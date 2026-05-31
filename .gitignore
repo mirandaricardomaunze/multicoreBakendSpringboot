@@ -1,0 +1,42 @@
+# Build outputs
+target/
+out/
+build/
+
+# Runtime data and backups
+backups/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.h2.db
+*.mv.db
+*.trace.db
+
+# Logs
+logs/
+*.log
+
+# Local environment files
+.env
+.env.*
+!.env.example
+application-local.properties
+application-*.local.properties
+
+# IDE and OS files
+.idea/
+.vscode/
+.claude/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Java temporary files
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+hs_err_pid*
+replay_pid*
