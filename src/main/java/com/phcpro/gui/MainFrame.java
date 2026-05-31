@@ -50,7 +50,7 @@ import java.awt.Font;
 import java.util.List;
 
 @org.springframework.stereotype.Component
-@org.springframework.context.annotation.Profile("!test")
+@org.springframework.context.annotation.Profile("desktop")
 public class MainFrame extends JFrame {
 
     private static final Color C_DASHBOARD  = UIHelper.ACCENT_BLUE;
@@ -125,7 +125,7 @@ public class MainFrame extends JFrame {
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         dashboardPanel  = new DashboardPanel(comercialService, financeService, approvalService, crmService, purchaseService, inventoryService);
-        comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService);
+        comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService);
         financeiroPanel = new FinanceiroPanel(financeService, comercialService);
         hrPanel         = new HRPanel(hrService, payslipPrintService);
         crmPanel        = new CRMPanel(crmService);

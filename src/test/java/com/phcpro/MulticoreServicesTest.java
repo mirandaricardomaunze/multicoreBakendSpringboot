@@ -125,7 +125,8 @@ public class MulticoreServicesTest {
                 client.getId(),
                 warehouse.getId(),
                 account.getId(),
-                List.of(line)
+                List.of(line),
+                null
         );
 
         assertThrows(BusinessRuleException.class, () -> posService.checkout(requestUnopened));
@@ -138,7 +139,8 @@ public class MulticoreServicesTest {
                 client.getId(),
                 warehouse.getId(),
                 account.getId(),
-                List.of(line)
+                List.of(line),
+                null
         );
         TillSession session = posService.openSession(operator, new BigDecimal("100.00"), company.getId());
         assertNotNull(session);
@@ -235,7 +237,8 @@ public class MulticoreServicesTest {
                 client.getId(),
                 warehouse.getId(),
                 account.getId(),
-                List.of(line)
+                List.of(line),
+                null
         );
 
         var invoice = posService.checkout(request);
@@ -336,5 +339,4 @@ public class MulticoreServicesTest {
         });
     }
 }
-
 
