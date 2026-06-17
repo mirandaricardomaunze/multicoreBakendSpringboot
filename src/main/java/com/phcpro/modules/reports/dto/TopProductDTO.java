@@ -6,6 +6,6 @@ public record TopProductDTO(
         Long productId,
         String sku,
         String name,
-        long quantitySold,
+        BigDecimal quantitySold,
         BigDecimal revenue
 ) {}

@@ -19,6 +19,11 @@ public class Stock {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Optimistic locking: protege o saldo de quantidade contra lost updates em vendas/entradas concorrentes.
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;

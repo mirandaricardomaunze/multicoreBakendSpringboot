@@ -12,6 +12,8 @@ public record ProductDTO(
     BigDecimal purchasePrice,
     BigDecimal minStock,
     int unitsPerBox,
+    String saleType,
+    boolean stockTracked,
     Long categoryId,
     String categoryName,
     String description

@@ -1,6 +1,7 @@
 package com.phcpro.modules.approvals.model;
 
 import com.phcpro.architecture.BaseEntity;
+import com.phcpro.modules.company.model.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +17,10 @@ public class ApprovalRequest extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @Column(name = "document_type", nullable = false)
     private String documentType; // e.g. "EXPENSE", "INVOICE"

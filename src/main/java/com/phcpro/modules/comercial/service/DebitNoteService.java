@@ -3,6 +3,8 @@ package com.phcpro.modules.comercial.service;
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.pricing.LineCalculator;
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
+import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.comercial.dto.CreateDebitNoteLineRequest;
 import com.phcpro.modules.comercial.dto.CreateDebitNoteRequest;
 import com.phcpro.modules.comercial.dto.DebitNoteDTO;
@@ -33,13 +35,16 @@ public class DebitNoteService {
 
     private final DebitNoteRepository debitNoteRepository;
     private final InvoiceRepository invoiceRepository;
+    private final AuditLogService auditLogService;
 
     public DebitNoteService(
             DebitNoteRepository debitNoteRepository,
-            InvoiceRepository invoiceRepository
+            InvoiceRepository invoiceRepository,
+            AuditLogService auditLogService
     ) {
         this.debitNoteRepository = debitNoteRepository;
         this.invoiceRepository = invoiceRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -54,6 +59,7 @@ public class DebitNoteService {
         Invoice invoice = invoiceRepository.findById(request.invoiceId())
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
+        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         DebitNote note = new DebitNote();
         note.setNoteNumber("ND-" + LocalDateTime.now().format(NUMBER_FMT));
         note.setIssueDate(LocalDateTime.now());
@@ -95,7 +101,8 @@ public class DebitNoteService {
 
     @Transactional
     public DebitNoteDTO approve(Long id) {
-        DebitNote note = debitNoteRepository.findByIdWithLines(id)
+        PermissionGuard.requireManagerOrAdmin("aprovar nota de débito");
+        DebitNote note = debitNoteRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Nota de débito não encontrada."));
         if (note.getStatus() != NoteStatus.PENDING_APPROVAL && note.getStatus() != NoteStatus.DRAFT) {
             throw new BusinessRuleException("Apenas notas em rascunho ou pendentes podem ser aprovadas.");
@@ -103,12 +110,16 @@ public class DebitNoteService {
         note.setStatus(NoteStatus.APPROVED);
         note.setApprovedBy(CurrentUserContext.getUsername());
         note.setApprovedAt(LocalDateTime.now());
-        return toDTO(debitNoteRepository.save(note));
+        DebitNote saved = debitNoteRepository.save(note);
+        auditLogService.logCurrent("DEBIT_NOTE_APPROVE",
+                "Nota de débito " + saved.getNoteNumber() + " aprovada.");
+        return toDTO(saved);
     }
 
     @Transactional
     public DebitNoteDTO reject(Long id, String rejectionReason) {
-        DebitNote note = debitNoteRepository.findByIdWithLines(id)
+        PermissionGuard.requireManagerOrAdmin("rejeitar nota de débito");
+        DebitNote note = debitNoteRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Nota de débito não encontrada."));
         if (note.getStatus() == NoteStatus.APPROVED) {
             throw new BusinessRuleException("Notas aprovadas não podem ser rejeitadas.");
@@ -117,35 +128,43 @@ public class DebitNoteService {
         note.setRejectionReason(rejectionReason);
         note.setApprovedBy(CurrentUserContext.getUsername());
         note.setApprovedAt(LocalDateTime.now());
-        return toDTO(debitNoteRepository.save(note));
+        DebitNote saved = debitNoteRepository.save(note);
+        auditLogService.logCurrent("DEBIT_NOTE_REJECT",
+                "Nota de débito " + saved.getNoteNumber() + " rejeitada. Motivo: " + rejectionReason);
+        return toDTO(saved);
     }
 
     @Transactional
     public DebitNoteDTO cancel(Long id) {
-        DebitNote note = debitNoteRepository.findByIdWithLines(id)
+        PermissionGuard.requireManagerOrAdmin("cancelar nota de débito");
+        DebitNote note = debitNoteRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Nota de débito não encontrada."));
         if (note.getStatus() == NoteStatus.APPROVED) {
             throw new BusinessRuleException("Notas aprovadas não podem ser canceladas.");
         }
         note.setStatus(NoteStatus.CANCELLED);
-        return toDTO(debitNoteRepository.save(note));
+        DebitNote saved = debitNoteRepository.save(note);
+        auditLogService.logCurrent("DEBIT_NOTE_CANCEL",
+                "Nota de débito " + saved.getNoteNumber() + " cancelada.");
+        return toDTO(saved);
     }
 
     @Transactional(readOnly = true)
     public List<DebitNoteDTO> findByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return debitNoteRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public DebitNoteDTO findById(Long id) {
-        return debitNoteRepository.findByIdWithLines(id)
+        return debitNoteRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .map(this::toDTO)
                 .orElseThrow(() -> new BusinessRuleException("Nota de débito não encontrada."));
     }
 
     @Transactional(readOnly = true)
     public DebitNote loadForPrint(Long id) {
-        return debitNoteRepository.findByIdWithLines(id)
+        return debitNoteRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Nota de débito não encontrada."));
     }
 

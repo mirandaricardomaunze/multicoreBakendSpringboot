@@ -123,6 +123,7 @@ public class MulticoreServicesTest {
                 operatorUnopened,
                 company.getId(),
                 client.getId(),
+                null, // walkInName
                 warehouse.getId(),
                 account.getId(),
                 List.of(line),
@@ -137,6 +138,7 @@ public class MulticoreServicesTest {
                 operator,
                 company.getId(),
                 client.getId(),
+                null, // walkInName
                 warehouse.getId(),
                 account.getId(),
                 List.of(line),
@@ -235,6 +237,7 @@ public class MulticoreServicesTest {
                 operator,
                 company.getId(),
                 client.getId(),
+                null, // walkInName
                 warehouse.getId(),
                 account.getId(),
                 List.of(line),
@@ -301,10 +304,9 @@ public class MulticoreServicesTest {
         assertNotNull(invoice);
         assertEquals(InvoiceStatus.APPROVED, invoice.status());
         
-        // 5. Shared sequence validation (EC-2026/X should match FT-2026/X)
-        String orderSeq = order.orderNumber().substring(order.orderNumber().lastIndexOf('/') + 1);
-        String invoiceSeq = invoice.invoiceNumber().substring(invoice.invoiceNumber().lastIndexOf('/') + 1);
-        assertEquals(orderSeq, invoiceSeq);
+        // 5. Cada série é numerada de forma independente e gapless (AT/SAF-T):
+        //    a encomenda mantém a série EC; a fatura recebe o seu próprio número FT.
+        assertTrue(order.orderNumber().startsWith("EC-2026/"));
         assertTrue(invoice.invoiceNumber().startsWith("FT-2026/"));
 
         // 6. Stock should now be deducted by the ordered quantity (3)

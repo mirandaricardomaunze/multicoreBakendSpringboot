@@ -1,9 +1,13 @@
 package com.phcpro.modules.comercial.model;
 
 import com.phcpro.architecture.BaseEntity;
+import com.phcpro.modules.company.model.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "clients")
@@ -26,4 +30,17 @@ public class Client extends BaseEntity {
 
     @Column(name = "address")
     private String address;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "client_companies",
+            joinColumns = @JoinColumn(name = "client_id"),
+            inverseJoinColumns = @JoinColumn(name = "company_id"),
+            uniqueConstraints = @UniqueConstraint(name = "uk_client_company", columnNames = {"client_id", "company_id"})
+    )
+    private Set<Company> companies = new LinkedHashSet<>();
+
+    public boolean belongsToCompany(Long companyId) {
+        return companyId != null && companies.stream().anyMatch(company -> companyId.equals(company.getId()));
+    }
 }

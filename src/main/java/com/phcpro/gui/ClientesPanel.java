@@ -3,8 +3,8 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.modules.comercial.dto.ClientDTO;
-import com.phcpro.modules.comercial.service.ComercialService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -17,7 +17,7 @@ import java.util.List;
 
 public class ClientesPanel extends JPanel {
 
-    private final ComercialService comercialService;
+    private final ComercialApiClient comercialApiClient;
 
     private JTextField searchField;
     private DefaultTableModel model;
@@ -25,8 +25,8 @@ public class ClientesPanel extends JPanel {
     private List<ClientDTO> allClients = new ArrayList<>();
     private List<ClientDTO> visibleClients = new ArrayList<>();
 
-    public ClientesPanel(ComercialService comercialService) {
-        this.comercialService = comercialService;
+    public ClientesPanel(ComercialApiClient comercialApiClient) {
+        this.comercialApiClient = comercialApiClient;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -37,13 +37,13 @@ public class ClientesPanel extends JPanel {
         topBar.setOpaque(false);
         topBar.add(UIHelper.createHeading("Gestão de Clientes"), BorderLayout.WEST);
 
-        ModernButton newBtn = new ModernButton("Novo Cliente", new Color(16, 185, 129), new Color(52, 211, 153));
+        ModernButton newBtn = UIHelper.createSuccessButton("Novo Cliente");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
-        ModernButton editBtn = new ModernButton("Editar", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
+        ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        ModernButton deleteBtn = new ModernButton("Eliminar", UIHelper.REJECTED_RED, UIHelper.REJECTED_RED.brighter());
+        ModernButton deleteBtn = UIHelper.createDangerButton("Eliminar");
         deleteBtn.setIcon(UIHelper.icon("fas-trash", 14));
-        ModernButton refreshBtn = new ModernButton("Atualizar", new Color(107, 114, 128), new Color(156, 163, 175));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
@@ -117,7 +117,7 @@ public class ClientesPanel extends JPanel {
     }
 
     public void onPanelSelected() {
-        allClients = comercialService.getAllClients();
+        allClients = comercialApiClient.getClients();
         refilter();
     }
 
@@ -187,11 +187,11 @@ public class ClientesPanel extends JPanel {
 
         try {
             if (existing == null) {
-                comercialService.createClient(name, taxId, email, address);
+                comercialApiClient.createClient(name, taxId, email, address);
                 JOptionPane.showMessageDialog(this, "Cliente '" + name + "' criado.",
                         "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                comercialService.updateClient(existing.id(), name, taxId, email, address);
+                comercialApiClient.updateClient(existing.id(), name, taxId, email, address);
                 JOptionPane.showMessageDialog(this, "Cliente atualizado.",
                         "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             }
@@ -209,7 +209,7 @@ public class ClientesPanel extends JPanel {
                 "Confirmar Eliminação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) return;
         try {
-            comercialService.deleteClient(c.id());
+            comercialApiClient.deleteClient(c.id());
             JOptionPane.showMessageDialog(this, "Cliente eliminado.",
                     "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             onPanelSelected();

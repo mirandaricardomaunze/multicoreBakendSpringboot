@@ -16,6 +16,8 @@ public record PayslipDTO(
         BigDecimal overtime,
         BigDecimal irpsDeduction,
         BigDecimal inssDeduction,
+        BigDecimal employerInss,
+        BigDecimal taxableIncome,
         BigDecimal otherDeductions,
         BigDecimal grossPay,
         BigDecimal totalDeductions,

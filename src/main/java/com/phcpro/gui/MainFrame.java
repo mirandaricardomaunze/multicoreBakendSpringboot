@@ -1,17 +1,20 @@
 package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.desktop.session.DesktopSession;
+import com.phcpro.desktop.session.DesktopSessionStore;
+import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.gui.components.CollapsibleSidebar;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.approvals.service.ApprovalService;
 import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.comercial.service.ComercialService;
-import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.crm.service.CRMService;
 import com.phcpro.modules.financeira.service.FinanceService;
 import com.phcpro.modules.hr.service.HRService;
+import com.phcpro.modules.hr.service.PayrollTaxService;
 import com.phcpro.modules.inventory.service.InventoryService;
 import com.phcpro.modules.inventory.service.StockTransferService;
 import com.phcpro.modules.pos.service.POSService;
@@ -51,6 +54,7 @@ import java.util.List;
 
 @org.springframework.stereotype.Component
 @org.springframework.context.annotation.Profile("desktop")
+@org.springframework.context.annotation.Lazy
 public class MainFrame extends JFrame {
 
     private static final Color C_DASHBOARD  = UIHelper.ACCENT_BLUE;
@@ -83,10 +87,13 @@ public class MainFrame extends JFrame {
     private final ConfigPanel configPanel;
 
     private final CompanyService companyService;
+    private final DesktopSessionStore desktopSessionStore;
     private CollapsibleSidebar sidebar;
+    private String sessionDisplayName;
 
     public MainFrame(
             ComercialService comercialService,
+            ComercialApiClient comercialApiClient,
             FinanceService financeService,
             ApprovalService approvalService,
             CRMService crmService,
@@ -98,6 +105,7 @@ public class MainFrame extends JFrame {
             AuditLogService auditLogService,
             BackupService backupService,
             CompanyService companyService,
+            DesktopSessionStore desktopSessionStore,
             ReceiptPrintService receiptPrintService,
             InvoicePrintService invoicePrintService,
             OrderPrintService orderPrintService,
@@ -112,9 +120,11 @@ public class MainFrame extends JFrame {
             TaxRateService taxRateService,
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
+            PayrollTaxService payrollTaxService,
             IvaDeclarationPrintService ivaDeclarationPrintService
     ) {
         this.companyService = companyService;
+        this.desktopSessionStore = desktopSessionStore;
 
         setTitle("MULTICORE — Gestão Profissional");
         setIconImage(UIHelper.iconImage("fas-cube", 64, UIHelper.ACCENT));
@@ -129,8 +139,8 @@ public class MainFrame extends JFrame {
         financeiroPanel = new FinanceiroPanel(financeService, comercialService);
         hrPanel         = new HRPanel(hrService, payslipPrintService);
         crmPanel        = new CRMPanel(crmService);
-        clientesPanel   = new ClientesPanel(comercialService);
-        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, ivaDeclarationPrintService);
+        clientesPanel   = new ClientesPanel(comercialApiClient);
+        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, payrollTaxService, ivaDeclarationPrintService);
         approvalsPanel  = new ApprovalsPanel(approvalService);
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService);
@@ -161,10 +171,11 @@ public class MainFrame extends JFrame {
 
     /** Called by the application bootstrap once the user is authenticated. */
     public void applyAuthenticatedUser(String displayName, String role) {
-        CurrentUserContext.setCurrentUser(displayName, role);
-        dashboardPanel.updateWelcomeMessage(displayName, role);
+        sessionDisplayName = displayName;
+        String activeRole = CurrentUserContext.getRole();
+        dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sessionUserLabel != null) sessionUserLabel.setText(displayName);
-        if (sessionRoleLabel != null) sessionRoleLabel.setText(role);
+        if (sessionRoleLabel != null) sessionRoleLabel.setText(activeRole);
     }
 
     private javax.swing.Icon navIcon(String code) {
@@ -224,30 +235,42 @@ public class MainFrame extends JFrame {
         return wrapper;
     }
 
-    private JComboBox<Company> buildCompanyCombo() {
-        List<Company> companies = companyService.getAllCompanies();
-        JComboBox<Company> combo = new JComboBox<>(companies.toArray(new Company[0]));
+    private JComboBox<DesktopSession.CompanyAccess> buildCompanyCombo() {
+        DesktopSession session = desktopSessionStore.requireSession();
+        List<DesktopSession.CompanyAccess> companies = session.companies();
+        JComboBox<DesktopSession.CompanyAccess> combo =
+                new JComboBox<>(companies.toArray(new DesktopSession.CompanyAccess[0]));
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof Company c) setText(c.getName());
+                if (value instanceof DesktopSession.CompanyAccess company) {
+                    setText(company.name() + "  [" + company.role() + "]");
+                }
                 return this;
             }
         });
 
         if (!companies.isEmpty()) {
-            CurrentUserContext.setCurrentCompanyId(companies.get(0).getId());
+            selectDesktopCompany(companies.get(0));
         }
 
         combo.addActionListener(e -> {
-            Company selected = (Company) combo.getSelectedItem();
+            DesktopSession.CompanyAccess selected = (DesktopSession.CompanyAccess) combo.getSelectedItem();
             if (selected != null) {
-                CurrentUserContext.setCurrentCompanyId(selected.getId());
+                selectDesktopCompany(selected);
+                updateSessionRole();
                 refreshActivePanel();
             }
         });
         return combo;
+    }
+
+    private void selectDesktopCompany(DesktopSession.CompanyAccess company) {
+        DesktopSession session = desktopSessionStore.requireSession();
+        session.selectCompany(company.id());
+        CurrentUserContext.setCurrentUser(session.username(), company.role());
+        CurrentUserContext.setCurrentCompanyId(company.id());
     }
 
     private JLabel sessionUserLabel;
@@ -329,6 +352,16 @@ public class MainFrame extends JFrame {
             else if (comp instanceof StockPanel p)      p.onPanelSelected();
             else if (comp instanceof ComprasPanel p)    p.onPanelSelected();
             else if (comp instanceof ConfigPanel p)     p.onPanelSelected();
+        }
+    }
+
+    private void updateSessionRole() {
+        String activeRole = CurrentUserContext.getRole();
+        if (sessionRoleLabel != null) {
+            sessionRoleLabel.setText(activeRole);
+        }
+        if (sessionDisplayName != null) {
+            dashboardPanel.updateWelcomeMessage(sessionDisplayName, activeRole);
         }
     }
 }

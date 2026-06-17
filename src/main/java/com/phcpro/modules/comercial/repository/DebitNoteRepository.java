@@ -24,5 +24,9 @@ public interface DebitNoteRepository extends JpaRepository<DebitNote, Long> {
             "WHERE n.id = :id")
     Optional<DebitNote> findByIdWithLines(@Param("id") Long id);
 
+    @Query("SELECT n FROM DebitNote n JOIN FETCH n.client JOIN FETCH n.invoice JOIN FETCH n.company " +
+            "LEFT JOIN FETCH n.lines WHERE n.id = :id AND n.company.id = :companyId")
+    Optional<DebitNote> findByIdWithLinesAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
+
     long countByCompanyId(Long companyId);
 }

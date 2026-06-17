@@ -28,5 +28,10 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
             "WHERE t.id = :id")
     Optional<StockTransfer> findByIdWithLines(@Param("id") Long id);
 
+    @Query("SELECT t FROM StockTransfer t JOIN FETCH t.originWarehouse JOIN FETCH t.destinationWarehouse " +
+            "JOIN FETCH t.company LEFT JOIN FETCH t.lines l LEFT JOIN FETCH l.product " +
+            "WHERE t.id = :id AND t.company.id = :companyId")
+    Optional<StockTransfer> findByIdWithLinesAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
+
     long countByCompanyId(Long companyId);
 }

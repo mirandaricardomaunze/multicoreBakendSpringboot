@@ -13,4 +13,8 @@ public interface TaxRateRepository extends JpaRepository<TaxRate, Long> {
     Optional<TaxRate> findByCode(String code);
     List<TaxRate> findByActiveTrueOrderByTypeAscRateDesc();
     List<TaxRate> findByType(TaxType type);
+    Optional<TaxRate> findByCodeAndCompaniesId(String code, Long companyId);
+    Optional<TaxRate> findByIdAndCompaniesId(Long id, Long companyId);
+    List<TaxRate> findDistinctByCompaniesIdOrderByTypeAscRateDesc(Long companyId);
+    List<TaxRate> findDistinctByCompaniesIdAndActiveTrueOrderByTypeAscRateDesc(Long companyId);
 }

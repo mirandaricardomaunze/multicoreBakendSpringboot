@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface TreasuryTransactionRepository extends JpaRepository<TreasuryTransaction, Long> {
     List<TreasuryTransaction> findAllByOrderByTransactionDateDesc();
+    List<TreasuryTransaction> findByTreasuryAccountCompanyIdOrderByTransactionDateDesc(Long companyId);
 }

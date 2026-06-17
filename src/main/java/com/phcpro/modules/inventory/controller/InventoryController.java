@@ -53,6 +53,11 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.findMovementsByCompany(companyId));
     }
 
+    @PostMapping("/adjustments")
+    public ResponseEntity<StockMovementDTO> adjustStock(@RequestBody @Valid CreateStockAdjustmentRequest request) {
+        return ResponseEntity.ok(inventoryService.adjustStock(request));
+    }
+
     @GetMapping("/batches")
     public ResponseEntity<List<ProductBatchDTO>> getBatches(
             @RequestParam(required = false) Long companyId,

@@ -5,6 +5,9 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ClientDTO;
+import com.phcpro.modules.comercial.dto.CreateCreditNoteLineRequest;
+import com.phcpro.modules.comercial.dto.CreditNoteDTO;
+import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.dto.ProductDTO;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.service.ComercialService;
@@ -15,6 +18,7 @@ import com.phcpro.modules.inventory.service.InventoryService;
 import com.phcpro.modules.pos.model.TillSession;
 import com.phcpro.modules.pos.dto.POSCheckoutLineRequest;
 import com.phcpro.modules.pos.dto.POSCheckoutRequest;
+import com.phcpro.modules.pos.dto.POSReturnRequest;
 import com.phcpro.modules.pos.service.POSService;
 
 import javax.swing.*;
@@ -52,6 +56,7 @@ public class POSPanel extends JPanel {
     private JTextField qtyField;
     private JTextField discountField;
     private JTextField batchField;
+    private JTextField expirationField;
     private JTextField serialField;
 
     private DefaultTableModel cartModel;
@@ -62,7 +67,13 @@ public class POSPanel extends JPanel {
     private ModernButton closeSessionBtn;
     private ModernButton cashMoveBtn;
     private ModernButton checkoutBtn;
+    private ModernButton addToCartBtn;
     private JCheckBox creditCheck;
+    private JTabbedPane posTabs;
+    private DefaultTableModel salesHistoryModel;
+    private JTable salesHistoryTable;
+    private JLabel salesHistorySummary;
+    private List<InvoiceDTO> salesHistoryList = new ArrayList<>();
 
     private List<ProductDTO> productsList = new ArrayList<>();
     private List<ProductDTO> filteredProducts = new ArrayList<>();
@@ -74,12 +85,12 @@ public class POSPanel extends JPanel {
     // Cart items representation
     private static class CartItem {
         ProductDTO product;
-        int qty;
+        BigDecimal qty;
         BigDecimal discount;
         String batch;
         String serial;
 
-        CartItem(ProductDTO product, int qty, BigDecimal discount, String batch, String serial) {
+        CartItem(ProductDTO product, BigDecimal qty, BigDecimal discount, String batch, String serial) {
             this.product = product;
             this.qty = qty;
             this.discount = discount;
@@ -88,7 +99,7 @@ public class POSPanel extends JPanel {
         }
 
         BigDecimal getSubtotal() {
-            BigDecimal base = product.unitPrice().multiply(BigDecimal.valueOf(qty));
+            BigDecimal base = product.unitPrice().multiply(qty);
             if (discount.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal discVal = base.multiply(discount.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
                 return base.subtract(discVal);
@@ -145,11 +156,11 @@ public class POSPanel extends JPanel {
         JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         sessionActions.setOpaque(false);
 
-        openSessionBtn = new ModernButton("Abrir Caixa", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.brighter());
+        openSessionBtn = UIHelper.createSuccessButton("Abrir Caixa");
         openSessionBtn.setIcon(UIHelper.icon("fas-lock-open", 14));
-        closeSessionBtn = new ModernButton("Fechar Caixa", UIHelper.REJECTED_RED, UIHelper.REJECTED_RED.brighter());
+        closeSessionBtn = UIHelper.createDangerButton("Fechar Caixa");
         closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14));
-        cashMoveBtn = new ModernButton("Sangria / Suprimento", new Color(107, 114, 128), new Color(156, 163, 175));
+        cashMoveBtn = UIHelper.createSecondaryButton("Sangria / Suprimento");
         cashMoveBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
 
         sessionActions.add(openSessionBtn);
@@ -170,11 +181,7 @@ public class POSPanel extends JPanel {
         barcodeField.addActionListener(e -> handleBarcodeScan());
         scannerBar.add(barcodeField, BorderLayout.CENTER);
 
-        JPanel topStack = new JPanel(new BorderLayout(0, 0));
-        topStack.setOpaque(false);
-        topStack.add(sessionBar, BorderLayout.NORTH);
-        topStack.add(scannerBar, BorderLayout.SOUTH);
-        add(topStack, BorderLayout.NORTH);
+        add(sessionBar, BorderLayout.NORTH);
 
 
         // 2. MAIN POS WORKSPACE: FORM (LEFT) & CART (RIGHT)
@@ -215,13 +222,21 @@ public class POSPanel extends JPanel {
         qtyField = new JTextField("1");
         discountField = new JTextField("0");
         batchField = new JTextField();
+        expirationField = new JTextField();
         serialField = new JTextField();
         UIHelper.styleTextField(qtyField);
         UIHelper.styleTextField(discountField);
         UIHelper.styleTextField(batchField);
+        UIHelper.styleTextField(expirationField);
         UIHelper.styleTextField(serialField);
+        batchField.setEditable(false);
+        expirationField.setEditable(false);
+        batchField.setToolTipText("Lote a sair (FEFO) — preenchido automaticamente quando escolhe produto+armazém.");
+        expirationField.setToolTipText("Validade do lote a sair (FEFO).");
+        batchField.putClientProperty("JTextField.placeholderText", "— FEFO automático —");
+        expirationField.putClientProperty("JTextField.placeholderText", "— FEFO automático —");
 
-        ModernButton newClientBtn = new ModernButton("+ Novo", new Color(16, 185, 129), new Color(52, 211, 153));
+        ModernButton newClientBtn = UIHelper.createSuccessButton("+ Novo");
         newClientBtn.setToolTipText("Criar novo cliente");
         newClientBtn.addActionListener(e -> createClientDialog());
 
@@ -252,15 +267,19 @@ public class POSPanel extends JPanel {
                 "Quantidade", qtyField,
                 "Desconto %", discountField);
         row = addTwoColumnRow(formCard, gbc, row,
-                "Nº Lote (opcional)", batchField,
-                "Nº Série (opcional)", serialField);
+                "Nº Lote (FEFO)", batchField,
+                "Validade (FEFO)", expirationField);
+        row = addFullRowField(formCard, gbc, row, "Nº Série (opcional)", serialField);
 
         // Action button — full width
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(20, 6, 6, 6);
-        ModernButton addToCartBtn = new ModernButton("Adicionar Artigo ao Carrinho", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
+        addToCartBtn = UIHelper.createPrimaryButton("Adicionar Artigo ao Carrinho");
         addToCartBtn.setIcon(UIHelper.icon("fas-cart-plus", 14));
         formCard.add(addToCartBtn, gbc);
+
+        productCombo.addActionListener(e -> refreshFEFOHint());
+        warehouseCombo.addActionListener(e -> refreshFEFOHint());
 
         // Wrap the form in a scroll pane so nothing gets clipped on small displays
         JScrollPane formScroll = new JScrollPane(formCard);
@@ -313,37 +332,53 @@ public class POSPanel extends JPanel {
         totalLabel.setForeground(Color.WHITE);
         totalRow.add(totalLabel, BorderLayout.EAST);
 
-        // Row 2: Action Buttons
-        JPanel buttonRow = new JPanel(new BorderLayout());
-        buttonRow.setOpaque(false);
-
-        ModernButton removeBtn = new ModernButton("Remover Selecionado", UIHelper.REJECTED_RED, UIHelper.REJECTED_RED.brighter());
-        removeBtn.setIcon(UIHelper.icon("fas-trash", 14));
-        buttonRow.add(removeBtn, BorderLayout.WEST);
-
+        // Row 2: Fiado checkbox (linha própria, evita ser esmagado entre botões)
         creditCheck = new JCheckBox("Fiado (cliente paga depois)");
         creditCheck.setForeground(UIHelper.TEXT_LIGHT);
         creditCheck.setOpaque(false);
         creditCheck.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JPanel centerActions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        centerActions.setOpaque(false);
-        centerActions.add(creditCheck);
-        buttonRow.add(centerActions, BorderLayout.CENTER);
+        JPanel creditRow = new JPanel(new BorderLayout());
+        creditRow.setOpaque(false);
+        creditRow.add(creditCheck, BorderLayout.WEST);
 
-        checkoutBtn = new ModernButton("Finalizar Venda (F9)");
+        // Row 3: Action Buttons
+        JPanel buttonRow = new JPanel(new BorderLayout());
+        buttonRow.setOpaque(false);
+
+        ModernButton removeBtn = UIHelper.createDangerButton("Remover Selecionado");
+        removeBtn.setIcon(UIHelper.icon("fas-trash", 14));
+        buttonRow.add(removeBtn, BorderLayout.WEST);
+
+        checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda (F9)");
         checkoutBtn.setIcon(UIHelper.icon("fas-check-circle", 14));
-        checkoutBtn.setGradient(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.darker());
         buttonRow.add(checkoutBtn, BorderLayout.EAST);
 
         cartBottom.add(totalRow);
-        cartBottom.add(Box.createRigidArea(new Dimension(0, 10)));
+        cartBottom.add(Box.createRigidArea(new Dimension(0, 8)));
+        cartBottom.add(creditRow);
+        cartBottom.add(Box.createRigidArea(new Dimension(0, 8)));
         cartBottom.add(buttonRow);
         cartCard.add(cartBottom, BorderLayout.SOUTH);
 
         rightPanel.add(cartCard, BorderLayout.CENTER);
         workspace.add(rightPanel);
 
-        add(workspace, BorderLayout.CENTER);
+        JPanel salesTab = new JPanel(new BorderLayout(0, 12));
+        salesTab.setOpaque(false);
+        salesTab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        salesTab.add(scannerBar, BorderLayout.NORTH);
+        salesTab.add(workspace, BorderLayout.CENTER);
+
+        posTabs = new JTabbedPane();
+        UIHelper.styleTabbedPane(posTabs);
+        posTabs.addTab("Venda POS", UIHelper.icon("fas-cash-register", 16, UIHelper.TEXT_LIGHT), salesTab);
+        posTabs.addTab("Histórico de Vendas", UIHelper.icon("fas-history", 16, UIHelper.TEXT_LIGHT), buildSalesHistoryTab());
+        posTabs.addChangeListener(e -> {
+            if (posTabs.getSelectedIndex() == 1) {
+                refreshSalesHistory();
+            }
+        });
+        add(posTabs, BorderLayout.CENTER);
 
         // LISTENERS
         openSessionBtn.addActionListener(e -> openSession());
@@ -359,6 +394,9 @@ public class POSPanel extends JPanel {
     public void onPanelSelected() {
         refreshSessionState();
         loadMetadata();
+        if (posTabs != null && posTabs.getSelectedIndex() == 1) {
+            refreshSalesHistory();
+        }
     }
 
     private void refreshSessionState() {
@@ -368,13 +406,18 @@ public class POSPanel extends JPanel {
         Optional<TillSession> sessionOpt = posService.getActiveSession(operator, companyId);
         if (sessionOpt.isPresent()) {
             activeSession = sessionOpt.get();
-            statusLabel.setText(String.format("Caixa Aberta por %s | Fundo Inicial: %,.2f MT", 
+            statusLabel.setText(String.format("Caixa Aberta por %s | Fundo Inicial: %,.2f MT",
                     activeSession.getOperator(), activeSession.getOpeningBalance()));
             statusLabel.setForeground(UIHelper.APPROVED_GREEN);
             openSessionBtn.setVisible(false);
             closeSessionBtn.setVisible(true);
             cashMoveBtn.setVisible(true);
             checkoutBtn.setEnabled(true);
+            checkoutBtn.setToolTipText(null);
+            if (addToCartBtn != null) {
+                addToCartBtn.setEnabled(true);
+                addToCartBtn.setToolTipText(null);
+            }
         } else {
             activeSession = null;
             statusLabel.setText("Caixa Fechada. É necessário abrir sessão antes de vender.");
@@ -383,6 +426,11 @@ public class POSPanel extends JPanel {
             closeSessionBtn.setVisible(false);
             cashMoveBtn.setVisible(false);
             checkoutBtn.setEnabled(false);
+            checkoutBtn.setToolTipText("Abra a caixa antes de finalizar uma venda.");
+            if (addToCartBtn != null) {
+                addToCartBtn.setEnabled(false);
+                addToCartBtn.setToolTipText("Abra a caixa antes de adicionar artigos.");
+            }
         }
     }
 
@@ -526,9 +574,13 @@ public class POSPanel extends JPanel {
 
         String balStr = JOptionPane.showInputDialog(this, "Saldo Físico no Fecho do Caixa (MT):", "Fechar Caixa", JOptionPane.QUESTION_MESSAGE);
         if (balStr == null) return;
+
+        // Conta de tesouraria que recebe o depósito do numerário da sessão (opcional).
+        Long depositAccountId = chooseDepositAccount();
+
         try {
             BigDecimal closingReal = new BigDecimal(balStr.trim());
-            TillSession closed = posService.closeSession(activeSession.getId(), closingReal);
+            TillSession closed = posService.closeSession(activeSession.getId(), closingReal, depositAccountId);
 
             String summary = String.format("Sessão Fechada com sucesso!\n" +
                     "Saldo Esperado: %,.2f MT\n" +
@@ -542,6 +594,30 @@ public class POSPanel extends JPanel {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Pergunta ao operador para que conta de tesouraria deve ir o depósito do numerário
+     * da sessão. Devolve o id da conta, ou null se o operador optar por não depositar
+     * agora (ou não houver contas configuradas).
+     */
+    private Long chooseDepositAccount() {
+        if (accountsList == null || accountsList.isEmpty()) return null;
+
+        String[] options = new String[accountsList.size() + 1];
+        for (int i = 0; i < accountsList.size(); i++) {
+            options[i] = accountsList.get(i).name();
+        }
+        options[accountsList.size()] = "Não depositar agora";
+
+        int choice = JOptionPane.showOptionDialog(this,
+                "Depositar o numerário da sessão em que conta de tesouraria?",
+                "Depósito de Fecho de Caixa",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                null, options, options[0]);
+
+        if (choice < 0 || choice == accountsList.size()) return null;
+        return accountsList.get(choice).id();
     }
 
     private void manageCashMovements() {
@@ -581,6 +657,12 @@ public class POSPanel extends JPanel {
     }
 
     private void addToCart() {
+        if (activeSession == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
+                    "Caixa Fechada", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (filteredProducts.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     productsList.isEmpty()
@@ -593,12 +675,12 @@ public class POSPanel extends JPanel {
         if (prodIdx < 0) return;
 
         ProductDTO product = filteredProducts.get(prodIdx);
-        int qty;
+        BigDecimal qty;
         try {
-            qty = Integer.parseInt(qtyField.getText().trim());
-            if (qty <= 0) throw new NumberFormatException();
+            qty = new BigDecimal(qtyField.getText().trim().replace(",", "."));
+            if (qty.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "A quantidade deve ser um número inteiro superior a 0.", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "A quantidade deve ser superior a 0.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -613,8 +695,9 @@ public class POSPanel extends JPanel {
             return;
         }
 
-        String batch = batchField.getText().trim();
-        if (batch.isEmpty()) batch = null;
+        // Lote é decidido por FEFO no backend — o batchField mostra apenas previsão.
+        String previewBatch = batchField.getText().trim();
+        String batch = null;
 
         String serial = serialField.getText().trim();
         if (serial.isEmpty()) serial = null;
@@ -623,14 +706,16 @@ public class POSPanel extends JPanel {
         cartItems.add(item);
 
         String lotSer = "";
-        if (batch != null) lotSer += "Lote: " + batch + " ";
+        if (!previewBatch.isEmpty() && !"Sem stock".equals(previewBatch) && !"—".equals(previewBatch)) {
+            lotSer += "Lote FEFO: " + previewBatch + " ";
+        }
         if (serial != null) lotSer += "Série: " + serial;
         if (lotSer.isEmpty()) lotSer = "-";
 
         cartModel.addRow(new Object[]{
                 product.name(),
                 String.format("%.2f MT", product.unitPrice()),
-                qty,
+                qty.stripTrailingZeros().toPlainString(),
                 discount + "%",
                 lotSer,
                 String.format("%.2f MT", item.getSubtotal())
@@ -641,8 +726,42 @@ public class POSPanel extends JPanel {
         // Clear item-specific fields
         qtyField.setText("1");
         discountField.setText("0");
-        batchField.setText("");
         serialField.setText("");
+        refreshFEFOHint();
+    }
+
+    /**
+     * Pré-visualiza o lote/validade que vai sair (FEFO) com base no produto e armazém escolhidos.
+     * Quando a linha for confirmada, o backend volta a aplicar FEFO em transacção — esta consulta
+     * serve só para mostrar a previsão ao utilizador.
+     */
+    private void refreshFEFOHint() {
+        int prodIdx = productCombo.getSelectedIndex();
+        int whIdx = warehouseCombo.getSelectedIndex();
+        if (prodIdx < 0 || whIdx < 0
+                || filteredProducts.isEmpty() || whIdx >= warehousesList.size()) {
+            batchField.setText("");
+            expirationField.setText("");
+            return;
+        }
+        ProductDTO product = filteredProducts.get(prodIdx);
+        Warehouse warehouse = warehousesList.get(whIdx);
+        try {
+            inventoryService.findNextFEFO(product.id(), warehouse.getId()).ifPresentOrElse(
+                    b -> {
+                        batchField.setText(b.batchNumber() == null ? "—" : b.batchNumber());
+                        expirationField.setText(b.expirationDate() == null
+                                ? "—"
+                                : b.expirationDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                    },
+                    () -> {
+                        batchField.setText("Sem stock");
+                        expirationField.setText("—");
+                    });
+        } catch (Exception ex) {
+            batchField.setText("");
+            expirationField.setText("");
+        }
     }
 
     private void removeFromCart() {
@@ -673,8 +792,8 @@ public class POSPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "O carrinho de vendas está vazio.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (clientsList.isEmpty() || warehousesList.isEmpty() || accountsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Falta cadastrar clientes, armazéns ou contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
+        if (warehousesList.isEmpty() || accountsList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Falta cadastrar armazéns ou contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -682,14 +801,24 @@ public class POSPanel extends JPanel {
         int whIdx = warehouseCombo.getSelectedIndex();
         int accIdx = accountCombo.getSelectedIndex();
 
-        if (clientIdx < 0 || whIdx < 0 || accIdx < 0) {
+        if (whIdx < 0 || accIdx < 0) {
             JOptionPane.showMessageDialog(this,
-                    "Selecione cliente, armazém e conta de tesouraria.",
+                    "Selecione armazém e conta de tesouraria.",
                     "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        ClientDTO client = filteredClients.get(clientIdx);
+        // Cliente é opcional. Se nada seleccionado, usa-se "Consumidor Final".
+        // Se o operador escreveu algo no campo de pesquisa sem seleccionar combo, esse texto
+        // vai como walkInName (rótulo para o recibo, sem criar registo de cliente).
+        ClientDTO client = (clientIdx >= 0 && clientIdx < filteredClients.size())
+                ? filteredClients.get(clientIdx)
+                : null;
+        String walkInName = null;
+        if (client == null) {
+            String typed = clientSearchField == null ? "" : clientSearchField.getText().trim();
+            if (!typed.isEmpty()) walkInName = typed;
+        }
         Warehouse wh = warehousesList.get(whIdx);
         TreasuryAccountDTO acc = accountsList.get(accIdx);
 
@@ -722,7 +851,8 @@ public class POSPanel extends JPanel {
             POSCheckoutRequest request = new POSCheckoutRequest(
                     operator,
                     companyId,
-                    client.id(),
+                    client != null ? client.id() : null,
+                    walkInName,
                     wh.getId(),
                     treasuryAccountId,
                     lines,
@@ -782,7 +912,7 @@ public class POSPanel extends JPanel {
         }
 
         // Adiciona com quantidade 1 ao carrinho — mesmo formato que addToCart usa
-        CartItem item = new CartItem(product, 1, BigDecimal.ZERO, null, null);
+        CartItem item = new CartItem(product, BigDecimal.ONE, BigDecimal.ZERO, null, null);
         cartItems.add(item);
         cartModel.addRow(new Object[]{
                 product.name(),
@@ -858,5 +988,228 @@ public class POSPanel extends JPanel {
         gbc.gridx = 0; host.add(leftControl, gbc);
         gbc.gridx = 1; host.add(rightControl, gbc);
         return row + 2;
+    }
+
+    private JPanel buildSalesHistoryTab() {
+        String[] cols = {"ID", "Nº Venda", "Data", "Operador", "Cliente", "Total", "Estado"};
+        salesHistoryModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        salesHistoryTable = new JTable(salesHistoryModel);
+        UIHelper.styleTable(salesHistoryTable);
+        salesHistoryTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        salesHistoryTable.setFillsViewportHeight(true);
+        // Esconder coluna ID
+        salesHistoryTable.getColumnModel().getColumn(0).setMinWidth(0);
+        salesHistoryTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        salesHistoryTable.getColumnModel().getColumn(0).setWidth(0);
+        // Larguras proporcionais
+        salesHistoryTable.getColumnModel().getColumn(1).setPreferredWidth(140);  // Nº Venda
+        salesHistoryTable.getColumnModel().getColumn(2).setPreferredWidth(120);  // Data
+        salesHistoryTable.getColumnModel().getColumn(3).setPreferredWidth(100);  // Operador
+        salesHistoryTable.getColumnModel().getColumn(4).setPreferredWidth(160);  // Cliente
+        salesHistoryTable.getColumnModel().getColumn(5).setPreferredWidth(100);  // Total
+        salesHistoryTable.getColumnModel().getColumn(6).setPreferredWidth(80);   // Estado
+
+        JScrollPane scroll = new JScrollPane(salesHistoryTable);
+        UIHelper.styleScrollPane(scroll);
+
+        salesHistorySummary = new JLabel(" ");
+        salesHistorySummary.setForeground(UIHelper.TEXT_LIGHT);
+        salesHistorySummary.setBorder(new EmptyBorder(8, 8, 8, 8));
+
+        ModernButton reprintBtn = UIHelper.createPrimaryButton("Reimprimir Recibo");
+        reprintBtn.setIcon(UIHelper.icon("fas-print", 14));
+        reprintBtn.addActionListener(e -> {
+            int row = salesHistoryTable.getSelectedRow();
+            if (row < 0) {
+                JOptionPane.showMessageDialog(this, "Selecione uma venda primeiro.",
+                        "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            Long invoiceId = (Long) salesHistoryModel.getValueAt(row, 0);
+            String invNum = String.valueOf(salesHistoryModel.getValueAt(row, 1));
+            try {
+                byte[] pdf = receiptPrintService.render(invoiceId);
+                com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "recibo-" + invNum);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Erro ao gerar recibo: " + ex.getMessage(),
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        ModernButton returnBtn = UIHelper.createSecondaryButton("Devolver / Trocar");
+        returnBtn.setIcon(UIHelper.icon("fas-undo", 14));
+        returnBtn.addActionListener(e -> showReturnDialog());
+
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> refreshSalesHistory());
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        buttons.setOpaque(false);
+        buttons.add(refreshBtn);
+        buttons.add(returnBtn);
+        buttons.add(reprintBtn);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.setBorder(new EmptyBorder(15, 5, 5, 5));
+        content.add(salesHistorySummary, BorderLayout.NORTH);
+        content.add(scroll, BorderLayout.CENTER);
+        content.add(buttons, BorderLayout.SOUTH);
+        return content;
+    }
+
+    private void refreshSalesHistory() {
+        if (salesHistoryModel == null || salesHistorySummary == null) return;
+
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        salesHistoryList = comercialService.getPOSSalesByCompany(companyId);
+        java.time.format.DateTimeFormatter dtf =
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        salesHistoryModel.setRowCount(0);
+        for (var inv : salesHistoryList) {
+            salesHistoryModel.addRow(new Object[]{
+                    inv.id(),
+                    inv.invoiceNumber(),
+                    inv.createdAt() != null ? inv.createdAt().format(dtf) : "—",
+                    inv.createdBy() != null ? inv.createdBy() : "—",
+                    inv.clientName() != null ? inv.clientName() : "—",
+                    String.format("%,.2f MT", inv.totalAmount()),
+                    inv.status() != null ? inv.status().name() : "—"
+            });
+        }
+        BigDecimal total = salesHistoryList.stream()
+                .map(InvoiceDTO::totalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        salesHistorySummary.setText(String.format(
+                "<html><b>%d</b> vendas POS — total <b>%,.2f MT</b></html>",
+                salesHistoryList.size(), total));
+    }
+
+    private void showReturnDialog() {
+        int selectedRow = salesHistoryTable == null ? -1 : salesHistoryTable.getSelectedRow();
+        if (selectedRow < 0 || selectedRow >= salesHistoryList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione uma venda no histórico primeiro.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (warehousesList.isEmpty()) {
+            loadMetadata();
+        }
+        if (warehousesList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Não há armazéns configurados para receber a devolução.",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        InvoiceDTO invoice = salesHistoryList.get(selectedRow);
+        DefaultTableModel linesModel = new DefaultTableModel(
+                new String[]{"Linha ID", "Produto", "Vendido", "Qtd a devolver"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return c == 3; }
+        };
+        for (var line : invoice.lines()) {
+            linesModel.addRow(new Object[]{
+                    line.id(),
+                    line.productName(),
+                    line.quantity().stripTrailingZeros().toPlainString(),
+                    "0"
+            });
+        }
+        JTable linesTable = new JTable(linesModel);
+        UIHelper.styleTable(linesTable);
+        linesTable.getColumnModel().getColumn(0).setMinWidth(0);
+        linesTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        linesTable.getColumnModel().getColumn(0).setWidth(0);
+
+        JComboBox<String> warehouseReturnCombo = new JComboBox<>();
+        for (Warehouse warehouse : warehousesList) {
+            warehouseReturnCombo.addItem(warehouse.getName());
+        }
+        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"CASH", "CARD", "BANK_TRANSFER", "CREDIT"});
+        JComboBox<String> refundAccountCombo = new JComboBox<>();
+        for (TreasuryAccountDTO account : accountsList) {
+            refundAccountCombo.addItem(account.name());
+        }
+        JTextField reasonField = new JTextField("Devolução de cliente");
+        UIHelper.styleComboBox(warehouseReturnCombo);
+        UIHelper.styleComboBox(methodCombo);
+        UIHelper.styleComboBox(refundAccountCombo);
+        UIHelper.styleTextField(reasonField);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+        panel.add(new JScrollPane(linesTable), BorderLayout.CENTER);
+        panel.add(UIHelper.createDialogForm(
+                "Armazém de entrada:", warehouseReturnCombo,
+                "Método de reembolso:", methodCombo,
+                "Conta para reembolso:", refundAccountCombo,
+                "Motivo:", reasonField
+        ), BorderLayout.SOUTH);
+
+        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(panel),
+                "Devolver / Trocar venda " + invoice.invoiceNumber(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        List<CreateCreditNoteLineRequest> lines = new ArrayList<>();
+        try {
+            for (int i = 0; i < linesModel.getRowCount(); i++) {
+                BigDecimal qty = new BigDecimal(String.valueOf(linesModel.getValueAt(i, 3)).trim().replace(",", "."));
+                if (qty.compareTo(BigDecimal.ZERO) > 0) {
+                    lines.add(new CreateCreditNoteLineRequest((Long) linesModel.getValueAt(i, 0), qty));
+                }
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantidade inválida em alguma linha.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (lines.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Informe pelo menos uma quantidade a devolver.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String method = String.valueOf(methodCombo.getSelectedItem());
+        Long accountId = null;
+        if (!"CASH".equals(method) && !"CREDIT".equals(method)) {
+            int accIdx = refundAccountCombo.getSelectedIndex();
+            if (accIdx < 0 || accIdx >= accountsList.size()) {
+                JOptionPane.showMessageDialog(this, "Selecione a conta de tesouraria para o reembolso.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            accountId = accountsList.get(accIdx).id();
+        }
+
+        try {
+            CreditNoteDTO note = posService.returnSale(new POSReturnRequest(
+                    CurrentUserContext.getUsername(),
+                    CurrentUserContext.getCurrentCompanyId(),
+                    invoice.id(),
+                    warehousesList.get(warehouseReturnCombo.getSelectedIndex()).getId(),
+                    reasonField.getText().trim(),
+                    method,
+                    accountId,
+                    lines
+            ));
+            JOptionPane.showMessageDialog(this,
+                    "Devolução registada com sucesso.\nNota de crédito: " + note.noteNumber()
+                            + "\nTotal: " + note.totalAmount() + " MT",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            int exchange = JOptionPane.showConfirmDialog(this,
+                    "Pretende lançar agora a venda de troca/substituição?",
+                    "Troca", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (exchange == JOptionPane.YES_OPTION && posTabs != null) {
+                posTabs.setSelectedIndex(0);
+            }
+            refreshSalesHistory();
+            refreshSessionState();
+            loadMetadata();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }

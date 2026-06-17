@@ -2,6 +2,7 @@ package com.phcpro.modules.audit.service;
 
 import com.phcpro.modules.audit.model.AuditLog;
 import com.phcpro.modules.audit.repository.AuditLogRepository;
+import com.phcpro.architecture.security.CurrentUserContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,11 @@ public class AuditLogService {
         log.setDetails(details);
         log.setEventTime(LocalDateTime.now());
         auditLogRepository.save(log);
+    }
+
+    @Transactional
+    public void logCurrent(String action, String details) {
+        logEvent(CurrentUserContext.getUsername(), CurrentUserContext.getCurrentCompanyId(), action, details);
     }
 
     @Transactional(readOnly = true)

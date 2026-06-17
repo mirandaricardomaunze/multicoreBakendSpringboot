@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface SupportTicketRepository extends JpaRepository<SupportTicket, Long> {
     List<SupportTicket> findByClientId(Long clientId);
+    List<SupportTicket> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
+    java.util.Optional<SupportTicket> findByIdAndCompanyId(Long id, Long companyId);
 }

@@ -183,14 +183,12 @@ public class ApprovalsPanel extends JPanel {
         JPanel btnPanel = new JPanel(new GridLayout(1, 2, 10, 0));
         btnPanel.setOpaque(false);
 
-        approveBtn = new ModernButton("Aprovar");
+        approveBtn = UIHelper.createSuccessButton("Aprovar");
         approveBtn.setIcon(UIHelper.icon("fas-check", 14));
-        approveBtn.setGradient(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.darker());
         approveBtn.setEnabled(false);
 
-        rejectBtn = new ModernButton("Rejeitar");
+        rejectBtn = UIHelper.createDangerButton("Rejeitar");
         rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
-        rejectBtn.setGradient(UIHelper.REJECTED_RED, UIHelper.REJECTED_RED.darker());
         rejectBtn.setEnabled(false);
 
         btnPanel.add(approveBtn);

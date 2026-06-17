@@ -10,11 +10,15 @@ public record OrderDTO(
     Long clientId,
     String clientName,
     String clientTaxId,
+    String walkInName,
     BigDecimal totalBeforeTax,
     BigDecimal taxAmount,
     BigDecimal totalAmount,
     String status,
     Long invoiceId,
     List<OrderLineDTO> lines,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    LocalDateTime printedAt,
+    int printCount,
+    String lastPrintedBy
 ) {}

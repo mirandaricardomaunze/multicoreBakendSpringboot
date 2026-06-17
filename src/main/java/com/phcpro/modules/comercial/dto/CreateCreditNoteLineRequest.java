@@ -2,14 +2,15 @@ package com.phcpro.modules.comercial.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 
+/**
+ * Linha de uma nota de crédito. Aponta para uma {@code InvoiceLine} concreta —
+ * produto, lote, preço e IVA são herdados dessa linha. O operador escolhe apenas
+ * <b>quanto</b> devolver (limitado pela quantidade vendida menos o já devolvido).
+ */
 public record CreateCreditNoteLineRequest(
-        @NotNull Long productId,
-        @NotNull @Positive BigDecimal quantity,
-        @NotNull @PositiveOrZero BigDecimal unitPrice,
-        @PositiveOrZero BigDecimal taxRate,
-        String batchNumber
+        @NotNull Long invoiceLineId,
+        @NotNull @Positive BigDecimal quantity
 ) {}

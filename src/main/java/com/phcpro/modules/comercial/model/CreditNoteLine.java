@@ -24,6 +24,12 @@ public class CreditNoteLine {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    /** Linha da fatura que está a ser devolvida. Garante que produto, lote, preço e IVA
+     *  ficam amarrados ao que efectivamente saiu, em vez de poderem ser inventados pelo operador. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invoice_line_id")
+    private InvoiceLine invoiceLine;
+
     @Column(name = "quantity", nullable = false, precision = 12, scale = 3)
     private BigDecimal quantity = BigDecimal.ZERO;
 

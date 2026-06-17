@@ -7,7 +7,7 @@ public record InvoiceLineDTO(
     Long productId,
     String productName,
     String sku,
-    Integer quantity,
+    BigDecimal quantity,
     BigDecimal unitPrice,
     BigDecimal taxRate,
     BigDecimal lineTotal,

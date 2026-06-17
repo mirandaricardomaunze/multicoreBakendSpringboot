@@ -1,6 +1,7 @@
 package com.phcpro.modules.pos.controller;
 
 import com.phcpro.modules.comercial.model.Invoice;
+import com.phcpro.modules.comercial.dto.CreditNoteDTO;
 import com.phcpro.modules.pos.dto.*;
 import com.phcpro.modules.pos.service.POSService;
 import jakarta.validation.Valid;
@@ -46,7 +47,7 @@ public class POSController {
             @RequestBody @Valid CloseSessionRequest request
     ) {
         return ResponseEntity.ok(posService.toDTO(
-                posService.closeSession(sessionId, request.closingBalanceReal())));
+                posService.closeSession(sessionId, request.closingBalanceReal(), request.depositAccountId())));
     }
 
     @GetMapping("/sessions/{sessionId}/movements")
@@ -69,5 +70,10 @@ public class POSController {
     public ResponseEntity<Long> checkout(@RequestBody @Valid POSCheckoutRequest request) {
         Invoice invoice = posService.checkout(request);
         return ResponseEntity.ok(invoice.getId());
+    }
+
+    @PostMapping("/returns")
+    public ResponseEntity<CreditNoteDTO> returnSale(@RequestBody @Valid POSReturnRequest request) {
+        return ResponseEntity.ok(posService.returnSale(request));
     }
 }

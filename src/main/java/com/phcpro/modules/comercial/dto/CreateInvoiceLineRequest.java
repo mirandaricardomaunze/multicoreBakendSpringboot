@@ -1,7 +1,7 @@
 package com.phcpro.modules.comercial.dto;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
@@ -10,8 +10,8 @@ public record CreateInvoiceLineRequest(
     Long productId,
 
     @NotNull(message = "A quantidade é obrigatória.")
-    @Min(value = 1, message = "A quantidade mínima é 1.")
-    Integer quantity,
+    @Positive(message = "A quantidade deve ser positiva.")
+    BigDecimal quantity,
 
     @NotNull(message = "A taxa de imposto é obrigatória.")
     BigDecimal taxRate, // e.g. 0.23
@@ -21,6 +21,11 @@ public record CreateInvoiceLineRequest(
     String serialNumber            // Série
 ) {
     public CreateInvoiceLineRequest(Long productId, Integer quantity, BigDecimal taxRate) {
-        this(productId, quantity, taxRate, BigDecimal.ZERO, null, null);
+        this(productId, BigDecimal.valueOf(quantity), taxRate, BigDecimal.ZERO, null, null);
+    }
+
+    public CreateInvoiceLineRequest(Long productId, Integer quantity, BigDecimal taxRate,
+                                    BigDecimal discountPercentage, String batchNumber, String serialNumber) {
+        this(productId, BigDecimal.valueOf(quantity), taxRate, discountPercentage, batchNumber, serialNumber);
     }
 }

@@ -97,7 +97,7 @@ public class CreditNotePrintService {
         return LineItemsTableRenderer.build(lines.stream().map(l -> new LineItemsTableRenderer.Row(
                 l.getProduct().getSku(),
                 l.getProduct().getName() + (l.getBatchNumber() != null ? "  (Lote: " + l.getBatchNumber() + ")" : ""),
-                l.getQuantity() == null ? 0 : l.getQuantity().intValue(),
+                l.getQuantity() == null ? BigDecimal.ZERO : l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),
                 BigDecimal.ZERO,

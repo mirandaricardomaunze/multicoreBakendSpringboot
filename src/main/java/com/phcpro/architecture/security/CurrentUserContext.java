@@ -1,9 +1,11 @@
 package com.phcpro.architecture.security;
 
+import com.phcpro.architecture.exception.BusinessRuleException;
+
 public class CurrentUserContext {
 
     private static final ThreadLocal<UserSession> userSessionThreadLocal = new ThreadLocal<>();
-    private static Long currentCompanyId = 1L; // Default fallback to first company
+    private static final ThreadLocal<Long> companyIdThreadLocal = new ThreadLocal<>();
 
     public record UserSession(String username, String role) {}
 
@@ -29,14 +31,30 @@ public class CurrentUserContext {
     }
 
     public static void setCurrentCompanyId(Long companyId) {
-        currentCompanyId = companyId;
+        companyIdThreadLocal.set(companyId);
     }
 
     public static Long getCurrentCompanyId() {
-        return currentCompanyId;
+        Long companyId = companyIdThreadLocal.get();
+        return companyId == null ? 1L : companyId;
+    }
+
+    public static Long requireCurrentCompanyId() {
+        Long companyId = companyIdThreadLocal.get();
+        if (companyId == null) {
+            throw new BusinessRuleException("Selecione uma empresa antes de continuar.");
+        }
+        return companyId;
+    }
+
+    public static void requireCompany(Long companyId) {
+        if (companyId == null || !getCurrentCompanyId().equals(companyId)) {
+            throw new BusinessRuleException("Operação recusada: o documento pertence a outra empresa.");
+        }
     }
 
     public static void clear() {
         userSessionThreadLocal.remove();
+        companyIdThreadLocal.remove();
     }
 }

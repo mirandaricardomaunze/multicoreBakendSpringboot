@@ -16,5 +16,8 @@ public record StockTransferDTO(
         String responsible,
         String vehicle,
         String notes,
+        String approvedBy,
+        LocalDateTime approvedAt,
+        String rejectionReason,
         List<StockTransferLineDTO> lines
 ) {}

@@ -6,6 +6,7 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceLine;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
@@ -35,6 +36,7 @@ public class ReceiptPrintService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada para emissão de recibo."));
 
+        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         return PdfDocumentBuilder.buildReceipt(doc -> {
             renderHeader(doc, invoice);
             renderLines(doc, invoice);
@@ -59,6 +61,7 @@ public class ReceiptPrintService {
         addCentered(doc, invoice.getInvoiceNumber(), PdfTheme.bodyFont());
         addCentered(doc, invoice.getCreatedAt() != null ? invoice.getCreatedAt().format(DATE_FMT) : "", PdfTheme.smallFont());
         addCentered(doc, "Cliente: " + (invoice.getClient() != null ? invoice.getClient().getName() : "—"), PdfTheme.smallFont());
+        addCentered(doc, "Operador: " + (invoice.getCreatedBy() != null ? invoice.getCreatedBy() : "—"), PdfTheme.smallFont());
 
         doc.add(PdfDocumentBuilder.spacer(4f));
     }
@@ -90,7 +93,6 @@ public class ReceiptPrintService {
     private void renderFooter(Document doc, Invoice invoice) {
         doc.add(PdfDocumentBuilder.spacer(6f));
         addCentered(doc, "Obrigado pela sua preferência!", PdfTheme.smallFont());
-        addCentered(doc, "Documento sem valor fiscal sem assinatura", PdfTheme.smallFont());
     }
 
     private void addCentered(Document doc, String text, com.lowagie.text.Font font) {

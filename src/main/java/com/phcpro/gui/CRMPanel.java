@@ -94,9 +94,8 @@ public class CRMPanel extends JPanel {
 
         JPanel wsBtnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         wsBtnBar.setOpaque(false);
-        ModernButton billBtn = new ModernButton("Faturar Folha de Obra");
+        ModernButton billBtn = UIHelper.createPrimaryButton("Faturar Folha de Obra");
         billBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        billBtn.setGradient(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.darker());
         wsBtnBar.add(billBtn);
         wsCard.add(wsBtnBar, BorderLayout.SOUTH);
         wsPanel.add(wsCard, BorderLayout.CENTER);
@@ -194,9 +193,8 @@ public class CRMPanel extends JPanel {
         // Row 4: Submit Button
         gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(20, 4, 4, 4);
-        ModernButton submitBtn = new ModernButton("Gravar Folha de Obra");
+        ModernButton submitBtn = UIHelper.createSuccessButton("Gravar Folha de Obra");
         submitBtn.setIcon(UIHelper.icon("fas-save", 14));
-        submitBtn.setGradient(UIHelper.ACCENT, UIHelper.ACCENT.darker());
         formCard.add(submitBtn, gbc);
 
         // Wrap form in a scroll pane so nothing gets clipped on small screens

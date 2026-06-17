@@ -24,8 +24,8 @@ public class OrderLine {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "quantity", nullable = false)
-    private Integer quantity;
+    @Column(name = "quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantity;
 
     @Column(name = "unit_price", nullable = false)
     private BigDecimal unitPrice;

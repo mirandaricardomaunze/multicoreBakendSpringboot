@@ -6,7 +6,6 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.modules.company.model.Company;
-import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.hr.model.Payslip;
 import com.phcpro.modules.hr.service.HRService;
 import org.springframework.stereotype.Service;
@@ -26,17 +25,15 @@ public class PayslipPrintService {
     private static final Locale PT = new Locale("pt", "PT");
 
     private final HRService hrService;
-    private final CompanyService companyService;
 
-    public PayslipPrintService(HRService hrService, CompanyService companyService) {
+    public PayslipPrintService(HRService hrService) {
         this.hrService = hrService;
-        this.companyService = companyService;
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long payslipId) {
         Payslip p = hrService.loadPayslipForPrint(payslipId);
-        Company company = resolveCompany();
+        Company company = p.getEmployee().getCompany();
 
         return PdfDocumentBuilder.buildA4(doc -> {
             doc.add(CompanyHeaderRenderer.build(
@@ -53,14 +50,16 @@ public class PayslipPrintService {
                 doc.add(PdfDocumentBuilder.spacer(10f));
                 doc.add(new Paragraph("Observações: " + p.getNotes(), PdfTheme.bodyFont()));
             }
+            if (p.getTaxConfigName() != null) {
+                doc.add(PdfDocumentBuilder.spacer(8f));
+                doc.add(new Paragraph("Configuração fiscal: " + p.getTaxConfigName(), PdfTheme.smallFont()));
+                if (p.getTaxLegalBasis() != null) {
+                    doc.add(new Paragraph("Base legal/configuração: " + p.getTaxLegalBasis(), PdfTheme.smallFont()));
+                }
+            }
             doc.add(PdfDocumentBuilder.spacer(30f));
             doc.add(buildSignatureBlock());
         });
-    }
-
-    private Company resolveCompany() {
-        var companies = companyService.getAllCompanies();
-        return companies.isEmpty() ? null : companies.get(0);
     }
 
     private PdfPTable buildEmployeeBlock(Payslip p) {
@@ -139,6 +138,7 @@ public class PayslipPrintService {
 
         BigDecimal total = p.getIrpsDeduction().add(p.getInssDeduction()).add(p.getOtherDeductions());
         totalLine(table, "Total de Descontos", total);
+        line(table, "INSS Patronal (informativo)", p.getEmployerInss());
         return table;
     }
 

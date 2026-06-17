@@ -1,6 +1,8 @@
 package com.phcpro.modules.fiscal.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.modules.company.repository.CompanyRepository;
 import com.phcpro.modules.fiscal.dto.CreateTaxRateRequest;
 import com.phcpro.modules.fiscal.dto.TaxRateDTO;
 import com.phcpro.modules.fiscal.model.TaxRate;
@@ -15,15 +17,23 @@ import java.util.List;
 public class TaxRateService {
 
     private final TaxRateRepository repository;
+    private final CompanyRepository companyRepository;
 
-    public TaxRateService(TaxRateRepository repository) {
+    public TaxRateService(TaxRateRepository repository, CompanyRepository companyRepository) {
         this.repository = repository;
+        this.companyRepository = companyRepository;
     }
 
     @Transactional
     public TaxRateDTO create(CreateTaxRateRequest request) {
-        if (repository.findByCode(request.code()).isPresent()) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (repository.findByCodeAndCompaniesId(request.code(), companyId).isPresent()) {
             throw new BusinessRuleException("Já existe uma taxa com o código " + request.code() + ".");
+        }
+        TaxRate shared = repository.findByCode(request.code()).orElse(null);
+        if (shared != null) {
+            shared.getCompanies().add(companyRepository.getReferenceById(companyId));
+            return toDTO(repository.save(shared));
         }
         TaxType type;
         try {
@@ -39,12 +49,13 @@ public class TaxRateService {
         t.setLegalBasis(request.legalBasis());
         t.setActive(true);
         t.setCreatedBy("SYSTEM");
+        t.getCompanies().add(companyRepository.getReferenceById(companyId));
         return toDTO(repository.save(t));
     }
 
     @Transactional
     public TaxRateDTO update(Long id, CreateTaxRateRequest request) {
-        TaxRate t = repository.findById(id)
+        TaxRate t = repository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Taxa não encontrada."));
         TaxType type;
         try {
@@ -61,7 +72,7 @@ public class TaxRateService {
 
     @Transactional
     public void deactivate(Long id) {
-        TaxRate t = repository.findById(id)
+        TaxRate t = repository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Taxa não encontrada."));
         t.setActive(false);
         repository.save(t);
@@ -69,7 +80,7 @@ public class TaxRateService {
 
     @Transactional
     public void activate(Long id) {
-        TaxRate t = repository.findById(id)
+        TaxRate t = repository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Taxa não encontrada."));
         t.setActive(true);
         repository.save(t);
@@ -77,12 +88,14 @@ public class TaxRateService {
 
     @Transactional(readOnly = true)
     public List<TaxRateDTO> getAll() {
-        return repository.findAll().stream().map(this::toDTO).toList();
+        return repository.findDistinctByCompaniesIdOrderByTypeAscRateDesc(CurrentUserContext.getCurrentCompanyId())
+                .stream().map(this::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public List<TaxRateDTO> getActive() {
-        return repository.findByActiveTrueOrderByTypeAscRateDesc().stream().map(this::toDTO).toList();
+        return repository.findDistinctByCompaniesIdAndActiveTrueOrderByTypeAscRateDesc(
+                CurrentUserContext.getCurrentCompanyId()).stream().map(this::toDTO).toList();
     }
 
     private TaxRateDTO toDTO(TaxRate t) {

@@ -31,11 +31,13 @@ import com.phcpro.modules.users.repository.AppUserRepository;
 import com.phcpro.modules.purchases.model.Supplier;
 import com.phcpro.modules.purchases.repository.SupplierRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
 @Component
+@Order(1)
 public class DataLoader implements CommandLineRunner {
 
     private final EmployeeRepository employeeRepository;
@@ -133,6 +135,7 @@ public class DataLoader implements CommandLineRunner {
     private Warehouse whMaputo;
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void run(String... args) {
         seedMozambicanTaxRates();
         seedProductCategories();
@@ -150,6 +153,19 @@ public class DataLoader implements CommandLineRunner {
         mzCompany.setEmail("contacto@phcpro.co.mz");
         mzCompany.setAddress("Avenida 24 de Julho 1500, Maputo");
         mzCompany = companyRepository.save(mzCompany);
+
+        Company seededPtCompany = ptCompany;
+        Company seededMzCompany = mzCompany;
+        productCategoryRepository.findAll().forEach(category -> {
+            category.getCompanies().add(seededPtCompany);
+            category.getCompanies().add(seededMzCompany);
+            productCategoryRepository.save(category);
+        });
+        taxRateRepository.findAll().forEach(rate -> {
+            rate.getCompanies().add(seededPtCompany);
+            rate.getCompanies().add(seededMzCompany);
+            taxRateRepository.save(rate);
+        });
 
         // Seed AppUsers matching the employees and matching roles
         AppUser mariaUser = new AppUser();
@@ -174,6 +190,14 @@ public class DataLoader implements CommandLineRunner {
         anaUser.setPassword("password");
         anaUser.setRole("ADMIN");
         anaUser.setActive(true);
+        appUserRepository.save(anaUser);
+
+        mariaUser.grantCompany(ptCompany, "EMPLOYEE");
+        joaoUser.grantCompany(ptCompany, "MANAGER");
+        anaUser.grantCompany(ptCompany, "ADMIN");
+        anaUser.grantCompany(mzCompany, "ADMIN");
+        appUserRepository.save(mariaUser);
+        appUserRepository.save(joaoUser);
         appUserRepository.save(anaUser);
 
         // Seed Warehouses
@@ -220,29 +244,38 @@ public class DataLoader implements CommandLineRunner {
 
         // 1. Seed Employees
         Employee maria = new Employee();
+        maria.setCompany(ptCompany);
+        maria.setEmployeeNumber("PT-001");
         maria.setName("Maria Santos");
         maria.setEmail("maria.santos@phcpro.pt");
         maria.setDepartment("Recursos Humanos");
         maria.setBaseSalary(new BigDecimal("1250.00"));
         maria.setRole("EMPLOYEE");
+        maria.setHireDate(java.time.LocalDate.of(2022, 1, 10));
         maria.setCreatedBy("SYSTEM");
         employeeRepository.save(maria);
 
         Employee joao = new Employee();
+        joao.setCompany(ptCompany);
+        joao.setEmployeeNumber("PT-002");
         joao.setName("João Silva");
         joao.setEmail("joao.silva@phcpro.pt");
         joao.setDepartment("Comercial");
         joao.setBaseSalary(new BigDecimal("2100.00"));
         joao.setRole("MANAGER");
+        joao.setHireDate(java.time.LocalDate.of(2021, 5, 3));
         joao.setCreatedBy("SYSTEM");
         employeeRepository.save(joao);
 
         Employee ana = new Employee();
+        ana.setCompany(mzCompany);
+        ana.setEmployeeNumber("MZ-001");
         ana.setName("Ana Costa");
         ana.setEmail("ana.costa@phcpro.pt");
         ana.setDepartment("Administração");
         ana.setBaseSalary(new BigDecimal("3800.00"));
         ana.setRole("ADMIN");
+        ana.setHireDate(java.time.LocalDate.of(2020, 2, 17));
         ana.setCreatedBy("SYSTEM");
         employeeRepository.save(ana);
 
@@ -252,6 +285,7 @@ public class DataLoader implements CommandLineRunner {
         techSol.setTaxId("501234567");
         techSol.setEmail("financeiro@techsolutions.pt");
         techSol.setAddress("Avenida da Boavista 1200, Porto");
+        techSol.getCompanies().add(ptCompany);
         clientRepository.save(techSol);
 
         Client padaria = new Client();
@@ -259,6 +293,7 @@ public class DataLoader implements CommandLineRunner {
         padaria.setTaxId("509876543");
         padaria.setEmail("geral@padariaminho.pt");
         padaria.setAddress("Rua Principal 45, Braga");
+        padaria.getCompanies().add(ptCompany);
         clientRepository.save(padaria);
 
         // 3. Seed Products
@@ -271,6 +306,7 @@ public class DataLoader implements CommandLineRunner {
         erpLic.setPurchasePrice(new BigDecimal("430.00"));
         erpLic.setMinStock(new BigDecimal("20.000"));
         erpLic.setDescription("Saco de arroz agulha de 5kg");
+        shareProduct(erpLic, ptCompany, mzCompany);
         productRepository.save(erpLic);
 
         Product support = new Product();
@@ -282,6 +318,7 @@ public class DataLoader implements CommandLineRunner {
         support.setPurchasePrice(new BigDecimal("72.00"));
         support.setMinStock(new BigDecimal("40.000"));
         support.setDescription("Pacote de acucar branco refinado de 1kg");
+        shareProduct(support, ptCompany, mzCompany);
         productRepository.save(support);
 
         Product techServ = new Product();
@@ -293,6 +330,7 @@ public class DataLoader implements CommandLineRunner {
         techServ.setPurchasePrice(new BigDecimal("130.00"));
         techServ.setMinStock(new BigDecimal("30.000"));
         techServ.setDescription("Garrafa de oleo alimentar de 1 litro");
+        shareProduct(techServ, ptCompany, mzCompany);
         productRepository.save(techServ);
 
         Product partsProduct = new Product();
@@ -304,6 +342,7 @@ public class DataLoader implements CommandLineRunner {
         partsProduct.setPurchasePrice(new BigDecimal("58.00"));
         partsProduct.setMinStock(new BigDecimal("35.000"));
         partsProduct.setDescription("Pacote de farinha de trigo de 1kg");
+        shareProduct(partsProduct, ptCompany, mzCompany);
         productRepository.save(partsProduct);
 
         Product feijao = new Product();
@@ -315,6 +354,7 @@ public class DataLoader implements CommandLineRunner {
         feijao.setPurchasePrice(new BigDecimal("140.00"));
         feijao.setMinStock(new BigDecimal("25.000"));
         feijao.setDescription("Pacote de feijao manteiga de 1kg");
+        shareProduct(feijao, ptCompany, mzCompany);
         productRepository.save(feijao);
 
         Product massa = new Product();
@@ -326,6 +366,7 @@ public class DataLoader implements CommandLineRunner {
         massa.setPurchasePrice(new BigDecimal("48.00"));
         massa.setMinStock(new BigDecimal("50.000"));
         massa.setDescription("Pacote de massa esparguete de 500g");
+        shareProduct(massa, ptCompany, mzCompany);
         productRepository.save(massa);
 
 
@@ -377,12 +418,14 @@ public class DataLoader implements CommandLineRunner {
         cgd.setName("Caixa Geral de Depósitos - Conta à Ordem");
         cgd.setAccountNumber("PT50 0035 0123 4567 8901 23");
         cgd.setBalance(new BigDecimal("18500.00"));
+        cgd.setCompany(ptCompany);
         accountRepository.save(cgd);
 
         TreasuryAccount bcp = new TreasuryAccount();
         bcp.setName("Millennium BCP - Investimentos");
         bcp.setAccountNumber("PT50 0033 0987 6543 2101 24");
         bcp.setBalance(new BigDecimal("45000.00"));
+        bcp.setCompany(mzCompany);
         accountRepository.save(bcp);
 
         // 5. Seed Support Tickets & WorkSheets
@@ -432,5 +475,9 @@ public class DataLoader implements CommandLineRunner {
                 "LODGING",
                 "Estadia de 4 dias no Hotel Ritz para conferência anual de parceiros"
         ));
+    }
+
+    private void shareProduct(Product product, Company... companies) {
+        product.getCompanies().addAll(java.util.List.of(companies));
     }
 }

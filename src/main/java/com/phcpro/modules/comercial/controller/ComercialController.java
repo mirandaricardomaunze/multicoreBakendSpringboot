@@ -23,6 +23,24 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getAllClients());
     }
 
+    @PostMapping("/clients")
+    public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid SaveClientRequest request) {
+        return ResponseEntity.ok(comercialService.createClient(
+                request.name(), request.taxId(), request.email(), request.address()));
+    }
+
+    @PutMapping("/clients/{id}")
+    public ResponseEntity<ClientDTO> updateClient(@PathVariable Long id, @RequestBody @Valid SaveClientRequest request) {
+        return ResponseEntity.ok(comercialService.updateClient(
+                id, request.name(), request.taxId(), request.email(), request.address()));
+    }
+
+    @DeleteMapping("/clients/{id}")
+    public ResponseEntity<Void> deleteClient(@PathVariable Long id) {
+        comercialService.deleteClient(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/products")
     public ResponseEntity<List<ProductDTO>> getProducts() {
         return ResponseEntity.ok(comercialService.getAllProducts());

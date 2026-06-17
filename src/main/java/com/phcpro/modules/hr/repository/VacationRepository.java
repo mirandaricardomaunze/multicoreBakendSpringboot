@@ -3,6 +3,7 @@ package com.phcpro.modules.hr.repository;
 import com.phcpro.modules.hr.model.Vacation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,6 +11,8 @@ import java.util.List;
 @Repository
 public interface VacationRepository extends JpaRepository<Vacation, Long> {
 
-    @Query("SELECT v FROM Vacation v JOIN FETCH v.employee ORDER BY v.startDate DESC, v.id DESC")
-    List<Vacation> findAllWithEmployee();
+    @Query("SELECT v FROM Vacation v JOIN FETCH v.employee e WHERE e.company.id = :companyId ORDER BY v.startDate DESC, v.id DESC")
+    List<Vacation> findAllWithEmployeeByCompanyId(@Param("companyId") Long companyId);
+
+    java.util.Optional<Vacation> findByIdAndEmployeeCompanyId(Long id, Long companyId);
 }

@@ -2,7 +2,11 @@ package com.phcpro.modules.backup.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
+import com.phcpro.modules.backup.dto.BackupVerificationDTO;
 import com.phcpro.modules.comercial.repository.ClientRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.ProductRepository;
@@ -29,6 +33,23 @@ import java.util.stream.Collectors;
 
 @Service
 public class BackupService {
+
+    private static final List<String> REQUIRED_COLLECTIONS = List.of(
+            "users",
+            "companies",
+            "clients",
+            "suppliers",
+            "products",
+            "warehouses",
+            "stocks",
+            "stockMovements",
+            "invoices",
+            "receipts",
+            "purchases",
+            "tillSessions",
+            "treasuryAccounts",
+            "auditLogs"
+    );
 
     private final AppUserRepository userRepository;
     private final CompanyRepository companyRepository;
@@ -82,22 +103,26 @@ public class BackupService {
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public synchronized String executeBackup() {
+        PermissionGuard.requireAdmin("gerar cópia de segurança");
         try {
             Map<String, Object> data = new LinkedHashMap<>();
+            Long companyId = CurrentUserContext.getCurrentCompanyId();
+            data.put("companyId", companyId);
+            data.put("generatedAt", LocalDateTime.now().toString());
 
             // 1. Users
-            data.put("users", userRepository.findAll().stream().map(u -> {
+            data.put("users", userRepository.findDistinctByCompanyAccessesCompanyIdOrderByName(companyId).stream().map(u -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", u.getId());
                 m.put("username", u.getUsername());
                 m.put("name", u.getName());
-                m.put("role", u.getRole());
+                m.put("role", u.getRoleForCompany(companyId));
                 m.put("active", u.isActive());
                 return m;
             }).collect(Collectors.toList()));
 
             // 2. Companies
-            data.put("companies", companyRepository.findAll().stream().map(c -> {
+            data.put("companies", companyRepository.findById(companyId).stream().map(c -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", c.getId());
                 m.put("name", c.getName());
@@ -107,7 +132,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 3. Clients
-            data.put("clients", clientRepository.findAll().stream().map(c -> {
+            data.put("clients", clientRepository.findDistinctByCompaniesIdOrderByName(companyId).stream().map(c -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", c.getId());
                 m.put("name", c.getName());
@@ -117,7 +142,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 4. Suppliers
-            data.put("suppliers", supplierRepository.findAll().stream().map(s -> {
+            data.put("suppliers", supplierRepository.findByCompanyId(companyId).stream().map(s -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", s.getId());
                 m.put("name", s.getName());
@@ -128,7 +153,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 5. Products
-            data.put("products", productRepository.findAll().stream().map(p -> {
+            data.put("products", productRepository.findDistinctByCompaniesIdOrderByName(companyId).stream().map(p -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", p.getId());
                 m.put("sku", p.getSku());
@@ -140,7 +165,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 6. Warehouses
-            data.put("warehouses", warehouseRepository.findAll().stream().map(w -> {
+            data.put("warehouses", warehouseRepository.findByCompanyId(companyId).stream().map(w -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", w.getId());
                 m.put("name", w.getName());
@@ -150,7 +175,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 7. Stocks
-            data.put("stocks", stockRepository.findAll().stream().map(s -> {
+            data.put("stocks", stockRepository.findByWarehouseCompanyId(companyId).stream().map(s -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", s.getId());
                 m.put("productId", s.getProduct().getId());
@@ -162,7 +187,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 8. Stock Movements
-            data.put("stockMovements", stockMovementRepository.findAll().stream().map(m -> {
+            data.put("stockMovements", stockMovementRepository.findByCompanyId(companyId).stream().map(m -> {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", m.getId());
                 map.put("movementType", m.getMovementType());
@@ -178,7 +203,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 9. Invoices
-            data.put("invoices", invoiceRepository.findAll().stream().map(i -> {
+            data.put("invoices", invoiceRepository.findByCompanyId(companyId).stream().map(i -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", i.getId());
                 m.put("invoiceNumber", i.getInvoiceNumber());
@@ -191,7 +216,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 10. Receipts
-            data.put("receipts", receiptRepository.findAll().stream().map(r -> {
+            data.put("receipts", receiptRepository.findByCompanyId(companyId).stream().map(r -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", r.getId());
                 m.put("receiptNumber", r.getReceiptNumber());
@@ -203,7 +228,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 11. Purchases
-            data.put("purchases", purchaseRepository.findAll().stream().map(p -> {
+            data.put("purchases", purchaseRepository.findByCompanyId(companyId).stream().map(p -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", p.getId());
                 m.put("purchaseNumber", p.getPurchaseNumber());
@@ -215,7 +240,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 12. Till Sessions
-            data.put("tillSessions", tillSessionRepository.findAll().stream().map(ts -> {
+            data.put("tillSessions", tillSessionRepository.findByCompanyId(companyId).stream().map(ts -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", ts.getId());
                 m.put("operator", ts.getOperator());
@@ -227,7 +252,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 13. Treasury Accounts
-            data.put("treasuryAccounts", accountRepository.findAll().stream().map(a -> {
+            data.put("treasuryAccounts", accountRepository.findByCompanyIdOrderByName(companyId).stream().map(a -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", a.getId());
                 m.put("name", a.getName());
@@ -236,7 +261,7 @@ public class BackupService {
             }).collect(Collectors.toList()));
 
             // 14. Audit Logs
-            data.put("auditLogs", auditLogRepository.findAll().stream().map(l -> {
+            data.put("auditLogs", auditLogRepository.findByCompanyIdOrderByEventTimeDesc(companyId).stream().map(l -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", l.getId());
                 m.put("username", l.getUsername());
@@ -253,7 +278,7 @@ public class BackupService {
             }
 
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-            File backupFile = new File(backupDir, "db_backup_" + timestamp + ".json");
+            File backupFile = new File(backupDir, "company_" + companyId + "_backup_" + timestamp + ".json");
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -263,5 +288,69 @@ public class BackupService {
         } catch (IOException e) {
             throw new BusinessRuleException("Falha ao criar backup de segurança: " + e.getMessage());
         }
+    }
+
+    public BackupVerificationDTO verifyBackup(String path) {
+        PermissionGuard.requireAdmin("verificar cópia de segurança");
+        if (path == null || path.isBlank()) {
+            throw new BusinessRuleException("Selecione um ficheiro de backup para verificar.");
+        }
+
+        File backupFile = new File(path);
+        if (!backupFile.exists() || !backupFile.isFile()) {
+            throw new BusinessRuleException("Ficheiro de backup não encontrado.");
+        }
+        if (!backupFile.getName().toLowerCase(Locale.ROOT).endsWith(".json")) {
+            throw new BusinessRuleException("O ficheiro selecionado não é um backup JSON válido.");
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> data = mapper.readValue(backupFile, new TypeReference<>() {});
+            Long currentCompanyId = CurrentUserContext.getCurrentCompanyId();
+            Long backupCompanyId = readCompanyId(data.get("companyId"));
+            if (!currentCompanyId.equals(backupCompanyId)) {
+                throw new BusinessRuleException("O backup pertence a outra empresa.");
+            }
+            Object generatedAt = data.get("generatedAt");
+            if (!(generatedAt instanceof String generatedAtText) || generatedAtText.isBlank()) {
+                throw new BusinessRuleException("Backup inválido: data de geração ausente.");
+            }
+
+            Map<String, Integer> itemCounts = new LinkedHashMap<>();
+            for (String section : REQUIRED_COLLECTIONS) {
+                Object value = data.get(section);
+                if (!(value instanceof List<?> items)) {
+                    throw new BusinessRuleException("Backup inválido: secção '" + section + "' ausente ou corrompida.");
+                }
+                itemCounts.put(section, items.size());
+            }
+
+            return new BackupVerificationDTO(
+                    backupFile.getName(),
+                    backupCompanyId,
+                    generatedAtText,
+                    REQUIRED_COLLECTIONS.size(),
+                    itemCounts
+            );
+        } catch (BusinessRuleException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new BusinessRuleException("Falha ao verificar backup: " + e.getMessage());
+        }
+    }
+
+    private Long readCompanyId(Object rawCompanyId) {
+        if (rawCompanyId instanceof Number number) {
+            return number.longValue();
+        }
+        if (rawCompanyId instanceof String text && !text.isBlank()) {
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                throw new BusinessRuleException("Backup inválido: empresa com identificador inválido.");
+            }
+        }
+        throw new BusinessRuleException("Backup inválido: empresa ausente.");
     }
 }

@@ -5,6 +5,7 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceLine;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
@@ -34,6 +35,7 @@ public class InvoicePrintService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
+        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         return PdfDocumentBuilder.buildA4(doc -> {
             doc.add(CompanyHeaderRenderer.build(
                     invoice.getCompany(),

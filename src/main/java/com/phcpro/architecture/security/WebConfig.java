@@ -16,15 +16,17 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(securityInterceptor).addPathPatterns("/api/**");
+        registry.addInterceptor(securityInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/auth/login");
     }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("*") // In development, allow any origin
+                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                .allowedHeaders("*")
-                .exposedHeaders("X-User-Name", "X-User-Role");
+                .allowedHeaders("Content-Type", "Authorization", "X-Company-Id")
+                .exposedHeaders("X-Company-Id");
     }
 }

@@ -1,6 +1,7 @@
 package com.phcpro.modules.fiscal.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.company.repository.CompanyRepository;
 import com.phcpro.modules.fiscal.dto.CreateWithholdingRequest;
 import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
@@ -27,6 +28,7 @@ public class WithholdingService {
 
     @Transactional
     public WithholdingRecordDTO create(CreateWithholdingRequest request) {
+        CurrentUserContext.requireCompany(request.companyId());
         var company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
 
@@ -54,6 +56,7 @@ public class WithholdingService {
     public WithholdingRecordDTO markDelivered(Long id) {
         WithholdingRecord r = repository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Registo não encontrado."));
+        CurrentUserContext.requireCompany(r.getCompany().getId());
         if ("DELIVERED".equals(r.getStatus())) {
             throw new BusinessRuleException("Já marcado como entregue.");
         }
@@ -66,6 +69,7 @@ public class WithholdingService {
     public void delete(Long id) {
         WithholdingRecord r = repository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Registo não encontrado."));
+        CurrentUserContext.requireCompany(r.getCompany().getId());
         if ("DELIVERED".equals(r.getStatus())) {
             throw new BusinessRuleException("Não é possível eliminar registos já entregues.");
         }
@@ -74,6 +78,7 @@ public class WithholdingService {
 
     @Transactional(readOnly = true)
     public List<WithholdingRecordDTO> findByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return repository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 

@@ -1,5 +1,6 @@
 package com.phcpro.modules.inventory.model;
 
+import com.phcpro.architecture.BaseEntity;
 import com.phcpro.modules.comercial.model.Product;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 @Table(name = "stock_movements")
 @Getter
 @Setter
-public class StockMovement {
+public class StockMovement extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,8 +22,9 @@ public class StockMovement {
     @Column(name = "movement_date", nullable = false)
     private LocalDateTime movementDate = LocalDateTime.now();
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "movement_type", nullable = false)
-    private String movementType; // PURCHASE, SALE, TRANSFER, CANCELLATION, ADJUSTMENT
+    private StockMovementType movementType; // PURCHASE, SALE, TRANSFER, CANCELLATION, ADJUSTMENT, RETURN
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

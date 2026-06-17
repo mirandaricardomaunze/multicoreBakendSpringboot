@@ -140,9 +140,8 @@ public class FinanceiroPanel extends JPanel {
         // Form Row 3: Submit Button
         gbc.gridy = 4;
         gbc.insets = new Insets(20, 10, 10, 10);
-        ModernButton payBtn = new ModernButton("Registar Recebimento");
+        ModernButton payBtn = UIHelper.createSuccessButton("Registar Recebimento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
-        payBtn.setGradient(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.darker());
         settlementCard.add(payBtn, gbc);
 
         settlementPanel.add(settlementCard, BorderLayout.CENTER);

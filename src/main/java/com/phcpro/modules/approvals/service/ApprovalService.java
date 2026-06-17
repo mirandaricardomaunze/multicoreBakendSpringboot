@@ -8,6 +8,7 @@ import com.phcpro.modules.approvals.model.ApprovalRequest;
 import com.phcpro.modules.approvals.model.ApprovalStatus;
 import com.phcpro.modules.approvals.repository.ApprovalHistoryRepository;
 import com.phcpro.modules.approvals.repository.ApprovalRequestRepository;
+import com.phcpro.modules.company.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,20 +23,24 @@ public class ApprovalService {
     private final ApprovalRequestRepository requestRepository;
     private final ApprovalHistoryRepository historyRepository;
     private final List<ApprovalCallback> callbacks;
+    private final CompanyRepository companyRepository;
 
     public ApprovalService(
             ApprovalRequestRepository requestRepository,
             ApprovalHistoryRepository historyRepository,
-            List<ApprovalCallback> callbacks
+            List<ApprovalCallback> callbacks,
+            CompanyRepository companyRepository
     ) {
         this.requestRepository = requestRepository;
         this.historyRepository = historyRepository;
         this.callbacks = callbacks;
+        this.companyRepository = companyRepository;
     }
 
     @Transactional
     public ApprovalRequestDTO submitRequest(String documentType, Long documentId, BigDecimal amount, String description) {
         ApprovalRequest request = new ApprovalRequest();
+        request.setCompany(companyRepository.getReferenceById(CurrentUserContext.getCurrentCompanyId()));
         request.setDocumentType(documentType);
         request.setDocumentId(documentId);
         request.setAmount(amount);
@@ -73,7 +78,7 @@ public class ApprovalService {
 
     @Transactional
     public ApprovalRequestDTO approveRequest(Long requestId, String comments) {
-        ApprovalRequest request = requestRepository.findById(requestId)
+        ApprovalRequest request = requestRepository.findByIdAndCompanyId(requestId, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Pedido de aprovação não encontrado."));
 
         if (request.getStatus() != ApprovalStatus.PENDING) {
@@ -103,7 +108,7 @@ public class ApprovalService {
 
     @Transactional
     public ApprovalRequestDTO rejectRequest(Long requestId, String reason) {
-        ApprovalRequest request = requestRepository.findById(requestId)
+        ApprovalRequest request = requestRepository.findByIdAndCompanyId(requestId, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Pedido de aprovação não encontrado."));
 
         if (request.getStatus() != ApprovalStatus.PENDING) {
@@ -136,7 +141,7 @@ public class ApprovalService {
 
     @Transactional(readOnly = true)
     public List<ApprovalRequestDTO> getPendingRequests() {
-        return requestRepository.findByStatus(ApprovalStatus.PENDING)
+        return requestRepository.findByCompanyIdAndStatus(CurrentUserContext.getCurrentCompanyId(), ApprovalStatus.PENDING)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -144,7 +149,7 @@ public class ApprovalService {
 
     @Transactional(readOnly = true)
     public List<ApprovalRequestDTO> getAllRequests() {
-        return requestRepository.findAll()
+        return requestRepository.findByCompanyIdOrderByCreatedAtDesc(CurrentUserContext.getCurrentCompanyId())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());

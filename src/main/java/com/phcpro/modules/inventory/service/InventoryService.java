@@ -1,9 +1,14 @@
 package com.phcpro.modules.inventory.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
+import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.comercial.model.Product;
+import com.phcpro.modules.comercial.repository.ProductRepository;
 import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
+import com.phcpro.modules.inventory.dto.CreateStockAdjustmentRequest;
 import com.phcpro.modules.inventory.dto.CreateWarehouseRequest;
 import com.phcpro.modules.inventory.dto.StockDTO;
 import com.phcpro.modules.inventory.dto.StockMovementDTO;
@@ -11,6 +16,7 @@ import com.phcpro.modules.inventory.dto.WarehouseDTO;
 import com.phcpro.modules.inventory.model.ProductBatch;
 import com.phcpro.modules.inventory.model.Stock;
 import com.phcpro.modules.inventory.model.StockMovement;
+import com.phcpro.modules.inventory.model.StockMovementType;
 import com.phcpro.modules.inventory.model.Warehouse;
 import com.phcpro.modules.inventory.repository.StockMovementRepository;
 import com.phcpro.modules.inventory.repository.StockRepository;
@@ -32,28 +38,36 @@ public class InventoryService {
     private final StockMovementRepository stockMovementRepository;
     private final CompanyRepository companyRepository;
     private final ProductBatchService productBatchService;
+    private final ProductRepository productRepository;
+    private final AuditLogService auditLogService;
 
     public InventoryService(
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             CompanyRepository companyRepository,
-            ProductBatchService productBatchService
+            ProductBatchService productBatchService,
+            ProductRepository productRepository,
+            AuditLogService auditLogService
     ) {
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.companyRepository = companyRepository;
         this.productBatchService = productBatchService;
+        this.productRepository = productRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
     public List<Warehouse> getWarehousesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return warehouseRepository.findByCompanyId(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<Stock> getStocksByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return stockRepository.findByWarehouseCompanyId(companyId);
     }
 
@@ -64,6 +78,7 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public List<StockMovement> getMovementsByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return stockMovementRepository.findByCompanyId(companyId);
     }
 
@@ -121,20 +136,30 @@ public class InventoryService {
             String description,
             LocalDate expirationDate
     ) {
+        if (product != null && !product.isStockTracked()) {
+            return null;
+        }
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
             throw new BusinessRuleException("Quantidade do movimento não pode ser zero.");
         }
 
+        StockMovementType type;
+        try {
+            type = StockMovementType.valueOf(movementType == null ? "" : movementType.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessRuleException("Tipo de movimento de stock inválido: " + movementType);
+        }
+
         if (quantity.compareTo(BigDecimal.ZERO) > 0) {
-            return registerEntry(product, warehouse, quantity, movementType,
+            return registerEntry(product, warehouse, quantity, type,
                     batchNumber, serialNumber, description, expirationDate);
         }
-        return registerExit(product, warehouse, quantity.negate(), movementType,
+        return registerExit(product, warehouse, quantity.negate(), type,
                 serialNumber, description);
     }
 
     private StockMovement registerEntry(Product product, Warehouse warehouse, BigDecimal quantity,
-                                         String movementType, String batchNumber, String serialNumber,
+                                         StockMovementType movementType, String batchNumber, String serialNumber,
                                          String description, LocalDate expirationDate) {
         ProductBatch batch = productBatchService.addToBatch(
                 product, warehouse, batchNumber, expirationDate, quantity);
@@ -147,7 +172,7 @@ public class InventoryService {
     }
 
     private StockMovement registerExit(Product product, Warehouse warehouse, BigDecimal absQty,
-                                        String movementType, String serialNumber, String description) {
+                                        StockMovementType movementType, String serialNumber, String description) {
         // Migração lazy: se houver Stock antigo sem lotes correspondentes, cria um LEGACY.
         ensureLegacyBatchIfNeeded(product, warehouse);
 
@@ -178,7 +203,7 @@ public class InventoryService {
     }
 
     private StockMovement saveMovement(Product product, Warehouse warehouse, BigDecimal qty,
-                                        String movementType, String batchNumber, ProductBatch batch,
+                                        StockMovementType movementType, String batchNumber, ProductBatch batch,
                                         String serialNumber, String description) {
         StockMovement movement = new StockMovement();
         movement.setProduct(product);
@@ -190,6 +215,7 @@ public class InventoryService {
         movement.setSerialNumber(serialNumber);
         movement.setDescription(description);
         movement.setMovementDate(LocalDateTime.now());
+        movement.setCreatedBy(CurrentUserContext.getUsername());
         return stockMovementRepository.save(movement);
     }
 
@@ -220,13 +246,55 @@ public class InventoryService {
         return toDTO(warehouse);
     }
 
+    @Transactional
+    public StockMovementDTO adjustStock(CreateStockAdjustmentRequest request) {
+        PermissionGuard.requireManagerOrAdmin("ajustar stock");
+        CurrentUserContext.requireCompany(request.companyId());
+        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        if (!product.isStockTracked()) {
+            throw new BusinessRuleException("Este produto não controla stock físico.");
+        }
+        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        if (!request.companyId().equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
+
+        BigDecimal current = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+                .map(Stock::getQuantity)
+                .orElse(BigDecimal.ZERO);
+        BigDecimal delta = request.countedQuantity().subtract(current);
+        if (delta.compareTo(BigDecimal.ZERO) == 0) {
+            throw new BusinessRuleException("A contagem informada é igual ao stock actual. Nenhum ajuste foi necessário.");
+        }
+
+        StockMovement movement = registerMovement(
+                product,
+                warehouse,
+                delta,
+                StockMovementType.ADJUSTMENT.name(),
+                null,
+                null,
+                "Ajuste de stock. Motivo: " + request.reason()
+                        + ". Stock anterior: " + current + "; contado: " + request.countedQuantity()
+        );
+        auditLogService.logCurrent("STOCK_ADJUSTMENT",
+                "Produto " + product.getSku() + " no armazém " + warehouse.getName()
+                        + ". Anterior: " + current + "; contado: " + request.countedQuantity()
+                        + "; diferença: " + delta + ". Motivo: " + request.reason());
+        return toDTO(movement);
+    }
+
     @Transactional(readOnly = true)
     public List<WarehouseDTO> findWarehousesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return warehouseRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public List<StockDTO> findStocksByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return stockRepository.findByWarehouseCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
@@ -237,12 +305,19 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public List<StockMovementDTO> findMovementsByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return stockMovementRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public List<com.phcpro.modules.inventory.dto.ProductBatchDTO> findBatchesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return productBatchService.findByCompany(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<com.phcpro.modules.inventory.dto.ProductBatchDTO> findNextFEFO(Long productId, Long warehouseId) {
+        return productBatchService.findNextFEFO(productId, warehouseId);
     }
 
     public WarehouseDTO toDTO(Warehouse w) {
@@ -279,7 +354,7 @@ public class InventoryService {
                 m.getWarehouse().getId(),
                 m.getWarehouse().getName(),
                 m.getQuantity(),
-                m.getMovementType(),
+                m.getMovementType() != null ? m.getMovementType().name() : null,
                 m.getBatchNumber(),
                 m.getSerialNumber(),
                 m.getDescription(),

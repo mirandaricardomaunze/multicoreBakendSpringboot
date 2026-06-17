@@ -23,6 +23,11 @@ public class ProductBatch extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Optimistic locking: protege a quantidade do lote contra consumos FEFO concorrentes.
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;

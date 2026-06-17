@@ -18,7 +18,7 @@ public final class LineItemsTableRenderer {
     public record Row(
             String sku,
             String description,
-            int quantity,
+            BigDecimal quantity,
             BigDecimal unitPrice,
             BigDecimal taxRate,
             BigDecimal discountPercentage,
@@ -44,7 +44,7 @@ public final class LineItemsTableRenderer {
         for (Row row : rows) {
             body(table, row.sku() == null ? "" : row.sku(), Element.ALIGN_LEFT);
             body(table, row.description() == null ? "" : row.description(), Element.ALIGN_LEFT);
-            body(table, String.valueOf(row.quantity()), Element.ALIGN_RIGHT);
+            body(table, formatQuantity(row.quantity()), Element.ALIGN_RIGHT);
             body(table, MoneyFormat.formatPlain(row.unitPrice()), Element.ALIGN_RIGHT);
             body(table, formatRate(row.taxRate()), Element.ALIGN_RIGHT);
             body(table, formatRate(row.discountPercentage() == null ? BigDecimal.ZERO : row.discountPercentage().movePointLeft(2)), Element.ALIGN_RIGHT);
@@ -74,5 +74,10 @@ public final class LineItemsTableRenderer {
         if (rate == null) return "0%";
         BigDecimal percent = rate.multiply(BigDecimal.valueOf(100));
         return percent.stripTrailingZeros().toPlainString() + "%";
+    }
+
+    private static String formatQuantity(BigDecimal quantity) {
+        if (quantity == null) return "0";
+        return quantity.stripTrailingZeros().toPlainString();
     }
 }

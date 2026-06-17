@@ -3,8 +3,8 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.users.model.AppUser;
-import com.phcpro.modules.users.service.AppUserService;
+import com.phcpro.desktop.client.AuthApiClient;
+import com.phcpro.desktop.session.DesktopSession;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -20,21 +20,22 @@ import java.awt.event.KeyEvent;
  */
 public class LoginDialog extends JDialog {
 
-    private final AppUserService appUserService;
+    private final AuthApiClient authApiClient;
 
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JLabel errorLabel;
-    private AppUser authenticatedUser;
+    private DesktopSession authenticatedSession;
 
-    public LoginDialog(AppUserService appUserService) {
+    public LoginDialog(AuthApiClient authApiClient) {
         super((Frame) null, "MULTICORE — Entrar", true);
-        this.appUserService = appUserService;
+        this.authApiClient = authApiClient;
 
         setSize(440, 560);
         setLocationRelativeTo(null);
         setResizable(false);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        setAlwaysOnTop(true);
         setIconImage(UIHelper.iconImage("fas-cube", 64, UIHelper.ACCENT));
         getContentPane().setBackground(UIHelper.BG_DARK);
 
@@ -42,8 +43,8 @@ public class LoginDialog extends JDialog {
         add(buildContent(), BorderLayout.CENTER);
     }
 
-    public AppUser getAuthenticatedUser() {
-        return authenticatedUser;
+    public DesktopSession getAuthenticatedSession() {
+        return authenticatedSession;
     }
 
     private JPanel buildContent() {
@@ -116,21 +117,11 @@ public class LoginDialog extends JDialog {
 
         c.gridy++;
         c.insets = new Insets(0, 0, 12, 0);
-        ModernButton loginBtn = new ModernButton("Entrar");
+        ModernButton loginBtn = UIHelper.createPrimaryButton("Entrar");
         loginBtn.setIcon(UIHelper.icon("fas-sign-in-alt", 14));
-        loginBtn.setGradient(UIHelper.ACCENT, UIHelper.ACCENT_BLUE);
         loginBtn.setPreferredSize(new Dimension(0, 42));
         loginBtn.addActionListener(e -> tryLogin());
         card.add(loginBtn, c);
-
-        c.gridy++;
-        c.insets = new Insets(0, 0, 0, 0);
-        ModernButton registerBtn = new ModernButton("Criar nova conta",
-                new Color(55, 65, 81), new Color(75, 85, 99));
-        registerBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
-        registerBtn.setPreferredSize(new Dimension(0, 38));
-        registerBtn.addActionListener(e -> openRegisterDialog());
-        card.add(registerBtn, c);
 
         g.gridy++;
         g.insets = new Insets(0, 0, 16, 0);
@@ -187,7 +178,7 @@ public class LoginDialog extends JDialog {
             return;
         }
         try {
-            authenticatedUser = appUserService.authenticate(username, password);
+            authenticatedSession = authApiClient.login(username, password);
             errorLabel.setText(" ");
             dispose();
         } catch (Exception ex) {
@@ -197,15 +188,4 @@ public class LoginDialog extends JDialog {
         }
     }
 
-    private void openRegisterDialog() {
-        RegisterDialog reg = new RegisterDialog(this, appUserService);
-        reg.setVisible(true);
-        AppUser created = reg.getCreatedUser();
-        if (created != null) {
-            usernameField.setText(created.getUsername());
-            passwordField.requestFocusInWindow();
-            errorLabel.setForeground(UIHelper.APPROVED_GREEN);
-            errorLabel.setText("Conta criada. Introduza a sua senha para entrar.");
-        }
-    }
 }

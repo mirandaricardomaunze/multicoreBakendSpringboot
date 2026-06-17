@@ -48,6 +48,27 @@ public class Payslip extends BaseEntity {
     @Column(name = "inss_deduction", nullable = false, precision = 14, scale = 2)
     private BigDecimal inssDeduction = BigDecimal.ZERO;
 
+    @Column(name = "employer_inss", nullable = false, precision = 14, scale = 2)
+    private BigDecimal employerInss = BigDecimal.ZERO;
+
+    @Column(name = "taxable_income", nullable = false, precision = 14, scale = 2)
+    private BigDecimal taxableIncome = BigDecimal.ZERO;
+
+    @Column(name = "irps_rate", nullable = false, precision = 7, scale = 4)
+    private BigDecimal irpsRate = BigDecimal.ZERO;
+
+    @Column(name = "employee_inss_rate", nullable = false, precision = 7, scale = 4)
+    private BigDecimal employeeInssRate = BigDecimal.ZERO;
+
+    @Column(name = "employer_inss_rate", nullable = false, precision = 7, scale = 4)
+    private BigDecimal employerInssRate = BigDecimal.ZERO;
+
+    @Column(name = "tax_config_name")
+    private String taxConfigName;
+
+    @Column(name = "tax_legal_basis", length = 500)
+    private String taxLegalBasis;
+
     @Column(name = "other_deductions", nullable = false, precision = 14, scale = 2)
     private BigDecimal otherDeductions = BigDecimal.ZERO;
 

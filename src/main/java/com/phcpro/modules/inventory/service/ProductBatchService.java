@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ProductBatchService {
@@ -136,6 +137,17 @@ public class ProductBatchService {
     @Transactional(readOnly = true)
     public BigDecimal sumQuantity(Long productId, Long warehouseId) {
         return batchRepository.sumQuantityByProductAndWarehouse(productId, warehouseId);
+    }
+
+    /**
+     * Devolve o próximo lote a ser consumido (FEFO) — o de validade mais próxima com qty > 0 —
+     * para um par produto/armazém. Útil para o UI mostrar de antemão que lote/validade vai sair.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ProductBatchDTO> findNextFEFO(Long productId, Long warehouseId) {
+        List<ProductBatch> available = batchRepository.findAvailableFEFO(productId, warehouseId);
+        if (available.isEmpty()) return Optional.empty();
+        return Optional.of(toDTO(available.get(0)));
     }
 
     public ProductBatchDTO toDTO(ProductBatch b) {

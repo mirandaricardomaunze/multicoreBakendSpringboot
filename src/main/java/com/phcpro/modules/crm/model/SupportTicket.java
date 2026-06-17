@@ -2,6 +2,7 @@ package com.phcpro.modules.crm.model;
 
 import com.phcpro.architecture.BaseEntity;
 import com.phcpro.modules.comercial.model.Client;
+import com.phcpro.modules.company.model.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,6 +20,10 @@ public class SupportTicket extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @Column(name = "subject", nullable = false)
     private String subject;

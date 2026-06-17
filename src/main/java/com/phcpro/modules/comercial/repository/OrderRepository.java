@@ -9,4 +9,7 @@ import java.util.List;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByCompanyId(Long companyId);
+
+    /** Encomendas que ainda não foram faturadas — usado pelo diálogo "Faturar Encomenda". */
+    List<Order> findByCompanyIdAndStatusAndInvoiceIdIsNull(Long companyId, String status);
 }

@@ -22,8 +22,34 @@ public class UIHelper {
     public static final Color APPROVED_GREEN = new Color(16, 185, 129); // Emerald-500 (#10B981)
     public static final Color REJECTED_RED = new Color(239, 68, 68);    // Red-500 (#EF4444)
     public static final Color PENDING_YELLOW = new Color(245, 158, 11);  // Amber-500 (#F59E0B)
+    private static final Color SECONDARY = new Color(75, 85, 99);       // Gray-600 (#4B5563)
+    private static final Color SECONDARY_HOVER = new Color(107, 114, 128); // Gray-500 (#6B7280)
     public static final int FORM_CONTROL_HEIGHT = 38;
     public static final int DIALOG_FORM_MIN_WIDTH = 560;
+
+    public static ModernButton createPrimaryButton(String text) {
+        return new ModernButton(text, ACCENT_BLUE, ACCENT_BLUE.brighter());
+    }
+
+    public static ModernButton createSuccessButton(String text) {
+        return new ModernButton(text, APPROVED_GREEN, APPROVED_GREEN.brighter());
+    }
+
+    public static ModernButton createDangerButton(String text) {
+        return new ModernButton(text, REJECTED_RED, REJECTED_RED.brighter());
+    }
+
+    public static ModernButton createSecondaryButton(String text) {
+        return new ModernButton(text, SECONDARY, SECONDARY_HOVER);
+    }
+
+    public static ModernButton createAddLineButton() {
+        ModernButton button = createPrimaryButton("Adicionar Linha");
+        button.setIcon(icon("fas-plus", 14));
+        button.setPreferredSize(new Dimension(180, FORM_CONTROL_HEIGHT));
+        button.setMinimumSize(new Dimension(180, FORM_CONTROL_HEIGHT));
+        return button;
+    }
 
     public static void initGlobalTheme() {
         try {
@@ -301,7 +327,7 @@ public class UIHelper {
         mainPanel.add(centerScroll, BorderLayout.CENTER);
 
         // Close button at bottom
-        ModernButton closeBtn = new ModernButton("Fechar", BG_CARD, new Color(55, 65, 81));
+        ModernButton closeBtn = createSecondaryButton("Fechar");
         closeBtn.setPreferredSize(new Dimension(100, 35));
         closeBtn.addActionListener(e -> dialog.dispose());
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));

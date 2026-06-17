@@ -39,7 +39,7 @@ public class InvoiceApprovalCallback implements ApprovalCallback {
                 inventoryService.registerMovement(
                         line.getProduct(),
                         invoice.getWarehouse(),
-                        BigDecimal.valueOf(line.getQuantity()).negate(),
+                        line.getQuantity().negate(),
                         "SALE",
                         line.getBatchNumber(),
                         line.getSerialNumber(),

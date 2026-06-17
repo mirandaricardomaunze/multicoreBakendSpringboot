@@ -38,8 +38,13 @@ public class StockTransfer extends BaseEntity {
     @JoinColumn(name = "destination_warehouse_id", nullable = false)
     private Warehouse destinationWarehouse;
 
+    /**
+     * Ciclo de vida da guia. Nasce PENDING_APPROVAL — o stock só sai do armazém de origem
+     * quando um MANAGER/ADMIN aprova (status APPROVED). REJECTED/CANCELLED nunca movem stock.
+     */
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "COMPLETED"; // DRAFT, COMPLETED, CANCELLED
+    private TransferStatus status = TransferStatus.PENDING_APPROVAL;
 
     @Column(name = "responsible")
     private String responsible;
@@ -49,6 +54,18 @@ public class StockTransfer extends BaseEntity {
 
     @Column(name = "notes", length = 500)
     private String notes;
+
+    /** Quem aprovou/rejeitou a guia (username). Null enquanto pendente. */
+    @Column(name = "approved_by")
+    private String approvedBy;
+
+    /** Momento da decisão de aprovação/rejeição. Null enquanto pendente. */
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    /** Motivo da rejeição, quando status = REJECTED. */
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
 
     @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<StockTransferLine> lines = new ArrayList<>();

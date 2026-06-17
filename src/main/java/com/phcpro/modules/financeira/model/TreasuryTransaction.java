@@ -22,8 +22,9 @@ public class TreasuryTransaction extends BaseEntity {
     @JoinColumn(name = "account_id", nullable = false)
     private TreasuryAccount treasuryAccount;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
-    private String transactionType; // "DEBIT" (Inflow/Receita) or "CREDIT" (Outflow/Despesa)
+    private TransactionType transactionType; // DEBIT (Inflow/Receita) ou CREDIT (Outflow/Despesa)
 
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;

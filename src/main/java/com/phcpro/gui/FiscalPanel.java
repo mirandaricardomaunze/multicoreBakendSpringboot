@@ -12,6 +12,7 @@ import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
 import com.phcpro.modules.fiscal.service.FiscalSummaryService;
 import com.phcpro.modules.fiscal.service.TaxRateService;
 import com.phcpro.modules.fiscal.service.WithholdingService;
+import com.phcpro.modules.hr.service.PayrollTaxService;
 import com.phcpro.modules.printing.IvaDeclarationPrintService;
 import com.phcpro.modules.printing.PdfFileSaver;
 
@@ -39,6 +40,7 @@ public class FiscalPanel extends JPanel {
     private final TaxRateService taxRateService;
     private final WithholdingService withholdingService;
     private final FiscalSummaryService fiscalSummaryService;
+    private final PayrollTaxService payrollTaxService;
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
 
     // IVA tab
@@ -57,16 +59,23 @@ public class FiscalPanel extends JPanel {
     private DefaultTableModel withholdingsModel;
     private JTable withholdingsTable;
     private List<WithholdingRecordDTO> withholdingsList = new ArrayList<>();
+    private JSpinner payrollYearSpinner;
+    private JSpinner payrollMonthSpinner;
+    private DefaultTableModel payrollFiscalModel;
+    private JLabel payrollIrpsLabel;
+    private JLabel payrollInssLabel;
 
     public FiscalPanel(
             TaxRateService taxRateService,
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
+            PayrollTaxService payrollTaxService,
             IvaDeclarationPrintService ivaDeclarationPrintService
     ) {
         this.taxRateService = taxRateService;
         this.withholdingService = withholdingService;
         this.fiscalSummaryService = fiscalSummaryService;
+        this.payrollTaxService = payrollTaxService;
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
 
         setLayout(new BorderLayout(0, 10));
@@ -80,6 +89,7 @@ public class FiscalPanel extends JPanel {
         tabs.addTab("Apuramento IVA",   UIHelper.icon("fas-percent", 16, UIHelper.TEXT_LIGHT),       buildIvaTab());
         tabs.addTab("Taxas Fiscais",    UIHelper.icon("fas-balance-scale", 16, UIHelper.TEXT_LIGHT), buildTaxRatesTab());
         tabs.addTab("Retenções na Fonte", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), buildWithholdingsTab());
+        tabs.addTab("IRPS & INSS Salarial", UIHelper.icon("fas-users-cog", 16, UIHelper.TEXT_LIGHT), buildPayrollFiscalTab());
         tabs.addTab("Declarações",      UIHelper.icon("fas-file-pdf", 16, UIHelper.TEXT_LIGHT),      buildDeclarationsTab());
 
         add(tabs, BorderLayout.CENTER);
@@ -93,6 +103,62 @@ public class FiscalPanel extends JPanel {
         loadTaxRates();
         loadWithholdings();
         recomputeIva();
+        loadPayrollFiscal();
+    }
+
+    private JPanel buildPayrollFiscalTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        controls.setOpaque(false);
+        controls.add(filterLabel("Período:"));
+        payrollMonthSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getMonthValue(), 1, 12, 1));
+        payrollYearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
+        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar Mapa");
+        refresh.addActionListener(e -> loadPayrollFiscal());
+        controls.add(payrollMonthSpinner);
+        controls.add(payrollYearSpinner);
+        controls.add(refresh);
+
+        payrollIrpsLabel = new JLabel("IRPS: 0.00 MT");
+        payrollInssLabel = new JLabel("INSS total: 0.00 MT");
+        payrollIrpsLabel.setForeground(UIHelper.TEXT_LIGHT);
+        payrollInssLabel.setForeground(UIHelper.TEXT_LIGHT);
+        controls.add(Box.createRigidArea(new Dimension(20, 0)));
+        controls.add(payrollIrpsLabel);
+        controls.add(payrollInssLabel);
+        tab.add(controls, BorderLayout.NORTH);
+
+        payrollFiscalModel = new DefaultTableModel(
+                new String[]{"Nº", "Colaborador", "NUIT", "Nº INSS", "Bruto", "Tributável", "IRPS", "INSS Trab.", "INSS Patronal"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable table = new JTable(payrollFiscalModel);
+        UIHelper.styleTable(table);
+        JScrollPane scroll = new JScrollPane(table);
+        UIHelper.styleScrollPane(scroll);
+        tab.add(scroll, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private void loadPayrollFiscal() {
+        if (payrollFiscalModel == null) return;
+        int year = (Integer) payrollYearSpinner.getValue();
+        int month = (Integer) payrollMonthSpinner.getValue();
+        var summary = payrollTaxService.fiscalSummary(year, month);
+        payrollFiscalModel.setRowCount(0);
+        for (var line : summary.lines()) {
+            payrollFiscalModel.addRow(new Object[]{
+                    line.employeeNumber(), line.employeeName(), line.taxId(), line.inssNumber(),
+                    String.format("%,.2f", line.grossPay()), String.format("%,.2f", line.taxableIncome()),
+                    String.format("%,.2f", line.irps()), String.format("%,.2f", line.employeeInss()),
+                    String.format("%,.2f", line.employerInss())
+            });
+        }
+        payrollIrpsLabel.setText(String.format("IRPS: %,.2f MT", summary.irpsWithheld()));
+        payrollInssLabel.setText(String.format("INSS total: %,.2f MT", summary.totalInss()));
     }
 
     // ─── Tab 1: Apuramento IVA ────────────────────────────────────────────
@@ -120,7 +186,7 @@ public class FiscalPanel extends JPanel {
         periodPanel.add(new JLabel("/"));
         periodPanel.add(ivaYearSpinner);
 
-        ModernButton printBtn = new ModernButton("Imprimir Declaração IVA", new Color(99, 102, 241), new Color(129, 140, 248));
+        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Declaração IVA");
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> printIvaDeclaration());
         periodPanel.add(Box.createRigidArea(new Dimension(20, 0)));
@@ -274,11 +340,11 @@ public class FiscalPanel extends JPanel {
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Tabela de Taxas Fiscais"), BorderLayout.WEST);
 
-        ModernButton newBtn = new ModernButton("Nova Taxa", new Color(16, 185, 129), new Color(52, 211, 153));
+        ModernButton newBtn = UIHelper.createSuccessButton("Nova Taxa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton editBtn = new ModernButton("Editar", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
+        ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        ModernButton toggleBtn = new ModernButton("Activar / Desactivar", new Color(107, 114, 128), new Color(156, 163, 175));
+        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar / Desactivar");
         toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         newBtn.addActionListener(e -> openTaxRateDialog(null));
         editBtn.addActionListener(e -> {
@@ -405,11 +471,11 @@ public class FiscalPanel extends JPanel {
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Retenções na Fonte"), BorderLayout.WEST);
 
-        ModernButton newBtn = new ModernButton("Registar Retenção", new Color(16, 185, 129), new Color(52, 211, 153));
+        ModernButton newBtn = UIHelper.createSuccessButton("Registar Retenção");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton deliverBtn = new ModernButton("Marcar como Entregue", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.brighter());
+        ModernButton deliverBtn = UIHelper.createSuccessButton("Marcar como Entregue");
         deliverBtn.setIcon(UIHelper.icon("fas-check", 14));
-        ModernButton deleteBtn = new ModernButton("Eliminar", UIHelper.REJECTED_RED, UIHelper.REJECTED_RED.brighter());
+        ModernButton deleteBtn = UIHelper.createDangerButton("Eliminar");
         deleteBtn.setIcon(UIHelper.icon("fas-trash", 14));
         newBtn.addActionListener(e -> openWithholdingDialog());
         deliverBtn.addActionListener(e -> deliverWithholding());
@@ -565,8 +631,7 @@ public class FiscalPanel extends JPanel {
         hint.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         hint.setForeground(UIHelper.TEXT_MUTED);
 
-        ModernButton ivaDocBtn = new ModernButton("Declaração Mensal de IVA",
-                new Color(13, 148, 136), new Color(20, 184, 166));
+        ModernButton ivaDocBtn = UIHelper.createSecondaryButton("Declaração Mensal de IVA");
         ivaDocBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         ivaDocBtn.setPreferredSize(new Dimension(280, 44));
         ivaDocBtn.addActionListener(e -> printIvaDeclaration());

@@ -1,9 +1,13 @@
 package com.phcpro.modules.comercial.model;
 
 import com.phcpro.architecture.BaseEntity;
+import com.phcpro.modules.company.model.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Categoria de produto (Alimentação, Bebidas, Higiene, Limpeza, …).
@@ -31,4 +35,13 @@ public class ProductCategory extends BaseEntity {
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "product_category_companies",
+            joinColumns = @JoinColumn(name = "category_id"),
+            inverseJoinColumns = @JoinColumn(name = "company_id"),
+            uniqueConstraints = @UniqueConstraint(name = "uk_product_category_company", columnNames = {"category_id", "company_id"})
+    )
+    private Set<Company> companies = new LinkedHashSet<>();
 }

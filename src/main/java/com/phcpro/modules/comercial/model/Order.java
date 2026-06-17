@@ -9,6 +9,7 @@ import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.inventory.model.Warehouse;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,11 @@ public class Order extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    /** Nome livre do comprador quando a encomenda é para "Consumidor Final" — não cria registo
+     *  de cliente, só serve como rótulo no recibo / consulta. Null para clientes registados. */
+    @Column(name = "walk_in_name", length = 120)
+    private String walkInName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
@@ -54,6 +60,18 @@ public class Order extends BaseEntity {
 
     @Column(name = "invoice_id")
     private Long invoiceId;
+
+    /** Timestamp da última impressão da encomenda (null se nunca foi impressa). */
+    @Column(name = "printed_at")
+    private LocalDateTime printedAt;
+
+    /** Quantas vezes a encomenda foi impressa. Usado pelo UI para avisar de re-impressões. */
+    @Column(name = "print_count", nullable = false)
+    private int printCount = 0;
+
+    /** Username do operador que fez a última impressão. */
+    @Column(name = "last_printed_by", length = 80)
+    private String lastPrintedBy;
 
     public void addLine(OrderLine line) {
         lines.add(line);

@@ -51,11 +51,11 @@ public class ModernFormDialog {
         main.add(contentPanel, BorderLayout.CENTER);
 
         // Buttons
-        ModernButton cancelBtn = new ModernButton("Cancelar", UIHelper.BG_CARD, new Color(55, 65, 81));
+        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar");
         cancelBtn.setPreferredSize(new Dimension(110, 38));
         cancelBtn.addActionListener(e -> dialog.dispose());
 
-        ModernButton saveBtn = new ModernButton("💾  Gravar", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.brighter());
+        ModernButton saveBtn = UIHelper.createSuccessButton("💾  Gravar");
         saveBtn.setPreferredSize(new Dimension(150, 38));
         saveBtn.addActionListener(e -> attemptSave());
 

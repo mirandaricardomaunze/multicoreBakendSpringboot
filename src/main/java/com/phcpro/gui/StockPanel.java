@@ -6,6 +6,7 @@ import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductDTO;
 import com.phcpro.modules.comercial.service.ComercialService;
+import com.phcpro.modules.inventory.dto.CreateStockAdjustmentRequest;
 import com.phcpro.modules.inventory.dto.CreateStockTransferLineRequest;
 import com.phcpro.modules.inventory.dto.CreateStockTransferRequest;
 import com.phcpro.modules.inventory.dto.StockTransferDTO;
@@ -23,7 +24,9 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,9 +77,9 @@ public class StockPanel extends JPanel {
 
         topBar.add(UIHelper.createHeading("Controle de Stock & Armazéns"), BorderLayout.WEST);
 
-        ModernButton newProductBtn = new ModernButton("Cadastrar Produto", new Color(16, 185, 129), new Color(52, 211, 153));
+        ModernButton newProductBtn = UIHelper.createSuccessButton("Cadastrar Produto");
         newProductBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton newWarehouseBtn = new ModernButton("Criar Armazém", new Color(139, 92, 246), new Color(167, 139, 250));
+        ModernButton newWarehouseBtn = UIHelper.createPrimaryButton("Criar Armazém");
         newWarehouseBtn.setIcon(UIHelper.icon("fas-warehouse", 14));
         JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         catalogueGroup.setOpaque(false);
@@ -123,11 +126,15 @@ public class StockPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Lotes & Validades"), BorderLayout.WEST);
-        ModernButton exportBtn = new ModernButton("Exportar PDF", new Color(99, 102, 241), new Color(129, 140, 248));
+        ModernButton addBatchBtn = UIHelper.createSuccessButton("Adicionar Lote/Validade");
+        addBatchBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        addBatchBtn.addActionListener(e -> createBatchEntryDialog(null));
+        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         exportBtn.addActionListener(e -> exportBatchesPdf());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actions.setOpaque(false);
+        actions.add(addBatchBtn);
         actions.add(exportBtn);
         header.add(actions, BorderLayout.EAST);
 
@@ -297,7 +304,7 @@ public class StockPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Níveis de Stock"), BorderLayout.WEST);
-        ModernButton printInventoryBtn = new ModernButton("Imprimir Inventário", new Color(99, 102, 241), new Color(129, 140, 248));
+        ModernButton printInventoryBtn = UIHelper.createSecondaryButton("Imprimir Inventário");
         printInventoryBtn.setIcon(UIHelper.icon("fas-print", 14));
         printInventoryBtn.addActionListener(e -> printInventoryReport());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
@@ -391,7 +398,7 @@ public class StockPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton adjustmentBtn = new ModernButton("Ajuste / Inventário", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
+        ModernButton adjustmentBtn = UIHelper.createPrimaryButton("Ajuste / Inventário");
         adjustmentBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         adjustmentBtn.addActionListener(e -> createAdjustmentDialog());
         JPanel header = new JPanel(new BorderLayout());
@@ -426,11 +433,17 @@ public class StockPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton transferBtn = new ModernButton("Nova Transferência", new Color(245, 158, 11), new Color(251, 191, 36));
+        ModernButton transferBtn = UIHelper.createPrimaryButton("Nova Transferência");
         transferBtn.setIcon(UIHelper.icon("fas-truck", 14));
-        ModernButton printTransferBtn = new ModernButton("Imprimir Guia", new Color(99, 102, 241), new Color(129, 140, 248));
+        ModernButton approveTransferBtn = UIHelper.createSecondaryButton("Aprovar");
+        approveTransferBtn.setIcon(UIHelper.icon("fas-check", 14));
+        ModernButton rejectTransferBtn = UIHelper.createSecondaryButton("Rejeitar");
+        rejectTransferBtn.setIcon(UIHelper.icon("fas-times", 14));
+        ModernButton printTransferBtn = UIHelper.createSecondaryButton("Imprimir Guia");
         printTransferBtn.setIcon(UIHelper.icon("fas-print", 14));
         transferBtn.addActionListener(e -> createTransferDialog());
+        approveTransferBtn.addActionListener(e -> approveSelectedTransfer());
+        rejectTransferBtn.addActionListener(e -> rejectSelectedTransfer());
         printTransferBtn.addActionListener(e -> printSelectedTransfer());
 
         JPanel header = new JPanel(new BorderLayout());
@@ -438,6 +451,8 @@ public class StockPanel extends JPanel {
         header.add(UIHelper.createSubheading("Transferências entre Armazéns"), BorderLayout.WEST);
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         headerActions.setOpaque(false);
+        headerActions.add(approveTransferBtn);
+        headerActions.add(rejectTransferBtn);
         headerActions.add(printTransferBtn);
         headerActions.add(transferBtn);
         header.add(headerActions, BorderLayout.EAST);
@@ -679,17 +694,13 @@ public class StockPanel extends JPanel {
 
         JComboBox<String> prodCombo = new JComboBox<>();
         JComboBox<String> whCombo = new JComboBox<>();
-        JTextField qtyField = new JTextField();
-        JTextField batchField = new JTextField();
-        JTextField serialField = new JTextField();
-        JTextField descField = new JTextField("Ajuste manual de inventário");
+        JTextField countedField = new JTextField();
+        JTextField reasonField = new JTextField("Contagem física de inventário");
 
         UIHelper.styleComboBox(prodCombo);
         UIHelper.styleComboBox(whCombo);
-        UIHelper.styleTextField(qtyField);
-        UIHelper.styleTextField(batchField);
-        UIHelper.styleTextField(serialField);
-        UIHelper.styleTextField(descField);
+        UIHelper.styleTextField(countedField);
+        UIHelper.styleTextField(reasonField);
 
         for (ProductDTO p : products) {
             prodCombo.addItem(p.name());
@@ -701,13 +712,11 @@ public class StockPanel extends JPanel {
         JPanel dialogPanel = UIHelper.createDialogForm(
                 "Selecionar Artigo:", prodCombo,
                 "Selecionar Armazém:", whCombo,
-                "Quantidade (use - para saídas, ex: -10):", qtyField,
-                "Número de Lote (se aplicável):", batchField,
-                "Número de Série (se aplicável):", serialField,
-                "Motivo / Descrição:", descField
+                "Quantidade contada:", countedField,
+                "Motivo / Descrição:", reasonField
         );
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Registar Ajuste de Inventário", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Contagem / Ajuste de Stock", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option == JOptionPane.OK_OPTION) {
             int prodIdx = prodCombo.getSelectedIndex();
             int whIdx = whCombo.getSelectedIndex();
@@ -718,38 +727,154 @@ public class StockPanel extends JPanel {
             Warehouse selectedWarehouse = warehousesList.get(whIdx);
 
             try {
-                BigDecimal qty = new BigDecimal(qtyField.getText().trim());
-                String batch = batchField.getText().trim();
-                if (batch.isEmpty()) batch = null;
+                BigDecimal counted = new BigDecimal(countedField.getText().trim().replace(",", "."));
+                String reason = reasonField.getText().trim();
+                if (reason.isBlank()) {
+                    JOptionPane.showMessageDialog(this, "Indique o motivo do ajuste.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
 
-                String serial = serialField.getText().trim();
-                if (serial.isEmpty()) serial = null;
+                inventoryService.adjustStock(new CreateStockAdjustmentRequest(
+                        CurrentUserContext.getCurrentCompanyId(),
+                        selectedProductDTO.id(),
+                        selectedWarehouse.getId(),
+                        counted,
+                        reason
+                ));
 
-                String desc = descField.getText().trim();
-
-                // Map ProductDTO to Product entity
-                com.phcpro.modules.comercial.model.Product p = new com.phcpro.modules.comercial.model.Product();
-                p.setId(selectedProductDTO.id());
-                p.setName(selectedProductDTO.name());
-                p.setSku(selectedProductDTO.sku());
-
-                inventoryService.registerMovement(
-                        p,
-                        selectedWarehouse,
-                        qty,
-                        "ADJUSTMENT",
-                        batch,
-                        serial,
-                        desc
-                );
-
-                JOptionPane.showMessageDialog(this, "Ajuste de inventário registado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Contagem de stock registada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 onPanelSelected();
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Quantidade inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    /**
+     * Diálogo profissional de entrada de lote com validade. Se {@code preselected} for indicado,
+     * pré-selecciona o produto (usado depois de cadastrar um produto novo).
+     */
+    private void createBatchEntryDialog(ProductDTO preselected) {
+        List<ProductDTO> products = comercialService.getAllProducts();
+        if (products.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre primeiro um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (warehousesList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Crie primeiro um armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JComboBox<String> prodCombo = new JComboBox<>();
+        JComboBox<String> whCombo = new JComboBox<>();
+        JTextField qtyField = new JTextField();
+        JTextField expirationField = new JTextField();
+        JTextField batchField = new JTextField();
+        JTextField serialField = new JTextField();
+        JTextField descField = new JTextField("Entrada de lote/validade");
+
+        UIHelper.styleComboBox(prodCombo);
+        UIHelper.styleComboBox(whCombo);
+        UIHelper.styleTextField(qtyField);
+        UIHelper.styleTextField(expirationField);
+        UIHelper.styleTextField(batchField);
+        UIHelper.styleTextField(serialField);
+        UIHelper.styleTextField(descField);
+
+        expirationField.putClientProperty("JTextField.placeholderText", "yyyy-MM-dd (ex: 2027-12-31)");
+        batchField.putClientProperty("JTextField.placeholderText", "Opcional — gerado a partir da validade se vazio");
+        serialField.putClientProperty("JTextField.placeholderText", "Opcional");
+
+        for (ProductDTO p : products) {
+            prodCombo.addItem(p.sku() + " — " + p.name());
+        }
+        for (Warehouse w : warehousesList) {
+            whCombo.addItem(w.getName());
+        }
+        if (preselected != null) {
+            for (int i = 0; i < products.size(); i++) {
+                if (products.get(i).id().equals(preselected.id())) {
+                    prodCombo.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+
+        JPanel dialogPanel = UIHelper.createDialogForm(
+                "Produto:", prodCombo,
+                "Armazém:", whCombo,
+                "Quantidade:", qtyField,
+                "Validade (yyyy-MM-dd):", expirationField,
+                "Nº Lote:", batchField,
+                "Nº Série:", serialField,
+                "Descrição:", descField
+        );
+
+        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
+                "Adicionar Lote / Validade", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option != JOptionPane.OK_OPTION) return;
+
+        int prodIdx = prodCombo.getSelectedIndex();
+        int whIdx = whCombo.getSelectedIndex();
+        if (prodIdx < 0 || whIdx < 0) return;
+
+        BigDecimal qty;
+        try {
+            qty = new BigDecimal(qtyField.getText().trim());
+            if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                JOptionPane.showMessageDialog(this, "Quantidade deve ser maior que zero.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantidade inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String expRaw = expirationField.getText().trim();
+        if (expRaw.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Validade é obrigatória (formato yyyy-MM-dd).", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        LocalDate expirationDate;
+        try {
+            expirationDate = LocalDate.parse(expRaw);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Validade inválida. Use o formato yyyy-MM-dd (ex: 2027-12-31).", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (expirationDate.isBefore(LocalDate.now())) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "A validade já está expirada. Pretende registar mesmo assim?",
+                    "Confirmação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+        }
+
+        String batch = batchField.getText().trim();
+        if (batch.isEmpty()) batch = null;
+        String serial = serialField.getText().trim();
+        if (serial.isEmpty()) serial = null;
+        String desc = descField.getText().trim();
+
+        ProductDTO selectedDTO = products.get(prodIdx);
+        Warehouse selectedWarehouse = warehousesList.get(whIdx);
+
+        com.phcpro.modules.comercial.model.Product p = new com.phcpro.modules.comercial.model.Product();
+        p.setId(selectedDTO.id());
+        p.setName(selectedDTO.name());
+        p.setSku(selectedDTO.sku());
+
+        try {
+            inventoryService.registerMovement(
+                    p, selectedWarehouse, qty, "ENTRY",
+                    batch, serial, desc, expirationDate);
+            JOptionPane.showMessageDialog(this,
+                    "Lote registado com sucesso para '" + selectedDTO.name() + "'.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            onPanelSelected();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -829,7 +954,7 @@ public class StockPanel extends JPanel {
                 if (catIdx > 0 && (catIdx - 1) < categories.size()) {
                     categoryId = categories.get(catIdx - 1).id();
                 }
-                comercialService.createProduct(
+                ProductDTO created = comercialService.createProduct(
                         sku,
                         reference.isEmpty() ? null : reference,
                         barcode.isEmpty() ? null : barcode,
@@ -840,9 +965,15 @@ public class StockPanel extends JPanel {
                         unitsPerBox,
                         categoryId,
                         desc.isEmpty() ? null : desc);
-                JOptionPane.showMessageDialog(this, "Produto '" + name + "' cadastrado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
                 onPanelSelected();
+
+                int addStock = JOptionPane.showConfirmDialog(this,
+                        "Produto '" + name + "' cadastrado.\nDeseja adicionar stock inicial com validade agora?",
+                        "Adicionar stock inicial", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (addStock == JOptionPane.YES_OPTION) {
+                    createBatchEntryDialog(created);
+                }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Os valores de preço e stock mínimo devem ser numéricos.", "Erro", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
@@ -883,10 +1014,10 @@ public class StockPanel extends JPanel {
         UIHelper.styleTextField(vehicleField);
         UIHelper.styleTextField(notesField);
 
-        String[] lineCols = {"Produto", "Quantidade"};
+        String[] lineCols = {"Produto", "Quantidade", "Lote (FEFO)", "Validade (FEFO)"};
         DefaultTableModel linesModel = new DefaultTableModel(lineCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return c == 1; }
+            public boolean isCellEditable(int r, int c) { return c == 0 || c == 1; }
         };
         JTable linesTable = new JTable(linesModel);
         UIHelper.styleTable(linesTable);
@@ -897,11 +1028,44 @@ public class StockPanel extends JPanel {
                 .setCellEditor(new DefaultCellEditor(productEditorCombo));
 
         JScrollPane linesScroll = new JScrollPane(linesTable);
-        linesScroll.setPreferredSize(new Dimension(520, 180));
+        linesScroll.setPreferredSize(new Dimension(640, 200));
 
-        ModernButton addLineBtn = new ModernButton("+ Linha", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
-        ModernButton removeLineBtn = new ModernButton("- Remover", new Color(220, 38, 38), new Color(248, 113, 113));
-        addLineBtn.addActionListener(ev -> linesModel.addRow(new Object[]{products.get(0).name(), "1"}));
+        Runnable refreshTransferFEFO = () -> {
+            int wIdx = originCombo.getSelectedIndex();
+            Warehouse origin = (wIdx >= 0 && wIdx < warehousesList.size()) ? warehousesList.get(wIdx) : null;
+            for (int i = 0; i < linesModel.getRowCount(); i++) {
+                String name = String.valueOf(linesModel.getValueAt(i, 0));
+                ProductDTO p = products.stream().filter(x -> x.name().equals(name)).findFirst().orElse(null);
+                if (p == null || origin == null) {
+                    linesModel.setValueAt("", i, 2);
+                    linesModel.setValueAt("", i, 3);
+                    continue;
+                }
+                try {
+                    var opt = inventoryService.findNextFEFO(p.id(), origin.getId());
+                    if (opt.isPresent()) {
+                        var b = opt.get();
+                        linesModel.setValueAt(b.batchNumber() == null ? "—" : b.batchNumber(), i, 2);
+                        linesModel.setValueAt(b.expirationDate() == null
+                                ? "—"
+                                : b.expirationDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")), i, 3);
+                    } else {
+                        linesModel.setValueAt("Sem stock", i, 2);
+                        linesModel.setValueAt("—", i, 3);
+                    }
+                } catch (Exception ignored) {
+                    linesModel.setValueAt("", i, 2);
+                    linesModel.setValueAt("", i, 3);
+                }
+            }
+        };
+
+        ModernButton addLineBtn = UIHelper.createAddLineButton();
+        ModernButton removeLineBtn = UIHelper.createDangerButton("- Remover");
+        addLineBtn.addActionListener(ev -> {
+            linesModel.addRow(new Object[]{products.get(0).name(), "1", "", ""});
+            refreshTransferFEFO.run();
+        });
         removeLineBtn.addActionListener(ev -> {
             int sel = linesTable.getSelectedRow();
             if (sel >= 0) linesModel.removeRow(sel);
@@ -911,7 +1075,12 @@ public class StockPanel extends JPanel {
         lineButtons.add(addLineBtn);
         lineButtons.add(removeLineBtn);
 
-        linesModel.addRow(new Object[]{products.get(0).name(), "1"});
+        linesModel.addRow(new Object[]{products.get(0).name(), "1", "", ""});
+        originCombo.addActionListener(ev -> refreshTransferFEFO.run());
+        linesModel.addTableModelListener(ev -> {
+            if (ev.getColumn() == 0) refreshTransferFEFO.run();
+        });
+        refreshTransferFEFO.run();
 
         JPanel header = UIHelper.createDialogForm(
                 "Armazém de Origem:", originCombo,
@@ -990,12 +1159,66 @@ public class StockPanel extends JPanel {
             onPanelSelected();
 
             int print = JOptionPane.showConfirmDialog(this,
-                    "Transferência " + created.transferNumber() + " registada com sucesso.\n"
+                    "Guia " + created.transferNumber() + " registada e PENDENTE DE APROVAÇÃO.\n"
+                            + "O stock só sai do armazém de origem após aprovação (MANAGER/ADMIN).\n\n"
                             + "Deseja imprimir a Guia de Transferência agora?",
                     "Sucesso", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
             if (print == JOptionPane.YES_OPTION) {
                 printTransfer(created.id(), created.transferNumber());
             }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void approveSelectedTransfer() {
+        int row = transferTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione uma guia na tabela primeiro.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        StockTransferDTO selected = transfersList.get(row);
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Aprovar a guia " + selected.transferNumber() + "?\n"
+                        + "O stock vai sair de '" + selected.originWarehouseName()
+                        + "' e entrar em '" + selected.destinationWarehouseName() + "'.",
+                "Confirmar aprovação", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        try {
+            stockTransferService.approve(selected.id());
+            onPanelSelected();
+            JOptionPane.showMessageDialog(this,
+                    "Guia " + selected.transferNumber() + " aprovada. Stock movido — ver aba Movimentos.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void rejectSelectedTransfer() {
+        int row = transferTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione uma guia na tabela primeiro.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        StockTransferDTO selected = transfersList.get(row);
+        String reason = JOptionPane.showInputDialog(this,
+                "Motivo da rejeição da guia " + selected.transferNumber() + ":",
+                "Rejeitar guia", JOptionPane.QUESTION_MESSAGE);
+        if (reason == null) return; // cancelou
+        if (reason.isBlank()) {
+            JOptionPane.showMessageDialog(this, "É obrigatório indicar o motivo da rejeição.",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            stockTransferService.reject(selected.id(), reason.trim());
+            onPanelSelected();
+            JOptionPane.showMessageDialog(this,
+                    "Guia " + selected.transferNumber() + " rejeitada. Nenhum stock foi movido.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }

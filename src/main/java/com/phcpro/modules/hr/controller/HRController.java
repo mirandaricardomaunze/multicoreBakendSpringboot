@@ -9,6 +9,7 @@ import com.phcpro.modules.hr.dto.EmployeeDTO;
 import com.phcpro.modules.hr.dto.ExpenseClaimDTO;
 import com.phcpro.modules.hr.dto.PayslipDTO;
 import com.phcpro.modules.hr.dto.VacationDTO;
+import com.phcpro.modules.hr.dto.UpsertEmployeeRequest;
 import com.phcpro.modules.hr.service.HRService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,27 @@ public class HRController {
         return ResponseEntity.ok(hrService.getAllEmployees());
     }
 
+    @PostMapping("/employees")
+    public ResponseEntity<EmployeeDTO> createEmployee(@RequestBody @Valid UpsertEmployeeRequest request) {
+        return ResponseEntity.ok(hrService.createEmployee(request));
+    }
+
+    @PutMapping("/employees/{id}")
+    public ResponseEntity<EmployeeDTO> updateEmployee(
+            @PathVariable Long id,
+            @RequestBody @Valid UpsertEmployeeRequest request
+    ) {
+        return ResponseEntity.ok(hrService.updateEmployee(id, request));
+    }
+
+    @PostMapping("/employees/{id}/status")
+    public ResponseEntity<EmployeeDTO> changeEmployeeStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        return ResponseEntity.ok(hrService.changeEmployeeStatus(id, body.get("status")));
+    }
+
     @GetMapping("/expenses")
     public ResponseEntity<List<ExpenseClaimDTO>> getExpenses() {
         return ResponseEntity.ok(hrService.getAllExpenses());
@@ -52,6 +74,11 @@ public class HRController {
     @PostMapping("/payslips")
     public ResponseEntity<PayslipDTO> createPayslip(@RequestBody @Valid CreatePayslipRequest request) {
         return ResponseEntity.ok(hrService.createPayslip(request));
+    }
+
+    @PostMapping("/payslips/process/{year}/{month}")
+    public ResponseEntity<List<PayslipDTO>> processPayroll(@PathVariable int year, @PathVariable int month) {
+        return ResponseEntity.ok(hrService.processMonthlyPayroll(year, month));
     }
 
     @PostMapping("/payslips/{id}/mark-paid")

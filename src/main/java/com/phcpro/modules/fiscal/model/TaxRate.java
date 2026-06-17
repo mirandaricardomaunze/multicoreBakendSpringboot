@@ -1,11 +1,14 @@
 package com.phcpro.modules.fiscal.model;
 
 import com.phcpro.architecture.BaseEntity;
+import com.phcpro.modules.company.model.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Taxa fiscal configurável (IVA, Retenção, IRPC, ICE).
@@ -41,4 +44,13 @@ public class TaxRate extends BaseEntity {
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "tax_rate_companies",
+            joinColumns = @JoinColumn(name = "tax_rate_id"),
+            inverseJoinColumns = @JoinColumn(name = "company_id"),
+            uniqueConstraints = @UniqueConstraint(name = "uk_tax_rate_company", columnNames = {"tax_rate_id", "company_id"})
+    )
+    private Set<Company> companies = new LinkedHashSet<>();
 }

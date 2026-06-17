@@ -1,14 +1,18 @@
 package com.phcpro.desktop;
 
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.desktop.client.AuthApiClient;
+import com.phcpro.desktop.config.DesktopApiConfig;
+import com.phcpro.desktop.session.DesktopSession;
+import com.phcpro.desktop.session.DesktopSessionStore;
 import com.phcpro.gui.LoginDialog;
 import com.phcpro.gui.MainFrame;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.users.model.AppUser;
-import com.phcpro.modules.users.service.AppUserService;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import java.awt.EventQueue;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class DesktopLauncher {
 
@@ -22,21 +26,41 @@ public class DesktopLauncher {
         EventQueue.invokeLater(() -> {
             UIHelper.initGlobalTheme();
 
-            AppUserService userService = context.getBean(AppUserService.class);
-            LoginDialog login = new LoginDialog(userService);
+            DesktopApiConfig apiConfig = DesktopApiConfig.from(context.getEnvironment());
+            AuthApiClient authApiClient = new AuthApiClient(apiConfig);
+            LoginDialog login = new LoginDialog(authApiClient);
             login.setVisible(true);
 
-            AppUser authenticated = login.getAuthenticatedUser();
-            if (authenticated == null) {
+            DesktopSession session = login.getAuthenticatedSession();
+            if (session == null) {
                 context.close();
                 System.exit(0);
                 return;
             }
 
-            CurrentUserContext.setCurrentUser(authenticated.getName(), authenticated.getRole());
+            if (session.companies().isEmpty()) {
+                context.close();
+                throw new IllegalStateException("O utilizador autenticado não possui acesso a nenhuma empresa.");
+            }
+            session.selectCompany(session.companies().get(0).id());
+            CurrentUserContext.setCurrentUser(session.username(), session.activeRole());
+            CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
+            context.getBean(DesktopSessionStore.class).setSession(session);
 
             MainFrame mainFrame = context.getBean(MainFrame.class);
-            mainFrame.applyAuthenticatedUser(authenticated.getName(), authenticated.getRole());
+            mainFrame.applyAuthenticatedUser(session.displayName(), session.activeRole());
+            mainFrame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent event) {
+                    try {
+                        authApiClient.logout(session);
+                    } finally {
+                        context.getBean(DesktopSessionStore.class).clear();
+                        CurrentUserContext.clear();
+                        context.close();
+                    }
+                }
+            });
             mainFrame.setVisible(true);
         });
     }

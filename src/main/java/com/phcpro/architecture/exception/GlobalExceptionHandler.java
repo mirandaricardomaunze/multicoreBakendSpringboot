@@ -1,5 +1,7 @@
 package com.phcpro.architecture.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,6 +15,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex) {
@@ -45,11 +49,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+        // O detalhe da exceção (mensagem, stack, eventual SQL) fica só no log do servidor;
+        // o cliente recebe uma mensagem genérica para não expor internos.
+        log.error("Erro não tratado a processar pedido", ex);
         ErrorResponse response = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                ex.getMessage()
+                "Ocorreu um erro interno. Contacte o suporte se persistir."
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

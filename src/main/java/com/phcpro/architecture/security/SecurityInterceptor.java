@@ -8,18 +8,39 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Component
 public class SecurityInterceptor implements HandlerInterceptor {
 
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String username = request.getHeader("X-User-Name");
-        String role = request.getHeader("X-User-Role");
+    private final TenantAccessService tenantAccessService;
+    private final AuthSessionService authSessionService;
 
-        if (username != null && role != null) {
-            CurrentUserContext.setCurrentUser(username, role);
-        } else {
-            // Default user context if not specified by request (useful for testing or initial requests)
-            CurrentUserContext.setCurrentUser("SYSTEM", "ADMIN");
+    public SecurityInterceptor(TenantAccessService tenantAccessService, AuthSessionService authSessionService) {
+        this.tenantAccessService = tenantAccessService;
+        this.authSessionService = authSessionService;
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        String companyId = request.getHeader("X-Company-Id");
+        String authorization = request.getHeader("Authorization");
+
+        if (authorization == null || !authorization.startsWith("Bearer ")
+                || companyId == null || companyId.isBlank()) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token e empresa são obrigatórios.");
+            return false;
         }
-        return true;
+
+        try {
+            String token = authorization.substring(7).trim();
+            String username = authSessionService.requireValid(token).username();
+            Long requestedCompanyId = Long.parseLong(companyId);
+            var user = tenantAccessService.requireAccess(username, requestedCompanyId);
+            CurrentUserContext.setCurrentUser(user.getUsername(), user.getRoleForCompany(requestedCompanyId));
+            CurrentUserContext.setCurrentCompanyId(requestedCompanyId);
+            return true;
+        } catch (NumberFormatException ex) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Empresa inválida.");
+        } catch (RuntimeException ex) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
+        }
+        return false;
     }
 
     @Override

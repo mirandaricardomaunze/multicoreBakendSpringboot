@@ -1,6 +1,7 @@
 package com.phcpro.modules.financeira.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
@@ -35,39 +36,45 @@ public class FinanceService {
 
     @Transactional(readOnly = true)
     public List<TreasuryAccountDTO> getAllAccounts() {
-        return accountRepository.findAll().stream()
+        return accountRepository.findByCompanyIdOrderByName(CurrentUserContext.getCurrentCompanyId()).stream()
                 .map(a -> new TreasuryAccountDTO(a.getId(), a.getName(), a.getAccountNumber(), a.getBalance()))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<TreasuryTransactionDTO> getAllTransactions() {
-        return transactionRepository.findAllByOrderByTransactionDateDesc().stream()
+        return transactionRepository.findByTreasuryAccountCompanyIdOrderByTransactionDateDesc(
+                        CurrentUserContext.getCurrentCompanyId()).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public TreasuryTransactionDTO registerTransaction(Long accountId, String type, BigDecimal amount, String description) {
-        TreasuryAccount account = accountRepository.findById(accountId)
+        TransactionType transactionType;
+        try {
+            transactionType = TransactionType.valueOf(type == null ? "" : type.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessRuleException("Tipo de transação inválido: " + type);
+        }
+
+        TreasuryAccount account = accountRepository.findByIdAndCompanyId(accountId, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."));
 
-        if ("DEBIT".equalsIgnoreCase(type)) {
+        if (transactionType == TransactionType.DEBIT) {
             account.setBalance(account.getBalance().add(amount));
-        } else if ("CREDIT".equalsIgnoreCase(type)) {
+        } else {
             if (account.getBalance().compareTo(amount) < 0) {
                 throw new BusinessRuleException("Saldo insuficiente na conta " + account.getName() + " para esta operação.");
             }
             account.setBalance(account.getBalance().subtract(amount));
-        } else {
-            throw new BusinessRuleException("Tipo de transação inválido: " + type);
         }
 
         account = accountRepository.save(account);
 
         TreasuryTransaction tx = new TreasuryTransaction();
         tx.setTreasuryAccount(account);
-        tx.setTransactionType(type.toUpperCase());
+        tx.setTransactionType(transactionType);
         tx.setAmount(amount);
         tx.setDescription(description);
         tx.setTransactionDate(LocalDateTime.now());
@@ -81,6 +88,7 @@ public class FinanceService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
+        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         if (invoice.getStatus() != InvoiceStatus.APPROVED) {
             throw new BusinessRuleException("Apenas faturas no estado APROVADA podem ser pagas. Estado atual: " + invoice.getStatus());
         }
@@ -96,7 +104,8 @@ public class FinanceService {
     @Transactional
     public void registerAutoExpensePayout(BigDecimal amount, String description) {
         // Automatically deduct from the first account (Cash/Caixa Geral) if available
-        List<TreasuryAccount> accounts = accountRepository.findAll();
+        List<TreasuryAccount> accounts = accountRepository.findByCompanyIdOrderByName(
+                CurrentUserContext.getCurrentCompanyId());
         if (accounts.isEmpty()) {
             return; // No account set up yet, skip auto payout log or handle gracefully
         }
@@ -108,7 +117,7 @@ public class FinanceService {
 
         TreasuryTransaction tx = new TreasuryTransaction();
         tx.setTreasuryAccount(defaultAccount);
-        tx.setTransactionType("CREDIT");
+        tx.setTransactionType(TransactionType.CREDIT);
         tx.setAmount(amount);
         tx.setDescription("Pagamento Despesa: " + description);
         tx.setTransactionDate(LocalDateTime.now());
@@ -120,7 +129,7 @@ public class FinanceService {
                 tx.getId(),
                 tx.getTreasuryAccount().getId(),
                 tx.getTreasuryAccount().getName(),
-                tx.getTransactionType(),
+                tx.getTransactionType().name(),
                 tx.getAmount(),
                 tx.getDescription(),
                 tx.getTransactionDate()

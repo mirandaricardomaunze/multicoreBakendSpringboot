@@ -1,5 +1,6 @@
 package com.phcpro.modules.fiscal.service;
 
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
@@ -35,6 +36,7 @@ public class FiscalSummaryService {
 
     @Transactional(readOnly = true)
     public IvaSummaryDTO computeMonth(Long companyId, int year, int month) {
+        CurrentUserContext.requireCompany(companyId);
         YearMonth ym = YearMonth.of(year, month);
         LocalDateTime start = ym.atDay(1).atStartOfDay();
         LocalDateTime end = ym.atEndOfMonth().atTime(23, 59, 59);

@@ -8,6 +8,11 @@ import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
 import com.phcpro.modules.fiscal.service.FiscalSummaryService;
 import com.phcpro.modules.fiscal.service.TaxRateService;
 import com.phcpro.modules.fiscal.service.WithholdingService;
+import com.phcpro.modules.hr.dto.PayrollFiscalSummaryDTO;
+import com.phcpro.modules.hr.dto.PayrollTaxConfigDTO;
+import com.phcpro.modules.hr.dto.SavePayrollTaxConfigRequest;
+import com.phcpro.modules.hr.service.PayrollTaxConfigService;
+import com.phcpro.modules.hr.service.PayrollTaxService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,13 +26,35 @@ public class FiscalController {
     private final TaxRateService taxRateService;
     private final WithholdingService withholdingService;
     private final FiscalSummaryService fiscalSummaryService;
+    private final PayrollTaxService payrollTaxService;
+    private final PayrollTaxConfigService payrollTaxConfigService;
 
     public FiscalController(TaxRateService taxRateService,
                             WithholdingService withholdingService,
-                            FiscalSummaryService fiscalSummaryService) {
+                            FiscalSummaryService fiscalSummaryService,
+                            PayrollTaxService payrollTaxService,
+                            PayrollTaxConfigService payrollTaxConfigService) {
         this.taxRateService = taxRateService;
         this.withholdingService = withholdingService;
         this.fiscalSummaryService = fiscalSummaryService;
+        this.payrollTaxService = payrollTaxService;
+        this.payrollTaxConfigService = payrollTaxConfigService;
+    }
+
+    @GetMapping("/payroll/{year}/{month}")
+    public ResponseEntity<PayrollFiscalSummaryDTO> payrollSummary(@PathVariable int year, @PathVariable int month) {
+        return ResponseEntity.ok(payrollTaxService.fiscalSummary(year, month));
+    }
+
+    @GetMapping("/payroll/configs")
+    public ResponseEntity<List<PayrollTaxConfigDTO>> payrollConfigs() {
+        return ResponseEntity.ok(payrollTaxConfigService.list());
+    }
+
+    @PostMapping("/payroll/configs")
+    public ResponseEntity<PayrollTaxConfigDTO> createPayrollConfig(
+            @RequestBody @Valid SavePayrollTaxConfigRequest request) {
+        return ResponseEntity.ok(payrollTaxConfigService.create(request));
     }
 
     // ── Taxas Fiscais ────────────────────────────────────────────────────

@@ -1,7 +1,9 @@
 package com.phcpro.modules.purchases.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.pricing.LineCalculator;
+import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.validation.TaxIdValidator;
 import com.phcpro.modules.comercial.model.Product;
 import com.phcpro.modules.comercial.repository.ProductRepository;
@@ -11,6 +13,8 @@ import com.phcpro.modules.financeira.service.FinanceService;
 import com.phcpro.modules.inventory.model.Warehouse;
 import com.phcpro.modules.inventory.repository.WarehouseRepository;
 import com.phcpro.modules.inventory.service.InventoryService;
+import com.phcpro.modules.numbering.service.DocumentNumberService;
+import com.phcpro.modules.numbering.service.DocumentSeries;
 import com.phcpro.modules.purchases.dto.CreatePurchaseLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseRequest;
 import com.phcpro.modules.purchases.dto.CreateSupplierRequest;
@@ -40,6 +44,7 @@ public class PurchaseService {
     private final CompanyRepository companyRepository;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
+    private final DocumentNumberService documentNumberService;
 
     public PurchaseService(
             SupplierRepository supplierRepository,
@@ -48,7 +53,8 @@ public class PurchaseService {
             WarehouseRepository warehouseRepository,
             CompanyRepository companyRepository,
             InventoryService inventoryService,
-            FinanceService financeService
+            FinanceService financeService,
+            DocumentNumberService documentNumberService
     ) {
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
@@ -57,10 +63,12 @@ public class PurchaseService {
         this.companyRepository = companyRepository;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
+        this.documentNumberService = documentNumberService;
     }
 
     @Transactional
     public Supplier createSupplier(String name, String taxId, String email, String address, Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         TaxIdValidator.validate(taxId);
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
@@ -78,22 +86,31 @@ public class PurchaseService {
 
     @Transactional(readOnly = true)
     public List<Supplier> getSuppliersByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return supplierRepository.findByCompanyId(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<Purchase> getPurchasesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return purchaseRepository.findByCompanyId(companyId);
     }
 
     @Transactional
     public Purchase createPurchase(CreatePurchaseRequest request) {
+        CurrentUserContext.requireCompany(request.companyId());
         Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
 
+        if (!request.companyId().equals(supplier.getCompany().getId())) {
+            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+        }
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
 
+        if (!request.companyId().equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
 
@@ -107,7 +124,7 @@ public class PurchaseService {
         BigDecimal totalTax = BigDecimal.ZERO;
 
         for (CreatePurchaseLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findById(lineReq.productId())
+            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
             PurchaseLine line = new PurchaseLine();
@@ -115,8 +132,8 @@ public class PurchaseService {
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(lineReq.unitPrice());
             
-            // Default VAT (IVA) rate: 17% (standard in Mozambique) or 23% depending on tax ID
-            BigDecimal taxRate = supplier.getTaxId().startsWith("5") ? new BigDecimal("0.23") : new BigDecimal("0.17");
+            // IVA à taxa-padrão (não depende do NUIT do fornecedor).
+            BigDecimal taxRate = TaxRates.STANDARD_VAT;
             line.setTaxRate(taxRate);
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
@@ -149,8 +166,7 @@ public class PurchaseService {
         purchase.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
         purchase.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         
-        long count = purchaseRepository.count() + 1;
-        purchase.setPurchaseNumber("V/FT-2026/" + count);
+        purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
 
         purchase = purchaseRepository.save(purchase);
 
@@ -169,11 +185,13 @@ public class PurchaseService {
 
     @Transactional(readOnly = true)
     public List<SupplierDTO> findSuppliersByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return supplierRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public List<PurchaseDTO> findPurchasesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return purchaseRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 

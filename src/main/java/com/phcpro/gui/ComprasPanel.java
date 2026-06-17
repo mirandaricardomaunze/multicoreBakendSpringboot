@@ -225,12 +225,14 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTextField(expirationField);
         formCard.add(expirationField, gbc);
 
-        // Row 4: Add Button (Full Width)
+        // Row 4: line action
         gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(16, 8, 12, 8);
-        ModernButton addLineBtn = new ModernButton("Adicionar Produto", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
-        addLineBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        formCard.add(addLineBtn, gbc);
+        ModernButton addLineBtn = UIHelper.createAddLineButton();
+        JPanel addLineActionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        addLineActionRow.setOpaque(false);
+        addLineActionRow.add(addLineBtn);
+        formCard.add(addLineActionRow, gbc);
 
         // Row 5: Draft Table (Full Width)
         gbc.gridy = 11; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
@@ -259,9 +261,8 @@ public class ComprasPanel extends JPanel {
         totalRow.setOpaque(false);
         totalRow.add(totalLabel, BorderLayout.EAST);
 
-        ModernButton registerBtn = new ModernButton("Registar Compra");
+        ModernButton registerBtn = UIHelper.createSuccessButton("Registar Compra");
         registerBtn.setIcon(UIHelper.icon("fas-download", 14));
-        registerBtn.setGradient(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.darker());
 
         JPanel btnRow = new JPanel(new BorderLayout());
         btnRow.setOpaque(false);
@@ -297,7 +298,7 @@ public class ComprasPanel extends JPanel {
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionRow.setOpaque(false);
-        ModernButton refreshBtn = new ModernButton("Atualizar Compras", new Color(75, 85, 99), new Color(107, 114, 128));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar Compras");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         actionRow.add(refreshBtn);
         historyCard.add(actionRow, BorderLayout.SOUTH);
@@ -325,9 +326,9 @@ public class ComprasPanel extends JPanel {
 
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         headerActions.setOpaque(false);
-        ModernButton refreshSupsBtn = new ModernButton("Atualizar", new Color(75, 85, 99), new Color(107, 114, 128));
+        ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Atualizar");
         refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        ModernButton newSupBtn = new ModernButton("Novo Fornecedor", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.brighter());
+        ModernButton newSupBtn = UIHelper.createSuccessButton("Novo Fornecedor");
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));
         headerActions.add(refreshSupsBtn);
         headerActions.add(newSupBtn);

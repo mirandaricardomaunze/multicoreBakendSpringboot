@@ -56,6 +56,10 @@ public class Invoice extends BaseEntity {
     @Column(name = "status", nullable = false)
     private InvoiceStatus status = InvoiceStatus.DRAFT;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sales_channel", nullable = false)
+    private SalesChannel salesChannel = SalesChannel.MANUAL;
+
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceLine> lines = new ArrayList<>();
 

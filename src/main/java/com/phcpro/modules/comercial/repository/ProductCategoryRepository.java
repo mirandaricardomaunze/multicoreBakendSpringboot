@@ -12,4 +12,8 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     Optional<ProductCategory> findByCode(String code);
     List<ProductCategory> findByActiveTrueOrderByNameAsc();
     List<ProductCategory> findAllByOrderByNameAsc();
+    Optional<ProductCategory> findByCodeAndCompaniesId(String code, Long companyId);
+    Optional<ProductCategory> findByIdAndCompaniesId(Long id, Long companyId);
+    List<ProductCategory> findDistinctByCompaniesIdOrderByNameAsc(Long companyId);
+    List<ProductCategory> findDistinctByCompaniesIdAndActiveTrueOrderByNameAsc(Long companyId);
 }

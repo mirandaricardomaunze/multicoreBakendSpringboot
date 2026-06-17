@@ -19,5 +19,6 @@ public record InvoiceDTO(
     InvoiceStatus status,
     String rejectionReason,
     List<InvoiceLineDTO> lines,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    String createdBy
 ) {}

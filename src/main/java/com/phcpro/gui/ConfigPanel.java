@@ -8,6 +8,7 @@ import com.phcpro.modules.users.model.AppUser;
 import com.phcpro.modules.users.service.AppUserService;
 import com.phcpro.modules.audit.model.AuditLog;
 import com.phcpro.modules.audit.service.AuditLogService;
+import com.phcpro.modules.backup.dto.BackupVerificationDTO;
 import com.phcpro.modules.backup.service.BackupService;
 
 import javax.swing.*;
@@ -95,7 +96,7 @@ public class ConfigPanel extends JPanel {
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnPanel.setOpaque(false);
-        ModernButton refreshBtn = new ModernButton("Atualizar Registos", new Color(75, 85, 99), new Color(107, 114, 128));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar Registos");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnPanel.add(refreshBtn);
         card.add(btnPanel, BorderLayout.SOUTH);
@@ -137,9 +138,8 @@ public class ConfigPanel extends JPanel {
         UIHelper.styleScrollPane(scrollConsole);
         consoleCard.add(scrollConsole, BorderLayout.CENTER);
 
-        ModernButton runBackupBtn = new ModernButton("Executar Backup Manual Agora");
+        ModernButton runBackupBtn = UIHelper.createSuccessButton("Executar Backup Manual Agora");
         runBackupBtn.setIcon(UIHelper.icon("fas-database", 14));
-        runBackupBtn.setGradient(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.darker());
         consoleCard.add(runBackupBtn, BorderLayout.SOUTH);
 
         leftPanel.add(consoleCard, BorderLayout.CENTER);
@@ -167,8 +167,11 @@ public class ConfigPanel extends JPanel {
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionRow.setOpaque(false);
-        ModernButton refreshArchiveBtn = new ModernButton("Atualizar Arquivo", new Color(75, 85, 99), new Color(107, 114, 128));
+        ModernButton verifyBackupBtn = UIHelper.createPrimaryButton("Verificar Backup");
+        verifyBackupBtn.setIcon(UIHelper.icon("fas-shield-alt", 14));
+        ModernButton refreshArchiveBtn = UIHelper.createSecondaryButton("Atualizar Arquivo");
         refreshArchiveBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        actionRow.add(verifyBackupBtn);
         actionRow.add(refreshArchiveBtn);
         archiveCard.add(actionRow, BorderLayout.SOUTH);
 
@@ -177,6 +180,7 @@ public class ConfigPanel extends JPanel {
 
         // LISTENERS
         runBackupBtn.addActionListener(e -> runManualBackup());
+        verifyBackupBtn.addActionListener(e -> verifySelectedBackup());
         refreshArchiveBtn.addActionListener(e -> loadBackupFilesList());
 
         return panel;
@@ -259,7 +263,7 @@ public class ConfigPanel extends JPanel {
         // Register Button (Full Width)
         cardGbc.gridy = 7;
         cardGbc.insets = new Insets(20, 8, 8, 8);
-        ModernButton saveUserBtn = new ModernButton("Registar Utilizador", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE.brighter());
+        ModernButton saveUserBtn = UIHelper.createSuccessButton("Registar Utilizador");
         saveUserBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         formCard.add(saveUserBtn, cardGbc);
 
@@ -288,8 +292,11 @@ public class ConfigPanel extends JPanel {
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnRow.setOpaque(false);
-        ModernButton refreshUsersBtn = new ModernButton("Atualizar Lista", new Color(75, 85, 99), new Color(107, 114, 128));
+        ModernButton refreshUsersBtn = UIHelper.createSecondaryButton("Atualizar Lista");
         refreshUsersBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        ModernButton updateRoleBtn = UIHelper.createPrimaryButton("Alterar Perfil Selecionado");
+        updateRoleBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
+        btnRow.add(updateRoleBtn);
         btnRow.add(refreshUsersBtn);
         listCard.add(btnRow, BorderLayout.SOUTH);
 
@@ -298,6 +305,7 @@ public class ConfigPanel extends JPanel {
 
         // LISTENERS
         saveUserBtn.addActionListener(e -> registerUser());
+        updateRoleBtn.addActionListener(e -> updateSelectedUserRole());
         refreshUsersBtn.addActionListener(e -> loadUsersList());
 
         return panel;
@@ -352,11 +360,49 @@ public class ConfigPanel extends JPanel {
         }
     }
 
+    private void verifySelectedBackup() {
+        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+            JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem verificar cópias de segurança.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int selectedRow = backupFilesTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione um ficheiro de backup no arquivo.", "Backup", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String fileName = String.valueOf(backupFilesModel.getValueAt(selectedRow, 0));
+        File backupFile = new File("backups", fileName);
+        backupLogArea.append(">> A verificar backup: " + fileName + "\n");
+        try {
+            BackupVerificationDTO verification = backupService.verifyBackup(backupFile.getPath());
+            backupLogArea.append(">> Backup válido para a empresa " + verification.companyId() + "\n");
+            backupLogArea.append(">> Gerado em: " + verification.generatedAt() + "\n");
+            backupLogArea.append(">> Secções verificadas: " + verification.totalSections() + "\n");
+            backupLogArea.append(">> Registos: " + verification.itemCounts() + "\n");
+            auditLogService.logEvent(CurrentUserContext.getUsername(),
+                    CurrentUserContext.getCurrentCompanyId(),
+                    "BACKUP_VERIFY",
+                    "Backup verificado: " + verification.fileName());
+            JOptionPane.showMessageDialog(this,
+                    "Backup verificado com sucesso.\nFicheiro: " + verification.fileName(),
+                    "Backup Válido",
+                    JOptionPane.INFORMATION_MESSAGE);
+            loadAuditLogs();
+        } catch (Exception ex) {
+            backupLogArea.append(">> ERRO DE VERIFICAÇÃO: " + ex.getMessage() + "\n");
+            JOptionPane.showMessageDialog(this, "Erro ao verificar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void loadBackupFilesList() {
         backupFilesModel.setRowCount(0);
         File backupsDir = new File("backups");
         if (backupsDir.exists() && backupsDir.isDirectory()) {
-            File[] files = backupsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+            String prefix = "company_" + CurrentUserContext.getCurrentCompanyId() + "_backup_";
+            File[] files = backupsDir.listFiles((dir, name) ->
+                    name.startsWith(prefix) && name.toLowerCase().endsWith(".json"));
             if (files != null) {
                 for (File f : files) {
                     double kbSize = (double) f.length() / 1024.0;
@@ -371,12 +417,18 @@ public class ConfigPanel extends JPanel {
 
     private void loadUsersList() {
         usersTableModel.setRowCount(0);
+        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+            usersTableModel.addRow(new Object[]{
+                    "Acesso restrito", "Apenas administradores podem gerir utilizadores.", "", ""
+            });
+            return;
+        }
         List<AppUser> users = userService.getAllUsers();
         for (AppUser u : users) {
             usersTableModel.addRow(new Object[]{
                     u.getUsername(),
                     u.getName(),
-                    u.getRole(),
+                    u.getRoleForCompany(CurrentUserContext.getCurrentCompanyId()),
                     u.isActive() ? "ATIVO" : "INATIVO"
             });
         }
@@ -404,6 +456,27 @@ public class ConfigPanel extends JPanel {
             loadUsersList();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao criar utilizador: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void updateSelectedUserRole() {
+        int selectedRow = usersTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Perfil", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String username = String.valueOf(usersTableModel.getValueAt(selectedRow, 0));
+        String role = (String) roleCombo.getSelectedItem();
+        try {
+            userService.updateCompanyRole(username, role);
+            JOptionPane.showMessageDialog(this,
+                    "Perfil de '" + username + "' atualizado nesta empresa.",
+                    "Perfil Atualizado", JOptionPane.INFORMATION_MESSAGE);
+            loadUsersList();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao alterar perfil: " + ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

@@ -34,6 +34,7 @@ Thumbs.db
 
 # Java temporary files
 *.class
+cp.txt
 *.jar
 *.war
 *.nar

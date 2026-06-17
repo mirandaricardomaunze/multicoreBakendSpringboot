@@ -1,9 +1,12 @@
 package com.phcpro.modules.comercial.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.architecture.pricing.LineCalculator;
 import com.phcpro.architecture.validation.TaxIdValidator;
 import com.phcpro.modules.approvals.service.ApprovalService;
+import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.comercial.dto.*;
 import com.phcpro.modules.comercial.model.*;
 import com.phcpro.modules.comercial.repository.*;
@@ -15,6 +18,8 @@ import com.phcpro.modules.inventory.service.InventoryService;
 import com.phcpro.modules.financeira.service.FinanceService;
 import com.phcpro.modules.financeira.repository.TreasuryAccountRepository;
 import com.phcpro.modules.financeira.model.TreasuryAccount;
+import com.phcpro.modules.numbering.service.DocumentNumberService;
+import com.phcpro.modules.numbering.service.DocumentSeries;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -24,7 +29,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,9 +47,9 @@ public class ComercialService {
     private final TreasuryAccountRepository treasuryAccountRepository;
     private final OrderRepository orderRepository;
     private final OrderLineRepository orderLineRepository;
-
-    // Simulated sequencer for invoice numbering in development
-    private static final AtomicLong invoiceSequence = new AtomicLong(0);
+    private final WalkInClientProvider walkInClientProvider;
+    private final DocumentNumberService documentNumberService;
+    private final AuditLogService auditLogService;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -60,7 +64,10 @@ public class ComercialService {
             @Lazy FinanceService financeService,
             TreasuryAccountRepository treasuryAccountRepository,
             OrderRepository orderRepository,
-            OrderLineRepository orderLineRepository
+            OrderLineRepository orderLineRepository,
+            WalkInClientProvider walkInClientProvider,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService
     ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -75,14 +82,25 @@ public class ComercialService {
         this.treasuryAccountRepository = treasuryAccountRepository;
         this.orderRepository = orderRepository;
         this.orderLineRepository = orderLineRepository;
+        this.walkInClientProvider = walkInClientProvider;
+        this.documentNumberService = documentNumberService;
+        this.auditLogService = auditLogService;
     }
 
 
     @Transactional
     public ClientDTO createClient(String name, String taxId, String email, String address) {
         TaxIdValidator.validate(taxId);
-        if (clientRepository.findByTaxId(taxId).isPresent()) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (clientRepository.findByTaxIdAndCompaniesId(taxId, companyId).isPresent()) {
             throw new BusinessRuleException("Já existe um cliente registado com este NUIT/NIF.");
+        }
+        Client sharedClient = clientRepository.findByTaxId(taxId).orElse(null);
+        if (sharedClient != null) {
+            sharedClient.getCompanies().add(companyRepository.getReferenceById(companyId));
+            sharedClient = clientRepository.save(sharedClient);
+            return new ClientDTO(sharedClient.getId(), sharedClient.getName(), sharedClient.getTaxId(),
+                    sharedClient.getEmail(), sharedClient.getAddress());
         }
         Client client = new Client();
         client.setName(name);
@@ -90,17 +108,18 @@ public class ComercialService {
         client.setEmail(email);
         client.setAddress(address);
         client.setCreatedBy("SYSTEM");
+        client.getCompanies().add(companyRepository.getReferenceById(companyId));
         client = clientRepository.save(client);
         return new ClientDTO(client.getId(), client.getName(), client.getTaxId(), client.getEmail(), client.getAddress());
     }
 
     @Transactional
     public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
-        Client client = clientRepository.findById(id)
+        Client client = clientRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         TaxIdValidator.validate(taxId);
         if (!client.getTaxId().equals(taxId)) {
-            clientRepository.findByTaxId(taxId).ifPresent(existing -> {
+            clientRepository.findByTaxIdAndCompaniesId(taxId, CurrentUserContext.getCurrentCompanyId()).ifPresent(existing -> {
                 throw new BusinessRuleException("Já existe outro cliente registado com este NUIT/NIF.");
             });
         }
@@ -114,7 +133,7 @@ public class ComercialService {
 
     @Transactional
     public void deleteClient(Long id) {
-        Client client = clientRepository.findById(id)
+        Client client = clientRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         try {
             clientRepository.delete(client);
@@ -126,13 +145,17 @@ public class ComercialService {
 
     @Transactional
     public InvoiceDTO createInvoice(CreateInvoiceRequest request) {
-        Client client = clientRepository.findById(request.clientId())
+        CurrentUserContext.requireCompany(request.companyId());
+        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
 
+        if (!request.companyId().equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
         Invoice invoice = new Invoice();
         invoice.setClient(client);
         invoice.setCompany(company);
@@ -144,7 +167,7 @@ public class ComercialService {
         boolean hasHighDiscount = false;
 
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findById(lineReq.productId())
+            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
             InvoiceLine line = new InvoiceLine();
@@ -183,9 +206,8 @@ public class ComercialService {
             invoice.setStatus(InvoiceStatus.PENDING_DISCOUNT_APPROVAL);
         }
 
-        // Generate invoice sequence number
-        long seq = invoiceSequence.incrementAndGet();
-        invoice.setInvoiceNumber("FT-2026/" + seq);
+        // Número fiscal sequencial e sem saltos (série FT).
+        invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
         invoice.setCreatedBy("SYSTEM");
 
         invoice = invoiceRepository.save(invoice);
@@ -204,11 +226,13 @@ public class ComercialService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
+        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         if (invoice.getStatus() != InvoiceStatus.APPROVED) {
             throw new BusinessRuleException("Apenas faturas no estado APROVADA podem ter recibo. Estado atual: " + invoice.getStatus());
         }
 
-        TreasuryAccount account = treasuryAccountRepository.findById(treasuryAccountId)
+        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(
+                        treasuryAccountId, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."));
 
         Receipt receipt = new Receipt();
@@ -220,7 +244,7 @@ public class ComercialService {
         receipt.setReceiptDate(LocalDateTime.now());
         receipt.setStatus("COMPLETED");
 
-        String receiptNum = "RC-2026/" + System.currentTimeMillis();
+        String receiptNum = documentNumberService.next(DocumentSeries.RECEIPT);
         receipt.setReceiptNumber(receiptNum);
         receipt.setCreatedBy("SYSTEM");
 
@@ -238,6 +262,7 @@ public class ComercialService {
 
     @Transactional
     public void cancelReceipt(Long receiptId, String reason) {
+        PermissionGuard.requireManagerOrAdmin("anular recibo");
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("É necessário indicar o motivo da anulação do recibo.");
         }
@@ -245,6 +270,7 @@ public class ComercialService {
         Receipt receipt = receiptRepository.findById(receiptId)
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
 
+        CurrentUserContext.requireCompany(receipt.getCompany().getId());
         if ("CANCELLED".equals(receipt.getStatus())) {
             throw new BusinessRuleException("Este recibo já se encontra anulado.");
         }
@@ -260,10 +286,13 @@ public class ComercialService {
         // Refund cash (CREDIT)
         String description = "Estorno Recibo " + receipt.getReceiptNumber() + " - Motivo: " + reason;
         financeService.registerTransaction(receipt.getTreasuryAccount().getId(), "CREDIT", receipt.getAmountPaid(), description);
+        auditLogService.logCurrent("RECEIPT_CANCEL",
+                "Recibo " + receipt.getReceiptNumber() + " anulado. Motivo: " + reason);
     }
 
     @Transactional
     public void cancelInvoice(Long invoiceId, String reason) {
+        PermissionGuard.requireManagerOrAdmin("anular fatura");
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("É necessário indicar o motivo da anulação.");
         }
@@ -271,6 +300,7 @@ public class ComercialService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
+        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new BusinessRuleException("Esta fatura já se encontra anulada.");
         }
@@ -282,7 +312,7 @@ public class ComercialService {
                 inventoryService.registerMovement(
                         line.getProduct(),
                         invoice.getWarehouse(),
-                        BigDecimal.valueOf(line.getQuantity()), // Positive quantity to replenish stock
+                        line.getQuantity(), // Positive quantity to replenish stock
                         "REVERSAL",
                         line.getBatchNumber(),
                         line.getSerialNumber(),
@@ -292,7 +322,7 @@ public class ComercialService {
         }
 
         // Cancel associated receipts (if any) and refund cash
-        List<Receipt> receipts = receiptRepository.findAll().stream()
+        List<Receipt> receipts = receiptRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId()).stream()
                 .filter(r -> r.getInvoice().getId().equals(invoiceId) && !"CANCELLED".equals(r.getStatus()))
                 .collect(Collectors.toList());
 
@@ -309,11 +339,13 @@ public class ComercialService {
         invoice.setStatus(InvoiceStatus.CANCELLED);
         invoice.setCancellationReason(reason);
         invoiceRepository.save(invoice);
+        auditLogService.logCurrent("INVOICE_CANCEL",
+                "Fatura " + invoice.getInvoiceNumber() + " anulada. Motivo: " + reason);
     }
 
     @Transactional(readOnly = true)
     public List<InvoiceDTO> getAllInvoices() {
-        return invoiceRepository.findAll()
+        return invoiceRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -321,12 +353,25 @@ public class ComercialService {
 
     @Transactional(readOnly = true)
     public List<Receipt> getAllReceipts() {
-        return receiptRepository.findAll();
+        return receiptRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId());
     }
 
     @Transactional(readOnly = true)
     public List<InvoiceDTO> getInvoicesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return invoiceRepository.findByCompanyId(companyId).stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Histórico de vendas POS (canal {@code SalesChannel.POS}), ordenadas da mais recente para a
+     * mais antiga. Inclui {@code createdBy} = operador da caixa que efectuou a venda.
+     */
+    @Transactional(readOnly = true)
+    public List<InvoiceDTO> getPOSSalesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return invoiceRepository
+                .findByCompanyIdAndSalesChannelOrderByCreatedAtDesc(companyId, SalesChannel.POS)
+                .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     /**
@@ -335,6 +380,7 @@ public class ComercialService {
      */
     @Transactional(readOnly = true)
     public List<InvoiceDTO> getOutstandingInvoicesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return invoiceRepository.findByCompanyId(companyId).stream()
                 .filter(i -> i.getStatus() == InvoiceStatus.APPROVED
                           || i.getStatus() == InvoiceStatus.PARTIALLY_PAID)
@@ -349,12 +395,13 @@ public class ComercialService {
 
     @Transactional(readOnly = true)
     public List<Receipt> getReceiptsByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return receiptRepository.findByCompanyId(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<ClientDTO> getAllClients() {
-        return clientRepository.findAll()
+        return clientRepository.findDistinctByCompaniesIdOrderByName(CurrentUserContext.getCurrentCompanyId())
                 .stream()
                 .map(c -> new ClientDTO(c.getId(), c.getName(), c.getTaxId(), c.getEmail(), c.getAddress()))
                 .collect(Collectors.toList());
@@ -362,7 +409,7 @@ public class ComercialService {
 
     @Transactional(readOnly = true)
     public List<ProductDTO> getAllProducts() {
-        return productRepository.findAll()
+        return productRepository.findDistinctByCompaniesIdOrderByName(CurrentUserContext.getCurrentCompanyId())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -390,15 +437,31 @@ public class ComercialService {
     public ProductDTO createProduct(String sku, String reference, String barcode, String name,
                                      BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
                                      int unitsPerBox, Long categoryId, String description) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, ProductSaleType.UNIT.name(), true, description);
+    }
+
+    @Transactional
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     String description) {
         String cleanReference = normalizeOptional(reference);
         String cleanBarcode = normalizeOptional(barcode);
-        if (productRepository.findBySku(sku).isPresent()) {
+        ProductSaleType parsedSaleType = parseSaleType(saleType);
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (productRepository.findBySkuAndCompaniesId(sku, companyId).isPresent()) {
             throw new BusinessRuleException("Já existe um produto com o SKU indicado.");
         }
-        if (cleanReference != null && productRepository.findByReference(cleanReference).isPresent()) {
+        Product sharedProduct = productRepository.findBySku(sku).orElse(null);
+        if (sharedProduct != null) {
+            sharedProduct.getCompanies().add(companyRepository.getReferenceById(companyId));
+            return toDTO(productRepository.save(sharedProduct));
+        }
+        if (cleanReference != null && productRepository.findByReferenceAndCompaniesId(cleanReference, companyId).isPresent()) {
             throw new BusinessRuleException("Ja existe um produto com a referencia indicada.");
         }
-        if (cleanBarcode != null && productRepository.findByBarcode(cleanBarcode).isPresent()) {
+        if (cleanBarcode != null && productRepository.findByBarcodeAndCompaniesId(cleanBarcode, companyId).isPresent()) {
             throw new BusinessRuleException("Ja existe um produto com o codigo de barras indicado.");
         }
         Product product = new Product();
@@ -410,12 +473,15 @@ public class ComercialService {
         product.setPurchasePrice(purchasePrice);
         product.setMinStock(minStock);
         product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        product.setSaleType(parsedSaleType);
+        product.setStockTracked(parsedSaleType != ProductSaleType.SERVICE && stockTracked);
         product.setDescription(description);
         if (categoryId != null) {
-            product.setCategory(productCategoryRepository.findById(categoryId)
+            product.setCategory(productCategoryRepository.findByIdAndCompaniesId(categoryId, companyId)
                     .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
         }
         product.setCreatedBy("SYSTEM");
+        product.getCompanies().add(companyRepository.getReferenceById(companyId));
         product = productRepository.save(product);
         return toDTO(product);
     }
@@ -423,14 +489,14 @@ public class ComercialService {
     @Transactional(readOnly = true)
     public ProductDTO findProductByBarcode(String barcode) {
         if (barcode == null || barcode.isBlank()) return null;
-        return productRepository.findByBarcode(barcode.trim())
+        return productRepository.findByBarcodeAndCompaniesId(barcode.trim(), CurrentUserContext.getCurrentCompanyId())
                 .map(this::toDTO)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> getAllCategories() {
-        return productCategoryRepository.findAllByOrderByNameAsc().stream()
+        return productCategoryRepository.findDistinctByCompaniesIdOrderByNameAsc(CurrentUserContext.getCurrentCompanyId()).stream()
                 .map(c -> new com.phcpro.modules.comercial.dto.ProductCategoryDTO(
                         c.getId(), c.getCode(), c.getName(), c.getColorHex(), c.isActive()))
                 .toList();
@@ -438,7 +504,8 @@ public class ComercialService {
 
     @Transactional(readOnly = true)
     public List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> getActiveCategories() {
-        return productCategoryRepository.findByActiveTrueOrderByNameAsc().stream()
+        return productCategoryRepository.findDistinctByCompaniesIdAndActiveTrueOrderByNameAsc(
+                        CurrentUserContext.getCurrentCompanyId()).stream()
                 .map(c -> new com.phcpro.modules.comercial.dto.ProductCategoryDTO(
                         c.getId(), c.getCode(), c.getName(), c.getColorHex(), c.isActive()))
                 .toList();
@@ -455,6 +522,8 @@ public class ComercialService {
                 p.getPurchasePrice() != null ? p.getPurchasePrice() : BigDecimal.ZERO,
                 p.getMinStock() != null ? p.getMinStock() : BigDecimal.ZERO,
                 p.getUnitsPerBox() <= 0 ? 1 : p.getUnitsPerBox(),
+                p.getSaleType() != null ? p.getSaleType().name() : ProductSaleType.UNIT.name(),
+                p.isStockTracked(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
                 p.getDescription()
@@ -467,6 +536,17 @@ public class ComercialService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ProductSaleType parseSaleType(String value) {
+        if (value == null || value.isBlank()) {
+            return ProductSaleType.UNIT;
+        }
+        try {
+            return ProductSaleType.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessRuleException("Tipo de venda inválido. Use UNIT, BOX, WEIGHT ou SERVICE.");
+        }
     }
 
     public InvoiceDTO toDTO(Invoice invoice) {
@@ -497,30 +577,50 @@ public class ComercialService {
                 invoice.getStatus(),
                 invoice.getRejectionReason(),
                 lines,
-                invoice.getCreatedAt() != null ? invoice.getCreatedAt() : LocalDateTime.now()
+                invoice.getCreatedAt() != null ? invoice.getCreatedAt() : LocalDateTime.now(),
+                invoice.getCreatedBy()
         );
     }
 
     @Transactional
     public OrderDTO createOrder(CreateInvoiceRequest request) {
-        Client client = clientRepository.findById(request.clientId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        return createOrder(new CreateOrderRequest(
+                request.clientId(), null,
+                request.companyId(), request.warehouseId(), request.lines()));
+    }
+
+    @Transactional
+    public OrderDTO createOrder(CreateOrderRequest request) {
+        CurrentUserContext.requireCompany(request.companyId());
+        Client client;
+        if (request.clientId() != null) {
+            client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
+                    .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        } else {
+            client = walkInClientProvider.getOrCreate();
+        }
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
 
+        if (!request.companyId().equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
         Order order = new Order();
         order.setClient(client);
         order.setCompany(company);
         order.setWarehouse(warehouse);
         order.setStatus("PENDING");
+        if (request.walkInName() != null && !request.walkInName().isBlank()) {
+            order.setWalkInName(request.walkInName().trim());
+        }
 
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
 
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findById(lineReq.productId())
+            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
             OrderLine line = new OrderLine();
@@ -552,9 +652,8 @@ public class ComercialService {
         order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         order.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
 
-        // Generate order sequence number using the shared sequencer
-        long seq = invoiceSequence.incrementAndGet();
-        order.setOrderNumber("EC-2026/" + seq);
+        // Número sequencial da encomenda (série EC, independente da série de faturas).
+        order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));
         order.setCreatedBy("SYSTEM");
 
         order = orderRepository.save(order);
@@ -567,6 +666,7 @@ public class ComercialService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
 
+        CurrentUserContext.requireCompany(order.getCompany().getId());
         if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException("Apenas encomendas no estado PENDENTE podem ser faturadas.");
         }
@@ -576,15 +676,15 @@ public class ComercialService {
         invoice.setCompany(order.getCompany());
         invoice.setWarehouse(order.getWarehouse());
         invoice.setStatus(InvoiceStatus.APPROVED);
+        invoice.setSalesChannel(SalesChannel.ORDER);
         invoice.setTotalBeforeTax(order.getTotalBeforeTax());
         invoice.setTaxAmount(order.getTaxAmount());
         invoice.setTotalAmount(order.getTotalAmount());
         invoice.setCreatedBy("SYSTEM");
 
-        // Extract sequence suffix from orderNumber (e.g. EC-2026/12 -> 12)
-        String orderNum = order.getOrderNumber();
-        String seq = orderNum.substring(orderNum.lastIndexOf('/') + 1);
-        invoice.setInvoiceNumber("FT-2026/" + seq);
+        // A fatura tem o seu próprio número fiscal gapless (série FT), independente
+        // do número da encomenda — exigência da AT (a série FT não pode ter saltos).
+        invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
 
         for (OrderLine orderLine : order.getLines()) {
             InvoiceLine invoiceLine = new InvoiceLine();
@@ -604,7 +704,7 @@ public class ComercialService {
             inventoryService.registerMovement(
                     orderLine.getProduct(),
                     order.getWarehouse(),
-                    BigDecimal.valueOf(orderLine.getQuantity()).negate(),
+                        orderLine.getQuantity().negate(),
                     "SALE",
                     orderLine.getBatchNumber(),
                     orderLine.getSerialNumber(),
@@ -623,7 +723,21 @@ public class ComercialService {
 
     @Transactional(readOnly = true)
     public List<OrderDTO> getOrdersByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return orderRepository.findByCompanyId(companyId).stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Devolve as encomendas PENDENTES (status PENDING e ainda sem invoiceId) — as únicas que
+     * podem ser convertidas em fatura. Usado pelo diálogo "Faturar Encomenda" no tab das Faturas
+     * para impedir dupla faturação a montante (a validação final está em {@link #billOrder}).
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDTO> getPendingOrdersByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return orderRepository
+                .findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING")
+                .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     public OrderDTO toDTO(Order order) {
@@ -647,13 +761,47 @@ public class ComercialService {
                 order.getClient().getId(),
                 order.getClient().getName(),
                 order.getClient().getTaxId(),
+                order.getWalkInName(),
                 order.getTotalBeforeTax(),
                 order.getTaxAmount(),
                 order.getTotalAmount(),
                 order.getStatus(),
                 order.getInvoiceId(),
                 lines,
-                order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now()
+                order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now(),
+                order.getPrintedAt(),
+                order.getPrintCount(),
+                order.getLastPrintedBy()
         );
+    }
+
+    /**
+     * Devolve uma encomenda pelo ID com todas as linhas carregadas. Usado pelo painel
+     * de gestão para o ecrã de detalhes.
+     */
+    @Transactional(readOnly = true)
+    public OrderDTO getOrderById(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        // Inicializa as linhas antes de sair da transacção
+        CurrentUserContext.requireCompany(order.getCompany().getId());
+        order.getLines().size();
+        return toDTO(order);
+    }
+
+    /**
+     * Marca a encomenda como impressa: incrementa contador, regista timestamp e operador.
+     * Idempotente em sentido lato — pode ser chamado várias vezes; cada chamada é
+     * uma nova impressão registada.
+     */
+    @Transactional
+    public OrderDTO markOrderPrinted(Long orderId, String operator) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        CurrentUserContext.requireCompany(order.getCompany().getId());
+        order.setPrintCount(order.getPrintCount() + 1);
+        order.setPrintedAt(LocalDateTime.now());
+        order.setLastPrintedBy(operator == null || operator.isBlank() ? "SYSTEM" : operator);
+        return toDTO(orderRepository.save(order));
     }
 }

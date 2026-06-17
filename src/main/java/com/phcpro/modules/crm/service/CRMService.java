@@ -1,6 +1,8 @@
 package com.phcpro.modules.crm.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.modules.comercial.dto.CreateInvoiceLineRequest;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
 import com.phcpro.modules.comercial.model.Client;
@@ -61,11 +63,13 @@ public class CRMService {
 
     @Transactional
     public SupportTicketDTO createTicket(CreateTicketRequest request) {
-        Client client = clientRepository.findById(request.clientId())
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
 
         SupportTicket ticket = new SupportTicket();
         ticket.setClient(client);
+        ticket.setCompany(companyRepository.getReferenceById(companyId));
         ticket.setSubject(request.subject());
         ticket.setDescription(request.description());
         ticket.setStatus("OPEN");
@@ -76,7 +80,8 @@ public class CRMService {
 
     @Transactional
     public WorkSheetDTO createWorkSheet(CreateWorkSheetRequest request) {
-        SupportTicket ticket = ticketRepository.findById(request.ticketId())
+        SupportTicket ticket = ticketRepository.findByIdAndCompanyId(
+                        request.ticketId(), CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Pedido de assistência não encontrado."));
 
         WorkSheet ws = new WorkSheet();
@@ -105,7 +110,8 @@ public class CRMService {
 
     @Transactional
     public void billWorkSheet(Long workSheetId) {
-        WorkSheet ws = workSheetRepository.findById(workSheetId)
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        WorkSheet ws = workSheetRepository.findByIdAndSupportTicketCompanyId(workSheetId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Folha de obra não encontrada."));
 
         if (ws.getIsBilled()) {
@@ -115,32 +121,41 @@ public class CRMService {
         Client client = ws.getSupportTicket().getClient();
 
         // Find or create technical service & parts product in the DB for invoicing
-        Product techProduct = productRepository.findBySku("SERV-TEC")
+        Product techProduct = productRepository.findBySkuAndCompaniesId("SERV-TEC", companyId)
+                .or(() -> productRepository.findBySku("SERV-TEC"))
                 .orElseGet(() -> {
                     Product p = new Product();
                     p.setSku("SERV-TEC");
                     p.setName("Serviço Técnico Especializado");
                     p.setUnitPrice(HOURLY_RATE);
+                    p.getCompanies().add(companyRepository.getReferenceById(companyId));
                     p.setDescription("Mão de obra técnica de suporte");
                     return productRepository.save(p);
                 });
 
-        Product partsProduct = productRepository.findBySku("PECAS-SUP")
+        Product partsProduct = productRepository.findBySkuAndCompaniesId("PECAS-SUP", companyId)
+                .or(() -> productRepository.findBySku("PECAS-SUP"))
                 .orElseGet(() -> {
                     Product p = new Product();
                     p.setSku("PECAS-SUP");
                     p.setName("Materiais e Peças de Reposição");
                     p.setUnitPrice(BigDecimal.ONE);
+                    p.getCompanies().add(companyRepository.getReferenceById(companyId));
                     p.setDescription("Peças e materiais utilizados na assistência");
                     return productRepository.save(p);
                 });
 
+        techProduct.getCompanies().add(companyRepository.getReferenceById(companyId));
+        partsProduct.getCompanies().add(companyRepository.getReferenceById(companyId));
+        techProduct = productRepository.save(techProduct);
+        partsProduct = productRepository.save(partsProduct);
+
         List<CreateInvoiceLineRequest> lines = new ArrayList<>();
         // Add hours line
         lines.add(new CreateInvoiceLineRequest(
-                techProduct.getId(), 
+                techProduct.getId(),
                 ws.getHoursWorked().intValue(), // quantize hours to integer for simplify
-                new BigDecimal("0.23") // 23% IVA
+                TaxRates.STANDARD_VAT
         ));
 
         // Add parts line if cost > 0
@@ -154,11 +169,11 @@ public class CRMService {
             lines.add(new CreateInvoiceLineRequest(
                     partsProduct.getId(),
                     1,
-                    new BigDecimal("0.23") // 23% IVA
+                    TaxRates.STANDARD_VAT
             ));
         }
 
-        Company company = companyRepository.findAll().stream().findFirst()
+        Company company = companyRepository.findById(companyId).stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Nenhuma empresa cadastrada no sistema para faturamento."));
         Warehouse warehouse = warehouseRepository.findByCompanyId(company.getId()).stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Nenhum armazém cadastrado para a empresa " + company.getName()));
@@ -172,14 +187,15 @@ public class CRMService {
 
     @Transactional(readOnly = true)
     public List<SupportTicketDTO> getAllTickets() {
-        return ticketRepository.findAll().stream()
+        return ticketRepository.findByCompanyIdOrderByCreatedAtDesc(CurrentUserContext.getCurrentCompanyId()).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<WorkSheetDTO> getAllWorkSheets() {
-        return workSheetRepository.findAll().stream()
+        return workSheetRepository.findBySupportTicketCompanyIdOrderByCreatedAtDesc(
+                        CurrentUserContext.getCurrentCompanyId()).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }

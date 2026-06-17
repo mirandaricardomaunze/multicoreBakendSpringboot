@@ -5,6 +5,7 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.model.OrderLine;
 import com.phcpro.modules.comercial.repository.OrderRepository;
@@ -31,6 +32,7 @@ public class OrderPrintService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
 
+        CurrentUserContext.requireCompany(order.getCompany().getId());
         return PdfDocumentBuilder.buildA4(doc -> {
             doc.add(CompanyHeaderRenderer.build(
                     order.getCompany(),

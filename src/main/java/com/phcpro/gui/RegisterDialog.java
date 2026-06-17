@@ -140,8 +140,7 @@ public class RegisterDialog extends JDialog {
 
         c.gridy = row++;
         c.insets = new Insets(0, 0, 8, 0);
-        ModernButton createBtn = new ModernButton("Criar Conta",
-                UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN.brighter());
+        ModernButton createBtn = UIHelper.createSuccessButton("Criar Conta");
         createBtn.setIcon(UIHelper.icon("fas-check", 14));
         createBtn.setPreferredSize(new Dimension(0, 42));
         createBtn.addActionListener(e -> tryRegister());
@@ -149,8 +148,7 @@ public class RegisterDialog extends JDialog {
 
         c.gridy = row++;
         c.insets = new Insets(0, 0, 0, 0);
-        ModernButton cancelBtn = new ModernButton("Voltar ao Login",
-                new Color(55, 65, 81), new Color(75, 85, 99));
+        ModernButton cancelBtn = UIHelper.createSecondaryButton("Voltar ao Login");
         cancelBtn.setIcon(UIHelper.icon("fas-arrow-left", 14));
         cancelBtn.setPreferredSize(new Dimension(0, 38));
         cancelBtn.addActionListener(e -> dispose());

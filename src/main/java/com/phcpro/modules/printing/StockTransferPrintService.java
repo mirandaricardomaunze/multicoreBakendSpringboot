@@ -89,7 +89,7 @@ public class StockTransferPrintService {
         Paragraph date = new Paragraph("Data: " + transfer.getTransferDate().format(DATE_FMT), PdfTheme.bodyFont());
         date.setAlignment(Element.ALIGN_RIGHT);
         destination.addElement(date);
-        Paragraph status = new Paragraph("Estado: " + transfer.getStatus(), PdfTheme.boldFont());
+        Paragraph status = new Paragraph("Estado: " + transfer.getStatus().getLabel(), PdfTheme.boldFont());
         status.setAlignment(Element.ALIGN_RIGHT);
         destination.addElement(status);
         table.addCell(destination);
