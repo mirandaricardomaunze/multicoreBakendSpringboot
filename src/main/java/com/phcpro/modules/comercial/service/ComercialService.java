@@ -146,6 +146,9 @@ public class ComercialService {
     @Transactional
     public InvoiceDTO createInvoice(CreateInvoiceRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
+        // Emitir fatura é operação directa de quem tem perfil autorizado (atribuído pelo admin) —
+        // não passa pela Engine de Aprovações. Só o desconto sensível (>10%) é que exige aprovação.
+        PermissionGuard.requireManagerOrAdmin("emitir fatura");
         Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         Company company = companyRepository.findById(request.companyId())
@@ -160,7 +163,7 @@ public class ComercialService {
         invoice.setClient(client);
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
-        invoice.setStatus(InvoiceStatus.PENDING_APPROVAL);
+        // Estado definido no fim: APPROVED (directa) ou PENDING_DISCOUNT_APPROVAL (desconto >10%).
 
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
@@ -202,23 +205,47 @@ public class ComercialService {
         invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
 
-        if (hasHighDiscount) {
-            invoice.setStatus(InvoiceStatus.PENDING_DISCOUNT_APPROVAL);
-        }
-
         // Número fiscal sequencial e sem saltos (série FT).
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
-        invoice.setCreatedBy("SYSTEM");
+        invoice.setCreatedBy(CurrentUserContext.getUsername());
 
-        invoice = invoiceRepository.save(invoice);
-
-        // Submit to Approvals Engine
-        String approvalDesc = String.format("Fatura %s para %s - Total: %s MT%s", 
-                invoice.getInvoiceNumber(), client.getName(), invoice.getTotalAmount(),
-                hasHighDiscount ? " (Aprovação de Desconto Especial >10%)" : "");
-        approvalService.submitRequest("INVOICE", invoice.getId(), invoice.getTotalAmount(), approvalDesc);
+        if (hasHighDiscount) {
+            // Desconto sensível (>10%) continua a exigir aprovação do gerente. O stock só baixa
+            // na aprovação (InvoiceApprovalCallback.onApproved).
+            invoice.setStatus(InvoiceStatus.PENDING_DISCOUNT_APPROVAL);
+            invoice = invoiceRepository.save(invoice);
+            String approvalDesc = String.format(
+                    "Fatura %s para %s - Total: %s MT (Aprovação de Desconto Especial >10%%)",
+                    invoice.getInvoiceNumber(), client.getName(), invoice.getTotalAmount());
+            approvalService.submitRequest("INVOICE", invoice.getId(), invoice.getTotalAmount(), approvalDesc);
+        } else {
+            // Faturação directa: emite já APROVADA e baixa o stock no acto (como POS/encomenda).
+            invoice.setStatus(InvoiceStatus.APPROVED);
+            invoice = invoiceRepository.save(invoice);
+            deductStockForInvoice(invoice);
+            auditLogService.logCurrent("INVOICE_ISSUE",
+                    "Fatura " + invoice.getInvoiceNumber() + " emitida e aprovada para "
+                            + client.getName() + ". Total: " + invoice.getTotalAmount() + " MT.");
+        }
 
         return toDTO(invoice);
+    }
+
+    /** Baixa de stock (saída SALE) por cada linha da fatura, no armazém da fatura. */
+    private void deductStockForInvoice(Invoice invoice) {
+        invoice.getLines().forEach(line -> {
+            String desc = String.format("Saída Fatura %s - Cliente %s",
+                    invoice.getInvoiceNumber(), invoice.getClient().getName());
+            inventoryService.registerMovement(
+                    line.getProduct(),
+                    invoice.getWarehouse(),
+                    line.getQuantity().negate(),
+                    "SALE",
+                    line.getBatchNumber(),
+                    line.getSerialNumber(),
+                    desc
+            );
+        });
     }
 
     @Transactional

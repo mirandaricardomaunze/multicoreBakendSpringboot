@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-06-16
+**Última actualização:** 2026-06-21
 
 ---
 
@@ -15,12 +15,12 @@
 | **Venda POS**           | ✅      | Não é documento próprio — é uma `Invoice` com `SalesChannel.POS`, série **FT**.    |
 | **Fatura**              | ✅      | `Invoice` (canais `MANUAL`, `POS`, `ORDER`), série **FT**.                          |
 | **Nota de Crédito**     | ✅      | `CreditNote`, série **NC**. Devolve stock na aprovação se motivo = `RETURN`.        |
-| **Guia (de remessa/entrega ao cliente)** | ❌ **NÃO existe** | Ver §5. O único "Guia" é a **Guia de Transferência** de stock (interna, não-fiscal). |
+| **Guia (transferência entre armazéns)** | ✅ | `StockTransfer`, série **TRF**. Create/approve/reject/cancel com stock a sair só na aprovação; PDF via `StockTransferPrintService`. |
 
-> ⚠️ **Conclusão principal:** os movimentos de venda (POS, fatura, NC) estão completos, mas
-> **não há documento de Guia de Remessa/Entrega ao cliente**. A "Guia de Transferência"
-> existente é logística interna entre armazéns — não documenta entrega a cliente nem é
-> movimento comercial. Se o requisito legal/operacional exige guia de remessa, é trabalho novo.
+> ✅ **Decisão (2026-06-21):** o "guia" que o negócio usa é a **Guia de Transferência** entre
+> armazéns — e essa já existe e está testada (`StockTransferServiceTest`, 9 testes). A **Guia de
+> Remessa/Entrega ao cliente NÃO é requisito** e não será implementada. Os movimentos de venda
+> (POS, fatura, NC) estão completos.
 
 ---
 
@@ -35,11 +35,7 @@ pela série central [`DocumentSeries`](src/main/java/com/phcpro/modules/numberin
 | Fatura           | `Invoice`     | `FT`   | `invoices`        | `DRAFT → PENDING_APPROVAL → APPROVED → PAID` / `CANCELLED` |
 | Recibo           | `Receipt`     | `RC`   | —                 | `COMPLETED` / anulado                                      |
 | Nota de Crédito  | `CreditNote`  | `NC`   | —                 | `PENDING_APPROVAL → APPROVED` / `REJECTED` / `CANCELLED`   |
-| Nota de Débito   | `DebitNote`   | `ND-…` | —                 | Puramente financeira (sem stock). ⚠️ numeração própria, **fora** de `DocumentSeries` |
-
-> ⚠️ **Dívida técnica de numeração:** a Nota de Débito gera o número à mão
-> (`"ND-" + timestamp` em `DebitNoteService`), não usa `DocumentNumberService`. Inconsistente
-> com as restantes séries (sem sequencial sem saltos por ano). Alinhar quando se tocar no módulo.
+| Nota de Débito   | `DebitNote`   | `ND`   | —                 | Puramente financeira (sem stock). Numeração sequencial gapless via `DocumentSeries.DEBIT_NOTE`. |
 
 ---
 
@@ -70,8 +66,11 @@ VENDA POS  (Invoice + SalesChannel.POS)         POSService.checkout()
   └─ TreasuryTransaction DEBIT (CARD/TRANSFER, ou numerário fora de sessão)
 
 FATURA MANUAL  (Invoice, SalesChannel.MANUAL)   ComercialService.createInvoice()
-  └─ Passa pela Engine de Aprovações → ao APROVAR:  InvoiceApprovalCallback.onApproved()
-        └─ StockMovement SALE (saída, por linha)
+  Requer perfil MANAGER/ADMIN (PermissionGuard). Faturação directa:
+  ├─ SEM desconto >10%  → emite já APPROVED e baixa stock no acto:
+  │     └─ StockMovement SALE (saída, por linha) em createInvoice()
+  └─ COM desconto >10%  → PENDING_DISCOUNT_APPROVAL → Engine de Aprovações
+        └─ ao APROVAR:  InvoiceApprovalCallback.onApproved() → StockMovement SALE
      Recibo (createReceipt) → TreasuryTransaction DEBIT
 
 FATURA DE ENCOMENDA  (Invoice, SalesChannel.ORDER)  ComercialService.billOrder()
@@ -87,32 +86,27 @@ NOTA DE CRÉDITO (outros motivos) / NOTA DE DÉBITO
   └─ Sem movimento de stock — só efeito documental/financeiro
 ```
 
-**Nota importante sobre o timing do stock:** a fatura **POS** e a **de encomenda** baixam stock
-no acto; a fatura **manual** só baixa stock **na aprovação** (callback). Não procures o
-`registerMovement` dentro de `createInvoice` — ele está em
-[InvoiceApprovalCallback](src/main/java/com/phcpro/modules/comercial/service/InvoiceApprovalCallback.java).
+**Nota importante sobre o timing do stock:** a fatura **POS**, a **de encomenda** e a **manual
+sem desconto >10%** baixam stock **no acto** (`createInvoice` chama `registerMovement` via
+`deductStockForInvoice`). Só a fatura manual **com desconto >10%** adia a baixa para a **aprovação**
+(em [InvoiceApprovalCallback](src/main/java/com/phcpro/modules/comercial/service/InvoiceApprovalCallback.java)).
+Decisão de 2026-06-20: emitir fatura é operação directa de quem tem perfil autorizado (atribuído pelo
+admin), não passa pela Engine de Aprovações — só o desconto sensível continua a exigir gerente.
 
 ---
 
-## 5. A lacuna: Guia de Remessa / Entrega ao cliente
+## 5. Guia de Transferência (entre armazéns) — o "guia" do negócio
 
-**Não existe.** Procuras de "guia" no código só encontram a **Guia de Transferência**
-([StockTransferPrintService](src/main/java/com/phcpro/modules/printing/StockTransferPrintService.java),
-série `TRF`), que é movimento de stock **entre armazéns** — não há cliente, não há valor fiscal,
-não é entrega.
+**Decisão (2026-06-21): é esta a guia que o negócio usa, e já existe.** A Guia de Remessa/Entrega
+ao cliente **não é requisito** e foi descartada.
 
-Se for preciso suportar guia de remessa (expedição de mercadoria sem/antes de faturar, com
-faturação posterior), o desenho que respeita a arquitectura actual seria:
-
-- Nova entidade `DeliveryNote` em `modules/comercial/model/` (extends `BaseEntity`), com linhas.
-- Série nova em `DocumentSeries` (ex.: `GR`).
-- Gera `StockMovement SALE` (saída) na expedição; a fatura posterior **não** repete a baixa.
-- Liga-se a `Order`/`Invoice` por referência, à semelhança de `CreditNote → Invoice`.
-- Controller → Service → Repository separados (regra do projecto).
-- Usar a skill `phc-new-module` ou `phc-new-endpoint` para o scaffold.
-
-> Decisão a tomar com o utilizador **antes** de implementar: precisa mesmo de guia de remessa,
-> ou o fluxo Encomenda → Fatura já cobre o caso de uso? (ver regra 7 do [CLAUDE.md](CLAUDE.md)).
+A **Guia de Transferência** documenta a movimentação de stock **entre armazéns**:
+- Entidade `StockTransfer` + linhas, série `TRF` em `DocumentSeries`.
+- Ciclo `PENDING_APPROVAL → APPROVED / REJECTED / CANCELLED`; o stock só sai da origem e entra no
+  destino **na aprovação** (FEFO por lote), com permissão MANAGER/ADMIN.
+- Lógica em [StockTransferService](src/main/java/com/phcpro/modules/inventory/service/StockTransferService.java),
+  PDF em [StockTransferPrintService](src/main/java/com/phcpro/modules/printing/StockTransferPrintService.java).
+- Testada por `StockTransferServiceTest` (9 cenários: estados, stock só na aprovação, permissão).
 
 ---
 
@@ -134,8 +128,11 @@ faturação posterior), o desenho que respeita a arquitectura actual seria:
 
 ## 7. Pontos abertos / dívida técnica
 
-1. **Guia de Remessa ao cliente não existe** — decidir se é requisito (§5).
-2. **Nota de Débito** numera fora de `DocumentSeries` (`ND-` + timestamp) — alinhar com as séries sequenciais.
+1. ~~**Guia de Remessa ao cliente**~~ — **decidido (2026-06-21): não é requisito.** O "guia" do
+   negócio é a Guia de Transferência entre armazéns, que já existe e está testada (§5).
+2. ~~**Nota de Débito** numera fora de `DocumentSeries`~~ — **resolvido (2026-06-20)**: passou a
+   usar `DocumentNumberService.next(DocumentSeries.DEBIT_NOTE)`, série `ND` sequencial e gapless,
+   coberto por `DocumentNumberServiceTest`.
 3. **Sem visão unificada de "movimentos"** — não há ecrã/relatório que liste todos os documentos
    de um cliente/período num só sítio; cada tipo consulta-se no seu painel. Avaliar um
    `MovimentosController` de leitura agregada se o negócio o pedir.

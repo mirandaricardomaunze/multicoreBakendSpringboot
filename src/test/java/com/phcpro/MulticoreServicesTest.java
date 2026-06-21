@@ -171,7 +171,11 @@ public class MulticoreServicesTest {
                 .findFirst()
                 .orElseThrow();
 
-        // 1. Discount = 5% (<= 10%), status should be PENDING_APPROVAL (standard approval flow)
+        // Garante stock disponível — a faturação directa baixa stock no acto.
+        inventoryService.registerMovement(product, warehouse, new BigDecimal("10"),
+                "ENTRY", "LOTE-DISC", "SERIE-DISC", "Stock para teste de desconto");
+
+        // 1. Discount = 5% (<= 10%): faturação directa → APPROVED (sem Engine de Aprovações).
         CreateInvoiceLineRequest lineNormal = new CreateInvoiceLineRequest(
                 product.getId(),
                 1,
@@ -188,7 +192,7 @@ public class MulticoreServicesTest {
         );
 
         InvoiceDTO invNormal = comercialService.createInvoice(reqNormal);
-        assertEquals(InvoiceStatus.PENDING_APPROVAL, invNormal.status());
+        assertEquals(InvoiceStatus.APPROVED, invNormal.status());
 
         // 2. Discount = 15% (> 10%), status should be PENDING_DISCOUNT_APPROVAL
         CreateInvoiceLineRequest lineHigh = new CreateInvoiceLineRequest(

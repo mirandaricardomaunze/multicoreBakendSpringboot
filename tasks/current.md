@@ -2,8 +2,44 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-06-17
+**Última actualização:** 2026-06-20
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-06-20 (dívida técnica + cobertura de testes)
+
+- **Nota de Débito** alinhada com `DocumentSeries`: nova série `ND`, número sequencial gapless via
+  `DocumentNumberService.next(...)` em vez de `"ND-" + timestamp`. (resolve dívida §7.2 de MOVIMENTOS_COMERCIAIS.md)
+- **Cobertura de testes** dos Services críticos que faltavam ao harness:
+  - `POSServiceTest` (10): checkout sem sessão, via legada vs multi-método, fiado parcial,
+    numerário+cartão sem dupla contagem, fecho de caixa (sem diferença / diferença exige permissão / depósito).
+  - `CreditNoteServiceTest` (8): RETURN repõe stock só na aprovação, limites de quantidade/valor, permissão.
+  - `DocumentNumberServiceTest` (6): sequência gapless, séries independentes, corrida na criação, série ND.
+- **BackupService confirmado**: faz export real (dump JSON de todas as coleções por empresa) — não é
+  placeholder. Só não tem restore programático (por design; restore é ao nível de BD em ambiente separado).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 71 testes, 0 falhas**.
+
+### Progresso — 2026-06-20 (faturação directa + lote vencido + mais testes)
+
+- **Faturação directa (decisão do utilizador):** `ComercialService.createInvoice` deixou de passar
+  sempre pela Engine de Aprovações. Agora exige perfil **MANAGER/ADMIN**, emite a fatura já **APPROVED**
+  e baixa stock no acto. **Só desconto >10%** mantém o caminho `PENDING_DISCOUNT_APPROVAL` → aprovação
+  do gerente (stock baixa na aprovação via callback). Sem dupla baixa de stock.
+- **Lote vencido (RS-12 / spec §4):** `ProductBatchService.addToBatch` bloqueia entrada de stock com
+  validade já no passado (validade = hoje ainda entra; sem validade não bloqueia). Guarda todas as
+  entradas porque compra/ENTRY passam por `addToBatch`.
+- **Novos testes:** `ComercialServiceTest` (8) e 3 cenários de lote vencido em `ProductBatchServiceTest`.
+  `MulticoreServicesTest.testDiscountApprovalThreshold` actualizado para o novo fluxo (5% → APPROVED).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 82 testes, 0 falhas**.
+
+### Progresso — 2026-06-21 (segurança/roles por API)
+
+- **Confirmado:** o `SecurityInterceptor` já impõe token+empresa em todo o `/api/**` (excepto
+  `/api/auth/login`): 401 sem token, 403 sem acesso à empresa, e resolve o role por empresa. A spec §9
+  está satisfeita ao nível do interceptor — o filtro Spring permissivo **não** é uma falha real.
+- **Novo teste:** `SecurityApiIntegrationTest` (4) valida ponta-a-ponta pela API: 401 sem token,
+  403 empresa sem acesso, e o role gate ao faturar (EMPLOYEE bloqueado / ADMIN passa). Fecha o item
+  "login, tenant e roles testados por API" do harness.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 86 testes, 0 falhas**.
 
 ---
 
@@ -83,11 +119,11 @@ Prioridade imediata: executar o harness RS-01 a RS-22 com dados reais de loja, v
 
 ## Por fazer antes de produção real
 
-1. **Gerar V1__init.sql** (ver [db/migration/README.md](src/main/resources/db/migration/README.md)) e fazer commit.
-2. **Restringir Security progressivamente** — quando o desktop começar a falar HTTP, substituir `.anyRequest().permitAll()` por `.requestMatchers(...).hasRole(...)` em [SecurityConfig](src/main/java/com/phcpro/architecture/security/SecurityConfig.java).
-3. **Endpoints `/api/auth/login`** (devolvem JWT ou abrem sessão) — começar pelo módulo `users/`.
-4. **Cobertura de testes** dos restantes Services críticos (`POSService.checkout`, `ComercialService.issueInvoice`, `StockTransferService.execute`).
-5. **Backups reais** — verificar se [BackupService](src/main/java/com/phcpro/modules/backup/service/BackupService.java) faz dump real ou é placeholder.
+1. ~~**Gerar V1__init.sql**~~ — já existe baseline `V1__init.sql` + V2..V8 em [db/migration/](src/main/resources/db/migration/). Falta aplicar/validar em PostgreSQL limpo (checklist do harness).
+2. ~~**Restringir Security**~~ — **confirmado (2026-06-21)**: o `SecurityInterceptor` já impõe token+empresa+role em todo o `/api/**` (401/403), validado por `SecurityApiIntegrationTest`. O `.anyRequest().permitAll()` do filtro Spring é redundante (a guarda é o interceptor), não uma falha. Endurecer o filtro Spring fica como hardening opcional, não bloqueante.
+3. ~~**Endpoints `/api/auth/login`**~~ — existe e está coberto (`AuthControllerIntegrationTest`).
+4. ~~**Cobertura de testes** dos Services críticos~~ — **feito (2026-06-20)** para `POSService.checkout/closeSession`, `CreditNoteService`, `DocumentNumberService`. Falta `ComercialService.issueInvoice` e o cenário lote vencido (RS-12).
+5. ~~**Backups reais**~~ — confirmado: `BackupService.executeBackup()` faz export real. Restore real continua a exigir ambiente separado (ponto manual do harness).
 
 ## Decisões tomadas
 
@@ -99,8 +135,8 @@ Prioridade imediata: executar o harness RS-01 a RS-22 com dados reais de loja, v
 ## Estado de build
 
 ```
-mvn clean compile                          → BUILD SUCCESS (243 fontes)
-mvn test -Dtest=ProductBatchServiceTest    → 9/9 verde
+mvn clean compile   → BUILD SUCCESS
+mvn clean test      → BUILD SUCCESS, 86 testes, 0 falhas (2026-06-21)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.

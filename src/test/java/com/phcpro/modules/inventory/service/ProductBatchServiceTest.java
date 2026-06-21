@@ -158,6 +158,44 @@ class ProductBatchServiceTest {
         verify(repo, never()).save(any());
     }
 
+    // ──────────────────── lote vencido (RS-12 / spec §4) ────────────────────
+
+    @Test
+    void addToBatch_loteJaVencido_lancaBusinessRuleException_eNaoPersiste() {
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.addToBatch(
+                product, warehouse, "LOTE-VELHO", LocalDate.now().minusDays(1), new BigDecimal("10")));
+        assertTrue(ex.getMessage().toLowerCase().contains("vencido"));
+        verify(repo, never()).save(any());
+        verify(repo, never()).findByProductIdAndWarehouseIdAndBatchNumber(anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void addToBatch_validadeHoje_aindaEntra() {
+        // Um lote que expira hoje ainda não está vencido — deve poder entrar.
+        when(repo.findByProductIdAndWarehouseIdAndBatchNumber(1L, 10L, "LOTE-HOJE"))
+                .thenReturn(Optional.empty());
+        when(repo.save(any(ProductBatch.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductBatch saved = service.addToBatch(product, warehouse, "LOTE-HOJE",
+                LocalDate.now(), new BigDecimal("4"));
+
+        assertEquals(new BigDecimal("4"), saved.getQuantity());
+        verify(repo).save(any(ProductBatch.class));
+    }
+
+    @Test
+    void addToBatch_semValidade_naoBloqueia() {
+        // Produto não-perecível (validade null) nunca é tratado como vencido.
+        when(repo.findByProductIdAndWarehouseIdAndBatchNumber(anyLong(), anyLong(), any()))
+                .thenReturn(Optional.empty());
+        when(repo.save(any(ProductBatch.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductBatch saved = service.addToBatch(product, warehouse, "LOTE-SEM-VAL",
+                null, new BigDecimal("7"));
+
+        assertEquals(new BigDecimal("7"), saved.getQuantity());
+    }
+
     // ────────────────────────── helpers ────────────────────────────────
 
     private static Product product(long id, String sku, String name) {

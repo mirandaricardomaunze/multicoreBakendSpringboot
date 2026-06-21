@@ -16,12 +16,13 @@ import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.NoteStatus;
 import com.phcpro.modules.comercial.repository.DebitNoteRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
+import com.phcpro.modules.numbering.service.DocumentNumberService;
+import com.phcpro.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -31,19 +32,20 @@ import java.util.List;
 @Service
 public class DebitNoteService {
 
-    private static final DateTimeFormatter NUMBER_FMT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-
     private final DebitNoteRepository debitNoteRepository;
     private final InvoiceRepository invoiceRepository;
+    private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
     public DebitNoteService(
             DebitNoteRepository debitNoteRepository,
             InvoiceRepository invoiceRepository,
+            DocumentNumberService documentNumberService,
             AuditLogService auditLogService
     ) {
         this.debitNoteRepository = debitNoteRepository;
         this.invoiceRepository = invoiceRepository;
+        this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
 
@@ -61,7 +63,7 @@ public class DebitNoteService {
 
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
         DebitNote note = new DebitNote();
-        note.setNoteNumber("ND-" + LocalDateTime.now().format(NUMBER_FMT));
+        note.setNoteNumber(documentNumberService.next(DocumentSeries.DEBIT_NOTE));
         note.setIssueDate(LocalDateTime.now());
         note.setCompany(invoice.getCompany());
         note.setClient(invoice.getClient());

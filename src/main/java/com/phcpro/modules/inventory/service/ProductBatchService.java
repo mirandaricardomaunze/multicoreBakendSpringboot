@@ -34,6 +34,14 @@ public class ProductBatchService {
             throw new BusinessRuleException("Quantidade de entrada deve ser positiva.");
         }
 
+        // Bloqueio de entrada de lote já vencido (spec §4 / harness RS-12). Lotes sem validade
+        // (perecível não rastreado) usam LEGACY_EXPIRATION 9999 e nunca caem aqui.
+        if (expirationDate != null && expirationDate.isBefore(LocalDate.now())) {
+            throw new BusinessRuleException(String.format(
+                    "Não é possível dar entrada de stock de '%s' com lote já vencido (validade %s).",
+                    product.getName(), expirationDate));
+        }
+
         String effectiveBatch = (batchNumber == null || batchNumber.isBlank())
                 ? defaultBatchNumber(expirationDate)
                 : batchNumber;
