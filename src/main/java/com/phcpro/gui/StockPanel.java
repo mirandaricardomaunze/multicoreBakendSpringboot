@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductDTO;
@@ -56,16 +57,24 @@ public class StockPanel extends JPanel {
     private DefaultTableModel movementsModel;
     private JTable movementsTable;
 
+    // Categorias
+    private final com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService;
+    private DefaultTableModel categoriesModel;
+    private JTable categoriesTable;
+    private java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categoriesList = new ArrayList<>();
+
     public StockPanel(InventoryService inventoryService,
                        ComercialService comercialService,
                        StockTransferService stockTransferService,
                        StockTransferPrintService stockTransferPrintService,
-                       InventoryReportPrintService inventoryReportPrintService) {
+                       InventoryReportPrintService inventoryReportPrintService,
+                       com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService) {
         this.inventoryService = inventoryService;
         this.comercialService = comercialService;
         this.stockTransferService = stockTransferService;
         this.stockTransferPrintService = stockTransferPrintService;
         this.inventoryReportPrintService = inventoryReportPrintService;
+        this.productCategoryService = productCategoryService;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -97,6 +106,7 @@ public class StockPanel extends JPanel {
         tabs.addTab("Lotes & Validades",             UIHelper.icon("fas-calendar-times", 16, UIHelper.TEXT_LIGHT),buildBatchesTab());
         tabs.addTab("Movimentos & Rastreabilidade",  UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT),buildMovementsTab());
         tabs.addTab("Transferências entre Armazéns", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),         buildTransfersTab());
+        tabs.addTab("Categorias",                    UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),         buildCategoriesTab());
 
         add(tabs, BorderLayout.CENTER);
 
@@ -517,6 +527,115 @@ public class StockPanel extends JPanel {
         loadMovements();
         loadTransfers();
         loadBatches();
+        loadCategories();
+    }
+
+    // ===== Categorias de produto =====
+
+    private JPanel buildCategoriesTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+
+        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
+        header.add(UIHelper.createHeading("Categorias de Produto"), BorderLayout.WEST);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
+        ModernButton newBtn = UIHelper.createSuccessButton("Nova Categoria");
+        newBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        newBtn.addActionListener(e -> openCategoryDialog(null));
+        ModernButton editBtn = UIHelper.createSecondaryButton("Editar");
+        editBtn.setIcon(UIHelper.icon("fas-edit", 14));
+        editBtn.addActionListener(e -> {
+            var sel = selectedCategory();
+            if (sel != null) openCategoryDialog(sel);
+        });
+        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
+        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
+        toggleBtn.addActionListener(e -> toggleSelectedCategory());
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadCategories());
+        actions.add(newBtn); actions.add(editBtn); actions.add(toggleBtn); actions.add(refreshBtn);
+        header.add(actions, BorderLayout.EAST);
+        tab.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout());
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        String[] cols = {"Código", "Nome", "Cor", "Estado"};
+        categoriesModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        categoriesTable = new JTable(categoriesModel);
+        UIHelper.styleTable(categoriesTable);
+        JScrollPane scroll = new JScrollPane(categoriesTable);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
+        tab.add(card, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private void loadCategories() {
+        if (categoriesModel == null) return;
+        categoriesList = productCategoryService.getAll();
+        categoriesModel.setRowCount(0);
+        for (var c : categoriesList) {
+            categoriesModel.addRow(new Object[]{
+                    c.code(), c.name(),
+                    c.colorHex() != null && !c.colorHex().isBlank() ? c.colorHex() : "-",
+                    c.active() ? "Activa" : "Inactiva"});
+        }
+    }
+
+    private com.phcpro.modules.comercial.dto.ProductCategoryDTO selectedCategory() {
+        int row = categoriesTable.getSelectedRow();
+        if (row < 0 || row >= categoriesList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione uma categoria.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return categoriesList.get(row);
+    }
+
+    private void toggleSelectedCategory() {
+        var sel = selectedCategory();
+        if (sel == null) return;
+        try {
+            productCategoryService.setActive(sel.id(), !sel.active());
+            loadCategories();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void openCategoryDialog(com.phcpro.modules.comercial.dto.ProductCategoryDTO existing) {
+        boolean editing = existing != null;
+        JTextField codeField = new JTextField(editing ? existing.code() : "");
+        JTextField nameField = new JTextField(editing ? existing.name() : "");
+        JTextField colorField = new JTextField(editing && existing.colorHex() != null ? existing.colorHex() : "");
+        colorField.setToolTipText("Cor opcional em hexadecimal, ex.: #2E86C1");
+
+        JPanel form = UIHelper.createDialogForm(
+                "Código:", codeField,
+                "Nome:", nameField,
+                "Cor (hex, opcional):", colorField);
+
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, editing ? "Editar Categoria" : "Nova Categoria", form);
+        dlg.setSize(460, 360);
+        dlg.setOnSave(() -> {
+            String code = codeField.getText().trim();
+            String name = nameField.getText().trim();
+            if (code.isEmpty() || name.isEmpty()) {
+                throw new RuntimeException("Código e nome são obrigatórios.");
+            }
+            var req = new com.phcpro.modules.comercial.dto.CreateProductCategoryRequest(
+                    code, name, colorField.getText().trim());
+            if (editing) productCategoryService.update(existing.id(), req);
+            else productCategoryService.create(req);
+        });
+        if (dlg.showDialog()) {
+            loadCategories();
+        }
     }
 
     private void loadTransfers() {

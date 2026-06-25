@@ -11,5 +11,7 @@ public record CreateSupplierRequest(
         @Pattern(regexp = "\\d{9}", message = "NUIT/NIF deve conter 9 dígitos.") String taxId,
         @Email(message = "Email inválido.") String email,
         String address,
+        String phone,
+        String contactPerson,
         @NotNull(message = "Empresa é obrigatória.") Long companyId
 ) {}

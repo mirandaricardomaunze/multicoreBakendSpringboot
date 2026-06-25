@@ -104,6 +104,8 @@ public class MainFrame extends JFrame {
             InventoryService inventoryService,
             POSService posService,
             PurchaseService purchaseService,
+            com.phcpro.modules.purchases.service.PurchaseOrderService purchaseOrderService,
+            com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService,
             AppUserService userService,
             AuditLogService auditLogService,
             BackupService backupService,
@@ -150,8 +152,8 @@ public class MainFrame extends JFrame {
         fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
         approvalsPanel  = new ApprovalsPanel(approvalService);
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
-        stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService);
-        comprasPanel    = new ComprasPanel(purchaseService, inventoryService, comercialService, financeService);
+        stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
+        comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, inventoryService, comercialService, financeService);
         configPanel     = new ConfigPanel(userService, auditLogService, backupService);
 
         contentPanel.add(dashboardPanel,  "dashboard");

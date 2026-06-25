@@ -28,6 +28,15 @@ public class Supplier extends BaseEntity {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "contact_person")
+    private String contactPerson;
+
+    @Column(name = "active", nullable = false)
+    private boolean active = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;

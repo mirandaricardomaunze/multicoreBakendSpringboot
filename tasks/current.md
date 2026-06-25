@@ -5,6 +5,30 @@
 **Última actualização:** 2026-06-21
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-06-25 (compras & aprovisionamento profissional)
+
+- **Gestão de fornecedores completa:** campos novos (telefone, contacto, **activo**), editar,
+  activar/desactivar (soft-delete, MANAGER/ADMIN + auditado), pesquisar por nome/NUIT. Fornecedor
+  inactivo bloqueado em compra/encomenda. Migration `V13`.
+- **Encomenda de Fornecedor (`PurchaseOrder`, série `EC-F`):** novo workflow `ORDERED → RECEIVED /
+  CANCELLED` (mirror da encomenda de cliente). **Não move stock até à recepção**; a recepção gera
+  entrada `PURCHASE` por linha (FEFO/lote, bloqueio de lote vencido), MANAGER/ADMIN + auditado.
+  Migration `V14`. Endpoints sob `/api/purchases/orders`.
+- **UI (`ComprasPanel`):** tab «Encomendas a Fornecedor» (form + linhas + lista com Receber/Cancelar/
+  pesquisa) e tab de fornecedores com editar/pesquisar/activar. **Categorias** ganharam ecrã de gestão
+  (nova tab no `StockPanel` sobre o `ProductCategoryService`).
+- Spec/harness: [docs/COMPRAS_APROVISIONAMENTO_SPEC.md](../docs/COMPRAS_APROVISIONAMENTO_SPEC.md) +
+  [docs/COMPRAS_APROVISIONAMENTO_HARNESS.md](../docs/COMPRAS_APROVISIONAMENTO_HARNESS.md).
+  Testes: `PurchaseServiceTest` (5) + `PurchaseOrderServiceTest` (8).
+- **Fase 4 (futuro):** contas a pagar a fornecedor (saldo + pagamento → tesouraria) e recepção parcial.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 151 testes, 0 falhas**.
+
+### Progresso — 2026-06-25 (UI faturação: tabela de linhas em largura total)
+
+- Tab **Faturação (FT)** reorganizada com **split vertical**: formulário + faturas recentes em cima,
+  **Linhas da Fatura em largura total** em baixo (divisor 50/50 aplicado no 1.º resize real — corrige
+  o `setDividerLocation` que não pegava antes do componente ter altura).
+
 ### Progresso — 2026-06-25 (vista unificada de movimentos comerciais)
 
 - **Dívida §7.3 fechada:** novo módulo de leitura agregada `modules/movimentos/` (DTO/enum/service/
@@ -307,7 +331,7 @@ fiscal e config de impostos sem endpoint/PDF; (5) férias sem saldo e `decideVac
 
 ```
 mvn clean compile   → BUILD SUCCESS
-mvn clean test      → BUILD SUCCESS, 138 testes, 0 falhas (2026-06-25)
+mvn clean test      → BUILD SUCCESS, 151 testes, 0 falhas (2026-06-25)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.

@@ -13,8 +13,12 @@ import com.phcpro.modules.inventory.model.Warehouse;
 import com.phcpro.modules.inventory.service.InventoryService;
 import com.phcpro.modules.purchases.dto.CreatePurchaseLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseRequest;
+import com.phcpro.modules.purchases.dto.CreatePurchaseOrderLineRequest;
+import com.phcpro.modules.purchases.dto.CreatePurchaseOrderRequest;
+import com.phcpro.modules.purchases.dto.PurchaseOrderDTO;
 import com.phcpro.modules.purchases.model.Supplier;
 import com.phcpro.modules.purchases.model.Purchase;
+import com.phcpro.modules.purchases.service.PurchaseOrderService;
 import com.phcpro.modules.purchases.service.PurchaseService;
 
 import javax.swing.*;
@@ -32,9 +36,27 @@ import java.util.List;
 public class ComprasPanel extends JPanel {
 
     private final PurchaseService purchaseService;
+    private final PurchaseOrderService purchaseOrderService;
     private final InventoryService inventoryService;
     private final ComercialService comercialService;
     private final FinanceService financeService;
+
+    // TAB ENCOMENDAS A FORNECEDOR
+    private JComboBox<String> poSupplierCombo;
+    private JComboBox<String> poWarehouseCombo;
+    private JComboBox<String> poProductCombo;
+    private JTextField poQtyField;
+    private JTextField poPriceField;
+    private JTextField poExpectedField;
+    private DefaultTableModel poLinesModel;
+    private JTable poLinesTable;
+    private JLabel poTotalLabel;
+    private DefaultTableModel poListModel;
+    private JTable poListTable;
+    private JTextField poSearchField;
+    private final List<CreatePurchaseOrderLineRequest> poDraftLines = new ArrayList<>();
+    private List<PurchaseOrderDTO> poList = new ArrayList<>();
+    private JTextField supplierSearchField;
 
     // TAB 1: REGISTO COMPRA ELEMENTS
     private JComboBox<String> supplierCombo;
@@ -61,7 +83,8 @@ public class ComprasPanel extends JPanel {
     private JTable suppliersTable;
 
     // Seeding lists
-    private List<Supplier> suppliersList = new ArrayList<>();
+    private List<Supplier> suppliersList = new ArrayList<>();        // linhas da tabela (pode estar filtrada)
+    private List<Supplier> supplierComboList = new ArrayList<>();     // activos, para combos de compra/encomenda
     private List<Warehouse> warehousesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
     private List<ProductDTO> productsList = new ArrayList<>();
@@ -72,11 +95,13 @@ public class ComprasPanel extends JPanel {
 
     public ComprasPanel(
             PurchaseService purchaseService,
+            PurchaseOrderService purchaseOrderService,
             InventoryService inventoryService,
             ComercialService comercialService,
             FinanceService financeService
     ) {
         this.purchaseService = purchaseService;
+        this.purchaseOrderService = purchaseOrderService;
         this.inventoryService = inventoryService;
         this.comercialService = comercialService;
         this.financeService = financeService;
@@ -92,7 +117,10 @@ public class ComprasPanel extends JPanel {
         JPanel tabCompras = createComprasTab();
         tabbedPane.addTab("Faturas de Compra (V/FT)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT), tabCompras);
 
-        // Tab 2: Fornecedores
+        // Tab 2: Encomendas a Fornecedor
+        tabbedPane.addTab("Encomendas a Fornecedor (EC-F)", UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT), createPurchaseOrdersTab());
+
+        // Tab 3: Fornecedores
         JPanel tabFornecedores = createFornecedoresTab();
         tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.TEXT_LIGHT), tabFornecedores);
 
@@ -338,12 +366,24 @@ public class ComprasPanel extends JPanel {
         header.setOpaque(false);
         header.add(UIHelper.createHeading("Fornecedores Cadastrados"), BorderLayout.WEST);
 
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         headerActions.setOpaque(false);
+        JLabel searchLbl = new JLabel("Pesquisar:"); searchLbl.setForeground(UIHelper.TEXT_MUTED);
+        supplierSearchField = new JTextField(14);
+        UIHelper.styleTextField(supplierSearchField);
+        supplierSearchField.setToolTipText("Filtrar por nome ou NUIT");
+        ModernButton editSupBtn = UIHelper.createSecondaryButton("Editar");
+        editSupBtn.setIcon(UIHelper.icon("fas-edit", 14));
+        ModernButton toggleSupBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
+        toggleSupBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Atualizar");
         refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         ModernButton newSupBtn = UIHelper.createSuccessButton("Novo Fornecedor");
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        headerActions.add(searchLbl);
+        headerActions.add(supplierSearchField);
+        headerActions.add(editSupBtn);
+        headerActions.add(toggleSupBtn);
         headerActions.add(refreshSupsBtn);
         headerActions.add(newSupBtn);
         header.add(headerActions, BorderLayout.EAST);
@@ -354,7 +394,7 @@ public class ComprasPanel extends JPanel {
         listCard.setLayout(new BorderLayout(0, 10));
         listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Correio Eletrónico", "Endereço"};
+        String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Telefone", "Contacto", "Correio Eletrónico", "Endereço", "Estado"};
         suppliersModel = new DefaultTableModel(supCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -367,45 +407,84 @@ public class ComprasPanel extends JPanel {
         panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
-        refreshSupsBtn.addActionListener(e -> loadSuppliers());
-        newSupBtn.addActionListener(e -> openNewSupplierDialog());
+        refreshSupsBtn.addActionListener(e -> { supplierSearchField.setText(""); loadSuppliers(); });
+        newSupBtn.addActionListener(e -> openSupplierDialog(null));
+        editSupBtn.addActionListener(e -> {
+            Supplier sel = selectedSupplier();
+            if (sel != null) openSupplierDialog(sel);
+        });
+        toggleSupBtn.addActionListener(e -> toggleSelectedSupplier());
+        UIHelper.onTextChange(supplierSearchField, this::loadSuppliers);
 
         return panel;
     }
 
-    private void openNewSupplierDialog() {
-        JTextField nameField = new JTextField();
-        JTextField taxIdField = new JTextField();
-        JTextField emailField = new JTextField();
-        JTextField addressField = new JTextField();
+    private Supplier selectedSupplier() {
+        int row = suppliersTable.getSelectedRow();
+        if (row < 0 || row >= suppliersList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione um fornecedor na tabela.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return suppliersList.get(row);
+    }
+
+    private void toggleSelectedSupplier() {
+        Supplier sel = selectedSupplier();
+        if (sel == null) return;
+        try {
+            purchaseService.setSupplierActive(sel.getId(), CurrentUserContext.getCurrentCompanyId(), !sel.isActive());
+            loadSuppliers();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void openSupplierDialog(Supplier existing) {
+        boolean editing = existing != null;
+        JTextField nameField = new JTextField(editing ? existing.getName() : "");
+        JTextField taxIdField = new JTextField(editing ? existing.getTaxId() : "");
+        JTextField phoneField = new JTextField(editing && existing.getPhone() != null ? existing.getPhone() : "");
+        JTextField contactField = new JTextField(editing && existing.getContactPerson() != null ? existing.getContactPerson() : "");
+        JTextField emailField = new JTextField(editing && existing.getEmail() != null ? existing.getEmail() : "");
+        JTextField addressField = new JTextField(editing && existing.getAddress() != null ? existing.getAddress() : "");
 
         JPanel form = UIHelper.createDialogForm(
                 "Nome / Empresa:", nameField,
                 "NUIT / NIF (9 dígitos):", taxIdField,
+                "Telefone:", phoneField,
+                "Pessoa de Contacto:", contactField,
                 "Correio Eletrónico:", emailField,
                 "Endereço:", addressField
         );
 
         Window parent = SwingUtilities.getWindowAncestor(this);
-        ModernFormDialog dlg = new ModernFormDialog(parent, "Novo Fornecedor", form);
-        dlg.setSize(520, 420);
+        ModernFormDialog dlg = new ModernFormDialog(parent, editing ? "Editar Fornecedor" : "Novo Fornecedor", form);
+        dlg.setSize(520, 480);
         dlg.setOnSave(() -> {
             String name = nameField.getText().trim();
             String taxId = taxIdField.getText().trim();
             if (name.isEmpty() || taxId.isEmpty()) {
                 throw new RuntimeException("Nome e NUIT/NIF são campos obrigatórios.");
             }
-            purchaseService.createSupplier(
-                    name, taxId,
-                    emailField.getText().trim(),
-                    addressField.getText().trim(),
-                    CurrentUserContext.getCurrentCompanyId()
-            );
+            com.phcpro.modules.purchases.dto.CreateSupplierRequest req =
+                    new com.phcpro.modules.purchases.dto.CreateSupplierRequest(
+                            name, taxId,
+                            emailField.getText().trim(),
+                            addressField.getText().trim(),
+                            phoneField.getText().trim(),
+                            contactField.getText().trim(),
+                            CurrentUserContext.getCurrentCompanyId());
+            if (editing) {
+                purchaseService.updateSupplier(existing.getId(), req);
+            } else {
+                purchaseService.createSupplier(req);
+            }
         });
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this,
-                    "Fornecedor '" + nameField.getText().trim() + "' registado com sucesso!",
+                    "Fornecedor '" + nameField.getText().trim() + (editing ? "' actualizado." : "' registado."),
                     "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadSuppliers();
         }
@@ -417,23 +496,311 @@ public class ComprasPanel extends JPanel {
         loadAccounts();
         loadProducts();
         loadPurchasesHistory();
+        refreshPoCombos();
+        loadPurchaseOrders();
+    }
+
+    private void refreshPoCombos() {
+        if (poWarehouseCombo == null) return;
+        poWarehouseCombo.removeAllItems();
+        for (Warehouse w : warehousesList) poWarehouseCombo.addItem(w.getName());
+        poProductCombo.removeAllItems();
+        for (ProductDTO p : productsList) poProductCombo.addItem(p.name() + " (" + p.sku() + ")");
+    }
+
+    // ===== Encomendas a Fornecedor =====
+
+    private JPanel createPurchaseOrdersTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+
+        // ---- formulário (topo) ----
+        ModernPanel formCard = new ModernPanel(16);
+        formCard.setLayout(new GridBagLayout());
+        formCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        GridBagConstraints g = new GridBagConstraints();
+        g.fill = GridBagConstraints.HORIZONTAL; g.insets = new Insets(4, 8, 4, 8); g.weightx = 1;
+
+        poSupplierCombo = new JComboBox<>(); UIHelper.styleComboBox(poSupplierCombo);
+        poWarehouseCombo = new JComboBox<>(); UIHelper.styleComboBox(poWarehouseCombo);
+        poProductCombo = new JComboBox<>(); UIHelper.styleComboBox(poProductCombo);
+        poQtyField = new JTextField("1"); UIHelper.styleTextField(poQtyField);
+        poPriceField = new JTextField("0"); UIHelper.styleTextField(poPriceField);
+        poExpectedField = new JTextField(); UIHelper.styleTextField(poExpectedField);
+        poExpectedField.setToolTipText("Data prevista de entrega (aaaa-MM-dd) — opcional");
+
+        g.gridx = 0; g.gridy = 0; g.weightx = 0.5; formCard.add(label("Fornecedor:"), g);
+        g.gridx = 1; formCard.add(label("Armazém de destino:"), g);
+        g.gridx = 0; g.gridy = 1; formCard.add(poSupplierCombo, g);
+        g.gridx = 1; formCard.add(poWarehouseCombo, g);
+        g.gridx = 0; g.gridy = 2; g.gridwidth = 2; g.weightx = 1; formCard.add(label("Produto:"), g);
+        g.gridy = 3; formCard.add(poProductCombo, g);
+        g.gridwidth = 1; g.weightx = 0.33;
+        g.gridx = 0; g.gridy = 4; formCard.add(label("Qtd:"), g);
+        g.gridx = 1; formCard.add(label("Preço unit. (compra):"), g);
+        g.gridx = 2; formCard.add(label("Entrega prevista:"), g);
+        g.gridx = 0; g.gridy = 5; formCard.add(poQtyField, g);
+        g.gridx = 1; formCard.add(poPriceField, g);
+        g.gridx = 2; formCard.add(poExpectedField, g);
+
+        ModernButton addLineBtn = UIHelper.createAddLineButton();
+        addLineBtn.addActionListener(e -> addPoDraftLine());
+        JPanel addRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0)); addRow.setOpaque(false);
+        addRow.add(addLineBtn);
+        g.gridx = 0; g.gridy = 6; g.gridwidth = 3; g.weightx = 1; g.insets = new Insets(10, 8, 4, 8);
+        formCard.add(addRow, g);
+
+        // ---- linhas (rascunho) ----
+        String[] lineCols = {"Produto", "Qtd", "Preço Unit.", "Lote", "Validade", "Total"};
+        poLinesModel = new DefaultTableModel(lineCols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        poLinesTable = new JTable(poLinesModel);
+        UIHelper.styleTable(poLinesTable);
+        JScrollPane linesScroll = new JScrollPane(poLinesTable);
+        UIHelper.styleScrollPane(linesScroll);
+
+        poTotalLabel = new JLabel("Total da Encomenda: 0.00 MT");
+        poTotalLabel.setForeground(Color.WHITE);
+        poTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        ModernButton createPoBtn = UIHelper.createPrimaryButton("Criar Encomenda");
+        createPoBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
+        createPoBtn.addActionListener(e -> createPurchaseOrder());
+        JPanel poFooter = new JPanel(new BorderLayout()); poFooter.setOpaque(false);
+        poFooter.setBorder(new EmptyBorder(8, 0, 0, 0));
+        poFooter.add(poTotalLabel, BorderLayout.WEST);
+        poFooter.add(createPoBtn, BorderLayout.EAST);
+
+        ModernPanel draftCard = new ModernPanel(16);
+        draftCard.setLayout(new BorderLayout(0, 10));
+        draftCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        draftCard.add(UIHelper.createSubheading("Linhas da Encomenda"), BorderLayout.NORTH);
+        draftCard.add(linesScroll, BorderLayout.CENTER);
+        draftCard.add(poFooter, BorderLayout.SOUTH);
+
+        JPanel top = new JPanel(new BorderLayout(0, 10)); top.setOpaque(false);
+        top.add(UIHelper.createHeading("Nova Encomenda a Fornecedor"), BorderLayout.NORTH);
+        JPanel topBody = new JPanel(new BorderLayout(0, 10)); topBody.setOpaque(false);
+        topBody.add(formCard, BorderLayout.NORTH);
+        topBody.add(draftCard, BorderLayout.CENTER);
+        top.add(topBody, BorderLayout.CENTER);
+
+        // ---- lista de encomendas (base) ----
+        JPanel listHeader = new JPanel(new BorderLayout(8, 0)); listHeader.setOpaque(false);
+        listHeader.add(UIHelper.createHeading("Encomendas Registadas"), BorderLayout.WEST);
+        JPanel listActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); listActions.setOpaque(false);
+        JLabel sLbl = new JLabel("Pesquisar:"); sLbl.setForeground(UIHelper.TEXT_MUTED);
+        poSearchField = new JTextField(12); UIHelper.styleTextField(poSearchField);
+        ModernButton receiveBtn = UIHelper.createSuccessButton("Receber");
+        receiveBtn.setIcon(UIHelper.icon("fas-dolly", 14));
+        receiveBtn.addActionListener(e -> receiveSelectedPO());
+        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
+        cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
+        cancelBtn.addActionListener(e -> cancelSelectedPO());
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> { poSearchField.setText(""); loadPurchaseOrders(); });
+        listActions.add(sLbl); listActions.add(poSearchField);
+        listActions.add(receiveBtn); listActions.add(cancelBtn); listActions.add(refreshBtn);
+        listHeader.add(listActions, BorderLayout.EAST);
+        UIHelper.onTextChange(poSearchField, this::loadPurchaseOrders);
+
+        String[] cols = {"Nº", "Fornecedor", "Estado", "Total", "Data", "Entrega prev."};
+        poListModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        poListTable = new JTable(poListModel);
+        UIHelper.styleTable(poListTable);
+        JScrollPane listScroll = new JScrollPane(poListTable);
+        UIHelper.styleScrollPane(listScroll);
+
+        ModernPanel listCard = new ModernPanel(16);
+        listCard.setLayout(new BorderLayout(0, 10));
+        listCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        listCard.add(listHeader, BorderLayout.NORTH);
+        listCard.add(listScroll, BorderLayout.CENTER);
+
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, top, listCard);
+        split.setOpaque(false); split.setBorder(null); split.setResizeWeight(0.6);
+        split.setContinuousLayout(true); split.setDividerSize(8);
+        split.addComponentListener(new java.awt.event.ComponentAdapter() {
+            private boolean applied = false;
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                if (!applied && split.getHeight() > 0) { applied = true; split.setDividerLocation(0.6); }
+            }
+        });
+        tab.add(split, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private JLabel label(String text) {
+        JLabel l = new JLabel(text);
+        l.setForeground(UIHelper.TEXT_MUTED);
+        return l;
+    }
+
+    private void addPoDraftLine() {
+        int prodIdx = poProductCombo.getSelectedIndex();
+        if (prodIdx < 0 || prodIdx >= productsList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            BigDecimal qty = new BigDecimal(poQtyField.getText().trim());
+            BigDecimal price = new BigDecimal(poPriceField.getText().trim());
+            if (qty.signum() <= 0 || price.signum() < 0) throw new NumberFormatException();
+            ProductDTO product = productsList.get(prodIdx);
+            poDraftLines.add(new CreatePurchaseOrderLineRequest(
+                    product.id(), qty, price, null, null, null));
+            poLinesModel.addRow(new Object[]{
+                    product.name(), qty.toPlainString(),
+                    String.format("%,.2f", price), "-", "-",
+                    String.format("%,.2f MT", qty.multiply(price))});
+            recomputePoTotal();
+            poQtyField.setText("1"); poPriceField.setText("0");
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantidade/preço inválidos.", "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void recomputePoTotal() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (CreatePurchaseOrderLineRequest l : poDraftLines) {
+            total = total.add(l.quantity().multiply(l.unitPrice()));
+        }
+        poTotalLabel.setText(String.format("Total da Encomenda: %,.2f MT", total));
+    }
+
+    private void createPurchaseOrder() {
+        int supIdx = poSupplierCombo.getSelectedIndex();
+        int whIdx = poWarehouseCombo.getSelectedIndex();
+        if (supIdx < 0 || supIdx >= supplierComboList.size() || whIdx < 0 || whIdx >= warehousesList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione fornecedor e armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (poDraftLines.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Adicione pelo menos uma linha.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        LocalDate expected = null;
+        try {
+            String t = poExpectedField.getText().trim();
+            if (!t.isEmpty()) expected = LocalDate.parse(t);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Data de entrega inválida (aaaa-MM-dd).", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            CreatePurchaseOrderRequest req = new CreatePurchaseOrderRequest(
+                    supplierComboList.get(supIdx).getId(),
+                    warehousesList.get(whIdx).getId(),
+                    CurrentUserContext.getCurrentCompanyId(),
+                    expected, null, new ArrayList<>(poDraftLines));
+            PurchaseOrderDTO dto = purchaseOrderService.createOrder(req);
+            poDraftLines.clear(); poLinesModel.setRowCount(0); recomputePoTotal();
+            poExpectedField.setText("");
+            JOptionPane.showMessageDialog(this, "Encomenda " + dto.orderNumber() + " criada.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadPurchaseOrders();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadPurchaseOrders() {
+        if (poListModel == null) return;
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        String q = poSearchField != null ? poSearchField.getText().trim() : "";
+        poList = q.isEmpty() ? purchaseOrderService.findOrdersByCompany(companyId)
+                : purchaseOrderService.searchOrders(companyId, q);
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        poListModel.setRowCount(0);
+        for (PurchaseOrderDTO o : poList) {
+            poListModel.addRow(new Object[]{
+                    o.orderNumber(), o.supplierName(), o.status(),
+                    String.format("%,.2f MT", o.totalAmount() == null ? BigDecimal.ZERO : o.totalAmount()),
+                    o.orderDate() == null ? "-" : o.orderDate().format(dtf),
+                    o.expectedDate() == null ? "-" : o.expectedDate().toString()});
+        }
+    }
+
+    private PurchaseOrderDTO selectedPO() {
+        int row = poListTable.getSelectedRow();
+        if (row < 0 || row >= poList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione uma encomenda.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return poList.get(row);
+    }
+
+    private void receiveSelectedPO() {
+        PurchaseOrderDTO sel = selectedPO();
+        if (sel == null) return;
+        int opt = JOptionPane.showConfirmDialog(this,
+                "Receber a encomenda " + sel.orderNumber() + "? O stock do armazém será actualizado.",
+                "Confirmar Recepção", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (opt != JOptionPane.OK_OPTION) return;
+        try {
+            purchaseOrderService.receiveOrder(sel.id());
+            JOptionPane.showMessageDialog(this, "Encomenda recebida e stock actualizado.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadPurchaseOrders();
+            loadPurchasesHistory();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void cancelSelectedPO() {
+        PurchaseOrderDTO sel = selectedPO();
+        if (sel == null) return;
+        String reason = JOptionPane.showInputDialog(this,
+                "Motivo do cancelamento da encomenda " + sel.orderNumber() + ":");
+        if (reason == null) return;
+        try {
+            purchaseOrderService.cancelOrder(sel.id(), reason);
+            loadPurchaseOrders();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void loadSuppliers() {
-        supplierCombo.removeAllItems();
-        suppliersModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        suppliersList = purchaseService.getSuppliersByCompany(companyId);
+        List<Supplier> all = purchaseService.getSuppliersByCompany(companyId);
 
+        // Combos de compra/encomenda: só fornecedores activos.
+        supplierComboList = all.stream().filter(Supplier::isActive).toList();
+        supplierCombo.removeAllItems();
+        for (Supplier s : supplierComboList) supplierCombo.addItem(s.getName() + " (" + s.getTaxId() + ")");
+        if (poSupplierCombo != null) {
+            poSupplierCombo.removeAllItems();
+            for (Supplier s : supplierComboList) poSupplierCombo.addItem(s.getName() + " (" + s.getTaxId() + ")");
+        }
+
+        // Tabela: aplica pesquisa por nome/NUIT.
+        String q = supplierSearchField != null ? supplierSearchField.getText().trim().toLowerCase() : "";
+        suppliersList = q.isEmpty() ? all : all.stream()
+                .filter(s -> (s.getName() != null && s.getName().toLowerCase().contains(q))
+                        || (s.getTaxId() != null && s.getTaxId().toLowerCase().contains(q)))
+                .toList();
+        suppliersModel.setRowCount(0);
         for (Supplier s : suppliersList) {
-            supplierCombo.addItem(s.getName() + " (" + s.getTaxId() + ")");
             suppliersModel.addRow(new Object[]{
                     s.getName(),
                     s.getTaxId(),
-                    s.getEmail() != null ? s.getEmail() : "-",
-                    s.getAddress() != null ? s.getAddress() : "-"
+                    dash(s.getPhone()),
+                    dash(s.getContactPerson()),
+                    dash(s.getEmail()),
+                    dash(s.getAddress()),
+                    s.isActive() ? "Activo" : "Inactivo"
             });
         }
+    }
+
+    private static String dash(String v) {
+        return v != null && !v.isBlank() ? v : "-";
     }
 
     private void loadWarehouses() {
@@ -565,8 +932,8 @@ public class ComprasPanel extends JPanel {
     }
 
     private void registerPurchase() {
-        if (suppliersList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Falta cadastrar fornecedores.", "Erro", JOptionPane.ERROR_MESSAGE);
+        if (supplierComboList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Falta cadastrar fornecedores activos.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (warehousesList.isEmpty()) {
@@ -588,7 +955,7 @@ public class ComprasPanel extends JPanel {
 
         if (supIdx < 0 || whIdx < 0 || accIdx < 0) return;
 
-        Supplier supplier = suppliersList.get(supIdx);
+        Supplier supplier = supplierComboList.get(supIdx);
         Warehouse warehouse = warehousesList.get(whIdx);
         TreasuryAccountDTO account = accountsList.get(accIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();

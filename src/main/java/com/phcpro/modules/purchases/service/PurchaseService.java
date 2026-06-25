@@ -2,6 +2,8 @@ package com.phcpro.modules.purchases.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
+import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.architecture.pricing.LineCalculator;
 import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.validation.TaxIdValidator;
@@ -45,6 +47,7 @@ public class PurchaseService {
     private final InventoryService inventoryService;
     private final FinanceService financeService;
     private final DocumentNumberService documentNumberService;
+    private final AuditLogService auditLogService;
 
     public PurchaseService(
             SupplierRepository supplierRepository,
@@ -54,7 +57,8 @@ public class PurchaseService {
             CompanyRepository companyRepository,
             InventoryService inventoryService,
             FinanceService financeService,
-            DocumentNumberService documentNumberService
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService
     ) {
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
@@ -64,6 +68,7 @@ public class PurchaseService {
         this.inventoryService = inventoryService;
         this.financeService = financeService;
         this.documentNumberService = documentNumberService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -104,6 +109,9 @@ public class PurchaseService {
 
         if (!request.companyId().equals(supplier.getCompany().getId())) {
             throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+        }
+        if (!supplier.isActive()) {
+            throw new BusinessRuleException("Fornecedor inactivo não pode ser usado em compras.");
         }
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
@@ -180,7 +188,60 @@ public class PurchaseService {
     @Transactional
     public SupplierDTO createSupplier(CreateSupplierRequest request) {
         Supplier supplier = createSupplier(request.name(), request.taxId(), request.email(), request.address(), request.companyId());
+        supplier.setPhone(request.phone());
+        supplier.setContactPerson(request.contactPerson());
+        supplier = supplierRepository.save(supplier);
+        auditLogService.logCurrent("SUPPLIER_CREATE", "Fornecedor " + supplier.getName() + " (" + supplier.getTaxId() + ")");
         return toDTO(supplier);
+    }
+
+    @Transactional
+    public SupplierDTO updateSupplier(Long id, CreateSupplierRequest request) {
+        CurrentUserContext.requireCompany(request.companyId());
+        TaxIdValidator.validate(request.taxId());
+        Supplier supplier = loadSupplierForCompany(id, request.companyId());
+        supplier.setName(request.name());
+        supplier.setTaxId(request.taxId());
+        supplier.setEmail(request.email());
+        supplier.setAddress(request.address());
+        supplier.setPhone(request.phone());
+        supplier.setContactPerson(request.contactPerson());
+        supplier = supplierRepository.save(supplier);
+        auditLogService.logCurrent("SUPPLIER_UPDATE", "Fornecedor #" + id + " " + supplier.getName());
+        return toDTO(supplier);
+    }
+
+    @Transactional
+    public SupplierDTO setSupplierActive(Long id, Long companyId, boolean active) {
+        CurrentUserContext.requireCompany(companyId);
+        PermissionGuard.requireManagerOrAdmin(active ? "activar fornecedor" : "desactivar fornecedor");
+        Supplier supplier = loadSupplierForCompany(id, companyId);
+        supplier.setActive(active);
+        supplier = supplierRepository.save(supplier);
+        auditLogService.logCurrent("SUPPLIER_STATUS",
+                "Fornecedor #" + id + " -> " + (active ? "ACTIVO" : "INACTIVO"));
+        return toDTO(supplier);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplierDTO> searchSuppliers(Long companyId, String query) {
+        CurrentUserContext.requireCompany(companyId);
+        String term = query == null ? "" : query.trim().toLowerCase();
+        return supplierRepository.findByCompanyId(companyId).stream()
+                .filter(s -> term.isEmpty()
+                        || (s.getName() != null && s.getName().toLowerCase().contains(term))
+                        || (s.getTaxId() != null && s.getTaxId().toLowerCase().contains(term)))
+                .map(this::toDTO)
+                .toList();
+    }
+
+    private Supplier loadSupplierForCompany(Long id, Long companyId) {
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
+        if (supplier.getCompany() == null || !companyId.equals(supplier.getCompany().getId())) {
+            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+        }
+        return supplier;
     }
 
     @Transactional(readOnly = true)
@@ -207,6 +268,9 @@ public class PurchaseService {
                 s.getTaxId(),
                 s.getEmail(),
                 s.getAddress(),
+                s.getPhone(),
+                s.getContactPerson(),
+                s.isActive(),
                 s.getCompany() != null ? s.getCompany().getId() : null
         );
     }
