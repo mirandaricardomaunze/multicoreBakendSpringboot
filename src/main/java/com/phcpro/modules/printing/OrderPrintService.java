@@ -22,9 +22,11 @@ public class OrderPrintService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final OrderRepository orderRepository;
+    private final LineRowMapper lineRowMapper;
 
-    public OrderPrintService(OrderRepository orderRepository) {
+    public OrderPrintService(OrderRepository orderRepository, LineRowMapper lineRowMapper) {
         this.orderRepository = orderRepository;
+        this.lineRowMapper = lineRowMapper;
     }
 
     @Transactional(readOnly = true)
@@ -88,9 +90,9 @@ public class OrderPrintService {
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<OrderLine> lines) {
-        return lines.stream().map(l -> new LineItemsTableRenderer.Row(
-                l.getProduct().getSku(),
-                l.getProduct().getName(),
+        return lines.stream().map(l -> lineRowMapper.map(
+                l.getProduct(),
+                l.getBatchNumber(),
                 l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),

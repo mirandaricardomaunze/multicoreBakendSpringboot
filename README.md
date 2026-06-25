@@ -66,8 +66,17 @@ modules/<nome>/
 ## Como correr
 
 ### Desktop (uso diário)
+
+O `pom.xml` fixa `<mainClass>com.phcpro.MulticoreApplication</mainClass>`, pelo que
+`mvn spring-boot:run` arranca **sempre o backend puro** (sem janela) — o
+`-Dspring-boot.run.main-class` da linha de comando **não** sobrepõe um valor literal
+da configuração. Para arrancar o cliente desktop, correr o `DesktopApplication` directamente:
+
 ```powershell
-mvn spring-boot:run "-Dspring-boot.run.main-class=com.phcpro.desktop.DesktopApplication"
+mvn -q compile
+mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
+$cp = "target/classes;" + (Get-Content target/cp.txt -Raw)
+java -cp $cp com.phcpro.desktop.DesktopApplication
 ```
 
 O login e a seleção de empresa do desktop comunicam com a API HTTP. Por defeito,

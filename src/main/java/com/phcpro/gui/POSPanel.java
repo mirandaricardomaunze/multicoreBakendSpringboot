@@ -33,12 +33,16 @@ import java.util.Optional;
 
 public class POSPanel extends JPanel {
 
+    /** Largura fixa do formulário (esquerda) para deixar o resto do espaço ao carrinho. */
+    private static final int FORM_PANEL_WIDTH = 400;
+
     private final POSService posService;
     private final ComercialService comercialService;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
     private final com.phcpro.modules.printing.ReceiptPrintService receiptPrintService;
     private final com.phcpro.modules.company.service.CompanyService companyService;
+    private final com.phcpro.modules.promotions.service.PromotionService promotionService;
 
     // Active session status
     private TillSession activeSession = null;
@@ -116,7 +120,8 @@ public class POSPanel extends JPanel {
             InventoryService inventoryService,
             FinanceService financeService,
             com.phcpro.modules.printing.ReceiptPrintService receiptPrintService,
-            com.phcpro.modules.company.service.CompanyService companyService
+            com.phcpro.modules.company.service.CompanyService companyService,
+            com.phcpro.modules.promotions.service.PromotionService promotionService
     ) {
         this.posService = posService;
         this.comercialService = comercialService;
@@ -124,6 +129,7 @@ public class POSPanel extends JPanel {
         this.financeService = financeService;
         this.receiptPrintService = receiptPrintService;
         this.companyService = companyService;
+        this.promotionService = promotionService;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -184,13 +190,22 @@ public class POSPanel extends JPanel {
         add(sessionBar, BorderLayout.NORTH);
 
 
-        // 2. MAIN POS WORKSPACE: FORM (LEFT) & CART (RIGHT)
-        JPanel workspace = new JPanel(new GridLayout(1, 2, 20, 0));
+        // 2. MAIN POS WORKSPACE: FORM (esquerda) & CART (direita) num JSplitPane redimensionável.
+        //    O resize favorece o carrinho (resizeWeight alto) e o formulário arranca com largura
+        //    confortável mas pode ser arrastado pelo operador.
+        JSplitPane workspace = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         workspace.setOpaque(false);
+        workspace.setBorder(null);
+        workspace.setDividerSize(10);
+        workspace.setContinuousLayout(true);
+        workspace.setResizeWeight(0.0); // espaço extra da janela vai para o carrinho (direita)
+        workspace.setBackground(UIHelper.BG_DARK);
 
-        // LEFT: ADD PRODUCT FORM & METADATA
+        // LEFT: ADD PRODUCT FORM & METADATA — largura inicial confortável; arrastável
         JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
         leftPanel.setOpaque(false);
+        leftPanel.setPreferredSize(new Dimension(FORM_PANEL_WIDTH, 10));
+        leftPanel.setMinimumSize(new Dimension(300, 10));
         leftPanel.add(UIHelper.createSubheading("Configurações & Artigos"), BorderLayout.NORTH);
 
         // Scrollable form content (transparent inner panel)
@@ -297,7 +312,7 @@ public class POSPanel extends JPanel {
         formCardWrapper.add(formScroll, BorderLayout.CENTER);
 
         leftPanel.add(formCardWrapper, BorderLayout.CENTER);
-        workspace.add(leftPanel);
+        workspace.setLeftComponent(leftPanel);
 
         // RIGHT: CART TABLE & CHECKOUT
         JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
@@ -315,6 +330,15 @@ public class POSPanel extends JPanel {
         };
         cartTable = new JTable(cartModel);
         UIHelper.styleTable(cartTable);
+        cartTable.setFillsViewportHeight(true);
+        cartTable.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+        // Larguras: "Artigo" leva o espaço; colunas numéricas/metadados ficam compactas.
+        cartTable.getColumnModel().getColumn(0).setPreferredWidth(260); // Artigo
+        cartTable.getColumnModel().getColumn(1).setPreferredWidth(110); // Preço Unit.
+        cartTable.getColumnModel().getColumn(2).setPreferredWidth(70);  // Qtd
+        cartTable.getColumnModel().getColumn(3).setPreferredWidth(70);  // Desc %
+        cartTable.getColumnModel().getColumn(4).setPreferredWidth(150); // Lote/Série
+        cartTable.getColumnModel().getColumn(5).setPreferredWidth(120); // Subtotal
         JScrollPane cartScroll = new JScrollPane(cartTable);
         UIHelper.styleScrollPane(cartScroll);
         cartCard.add(cartScroll, BorderLayout.CENTER);
@@ -361,7 +385,9 @@ public class POSPanel extends JPanel {
         cartCard.add(cartBottom, BorderLayout.SOUTH);
 
         rightPanel.add(cartCard, BorderLayout.CENTER);
-        workspace.add(rightPanel);
+        rightPanel.setMinimumSize(new Dimension(400, 10));
+        workspace.setRightComponent(rightPanel);
+        workspace.setDividerLocation(FORM_PANEL_WIDTH);
 
         JPanel salesTab = new JPanel(new BorderLayout(0, 12));
         salesTab.setOpaque(false);
@@ -695,6 +721,18 @@ public class POSPanel extends JPanel {
             return;
         }
 
+        // Promoção automática: se o operador não definiu desconto manual, aplica a melhor promoção
+        // activa para o produto/categoria (traduzida em desconto % efectivo pelo PromotionService).
+        String promoName = null;
+        if (discount.compareTo(BigDecimal.ZERO) == 0) {
+            var promo = promotionService.bestPromotion(
+                    CurrentUserContext.getCurrentCompanyId(), product.id(), product.categoryId(), qty);
+            if (promo.isPresent()) {
+                discount = promo.get().discountPercent();
+                promoName = promo.get().name();
+            }
+        }
+
         // Lote é decidido por FEFO no backend — o batchField mostra apenas previsão.
         String previewBatch = batchField.getText().trim();
         String batch = null;
@@ -706,6 +744,7 @@ public class POSPanel extends JPanel {
         cartItems.add(item);
 
         String lotSer = "";
+        if (promoName != null) lotSer += "Promo: " + promoName + " ";
         if (!previewBatch.isEmpty() && !"Sem stock".equals(previewBatch) && !"—".equals(previewBatch)) {
             lotSer += "Lote FEFO: " + previewBatch + " ";
         }
@@ -836,48 +875,142 @@ public class POSPanel extends JPanel {
         String operator = CurrentUserContext.getUsername();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
-        try {
-            boolean fiado = creditCheck != null && creditCheck.isSelected();
-            java.util.List<com.phcpro.modules.pos.dto.PosPaymentRequest> payments = null;
-            Long treasuryAccountId = acc.id();
-            if (fiado) {
-                // Soma o total do carrinho para enviar como pagamento CREDIT (valor a deber)
-                java.math.BigDecimal cartTotal = java.math.BigDecimal.ZERO;
-                for (CartItem item : cartItems) cartTotal = cartTotal.add(item.getSubtotal());
-                payments = java.util.List.of(new com.phcpro.modules.pos.dto.PosPaymentRequest(
-                        "CREDIT", cartTotal, java.math.BigDecimal.ZERO, "Venda a crédito", null));
-                treasuryAccountId = null;  // fiado não move tesouraria
-            }
-            POSCheckoutRequest request = new POSCheckoutRequest(
-                    operator,
-                    companyId,
-                    client != null ? client.id() : null,
-                    walkInName,
-                    wh.getId(),
-                    treasuryAccountId,
-                    lines,
-                    payments
-            );
+        boolean fiado = creditCheck != null && creditCheck.isSelected();
+        java.math.BigDecimal cartTotal = java.math.BigDecimal.ZERO;
+        for (CartItem item : cartItems) cartTotal = cartTotal.add(item.getSubtotal());
+        cartTotal = cartTotal.setScale(2, RoundingMode.HALF_UP);
 
-            Invoice inv = posService.checkout(request);
-            String paymentLabel = fiado ? "EM DÍVIDA (fiado)" : "PAGO";
-            JOptionPane.showMessageDialog(this, "Venda POS efetuada com sucesso!\n" +
-                    "Documento emitido: " + inv.getInvoiceNumber() + "\n" +
-                    "Valor Total: " + inv.getTotalAmount() + " MT (" + paymentLabel + ")", "Venda Concluída", JOptionPane.INFORMATION_MESSAGE);
-
-            if (fiado && creditCheck != null) creditCheck.setSelected(false);
-
-            printReceiptIfConfirmed(inv);
-
-            // Reset cart
-            cartItems.clear();
-            cartModel.setRowCount(0);
-            updateCartTotal();
-            refreshSessionState();
-            loadMetadata(); // refresh account balance display
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao processar checkout: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        java.util.List<com.phcpro.modules.pos.dto.PosPaymentRequest> payments;
+        Long treasuryAccountId;
+        if (fiado) {
+            // Venda a crédito: pagamento CREDIT pelo total, sem mover tesouraria.
+            payments = java.util.List.of(new com.phcpro.modules.pos.dto.PosPaymentRequest(
+                    "CREDIT", cartTotal, java.math.BigDecimal.ZERO, "Venda a crédito", null));
+            treasuryAccountId = null;
+        } else {
+            // Diálogo de pagamento: método + valor entregue (numerário) com cálculo de troco.
+            com.phcpro.modules.pos.dto.PosPaymentRequest payment = askPayment(cartTotal, acc.id());
+            if (payment == null) return; // operador cancelou
+            payments = java.util.List.of(payment);
+            treasuryAccountId = null; // o pagamento vai pela lista de payments
         }
+
+        POSCheckoutRequest request = new POSCheckoutRequest(
+                operator,
+                companyId,
+                client != null ? client.id() : null,
+                walkInName,
+                wh.getId(),
+                treasuryAccountId,
+                lines,
+                payments
+        );
+
+        // Checkout corre fora do EDT com indicador "a finalizar venda…" (não congela a UI).
+        UIHelper.runWithProgress(this, "A finalizar venda…",
+                () -> posService.checkout(request),
+                inv -> {
+                    String paymentLabel = fiado ? "EM DÍVIDA (fiado)" : "PAGO";
+                    JOptionPane.showMessageDialog(this, "Venda POS efetuada com sucesso!\n" +
+                            "Documento emitido: " + inv.getInvoiceNumber() + "\n" +
+                            "Valor Total: " + inv.getTotalAmount() + " MT (" + paymentLabel + ")", "Venda Concluída", JOptionPane.INFORMATION_MESSAGE);
+
+                    if (fiado && creditCheck != null) creditCheck.setSelected(false);
+
+                    printReceiptIfConfirmed(inv);
+
+                    // Reset cart
+                    cartItems.clear();
+                    cartModel.setRowCount(0);
+                    updateCartTotal();
+                    refreshSessionState();
+                    loadMetadata(); // refresh account balance display
+                },
+                ex -> JOptionPane.showMessageDialog(this, "Erro ao processar checkout: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+    }
+
+    /**
+     * Diálogo de pagamento do checkout (vendas não-fiado). Recolhe o método e, para numerário,
+     * o valor entregue pelo cliente com cálculo de troco em tempo real. Devolve o pedido de
+     * pagamento pronto a enviar, ou {@code null} se o operador cancelar.
+     */
+    private com.phcpro.modules.pos.dto.PosPaymentRequest askPayment(BigDecimal total, Long accountId) {
+        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"Numerário", "Cartão", "Transferência"});
+        UIHelper.styleComboBox(methodCombo);
+
+        JTextField totalField = new JTextField(String.format("%,.2f MT", total));
+        UIHelper.styleTextField(totalField);
+        totalField.setEditable(false);
+
+        JTextField tenderedField = new JTextField(total.toPlainString());
+        UIHelper.styleTextField(tenderedField);
+
+        JLabel changeLabel = new JLabel("Troco: 0,00 MT");
+        changeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        changeLabel.setForeground(UIHelper.APPROVED_GREEN);
+
+        // Recalcula o troco a cada alteração; só relevante quando o método é numerário.
+        Runnable recompute = () -> {
+            boolean cash = methodCombo.getSelectedIndex() == 0;
+            tenderedField.setEnabled(cash);
+            if (!cash) {
+                changeLabel.setText("Troco: —");
+                return;
+            }
+            try {
+                BigDecimal tendered = new BigDecimal(tenderedField.getText().trim().replace(",", "."));
+                BigDecimal change = tendered.subtract(total);
+                if (change.compareTo(BigDecimal.ZERO) < 0) {
+                    changeLabel.setForeground(UIHelper.PENDING_YELLOW);
+                    changeLabel.setText(String.format("Falta: %,.2f MT", change.abs()));
+                } else {
+                    changeLabel.setForeground(UIHelper.APPROVED_GREEN);
+                    changeLabel.setText(String.format("Troco: %,.2f MT", change));
+                }
+            } catch (NumberFormatException ex) {
+                changeLabel.setForeground(UIHelper.PENDING_YELLOW);
+                changeLabel.setText("Troco: valor inválido");
+            }
+        };
+        methodCombo.addActionListener(e -> recompute.run());
+        tenderedField.getDocument().addDocumentListener(simpleDocumentListener(recompute));
+        recompute.run();
+
+        JPanel form = UIHelper.createDialogForm(
+                "Método de pagamento:", methodCombo,
+                "Total a pagar:", totalField,
+                "Valor entregue (MT):", tenderedField
+        );
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+        panel.add(form, BorderLayout.CENTER);
+        panel.add(changeLabel, BorderLayout.SOUTH);
+
+        int opt = JOptionPane.showConfirmDialog(this, panel, "Pagamento",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (opt != JOptionPane.OK_OPTION) return null;
+
+        int methodIdx = methodCombo.getSelectedIndex();
+        if (methodIdx == 0) {
+            // Numerário: valida valor entregue ≥ total e calcula troco no backend.
+            BigDecimal tendered;
+            try {
+                tendered = new BigDecimal(tenderedField.getText().trim().replace(",", "."));
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Valor entregue inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return askPayment(total, accountId);
+            }
+            if (tendered.compareTo(total) < 0) {
+                JOptionPane.showMessageDialog(this,
+                        "O valor entregue é inferior ao total a pagar.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return askPayment(total, accountId);
+            }
+            // Numerário durante sessão de caixa entra na gaveta — não precisa de conta de tesouraria.
+            return new com.phcpro.modules.pos.dto.PosPaymentRequest("CASH", total, tendered, null, null);
+        }
+
+        String method = (methodIdx == 1) ? "CARD" : "BANK_TRANSFER";
+        return new com.phcpro.modules.pos.dto.PosPaymentRequest(method, total, total, null, accountId);
     }
 
     private void printReceiptIfConfirmed(Invoice invoice) {
@@ -885,12 +1018,12 @@ public class POSPanel extends JPanel {
                 "Deseja imprimir o recibo da venda " + invoice.getInvoiceNumber() + "?",
                 "Imprimir Recibo", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
-        try {
-            byte[] pdf = receiptPrintService.render(invoice.getId());
-            com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "recibo-" + invoice.getInvoiceNumber());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao imprimir recibo: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        UIHelper.runWithProgress(this, "A gerar recibo…",
+                () -> { com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(
+                            receiptPrintService.render(invoice.getId()), "recibo-" + invoice.getInvoiceNumber());
+                        return null; },
+                ok -> { },
+                ex -> JOptionPane.showMessageDialog(this, "Erro ao imprimir recibo: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
     }
 
     /**
@@ -1029,14 +1162,14 @@ public class POSPanel extends JPanel {
             }
             Long invoiceId = (Long) salesHistoryModel.getValueAt(row, 0);
             String invNum = String.valueOf(salesHistoryModel.getValueAt(row, 1));
-            try {
-                byte[] pdf = receiptPrintService.render(invoiceId);
-                com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "recibo-" + invNum);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Erro ao gerar recibo: " + ex.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+            UIHelper.runWithProgress(this, "A gerar recibo…",
+                    () -> { com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(
+                                receiptPrintService.render(invoiceId), "recibo-" + invNum);
+                            return null; },
+                    ok -> { },
+                    ex -> JOptionPane.showMessageDialog(this,
+                            "Erro ao gerar recibo: " + ex.getMessage(),
+                            "Erro", JOptionPane.ERROR_MESSAGE));
         });
 
         ModernButton returnBtn = UIHelper.createSecondaryButton("Devolver / Trocar");

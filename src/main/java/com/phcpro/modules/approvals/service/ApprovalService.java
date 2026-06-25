@@ -139,6 +139,26 @@ public class ApprovalService {
         return toDTO(request);
     }
 
+    /**
+     * Fecha qualquer pedido de aprovação ainda PENDENTE de um documento que está a ser cancelado
+     * na sua origem (ex.: cancelar uma encomenda em PENDING_APPROVAL). Marca o pedido como REJECTED
+     * com o motivo do cancelamento. Não há re-verificação de role aqui — quem cancela o documento
+     * já foi autorizado no Service dono da regra; e não dispara callback (a origem já trata o estado).
+     */
+    @Transactional
+    public void cancelPendingForDocument(String documentType, Long documentId, String reason) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        for (ApprovalRequest req : requestRepository.findByCompanyIdAndStatus(companyId, ApprovalStatus.PENDING)) {
+            if (documentType.equalsIgnoreCase(req.getDocumentType()) && documentId.equals(req.getDocumentId())) {
+                req.setStatus(ApprovalStatus.REJECTED);
+                req.setRejectionReason(reason);
+                req.setUpdatedAt(LocalDateTime.now());
+                requestRepository.save(req);
+                logHistory(req, "CANCEL", "Pedido fechado por cancelamento do documento. Motivo: " + reason);
+            }
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<ApprovalRequestDTO> getPendingRequests() {
         return requestRepository.findByCompanyIdAndStatus(CurrentUserContext.getCurrentCompanyId(), ApprovalStatus.PENDING)

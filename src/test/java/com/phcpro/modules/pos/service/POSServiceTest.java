@@ -194,6 +194,41 @@ class POSServiceTest {
         verify(paymentEntryRepository, times(2)).save(any());
     }
 
+    @Test
+    void checkout_walkInName_ficaGravadoNaFaturaParaRecibo() {
+        stubHappyPath();
+
+        // Cliente não registado, mas operador escreveu o nome do comprador para o recibo.
+        POSCheckoutRequest request = new POSCheckoutRequest(
+                OPERATOR, COMPANY_ID, /*clientId*/ null, /*walkInName*/ "João Sitoe", WAREHOUSE_ID,
+                ACCOUNT_ID,
+                List.of(new POSCheckoutLineRequest(PRODUCT_ID, new BigDecimal("1"), null, null, null)),
+                /*payments*/ null);
+
+        Invoice invoice = service.checkout(request);
+
+        assertEquals("João Sitoe", invoice.getCustomerName());
+    }
+
+    @Test
+    void checkout_numerarioComTroco_calculaTrocoNoPagamento() {
+        stubHappyPath();
+
+        org.mockito.ArgumentCaptor<com.phcpro.modules.pos.model.PaymentEntry> captor =
+                org.mockito.ArgumentCaptor.forClass(com.phcpro.modules.pos.model.PaymentEntry.class);
+
+        // Total = 100 + IVA. Cliente entrega 200 em numerário → troco = 200 − total.
+        BigDecimal tendered = new BigDecimal("200");
+        PosPaymentRequest cash = new PosPaymentRequest("CASH", new BigDecimal("100"), tendered, null, null);
+        Invoice invoice = service.checkout(checkout(List.of(cash), null));
+
+        verify(paymentEntryRepository).save(captor.capture());
+        com.phcpro.modules.pos.model.PaymentEntry entry = captor.getValue();
+        assertEquals(0, tendered.compareTo(entry.getTenderedAmount()));
+        // Troco = entregue − valor desta entrada (100).
+        assertEquals(0, new BigDecimal("100.00").compareTo(entry.getChangeGiven()));
+    }
+
     // ────────────────────────── closeSession ──────────────────────────
 
     @Test

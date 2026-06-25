@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.users.model.AppUser;
 import com.phcpro.modules.users.service.AppUserService;
@@ -51,6 +52,8 @@ public class ConfigPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
+        add(buildAppearanceBar(), BorderLayout.NORTH);
+
         JTabbedPane tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPane(tabbedPane);
 
@@ -69,6 +72,29 @@ public class ConfigPanel extends JPanel {
         add(tabbedPane, BorderLayout.CENTER);
 
         onPanelSelected();
+    }
+
+    private JPanel buildAppearanceBar() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        bar.setOpaque(false);
+
+        JLabel label = new JLabel("Aparência:");
+        label.setForeground(UIHelper.TEXT_LIGHT);
+        bar.add(label);
+
+        ModernButton themeBtn = UIHelper.createSecondaryButton(themeButtonLabel());
+        themeBtn.setIcon(UIHelper.icon(UIHelper.isLight() ? "fas-moon" : "fas-sun", 14));
+        themeBtn.addActionListener(e -> {
+            UIHelper.setTheme(UIHelper.isLight() ? Theme.DARK : Theme.LIGHT);
+            themeBtn.setText(themeButtonLabel());
+            themeBtn.setIcon(UIHelper.icon(UIHelper.isLight() ? "fas-moon" : "fas-sun", 14));
+        });
+        bar.add(themeBtn);
+        return bar;
+    }
+
+    private String themeButtonLabel() {
+        return UIHelper.isLight() ? "Mudar para Tema Escuro" : "Mudar para Tema Claro";
     }
 
     private JPanel createAuditTab() {

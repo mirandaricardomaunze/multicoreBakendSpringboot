@@ -73,8 +73,9 @@ public class CollapsibleSidebar extends JPanel {
         brandLabel.setForeground(HEADER_TEXT);
 
         brandSubLabel = new JLabel(subBrand);
-        brandSubLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        brandSubLabel.setForeground(SECTION_LABEL);
+        brandSubLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        brandSubLabel.setForeground(new Color(203, 213, 225)); // Slate-300 — legível sob a marca
+        brandSubLabel.setToolTipText("Empresa ativa");
 
         JPanel brandStack = new JPanel();
         brandStack.setOpaque(false);
@@ -119,6 +120,11 @@ public class CollapsibleSidebar extends JPanel {
         footerLabel.setForeground(SECTION_LABEL);
         footerLabel.setBorder(new EmptyBorder(10, 18, 16, 14));
         add(footerLabel, BorderLayout.SOUTH);
+    }
+
+    /** Update the sub-brand line (e.g. the active company name shown under the brand). */
+    public void setSubBrand(String text) {
+        brandSubLabel.setText(text == null || text.isBlank() ? "" : text);
     }
 
     /** Add a section header label. Hidden in collapsed mode. */

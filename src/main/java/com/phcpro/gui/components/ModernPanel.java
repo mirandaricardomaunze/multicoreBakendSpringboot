@@ -14,7 +14,7 @@ public class ModernPanel extends JPanel {
 
     public ModernPanel() {
         setOpaque(false);
-        setBackground(new Color(31, 41, 55)); // Default Tailwind Gray-800 (#1F2937)
+        setBackground(UIHelper.BG_CARD); // fundo de cartão do tema activo
     }
 
     public ModernPanel(int radius) {

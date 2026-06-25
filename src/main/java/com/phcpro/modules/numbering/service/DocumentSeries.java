@@ -21,6 +21,8 @@ public final class DocumentSeries {
     public static final String STOCK_TRANSFER = "TRF";
     /** Documento interno de compra a fornecedor. */
     public static final String PURCHASE = "V/FT";
+    /** Recibo de vencimento (folha salarial). */
+    public static final String PAYSLIP = "REC";
 
     private DocumentSeries() {}
 }

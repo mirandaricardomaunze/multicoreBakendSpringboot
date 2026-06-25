@@ -31,7 +31,7 @@ pela série central [`DocumentSeries`](src/main/java/com/phcpro/modules/numberin
 
 | Documento        | Entidade      | Série  | Tabela            | Estado / ciclo                                              |
 |------------------|---------------|--------|-------------------|------------------------------------------------------------|
-| Encomenda        | `Order`       | `EC`   | `customer_orders` | `PENDING → BILLED / CANCELLED`                             |
+| Encomenda        | `Order`       | `EC`   | `customer_orders` | `PENDING_APPROVAL → (aprovação) → PENDING → BILLED` / `CANCELLED` |
 | Fatura           | `Invoice`     | `FT`   | `invoices`        | `DRAFT → PENDING_APPROVAL → APPROVED → PAID` / `CANCELLED` |
 | Recibo           | `Receipt`     | `RC`   | —                 | `COMPLETED` / anulado                                      |
 | Nota de Crédito  | `CreditNote`  | `NC`   | —                 | `PENDING_APPROVAL → APPROVED` / `REJECTED` / `CANCELLED`   |
@@ -73,7 +73,13 @@ FATURA MANUAL  (Invoice, SalesChannel.MANUAL)   ComercialService.createInvoice()
         └─ ao APROVAR:  InvoiceApprovalCallback.onApproved() → StockMovement SALE
      Recibo (createReceipt) → TreasuryTransaction DEBIT
 
+ENCOMENDA  (Order, série EC)                    ComercialService.createOrder()
+  └─ Engine de Aprovações (documentType "ORDER", por valor): ao APROVAR,
+       OrderApprovalCallback.onApproved() → estado PENDING (faturável); ao REJEITAR → CANCELLED.
+     Não move stock — só a faturação o faz.
+
 FATURA DE ENCOMENDA  (Invoice, SalesChannel.ORDER)  ComercialService.billOrder()
+  └─ Só faturável quando a encomenda está PENDING (aprovada).
   └─ StockMovement SALE (saída, por linha)
 
 ANULAÇÃO DE FATURA   ComercialService.cancelInvoice()
@@ -133,6 +139,9 @@ A **Guia de Transferência** documenta a movimentação de stock **entre armazé
 2. ~~**Nota de Débito** numera fora de `DocumentSeries`~~ — **resolvido (2026-06-20)**: passou a
    usar `DocumentNumberService.next(DocumentSeries.DEBIT_NOTE)`, série `ND` sequencial e gapless,
    coberto por `DocumentNumberServiceTest`.
-3. **Sem visão unificada de "movimentos"** — não há ecrã/relatório que liste todos os documentos
-   de um cliente/período num só sítio; cada tipo consulta-se no seu painel. Avaliar um
-   `MovimentosController` de leitura agregada se o negócio o pedir.
+3. ~~**Sem visão unificada de "movimentos"**~~ — **resolvido (2026-06-25)**: novo módulo de leitura
+   agregada `modules/movimentos/` lista fatura, encomenda, NC e ND num só sítio, filtrável por
+   nº/cliente e período, ordenado por data desc. Endpoint `GET /api/movimentos` + tab "Movimentos"
+   no `ComercialPanel`. Spec/harness em [docs/MOVIMENTOS_UNIFICADOS_SPEC.md](docs/MOVIMENTOS_UNIFICADOS_SPEC.md)
+   / [docs/MOVIMENTOS_UNIFICADOS_HARNESS.md](docs/MOVIMENTOS_UNIFICADOS_HARNESS.md). Testado por
+   `MovimentosServiceTest` (7: MU-01..MU-07).

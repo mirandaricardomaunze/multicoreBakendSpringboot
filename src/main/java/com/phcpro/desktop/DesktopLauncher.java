@@ -17,6 +17,9 @@ import java.awt.event.WindowEvent;
 public class DesktopLauncher {
 
     private final ConfigurableApplicationContext context;
+    private AuthApiClient authApiClient;
+    private DesktopSession session;
+    private MainFrame currentFrame;
 
     public DesktopLauncher(ConfigurableApplicationContext context) {
         this.context = context;
@@ -24,14 +27,14 @@ public class DesktopLauncher {
 
     public void launch() {
         EventQueue.invokeLater(() -> {
-            UIHelper.initGlobalTheme();
+            UIHelper.loadAndApplySavedTheme();
 
             DesktopApiConfig apiConfig = DesktopApiConfig.from(context.getEnvironment());
-            AuthApiClient authApiClient = new AuthApiClient(apiConfig);
+            authApiClient = new AuthApiClient(apiConfig);
             LoginDialog login = new LoginDialog(authApiClient);
             login.setVisible(true);
 
-            DesktopSession session = login.getAuthenticatedSession();
+            session = login.getAuthenticatedSession();
             if (session == null) {
                 context.close();
                 System.exit(0);
@@ -47,21 +50,44 @@ public class DesktopLauncher {
             CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
             context.getBean(DesktopSessionStore.class).setSession(session);
 
-            MainFrame mainFrame = context.getBean(MainFrame.class);
-            mainFrame.applyAuthenticatedUser(session.displayName(), session.activeRole());
-            mainFrame.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowClosing(WindowEvent event) {
-                    try {
-                        authApiClient.logout(session);
-                    } finally {
-                        context.getBean(DesktopSessionStore.class).clear();
-                        CurrentUserContext.clear();
-                        context.close();
-                    }
-                }
-            });
-            mainFrame.setVisible(true);
+            // Trocar de tema reconstrói a janela já com a paleta nova (cobre ícones/pintura custom).
+            UIHelper.onThemeChanged = () -> EventQueue.invokeLater(this::rebuildMainFrame);
+
+            // Arranque após login: janela maximizada (loja trabalha em ecrã cheio).
+            showMainFrame(null, java.awt.Frame.MAXIMIZED_BOTH);
         });
+    }
+
+    private void rebuildMainFrame() {
+        // Preserva tamanho/posição E estado (maximizado/normal) ao reconstruir por troca de tema.
+        java.awt.Rectangle bounds = currentFrame != null ? currentFrame.getBounds() : null;
+        int extendedState = currentFrame != null ? currentFrame.getExtendedState() : java.awt.Frame.MAXIMIZED_BOTH;
+        if (currentFrame != null) {
+            currentFrame.dispose(); // dispose programático → não dispara o logout (que é em windowClosing)
+        }
+        showMainFrame(bounds, extendedState);
+    }
+
+    private void showMainFrame(java.awt.Rectangle bounds, int extendedState) {
+        MainFrame mainFrame = context.getBean(MainFrame.class); // prototype → instância nova com o tema activo
+        mainFrame.applyAuthenticatedUser(session.displayName(), session.activeRole());
+        mainFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent event) {
+                try {
+                    authApiClient.logout(session);
+                } finally {
+                    context.getBean(DesktopSessionStore.class).clear();
+                    CurrentUserContext.clear();
+                    context.close();
+                }
+            }
+        });
+        if (bounds != null) {
+            mainFrame.setBounds(bounds); // preserva tamanho/posição ao reconstruir
+        }
+        mainFrame.setExtendedState(extendedState); // maximizado no arranque; estado preservado na reconstrução
+        currentFrame = mainFrame;
+        mainFrame.setVisible(true);
     }
 }

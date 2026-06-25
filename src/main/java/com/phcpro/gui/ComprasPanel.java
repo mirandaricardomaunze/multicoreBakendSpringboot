@@ -111,9 +111,9 @@ public class ComprasPanel extends JPanel {
         leftPanel.setOpaque(false);
         leftPanel.add(UIHelper.createHeading("Registar Compra (Entrada Stock)"), BorderLayout.NORTH);
 
-        ModernPanel formCard = new ModernPanel(16);
-        formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        // Host do formulário: transparente e a acompanhar a largura do viewport, para que o
+        // JScrollPane só dê scroll vertical (e os campos continuem a ocupar a largura toda).
+        VScrollForm formCard = new VScrollForm(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -273,7 +273,21 @@ public class ComprasPanel extends JPanel {
         bottomPanel.add(btnRow);
         formCard.add(bottomPanel, gbc);
 
-        leftPanel.add(formCard, BorderLayout.CENTER);
+        // Scroll vertical do formulário de entrada de stock (formulários longos em ecrãs baixos).
+        JScrollPane formScroll = new JScrollPane(formCard,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        formScroll.setBorder(BorderFactory.createEmptyBorder());
+        formScroll.setOpaque(false);
+        formScroll.getViewport().setOpaque(false);
+        formScroll.getVerticalScrollBar().setUnitIncrement(16);
+        UIHelper.styleScrollPane(formScroll);
+
+        ModernPanel formWrapper = new ModernPanel(16);
+        formWrapper.setLayout(new BorderLayout());
+        formWrapper.setBorder(new EmptyBorder(15, 15, 15, 15));
+        formWrapper.add(formScroll, BorderLayout.CENTER);
+
+        leftPanel.add(formWrapper, BorderLayout.CENTER);
         panel.add(leftPanel);
 
         // RIGHT COLUMN: PURCHASES HISTORY
@@ -621,6 +635,23 @@ public class ComprasPanel extends JPanel {
                     p.getPurchaseDate().format(dtf)
             });
         }
+    }
+
+    /**
+     * Painel de formulário transparente que acompanha a largura do viewport mas não a altura,
+     * para um {@link JScrollPane} dar apenas scroll vertical mantendo os campos a largura toda.
+     */
+    private static final class VScrollForm extends JPanel implements Scrollable {
+        VScrollForm(LayoutManager layout) {
+            super(layout);
+            setOpaque(false);
+        }
+
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle visible, int orientation, int direction) { return 16; }
+        @Override public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) { return 80; }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 
 }

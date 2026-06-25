@@ -320,6 +320,17 @@ public class InventoryService {
         return productBatchService.findNextFEFO(productId, warehouseId);
     }
 
+    /**
+     * Alerta de validade: lotes com stock (qty &gt; 0) cuja validade já passou ou ocorre dentro
+     * de {@code daysAhead} dias. Inclui já-vencidos (validade no passado). Lotes sem validade
+     * (LEGACY 9999) ficam de fora. Base do cartão de validades no dashboard e do resumo na loja.
+     */
+    @Transactional(readOnly = true)
+    public List<com.phcpro.modules.inventory.dto.ProductBatchDTO> findExpiringBatches(Long companyId, int daysAhead) {
+        CurrentUserContext.requireCompany(companyId);
+        return productBatchService.findExpiringByCompany(companyId, LocalDate.now().plusDays(daysAhead));
+    }
+
     public WarehouseDTO toDTO(Warehouse w) {
         return new WarehouseDTO(
                 w.getId(),

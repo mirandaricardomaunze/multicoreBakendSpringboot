@@ -116,7 +116,11 @@ public class StockPanel extends JPanel {
     private JTextField batchSearchField;
     private JComboBox<String> batchExpirationCombo;
     private JComboBox<String> batchWarehouseCombo;
+    private JLabel batchesSummary;
     private List<com.phcpro.modules.inventory.dto.ProductBatchDTO> batchesList = new ArrayList<>();
+
+    /** Horizonte (dias) considerado "a vencer" no resumo de validades. */
+    private static final int EXPIRY_SOON_DAYS = 30;
 
     private JPanel buildBatchesTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
@@ -177,10 +181,16 @@ public class StockPanel extends JPanel {
         g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
         filters.add(batchSearchField, g);
 
+        batchesSummary = new JLabel(" ");
+        batchesSummary.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        batchesSummary.setForeground(UIHelper.TEXT_MUTED);
+        batchesSummary.setBorder(new EmptyBorder(2, 2, 0, 0));
+
         JPanel topStack = new JPanel(new BorderLayout(0, 10));
         topStack.setOpaque(false);
         topStack.add(header, BorderLayout.NORTH);
         topStack.add(filters, BorderLayout.CENTER);
+        topStack.add(batchesSummary, BorderLayout.SOUTH);
         tab.add(topStack, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
@@ -216,7 +226,31 @@ public class StockPanel extends JPanel {
             }
             if (selected != null) batchWarehouseCombo.setSelectedItem(selected);
         }
+        updateBatchesSummary();
         filterBatches();
+    }
+
+    /** Resumo proativo: conta lotes (com stock) vencidos e a vencer em ≤ {@link #EXPIRY_SOON_DAYS} dias. */
+    private void updateBatchesSummary() {
+        if (batchesSummary == null) return;
+        LocalDate today = LocalDate.now();
+        long expired = 0;
+        long soon = 0;
+        for (var b : batchesList) {
+            if (b.expirationDate() == null) continue;
+            if (b.quantity() == null || b.quantity().compareTo(BigDecimal.ZERO) <= 0) continue;
+            long days = java.time.temporal.ChronoUnit.DAYS.between(today, b.expirationDate());
+            if (days < 0) expired++;
+            else if (days <= EXPIRY_SOON_DAYS) soon++;
+        }
+        if (expired == 0 && soon == 0) {
+            batchesSummary.setForeground(UIHelper.APPROVED_GREEN);
+            batchesSummary.setText("Sem lotes vencidos ou a vencer em breve.");
+        } else {
+            batchesSummary.setForeground(expired > 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
+            batchesSummary.setText(String.format("%d lote%s vencido%s · %d a vencer em ≤ %d dias",
+                    expired, expired == 1 ? "" : "s", expired == 1 ? "" : "s", soon, EXPIRY_SOON_DAYS));
+        }
     }
 
     private void filterBatches() {

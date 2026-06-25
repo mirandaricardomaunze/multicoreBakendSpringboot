@@ -708,8 +708,7 @@ public class HRPanel extends JPanel {
             if (reason == null) return;
         }
         try {
-            String user = com.phcpro.architecture.security.CurrentUserContext.getUsername();
-            hrService.decideVacation(sel.id(), approve, user == null ? "SYSTEM" : user, reason);
+            hrService.decideVacation(sel.id(), approve, reason);
             loadVacations();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);

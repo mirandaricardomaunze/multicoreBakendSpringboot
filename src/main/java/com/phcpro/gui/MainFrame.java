@@ -4,7 +4,8 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.desktop.session.DesktopSession;
 import com.phcpro.desktop.session.DesktopSessionStore;
 import com.phcpro.desktop.client.ComercialApiClient;
-import com.phcpro.gui.components.CollapsibleSidebar;
+import com.phcpro.gui.components.Theme;
+import com.phcpro.gui.components.TopNavBar;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.approvals.service.ApprovalService;
 import com.phcpro.modules.audit.service.AuditLogService;
@@ -28,6 +29,7 @@ import com.phcpro.modules.printing.CreditNotePrintService;
 import com.phcpro.modules.printing.DebitNotePrintService;
 import com.phcpro.modules.printing.InventoryReportPrintService;
 import com.phcpro.modules.printing.IvaDeclarationPrintService;
+import com.phcpro.modules.printing.PayrollFiscalMapPrintService;
 import com.phcpro.modules.printing.OrderPrintService;
 import com.phcpro.modules.printing.PayslipPrintService;
 import com.phcpro.modules.printing.ReceiptPrintService;
@@ -55,6 +57,7 @@ import java.util.List;
 @org.springframework.stereotype.Component
 @org.springframework.context.annotation.Profile("desktop")
 @org.springframework.context.annotation.Lazy
+@org.springframework.context.annotation.Scope("prototype")
 public class MainFrame extends JFrame {
 
     private static final Color C_DASHBOARD  = UIHelper.ACCENT_BLUE;
@@ -88,7 +91,7 @@ public class MainFrame extends JFrame {
 
     private final CompanyService companyService;
     private final DesktopSessionStore desktopSessionStore;
-    private CollapsibleSidebar sidebar;
+    private TopNavBar topBar;
     private String sessionDisplayName;
 
     public MainFrame(
@@ -105,6 +108,8 @@ public class MainFrame extends JFrame {
             AuditLogService auditLogService,
             BackupService backupService,
             CompanyService companyService,
+            com.phcpro.modules.promotions.service.PromotionService promotionService,
+            com.phcpro.modules.movimentos.service.MovimentosService movimentosService,
             DesktopSessionStore desktopSessionStore,
             ReceiptPrintService receiptPrintService,
             InvoicePrintService invoicePrintService,
@@ -121,7 +126,9 @@ public class MainFrame extends JFrame {
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
             PayrollTaxService payrollTaxService,
-            IvaDeclarationPrintService ivaDeclarationPrintService
+            IvaDeclarationPrintService ivaDeclarationPrintService,
+            PayrollFiscalMapPrintService payrollFiscalMapPrintService,
+            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -135,14 +142,14 @@ public class MainFrame extends JFrame {
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         dashboardPanel  = new DashboardPanel(comercialService, financeService, approvalService, crmService, purchaseService, inventoryService);
-        comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService);
+        comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionService, movimentosService);
         financeiroPanel = new FinanceiroPanel(financeService, comercialService);
         hrPanel         = new HRPanel(hrService, payslipPrintService);
         crmPanel        = new CRMPanel(crmService);
         clientesPanel   = new ClientesPanel(comercialApiClient);
-        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, payrollTaxService, ivaDeclarationPrintService);
+        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
         approvalsPanel  = new ApprovalsPanel(approvalService);
-        posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService);
+        posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService);
         comprasPanel    = new ComprasPanel(purchaseService, inventoryService, comercialService, financeService);
         configPanel     = new ConfigPanel(userService, auditLogService, backupService);
@@ -162,11 +169,11 @@ public class MainFrame extends JFrame {
 
         setLayout(new BorderLayout());
 
-        sidebar = buildSidebar();
-        add(sidebar, BorderLayout.WEST);
+        topBar = buildTopBar();
+        add(topBar, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
 
-        sidebar.setActive("Painel Inicial");
+        topBar.setActive("Painel Inicial");
     }
 
     /** Called by the application bootstrap once the user is authenticated. */
@@ -175,64 +182,70 @@ public class MainFrame extends JFrame {
         String activeRole = CurrentUserContext.getRole();
         dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sessionUserLabel != null) sessionUserLabel.setText(displayName);
-        if (sessionRoleLabel != null) sessionRoleLabel.setText(activeRole);
+        if (sessionRoleLabel != null) sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
     }
 
     private javax.swing.Icon navIcon(String code) {
-        return UIHelper.icon(code, 18, new Color(229, 231, 235));
+        return UIHelper.icon(code, 20, topBarIconTint());
     }
 
-    private CollapsibleSidebar buildSidebar() {
-        CollapsibleSidebar bar = new CollapsibleSidebar("MULTICORE", "ERP Profissional");
+    /** Tinta dos ícones da barra de topo — escura sobre barra clara, clara sobre barra escura. */
+    private static Color topBarIconTint() {
+        return UIHelper.isLight() ? new Color(71, 85, 105) : new Color(229, 231, 235);
+    }
 
-        bar.addExpandedOnly(buildContextSelector("Empresa Ativa", buildCompanyCombo()));
-        bar.addExpandedOnly(buildSessionCard());
+    private TopNavBar buildTopBar() {
+        TopNavBar bar = new TopNavBar("MULTICORE", "ERP Profissional");
 
-        bar.addSection("Operações");
+        // Navegação: ícones-only com tooltip = nome do módulo (CONVENTIONS: UIHelper.icon, sem emojis).
         bar.addItem(navIcon("fas-th-large"),            "Painel Inicial",     C_DASHBOARD,  () -> navigate("dashboard"));
         bar.addItem(navIcon("fas-cash-register"),       "POS — Caixa",        C_POS,        () -> navigate("pos"));
         bar.addItem(navIcon("fas-file-invoice"),        "Vendas & Faturação", C_COMERCIAL,  () -> navigate("comercial"));
         bar.addItem(navIcon("fas-shopping-cart"),       "Compras",            C_COMPRAS,    () -> navigate("compras"));
-
-        bar.addSection("Armazém");
         bar.addItem(navIcon("fas-boxes"),               "Stock & Armazéns",   C_STOCK,      () -> navigate("stock"));
-
-        bar.addSection("Financeiro");
         bar.addItem(navIcon("fas-coins"),               "Tesouraria",         C_FINANCEIRO, () -> navigate("financeiro"));
-
-        bar.addSection("Gestão");
         bar.addItem(navIcon("fas-users"),               "Recursos Humanos",   C_HR,         () -> navigate("hr"));
         bar.addItem(navIcon("fas-headset"),             "CRM & Assistência",  C_CRM,        () -> navigate("crm"));
         bar.addItem(navIcon("fas-address-book"),        "Clientes",           C_CLIENTES,   () -> navigate("clientes"));
         bar.addItem(navIcon("fas-percent"),             "Área Fiscal",        C_FISCAL,     () -> navigate("fiscal"));
         bar.addItem(navIcon("fas-check-double"),        "Aprovações",         C_APPROVALS,  () -> navigate("approvals"));
-
-        bar.addSection("Sistema");
         bar.addItem(navIcon("fas-cog"),                 "Configurações",      C_CONFIG,     () -> navigate("config"));
+
+        // Área direita: seletor de empresa + chip de utilizador.
+        JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
+        UIHelper.styleComboBox(companyCombo);
+        companyCombo.setToolTipText("Empresa ativa");
+        companyCombo.setPreferredSize(new Dimension(210, 32));
+        // Reaplicar o renderer DEPOIS de styleComboBox (senão mostraria CompanyAccess[...]).
+        applyCompanyRenderer(companyCombo);
+        bar.addTrailing(buildThemeToggle());
+        bar.addTrailing(companyCombo);
+        bar.addTrailing(buildUserChip());
+
+        // Marca: MULTICORE no topo, nome da empresa activa por baixo.
+        DesktopSession initialSession = desktopSessionStore.requireSession();
+        if (!initialSession.companies().isEmpty()) {
+            bar.setSubBrand(initialSession.companies().get(0).name());
+        }
 
         return bar;
     }
 
-    private JPanel buildContextSelector(String title, JComboBox<?> combo) {
-        JPanel wrapper = new JPanel();
-        wrapper.setOpaque(false);
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
-        wrapper.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
-        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel label = new JLabel(title);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        label.setForeground(new Color(156, 163, 175));
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapper.add(label);
-        wrapper.add(Box.createRigidArea(new Dimension(0, 4)));
-
-        UIHelper.styleComboBox(combo);
-        combo.setMaximumSize(new Dimension(210, 32));
-        combo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapper.add(combo);
-        return wrapper;
+    /** Botão de tema na barra de menu (ícone sol/lua). Trocar reconstrói a janela no tema escolhido. */
+    private javax.swing.JComponent buildThemeToggle() {
+        String code = UIHelper.isLight() ? "fas-moon" : "fas-sun";
+        String tip = UIHelper.isLight() ? "Mudar para tema escuro" : "Mudar para tema claro";
+        JLabel toggle = new JLabel(UIHelper.icon(code, 18, topBarIconTint()));
+        toggle.setToolTipText(tip);
+        toggle.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        toggle.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
+        toggle.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                UIHelper.setTheme(UIHelper.isLight() ? Theme.DARK : Theme.LIGHT);
+            }
+        });
+        return toggle;
     }
 
     private JComboBox<DesktopSession.CompanyAccess> buildCompanyCombo() {
@@ -240,16 +253,6 @@ public class MainFrame extends JFrame {
         List<DesktopSession.CompanyAccess> companies = session.companies();
         JComboBox<DesktopSession.CompanyAccess> combo =
                 new JComboBox<>(companies.toArray(new DesktopSession.CompanyAccess[0]));
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof DesktopSession.CompanyAccess company) {
-                    setText(company.name() + "  [" + company.role() + "]");
-                }
-                return this;
-            }
-        });
 
         if (!companies.isEmpty()) {
             selectDesktopCompany(companies.get(0));
@@ -259,11 +262,36 @@ public class MainFrame extends JFrame {
             DesktopSession.CompanyAccess selected = (DesktopSession.CompanyAccess) combo.getSelectedItem();
             if (selected != null) {
                 selectDesktopCompany(selected);
+                if (topBar != null) topBar.setSubBrand(selected.name());
                 updateSessionRole();
                 refreshActivePanel();
             }
         });
         return combo;
+    }
+
+    /**
+     * Renderer do combo de empresas: nome em destaque e perfil traduzido para PT em tom
+     * discreto. Tem de ser aplicado depois de {@code UIHelper.styleComboBox}, que substitui
+     * o renderer e mostraria o {@code toString()} do record ({@code CompanyAccess[...]}).
+     */
+    private void applyCompanyRenderer(JComboBox<DesktopSession.CompanyAccess> combo) {
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setBackground(isSelected ? new Color(55, 65, 81) : UIHelper.BG_CARD);
+                setForeground(UIHelper.TEXT_LIGHT);
+                setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+                if (value instanceof DesktopSession.CompanyAccess company) {
+                    String roleColor = isSelected ? "#E5E7EB" : "#9CA3AF";
+                    setText("<html>" + company.name()
+                            + " <font color='" + roleColor + "'>· " + UIHelper.humanRole(company.role())
+                            + "</font></html>");
+                }
+                return this;
+            }
+        });
     }
 
     private void selectDesktopCompany(DesktopSession.CompanyAccess company) {
@@ -276,27 +304,13 @@ public class MainFrame extends JFrame {
     private JLabel sessionUserLabel;
     private JLabel sessionRoleLabel;
 
-    private JPanel buildSessionCard() {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setOpaque(false);
-        card.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
-        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+    /** Compact horizontal user chip for the top bar: avatar + name/role stacked. */
+    private JPanel buildUserChip() {
+        JPanel chip = new JPanel(new BorderLayout(8, 0));
+        chip.setOpaque(false);
 
-        JLabel title = new JLabel("UTILIZADOR ATIVO");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        title.setForeground(new Color(156, 163, 175));
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(title);
-        card.add(Box.createRigidArea(new Dimension(0, 6)));
-
-        JPanel row = new JPanel(new BorderLayout(8, 0));
-        row.setOpaque(false);
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        JLabel avatar = new JLabel(UIHelper.icon("fas-user-circle", 26, UIHelper.ACCENT));
-        row.add(avatar, BorderLayout.WEST);
+        JLabel avatar = new JLabel(UIHelper.icon("fas-user-circle", 28, UIHelper.ACCENT));
+        chip.add(avatar, BorderLayout.WEST);
 
         JPanel textStack = new JPanel();
         textStack.setOpaque(false);
@@ -309,10 +323,9 @@ public class MainFrame extends JFrame {
         sessionRoleLabel.setForeground(new Color(156, 163, 175));
         textStack.add(sessionUserLabel);
         textStack.add(sessionRoleLabel);
-        row.add(textStack, BorderLayout.CENTER);
+        chip.add(textStack, BorderLayout.CENTER);
 
-        card.add(row);
-        return card;
+        return chip;
     }
 
     private void navigate(String cardName) {
@@ -358,7 +371,7 @@ public class MainFrame extends JFrame {
     private void updateSessionRole() {
         String activeRole = CurrentUserContext.getRole();
         if (sessionRoleLabel != null) {
-            sessionRoleLabel.setText(activeRole);
+            sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
         }
         if (sessionDisplayName != null) {
             dashboardPanel.updateWelcomeMessage(sessionDisplayName, activeRole);

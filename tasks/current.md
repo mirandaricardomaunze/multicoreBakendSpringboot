@@ -2,8 +2,65 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-06-20
+**Última actualização:** 2026-06-21
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-06-25 (vista unificada de movimentos comerciais)
+
+- **Dívida §7.3 fechada:** novo módulo de leitura agregada `modules/movimentos/` (DTO/enum/service/
+  controller, sem entidade própria — reutiliza repositórios de `comercial`, padrão do `ReportService`).
+  `MovimentosService.listar(companyId, query, from, to)` junta **fatura, encomenda, NC e ND** numa só
+  lista, filtrável por **nº/cliente** (substring case-insensitive) e **período** (inclusivo), ordenada
+  por **data desc**, com guarda multi-tenant (`requireCompany`).
+- **UI:** nova tab "Movimentos" no `ComercialPanel` com filtros (pesquisar/de/até) e rodapé
+  contagem+soma. **API:** `GET /api/movimentos`.
+- Spec/harness: [docs/MOVIMENTOS_UNIFICADOS_SPEC.md](../docs/MOVIMENTOS_UNIFICADOS_SPEC.md) +
+  [docs/MOVIMENTOS_UNIFICADOS_HARNESS.md](../docs/MOVIMENTOS_UNIFICADOS_HARNESS.md). Testes:
+  `MovimentosServiceTest` (7: MU-01..MU-07).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 138 testes, 0 falhas**.
+
+### Progresso — 2026-06-25 (recibo pontilhado + loading reutilizável no checkout/PDF)
+
+- **Recibo térmico pontilhado:** separadores passaram de traços a **linhas pontilhadas reais**
+  (`DottedLineSeparator`) e as linhas da tabela ganharam **borda inferior pontilhada** (evento de
+  célula com `setLineDash`) — aspecto de recibo térmico. `ReceiptPrintService`.
+- **Loading profissional reutilizável:** novo `UIHelper.runWithProgress(...)` corre tarefas
+  demoradas num `SwingWorker` com diálogo modal "a processar…" + barra indeterminada. Aplicado ao
+  **checkout do POS** ("A finalizar venda…") e à **geração/reimpressão de recibos** ("A gerar
+  recibo…"). Padrão pronto para outros PDFs/cargas.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 131 testes, 0 falhas**.
+
+### Progresso — 2026-06-25 (promoções de loja + login com loading + maximizar)
+
+- **Módulo `promotions` (sugestão #3):** novo domínio completo (model/enum/repo/dto/service/controller)
+  seguindo a arquitetura. Tipos: **percentagem** (produto ou categoria) e **leve X, pague Y** (produto).
+  - `PromotionService.bestPromotion(...)` traduz a promoção activa no **desconto % efectivo** por
+    linha — reutiliza o checkout existente sem mexer no cálculo do POS/faturação.
+  - **POS:** ao adicionar artigo sem desconto manual, aplica automaticamente a melhor promoção e
+    marca "Promo: <nome>" na linha do carrinho.
+  - **UI:** nova tab "Promoções" no `ComercialPanel` (`PromotionsPanel`) — listar, criar, activar/
+    desactivar (permissão MANAGER/ADMIN, auditado).
+  - Migration `V12__store_promotions.sql`. Testes: `PromotionServiceTest` (8).
+- **Login com loading profissional:** autenticação passou a correr em `SwingWorker` (não congela o
+  EDT) com barra de progresso indeterminada reutilizável (`UIHelper.createBusyBar`) e estado
+  "A entrar…". Campos/botão bloqueados durante a chamada.
+- **Arranque maximizado** após login (`DesktopLauncher`), com estado preservado na troca de tema.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 131 testes, 0 falhas**.
+
+### Progresso — 2026-06-25 (alerta de validade proativo + UI tema/POS)
+
+- **Alerta de validade (sugestão #4 p/ loja):** lotes com stock vencidos ou a vencer em ≤30 dias
+  passam a ser **proativos**, não só consultáveis. `InventoryService.findExpiringBatches(companyId,
+  daysAhead)` (com guarda de empresa) delega em `ProductBatchService.findExpiringByCompany`.
+  - **Dashboard:** novo cartão "ALERTAS DE VALIDADE" (visível no login) com total + repartição
+    "X vencidos · Y a vencer (≤30d)". Grelha de KPIs passou a 3 colunas/linhas automáticas.
+  - **Stock › Lotes & Validades:** resumo proativo no topo (vermelho se há vencidos) e **cor de
+    urgência** na coluna Estado (VENCIDO vermelho, VENCE EM BREVE amarelo) via `UIHelper.styleTable`.
+  - Testes: `InventoryServiceTest` (2: corte hoje+dias / guarda de empresa).
+- **UI (sessão anterior):** barra de topo passou a acompanhar o tema claro/escuro; POS com
+  formulário/carrinho em `JSplitPane` redimensionável; dropdown dos combos legível em tema claro;
+  botões dos diálogos legíveis (gradiente Metal achatado).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 123 testes, 0 falhas**.
 
 ### Progresso — 2026-06-20 (dívida técnica + cobertura de testes)
 
@@ -41,6 +98,65 @@
   "login, tenant e roles testados por API" do harness.
 - Verificação: `mvn clean test` → **BUILD SUCCESS, 86 testes, 0 falhas**.
 
+### Progresso — 2026-06-21 (localizar documento de origem por pesquisa, estilo PHC)
+
+- **Faturar a partir de encomenda** e **NC/ND a partir da fatura** passaram a permitir **pesquisar o
+  documento de origem por nº ou cliente** (BUSINESS_FLOWS passo 1 "documento origem é localizado").
+- Backend: `ComercialService.searchInvoices(query)` e `searchPendingOrders(query)` (filtro substring
+  case-insensitive por nº/cliente, empresa activa) + helper `matches()`. Lógica no Service, UI fina.
+- UI: campo "Pesquisar (nº ou cliente)" nos 3 diálogos do `ComercialPanel` (Faturar Encomenda, Emitir
+  NC, Emitir ND) que filtra a lista ao escrever. Novo helper reutilizável `UIHelper.onTextChange(...)`.
+  Faturação manual directa e por encomenda **ambas mantidas**.
+- Testes: `ComercialServiceTest` (5 novos) para as pesquisas.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 91 testes, 0 falhas**.
+
+### Progresso — 2026-06-21 (bug: encomenda não chegava à aprovação)
+
+- **Causa:** `ComercialService.createOrder` guardava a encomenda como `PENDING` mas **nunca a
+  submetia** à Engine de Aprovações — só faturas (desconto >10%) e despesas lá chegavam.
+- **Fix:** a encomenda nasce `PENDING_APPROVAL` e é submetida via `approvalService.submitRequest("ORDER", …)`.
+  Novo `OrderApprovalCallback`: aprovado → `PENDING` (faturável); rejeitado → `CANCELLED`. `billOrder`
+  já exige `PENDING`, logo só fatura encomendas aprovadas (aprovar → depois faturar).
+- UI: mensagem de criação passa a indicar "Submetida para aprovação"; a área de aprovação mostra o
+  tipo em PT ("Encomenda"/"Fatura") via `humanType(...)`.
+- Testes: `OrderApprovalCallbackTest` (4) + `createOrder` submete aprovação (`ComercialServiceTest`);
+  `MulticoreServicesTest` actualizado (aprovar a encomenda antes de faturar).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 96 testes, 0 falhas**.
+
+### Progresso — 2026-06-21 (cancelar encomenda)
+
+- `ComercialService.cancelOrder(id, reason)` (mirror de `cancelInvoice`): exige MANAGER/ADMIN e motivo,
+  bloqueia encomenda já faturada/cancelada, fecha o pedido de aprovação aberto e audita (`ORDER_CANCEL`).
+- `ComercialService.searchCancellableOrders(query)` + `ApprovalService.cancelPendingForDocument(...)`.
+- UI: botão "Cancelar Encomenda…" na tab Encomendas → diálogo com pesquisa por nº/cliente + motivo.
+- Testes: `ComercialServiceTest` (cancelOrder + searchCancellableOrders) e `ApprovalServiceTest`.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 103 testes, 0 falhas**.
+
+### Progresso — 2026-06-21 (recibo POS: nome + valor pago/troco; UI)
+
+- **Recibo térmico POS** (spec §4 "troco para numerário", RS-05): o nome do comprador passa a ser
+  gravado na fatura (`Invoice.customerName`, migration `V9`) e impresso; o `ReceiptPrintService` mostra
+  bloco de pagamento por método + **Valor pago** e **Troco**. UI: diálogo de pagamento no checkout
+  (`POSPanel.askPayment`) recolhe método e, em numerário, **valor entregue com troco em tempo real**;
+  passa a usar a via multi-pagamento (`PaymentEntry` com tendered/change). Bónus: cartão/transferência
+  já vão à tesouraria sem contar como numerário na gaveta. Testes: `POSServiceTest` (+2 → 105).
+- **Marca com empresa activa:** topo mantém MULTICORE e mostra o nome da empresa por baixo; role
+  traduzido para PT discreto (`UIHelper.humanRole`: Administrador/Gestor/Funcionário).
+- **Bug do seletor de empresa:** `styleComboBox` substituía o renderer e mostrava `CompanyAccess[...]`.
+  Corrigido reaplicando o renderer depois de `styleComboBox` (`MainFrame.applyCompanyRenderer`).
+- **Navegação no topo (decisão do utilizador):** sidebar esquerda → **barra de topo só-ícones**
+  (`TopNavBar` + `TopNavItem`, ícones via `UIHelper.icon`, tooltip por módulo, quebra para 2ª linha
+  via `WrapLayout`), libertando largura para tabelas/formulários. `CollapsibleSidebar`/`SidebarNavItem`
+  ficaram sem uso (não removidos).
+- **Scroll no formulário de compra:** "Registar Compra (Entrada Stock)" ganhou scroll vertical via
+  host `Scrollable` (acompanha largura, não altura) dentro de `JScrollPane` no `ComprasPanel`.
+- **Cadastro de cliente fora das Faturas:** removida a tab "Registar Cliente" do `ComercialPanel`
+  (e código sem uso: `createRegistarClienteTab`/`registerClient`/4 campos). Gestão de clientes vive
+  só na área Clientes (`ClientesPanel`); o diálogo rápido "+ Novo" do POS mantém-se.
+- **Nota de arranque desktop:** o `-Dspring-boot.run.main-class` não sobrepõe o `<mainClass>` literal do
+  pom; README actualizado para arrancar o desktop via `java -cp`.
+- Verificação: `mvn clean compile` → SUCCESS; `mvn test` → **105 testes, 0 falhas**.
+
 ---
 
 ## Foco em curso
@@ -52,6 +168,61 @@ Fechar lacunas para uso real em loja/mercearia:
 - Task faseada: [tasks/retail_store_readiness.md](retail_store_readiness.md)
 
 Prioridade imediata: executar o harness RS-01 a RS-22 com dados reais de loja, validar impressora/leitor/gaveta e testar restore num ambiente separado.
+
+### Progresso — 2026-06-22 (colunas de linha dos documentos comerciais)
+
+- **Fatura, encomenda e nota de crédito** passaram a mostrar, por linha: **código de barras, referência,
+  descrição, validade (do lote), qtd, preço unit., IVA e subtotal líquido** — via o renderizador
+  partilhado `LineItemsTableRenderer` (8 colunas canónicas; subtotal = `LineCalculator.net`).
+- Novo `LineRowMapper` (DRY) resolve barcode/ref/descrição do `Product` e a validade via novo
+  `ProductBatchRepository.findFirstByProductIdAndBatchNumberOrderByExpirationDateAsc`. Os 3 serviços
+  de impressão deixaram de montar linhas à mão.
+- Spec/harness: [docs/DOCUMENT_LINE_COLUMNS_SPEC.md](../docs/DOCUMENT_LINE_COLUMNS_SPEC.md) +
+  [docs/DOCUMENT_LINE_COLUMNS_HARNESS.md](../docs/DOCUMENT_LINE_COLUMNS_HARNESS.md). ND é baseada em
+  valor (sem linhas de artigo).
+- **Nova Guia de Remessa**: `GuideRemittancePrintService.render(invoiceId)` gera a guia a partir da
+  fatura (mesmas 8 colunas + bloco de transporte/assinaturas, ref. `GR-<nºfatura>` sem consumir
+  numeração). Endpoint `GET /api/print/guide/{invoiceId}` + botão "Imprimir Guia" no `ComercialPanel`.
+- Teste: `LineItemsTableRendererTest` (3). Verificação: `mvn clean test` → **121 testes, 0 falhas**.
+
+### Backlog — RH/Folha (avaliação 2026-06-22)
+
+Módulo `com.phcpro.modules.hr` está avançado (motor fiscal IRPS/INSS, recibos, despesas, férias,
+faltas, UI + PDF) mas **não pronto para produção**. Spec-alvo e harness criados:
+- Spec: [docs/HR_PAYROLL_SPEC.md](../docs/HR_PAYROLL_SPEC.md)
+- Harness: [docs/HR_PAYROLL_HARNESS.md](../docs/HR_PAYROLL_HARNESS.md) (cenários RH-01..RH-25 + punch list)
+
+Lacunas prioritárias: (1) auditoria ausente no RH; (2) nº de recibo por timestamp em vez de
+`DocumentNumberService` gapless; (3) marcar recibo pago não gera saída de tesouraria; (4) mapa
+fiscal e config de impostos sem endpoint/PDF; (5) férias sem saldo e `decideVacation` confia no
+`decidedBy` do body; (6) faltas não descontam no recibo; (7) 13.º mês e subsídio de férias em falta;
+(8) só 6 testes para um módulo de dinheiro+impostos (alvo ~30+).
+
+**Progresso RH — 2026-06-22 (itens 1–3 da punch list):**
+- (1) **Auditoria** em todo o RH: `AuditLogService` injectado em `HRService`, audita
+  `EMPLOYEE_CREATE/UPDATE/STATUS`, `PAYSLIP_ISSUE/PAID/CANCEL`, `PAYROLL_PROCESS`, `VACATION_DECISION`.
+- (2) **Nº de recibo gapless**: série `REC` via `DocumentNumberService.next` (fim do timestamp).
+- (3) **Líquido → tesouraria** em `markPayslipPaid` via novo `FinanceService.registerAutoPayout`
+  (refactor DRY de `registerAutoExpensePayout`).
+- (4) **Mapa fiscal + config de impostos via API/PDF**: `HRController` expõe
+  `GET /payroll/fiscal-summary/{year}/{month}` e `GET/POST /payroll/tax-config`; novo
+  `PayrollFiscalMapPrintService` (PDF mapa INSS/IRPS) + botão "Imprimir Mapa Fiscal" no `FiscalPanel`;
+  novo `HRApiIntegrationTest` (4: 401/403/200).
+- (5) **Férias: saldo + decisor seguro**: direito anual 22 dias, saldo = direito − reservados
+  (`VacationRepository.sumReservedDays`), `submitVacation` bloqueia acima do saldo; `decideVacation`
+  exige MANAGER/ADMIN, resolve decisor por `CurrentUserContext` (deixou de confiar no `decidedBy` do
+  body) e exige motivo na rejeição. Testes: `HRServiceTest` (+2).
+- (6) **Faltas não remuneradas descontam no recibo**: novo campo `Payslip.absenceDeduction`
+  (migration `V10`); `createPayslip` desconta faltas `UNJUSTIFIED` que se sobrepõem ao mês
+  (valor/dia = salário base / 30), reflectido no líquido, `PayslipDTO` e PDF. Teste: `HRServiceTest` (+1).
+- (7) **13.º mês + subsídio de férias (cálculo + pagamento)**: novo `PayrollBonusService` calcula
+  (`thirteenthMonth`/`vacationAllowance`) e **paga de forma persistida e idempotente** via nova
+  entidade `PayrollBonus` (migration `V11`, unique `employee+type+year+reference`): `payThirteenthMonth`
+  /`payVacationAllowance` exigem MANAGER/ADMIN, saída de tesouraria + auditoria. Endpoints GET (calcular)
+  e POST `/pay`. `PayrollBonusServiceTest` (6).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 118 testes, 0 falhas**.
+- **RH: punch list 1–7 fechada.** Cobertura RH = 19 testes próprios. Item 8 (cobertura) substancialmente
+  cumprido. Falta apenas (opcional) UI desktop para 13.º/subsídio de férias — backend completo.
 
 ### Progresso da Fase 1 — 2026-06-17
 
@@ -136,7 +307,7 @@ Prioridade imediata: executar o harness RS-01 a RS-22 com dados reais de loja, v
 
 ```
 mvn clean compile   → BUILD SUCCESS
-mvn clean test      → BUILD SUCCESS, 86 testes, 0 falhas (2026-06-21)
+mvn clean test      → BUILD SUCCESS, 138 testes, 0 falhas (2026-06-25)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.

@@ -279,6 +279,9 @@ public class POSService {
 
         Invoice invoice = new Invoice();
         invoice.setClient(client);
+        // Nome a imprimir no recibo: o rótulo walk-in escrito pelo operador, ou o nome do
+        // cliente registado quando não há rótulo livre.
+        invoice.setCustomerName(walkInLabel != null ? walkInLabel : client.getName());
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
         invoice.setStatus(InvoiceStatus.PAID); // Immediate payment for POS sales

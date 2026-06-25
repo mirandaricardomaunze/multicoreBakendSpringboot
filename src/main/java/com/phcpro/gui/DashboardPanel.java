@@ -39,6 +39,11 @@ public class DashboardPanel extends JPanel {
     private JLabel taxSummaryLabel;
     private JLabel taxDetailLabel;
     private JLabel stockAlertsLabel;
+    private JLabel expiryAlertsLabel;
+    private JLabel expiryAlertsSub;
+
+    /** Horizonte (dias) do alerta de validade no dashboard. */
+    private static final int EXPIRY_ALERT_DAYS = 30;
     private SimpleBarChartPanel financialChart;
     private SimpleBarChartPanel operationsChart;
 
@@ -81,10 +86,11 @@ public class DashboardPanel extends JPanel {
         dashboardContent.setOpaque(false);
         dashboardContent.setBorder(new EmptyBorder(18, 0, 0, 0));
 
-        // Compact KPI cards leave vertical room for charts.
-        JPanel gridPanel = new JPanel(new GridLayout(2, 3, 12, 12));
+        // Compact KPI cards leave vertical room for charts. Grelha de 3 colunas, linhas automáticas
+        // (7 cartões → 3 linhas), dentro do scroll.
+        JPanel gridPanel = new JPanel(new GridLayout(0, 3, 12, 12));
         gridPanel.setOpaque(false);
-        gridPanel.setPreferredSize(new Dimension(0, 220));
+        gridPanel.setPreferredSize(new Dimension(0, 330));
 
         balanceValLabel = newValueLabel("0.00 MT", 20);
         gridPanel.add(buildKpiCard(
@@ -127,6 +133,15 @@ public class DashboardPanel extends JPanel {
                 "ALERTAS DE STOCK BAIXO", "fas-exclamation-triangle", new Color(254, 226, 226),
                 stockAlertsLabel, stockAlertsSub,
                 new Color(220, 38, 38), new Color(185, 28, 28)));
+
+        expiryAlertsLabel = newValueLabel("0 Lotes", 20);
+        expiryAlertsSub = new JLabel("Vencidos ou a vencer em ≤ " + EXPIRY_ALERT_DAYS + " dias");
+        expiryAlertsSub.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        expiryAlertsSub.setForeground(new Color(255, 237, 213));
+        gridPanel.add(buildKpiCard(
+                "ALERTAS DE VALIDADE", "fas-calendar-times", new Color(255, 237, 213),
+                expiryAlertsLabel, expiryAlertsSub,
+                new Color(194, 65, 12), new Color(234, 88, 12)));
 
         dashboardContent.add(gridPanel, BorderLayout.NORTH);
 
@@ -253,6 +268,18 @@ public class DashboardPanel extends JPanel {
                 .filter(s -> s.getQuantity().compareTo(BigDecimal.valueOf(5)) < 0)
                 .count();
         stockAlertsLabel.setText(lowStocksCount + " Artigo" + (lowStocksCount == 1 ? "" : "s"));
+
+        // 7. Alertas de validade — lotes vencidos ou a vencer no horizonte definido
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<com.phcpro.modules.inventory.dto.ProductBatchDTO> expiring =
+                inventoryService.findExpiringBatches(companyId, EXPIRY_ALERT_DAYS);
+        long expiredCount = expiring.stream()
+                .filter(b -> b.expirationDate() != null && b.expirationDate().isBefore(today))
+                .count();
+        long soonCount = expiring.size() - expiredCount;
+        expiryAlertsLabel.setText(expiring.size() + " Lote" + (expiring.size() == 1 ? "" : "s"));
+        expiryAlertsSub.setText(String.format("%d vencido%s · %d a vencer (≤ %d dias)",
+                expiredCount, expiredCount == 1 ? "" : "s", soonCount, EXPIRY_ALERT_DAYS));
 
         financialChart.setData(
                 new String[]{"Vendas", "Compras", "IVA"},

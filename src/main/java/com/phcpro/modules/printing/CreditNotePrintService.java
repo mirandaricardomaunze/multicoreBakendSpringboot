@@ -21,9 +21,11 @@ public class CreditNotePrintService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final CreditNoteService service;
+    private final LineRowMapper lineRowMapper;
 
-    public CreditNotePrintService(CreditNoteService service) {
+    public CreditNotePrintService(CreditNoteService service, LineRowMapper lineRowMapper) {
         this.service = service;
+        this.lineRowMapper = lineRowMapper;
     }
 
     @Transactional(readOnly = true)
@@ -94,9 +96,9 @@ public class CreditNotePrintService {
     }
 
     private PdfPTable buildLinesTable(List<CreditNoteLine> lines) {
-        return LineItemsTableRenderer.build(lines.stream().map(l -> new LineItemsTableRenderer.Row(
-                l.getProduct().getSku(),
-                l.getProduct().getName() + (l.getBatchNumber() != null ? "  (Lote: " + l.getBatchNumber() + ")" : ""),
+        return LineItemsTableRenderer.build(lines.stream().map(l -> lineRowMapper.map(
+                l.getProduct(),
+                l.getBatchNumber(),
                 l.getQuantity() == null ? BigDecimal.ZERO : l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),

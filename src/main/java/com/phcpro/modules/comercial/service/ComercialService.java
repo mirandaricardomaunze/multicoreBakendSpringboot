@@ -390,6 +390,21 @@ public class ComercialService {
     }
 
     /**
+     * Localiza faturas da empresa activa por nº de fatura OU nome de cliente (pesquisa parcial,
+     * sem distinção de maiúsculas). Usado pelos diálogos de Nota de Crédito/Débito para encontrar
+     * o documento de origem ao estilo PHC. {@code query} vazio devolve todas as faturas.
+     */
+    @Transactional(readOnly = true)
+    public List<InvoiceDTO> searchInvoices(String query) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return invoiceRepository.findByCompanyId(companyId).stream()
+                .filter(i -> matches(i.getInvoiceNumber(), query)
+                        || (i.getClient() != null && matches(i.getClient().getName(), query)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Histórico de vendas POS (canal {@code SalesChannel.POS}), ordenadas da mais recente para a
      * mais antiga. Inclui {@code createdBy} = operador da caixa que efectuou a venda.
      */
@@ -638,7 +653,8 @@ public class ComercialService {
         order.setClient(client);
         order.setCompany(company);
         order.setWarehouse(warehouse);
-        order.setStatus("PENDING");
+        // Encomenda passa pela Engine de Aprovações antes de ser faturável (ver OrderApprovalCallback).
+        order.setStatus("PENDING_APPROVAL");
         if (request.walkInName() != null && !request.walkInName().isBlank()) {
             order.setWalkInName(request.walkInName().trim());
         }
@@ -681,9 +697,15 @@ public class ComercialService {
 
         // Número sequencial da encomenda (série EC, independente da série de faturas).
         order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));
-        order.setCreatedBy("SYSTEM");
+        order.setCreatedBy(CurrentUserContext.getUsername());
 
         order = orderRepository.save(order);
+
+        // Submete à Engine de Aprovações. O encaminhamento por valor (auto ≤50 / MANAGER / ADMIN)
+        // e a promoção a PENDING (faturável) acontecem em OrderApprovalCallback.
+        String approvalDesc = String.format("Encomenda %s para %s - Total: %s MT",
+                order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
+        approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), approvalDesc);
 
         return toDTO(order);
     }
@@ -755,6 +777,53 @@ public class ComercialService {
     }
 
     /**
+     * Encomendas que ainda podem ser canceladas (não faturadas nem já canceladas), localizadas por
+     * nº ou cliente (pesquisa parcial). Cobre tanto PENDING_APPROVAL como PENDING. Usado pelo diálogo
+     * "Cancelar Encomenda" ao estilo PHC. {@code query} vazio devolve todas as canceláveis.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDTO> searchCancellableOrders(String query) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return orderRepository.findByCompanyId(companyId).stream()
+                .filter(o -> !"BILLED".equalsIgnoreCase(o.getStatus())
+                        && !"CANCELLED".equalsIgnoreCase(o.getStatus()))
+                .filter(o -> matches(o.getOrderNumber(), query)
+                        || (o.getClient() != null && matches(o.getClient().getName(), query)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Cancela uma encomenda ainda não faturada. Regra de negócio (mirror de {@code cancelInvoice}):
+     * exige perfil MANAGER/ADMIN e motivo; uma encomenda já faturada não se cancela (anula-se a
+     * fatura); fecha também o pedido de aprovação aberto, se existir; audita.
+     */
+    @Transactional
+    public void cancelOrder(Long orderId, String reason) {
+        PermissionGuard.requireManagerOrAdmin("cancelar encomenda");
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessRuleException("É necessário indicar o motivo do cancelamento.");
+        }
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        CurrentUserContext.requireCompany(order.getCompany().getId());
+        if ("BILLED".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Encomenda já faturada — anule a fatura associada.");
+        }
+        if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Esta encomenda já se encontra cancelada.");
+        }
+
+        // Fecha o pedido de aprovação ainda aberto (encomenda em PENDING_APPROVAL).
+        approvalService.cancelPendingForDocument("ORDER", order.getId(), reason);
+
+        order.setStatus("CANCELLED");
+        orderRepository.save(order);
+        auditLogService.logCurrent("ORDER_CANCEL",
+                "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
+    }
+
+    /**
      * Devolve as encomendas PENDENTES (status PENDING e ainda sem invoiceId) — as únicas que
      * podem ser convertidas em fatura. Usado pelo diálogo "Faturar Encomenda" no tab das Faturas
      * para impedir dupla faturação a montante (a validação final está em {@link #billOrder}).
@@ -765,6 +834,29 @@ public class ComercialService {
         return orderRepository
                 .findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING")
                 .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Localiza encomendas PENDENTES (não faturadas) da empresa activa por nº de encomenda OU nome
+     * de cliente (pesquisa parcial, sem distinção de maiúsculas). Usado pelo diálogo "Faturar
+     * Encomenda" ao estilo PHC. {@code query} vazio devolve todas as pendentes.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDTO> searchPendingOrders(String query) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING").stream()
+                .filter(o -> matches(o.getOrderNumber(), query)
+                        || (o.getClient() != null && matches(o.getClient().getName(), query)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /** Substring case-insensitive, null-safe. {@code needle} vazio/nulo → corresponde sempre. */
+    private boolean matches(String haystack, String needle) {
+        if (needle == null || needle.isBlank()) return true;
+        if (haystack == null) return false;
+        return haystack.toLowerCase(java.util.Locale.ROOT)
+                .contains(needle.trim().toLowerCase(java.util.Locale.ROOT));
     }
 
     public OrderDTO toDTO(Order order) {

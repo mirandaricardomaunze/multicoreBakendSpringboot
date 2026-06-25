@@ -25,6 +25,9 @@ public class LoginDialog extends JDialog {
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JLabel errorLabel;
+    private ModernButton loginBtn;
+    private JProgressBar progressBar;
+    private boolean busy = false;
     private DesktopSession authenticatedSession;
 
     public LoginDialog(AuthApiClient authApiClient) {
@@ -116,12 +119,18 @@ public class LoginDialog extends JDialog {
         card.add(errorLabel, c);
 
         c.gridy++;
-        c.insets = new Insets(0, 0, 12, 0);
-        ModernButton loginBtn = UIHelper.createPrimaryButton("Entrar");
+        c.insets = new Insets(0, 0, 8, 0);
+        loginBtn = UIHelper.createPrimaryButton("Entrar");
         loginBtn.setIcon(UIHelper.icon("fas-sign-in-alt", 14));
         loginBtn.setPreferredSize(new Dimension(0, 42));
         loginBtn.addActionListener(e -> tryLogin());
         card.add(loginBtn, c);
+
+        c.gridy++;
+        c.insets = new Insets(0, 0, 4, 0);
+        progressBar = UIHelper.createBusyBar();
+        progressBar.setVisible(false); // só aparece durante a autenticação
+        card.add(progressBar, c);
 
         g.gridy++;
         g.insets = new Insets(0, 0, 16, 0);
@@ -157,12 +166,15 @@ public class LoginDialog extends JDialog {
 
     private JPanel iconField(String iconCode, JComponent field) {
         JPanel p = new JPanel(new BorderLayout(8, 0));
-        p.setBackground(new Color(31, 41, 55));
-        p.setBorder(new LineBorder(new Color(55, 65, 81), 1, true));
+        p.setBackground(UIHelper.FIELD_BG);
+        p.setBorder(new LineBorder(UIHelper.BORDER, 1, true));
         JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 16, UIHelper.TEXT_MUTED));
         iconLabel.setBorder(new EmptyBorder(0, 12, 0, 0));
         field.setBorder(new EmptyBorder(10, 4, 10, 12));
-        if (field instanceof JTextField tf) tf.setBackground(new Color(31, 41, 55));
+        if (field instanceof JTextField tf) {
+            tf.setBackground(UIHelper.FIELD_BG);
+            tf.setCaretColor(UIHelper.TEXT_LIGHT); // cursor visível em qualquer tema
+        }
         field.setForeground(UIHelper.TEXT_LIGHT);
         p.add(iconLabel, BorderLayout.WEST);
         p.add(field, BorderLayout.CENTER);
@@ -171,21 +183,48 @@ public class LoginDialog extends JDialog {
     }
 
     private void tryLogin() {
+        if (busy) return; // evita duplo clique / Enter repetido durante a autenticação
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
         if (username.isEmpty() || password.isEmpty()) {
             errorLabel.setText("Indique utilizador e senha.");
             return;
         }
-        try {
-            authenticatedSession = authApiClient.login(username, password);
-            errorLabel.setText(" ");
-            dispose();
-        } catch (Exception ex) {
-            errorLabel.setText(ex.getMessage());
-            passwordField.setText("");
-            passwordField.requestFocusInWindow();
-        }
+
+        // Autenticação corre em background (chamada HTTP) para não congelar o EDT; a barra de
+        // progresso indeterminada dá o feedback de "a entrar…".
+        setBusy(true);
+        errorLabel.setText(" ");
+        new SwingWorker<DesktopSession, Void>() {
+            @Override
+            protected DesktopSession doInBackground() {
+                return authApiClient.login(username, password);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    authenticatedSession = get();
+                    dispose();
+                } catch (Exception ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    setBusy(false);
+                    errorLabel.setText(cause.getMessage());
+                    passwordField.setText("");
+                    passwordField.requestFocusInWindow();
+                }
+            }
+        }.execute();
+    }
+
+    /** Alterna o estado "a entrar…": bloqueia campos/botão e mostra a barra de progresso. */
+    private void setBusy(boolean value) {
+        this.busy = value;
+        usernameField.setEnabled(!value);
+        passwordField.setEnabled(!value);
+        loginBtn.setEnabled(!value);
+        loginBtn.setText(value ? "A entrar…" : "Entrar");
+        progressBar.setVisible(value);
     }
 
 }

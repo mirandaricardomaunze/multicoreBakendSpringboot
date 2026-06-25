@@ -14,6 +14,7 @@ import com.phcpro.modules.fiscal.service.TaxRateService;
 import com.phcpro.modules.fiscal.service.WithholdingService;
 import com.phcpro.modules.hr.service.PayrollTaxService;
 import com.phcpro.modules.printing.IvaDeclarationPrintService;
+import com.phcpro.modules.printing.PayrollFiscalMapPrintService;
 import com.phcpro.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
@@ -42,6 +43,7 @@ public class FiscalPanel extends JPanel {
     private final FiscalSummaryService fiscalSummaryService;
     private final PayrollTaxService payrollTaxService;
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
+    private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
 
     // IVA tab
     private JSpinner ivaYearSpinner;
@@ -70,13 +72,15 @@ public class FiscalPanel extends JPanel {
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
             PayrollTaxService payrollTaxService,
-            IvaDeclarationPrintService ivaDeclarationPrintService
+            IvaDeclarationPrintService ivaDeclarationPrintService,
+            PayrollFiscalMapPrintService payrollFiscalMapPrintService
     ) {
         this.taxRateService = taxRateService;
         this.withholdingService = withholdingService;
         this.fiscalSummaryService = fiscalSummaryService;
         this.payrollTaxService = payrollTaxService;
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
+        this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
 
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
@@ -118,9 +122,13 @@ public class FiscalPanel extends JPanel {
         payrollYearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
         ModernButton refresh = UIHelper.createSecondaryButton("Atualizar Mapa");
         refresh.addActionListener(e -> loadPayrollFiscal());
+        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Mapa Fiscal");
+        printBtn.setIcon(UIHelper.icon("fas-print", 14));
+        printBtn.addActionListener(e -> printPayrollFiscalMap());
         controls.add(payrollMonthSpinner);
         controls.add(payrollYearSpinner);
         controls.add(refresh);
+        controls.add(printBtn);
 
         payrollIrpsLabel = new JLabel("IRPS: 0.00 MT");
         payrollInssLabel = new JLabel("INSS total: 0.00 MT");
@@ -159,6 +167,18 @@ public class FiscalPanel extends JPanel {
         }
         payrollIrpsLabel.setText(String.format("IRPS: %,.2f MT", summary.irpsWithheld()));
         payrollInssLabel.setText(String.format("INSS total: %,.2f MT", summary.totalInss()));
+    }
+
+    private void printPayrollFiscalMap() {
+        try {
+            int year = (Integer) payrollYearSpinner.getValue();
+            int month = (Integer) payrollMonthSpinner.getValue();
+            byte[] pdf = payrollFiscalMapPrintService.render(
+                    CurrentUserContext.getCurrentCompanyId(), year, month);
+            PdfFileSaver.saveAndOpen(pdf, "mapa-fiscal-salarial-" + year + "-" + String.format("%02d", month));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // ─── Tab 1: Apuramento IVA ────────────────────────────────────────────

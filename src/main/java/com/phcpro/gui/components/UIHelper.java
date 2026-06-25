@@ -13,10 +13,21 @@ import java.awt.event.MouseEvent;
 
 public class UIHelper {
 
-    public static final Color BG_DARK = new Color(17, 24, 39);      // Gray-900 (#111827)
-    public static final Color BG_CARD = new Color(31, 41, 55);      // Gray-800 (#1F2937)
-    public static final Color TEXT_LIGHT = new Color(243, 244, 246); // Gray-100 (#F3F4F6)
-    public static final Color TEXT_MUTED = new Color(156, 163, 175); // Gray-400 (#9CA3AF)
+    // ── Slots de cor sensíveis ao tema (claro/escuro). Os nomes são históricos mas representam
+    //    papéis semânticos: BG_DARK = fundo de página, TEXT_LIGHT = texto principal, etc.
+    //    Não são final — são reatribuídos por applyTheme(...). Ver Theme.java. ────────────────
+    public static Color BG_DARK = Theme.DARK.bg;
+    public static Color BG_CARD = Theme.DARK.card;
+    public static Color TEXT_LIGHT = Theme.DARK.textPrimary;
+    public static Color TEXT_MUTED = Theme.DARK.textMuted;
+    public static Color GRID = Theme.DARK.grid;
+    public static Color TABLE_HEADER_BG = Theme.DARK.tableHeaderBg;
+    public static Color ROW_ALT = Theme.DARK.rowAlt;
+    public static Color FIELD_BG = Theme.DARK.fieldBg;
+    public static Color BORDER = Theme.DARK.border;
+    public static Color SELECTION_BG = Theme.DARK.selectionBg;
+
+    // ── Cores de acento — partilhadas entre temas (não mudam com claro/escuro) ──────────────
     public static final Color ACCENT = new Color(139, 92, 246);      // Violet-500 (#8B5CF6)
     public static final Color ACCENT_BLUE = new Color(59, 130, 246); // Blue-500 (#3B82F6)
     public static final Color APPROVED_GREEN = new Color(16, 185, 129); // Emerald-500 (#10B981)
@@ -26,6 +37,106 @@ public class UIHelper {
     private static final Color SECONDARY_HOVER = new Color(107, 114, 128); // Gray-500 (#6B7280)
     public static final int FORM_CONTROL_HEIGHT = 38;
     public static final int DIALOG_FORM_MIN_WIDTH = 560;
+
+    private static Theme activeTheme = Theme.DARK;
+    private static final java.util.prefs.Preferences PREFS =
+            java.util.prefs.Preferences.userRoot().node("com/phcpro/ui");
+
+    /**
+     * Hook opcional para reconstruir a janela principal quando o tema muda. O desktop regista aqui
+     * uma rotina que recria o MainFrame já com a paleta nova — garante que componentes pintados e
+     * ícones (que fixam a cor na criação) também ficam coerentes. Sem hook (ex.: testes), recorre-se
+     * à re-pintura por mapeamento de cores.
+     */
+    public static Runnable onThemeChanged;
+
+    public static Theme currentTheme() {
+        return activeTheme;
+    }
+
+    public static boolean isLight() {
+        return activeTheme == Theme.LIGHT;
+    }
+
+    /** Lê o tema guardado (por defeito escuro) e aplica os slots + UIManager. Chamar no arranque. */
+    public static void loadAndApplySavedTheme() {
+        applyTheme(Theme.byId(PREFS.get("theme", "dark")));
+    }
+
+    /** Reatribui os slots de cor e os defaults do Swing à paleta do tema indicado (sem persistir). */
+    public static void applyTheme(Theme theme) {
+        activeTheme = theme;
+        BG_DARK = theme.bg;
+        BG_CARD = theme.card;
+        TEXT_LIGHT = theme.textPrimary;
+        TEXT_MUTED = theme.textMuted;
+        GRID = theme.grid;
+        TABLE_HEADER_BG = theme.tableHeaderBg;
+        ROW_ALT = theme.rowAlt;
+        FIELD_BG = theme.fieldBg;
+        BORDER = theme.border;
+        SELECTION_BG = theme.selectionBg;
+        initGlobalTheme();
+    }
+
+    /**
+     * Troca o tema em tempo real: persiste a escolha, reaplica a paleta e re-pinta todas as janelas
+     * abertas mapeando, cor a cor, a paleta antiga para a nova.
+     */
+    public static void setTheme(Theme theme) {
+        Theme previous = activeTheme;
+        if (theme == previous) {
+            return;
+        }
+        PREFS.put("theme", theme.id);
+        applyTheme(theme);
+        if (onThemeChanged != null) {
+            onThemeChanged.run(); // desktop: reconstrói a janela já com a paleta nova
+        } else {
+            restyleAllWindows(previous, theme);
+        }
+    }
+
+    private static void restyleAllWindows(Theme from, Theme to) {
+        Color[] oldP = from.palette();
+        Color[] newP = to.palette();
+        // Nota: NÃO usar updateComponentTreeUI — reinstalaria os UIs default do Look&Feel e
+        // destruiria a estilização custom (ex.: tabs). O mapeamento de cores + repaint chega,
+        // porque os componentes pintados lêem os slots de cor em tempo de pintura.
+        for (Window window : Window.getWindows()) {
+            restyleTree(window, oldP, newP);
+            window.invalidate();
+            window.validate();
+            window.repaint();
+        }
+    }
+
+    private static void restyleTree(Component c, Color[] oldP, Color[] newP) {
+        Color bg = mapColor(c.getBackground(), oldP, newP);
+        if (bg != null) c.setBackground(bg);
+        Color fg = mapColor(c.getForeground(), oldP, newP);
+        if (fg != null) c.setForeground(fg);
+
+        if (c instanceof JTable table) {
+            styleTable(table); // reaplica grid/cabeçalho/seleção a partir dos slots actuais
+        }
+        if (c instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                restyleTree(child, oldP, newP);
+            }
+        }
+    }
+
+    /** Devolve a cor equivalente no novo tema se {@code color} pertencer à paleta antiga; senão null. */
+    private static Color mapColor(Color color, Color[] oldP, Color[] newP) {
+        if (color == null) return null;
+        for (int i = 0; i < oldP.length; i++) {
+            if (oldP[i].getRGB() == color.getRGB()) {
+                return newP[i];
+            }
+        }
+        return null;
+    }
 
     public static ModernButton createPrimaryButton(String text) {
         return new ModernButton(text, ACCENT_BLUE, ACCENT_BLUE.brighter());
@@ -63,8 +174,14 @@ public class UIHelper {
             // Buttons inside dialogs
             UIManager.put("Button.background", BG_CARD);
             UIManager.put("Button.foreground", TEXT_LIGHT);
-            UIManager.put("Button.select", new Color(55, 65, 81));
+            UIManager.put("Button.select", SELECTION_BG);
             UIManager.put("Button.focus", new Color(0, 0, 0, 0));
+            // O L&F Metal/Ocean pinta o botão com um gradiente claro próprio e ignora o
+            // Button.background — o texto do tema ficaria claro sobre fundo claro (ilegível).
+            // Achatar o gradiente para a cor sólida do tema repõe o contraste do texto.
+            UIManager.put("Button.gradient",
+                    java.util.Arrays.asList(1f, 0f, BG_CARD, BG_CARD, BG_CARD));
+            UIManager.put("Button.disabledText", TEXT_MUTED);
             
             // TabbedPane dark theme consistency
             UIManager.put("TabbedPane.background", BG_CARD);
@@ -83,16 +200,16 @@ public class UIHelper {
             UIManager.put("Label.font", new Font("Segoe UI", Font.PLAIN, 13));
 
             // ComboBox and TextField
-            UIManager.put("ComboBox.background", BG_CARD);
+            UIManager.put("ComboBox.background", FIELD_BG);
             UIManager.put("ComboBox.foreground", TEXT_LIGHT);
-            UIManager.put("ComboBox.selectionBackground", new Color(55, 65, 81));
+            UIManager.put("ComboBox.selectionBackground", SELECTION_BG);
             UIManager.put("ComboBox.selectionForeground", TEXT_LIGHT);
-            UIManager.put("TextField.background", BG_CARD);
+            UIManager.put("TextField.background", FIELD_BG);
             UIManager.put("TextField.foreground", TEXT_LIGHT);
             UIManager.put("TextField.caretForeground", TEXT_LIGHT);
 
             // PasswordField and TextArea
-            UIManager.put("PasswordField.background", BG_CARD);
+            UIManager.put("PasswordField.background", FIELD_BG);
             UIManager.put("PasswordField.foreground", TEXT_LIGHT);
             UIManager.put("PasswordField.caretForeground", TEXT_LIGHT);
             UIManager.put("TextArea.background", BG_DARK);
@@ -163,10 +280,10 @@ public class UIHelper {
     public static void styleTable(JTable table) {
         table.setBackground(BG_CARD);
         table.setForeground(TEXT_LIGHT);
-        table.setGridColor(new Color(55, 65, 81)); // Gray-700
+        table.setGridColor(GRID);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         table.setRowHeight(35);
-        table.setSelectionBackground(new Color(55, 65, 81));
+        table.setSelectionBackground(SELECTION_BG);
         table.setSelectionForeground(TEXT_LIGHT);
         table.setShowVerticalLines(false);
         table.setShowHorizontalLines(true);
@@ -174,11 +291,11 @@ public class UIHelper {
 
         // Header Styling
         JTableHeader header = table.getTableHeader();
-        header.setBackground(new Color(15, 23, 42)); // Dark Slate
+        header.setBackground(TABLE_HEADER_BG);
         header.setForeground(TEXT_LIGHT);
         header.setFont(new Font("Segoe UI", Font.BOLD, 13));
         header.setPreferredSize(new Dimension(100, 38));
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(55, 65, 81)));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, GRID));
 
         // Center / Left cell alignments and paddings
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
@@ -190,7 +307,7 @@ public class UIHelper {
                 if (isSelected) {
                     setBackground(t.getSelectionBackground());
                 } else {
-                    setBackground(row % 2 == 0 ? BG_CARD : new Color(24, 32, 47));
+                    setBackground(row % 2 == 0 ? BG_CARD : ROW_ALT);
                 }
                 
                 // Colorize status values if present
@@ -207,10 +324,10 @@ public class UIHelper {
                     if (upperStr.equals("APPROVED") || upperStr.equals("APROVADO") || upperStr.equals("RESOLVED") || upperStr.equals("PAID") || upperStr.equals("PAGO")) {
                         setForeground(APPROVED_GREEN);
                         setFont(getFont().deriveFont(Font.BOLD));
-                    } else if (upperStr.equals("REJECTED") || upperStr.equals("REJEITADO")) {
+                    } else if (upperStr.equals("REJECTED") || upperStr.equals("REJEITADO") || upperStr.startsWith("VENCIDO")) {
                         setForeground(REJECTED_RED);
                         setFont(getFont().deriveFont(Font.BOLD));
-                    } else if (upperStr.contains("PENDING") || upperStr.contains("PENDENTE")) {
+                    } else if (upperStr.contains("PENDING") || upperStr.contains("PENDENTE") || upperStr.startsWith("VENCE")) {
                         setForeground(PENDING_YELLOW);
                         setFont(getFont().deriveFont(Font.BOLD));
                     } else {
@@ -434,6 +551,29 @@ public class UIHelper {
         applyFormControlHeight(field);
     }
 
+    /**
+     * Liga um {@link Runnable} às alterações de texto de um campo (inserção, remoção, edição).
+     * Útil para pesquisa incremental — corre o callback sempre que o utilizador escreve.
+     */
+    public static void onTextChange(JTextField field, Runnable onChange) {
+        field.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
+        });
+    }
+
+    /** Traduz o código de perfil (role) para uma etiqueta profissional em PT-MZ. */
+    public static String humanRole(String role) {
+        if (role == null || role.isBlank()) return "—";
+        return switch (role.trim().toUpperCase()) {
+            case "ADMIN" -> "Administrador";
+            case "MANAGER" -> "Gestor";
+            case "EMPLOYEE" -> "Funcionário";
+            default -> role;
+        };
+    }
+
     public static void stylePasswordField(JPasswordField field) {
         field.setBackground(BG_CARD);
         field.setForeground(TEXT_LIGHT);
@@ -464,11 +604,13 @@ public class UIHelper {
         combo.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1));
         applyFormControlHeight(combo);
         // Simple UI cell renderer for elements in dropdown list
+        // O fundo da lista do popup segue o tema (SELECTION_BG/BG_CARD), senão em tema claro
+        // a opção destacada ficava com fundo escuro e texto escuro = ilegível.
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? new Color(55, 65, 81) : BG_CARD);
+                setBackground(isSelected ? SELECTION_BG : BG_CARD);
                 setForeground(TEXT_LIGHT);
                 setBorder(new EmptyBorder(5, 8, 5, 8));
                 return this;
@@ -482,6 +624,81 @@ public class UIHelper {
         Dimension uniform = new Dimension(width, FORM_CONTROL_HEIGHT);
         component.setPreferredSize(uniform);
         component.setMinimumSize(new Dimension(0, FORM_CONTROL_HEIGHT));
+    }
+
+    /**
+     * Barra de progresso indeterminada, fina e na cor de acento — para estados de "a carregar"
+     * profissionais (login, checkout, geração de PDF, …). Começa escondida; mostrar com
+     * {@code setVisible(true)} enquanto a tarefa corre num {@code SwingWorker}.
+     */
+    public static JProgressBar createBusyBar() {
+        JProgressBar bar = new JProgressBar();
+        bar.setIndeterminate(true);
+        bar.setBorderPainted(false);
+        bar.setBackground(BG_CARD);
+        bar.setForeground(ACCENT);
+        bar.setPreferredSize(new Dimension(0, 6));
+        return bar;
+    }
+
+    /**
+     * Corre uma tarefa demorada (rede/BD/PDF) fora do EDT com feedback profissional: mostra um
+     * pequeno diálogo modal "a processar…" com barra indeterminada enquanto a tarefa corre num
+     * {@link SwingWorker}, e devolve o resultado (ou o erro) já de volta no EDT. Não congela a UI.
+     */
+    public static <T> void runWithProgress(Component owner, String message,
+                                           java.util.concurrent.Callable<T> task,
+                                           java.util.function.Consumer<T> onSuccess,
+                                           java.util.function.Consumer<Throwable> onError) {
+        Window win = owner == null ? null : SwingUtilities.getWindowAncestor(owner);
+        JDialog dialog = new JDialog(win, Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBackground(BG_CARD);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER, 1, true), new EmptyBorder(18, 26, 18, 26)));
+        JLabel label = new JLabel(message);
+        label.setForeground(TEXT_LIGHT);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(createBusyBar(), BorderLayout.SOUTH);
+        dialog.setContentPane(panel);
+        dialog.pack();
+        dialog.setMinimumSize(new Dimension(260, dialog.getHeight()));
+        dialog.setLocationRelativeTo(win);
+
+        // O CurrentUserContext é ThreadLocal — captura no EDT e repõe na thread de fundo, senão
+        // os Services veem empresa/utilizador vazios ("o documento pertence a outra empresa").
+        com.phcpro.architecture.security.CurrentUserContext.UserSession capturedUser =
+                com.phcpro.architecture.security.CurrentUserContext.getCurrentUser();
+        Long capturedCompany =
+                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId();
+
+        SwingWorker<T, Void> worker = new SwingWorker<>() {
+            @Override protected T doInBackground() throws Exception {
+                com.phcpro.architecture.security.CurrentUserContext.setCurrentUser(
+                        capturedUser.username(), capturedUser.role());
+                com.phcpro.architecture.security.CurrentUserContext.setCurrentCompanyId(capturedCompany);
+                try {
+                    return task.call();
+                } finally {
+                    com.phcpro.architecture.security.CurrentUserContext.clear();
+                }
+            }
+            @Override protected void done() {
+                dialog.dispose();
+                try {
+                    T result = get();
+                    if (onSuccess != null) onSuccess.accept(result);
+                } catch (Exception ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    if (onError != null) onError.accept(cause);
+                }
+            }
+        };
+        worker.execute();
+        dialog.setVisible(true); // modal: bloqueia até done() fazer dispose (mas o EDT continua a despachar)
     }
 
     public static JLabel createHeading(String text) {

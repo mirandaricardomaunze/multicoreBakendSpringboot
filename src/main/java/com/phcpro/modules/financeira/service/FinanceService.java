@@ -103,15 +103,23 @@ public class FinanceService {
 
     @Transactional
     public void registerAutoExpensePayout(BigDecimal amount, String description) {
-        // Automatically deduct from the first account (Cash/Caixa Geral) if available
+        registerAutoPayout(amount, "Pagamento Despesa: " + description);
+    }
+
+    /**
+     * Regista uma saída de caixa (CREDIT) na conta de tesouraria por defeito da empresa
+     * activa — usado para pagamentos automáticos (reembolsos de despesa, salários).
+     * Se a empresa ainda não tem conta configurada, a operação é ignorada graciosamente.
+     */
+    @Transactional
+    public void registerAutoPayout(BigDecimal amount, String description) {
         List<TreasuryAccount> accounts = accountRepository.findByCompanyIdOrderByName(
                 CurrentUserContext.getCurrentCompanyId());
         if (accounts.isEmpty()) {
-            return; // No account set up yet, skip auto payout log or handle gracefully
+            return; // No account set up yet, skip auto payout gracefully
         }
         TreasuryAccount defaultAccount = accounts.get(0);
-        
-        // Register an outflow (CREDIT) for the employee reimbursement
+
         defaultAccount.setBalance(defaultAccount.getBalance().subtract(amount));
         accountRepository.save(defaultAccount);
 
@@ -119,7 +127,7 @@ public class FinanceService {
         tx.setTreasuryAccount(defaultAccount);
         tx.setTransactionType(TransactionType.CREDIT);
         tx.setAmount(amount);
-        tx.setDescription("Pagamento Despesa: " + description);
+        tx.setDescription(description);
         tx.setTransactionDate(LocalDateTime.now());
         transactionRepository.save(tx);
     }

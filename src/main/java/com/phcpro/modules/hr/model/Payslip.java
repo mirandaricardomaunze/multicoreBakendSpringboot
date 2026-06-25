@@ -72,6 +72,9 @@ public class Payslip extends BaseEntity {
     @Column(name = "other_deductions", nullable = false, precision = 14, scale = 2)
     private BigDecimal otherDeductions = BigDecimal.ZERO;
 
+    @Column(name = "absence_deduction", nullable = false, precision = 14, scale = 2)
+    private BigDecimal absenceDeduction = BigDecimal.ZERO;
+
     @Column(name = "net_pay", nullable = false, precision = 14, scale = 2)
     private BigDecimal netPay = BigDecimal.ZERO;
 

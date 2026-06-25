@@ -23,6 +23,7 @@ public class PrintController {
     private final DebitNotePrintService debitNotePrintService;
     private final InventoryReportPrintService inventoryReportPrintService;
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
+    private final GuideRemittancePrintService guideRemittancePrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -33,7 +34,8 @@ public class PrintController {
             CreditNotePrintService creditNotePrintService,
             DebitNotePrintService debitNotePrintService,
             InventoryReportPrintService inventoryReportPrintService,
-            IvaDeclarationPrintService ivaDeclarationPrintService
+            IvaDeclarationPrintService ivaDeclarationPrintService,
+            GuideRemittancePrintService guideRemittancePrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -44,6 +46,7 @@ public class PrintController {
         this.debitNotePrintService = debitNotePrintService;
         this.inventoryReportPrintService = inventoryReportPrintService;
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
+        this.guideRemittancePrintService = guideRemittancePrintService;
     }
 
     @GetMapping("/receipt/{invoiceId}")
@@ -59,6 +62,11 @@ public class PrintController {
     @GetMapping("/order/{orderId}")
     public ResponseEntity<Resource> order(@PathVariable Long orderId) {
         return pdfResponse(orderPrintService.render(orderId), "encomenda-" + orderId);
+    }
+
+    @GetMapping("/guide/{invoiceId}")
+    public ResponseEntity<Resource> guide(@PathVariable Long invoiceId) {
+        return pdfResponse(guideRemittancePrintService.render(invoiceId), "guia-remessa-" + invoiceId);
     }
 
     @GetMapping("/stock-transfer/{transferId}")

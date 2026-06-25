@@ -7,6 +7,7 @@ import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.comercial.dto.CreateInvoiceLineRequest;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
+import com.phcpro.modules.comercial.dto.OrderDTO;
 import com.phcpro.modules.comercial.model.Client;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
@@ -157,6 +158,27 @@ class ComercialServiceTest {
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
     }
 
+    // ────────────────────────── createOrder ──────────────────────────
+
+    @Test
+    void createOrder_submeteAEngineDeAprovacao_eFicaPendingApproval() {
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(documentNumberService.next(DocumentSeries.ORDER)).thenReturn("EC-2026/1");
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderDTO dto = service.createOrder(invoiceRequest(new BigDecimal("2"), null));
+
+        // A encomenda nasce à espera de aprovação e é submetida à Engine — só assim chega
+        // à área de aprovação (regressão do bug "encomenda não chega à aprovação").
+        assertEquals("PENDING_APPROVAL", dto.status());
+        verify(approvalService).submitRequest(eq("ORDER"), any(), any(), any());
+        // Criar encomenda não baixa stock.
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
     // ────────────────────────── billOrder ──────────────────────────
 
     @Test
@@ -183,6 +205,69 @@ class ComercialServiceTest {
 
         assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    // ────────────────────────── cancelOrder ──────────────────────────
+
+    @Test
+    void cancelOrder_porAprovar_cancela_fechaPedido_eAudita() {
+        Order order = orderWithStatus(1L, "PENDING_APPROVAL");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.cancelOrder(1L, "Cliente desistiu");
+
+        assertEquals("CANCELLED", order.getStatus());
+        verify(approvalService).cancelPendingForDocument(eq("ORDER"), eq(1L), eq("Cliente desistiu"));
+        verify(auditLogService).logCurrent(eq("ORDER_CANCEL"), any());
+    }
+
+    @Test
+    void cancelOrder_jaFaturada_bloqueia() {
+        Order order = orderWithStatus(1L, "BILLED");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(BusinessRuleException.class, () -> service.cancelOrder(1L, "motivo"));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelOrder_jaCancelada_bloqueia() {
+        Order order = orderWithStatus(1L, "CANCELLED");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(BusinessRuleException.class, () -> service.cancelOrder(1L, "motivo"));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelOrder_semMotivo_bloqueia() {
+        assertThrows(BusinessRuleException.class, () -> service.cancelOrder(1L, "  "));
+        verify(orderRepository, never()).findById(any());
+    }
+
+    @Test
+    void cancelOrder_semPerfilAutorizado_bloqueia() {
+        CurrentUserContext.setCurrentUser("caixa", "EMPLOYEE");
+
+        assertThrows(BusinessRuleException.class, () -> service.cancelOrder(1L, "motivo"));
+        verify(orderRepository, never()).save(any());
+    }
+
+    // ────────────────────────── searchCancellableOrders ──────────────────────────
+
+    @Test
+    void searchCancellableOrders_excluiFaturadasECanceladas() {
+        when(orderRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                orderStatus("EC-2026/1", client(5L, "Cliente Loja"), "PENDING_APPROVAL"),
+                orderStatus("EC-2026/2", client(6L, "Padaria Central"), "PENDING"),
+                orderStatus("EC-2026/3", client(7L, "Mercado X"), "BILLED"),
+                orderStatus("EC-2026/4", client(8L, "Quiosque Y"), "CANCELLED")));
+
+        // Por aprovar + aprovada são canceláveis; faturada e cancelada não.
+        assertEquals(2, service.searchCancellableOrders("").size());
+        assertEquals(1, service.searchCancellableOrders("padaria").size());
+        assertTrue(service.searchCancellableOrders("EC-2026/3").isEmpty());
     }
 
     // ────────────────────────── cancelInvoice ──────────────────────────
@@ -216,7 +301,101 @@ class ComercialServiceTest {
         assertThrows(BusinessRuleException.class, () -> service.cancelInvoice(1L, "  "));
     }
 
+    // ────────────────────────── searchInvoices ──────────────────────────
+
+    @Test
+    void searchInvoices_porNumero_filtraResultado() {
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoiceDoc("FT-2026/1", client(5L, "Cliente Loja")),
+                invoiceDoc("FT-2026/2", client(6L, "Padaria Central"))));
+
+        List<InvoiceDTO> result = service.searchInvoices("FT-2026/2");
+
+        assertEquals(1, result.size());
+        assertEquals("FT-2026/2", result.get(0).invoiceNumber());
+    }
+
+    @Test
+    void searchInvoices_porCliente_ignoraMaiusculas() {
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoiceDoc("FT-2026/1", client(5L, "Cliente Loja")),
+                invoiceDoc("FT-2026/2", client(6L, "Padaria Central"))));
+
+        List<InvoiceDTO> result = service.searchInvoices("padaria");
+
+        assertEquals(1, result.size());
+        assertEquals("FT-2026/2", result.get(0).invoiceNumber());
+    }
+
+    @Test
+    void searchInvoices_queryVazia_devolveTodas() {
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoiceDoc("FT-2026/1", client(5L, "Cliente Loja")),
+                invoiceDoc("FT-2026/2", client(6L, "Padaria Central"))));
+
+        assertEquals(2, service.searchInvoices("  ").size());
+    }
+
+    @Test
+    void searchInvoices_semCorrespondencia_devolveVazio() {
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoiceDoc("FT-2026/1", client(5L, "Cliente Loja"))));
+
+        assertTrue(service.searchInvoices("inexistente").isEmpty());
+    }
+
+    // ────────────────────────── searchPendingOrders ──────────────────────────
+
+    @Test
+    void searchPendingOrders_porNumeroOuCliente_filtra() {
+        when(orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(COMPANY_ID, "PENDING"))
+                .thenReturn(List.of(
+                        orderDoc("EC-2026/1", client(5L, "Cliente Loja")),
+                        orderDoc("EC-2026/2", client(6L, "Padaria Central"))));
+
+        assertEquals(1, service.searchPendingOrders("EC-2026/1").size());
+        assertEquals(1, service.searchPendingOrders("padaria").size());
+        assertEquals(2, service.searchPendingOrders("").size());
+        assertTrue(service.searchPendingOrders("zzz").isEmpty());
+    }
+
     // ────────────────────────── helpers ──────────────────────────
+
+    private Invoice invoiceDoc(String number, Client c) {
+        Invoice invoice = new Invoice();
+        invoice.setInvoiceNumber(number);
+        invoice.setCompany(company);
+        invoice.setClient(c);
+        return invoice;
+    }
+
+    private Order orderDoc(String number, Client c) {
+        Order order = new Order();
+        order.setOrderNumber(number);
+        order.setCompany(company);
+        order.setClient(c);
+        order.setStatus("PENDING");
+        return order;
+    }
+
+    private Order orderWithStatus(long id, String status) {
+        Order order = new Order();
+        order.setId(id);
+        order.setOrderNumber("EC-2026/1");
+        order.setCompany(company);
+        order.setClient(client);
+        order.setStatus(status);
+        return order;
+    }
+
+    private Order orderStatus(String number, Client c, String status) {
+        Order order = new Order();
+        order.setOrderNumber(number);
+        order.setCompany(company);
+        order.setClient(c);
+        order.setStatus(status);
+        return order;
+    }
 
     private void stubInvoiceLookups() {
         when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));

@@ -242,7 +242,7 @@ public class ApprovalsPanel extends JPanel {
 
     private void selectRequest(ApprovalRequestDTO req) {
         this.selectedRequest = req;
-        docTypeVal.setText(req.documentType());
+        docTypeVal.setText(humanType(req.documentType()));
         docIdVal.setText("#" + req.documentId());
         submitterVal.setText(req.submitter());
         amountVal.setText(String.format("%,.2f MT", req.amount()));
@@ -272,13 +272,24 @@ public class ApprovalsPanel extends JPanel {
         clearSelection();
     }
 
+    /** Tipo de documento em PT para a área de aprovação. Desconhecidos ficam como estão. */
+    private static String humanType(String documentType) {
+        if (documentType == null) return "";
+        return switch (documentType.toUpperCase(java.util.Locale.ROOT)) {
+            case "ORDER" -> "Encomenda";
+            case "INVOICE" -> "Fatura";
+            case "EXPENSE", "EXPENSE_CLAIM" -> "Despesa";
+            default -> documentType;
+        };
+    }
+
     private void loadPendingTable() {
         pendingModel.setRowCount(0);
         pendingList = approvalService.getPendingRequests();
         for (ApprovalRequestDTO req : pendingList) {
             pendingModel.addRow(new Object[]{
                     req.id(),
-                    req.documentType() + " #" + req.documentId(),
+                    humanType(req.documentType()) + " #" + req.documentId(),
                     req.submitter(),
                     String.format("%,.2f MT", req.amount()),
                     req.requiredRole()
@@ -294,7 +305,7 @@ public class ApprovalsPanel extends JPanel {
             if (req.status() != ApprovalStatus.PENDING) {
                 historyModel.addRow(new Object[]{
                         req.createdAt().format(formatter),
-                        req.documentType() + " #" + req.documentId(),
+                        humanType(req.documentType()) + " #" + req.documentId(),
                         req.submitter(),
                         String.format("%,.2f MT", req.amount()),
                         req.status().name(),
