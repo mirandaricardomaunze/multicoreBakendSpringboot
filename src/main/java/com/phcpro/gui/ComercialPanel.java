@@ -179,7 +179,7 @@ public class ComercialPanel extends JPanel {
 
 
     private JPanel createFaturacaoTab() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 20, 0));
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
@@ -346,20 +346,13 @@ public class ComercialPanel extends JPanel {
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(summaryPanel, BorderLayout.SOUTH);
 
-        JPanel leftContent = new JPanel(new BorderLayout(0, 15));
-        leftContent.setOpaque(false);
         JScrollPane formScroll = new JScrollPane(formCard);
         formScroll.setBorder(null);
         formScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         formScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         formScroll.getViewport().setBackground(UIHelper.BG_DARK);
-        formScroll.setPreferredSize(new Dimension(0, 300));
-        formScroll.setMinimumSize(new Dimension(0, 220));
-        leftContent.add(formScroll, BorderLayout.NORTH);
-        leftContent.add(draftCard, BorderLayout.CENTER);
-
-        leftPanel.add(leftContent, BorderLayout.CENTER);
-        panel.add(leftPanel);
+        formScroll.getVerticalScrollBar().setUnitIncrement(16);
+        leftPanel.add(formScroll, BorderLayout.CENTER);
 
         // RIGHT COLUMN: INVOICE LIST
         JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
@@ -413,7 +406,37 @@ public class ComercialPanel extends JPanel {
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
         rightPanel.add(listCard, BorderLayout.CENTER);
-        panel.add(rightPanel);
+
+        // TOPO: formulário (esq.) + faturas recentes (dir.) lado a lado
+        JPanel topRow = new JPanel(new GridLayout(1, 2, 20, 0));
+        topRow.setOpaque(false);
+        topRow.add(leftPanel);
+        topRow.add(rightPanel);
+
+        // BASE: linhas da fatura em largura total — mais altura e legibilidade
+        JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
+        bottomPanel.setOpaque(false);
+        bottomPanel.add(UIHelper.createHeading("Linhas da Fatura (Rascunho)"), BorderLayout.NORTH);
+        bottomPanel.add(draftCard, BorderLayout.CENTER);
+
+        JSplitPane faturacaoSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topRow, bottomPanel);
+        faturacaoSplit.setOpaque(false);
+        faturacaoSplit.setBorder(null);
+        faturacaoSplit.setResizeWeight(0.45);   // espaço extra favorece as linhas
+        faturacaoSplit.setContinuousLayout(true);
+        faturacaoSplit.setDividerSize(8);
+        // setDividerLocation(double) só funciona depois do split ter altura real;
+        // aplicar no primeiro resize garante 50/50 (zona de linhas com altura útil).
+        faturacaoSplit.addComponentListener(new java.awt.event.ComponentAdapter() {
+            private boolean applied = false;
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                if (!applied && faturacaoSplit.getHeight() > 0) {
+                    applied = true;
+                    faturacaoSplit.setDividerLocation(0.5);
+                }
+            }
+        });
+        panel.add(faturacaoSplit, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftLine());
