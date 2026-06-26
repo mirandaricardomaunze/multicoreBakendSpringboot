@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.*;
@@ -97,6 +98,8 @@ public class ComercialPanel extends JPanel {
     private final com.phcpro.modules.promotions.service.PromotionService promotionService;
     private final com.phcpro.modules.movimentos.service.MovimentosService movimentosService;
 
+    private JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
+    private com.phcpro.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
     private DefaultTableModel movimentosModel;
     private JTable movimentosTable;
     private JTextField movimentosQueryField;
@@ -313,53 +316,47 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleEmbeddedTableScrollPane(linesScroll, linesTable, 4);
         // Draft table is placed in its own card below the input form.
 
-        // Row 7: Total summary and Issue button
-        gbc.gridy = 10; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel summaryPanel = new JPanel();
-        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
-        summaryPanel.setOpaque(false);
-        summaryPanel.setBorder(new EmptyBorder(12, 0, 0, 0));
-
+        // Row 7: Total summary (a emissão é feita pelo botão Gravar do modal)
         totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
         totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
+        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         totalRow.add(totalLabel, BorderLayout.EAST);
 
-        ModernButton issueBtn = UIHelper.createPrimaryButton("Emitir Fatura");
-        issueBtn.setIcon(UIHelper.icon("fas-file-invoice", 14));
-
-        JPanel btnRow = new JPanel(new BorderLayout());
-        btnRow.setOpaque(false);
-        btnRow.add(issueBtn, BorderLayout.EAST);
-
-        summaryPanel.add(totalRow);
-        summaryPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-        summaryPanel.add(btnRow);
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
         draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        draftCard.setMinimumSize(new Dimension(0, 260));
-        draftCard.setPreferredSize(new Dimension(0, 300));
+        draftCard.setPreferredSize(new Dimension(0, 280));
         draftCard.add(linesScroll, BorderLayout.CENTER);
-        draftCard.add(summaryPanel, BorderLayout.SOUTH);
+        draftCard.add(totalRow, BorderLayout.SOUTH);
 
-        JScrollPane formScroll = new JScrollPane(formCard);
-        formScroll.setBorder(null);
-        formScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        formScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        formScroll.getViewport().setBackground(UIHelper.BG_DARK);
-        formScroll.getVerticalScrollBar().setUnitIncrement(16);
-        leftPanel.add(formScroll, BorderLayout.CENTER);
+        // Conteúdo do formulário (vai para o modal responsivo): inputs + linhas de rascunho.
+        JPanel formContent = new JPanel(new BorderLayout(0, 12));
+        formContent.setOpaque(false);
+        formContent.add(formCard, BorderLayout.NORTH);
+        JPanel draftWrap = new JPanel(new BorderLayout(0, 8));
+        draftWrap.setOpaque(false);
+        draftWrap.add(UIHelper.createSubheading("Linhas da Fatura (Rascunho)"), BorderLayout.NORTH);
+        draftWrap.add(draftCard, BorderLayout.CENTER);
+        formContent.add(draftWrap, BorderLayout.CENTER);
+        this.invoiceFormContent = formContent;
 
-        // RIGHT COLUMN: INVOICE LIST
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
-        rightPanel.setOpaque(false);
-
-        JLabel rightTitle = UIHelper.createHeading("Faturas Recentes");
-        rightPanel.add(rightTitle, BorderLayout.NORTH);
+        // TAB: cabeçalho com acções + lista de faturas em ecrã inteiro.
+        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
+        headerBar.setOpaque(false);
+        headerBar.add(UIHelper.createHeading("Faturas Recentes"), BorderLayout.WEST);
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        ModernButton newInvoiceBtn = UIHelper.createPrimaryButton("Nova Fatura…");
+        newInvoiceBtn.setIcon(UIHelper.icon("fas-file-invoice", 14));
+        newInvoiceBtn.addActionListener(e -> openInvoiceFormDialog());
+        headerActions.add(billFromOrderBtn);
+        headerActions.add(newInvoiceBtn);
+        headerBar.add(headerActions, BorderLayout.EAST);
+        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -405,44 +402,13 @@ public class ComercialPanel extends JPanel {
         btnPanel.add(refreshBtn);
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
-        rightPanel.add(listCard, BorderLayout.CENTER);
-
-        // TOPO: formulário (esq.) + faturas recentes (dir.) lado a lado
-        JPanel topRow = new JPanel(new GridLayout(1, 2, 20, 0));
-        topRow.setOpaque(false);
-        topRow.add(leftPanel);
-        topRow.add(rightPanel);
-
-        // BASE: linhas da fatura em largura total — mais altura e legibilidade
-        JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
-        bottomPanel.setOpaque(false);
-        bottomPanel.add(UIHelper.createHeading("Linhas da Fatura (Rascunho)"), BorderLayout.NORTH);
-        bottomPanel.add(draftCard, BorderLayout.CENTER);
-
-        JSplitPane faturacaoSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topRow, bottomPanel);
-        faturacaoSplit.setOpaque(false);
-        faturacaoSplit.setBorder(null);
-        faturacaoSplit.setResizeWeight(0.45);   // espaço extra favorece as linhas
-        faturacaoSplit.setContinuousLayout(true);
-        faturacaoSplit.setDividerSize(8);
-        // setDividerLocation(double) só funciona depois do split ter altura real;
-        // aplicar no primeiro resize garante 50/50 (zona de linhas com altura útil).
-        faturacaoSplit.addComponentListener(new java.awt.event.ComponentAdapter() {
-            private boolean applied = false;
-            @Override public void componentResized(java.awt.event.ComponentEvent e) {
-                if (!applied && faturacaoSplit.getHeight() > 0) {
-                    applied = true;
-                    faturacaoSplit.setDividerLocation(0.5);
-                }
-            }
-        });
-        panel.add(faturacaoSplit, BorderLayout.CENTER);
+        // Lista de faturas ocupa a tab inteira; o formulário vive no modal.
+        panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftLine());
         productCombo.addActionListener(e -> refreshInvoiceFEFOHint());
         warehouseCombo.addActionListener(e -> refreshInvoiceFEFOHint());
-        issueBtn.addActionListener(e -> issueInvoice());
         cancelInvoiceBtn.addActionListener(e -> cancelSelectedInvoice());
         payInvoiceBtn.addActionListener(e -> paySelectedInvoice());
         refreshBtn.addActionListener(e -> loadInvoicesTable());
@@ -644,7 +610,8 @@ public class ComercialPanel extends JPanel {
         refreshInvoiceFEFOHint();
     }
 
-    private void issueInvoice() {
+    /** Abre o formulário de nova fatura num modal responsivo (com scroll). */
+    private void openInvoiceFormDialog() {
         if (clientsList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Nenhum cliente disponível.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -653,45 +620,51 @@ public class ComercialPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (draftLines.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Adicione pelo menos um item à fatura.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        int clientIdx = clientCombo.getSelectedIndex();
-        int whIdx = warehouseCombo.getSelectedIndex();
-        if (clientIdx < 0 || whIdx < 0) return;
-
-        ClientDTO client = clientsList.get(clientIdx);
-        Warehouse warehouse = warehousesList.get(whIdx);
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-
-        try {
-            CreateInvoiceRequest request = new CreateInvoiceRequest(client.id(), companyId, warehouse.getId(), draftLines);
-            InvoiceDTO created = comercialService.createInvoice(request);
-
-            // Notify user and reset form
+        resetInvoiceDraft();
+        lastCreatedInvoice = null;
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, "Emitir Nova Fatura", invoiceFormContent);
+        dlg.setSize(880, 680);
+        dlg.setOnSave(this::submitInvoiceOrThrow);
+        if (dlg.showDialog() && lastCreatedInvoice != null) {
+            InvoiceDTO created = lastCreatedInvoice;
             if (created.status() == InvoiceStatus.PENDING_DISCOUNT_APPROVAL) {
                 JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida!\n" +
                         "Bloqueada para Aprovação de Desconto (superior a 10%).\n" +
                         "Valor: " + created.totalAmount() + " MT.", "Bloqueio de Desconto", JOptionPane.WARNING_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida com sucesso!\n" +
-                        "Submetida para aprovação (valor: " + created.totalAmount() + " MT).", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                        "Valor: " + created.totalAmount() + " MT.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             }
-
-            // Reset draft states
-            draftLines.clear();
-            draftSubtotal = BigDecimal.ZERO;
-            draftTax = BigDecimal.ZERO;
-            draftTotal = BigDecimal.ZERO;
-            linesTableModel.setRowCount(0);
-            totalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
-
             loadInvoicesTable();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao emitir fatura: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /** Validação + emissão. Lança {@link RuntimeException} em erro para manter o modal aberto. */
+    private void submitInvoiceOrThrow() {
+        if (draftLines.isEmpty()) {
+            throw new RuntimeException("Adicione pelo menos um item à fatura.");
+        }
+        int clientIdx = clientCombo.getSelectedIndex();
+        int whIdx = warehouseCombo.getSelectedIndex();
+        if (clientIdx < 0 || whIdx < 0) {
+            throw new RuntimeException("Selecione cliente e armazém.");
+        }
+        ClientDTO client = clientsList.get(clientIdx);
+        Warehouse warehouse = warehousesList.get(whIdx);
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        CreateInvoiceRequest request = new CreateInvoiceRequest(client.id(), companyId, warehouse.getId(), draftLines);
+        lastCreatedInvoice = comercialService.createInvoice(request);
+        resetInvoiceDraft();
+    }
+
+    private void resetInvoiceDraft() {
+        draftLines.clear();
+        draftSubtotal = BigDecimal.ZERO;
+        draftTax = BigDecimal.ZERO;
+        draftTotal = BigDecimal.ZERO;
+        if (linesTableModel != null) linesTableModel.setRowCount(0);
+        if (totalLabel != null) totalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
     }
 
     private void cancelSelectedInvoice() {

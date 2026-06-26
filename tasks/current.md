@@ -5,6 +5,17 @@
 **Última actualização:** 2026-06-21
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-06-26 (formulários em modal responsivo)
+
+- **`ModernFormDialog`** passou a ser o modal canónico: **scroll automático** do conteúdo,
+  **responsivo** (≤92%×88% do ecrã, centrado), botão Gravar com ícone `fas-save` (removido o emoji).
+- **Formulários de criação convertidos em modais**, deixando as tabelas a ecrã inteiro: Faturação
+  (FT) «Nova Fatura…», Compras «Registar Compra…», Encomendas a Fornecedor «Nova Encomenda…».
+  Cada submit lança em erro (modal fica aberto) e recarrega a lista em sucesso.
+- Spec/harness: [docs/FORMULARIOS_MODAIS_SPEC.md](../docs/FORMULARIOS_MODAIS_SPEC.md) +
+  [docs/FORMULARIOS_MODAIS_HARNESS.md](../docs/FORMULARIOS_MODAIS_HARNESS.md) (FM-01..08, manual).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 155 testes, 0 falhas** (sem regressões).
+
 ### Progresso — 2026-06-26 (contas a pagar a fornecedor — Fase 4)
 
 - **`Purchase.amountPaid`** (em dívida = total − pago), migration `V15` (backfill: compras antigas

@@ -56,6 +56,8 @@ public class ComprasPanel extends JPanel {
     private JTextField poSearchField;
     private final List<CreatePurchaseOrderLineRequest> poDraftLines = new ArrayList<>();
     private List<PurchaseOrderDTO> poList = new ArrayList<>();
+    private JPanel poFormContent;                   // conteúdo do modal de nova encomenda
+    private JPanel purchaseFormContent;             // conteúdo do modal de registar compra
     private JTextField supplierSearchField;
 
     // TAB CONTAS A PAGAR
@@ -139,17 +141,11 @@ public class ComprasPanel extends JPanel {
     }
 
     private JPanel createComprasTab() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 20, 0));
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // LEFT COLUMN: PURCHASE ENTRY FORM
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
-        leftPanel.setOpaque(false);
-        leftPanel.add(UIHelper.createHeading("Registar Compra (Entrada Stock)"), BorderLayout.NORTH);
-
-        // Host do formulário: transparente e a acompanhar a largura do viewport, para que o
-        // JScrollPane só dê scroll vertical (e os campos continuem a ocupar a largura toda).
+        // Host do formulário (vai para modal): transparente e a acompanhar a largura do viewport.
         VScrollForm formCard = new VScrollForm(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -298,39 +294,24 @@ public class ComprasPanel extends JPanel {
         totalRow.setOpaque(false);
         totalRow.add(totalLabel, BorderLayout.EAST);
 
-        ModernButton registerBtn = UIHelper.createSuccessButton("Registar Compra");
-        registerBtn.setIcon(UIHelper.icon("fas-download", 14));
-
-        JPanel btnRow = new JPanel(new BorderLayout());
-        btnRow.setOpaque(false);
-        btnRow.add(registerBtn, BorderLayout.EAST);
-
         bottomPanel.add(totalRow);
-        bottomPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-        bottomPanel.add(btnRow);
         formCard.add(bottomPanel, gbc);
 
-        // Scroll vertical do formulário de entrada de stock (formulários longos em ecrãs baixos).
-        JScrollPane formScroll = new JScrollPane(formCard,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        formScroll.setBorder(BorderFactory.createEmptyBorder());
-        formScroll.setOpaque(false);
-        formScroll.getViewport().setOpaque(false);
-        formScroll.getVerticalScrollBar().setUnitIncrement(16);
-        UIHelper.styleScrollPane(formScroll);
+        // Conteúdo do formulário vai para o modal responsivo (com scroll).
+        this.purchaseFormContent = formCard;
 
-        ModernPanel formWrapper = new ModernPanel(16);
-        formWrapper.setLayout(new BorderLayout());
-        formWrapper.setBorder(new EmptyBorder(15, 15, 15, 15));
-        formWrapper.add(formScroll, BorderLayout.CENTER);
-
-        leftPanel.add(formWrapper, BorderLayout.CENTER);
-        panel.add(leftPanel);
-
-        // RIGHT COLUMN: PURCHASES HISTORY
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
-        rightPanel.setOpaque(false);
-        rightPanel.add(UIHelper.createHeading("Faturas de Compra Registadas"), BorderLayout.NORTH);
+        // TAB: cabeçalho com acção + histórico de compras em ecrã inteiro.
+        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
+        headerBar.setOpaque(false);
+        headerBar.add(UIHelper.createHeading("Faturas de Compra Registadas"), BorderLayout.WEST);
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        ModernButton newPurchaseBtn = UIHelper.createSuccessButton("Registar Compra…");
+        newPurchaseBtn.setIcon(UIHelper.icon("fas-download", 14));
+        newPurchaseBtn.addActionListener(e -> openPurchaseFormDialog());
+        headerActions.add(newPurchaseBtn);
+        headerBar.add(headerActions, BorderLayout.EAST);
+        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout(0, 10));
@@ -354,15 +335,35 @@ public class ComprasPanel extends JPanel {
         actionRow.add(refreshBtn);
         historyCard.add(actionRow, BorderLayout.SOUTH);
 
-        rightPanel.add(historyCard, BorderLayout.CENTER);
-        panel.add(rightPanel);
+        // Histórico de compras ocupa a tab inteira; o formulário vive no modal.
+        panel.add(historyCard, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftLine());
-        registerBtn.addActionListener(e -> registerPurchase());
         refreshBtn.addActionListener(e -> loadPurchasesHistory());
 
         return panel;
+    }
+
+    private void openPurchaseFormDialog() {
+        if (supplierComboList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre um fornecedor activo primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        // Reset do rascunho ao abrir.
+        draftLines.clear();
+        draftTotal = BigDecimal.ZERO;
+        if (draftLinesModel != null) draftLinesModel.setRowCount(0);
+        totalLabel.setText("Total Compra: 0.00 MT (excl. IVA)");
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, "Registar Compra (Entrada de Stock)", purchaseFormContent);
+        dlg.setSize(900, 680);
+        dlg.setOnSave(this::submitPurchaseOrThrow);
+        if (dlg.showDialog()) {
+            loadPurchasesHistory();
+            loadAccounts();
+            loadPayables();
+        }
     }
 
     private JPanel createFornecedoresTab() {
@@ -683,13 +684,9 @@ public class ComprasPanel extends JPanel {
         poTotalLabel = new JLabel("Total da Encomenda: 0.00 MT");
         poTotalLabel.setForeground(Color.WHITE);
         poTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        ModernButton createPoBtn = UIHelper.createPrimaryButton("Criar Encomenda");
-        createPoBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
-        createPoBtn.addActionListener(e -> createPurchaseOrder());
         JPanel poFooter = new JPanel(new BorderLayout()); poFooter.setOpaque(false);
         poFooter.setBorder(new EmptyBorder(8, 0, 0, 0));
         poFooter.add(poTotalLabel, BorderLayout.WEST);
-        poFooter.add(createPoBtn, BorderLayout.EAST);
 
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
@@ -698,12 +695,12 @@ public class ComprasPanel extends JPanel {
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(poFooter, BorderLayout.SOUTH);
 
-        JPanel top = new JPanel(new BorderLayout(0, 10)); top.setOpaque(false);
-        top.add(UIHelper.createHeading("Nova Encomenda a Fornecedor"), BorderLayout.NORTH);
-        JPanel topBody = new JPanel(new BorderLayout(0, 10)); topBody.setOpaque(false);
-        topBody.add(formCard, BorderLayout.NORTH);
-        topBody.add(draftCard, BorderLayout.CENTER);
-        top.add(topBody, BorderLayout.CENTER);
+        // Conteúdo do formulário (modal responsivo): inputs + linhas.
+        JPanel poFormContentPanel = new JPanel(new BorderLayout(0, 10));
+        poFormContentPanel.setOpaque(false);
+        poFormContentPanel.add(formCard, BorderLayout.NORTH);
+        poFormContentPanel.add(draftCard, BorderLayout.CENTER);
+        this.poFormContent = poFormContentPanel;
 
         // ---- lista de encomendas (base) ----
         JPanel listHeader = new JPanel(new BorderLayout(8, 0)); listHeader.setOpaque(false);
@@ -720,8 +717,12 @@ public class ComprasPanel extends JPanel {
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> { poSearchField.setText(""); loadPurchaseOrders(); });
+        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
+        newOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
+        newOrderBtn.addActionListener(e -> openPurchaseOrderFormDialog());
         listActions.add(sLbl); listActions.add(poSearchField);
         listActions.add(receiveBtn); listActions.add(cancelBtn); listActions.add(refreshBtn);
+        listActions.add(newOrderBtn);
         listHeader.add(listActions, BorderLayout.EAST);
         UIHelper.onTextChange(poSearchField, this::loadPurchaseOrders);
 
@@ -740,17 +741,28 @@ public class ComprasPanel extends JPanel {
         listCard.add(listHeader, BorderLayout.NORTH);
         listCard.add(listScroll, BorderLayout.CENTER);
 
-        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, top, listCard);
-        split.setOpaque(false); split.setBorder(null); split.setResizeWeight(0.6);
-        split.setContinuousLayout(true); split.setDividerSize(8);
-        split.addComponentListener(new java.awt.event.ComponentAdapter() {
-            private boolean applied = false;
-            @Override public void componentResized(java.awt.event.ComponentEvent e) {
-                if (!applied && split.getHeight() > 0) { applied = true; split.setDividerLocation(0.6); }
-            }
-        });
-        tab.add(split, BorderLayout.CENTER);
+        // Lista de encomendas ocupa a tab inteira; o formulário vive no modal.
+        tab.add(listCard, BorderLayout.CENTER);
         return tab;
+    }
+
+    private void openPurchaseOrderFormDialog() {
+        if (supplierComboList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre um fornecedor activo primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        // Reset do rascunho ao abrir.
+        poDraftLines.clear();
+        if (poLinesModel != null) poLinesModel.setRowCount(0);
+        recomputePoTotal();
+        poExpectedField.setText("");
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, "Nova Encomenda a Fornecedor", poFormContent);
+        dlg.setSize(880, 640);
+        dlg.setOnSave(this::submitPurchaseOrderOrThrow);
+        if (dlg.showDialog()) {
+            loadPurchaseOrders();
+        }
     }
 
     private JLabel label(String text) {
@@ -791,40 +803,37 @@ public class ComprasPanel extends JPanel {
         poTotalLabel.setText(String.format("Total da Encomenda: %,.2f MT", total));
     }
 
-    private void createPurchaseOrder() {
+    /** Validação + criação da encomenda. Lança RuntimeException em erro (mantém o modal aberto). */
+    private void submitPurchaseOrderOrThrow() {
         int supIdx = poSupplierCombo.getSelectedIndex();
         int whIdx = poWarehouseCombo.getSelectedIndex();
         if (supIdx < 0 || supIdx >= supplierComboList.size() || whIdx < 0 || whIdx >= warehousesList.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione fornecedor e armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
+            throw new RuntimeException("Selecione fornecedor e armazém.");
         }
         if (poDraftLines.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Adicione pelo menos uma linha.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
+            throw new RuntimeException("Adicione pelo menos uma linha.");
         }
         LocalDate expected = null;
-        try {
-            String t = poExpectedField.getText().trim();
-            if (!t.isEmpty()) expected = LocalDate.parse(t);
-        } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "Data de entrega inválida (aaaa-MM-dd).", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
+        String t = poExpectedField.getText().trim();
+        if (!t.isEmpty()) {
+            try {
+                expected = LocalDate.parse(t);
+            } catch (DateTimeParseException ex) {
+                throw new RuntimeException("Data de entrega inválida (aaaa-MM-dd).");
+            }
         }
-        try {
-            CreatePurchaseOrderRequest req = new CreatePurchaseOrderRequest(
-                    supplierComboList.get(supIdx).getId(),
-                    warehousesList.get(whIdx).getId(),
-                    CurrentUserContext.getCurrentCompanyId(),
-                    expected, null, new ArrayList<>(poDraftLines));
-            PurchaseOrderDTO dto = purchaseOrderService.createOrder(req);
-            poDraftLines.clear(); poLinesModel.setRowCount(0); recomputePoTotal();
-            poExpectedField.setText("");
-            JOptionPane.showMessageDialog(this, "Encomenda " + dto.orderNumber() + " criada.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadPurchaseOrders();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        CreatePurchaseOrderRequest req = new CreatePurchaseOrderRequest(
+                supplierComboList.get(supIdx).getId(),
+                warehousesList.get(whIdx).getId(),
+                CurrentUserContext.getCurrentCompanyId(),
+                expected, null, new ArrayList<>(poDraftLines));
+        PurchaseOrderDTO dto = purchaseOrderService.createOrder(req);
+        poDraftLines.clear();
+        if (poLinesModel != null) poLinesModel.setRowCount(0);
+        recomputePoTotal();
+        poExpectedField.setText("");
+        JOptionPane.showMessageDialog(this, "Encomenda " + dto.orderNumber() + " criada.",
+                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void loadPurchaseOrders() {
@@ -1051,25 +1060,20 @@ public class ComprasPanel extends JPanel {
         updateDefaultPrice();
     }
 
-    private void registerPurchase() {
-        if (supplierComboList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Falta cadastrar fornecedores activos.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    /** Validação + registo da compra. Lança RuntimeException em erro (mantém o modal aberto). */
+    private void submitPurchaseOrThrow() {
         if (warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Falta cadastrar armazéns.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
+            throw new RuntimeException("Falta cadastrar armazéns.");
         }
         if (draftLines.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum produto adicionado à compra.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
+            throw new RuntimeException("Nenhum produto adicionado à compra.");
         }
-
         int supIdx = supplierCombo.getSelectedIndex();
         int whIdx = warehouseCombo.getSelectedIndex();
         int accIdx = accountCombo.getSelectedIndex();
-
-        if (supIdx < 0 || whIdx < 0) return;
+        if (supIdx < 0 || supIdx >= supplierComboList.size() || whIdx < 0) {
+            throw new RuntimeException("Selecione fornecedor e armazém.");
+        }
 
         Supplier supplier = supplierComboList.get(supIdx);
         Warehouse warehouse = warehousesList.get(whIdx);
@@ -1078,34 +1082,19 @@ public class ComprasPanel extends JPanel {
         Long financeAccountId = onCredit ? null : accountsList.get(accIdx - 1).id();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
-        try {
-            CreatePurchaseRequest request = new CreatePurchaseRequest(
-                    supplier.getId(),
-                    warehouse.getId(),
-                    companyId,
-                    financeAccountId,
-                    draftLines
-            );
+        CreatePurchaseRequest request = new CreatePurchaseRequest(
+                supplier.getId(), warehouse.getId(), companyId, financeAccountId, draftLines);
+        Purchase p = purchaseService.createPurchase(request);
+        JOptionPane.showMessageDialog(this, "Compra " + p.getPurchaseNumber() + " registada com sucesso!\n" +
+                (onCredit
+                    ? "Stock atualizado. Compra a crédito — ver tab Contas a Pagar."
+                    : "Stock atualizado e saldo deduzido de " + p.getTotalAmount() + " MT."),
+                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
-            Purchase p = purchaseService.createPurchase(request);
-            JOptionPane.showMessageDialog(this, "Compra " + p.getPurchaseNumber() + " registada com sucesso!\n" +
-                    (onCredit
-                        ? "Stock atualizado. Compra a crédito — ver tab Contas a Pagar."
-                        : "Stock atualizado e saldo deduzido de " + p.getTotalAmount() + " MT."),
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-
-            // Clear draft
-            draftLines.clear();
-            draftLinesModel.setRowCount(0);
-            draftTotal = BigDecimal.ZERO;
-            totalLabel.setText("Total Compra: 0.00 MT (excl. IVA)");
-
-            loadPurchasesHistory();
-            loadAccounts(); // refresh balance
-            loadPayables();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao registar compra: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        draftLines.clear();
+        draftLinesModel.setRowCount(0);
+        draftTotal = BigDecimal.ZERO;
+        totalLabel.setText("Total Compra: 0.00 MT (excl. IVA)");
     }
 
     private void loadPurchasesHistory() {
