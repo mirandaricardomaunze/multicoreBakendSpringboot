@@ -58,6 +58,12 @@ public class ComprasPanel extends JPanel {
     private List<PurchaseOrderDTO> poList = new ArrayList<>();
     private JTextField supplierSearchField;
 
+    // TAB CONTAS A PAGAR
+    private DefaultTableModel payablesModel;
+    private JTable payablesTable;
+    private JLabel payablesFooter;
+    private List<com.phcpro.modules.purchases.dto.PayableDTO> payablesList = new ArrayList<>();
+
     // TAB 1: REGISTO COMPRA ELEMENTS
     private JComboBox<String> supplierCombo;
     private JComboBox<String> warehouseCombo;
@@ -120,7 +126,10 @@ public class ComprasPanel extends JPanel {
         // Tab 2: Encomendas a Fornecedor
         tabbedPane.addTab("Encomendas a Fornecedor (EC-F)", UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT), createPurchaseOrdersTab());
 
-        // Tab 3: Fornecedores
+        // Tab 3: Contas a Pagar
+        tabbedPane.addTab("Contas a Pagar", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), createPayablesTab());
+
+        // Tab 4: Fornecedores
         JPanel tabFornecedores = createFornecedoresTab();
         tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.TEXT_LIGHT), tabFornecedores);
 
@@ -498,6 +507,116 @@ public class ComprasPanel extends JPanel {
         loadPurchasesHistory();
         refreshPoCombos();
         loadPurchaseOrders();
+        loadPayables();
+    }
+
+    // ===== Contas a Pagar =====
+
+    private JPanel createPayablesTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+
+        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
+        header.add(UIHelper.createHeading("Contas a Pagar a Fornecedores"), BorderLayout.WEST);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
+        ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
+        payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
+        payBtn.addActionListener(e -> openSupplierPaymentDialog());
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadPayables());
+        actions.add(refreshBtn); actions.add(payBtn);
+        header.add(actions, BorderLayout.EAST);
+        tab.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        String[] cols = {"Nº Compra", "Fornecedor", "Total", "Pago", "Em Dívida", "Data"};
+        payablesModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        payablesTable = new JTable(payablesModel);
+        UIHelper.styleTable(payablesTable);
+        JScrollPane scroll = new JScrollPane(payablesTable);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
+        payablesFooter = new JLabel(" ");
+        payablesFooter.setForeground(UIHelper.TEXT_MUTED);
+        payablesFooter.setBorder(new EmptyBorder(8, 4, 0, 4));
+        card.add(payablesFooter, BorderLayout.SOUTH);
+        tab.add(card, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private void loadPayables() {
+        if (payablesModel == null) return;
+        payablesList = purchaseService.findPayablesByCompany(CurrentUserContext.getCurrentCompanyId());
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        BigDecimal totalDivida = BigDecimal.ZERO;
+        payablesModel.setRowCount(0);
+        for (var pa : payablesList) {
+            totalDivida = totalDivida.add(pa.outstanding());
+            payablesModel.addRow(new Object[]{
+                    pa.purchaseNumber(), pa.supplierName(),
+                    String.format("%,.2f MT", pa.totalAmount()),
+                    String.format("%,.2f MT", pa.amountPaid()),
+                    String.format("%,.2f MT", pa.outstanding()),
+                    pa.purchaseDate() == null ? "-" : pa.purchaseDate().format(dtf)});
+        }
+        payablesFooter.setText(String.format("%d fatura(s) em dívida · Total a pagar: %,.2f MT",
+                payablesList.size(), totalDivida));
+    }
+
+    private void openSupplierPaymentDialog() {
+        int row = payablesTable.getSelectedRow();
+        if (row < 0 || row >= payablesList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione uma conta a pagar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        var pa = payablesList.get(row);
+        if (accountsList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Falta cadastrar contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        JComboBox<String> accCombo = new JComboBox<>();
+        for (TreasuryAccountDTO a : accountsList) accCombo.addItem(a.name());
+        UIHelper.styleComboBox(accCombo);
+        JTextField amountField = new JTextField(pa.outstanding().toPlainString());
+        UIHelper.styleTextField(amountField);
+        JTextField refField = new JTextField();
+        UIHelper.styleTextField(refField);
+
+        JLabel info = new JLabel(String.format(
+                "<html><b>Compra:</b> %s · <b>Fornecedor:</b> %s<br><b>Em dívida:</b> %,.2f MT</html>",
+                pa.purchaseNumber(), pa.supplierName(), pa.outstanding()));
+        info.setForeground(UIHelper.TEXT_LIGHT);
+
+        JPanel form = UIHelper.createDialogForm(
+                "Resumo:", info,
+                "Conta de Tesouraria:", accCombo,
+                "Valor a Pagar (MT):", amountField,
+                "Referência:", refField);
+
+        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
+                "Pagar a Fornecedor — " + pa.purchaseNumber(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (opt != JOptionPane.OK_OPTION) return;
+        try {
+            BigDecimal amount = new BigDecimal(amountField.getText().trim());
+            Long accountId = accountsList.get(accCombo.getSelectedIndex()).id();
+            String ref = refField.getText().trim();
+            purchaseService.registerSupplierPayment(pa.purchaseId(), amount, accountId, ref.isEmpty() ? null : ref);
+            JOptionPane.showMessageDialog(this, "Pagamento registado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadPayables();
+            loadPurchasesHistory();
+            loadAccounts();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Valor inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void refreshPoCombos() {
@@ -817,6 +936,7 @@ public class ComprasPanel extends JPanel {
         accountCombo.removeAllItems();
         accountsList = financeService.getAllAccounts();
 
+        accountCombo.addItem("— A crédito (pagar depois) —");
         for (TreasuryAccountDTO acc : accountsList) {
             accountCombo.addItem(acc.name() + " (" + String.format("%.2f", acc.balance()) + " MT)");
         }
@@ -940,10 +1060,6 @@ public class ComprasPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Falta cadastrar armazéns.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (accountsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Falta cadastrar contas financeiras.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
         if (draftLines.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Nenhum produto adicionado à compra.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -953,11 +1069,13 @@ public class ComprasPanel extends JPanel {
         int whIdx = warehouseCombo.getSelectedIndex();
         int accIdx = accountCombo.getSelectedIndex();
 
-        if (supIdx < 0 || whIdx < 0 || accIdx < 0) return;
+        if (supIdx < 0 || whIdx < 0) return;
 
         Supplier supplier = supplierComboList.get(supIdx);
         Warehouse warehouse = warehousesList.get(whIdx);
-        TreasuryAccountDTO account = accountsList.get(accIdx);
+        // Índice 0 = "a crédito" (sem conta → conta a pagar); restantes mapeiam accountsList[idx-1].
+        boolean onCredit = accIdx <= 0;
+        Long financeAccountId = onCredit ? null : accountsList.get(accIdx - 1).id();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         try {
@@ -965,13 +1083,16 @@ public class ComprasPanel extends JPanel {
                     supplier.getId(),
                     warehouse.getId(),
                     companyId,
-                    account.id(),
+                    financeAccountId,
                     draftLines
             );
 
             Purchase p = purchaseService.createPurchase(request);
             JOptionPane.showMessageDialog(this, "Compra " + p.getPurchaseNumber() + " registada com sucesso!\n" +
-                    "Stock atualizado nos armazéns e saldo deduzido de " + p.getTotalAmount() + " MT.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    (onCredit
+                        ? "Stock atualizado. Compra a crédito — ver tab Contas a Pagar."
+                        : "Stock atualizado e saldo deduzido de " + p.getTotalAmount() + " MT."),
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
             // Clear draft
             draftLines.clear();
@@ -981,6 +1102,7 @@ public class ComprasPanel extends JPanel {
 
             loadPurchasesHistory();
             loadAccounts(); // refresh balance
+            loadPayables();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao registar compra: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }

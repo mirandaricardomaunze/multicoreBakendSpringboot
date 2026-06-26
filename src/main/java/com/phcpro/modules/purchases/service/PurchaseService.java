@@ -20,6 +20,7 @@ import com.phcpro.modules.numbering.service.DocumentSeries;
 import com.phcpro.modules.purchases.dto.CreatePurchaseLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseRequest;
 import com.phcpro.modules.purchases.dto.CreateSupplierRequest;
+import com.phcpro.modules.purchases.dto.PayableDTO;
 import com.phcpro.modules.purchases.dto.PurchaseDTO;
 import com.phcpro.modules.purchases.dto.PurchaseLineDTO;
 import com.phcpro.modules.purchases.dto.SupplierDTO;
@@ -176,11 +177,16 @@ public class PurchaseService {
         
         purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
 
+        boolean payNow = request.financeAccountId() != null;
+        purchase.setAmountPaid(payNow ? purchase.getTotalAmount() : BigDecimal.ZERO);
+
         purchase = purchaseRepository.save(purchase);
 
-        // Record finance transaction (CREDIT = cash out)
-        String description = "Pagamento Compra " + purchase.getPurchaseNumber() + " - Fornecedor " + supplier.getName();
-        financeService.registerTransaction(request.financeAccountId(), "CREDIT", total, description);
+        // Pagamento imediato → saída de tesouraria (CREDIT). Sem conta → fica a crédito (conta a pagar).
+        if (payNow) {
+            String description = "Pagamento Compra " + purchase.getPurchaseNumber() + " - Fornecedor " + supplier.getName();
+            financeService.registerTransaction(request.financeAccountId(), "CREDIT", total, description);
+        }
 
         return purchase;
     }
@@ -298,9 +304,65 @@ public class PurchaseService {
                 p.getCompany() != null ? p.getCompany().getId() : null,
                 p.getTotalAmount(),
                 p.getTaxAmount(),
+                p.getAmountPaid(),
                 p.getStatus(),
                 p.getPurchaseDate(),
                 lines
         );
+    }
+
+    // ===== Contas a pagar a fornecedor (Fase 4) =====
+
+    @Transactional(readOnly = true)
+    public List<PayableDTO> findPayablesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return purchaseRepository.findByCompanyId(companyId).stream()
+                .filter(p -> !"CANCELLED".equals(p.getStatus()))
+                .filter(p -> p.getOutstanding().signum() > 0)
+                .map(p -> new PayableDTO(
+                        p.getId(),
+                        p.getPurchaseNumber(),
+                        p.getSupplier().getId(),
+                        p.getSupplier().getName(),
+                        p.getTotalAmount(),
+                        p.getAmountPaid(),
+                        p.getOutstanding(),
+                        p.getPurchaseDate()))
+                .toList();
+    }
+
+    @Transactional
+    public PurchaseDTO registerSupplierPayment(Long purchaseId, BigDecimal amount, Long financeAccountId, String reference) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new BusinessRuleException("Valor do pagamento deve ser positivo.");
+        }
+        if (financeAccountId == null) {
+            throw new BusinessRuleException("Conta de tesouraria é obrigatória.");
+        }
+        Purchase purchase = purchaseRepository.findById(purchaseId)
+                .orElseThrow(() -> new BusinessRuleException("Fatura de compra não encontrada."));
+        CurrentUserContext.requireCompany(purchase.getCompany() != null ? purchase.getCompany().getId() : null);
+        if ("CANCELLED".equals(purchase.getStatus())) {
+            throw new BusinessRuleException("Compra anulada não tem saldo a pagar.");
+        }
+        BigDecimal outstanding = purchase.getOutstanding();
+        if (outstanding.signum() <= 0) {
+            throw new BusinessRuleException("Esta compra já está totalmente paga.");
+        }
+        if (amount.compareTo(outstanding) > 0) {
+            throw new BusinessRuleException("Valor excede o saldo em dívida (" + outstanding.toPlainString() + " MT).");
+        }
+
+        purchase.setAmountPaid(purchase.getAmountPaid().add(amount));
+        purchase = purchaseRepository.save(purchase);
+
+        String desc = "Pagamento a fornecedor " + purchase.getSupplier().getName()
+                + " — Compra " + purchase.getPurchaseNumber()
+                + (reference != null && !reference.isBlank() ? " (ref. " + reference + ")" : "");
+        financeService.registerTransaction(financeAccountId, "CREDIT", amount, desc);
+        auditLogService.logCurrent("SUPPLIER_PAYMENT",
+                "Compra " + purchase.getPurchaseNumber() + " pagamento " + amount.toPlainString()
+                        + " MT (saldo " + purchase.getOutstanding().toPlainString() + " MT)");
+        return toDTO(purchase);
     }
 }

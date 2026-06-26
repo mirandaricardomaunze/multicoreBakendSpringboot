@@ -5,6 +5,16 @@
 **Última actualização:** 2026-06-21
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-06-26 (contas a pagar a fornecedor — Fase 4)
+
+- **`Purchase.amountPaid`** (em dívida = total − pago), migration `V15` (backfill: compras antigas
+  ficam pagas). **Compra a crédito**: `createPurchase` com `financeAccountId = null` não paga no acto.
+- `findPayablesByCompany` (saldo > 0) + `registerSupplierPayment` (abate, cap no saldo, saída de
+  tesouraria CREDIT, auditoria). API: `GET /api/purchases/payables`, `POST /api/purchases/{id}/pay`.
+- **UI:** opção "— A crédito —" no combo de conta da compra + tab **Contas a Pagar** (lista com
+  total em dívida + Registar Pagamento). Testes: `PurchaseServiceTest` AP-03..06.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 155 testes, 0 falhas**.
+
 ### Progresso — 2026-06-25 (compras & aprovisionamento profissional)
 
 - **Gestão de fornecedores completa:** campos novos (telefone, contacto, **activo**), editar,
@@ -331,7 +341,7 @@ fiscal e config de impostos sem endpoint/PDF; (5) férias sem saldo e `decideVac
 
 ```
 mvn clean compile   → BUILD SUCCESS
-mvn clean test      → BUILD SUCCESS, 151 testes, 0 falhas (2026-06-25)
+mvn clean test      → BUILD SUCCESS, 155 testes, 0 falhas (2026-06-26)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.

@@ -5,7 +5,7 @@
 > ledgers em [MOVIMENTOS_COMERCIAIS.md](../MOVIMENTOS_COMERCIAIS.md).
 
 **Última actualização:** 2026-06-25
-**Estado:** Fases 1–3 implementadas e testadas. Fase 4 (contas a pagar) planeada.
+**Estado:** Fases 1–4 implementadas e testadas.
 
 ---
 
@@ -85,9 +85,19 @@ Tudo protegido pelo `SecurityInterceptor` (`/api/**`).
   **Cancelar**, **Imprimir** (PDF reutiliza building blocks de `printing`).
 - Tab nova **Categorias** (ou no Stock): listar/criar/editar/activar.
 
+### Fase 4 — Contas a Pagar (implementada)
+
+A Fatura de Compra (`Purchase`) passou a registar **`amountPaid`** (em dívida = total − pago):
+- **Compra a crédito:** `createPurchase` com `financeAccountId = null` não paga no acto (`amountPaid = 0`);
+  com conta, paga tudo e regista saída de tesouraria (CREDIT) como antes. Migration `V15`.
+- `findPayablesByCompany(companyId)` → faturas com saldo > 0 (exclui pagas/anuladas).
+- `registerSupplierPayment(purchaseId, amount, accountId, reference)` → abate no saldo (cap no
+  outstanding), saída de tesouraria CREDIT e auditoria (`SUPPLIER_PAYMENT`).
+- API: `GET /api/purchases/payables`, `POST /api/purchases/{id}/pay`. UI: opção "— A crédito —" na
+  compra + tab **Contas a Pagar** (lista + Registar Pagamento).
+
 ## 6. Não-objectivos (futuro)
 
-- **Fase 4 — Contas a Pagar:** saldo por fornecedor a partir das Faturas de Compra, registo de
-  pagamento → `TreasuryTransaction CREDIT` (reutiliza `FinanceService.registerAutoPayout`).
 - Recepção **parcial** de encomenda (split de linhas) — por agora a recepção é total.
 - Ligação automática Encomenda→Fatura de Compra.
+- Extracto consolidado por fornecedor (vários documentos) — hoje as contas a pagar são por fatura.

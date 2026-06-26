@@ -10,6 +10,7 @@ public record CreatePurchaseRequest(
         @NotNull(message = "Fornecedor é obrigatório.") Long supplierId,
         @NotNull(message = "Armazém é obrigatório.") Long warehouseId,
         @NotNull(message = "Empresa é obrigatória.") Long companyId,
-        @NotNull(message = "Conta financeira é obrigatória.") Long financeAccountId,
+        // Conta de tesouraria para pagamento imediato. Se null, a compra fica a crédito (conta a pagar).
+        Long financeAccountId,
         @NotEmpty(message = "A compra deve conter pelo menos uma linha.") @Valid List<CreatePurchaseLineRequest> lines
 ) {}

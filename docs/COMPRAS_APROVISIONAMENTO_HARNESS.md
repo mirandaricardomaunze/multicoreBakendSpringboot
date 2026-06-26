@@ -30,6 +30,17 @@
 | PO-07 | `cancelOrder` sem motivo / em encomenda já recebida     | `BusinessRuleException`.                                     |
 | PO-08 | `searchOrders` por nº/fornecedor                         | Filtra por substring case-insensitive.                      |
 
+## Contas a Pagar — Fase 4 (PurchaseServiceTest)
+
+| ID    | Cenário                                                  | Esperado                                                     |
+|-------|---------------------------------------------------------|-------------------------------------------------------------|
+| AP-01 | `createPurchase` sem conta (a crédito)                  | `amountPaid = 0`, sem transação de tesouraria; em dívida = total. |
+| AP-02 | `createPurchase` com conta                               | `amountPaid = total`; tesouraria CREDIT registado.          |
+| AP-03 | `findPayablesByCompany`                                  | Só faturas com saldo > 0; exclui pagas e anuladas.          |
+| AP-04 | `registerSupplierPayment` parcial                       | Abate no saldo + saída de tesouraria (CREDIT) + auditoria.  |
+| AP-05 | Pagamento acima do saldo em dívida                      | `BusinessRuleException`; sem transação.                     |
+| AP-06 | Pagamento sobre fatura já liquidada                     | `BusinessRuleException`.                                     |
+
 ## Manuais (UI desktop)
 
 | ID    | Passos                                                              | Esperado                                            |
@@ -38,6 +49,8 @@
 | UI-02 | Compras › Encomendas a Fornecedor → criar, **Receber**             | Stock do armazém sobe pelas quantidades recebidas.  |
 | UI-03 | Compras › Encomendas → **Cancelar** (com motivo)                   | Estado CANCELLED; stock inalterado.                 |
 | UI-04 | Stock/Compras › Categorias → criar/editar/activar                  | Lista actualiza; categorias activas surgem no produto. |
+| UI-05 | Faturas de Compra → escolher "— A crédito —" e registar             | Compra entra sem saída de caixa; aparece em Contas a Pagar. |
+| UI-06 | Contas a Pagar → seleccionar fatura → Registar Pagamento            | Saldo abate; saída de tesouraria; sai da lista quando liquidada. |
 
 ## Verificação
 

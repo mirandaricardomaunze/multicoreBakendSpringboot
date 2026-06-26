@@ -31,24 +31,43 @@ class PurchaseServiceTest {
     private static final Long COMPANY_ID = 1L;
 
     private SupplierRepository supplierRepository;
+    private com.phcpro.modules.purchases.repository.PurchaseRepository purchaseRepository;
+    private FinanceService financeService;
     private PurchaseService service;
 
     @BeforeEach
     void setUp() {
         supplierRepository = mock(SupplierRepository.class);
+        purchaseRepository = mock(com.phcpro.modules.purchases.repository.PurchaseRepository.class);
+        financeService = mock(FinanceService.class);
         service = new PurchaseService(
                 supplierRepository,
-                mock(PurchaseRepository.class),
+                purchaseRepository,
                 mock(ProductRepository.class),
                 mock(WarehouseRepository.class),
                 mock(CompanyRepository.class),
                 mock(InventoryService.class),
-                mock(FinanceService.class),
+                financeService,
                 mock(DocumentNumberService.class),
                 mock(AuditLogService.class));
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
         when(supplierRepository.save(any(Supplier.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(purchaseRepository.save(any(com.phcpro.modules.purchases.model.Purchase.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    private com.phcpro.modules.purchases.model.Purchase purchase(String total, String paid, String status) {
+        com.phcpro.modules.purchases.model.Purchase p = new com.phcpro.modules.purchases.model.Purchase();
+        p.setId(50L);
+        p.setPurchaseNumber("V/FT-2026/1");
+        p.setSupplier(supplier(7L, "Acme Lda"));
+        Company c = new Company(); c.setId(COMPANY_ID);
+        p.setCompany(c);
+        p.setTotalAmount(new java.math.BigDecimal(total));
+        p.setAmountPaid(new java.math.BigDecimal(paid));
+        p.setStatus(status);
+        return p;
     }
 
     @AfterEach
@@ -105,5 +124,41 @@ class PurchaseServiceTest {
     void updateSupplier_empresaDiferente_lanca() {
         assertThrows(BusinessRuleException.class, () -> service.updateSupplier(5L,
                 new CreateSupplierRequest("X", "123456789", null, null, null, null, 999L)));
+    }
+
+    // ===== Contas a pagar (Fase 4) =====
+
+    @Test // AP-03
+    void findPayables_soComSaldoEmDivida() {
+        when(purchaseRepository.findByCompanyId(COMPANY_ID)).thenReturn(java.util.List.of(
+                purchase("100", "100", "COMPLETED"),  // pago → excluído
+                purchase("200", "50", "COMPLETED"),   // em dívida 150 → incluído
+                purchase("300", "0", "CANCELLED")));   // anulado → excluído
+        var payables = service.findPayablesByCompany(COMPANY_ID);
+        assertEquals(1, payables.size());
+        assertEquals(new java.math.BigDecimal("150"), payables.get(0).outstanding());
+    }
+
+    @Test // AP-04
+    void registerSupplierPayment_parcial_abateESaiTesouraria() {
+        when(purchaseRepository.findById(50L)).thenReturn(java.util.Optional.of(purchase("200", "50", "COMPLETED")));
+        var dto = service.registerSupplierPayment(50L, new java.math.BigDecimal("100"), 9L, "ref-1");
+        assertEquals(new java.math.BigDecimal("150"), dto.amountPaid());
+        verify(financeService).registerTransaction(eq(9L), eq("CREDIT"), eq(new java.math.BigDecimal("100")), anyString());
+    }
+
+    @Test // AP-05
+    void registerSupplierPayment_excedeSaldo_lanca() {
+        when(purchaseRepository.findById(50L)).thenReturn(java.util.Optional.of(purchase("200", "50", "COMPLETED")));
+        assertThrows(BusinessRuleException.class,
+                () -> service.registerSupplierPayment(50L, new java.math.BigDecimal("999"), 9L, null));
+        verifyNoInteractions(financeService);
+    }
+
+    @Test // AP-06
+    void registerSupplierPayment_jaPago_lanca() {
+        when(purchaseRepository.findById(50L)).thenReturn(java.util.Optional.of(purchase("200", "200", "COMPLETED")));
+        assertThrows(BusinessRuleException.class,
+                () -> service.registerSupplierPayment(50L, new java.math.BigDecimal("10"), 9L, null));
     }
 }

@@ -84,4 +84,20 @@ public class PurchaseController {
             @PathVariable Long id, @RequestParam String reason) {
         return ResponseEntity.ok(purchaseOrderService.cancelOrder(id, reason));
     }
+
+    // --- Contas a pagar a fornecedor ---
+
+    @GetMapping("/payables")
+    public ResponseEntity<List<PayableDTO>> getPayables(@RequestParam Long companyId) {
+        return ResponseEntity.ok(purchaseService.findPayablesByCompany(companyId));
+    }
+
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<PurchaseDTO> paySupplier(
+            @PathVariable Long id,
+            @RequestParam java.math.BigDecimal amount,
+            @RequestParam Long financeAccountId,
+            @RequestParam(required = false) String reference) {
+        return ResponseEntity.ok(purchaseService.registerSupplierPayment(id, amount, financeAccountId, reference));
+    }
 }

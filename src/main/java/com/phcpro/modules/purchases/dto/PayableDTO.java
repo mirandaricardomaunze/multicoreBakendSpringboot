@@ -2,19 +2,17 @@ package com.phcpro.modules.purchases.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
-public record PurchaseDTO(
-        Long id,
+/**
+ * Conta a pagar a fornecedor: fatura de compra com saldo em dívida.
+ */
+public record PayableDTO(
+        Long purchaseId,
         String purchaseNumber,
         Long supplierId,
         String supplierName,
-        Long warehouseId,
-        Long companyId,
         BigDecimal totalAmount,
-        BigDecimal taxAmount,
         BigDecimal amountPaid,
-        String status,
-        LocalDateTime purchaseDate,
-        List<PurchaseLineDTO> lines
+        BigDecimal outstanding,
+        LocalDateTime purchaseDate
 ) {}
