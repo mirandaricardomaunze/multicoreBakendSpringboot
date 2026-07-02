@@ -5,6 +5,17 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-02 (resiliência das ligações à BD — PC de balcão)
+
+- **Lacuna operacional fechada:** com a app aberta e a máquina em suspensão longa, o pool Hikari
+  mantinha ligações **mortas** ao PostgreSQL → gravações falhavam até reiniciar (visto em uso real).
+  Config de resiliência no perfil **`desktop`** e espelhada em **`prod`**: `keepalive-time=120s`
+  (sonda ligações ociosas), `max-lifetime=600s` (rotação), `connection-timeout=10s` (falha rápida),
+  `validation-timeout=5s`; desktop com pool 5/min-idle 1. Sem tocar em código/Services/schema.
+- Validado: desktop arranca com Hikari sem avisos de `keepalive/maxLifetime`; `mvn test` 196/0.
+- Spec/harness: [docs/RESILIENCIA_LIGACOES_SPEC.md](../docs/RESILIENCIA_LIGACOES_SPEC.md) +
+  [docs/RESILIENCIA_LIGACOES_HARNESS.md](../docs/RESILIENCIA_LIGACOES_HARNESS.md) (RL-01..RL-05 manuais).
+
 ### Progresso — 2026-07-01 (documento de inventário simplificado)
 
 - **Pedido do utilizador:** o PDF de inventário passou a ter **só 6 colunas** — Referência · Código de
