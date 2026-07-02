@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.fiscal.dto.CreateTaxRateRequest;
@@ -9,6 +10,8 @@ import com.phcpro.modules.fiscal.dto.CreateWithholdingRequest;
 import com.phcpro.modules.fiscal.dto.IvaSummaryDTO;
 import com.phcpro.modules.fiscal.dto.TaxRateDTO;
 import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
+import com.phcpro.modules.fiscal.dto.FiscalSalesExportDTO;
+import com.phcpro.modules.fiscal.service.FiscalSalesExportService;
 import com.phcpro.modules.fiscal.service.FiscalSummaryService;
 import com.phcpro.modules.fiscal.service.TaxRateService;
 import com.phcpro.modules.fiscal.service.WithholdingService;
@@ -41,6 +44,7 @@ public class FiscalPanel extends JPanel {
     private final TaxRateService taxRateService;
     private final WithholdingService withholdingService;
     private final FiscalSummaryService fiscalSummaryService;
+    private final FiscalSalesExportService fiscalSalesExportService;
     private final PayrollTaxService payrollTaxService;
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
     private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
@@ -71,6 +75,7 @@ public class FiscalPanel extends JPanel {
             TaxRateService taxRateService,
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
+            FiscalSalesExportService fiscalSalesExportService,
             PayrollTaxService payrollTaxService,
             IvaDeclarationPrintService ivaDeclarationPrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService
@@ -78,6 +83,7 @@ public class FiscalPanel extends JPanel {
         this.taxRateService = taxRateService;
         this.withholdingService = withholdingService;
         this.fiscalSummaryService = fiscalSummaryService;
+        this.fiscalSalesExportService = fiscalSalesExportService;
         this.payrollTaxService = payrollTaxService;
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
         this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
@@ -211,6 +217,12 @@ public class FiscalPanel extends JPanel {
         printBtn.addActionListener(e -> printIvaDeclaration());
         periodPanel.add(Box.createRigidArea(new Dimension(20, 0)));
         periodPanel.add(printBtn);
+
+        ModernButton saftBtn = UIHelper.createSecondaryButton("Exportar SAF-T (Vendas)");
+        saftBtn.setIcon(UIHelper.icon("fas-file-export", 14));
+        saftBtn.addActionListener(e -> exportSaft());
+        periodPanel.add(Box.createRigidArea(new Dimension(8, 0)));
+        periodPanel.add(saftBtn);
 
         topRow.add(periodPanel, BorderLayout.WEST);
         tab.add(topRow, BorderLayout.NORTH);
@@ -349,6 +361,32 @@ public class FiscalPanel extends JPanel {
         }
     }
 
+    private void exportSaft() {
+        try {
+            int year = (Integer) ivaYearSpinner.getValue();
+            int month = (Integer) ivaMonthSpinner.getValue();
+            java.time.YearMonth ym = java.time.YearMonth.of(year, month);
+            FiscalSalesExportDTO export = fiscalSalesExportService.exportSales(
+                    CurrentUserContext.getCurrentCompanyId(), ym.atDay(1), ym.atEndOfMonth());
+
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Guardar exportação SAF-T (Vendas)");
+            chooser.setSelectedFile(new java.io.File(
+                    "saft_vendas_" + year + "-" + String.format("%02d", month) + ".xml"));
+            if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+            java.nio.file.Files.writeString(chooser.getSelectedFile().toPath(), export.xml());
+            JOptionPane.showMessageDialog(this,
+                    "Exportação SAF-T gravada (" + export.numberOfInvoices() + " faturas).\n"
+                            + "Total: " + String.format("%,.2f MT", export.totalGross()) + "\n"
+                            + chooser.getSelectedFile().getAbsolutePath(),
+                    "SAF-T Exportado", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     // ─── Tab 2: Taxas Fiscais ──────────────────────────────────────────────
 
     private JPanel buildTaxRatesTab() {
@@ -445,10 +483,9 @@ public class FiscalPanel extends JPanel {
                 "Base Legal:", legalField
         );
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                existing == null ? "Nova Taxa Fiscal" : "Editar Taxa Fiscal",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
+                existing == null ? "Nova Taxa Fiscal" : "Editar Taxa Fiscal", "fas-percent", "Configuração de imposto/taxa", form).showDialog();
+        if (!confirmed) return;
 
         try {
             CreateTaxRateRequest req = new CreateTaxRateRequest(
@@ -584,9 +621,8 @@ public class FiscalPanel extends JPanel {
                 "Taxa (fração, ex: 0.10):", rateField
         );
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                "Registar Retenção na Fonte", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Registar Retenção na Fonte", "fas-percent", "Imposto retido na fonte", form).showDialog();
+        if (!confirmed) return;
 
         try {
             CreateWithholdingRequest req = new CreateWithholdingRequest(

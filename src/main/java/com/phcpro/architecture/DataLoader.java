@@ -139,6 +139,11 @@ public class DataLoader implements CommandLineRunner {
     public void run(String... args) {
         seedMozambicanTaxRates();
         seedProductCategories();
+        // Guarda de idempotência: numa BD persistente (PostgreSQL) o seed de demo só corre uma vez.
+        // Sem isto, cada arranque tentava recriar empresas/utilizadores e falhava na chave única de username.
+        if (companyRepository.count() > 0) {
+            return;
+        }
         // 0. Seed Companies
         Company ptCompany = new Company();
         ptCompany.setName("Multicore Portugal Lda");
@@ -368,6 +373,17 @@ public class DataLoader implements CommandLineRunner {
         massa.setDescription("Pacote de massa esparguete de 500g");
         shareProduct(massa, ptCompany, mzCompany);
         productRepository.save(massa);
+
+        // IVA dinâmico — taxas variadas por produto (realidade MZ: cesta básica isenta).
+        TaxRate ivaExempt = taxRateRepository.findByCode("IVAEXMT").orElse(null);
+        TaxRate ivaReduced = taxRateRepository.findByCode("IVA5").orElse(null);
+        TaxRate ivaNormal = taxRateRepository.findByCode("IVA16").orElse(null);
+        erpLic.setTaxRate(ivaExempt);        productRepository.save(erpLic);        // Arroz — isento
+        support.setTaxRate(ivaExempt);       productRepository.save(support);       // Açúcar — isento
+        partsProduct.setTaxRate(ivaExempt);  productRepository.save(partsProduct);  // Farinha — isento
+        feijao.setTaxRate(ivaExempt);        productRepository.save(feijao);        // Feijão — isento
+        massa.setTaxRate(ivaReduced);        productRepository.save(massa);         // Massa — IVA 5%
+        techServ.setTaxRate(ivaNormal);      productRepository.save(techServ);      // Óleo — IVA 16%
 
 
         // 3.1 Seed Stocks

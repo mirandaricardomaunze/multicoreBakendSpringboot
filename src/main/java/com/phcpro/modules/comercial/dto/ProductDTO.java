@@ -16,5 +16,9 @@ public record ProductDTO(
     boolean stockTracked,
     Long categoryId,
     String categoryName,
-    String description
+    Long taxRateId,
+    BigDecimal taxRate,
+    String taxRateLabel,
+    String description,
+    byte[] image
 ) {}

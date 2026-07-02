@@ -304,8 +304,11 @@ public class POSService {
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(product.getUnitPrice());
             
-            // IVA à taxa-padrão (não depende do NUIT do cliente).
-            BigDecimal taxRate = TaxRates.STANDARD_VAT;
+            // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a
+            // padrão. Não depende do NUIT do cliente.
+            BigDecimal taxRate = product.getTaxRate() != null
+                    ? product.getTaxRate().getRate()
+                    : TaxRates.STANDARD_VAT;
             line.setTaxRate(taxRate);
 
             if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.ZERO) > 0) {

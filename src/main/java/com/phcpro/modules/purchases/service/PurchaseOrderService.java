@@ -19,6 +19,7 @@ import com.phcpro.modules.purchases.dto.CreatePurchaseOrderLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseOrderRequest;
 import com.phcpro.modules.purchases.dto.PurchaseOrderDTO;
 import com.phcpro.modules.purchases.dto.PurchaseOrderLineDTO;
+import com.phcpro.modules.purchases.dto.ReceivePurchaseOrderRequest;
 import com.phcpro.modules.purchases.model.PurchaseOrder;
 import com.phcpro.modules.purchases.model.PurchaseOrderLine;
 import com.phcpro.modules.purchases.model.Supplier;
@@ -135,35 +136,101 @@ public class PurchaseOrderService {
         return toDTO(order);
     }
 
+    /** Recebe tudo o que falta de cada linha (de ORDERED ou PARTIALLY_RECEIVED) e fecha RECEIVED. */
     @Transactional
     public PurchaseOrderDTO receiveOrder(Long id) {
         PurchaseOrder order = loadForActiveCompany(id);
         PermissionGuard.requireManagerOrAdmin("receber encomenda a fornecedor");
-        if (!PurchaseOrder.ORDERED.equals(order.getStatus())) {
-            throw new BusinessRuleException("Só encomendas no estado ORDERED podem ser recebidas.");
-        }
+        requireReceivable(order);
 
-        Warehouse warehouse = order.getWarehouse();
         for (PurchaseOrderLine line : order.getLines()) {
-            String desc = String.format("Recepção Encomenda %s - Fornecedor %s",
-                    order.getOrderNumber(), order.getSupplier().getName());
-            inventoryService.registerMovement(
-                    line.getProduct(),
-                    warehouse,
-                    line.getQuantity(),
-                    "PURCHASE",
-                    line.getBatchNumber(),
-                    line.getSerialNumber(),
-                    desc,
-                    line.getExpirationDate());
+            BigDecimal outstanding = outstanding(line);
+            if (outstanding.signum() > 0) {
+                receiveLine(order, line, outstanding);
+            }
         }
 
-        order.setStatus(PurchaseOrder.RECEIVED);
-        order.setReceivedAt(LocalDateTime.now());
+        recomputeStatus(order);
         order = orderRepository.save(order);
         auditLogService.logCurrent("PURCHASE_ORDER_RECEIVE",
                 "Encomenda " + order.getOrderNumber() + " recebida (" + order.getLines().size() + " linhas)");
         return toDTO(order);
+    }
+
+    /** Recebe apenas as quantidades indicadas por linha; a encomenda fica PARTIALLY_RECEIVED ou RECEIVED. */
+    @Transactional
+    public PurchaseOrderDTO receivePartial(Long id, ReceivePurchaseOrderRequest request) {
+        PurchaseOrder order = loadForActiveCompany(id);
+        PermissionGuard.requireManagerOrAdmin("receber encomenda a fornecedor");
+        requireReceivable(order);
+
+        for (ReceivePurchaseOrderRequest.ReceiveLine item : request.lines()) {
+            PurchaseOrderLine line = order.getLines().stream()
+                    .filter(l -> l.getId() != null && l.getId().equals(item.lineId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "Linha não pertence a esta encomenda: " + item.lineId()));
+            BigDecimal qty = item.quantity();
+            if (qty == null || qty.signum() <= 0) {
+                throw new BusinessRuleException("Quantidade a receber tem de ser positiva.");
+            }
+            BigDecimal outstanding = outstanding(line);
+            if (qty.compareTo(outstanding) > 0) {
+                throw new BusinessRuleException(String.format(
+                        "Linha %s: não pode receber %s (em falta: %s).",
+                        line.getProduct().getName(), qty.toPlainString(), outstanding.toPlainString()));
+            }
+            receiveLine(order, line, qty);
+        }
+
+        recomputeStatus(order);
+        order = orderRepository.save(order);
+        auditLogService.logCurrent("PURCHASE_ORDER_RECEIVE_PARTIAL",
+                "Encomenda " + order.getOrderNumber() + " — recepção parcial (estado " + order.getStatus() + ")");
+        return toDTO(order);
+    }
+
+    private void requireReceivable(PurchaseOrder order) {
+        if (!PurchaseOrder.ORDERED.equals(order.getStatus())
+                && !PurchaseOrder.PARTIALLY_RECEIVED.equals(order.getStatus())) {
+            throw new BusinessRuleException(
+                    "Só encomendas por receber (ORDERED ou PARTIALLY_RECEIVED) podem ser recebidas.");
+        }
+    }
+
+    /** Regista a entrada de stock de {@code qty} numa linha e soma à quantidade recebida. */
+    private void receiveLine(PurchaseOrder order, PurchaseOrderLine line, BigDecimal qty) {
+        String desc = String.format("Recepção Encomenda %s - Fornecedor %s",
+                order.getOrderNumber(), order.getSupplier().getName());
+        inventoryService.registerMovement(
+                line.getProduct(),
+                order.getWarehouse(),
+                qty,
+                "PURCHASE",
+                line.getBatchNumber(),
+                line.getSerialNumber(),
+                desc,
+                line.getExpirationDate());
+        line.setReceivedQuantity(nz(line.getReceivedQuantity()).add(qty));
+    }
+
+    /** Deriva o estado da encomenda a partir do recebido de cada linha. */
+    private void recomputeStatus(PurchaseOrder order) {
+        boolean allComplete = order.getLines().stream().allMatch(l -> outstanding(l).signum() <= 0);
+        if (allComplete) {
+            order.setStatus(PurchaseOrder.RECEIVED);
+            order.setReceivedAt(LocalDateTime.now());
+        } else {
+            order.setStatus(PurchaseOrder.PARTIALLY_RECEIVED);
+        }
+    }
+
+    private BigDecimal outstanding(PurchaseOrderLine line) {
+        return nz(line.getQuantity()).subtract(nz(line.getReceivedQuantity()));
+    }
+
+    private BigDecimal nz(BigDecimal v) {
+        return v == null ? BigDecimal.ZERO : v;
     }
 
     @Transactional
@@ -173,8 +240,10 @@ public class PurchaseOrderService {
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("Indique o motivo do cancelamento.");
         }
-        if (!PurchaseOrder.ORDERED.equals(order.getStatus())) {
-            throw new BusinessRuleException("Só encomendas no estado ORDERED podem ser canceladas.");
+        if (!PurchaseOrder.ORDERED.equals(order.getStatus())
+                && !PurchaseOrder.PARTIALLY_RECEIVED.equals(order.getStatus())) {
+            throw new BusinessRuleException(
+                    "Só encomendas por receber (ORDERED ou PARTIALLY_RECEIVED) podem ser canceladas.");
         }
         order.setStatus(PurchaseOrder.CANCELLED);
         order.setCancellationReason(reason);
@@ -217,6 +286,7 @@ public class PurchaseOrderService {
                 l.getProduct().getName(),
                 l.getProduct().getSku(),
                 l.getQuantity(),
+                nz(l.getReceivedQuantity()),
                 l.getUnitPrice(),
                 l.getTaxRate(),
                 l.getLineTotal(),

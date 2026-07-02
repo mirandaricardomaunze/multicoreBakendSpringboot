@@ -109,6 +109,7 @@ public class MainFrame extends JFrame {
             AppUserService userService,
             AuditLogService auditLogService,
             BackupService backupService,
+            com.phcpro.modules.backup.service.DatabaseBackupService databaseBackupService,
             CompanyService companyService,
             com.phcpro.modules.promotions.service.PromotionService promotionService,
             com.phcpro.modules.movimentos.service.MovimentosService movimentosService,
@@ -127,6 +128,7 @@ public class MainFrame extends JFrame {
             TaxRateService taxRateService,
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
+            com.phcpro.modules.fiscal.service.FiscalSalesExportService fiscalSalesExportService,
             PayrollTaxService payrollTaxService,
             IvaDeclarationPrintService ivaDeclarationPrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService,
@@ -141,6 +143,7 @@ public class MainFrame extends JFrame {
         setSize(1280, 820);
         setMinimumSize(new Dimension(1024, 700));
         setLocationRelativeTo(null);
+        UIHelper.registerMainWindow(this); // contém modais dentro da janela principal (mesmo ao arrastar)
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         dashboardPanel  = new DashboardPanel(comercialService, financeService, approvalService, crmService, purchaseService, inventoryService);
@@ -149,12 +152,12 @@ public class MainFrame extends JFrame {
         hrPanel         = new HRPanel(hrService, payslipPrintService);
         crmPanel        = new CRMPanel(crmService);
         clientesPanel   = new ClientesPanel(comercialApiClient);
-        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
+        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
         approvalsPanel  = new ApprovalsPanel(approvalService);
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
         comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, inventoryService, comercialService, financeService);
-        configPanel     = new ConfigPanel(userService, auditLogService, backupService);
+        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService);
 
         contentPanel.add(dashboardPanel,  "dashboard");
         contentPanel.add(posPanel,        "pos");

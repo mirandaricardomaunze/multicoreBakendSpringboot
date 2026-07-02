@@ -229,6 +229,32 @@ class POSServiceTest {
         assertEquals(0, new BigDecimal("100.00").compareTo(entry.getChangeGiven()));
     }
 
+    @Test
+    void checkout_produtoIsento_naoAplicaIva() {
+        // IVA dinâmico: produto com taxa isenta (0%) → linha sem IVA, total = líquido.
+        product.setTaxRate(taxRate(new BigDecimal("0.00")));
+        stubHappyPath();
+
+        Invoice invoice = service.checkout(checkout(/*payments*/ null, ACCOUNT_ID));
+
+        var line = invoice.getLines().get(0);
+        assertEquals(0, new BigDecimal("0.00").compareTo(line.getTaxRate()));
+        assertEquals(0, new BigDecimal("100.00").compareTo(line.getLineTotal()));
+    }
+
+    @Test
+    void checkout_produtoComIva16_aplicaIvaDinamico() {
+        // IVA dinâmico: produto com taxa normal (16%) → IVA sobre o líquido (100 → 116).
+        product.setTaxRate(taxRate(new BigDecimal("0.16")));
+        stubHappyPath();
+
+        Invoice invoice = service.checkout(checkout(/*payments*/ null, ACCOUNT_ID));
+
+        var line = invoice.getLines().get(0);
+        assertEquals(0, new BigDecimal("0.16").compareTo(line.getTaxRate()));
+        assertEquals(0, new BigDecimal("116.00").compareTo(line.getLineTotal()));
+    }
+
     // ────────────────────────── closeSession ──────────────────────────
 
     @Test
@@ -327,6 +353,12 @@ class POSServiceTest {
         p.setName("Arroz 1kg");
         p.setUnitPrice(price);
         return p;
+    }
+
+    private static com.phcpro.modules.fiscal.model.TaxRate taxRate(BigDecimal rate) {
+        com.phcpro.modules.fiscal.model.TaxRate t = new com.phcpro.modules.fiscal.model.TaxRate();
+        t.setRate(rate);
+        return t;
     }
 
     private static Client client(long id, String name) {

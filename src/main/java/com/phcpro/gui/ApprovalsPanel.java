@@ -1,6 +1,7 @@
 package com.phcpro.gui;
 
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.approvals.dto.ApprovalRequestDTO;
@@ -26,22 +27,12 @@ public class ApprovalsPanel extends JPanel {
     private DefaultTableModel historyModel;
     private JTable historyTable;
 
-    // Detailed inspector labels
-    private JLabel docTypeVal;
-    private JLabel docIdVal;
-    private JLabel submitterVal;
-    private JLabel amountVal;
-    private JLabel requiredRoleVal;
-    private JTextArea descVal;
-
-    // Control buttons
-    private ModernButton approveBtn;
-    private ModernButton rejectBtn;
+    // Toolbar
+    private ModernButton openBtn;
 
     // Data lists
     private List<ApprovalRequestDTO> pendingList = new ArrayList<>();
     private List<ApprovalRequestDTO> historyList = new ArrayList<>();
-    private ApprovalRequestDTO selectedRequest = null;
 
     public ApprovalsPanel(ApprovalService approvalService) {
         this.approvalService = approvalService;
@@ -61,14 +52,22 @@ public class ApprovalsPanel extends JPanel {
         headerPanel.add(sub, BorderLayout.SOUTH);
         add(headerPanel, BorderLayout.NORTH);
 
-        // CENTER: PENDING (LEFT) & DETAIL INSPECTOR (RIGHT)
-        JPanel centerSplit = new JPanel(new GridLayout(1, 2, 20, 0));
-        centerSplit.setOpaque(false);
-
-        // Left Card: Pending Table
+        // CENTER: tabela de pendentes a largura total + barra de acções (o detalhe vive num modal).
         JPanel pendingPanel = new JPanel(new BorderLayout(0, 10));
         pendingPanel.setOpaque(false);
-        pendingPanel.add(UIHelper.createSubheading("Pedidos a Aguardar Decisão"), BorderLayout.NORTH);
+
+        JPanel pendHeader = new JPanel(new BorderLayout());
+        pendHeader.setOpaque(false);
+        pendHeader.add(UIHelper.createSubheading("Pedidos a Aguardar Decisão"), BorderLayout.WEST);
+        openBtn = UIHelper.createPrimaryButton("Abrir / Decidir");
+        openBtn.setIcon(UIHelper.icon("fas-gavel", 14));
+        openBtn.setEnabled(false);
+        openBtn.addActionListener(e -> openDecisionForSelected());
+        JPanel pendActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        pendActions.setOpaque(false);
+        pendActions.add(openBtn);
+        pendHeader.add(pendActions, BorderLayout.EAST);
+        pendingPanel.add(pendHeader, BorderLayout.NORTH);
 
         ModernPanel pendingCard = new ModernPanel(16);
         pendingCard.setLayout(new BorderLayout());
@@ -81,123 +80,13 @@ public class ApprovalsPanel extends JPanel {
         };
         pendingTable = new JTable(pendingModel);
         UIHelper.styleTable(pendingTable);
+        // Duplo-clique abre o modal de decisão (não o inspector genérico do styleTable).
+        pendingTable.putClientProperty("noRowInspector", Boolean.TRUE);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
         UIHelper.styleScrollPane(pendingScroll);
         pendingCard.add(pendingScroll, BorderLayout.CENTER);
         pendingPanel.add(pendingCard, BorderLayout.CENTER);
-        centerSplit.add(pendingPanel);
-
-        // Right Card: Detail View & Actions
-        JPanel inspectorPanel = new JPanel(new BorderLayout(0, 10));
-        inspectorPanel.setOpaque(false);
-        inspectorPanel.add(UIHelper.createSubheading("Inspetor de Detalhes"), BorderLayout.NORTH);
-
-        ModernPanel detailCard = new ModernPanel(16);
-        detailCard.setLayout(new GridBagLayout());
-        detailCard.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(6, 6, 6, 6);
-        gbc.weightx = 1.0;
-
-        // Rows config
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1;
-        JLabel lblType = new JLabel("Tipo Documento:");
-        lblType.setForeground(UIHelper.TEXT_MUTED);
-        detailCard.add(lblType, gbc);
-
-        gbc.gridx = 1;
-        docTypeVal = new JLabel("Nenhum selecionado");
-        docTypeVal.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        docTypeVal.setForeground(UIHelper.TEXT_LIGHT);
-        detailCard.add(docTypeVal, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 1;
-        JLabel lblId = new JLabel("ID Documento:");
-        lblId.setForeground(UIHelper.TEXT_MUTED);
-        detailCard.add(lblId, gbc);
-
-        gbc.gridx = 1;
-        docIdVal = new JLabel("-");
-        docIdVal.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        docIdVal.setForeground(UIHelper.TEXT_LIGHT);
-        detailCard.add(docIdVal, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 2;
-        JLabel lblSub = new JLabel("Solicitante:");
-        lblSub.setForeground(UIHelper.TEXT_MUTED);
-        detailCard.add(lblSub, gbc);
-
-        gbc.gridx = 1;
-        submitterVal = new JLabel("-");
-        submitterVal.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        submitterVal.setForeground(UIHelper.TEXT_LIGHT);
-        detailCard.add(submitterVal, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 3;
-        JLabel lblAmt = new JLabel("Valor do Documento:");
-        lblAmt.setForeground(UIHelper.TEXT_MUTED);
-        detailCard.add(lblAmt, gbc);
-
-        gbc.gridx = 1;
-        amountVal = new JLabel("-");
-        amountVal.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        amountVal.setForeground(UIHelper.ACCENT_BLUE);
-        detailCard.add(amountVal, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 4;
-        JLabel lblRole = new JLabel("Perfil Requerido:");
-        lblRole.setForeground(UIHelper.TEXT_MUTED);
-        detailCard.add(lblRole, gbc);
-
-        gbc.gridx = 1;
-        requiredRoleVal = new JLabel("-");
-        requiredRoleVal.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        requiredRoleVal.setForeground(UIHelper.PENDING_YELLOW);
-        detailCard.add(requiredRoleVal, gbc);
-
-        // Description text area (scrollable)
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
-        JLabel lblDesc = new JLabel("Descrição / Justificação:");
-        lblDesc.setForeground(UIHelper.TEXT_MUTED);
-        detailCard.add(lblDesc, gbc);
-
-        gbc.gridy = 6; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
-        descVal = new JTextArea();
-        descVal.setEditable(false);
-        descVal.setLineWrap(true);
-        descVal.setWrapStyleWord(true);
-        descVal.setBackground(UIHelper.BG_DARK);
-        descVal.setForeground(UIHelper.TEXT_LIGHT);
-        descVal.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        descVal.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(55, 65, 81), 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
-        JScrollPane descScroll = new JScrollPane(descVal);
-        detailCard.add(descScroll, gbc);
-
-        // Buttons
-        gbc.gridy = 7; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel btnPanel = new JPanel(new GridLayout(1, 2, 10, 0));
-        btnPanel.setOpaque(false);
-
-        approveBtn = UIHelper.createSuccessButton("Aprovar");
-        approveBtn.setIcon(UIHelper.icon("fas-check", 14));
-        approveBtn.setEnabled(false);
-
-        rejectBtn = UIHelper.createDangerButton("Rejeitar");
-        rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
-        rejectBtn.setEnabled(false);
-
-        btnPanel.add(approveBtn);
-        btnPanel.add(rejectBtn);
-        detailCard.add(btnPanel, gbc);
-
-        inspectorPanel.add(detailCard, BorderLayout.CENTER);
-        centerSplit.add(inspectorPanel);
-        add(centerSplit, BorderLayout.CENTER);
+        add(pendingPanel, BorderLayout.CENTER);
 
         // BOTTOM: HISTORY LOG
         JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
@@ -225,51 +114,25 @@ public class ApprovalsPanel extends JPanel {
         // LISTENERS
         pendingTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                int row = pendingTable.getSelectedRow();
-                if (row >= 0 && row < pendingList.size()) {
-                    selectRequest(pendingList.get(row));
-                } else {
-                    clearSelection();
-                }
+                openBtn.setEnabled(pendingTable.getSelectedRow() >= 0);
+            }
+        });
+        pendingTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent ev) {
+                if (ev.getClickCount() == 2) openDecisionForSelected();
             }
         });
 
-        approveBtn.addActionListener(e -> performApproval());
-        rejectBtn.addActionListener(e -> performRejection());
-
         refreshData();
-    }
-
-    private void selectRequest(ApprovalRequestDTO req) {
-        this.selectedRequest = req;
-        docTypeVal.setText(humanType(req.documentType()));
-        docIdVal.setText("#" + req.documentId());
-        submitterVal.setText(req.submitter());
-        amountVal.setText(String.format("%,.2f MT", req.amount()));
-        requiredRoleVal.setText(req.requiredRole());
-        descVal.setText(req.description());
-
-        approveBtn.setEnabled(true);
-        rejectBtn.setEnabled(true);
-    }
-
-    private void clearSelection() {
-        this.selectedRequest = null;
-        docTypeVal.setText("Nenhum selecionado");
-        docIdVal.setText("-");
-        submitterVal.setText("-");
-        amountVal.setText("-");
-        requiredRoleVal.setText("-");
-        descVal.setText("");
-
-        approveBtn.setEnabled(false);
-        rejectBtn.setEnabled(false);
     }
 
     public void refreshData() {
         loadPendingTable();
         loadHistoryTable();
-        clearSelection();
+        if (openBtn != null) {
+            openBtn.setEnabled(false);
+            pendingTable.clearSelection();
+        }
     }
 
     /** Tipo de documento em PT para a área de aprovação. Desconhecidos ficam como estão. */
@@ -315,55 +178,95 @@ public class ApprovalsPanel extends JPanel {
         }
     }
 
-    private void performApproval() {
-        if (selectedRequest == null) return;
-
-        int response = JOptionPane.showConfirmDialog(
-                this, 
-                "Tem certeza que deseja aprovar este documento?", 
-                "Confirmar Aprovação", 
-                JOptionPane.YES_NO_OPTION, 
-                JOptionPane.QUESTION_MESSAGE
-        );
-
-        if (response == JOptionPane.YES_OPTION) {
-            try {
-                approvalService.approveRequest(selectedRequest.id(), "Aprovado via interface Swing.");
-                JOptionPane.showMessageDialog(this, "Documento aprovado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-                refreshData();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro de validação: " + ex.getMessage(), "Erro de Autorização", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+    private void openDecisionForSelected() {
+        int row = pendingTable.getSelectedRow();
+        if (row < 0 || row >= pendingList.size()) return;
+        openDecisionDialog(pendingList.get(row));
     }
 
-    private void performRejection() {
-        if (selectedRequest == null) return;
+    /**
+     * Modal de decisão profissional ({@link ModernFormDialog}): mostra os detalhes do pedido
+     * (só-leitura) e oferece Aprovar / Rejeitar / Fechar no rodapé. Substitui o inspector inline.
+     */
+    private void openDecisionDialog(ApprovalRequestDTO req) {
+        JTextArea descA = new JTextArea(req.description() == null ? "" : req.description());
+        descA.setEditable(false);
+        descA.setLineWrap(true);
+        descA.setWrapStyleWord(true);
+        UIHelper.styleTextArea(descA);
+        JScrollPane descScroll = new JScrollPane(descA);
+        descScroll.setPreferredSize(new Dimension(380, 96));
+        descScroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
 
-        String reason = JOptionPane.showInputDialog(
-                this, 
-                "Introduza o motivo de rejeição para este documento (obrigatório):", 
-                "Rejeitar Documento", 
-                JOptionPane.WARNING_MESSAGE
-        );
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.weightx = 1.0;
+        g.gridx = 0;
+        g.insets = new Insets(5, 8, 5, 8);
+        int y = 0;
+        y = addFormRow(form, g, y, "Tipo de Documento:", readOnly(humanType(req.documentType())));
+        y = addFormRow(form, g, y, "ID Documento:", readOnly("#" + req.documentId()));
+        y = addFormRow(form, g, y, "Solicitante:", readOnly(req.submitter()));
+        y = addFormRow(form, g, y, "Valor do Documento:", readOnly(String.format("%,.2f MT", req.amount())));
+        y = addFormRow(form, g, y, "Perfil Requerido:", readOnly(req.requiredRole()));
+        addFormRow(form, g, y, "Descrição / Justificação:", descScroll);
 
-        if (reason == null) {
-            // User cancelled
-            return;
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Decisão de Aprovação",
+                "fas-clipboard-check", humanType(req.documentType()) + " #" + req.documentId(), form);
+
+        ModernButton rejectBtn = UIHelper.createDangerButton("Rejeitar");
+        rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
+        rejectBtn.addActionListener(e -> {
+            String reason = JOptionPane.showInputDialog(this,
+                    "Introduza o motivo de rejeição (obrigatório):", "Rejeitar Documento",
+                    JOptionPane.WARNING_MESSAGE);
+            if (reason == null) return;
+            if (reason.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "É obrigatório indicar um motivo para a rejeição.",
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            try {
+                approvalService.rejectRequest(req.id(), reason.trim());
+                dlg.close();
+                JOptionPane.showMessageDialog(this, "Documento rejeitado com sucesso.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                refreshData();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage(), "Erro de Autorização", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        dlg.addActionButton(rejectBtn);
+        dlg.setConfirmButton("Aprovar", "fas-check");
+        dlg.setOnSave(() -> approvalService.approveRequest(req.id(), "Aprovado via interface Swing."));
+
+        boolean approved = dlg.showDialog();
+        if (approved) {
+            JOptionPane.showMessageDialog(this, "Documento aprovado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
         }
+        refreshData();
+    }
 
-        if (reason.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "É obrigatório indicar um motivo para a rejeição.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    private static JTextField readOnly(String value) {
+        JTextField f = new JTextField(value == null ? "" : value);
+        f.setEditable(false);
+        UIHelper.styleTextField(f);
+        return f;
+    }
 
-        try {
-            approvalService.rejectRequest(selectedRequest.id(), reason.trim());
-            JOptionPane.showMessageDialog(this, "Documento rejeitado com sucesso.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            refreshData();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage(), "Erro de Autorização", JOptionPane.ERROR_MESSAGE);
-        }
+    /** Adiciona um par etiqueta (acento) → componente, empilhados, e devolve o próximo {@code gridy}. */
+    private static int addFormRow(JPanel form, GridBagConstraints g, int y, String label, JComponent comp) {
+        JLabel l = new JLabel(label);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setForeground(UIHelper.ACCENT);
+        g.gridy = y;
+        g.insets = new Insets(8, 8, 2, 8);
+        form.add(l, g);
+        g.gridy = y + 1;
+        g.insets = new Insets(0, 8, 6, 8);
+        form.add(comp, g);
+        return y + 2;
     }
 
     public void onPanelSelected() {

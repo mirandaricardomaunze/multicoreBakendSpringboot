@@ -2,6 +2,7 @@ package com.phcpro.modules.comercial.model;
 
 import com.phcpro.architecture.BaseEntity;
 import com.phcpro.modules.company.model.Company;
+import com.phcpro.modules.fiscal.model.TaxRate;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -56,8 +57,20 @@ public class Product extends BaseEntity {
     @JoinColumn(name = "category_id")
     private ProductCategory category;
 
+    /**
+     * Taxa de IVA do produto (IVA dinâmico). Aponta para uma {@link TaxRate} configurável
+     * (normal 16%, reduzida, isento). Quando nula, aplica-se a taxa-padrão do sistema.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tax_rate_id")
+    private TaxRate taxRate;
+
     @Column(name = "description", length = 500)
     private String description;
+
+    /** Imagem do produto (thumbnail ~320px) para o catálogo POS em cards. */
+    @Column(name = "image_data")
+    private byte[] imageData;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -118,65 +118,47 @@ public class InventoryReportPrintService {
     }
 
     private PdfPTable buildStockTable(List<Stock> stocks) {
-        // SKU | Nome | Armazém | Stock Mínimo | Qtd | Preço Compra | Valor | Estado
-        PdfPTable table = new PdfPTable(new float[]{9f, 10f, 12f, 24f, 14f, 7f, 9f, 10f, 10f, 10f});
+        // Referência | Cód. Barras | Nome | Quantidade | Caixas | Valor
+        PdfPTable table = new PdfPTable(new float[]{14f, 16f, 34f, 12f, 10f, 14f});
         table.setWidthPercentage(100);
         table.setSpacingBefore(6f);
         table.setSpacingAfter(6f);
 
-        header(table, "SKU", Element.ALIGN_LEFT);
-        header(table, "Ref.", Element.ALIGN_LEFT);
-        header(table, "Cod. Barras", Element.ALIGN_LEFT);
+        header(table, "Referência", Element.ALIGN_LEFT);
+        header(table, "Cód. Barras", Element.ALIGN_LEFT);
         header(table, "Nome do Artigo", Element.ALIGN_LEFT);
-        header(table, "Armazém", Element.ALIGN_LEFT);
-        header(table, "Min.", Element.ALIGN_RIGHT);
-        header(table, "Qtd.", Element.ALIGN_RIGHT);
-        header(table, "P. Compra", Element.ALIGN_RIGHT);
+        header(table, "Quantidade", Element.ALIGN_RIGHT);
+        header(table, "Caixas", Element.ALIGN_RIGHT);
         header(table, "Valor", Element.ALIGN_RIGHT);
-        header(table, "Estado", Element.ALIGN_CENTER);
 
         for (Stock s : stocks) {
             BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-            BigDecimal min = s.getProduct().getMinStock() == null ? BigDecimal.ZERO : s.getProduct().getMinStock();
-            BigDecimal price = s.getProduct().getPurchasePrice() == null ? BigDecimal.ZERO : s.getProduct().getPurchasePrice();
+            // Valor a preço de VENDA (unitPrice).
+            BigDecimal price = s.getProduct().getUnitPrice() == null ? BigDecimal.ZERO : s.getProduct().getUnitPrice();
             BigDecimal value = qty.multiply(price);
+            int unitsPerBox = s.getProduct().getUnitsPerBox() <= 0 ? 1 : s.getProduct().getUnitsPerBox();
+            BigDecimal boxes = qty.divide(BigDecimal.valueOf(unitsPerBox), 2, java.math.RoundingMode.HALF_UP);
 
-            String status;
-            if (qty.compareTo(BigDecimal.ZERO) <= 0) status = "ESGOTADO";
-            else if (min.compareTo(BigDecimal.ZERO) > 0 && qty.compareTo(min) < 0) status = "BAIXO";
-            else status = "OK";
+            // Referência com recurso ao SKU quando não há referência (evita coluna vazia).
+            String reference = s.getProduct().getReference();
+            if (reference == null || reference.isBlank()) reference = s.getProduct().getSku();
 
-            body(table, s.getProduct().getSku(), Element.ALIGN_LEFT);
-            body(table, s.getProduct().getReference(), Element.ALIGN_LEFT);
+            body(table, reference, Element.ALIGN_LEFT);
             body(table, s.getProduct().getBarcode(), Element.ALIGN_LEFT);
             body(table, s.getProduct().getName(), Element.ALIGN_LEFT);
-            body(table, s.getWarehouse().getName(), Element.ALIGN_LEFT);
-            body(table, String.format("%,.0f", min), Element.ALIGN_RIGHT);
             body(table, String.format("%,.3f", qty), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(price), Element.ALIGN_RIGHT);
+            body(table, String.format("%,.2f", boxes), Element.ALIGN_RIGHT);
             body(table, MoneyFormat.formatPlain(value), Element.ALIGN_RIGHT);
-            body(table, status, Element.ALIGN_CENTER);
         }
         return table;
     }
 
     private PdfPTable buildSummary(List<Stock> stocks) {
         long total = stocks.size();
-        long lowStock = stocks.stream().filter(s -> {
-            BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-            BigDecimal min = s.getProduct().getMinStock() == null ? BigDecimal.ZERO : s.getProduct().getMinStock();
-            return qty.compareTo(BigDecimal.ZERO) > 0
-                    && min.compareTo(BigDecimal.ZERO) > 0
-                    && qty.compareTo(min) < 0;
-        }).count();
-        long outOfStock = stocks.stream().filter(s -> {
-            BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-            return qty.compareTo(BigDecimal.ZERO) <= 0;
-        }).count();
         BigDecimal totalValue = stocks.stream()
                 .map(s -> {
                     BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-                    BigDecimal price = s.getProduct().getPurchasePrice() == null ? BigDecimal.ZERO : s.getProduct().getPurchasePrice();
+                    BigDecimal price = s.getProduct().getUnitPrice() == null ? BigDecimal.ZERO : s.getProduct().getUnitPrice();
                     return qty.multiply(price);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -190,8 +172,6 @@ public class InventoryReportPrintService {
 
         PdfPTable inner = new PdfPTable(new float[]{60f, 40f});
         addSummaryLine(inner, "Artigos no inventário", String.valueOf(total), false);
-        addSummaryLine(inner, "Artigos com stock baixo", String.valueOf(lowStock), false);
-        addSummaryLine(inner, "Artigos esgotados", String.valueOf(outOfStock), false);
         addSummaryLine(inner, "VALOR TOTAL DO STOCK", MoneyFormat.format(totalValue), true);
 
         PdfPCell innerWrap = new PdfPCell(inner);

@@ -79,6 +79,16 @@ $cp = "target/classes;" + (Get-Content target/cp.txt -Raw)
 java -cp $cp com.phcpro.desktop.DesktopApplication
 ```
 
+> 🗄️ **Base de dados:** o perfil `desktop` usa **PostgreSQL local** (`jdbc:postgresql://localhost:5432/multicore`),
+> não H2 — os dados persistem. Requer um servidor PostgreSQL a correr, a BD `multicore` + role `multicore`,
+> e a variável de ambiente **`DB_PASSWORD`** com a password da role. Flyway é dono do schema (`V1..V17`),
+> Hibernate apenas valida. Detalhes em [docs/BD_POSTGRES_DESKTOP_SPEC.md](docs/BD_POSTGRES_DESKTOP_SPEC.md).
+> Para criar a BD/role de raiz:
+> ```sql
+> CREATE ROLE multicore LOGIN PASSWORD 'a_tua_password';
+> CREATE DATABASE multicore OWNER multicore;
+> ```
+
 O login e a seleção de empresa do desktop comunicam com a API HTTP. Por defeito,
 o modo desktop usa o backend local em `http://localhost:8080`. Para apontar para
 um backend remoto:

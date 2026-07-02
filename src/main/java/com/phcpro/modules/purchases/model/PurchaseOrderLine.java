@@ -33,6 +33,10 @@ public class PurchaseOrderLine {
     @Column(name = "quantity", nullable = false)
     private BigDecimal quantity;
 
+    /** Quantidade já recebida em stock (recepção parcial). Em falta = quantity − receivedQuantity. */
+    @Column(name = "received_quantity", nullable = false)
+    private BigDecimal receivedQuantity = BigDecimal.ZERO;
+
     @Column(name = "unit_price", nullable = false)
     private BigDecimal unitPrice;
 

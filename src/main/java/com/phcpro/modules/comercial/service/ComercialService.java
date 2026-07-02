@@ -50,6 +50,7 @@ public class ComercialService {
     private final WalkInClientProvider walkInClientProvider;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -67,7 +68,8 @@ public class ComercialService {
             OrderLineRepository orderLineRepository,
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository
     ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -85,6 +87,7 @@ public class ComercialService {
         this.walkInClientProvider = walkInClientProvider;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.taxRateRepository = taxRateRepository;
     }
 
 
@@ -488,6 +491,15 @@ public class ComercialService {
                                      BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
                                      int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
                                      String description) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, saleType, stockTracked, null, description);
+    }
+
+    @Transactional
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description) {
         String cleanReference = normalizeOptional(reference);
         String cleanBarcode = normalizeOptional(barcode);
         ProductSaleType parsedSaleType = parseSaleType(saleType);
@@ -522,9 +534,68 @@ public class ComercialService {
             product.setCategory(productCategoryRepository.findByIdAndCompaniesId(categoryId, companyId)
                     .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
         }
+        if (taxRateId != null) {
+            product.setTaxRate(taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
+        }
         product.setCreatedBy("SYSTEM");
         product.getCompanies().add(companyRepository.getReferenceById(companyId));
         product = productRepository.save(product);
+        return toDTO(product);
+    }
+
+    /**
+     * Actualiza os dados de um produto da empresa activa. O SKU é imutável (identidade do artigo);
+     * referência e código de barras revalidam unicidade excluindo o próprio. Não toca no stock — só
+     * no cadastro. `unitsPerBox` afecta apenas a conversão para caixas no inventário (o stock
+     * continua em unidades).
+     */
+    @Transactional
+    public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Product product = productRepository.findByIdAndCompaniesId(id, companyId)
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        String cleanReference = normalizeOptional(reference);
+        String cleanBarcode = normalizeOptional(barcode);
+        if (cleanReference != null) {
+            productRepository.findByReferenceAndCompaniesId(cleanReference, companyId)
+                    .filter(p -> !p.getId().equals(id))
+                    .ifPresent(p -> { throw new BusinessRuleException("Ja existe outro produto com a referencia indicada."); });
+        }
+        if (cleanBarcode != null) {
+            productRepository.findByBarcodeAndCompaniesId(cleanBarcode, companyId)
+                    .filter(p -> !p.getId().equals(id))
+                    .ifPresent(p -> { throw new BusinessRuleException("Ja existe outro produto com o codigo de barras indicado."); });
+        }
+        ProductSaleType parsedSaleType = parseSaleType(saleType);
+        product.setReference(cleanReference);
+        product.setBarcode(cleanBarcode);
+        product.setName(name);
+        product.setUnitPrice(unitPrice);
+        product.setPurchasePrice(purchasePrice);
+        product.setMinStock(minStock);
+        product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        product.setSaleType(parsedSaleType);
+        product.setStockTracked(parsedSaleType != ProductSaleType.SERVICE && stockTracked);
+        product.setDescription(normalizeOptional(description));
+        if (categoryId != null) {
+            product.setCategory(productCategoryRepository.findByIdAndCompaniesId(categoryId, companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
+        } else {
+            product.setCategory(null);
+        }
+        if (taxRateId != null) {
+            product.setTaxRate(taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
+        } else {
+            product.setTaxRate(null);
+        }
+        product = productRepository.save(product);
+        auditLogService.logCurrent("PRODUCT_UPDATE",
+                "Produto " + product.getSku() + " (" + product.getName() + ") actualizado.");
         return toDTO(product);
     }
 
@@ -553,7 +624,25 @@ public class ComercialService {
                 .toList();
     }
 
+    /** Taxas de IVA activas da empresa (apenas tipos IVA_*), para escolha no cadastro de produto. */
+    @Transactional(readOnly = true)
+    public List<com.phcpro.modules.fiscal.dto.TaxRateDTO> getActiveVatRates() {
+        return taxRateRepository.findDistinctByCompaniesIdAndActiveTrueOrderByTypeAscRateDesc(
+                        CurrentUserContext.getCurrentCompanyId()).stream()
+                .filter(t -> t.getType() != null && t.getType().name().startsWith("IVA"))
+                .map(t -> new com.phcpro.modules.fiscal.dto.TaxRateDTO(
+                        t.getId(), t.getCode(), t.getName(), t.getType().name(),
+                        t.getRate(), t.getLegalBasis(), t.isActive()))
+                .toList();
+    }
+
     public ProductDTO toDTO(Product p) {
+        // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a padrão.
+        boolean hasRate = p.getTaxRate() != null;
+        BigDecimal effectiveRate = hasRate ? p.getTaxRate().getRate()
+                : com.phcpro.architecture.pricing.TaxRates.STANDARD_VAT;
+        Long taxRateId = hasRate ? p.getTaxRate().getId() : null;
+        String taxRateLabel = hasRate ? p.getTaxRate().getName() : "IVA Normal (16%)";
         return new ProductDTO(
                 p.getId(),
                 p.getSku(),
@@ -568,8 +657,23 @@ public class ComercialService {
                 p.isStockTracked(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
-                p.getDescription()
+                taxRateId,
+                effectiveRate,
+                taxRateLabel,
+                p.getDescription(),
+                p.getImageData()
         );
+    }
+
+    /** Guarda/actualiza a imagem (thumbnail) de um produto da empresa actual. */
+    @Transactional
+    public void updateProductImage(Long productId, byte[] imageData) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Product product = productRepository.findById(productId)
+                .filter(p -> p.belongsToCompany(companyId))
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        product.setImageData(imageData);
+        productRepository.save(product);
     }
 
     private String normalizeOptional(String value) {

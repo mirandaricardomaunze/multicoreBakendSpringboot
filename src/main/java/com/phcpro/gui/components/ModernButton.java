@@ -62,6 +62,16 @@ public class ModernButton extends JButton {
         setBackground(normalColor);
     }
 
+    /** Redefine as cores do botão em runtime (ex.: alternar estado activo/inactivo num segmented control). */
+    public void setColors(Color base, Color hover) {
+        this.normalColor = base;
+        this.hoverColor = hover;
+        this.clickColor = base.darker();
+        this.isGradient = false;
+        setBackground(base);
+        repaint();
+    }
+
     public void setGradient(Color start, Color end) {
         this.isGradient = true;
         this.gradientStart = start;
@@ -72,6 +82,21 @@ public class ModernButton extends JButton {
     public void setCornerRadius(int radius) {
         this.cornerRadius = radius;
         repaint();
+    }
+
+    /**
+     * Garante que os botões têm pelo menos a altura dos campos de formulário
+     * ({@link UIHelper#FORM_CONTROL_HEIGHT}), para botões e inputs alinharem na mesma linha.
+     * A largura mantém-se natural (inclui o ícone); tamanhos definidos via {@code setPreferredSize}
+     * são respeitados tal como estão.
+     */
+    @Override
+    public Dimension getPreferredSize() {
+        Dimension d = super.getPreferredSize();
+        if (isPreferredSizeSet() || d == null) {
+            return d;
+        }
+        return new Dimension(d.width, Math.max(d.height, UIHelper.FORM_CONTROL_HEIGHT));
     }
 
     @Override

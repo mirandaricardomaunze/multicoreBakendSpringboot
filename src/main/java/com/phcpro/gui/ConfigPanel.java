@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.UIHelper;
@@ -10,7 +11,9 @@ import com.phcpro.modules.users.service.AppUserService;
 import com.phcpro.modules.audit.model.AuditLog;
 import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.backup.dto.BackupVerificationDTO;
+import com.phcpro.modules.backup.dto.PhysicalBackupResultDTO;
 import com.phcpro.modules.backup.service.BackupService;
+import com.phcpro.modules.backup.service.DatabaseBackupService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -25,6 +28,7 @@ public class ConfigPanel extends JPanel {
     private final AppUserService userService;
     private final AuditLogService auditLogService;
     private final BackupService backupService;
+    private final DatabaseBackupService databaseBackupService;
 
     // TAB 1: AUDIT LOGS
     private DefaultTableModel auditTableModel;
@@ -36,17 +40,16 @@ public class ConfigPanel extends JPanel {
     private JTable backupFilesTable;
 
     // TAB 3: USERS
-    private JTextField usernameField;
-    private JTextField fullNameField;
-    private JPasswordField passwordField;
-    private JComboBox<String> roleCombo;
+    private static final String[] USER_ROLES = {"EMPLOYEE", "MANAGER", "ADMIN"};
     private DefaultTableModel usersTableModel;
     private JTable usersTable;
 
-    public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService) {
+    public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
+                       DatabaseBackupService databaseBackupService) {
         this.userService = userService;
         this.auditLogService = auditLogService;
         this.backupService = backupService;
+        this.databaseBackupService = databaseBackupService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -149,7 +152,7 @@ public class ConfigPanel extends JPanel {
         consoleCard.setLayout(new BorderLayout(0, 15));
         consoleCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel desc = new JLabel("<html><body>O sistema ERP grava dados em base de dados em memória. Para evitar perdas de informação, gere backups de segurança regulares em ficheiros de formato JSON. Os backups automáticos ocorrem a cada faturação.</body></html>");
+        JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação de desastres use o <b>backup físico (BD)</b>, restaurável com fidelidade total via pg_dump/pg_restore. Os backups lógicos automáticos ocorrem a cada faturação.</body></html>");
         desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         desc.setForeground(UIHelper.TEXT_MUTED);
         consoleCard.add(desc, BorderLayout.NORTH);
@@ -164,9 +167,15 @@ public class ConfigPanel extends JPanel {
         UIHelper.styleScrollPane(scrollConsole);
         consoleCard.add(scrollConsole, BorderLayout.CENTER);
 
-        ModernButton runBackupBtn = UIHelper.createSuccessButton("Executar Backup Manual Agora");
-        runBackupBtn.setIcon(UIHelper.icon("fas-database", 14));
-        consoleCard.add(runBackupBtn, BorderLayout.SOUTH);
+        ModernButton runBackupBtn = UIHelper.createSuccessButton("Backup Lógico (.json)");
+        runBackupBtn.setIcon(UIHelper.icon("fas-file-code", 14));
+        ModernButton runPhysicalBtn = UIHelper.createPrimaryButton("Backup Físico (BD)");
+        runPhysicalBtn.setIcon(UIHelper.icon("fas-database", 14));
+        JPanel backupActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        backupActions.setOpaque(false);
+        backupActions.add(runBackupBtn);
+        backupActions.add(runPhysicalBtn);
+        consoleCard.add(backupActions, BorderLayout.SOUTH);
 
         leftPanel.add(consoleCard, BorderLayout.CENTER);
         panel.add(leftPanel);
@@ -206,6 +215,7 @@ public class ConfigPanel extends JPanel {
 
         // LISTENERS
         runBackupBtn.addActionListener(e -> runManualBackup());
+        runPhysicalBtn.addActionListener(e -> runPhysicalBackup());
         verifyBackupBtn.addActionListener(e -> verifySelectedBackup());
         refreshArchiveBtn.addActionListener(e -> loadBackupFilesList());
 
@@ -213,96 +223,30 @@ public class ConfigPanel extends JPanel {
     }
 
     private JPanel createUsersTab() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 20, 0));
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // LEFT: NEW USER FORM
-        JPanel leftPanel = new JPanel(new GridBagLayout());
-        leftPanel.setOpaque(false);
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createHeading("Utilizadores do Sistema"), BorderLayout.WEST);
 
-        ModernPanel formCard = new ModernPanel(16);
-        formCard.setPreferredSize(new Dimension(420, 460));
-        formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(25, 25, 25, 25));
-
-        GridBagConstraints cardGbc = new GridBagConstraints();
-        cardGbc.fill = GridBagConstraints.HORIZONTAL;
-        cardGbc.weightx = 1.0;
-
-        cardGbc.gridx = 0; cardGbc.gridy = 0; cardGbc.gridwidth = 2;
-        cardGbc.insets = new Insets(0, 8, 12, 8);
-        JLabel formTitle = UIHelper.createSubheading("Criar Novo Utilizador");
-        formTitle.setHorizontalAlignment(SwingConstants.CENTER);
-        formCard.add(formTitle, cardGbc);
-
-        // Username & Função (Side by Side)
-        cardGbc.gridx = 0; cardGbc.gridy = 1; cardGbc.gridwidth = 1; cardGbc.weightx = 0.5;
-        cardGbc.insets = new Insets(8, 8, 2, 8);
-        JLabel userLbl = new JLabel("Username:");
-        userLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(userLbl, cardGbc);
-
-        cardGbc.gridx = 1;
-        JLabel roleLbl = new JLabel("Função / Cargo:");
-        roleLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(roleLbl, cardGbc);
-
-        cardGbc.gridx = 0; cardGbc.gridy = 2;
-        cardGbc.insets = new Insets(2, 8, 12, 8);
-        usernameField = new JTextField();
-        UIHelper.styleTextField(usernameField);
-        formCard.add(usernameField, cardGbc);
-
-        cardGbc.gridx = 1;
-        String[] roles = {"EMPLOYEE", "MANAGER", "ADMIN"};
-        roleCombo = new JComboBox<>(roles);
-        UIHelper.styleComboBox(roleCombo);
-        formCard.add(roleCombo, cardGbc);
-
-        // Full Name (Full Width)
-        cardGbc.gridx = 0; cardGbc.gridy = 3; cardGbc.gridwidth = 2; cardGbc.weightx = 1.0;
-        cardGbc.insets = new Insets(8, 8, 2, 8);
-        JLabel nameLbl = new JLabel("Nome Completo:");
-        nameLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(nameLbl, cardGbc);
-
-        cardGbc.gridy = 4;
-        cardGbc.insets = new Insets(2, 8, 12, 8);
-        fullNameField = new JTextField();
-        UIHelper.styleTextField(fullNameField);
-        formCard.add(fullNameField, cardGbc);
-
-        // Password (Full Width)
-        cardGbc.gridy = 5;
-        cardGbc.insets = new Insets(8, 8, 2, 8);
-        JLabel passLbl = new JLabel("Palavra-Passe:");
-        passLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(passLbl, cardGbc);
-
-        cardGbc.gridy = 6;
-        cardGbc.insets = new Insets(2, 8, 12, 8);
-        passwordField = new JPasswordField();
-        UIHelper.stylePasswordField(passwordField);
-        formCard.add(passwordField, cardGbc);
-
-        // Register Button (Full Width)
-        cardGbc.gridy = 7;
-        cardGbc.insets = new Insets(20, 8, 8, 8);
-        ModernButton saveUserBtn = UIHelper.createSuccessButton("Registar Utilizador");
-        saveUserBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
-        formCard.add(saveUserBtn, cardGbc);
-
-        leftPanel.add(formCard);
-        panel.add(leftPanel);
-
-        // RIGHT: SYSTEM USERS LIST
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
-        rightPanel.setOpaque(false);
-        rightPanel.add(UIHelper.createHeading("Utilizadores do Sistema"), BorderLayout.NORTH);
+        ModernButton newUserBtn = UIHelper.createSuccessButton("Novo Utilizador");
+        newUserBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
+        ModernButton updateRoleBtn = UIHelper.createPrimaryButton("Alterar Perfil");
+        updateRoleBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
+        ModernButton refreshUsersBtn = UIHelper.createSecondaryButton("Atualizar Lista");
+        refreshUsersBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshUsersBtn);
+        actions.add(updateRoleBtn);
+        actions.add(newUserBtn);
+        header.add(actions, BorderLayout.EAST);
+        panel.add(header, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
-        listCard.setLayout(new BorderLayout(0, 10));
+        listCard.setLayout(new BorderLayout());
         listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         String[] userCols = {"Username", "Nome Completo", "Role", "Estado"};
@@ -315,22 +259,10 @@ public class ConfigPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(usersTable);
         UIHelper.styleScrollPane(scroll);
         listCard.add(scroll, BorderLayout.CENTER);
-
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnRow.setOpaque(false);
-        ModernButton refreshUsersBtn = UIHelper.createSecondaryButton("Atualizar Lista");
-        refreshUsersBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        ModernButton updateRoleBtn = UIHelper.createPrimaryButton("Alterar Perfil Selecionado");
-        updateRoleBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
-        btnRow.add(updateRoleBtn);
-        btnRow.add(refreshUsersBtn);
-        listCard.add(btnRow, BorderLayout.SOUTH);
-
-        rightPanel.add(listCard, BorderLayout.CENTER);
-        panel.add(rightPanel);
+        panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
-        saveUserBtn.addActionListener(e -> registerUser());
+        newUserBtn.addActionListener(e -> registerUser());
         updateRoleBtn.addActionListener(e -> updateSelectedUserRole());
         refreshUsersBtn.addActionListener(e -> loadUsersList());
 
@@ -384,6 +316,32 @@ public class ConfigPanel extends JPanel {
             backupLogArea.append(">> ERRO: " + ex.getMessage() + "\n");
             JOptionPane.showMessageDialog(this, "Erro ao efetuar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void runPhysicalBackup() {
+        String activeUser = CurrentUserContext.getUsername();
+        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+            JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem gerar backups físicos.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        backupLogArea.append(">> A iniciar backup físico da base de dados (" + activeUser + ")...\n");
+        UIHelper.runWithProgress(this, "A gerar backup físico da base de dados…",
+                databaseBackupService::executePhysicalBackup,
+                result -> {
+                    backupLogArea.append(">> Backup físico concluído!\n");
+                    backupLogArea.append(">> Destino: " + result.filePath() + "\n");
+                    backupLogArea.append(">> Base de dados: " + result.database() + " (" + (result.sizeBytes() / 1024) + " KB)\n");
+                    auditLogService.logEvent(activeUser, CurrentUserContext.getCurrentCompanyId(), "BACKUP_FISICO",
+                            "Backup físico gerado: " + result.filePath());
+                    JOptionPane.showMessageDialog(this, "Backup físico restaurável gravado em:\n" + result.filePath(),
+                            "Backup Físico Concluído", JOptionPane.INFORMATION_MESSAGE);
+                    loadAuditLogs();
+                },
+                error -> {
+                    backupLogArea.append(">> ERRO: " + error.getMessage() + "\n");
+                    JOptionPane.showMessageDialog(this, "Erro ao gerar backup físico: " + error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                });
     }
 
     private void verifySelectedBackup() {
@@ -460,31 +418,41 @@ public class ConfigPanel extends JPanel {
         }
     }
 
+    /** Criação de utilizador em modal profissional. */
     private void registerUser() {
-        String username = usernameField.getText().trim();
-        String fullName = fullNameField.getText().trim();
-        String password = new String(passwordField.getPassword()).trim();
-        String role = (String) roleCombo.getSelectedItem();
+        JTextField usernameField = new JTextField();
+        JTextField fullNameField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        JComboBox<String> roleCombo = new JComboBox<>(USER_ROLES);
+        UIHelper.styleComboBox(roleCombo);
 
-        if (username.isEmpty() || fullName.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Todos os campos são obrigatórios para registar o utilizador.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        JPanel form = UIHelper.createDialogForm(
+                "Username:", usernameField,
+                "Função / Cargo:", roleCombo,
+                "Nome Completo:", fullNameField,
+                "Palavra-Passe:", passwordField
+        );
 
-        try {
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Criar Novo Utilizador",
+                "fas-user-plus", "Conta de acesso ao sistema", form).setConfirmButton("Registar", "fas-user-plus");
+        dlg.setOnSave(() -> {
+            String username = usernameField.getText().trim();
+            String fullName = fullNameField.getText().trim();
+            String password = new String(passwordField.getPassword()).trim();
+            String role = (String) roleCombo.getSelectedItem();
+            if (username.isEmpty() || fullName.isEmpty() || password.isEmpty()) {
+                throw new IllegalArgumentException("Todos os campos são obrigatórios.");
+            }
             userService.createUser(username, fullName, password, role);
-            JOptionPane.showMessageDialog(this, "Utilizador '" + username + "' criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        });
 
-            usernameField.setText("");
-            fullNameField.setText("");
-            passwordField.setText("");
-
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Utilizador criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadUsersList();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao criar utilizador: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    /** Alteração de perfil do utilizador seleccionado, em modal profissional. */
     private void updateSelectedUserRole() {
         int selectedRow = usersTable.getSelectedRow();
         if (selectedRow < 0) {
@@ -493,16 +461,19 @@ public class ConfigPanel extends JPanel {
         }
 
         String username = String.valueOf(usersTableModel.getValueAt(selectedRow, 0));
-        String role = (String) roleCombo.getSelectedItem();
-        try {
-            userService.updateCompanyRole(username, role);
-            JOptionPane.showMessageDialog(this,
-                    "Perfil de '" + username + "' atualizado nesta empresa.",
+        JComboBox<String> roleCombo = new JComboBox<>(USER_ROLES);
+        UIHelper.styleComboBox(roleCombo);
+        roleCombo.setSelectedItem(String.valueOf(usersTableModel.getValueAt(selectedRow, 2)));
+
+        JPanel form = UIHelper.createDialogForm("Novo Perfil:", roleCombo);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Alterar Perfil",
+                "fas-user-shield", "Utilizador: " + username, form).setConfirmButton("Alterar", "fas-check");
+        dlg.setOnSave(() -> userService.updateCompanyRole(username, (String) roleCombo.getSelectedItem()));
+
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Perfil de '" + username + "' atualizado nesta empresa.",
                     "Perfil Atualizado", JOptionPane.INFORMATION_MESSAGE);
             loadUsersList();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao alterar perfil: " + ex.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

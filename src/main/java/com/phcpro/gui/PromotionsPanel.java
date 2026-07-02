@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
@@ -192,9 +193,8 @@ public class PromotionsPanel extends JPanel {
                 "Fim (yyyy-MM-dd):", endField
         );
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                "Nova Promoção", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Nova Promoção", "fas-percent", "Campanha de desconto na loja", form).showDialog();
+        if (!confirmed) return;
 
         boolean percent = typeCombo.getSelectedIndex() == 0;
         boolean byProduct = scopeCombo.getSelectedIndex() == 0;

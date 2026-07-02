@@ -1,6 +1,7 @@
 package com.phcpro.gui;
 
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ComercialApiClient;
@@ -170,9 +171,8 @@ public class ClientesPanel extends JPanel {
         );
 
         String title = existing == null ? "Novo Cliente" : "Editar Cliente — " + existing.name();
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form), title,
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, title, null, "Dados de cadastro do cliente", form).showDialog();
+        if (!confirmed) return;
 
         String name = nameField.getText().trim();
         String taxId = taxIdField.getText().trim();

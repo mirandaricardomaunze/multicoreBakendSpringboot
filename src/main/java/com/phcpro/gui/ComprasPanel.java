@@ -16,6 +16,8 @@ import com.phcpro.modules.purchases.dto.CreatePurchaseRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseOrderLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseOrderRequest;
 import com.phcpro.modules.purchases.dto.PurchaseOrderDTO;
+import com.phcpro.modules.purchases.dto.PurchaseOrderLineDTO;
+import com.phcpro.modules.purchases.dto.ReceivePurchaseOrderRequest;
 import com.phcpro.modules.purchases.model.Supplier;
 import com.phcpro.modules.purchases.model.Purchase;
 import com.phcpro.modules.purchases.service.PurchaseOrderService;
@@ -600,10 +602,10 @@ public class ComprasPanel extends JPanel {
                 "Valor a Pagar (MT):", amountField,
                 "Referência:", refField);
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                "Pagar a Fornecedor — " + pa.purchaseNumber(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
+                "Pagar a Fornecedor — " + pa.purchaseNumber(), "fas-money-bill-wave", "Liquidação de compra a crédito", form)
+                .setConfirmButton("Pagar", "fas-money-bill-wave").showDialog();
+        if (!confirmed) return;
         try {
             BigDecimal amount = new BigDecimal(amountField.getText().trim());
             Long accountId = accountsList.get(accCombo.getSelectedIndex()).id();
@@ -711,6 +713,9 @@ public class ComprasPanel extends JPanel {
         ModernButton receiveBtn = UIHelper.createSuccessButton("Receber");
         receiveBtn.setIcon(UIHelper.icon("fas-dolly", 14));
         receiveBtn.addActionListener(e -> receiveSelectedPO());
+        ModernButton receivePartialBtn = UIHelper.createPrimaryButton("Receber Parcial…");
+        receivePartialBtn.setIcon(UIHelper.icon("fas-dolly-flatbed", 14));
+        receivePartialBtn.addActionListener(e -> receivePartialSelectedPO());
         ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
         cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
         cancelBtn.addActionListener(e -> cancelSelectedPO());
@@ -721,7 +726,7 @@ public class ComprasPanel extends JPanel {
         newOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         newOrderBtn.addActionListener(e -> openPurchaseOrderFormDialog());
         listActions.add(sLbl); listActions.add(poSearchField);
-        listActions.add(receiveBtn); listActions.add(cancelBtn); listActions.add(refreshBtn);
+        listActions.add(receiveBtn); listActions.add(receivePartialBtn); listActions.add(cancelBtn); listActions.add(refreshBtn);
         listActions.add(newOrderBtn);
         listHeader.add(listActions, BorderLayout.EAST);
         UIHelper.onTextChange(poSearchField, this::loadPurchaseOrders);
@@ -880,11 +885,84 @@ public class ComprasPanel extends JPanel {
         }
     }
 
+    private void receivePartialSelectedPO() {
+        PurchaseOrderDTO sel = selectedPO();
+        if (sel == null) return;
+        if (!"ORDERED".equals(sel.status()) && !"PARTIALLY_RECEIVED".equals(sel.status())) {
+            JOptionPane.showMessageDialog(this, "Só encomendas por receber podem ser recebidas.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Tabela: Produto | Encomendado | Recebido | Em falta | A receber agora (editável).
+        String[] cols = {"Produto", "Encomendado", "Recebido", "Em falta", "A receber agora"};
+        DefaultTableModel model = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return c == 4; }
+        };
+        List<PurchaseOrderLineDTO> lines = sel.lines();
+        for (PurchaseOrderLineDTO l : lines) {
+            BigDecimal outstanding = l.outstandingQuantity();
+            model.addRow(new Object[]{
+                    l.productName(),
+                    l.quantity().toPlainString(),
+                    l.receivedQuantity().toPlainString(),
+                    outstanding.toPlainString(),
+                    outstanding.toPlainString() // pré-preenche com o em falta
+            });
+        }
+        JTable table = new JTable(model);
+        UIHelper.styleTable(table);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setPreferredSize(new Dimension(560, 220));
+
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.setOpaque(false);
+        panel.add(new JLabel("Encomenda " + sel.orderNumber() + " — indique a quantidade a receber agora:"),
+                BorderLayout.NORTH);
+        panel.add(scroll, BorderLayout.CENTER);
+
+        int opt = JOptionPane.showConfirmDialog(this, panel, "Recepção Parcial",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (opt != JOptionPane.OK_OPTION) return;
+        if (table.isEditing()) table.getCellEditor().stopCellEditing();
+
+        List<ReceivePurchaseOrderRequest.ReceiveLine> toReceive = new ArrayList<>();
+        try {
+            for (int i = 0; i < lines.size(); i++) {
+                String raw = String.valueOf(model.getValueAt(i, 4)).trim().replace(',', '.');
+                if (raw.isEmpty()) continue;
+                BigDecimal qty = new BigDecimal(raw);
+                if (qty.signum() > 0) {
+                    toReceive.add(new ReceivePurchaseOrderRequest.ReceiveLine(lines.get(i).id(), qty));
+                }
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantidade inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (toReceive.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Indique pelo menos uma quantidade a receber.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            PurchaseOrderDTO updated = purchaseOrderService.receivePartial(
+                    sel.id(), new ReceivePurchaseOrderRequest(toReceive));
+            JOptionPane.showMessageDialog(this,
+                    "Recepção registada. Estado da encomenda: " + updated.status() + ".",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadPurchaseOrders();
+            loadPurchasesHistory();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void cancelSelectedPO() {
         PurchaseOrderDTO sel = selectedPO();
         if (sel == null) return;
-        String reason = JOptionPane.showInputDialog(this,
-                "Motivo do cancelamento da encomenda " + sel.orderNumber() + ":");
+        String reason = UIHelper.promptRequiredText("Cancelar Encomenda", "fas-ban",
+                "Encomenda " + sel.orderNumber(), "Motivo do cancelamento:");
         if (reason == null) return;
         try {
             purchaseOrderService.cancelOrder(sel.id(), reason);

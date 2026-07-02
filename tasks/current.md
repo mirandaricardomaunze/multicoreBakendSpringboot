@@ -2,8 +2,240 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-06-21
+**Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-01 (documento de inventário simplificado)
+
+- **Pedido do utilizador:** o PDF de inventário passou a ter **só 6 colunas** — Referência · Código de
+  Barras · Nome · Quantidade · **Caixas** (qtd ÷ und/caixa) · **Valor**. Removidas SKU, Armazém,
+  Mínimo, Preço de Compra, Estado. **Valor a preço de VENDA** (`unitPrice`), por linha e no total.
+  Rodapé reduzido a "Artigos no inventário" + "VALOR TOTAL DO STOCK". `InventoryReportPrintService`.
+
+### Progresso — 2026-07-01 (venda ao grosso: helper "Caixas" na faturação)
+
+- **Decisão (utilizador vende ao grosso):** a linha da **fatura** ganhou campo opcional **"Caixas"**
+  que preenche a **Qtd (unidades) = caixas × unidades/caixa** do produto. **Cálculo de dinheiro
+  continua por unidade** (`LineCalculator` intacto, IVA por unidade). **POS não é tocado** (retalho
+  rápido à unidade). Entrada directa em unidades mantém-se (campo vazio). `ComercialPanel.applyInvoiceBoxes()`.
+- Harness CX-09/CX-10. Helper **replicado na Encomenda a Cliente** (`applyOrderBoxes()`) — mesmo
+  comportamento (caixas → Qtd em unidades, dinheiro por unidade).
+
+### Progresso — 2026-07-01 (edição de produtos + entrada de stock por caixas)
+
+- **Editar Produto (lacuna fechada):** existia `createProduct` mas **não havia como actualizar** um
+  artigo já cadastrado. Novo `ComercialService.updateProduct(...)` (SKU imutável = identidade;
+  referência/código de barras revalidam unicidade **excluindo o próprio**; não toca no stock;
+  auditoria `PRODUCT_UPDATE`). **UI:** botão **"Editar Produto"** no topo do `StockPanel` → diálogo
+  com selector de produto que **pré-preenche** o formulário (mesmos campos do cadastro, incluindo
+  unidades/caixa, IVA, categoria e imagem). Testes: `ComercialServiceTest` 20 → **23**.
+- **Entrada de stock por caixas:** ver abaixo.
+
+### Progresso — 2026-07-01 (entrada de stock por caixas)
+
+- **Pedido do utilizador:** dar entrada de mercadoria **por nº de caixas** (a loja arruma às caixas),
+  mantendo faturação/reserva/guia/POS **em unidades**. Já existiam `Product.unitsPerBox`, o campo
+  "Unidades por Caixa" no cadastro e a coluna "Qtd Caixas" no inventário — faltava o **caminho de
+  entrada por caixas**.
+- **Decisão:** a unidade interna de stock continua a **UNIDADE** (nada muda a jusante). A caixa é só
+  camada de **entrada + visualização**. No `createBatchEntryDialog` (stock inicial **e** "Adicionar
+  Lote/Validade" — mesmo método) o operador indica **Nº de Caixas + Unidades soltas**, vê as
+  **unidades/caixa** do produto e o **Total (unidades)** calculado em tempo real
+  (`total = caixas × unitsPerBox + soltas`); o movimento grava o total em unidades.
+- Helpers `parseIntOrZero`/`parseDecimalOrZero` + `UIHelper.onTextChange` para recálculo ao vivo.
+  Sem tocar em Services/DTOs (faturação/POS/guia/inventário inalterados).
+- Spec/harness: [docs/CADASTRO_POR_CAIXAS_SPEC.md](../docs/CADASTRO_POR_CAIXAS_SPEC.md) +
+  [docs/CADASTRO_POR_CAIXAS_HARNESS.md](../docs/CADASTRO_POR_CAIXAS_HARNESS.md) (CX-01..CX-08 manuais).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 196 testes, 0 falhas**.
+
+### Progresso — 2026-07-01 (recepção parcial de encomenda a fornecedor)
+
+- **Fecha a "Fase 4 (futuro)"** das compras: a recepção de encomenda deixou de ser tudo-ou-nada.
+  - `PurchaseOrderLine.receivedQuantity` (migração `V19`) regista o já recebido; **em falta =
+    quantity − receivedQuantity**. Novo estado `PARTIALLY_RECEIVED` (ciclo
+    `ORDERED → PARTIALLY_RECEIVED* → RECEIVED` / `CANCELLED`).
+  - `receivePartial(id, itens)`: recebe as quantidades indicadas por linha (entra stock só pela
+    quantidade do acto, FEFO/lote, sem recontar o já recebido), valida `0 < qty ≤ emFalta`, recalcula
+    o estado. `receiveOrder` passou a **receber o em falta** (de ORDERED ou PARTIALLY_RECEIVED) sem
+    dupla entrada; `cancelOrder` aceita PARTIALLY_RECEIVED (stock recebido mantém-se). MANAGER/ADMIN +
+    auditoria. Estado é **derivado** das linhas, nunca escrito à mão.
+  - **API:** `POST /api/purchases/orders/{id}/receive-partial`. **UI:** botão "Receber Parcial…" no
+    `ComprasPanel` (modal com tabela editável "A receber agora" por linha).
+  - Spec/harness: [docs/RECECAO_PARCIAL_SPEC.md](../docs/RECECAO_PARCIAL_SPEC.md) +
+    [docs/RECECAO_PARCIAL_HARNESS.md](../docs/RECECAO_PARCIAL_HARNESS.md) (RP-01..RP-12 automáticos,
+    RP-50..RP-52 manuais). Testes: `PurchaseOrderServiceTest` 8 → **20**.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 193 testes, 0 falhas**.
+
+### Progresso — 2026-07-01 (exportação fiscal de vendas — estrutura SAF-T)
+
+- **Nova exportação fiscal de auditoria:** o sistema calculava o apuramento de IVA mas não
+  exportava um ficheiro estruturado dos documentos de venda. Novo `FiscalSalesExportService`
+  produz um **XML alinhado com a estrutura SAF-T** (`Header` / `MasterFiles` / `SourceDocuments` →
+  `SalesInvoices`) para um período.
+  - **Permissão** MANAGER/ADMIN + guarda multi-tenant (`requireCompany`). Inclui faturas emitidas
+    (`APPROVED/PAID/PARTIALLY_PAID`) e **anuladas** (`CANCELLED`, com estado, sem somar aos totais);
+    exclui `DRAFT/PENDING*/REJECTED`.
+  - **Reutiliza os valores fiscais persistidos** na fatura (não recalcula impostos → não diverge da
+    engine de faturação/POS). Escaping XML correcto, determinístico, totais conferíveis.
+  - **API:** `GET /api/fiscal/saft?companyId&from&to` (`application/xml`). **UI:** botão
+    "Exportar SAF-T (Vendas)" na aba IVA do `FiscalPanel` (usa o ano/mês selecionado, grava `.xml`
+    via `JFileChooser`).
+  - **Limite honesto:** segue a *estrutura* SAF-T mas **não é certificado** — validar contra a XSD
+    oficial da AT-MZ antes de submissão (documentado na spec/harness, SF-51).
+  - Spec/harness: [docs/FISCAL_SAFT_EXPORT_SPEC.md](../docs/FISCAL_SAFT_EXPORT_SPEC.md) +
+    [docs/FISCAL_SAFT_EXPORT_HARNESS.md](../docs/FISCAL_SAFT_EXPORT_HARNESS.md) (SF-01..SF-14
+    automáticos, SF-50..SF-52 manuais). Testes: `FiscalSalesExportServiceTest` (12).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 181 testes, 0 falhas**.
+
+### Progresso — 2026-06-30 (backup físico restaurável — recuperação de desastres)
+
+- **Lacuna fechada (parcial):** o `BackupService` existente grava um **dump JSON lógico lossy**
+  (subconjunto de campos, relações achatadas) — bom para auditoria/verificação, **não restaurável**.
+  Faltava o caminho de DR real. Novo `DatabaseBackupService` faz **backup físico via
+  `pg_dump`/`pg_restore`** (formato custom `-Fc`), fidelidade total da instância.
+  - `executePhysicalBackup()` (ADMIN): recusa BD não-PostgreSQL, password só por `PGPASSWORD` no
+    ambiente do subprocesso (nunca na linha de comando), escreve `backups/multicore_<db>_<ts>.dump`.
+  - `restorePhysicalBackup(path, confirmOverwrite)` (ADMIN, **destrutivo** → exige confirmação):
+    `pg_restore --clean --if-exists --no-owner`.
+  - Config: `backup.pg-bin-dir` (binários fora do PATH) e `backup.dir`.
+  - **UI:** botão "Backup Físico (BD)" no `ConfigPanel` (aba Cópias de Segurança), via
+    `runWithProgress`; descrição da aba corrigida (já não diz "base de dados em memória").
+  - Spec/harness: [docs/BACKUP_RESTORE_SPEC.md](../docs/BACKUP_RESTORE_SPEC.md) +
+    [docs/BACKUP_RESTORE_HARNESS.md](../docs/BACKUP_RESTORE_HARNESS.md) (BR-01..BR-12 automáticos,
+    BR-50..BR-54 manuais — o round-trip real precisa de PostgreSQL + binários, fora de CI).
+  - Testes: `DatabaseBackupServiceTest` (12: parsing JDBC, construção de comandos, guardas).
+- **Ainda pendente para fechar o item de DR:** correr BR-50..BR-54 num ambiente separado (gerar
+  `.dump` → restaurar em BD limpa → confirmar contagens idênticas). O software está pronto; falta a
+  execução manual com PostgreSQL real.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 169 testes, 0 falhas**.
+
+### Progresso — 2026-06-29/30 (polish de UI profissional transversal)
+
+Várias iterações **só de apresentação** (sem tocar em Services/DTOs/regras), cada uma com spec+harness:
+
+- **Grelha estilo PHC** (`UIHelper.styleTable`): números alinhados à direita (qtd/preço/IVA/total) +
+  cabeçalho com separadores; **calha de selecção** ▸ na margem esquerda (rowHeader, sem mexer no
+  modelo de colunas). [POS_*]/grelha.
+- **Cabeçalho POS compacto:** código de barras subiu para a linha dos selects; catálogo ganhou
+  altura. [POS_CABECALHO_COMPACTO_SPEC](../docs/POS_CABECALHO_COMPACTO_SPEC.md).
+- **RH — aba "Visão Geral":** 6 cards de KPI + 2 gráficos, reutilizando `KpiCard`/`SimpleBarChart`
+  extraídos do Dashboard (DRY). [RH_VISAO_GERAL_SPEC](../docs/RH_VISAO_GERAL_SPEC.md).
+- **Inputs/selects profissionais:** `FIELD_BG`/`BORDER` por tema + **realce de foco a acento** +
+  combo achatado. [INPUTS_SELECTS_SPEC](../docs/INPUTS_SELECTS_SPEC.md).
+- **Inspetor de detalhes** (duplo-clique) → `ModernFormDialog` só-leitura (`asReadOnly`).
+  [INSPETOR_DETALHES_SPEC](../docs/INSPETOR_DETALHES_SPEC.md).
+- **Aprovações:** inspector inline → **modal de decisão** (Aprovar/Rejeitar/Fechar);
+  `ModernFormDialog.addActionButton`/`close`. [APROVACOES_MODAL_SPEC](../docs/APROVACOES_MODAL_SPEC.md).
+- **Formulários inline → modal** (CRM Folha de Obra, Financeiro Recebimento, Config Utilizador +
+  bug do combo de perfil corrigido). [FORMULARIOS_INLINE_MODAL_SPEC](../docs/FORMULARIOS_INLINE_MODAL_SPEC.md).
+- **Prompts de dados → modal** via helpers `UIHelper.promptRequiredText`/`promptAmount` (motivos de
+  anulação/rejeição, abrir/fechar caixa). Removido `StockPanel.createWarehouseDialog` V1 morto.
+  [PROMPTS_MODAL_SPEC](../docs/PROMPTS_MODAL_SPEC.md).
+- **Despesa RH** migrada para `ModernFormDialog`. [MODAIS_ICONES_SPEC](../docs/MODAIS_ICONES_SPEC.md).
+- **Modais de despesa/submeter:** despesa do RH em modal.
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 157 testes, 0 falhas**.
+
+### Progresso — 2026-06-28 (gestão de categorias profissional + modal de pagamento premium)
+
+- **Gestão de categorias profissionalizada** (tab Categorias do Stock, sobre o `ProductCategoryService`
+  existente): tabela com **amostra de cor** (`ColorCellRenderer`), **contagem de produtos** por
+  categoria, **pesquisa** por código/nome. Diálogo com **seletor de cor** (`JColorChooser` + amostra ao
+  vivo + Limpar) num `ModernFormDialog` premium (ícone `fas-tags`). Activar/desactivar (sem apagar).
+  Spec/harness: [docs/CATEGORIAS_GESTAO_SPEC.md](../docs/CATEGORIAS_GESTAO_SPEC.md) +
+  [docs/CATEGORIAS_GESTAO_HARNESS.md](../docs/CATEGORIAS_GESTAO_HARNESS.md) (CT-01..10).
+- **Modal de pagamento do POS premium:** `askPayment` migrou de `JOptionPane` para `ModernFormDialog`
+  (ícone `fas-money-bill-wave`, subtítulo, botão "Confirmar Pagamento" `fas-check`); validação no
+  `onSave` (mantém aberto em erro) — fim da recursão.
+- **Carrinho POS:** container com `VScrollPanel` (acompanha a largura, scroll vertical quando falta
+  altura) → a tabela deixa de colapsar para só o cabeçalho. Bloco **Subtotal s/ IVA + IVA** sempre
+  visível por cima do TOTAL. Selector de vista (Venda POS | Histórico) na mesma linha que as acções de
+  caixa (poupa espaço). Lupa de pesquisa **dentro** do input.
+
+### Progresso — 2026-06-28 (catálogo POS em cards com imagem + modais premium)
+
+- **Catálogo POS em cards com imagem:** o separador "Venda POS" passou a mostrar os produtos como
+  **grid de cards** (imagem/marcador + nome + preço). **Clicar adiciona ao carrinho** (qtd 1, FEFO/
+  promoção automáticos); clicar de novo **incrementa** (merge), como num carrinho web. O leitor de
+  código de barras usa o mesmo caminho (`addProductToCart`). Removido o formulário detalhado antigo
+  (combo de produto, qtd, desconto, lote, série, "Adicionar Artigo", `refreshFEFOHint`).
+- **Imagem por produto (bytea):** `Product.imageData`, `ProductDTO.image`, migração `V18`,
+  `ComercialService.updateProductImage`; cadastro de produto (StockPanel) ganhou **selector de imagem**
+  com pré-visualização (auto-reduzida a 320px). Helpers `UIHelper.readScaledImage` / `imageIconFromBytes`.
+- **Selects alinhados no topo:** Cliente/Armazém/Conta passaram para uma **barra superior compacta**
+  (estilo web), libertando largura para catálogo + carrinho.
+- Spec/harness: [docs/POS_CATALOGO_CARDS_SPEC.md](../docs/POS_CATALOGO_CARDS_SPEC.md) +
+  [docs/POS_CATALOGO_CARDS_HARNESS.md](../docs/POS_CATALOGO_CARDS_HARNESS.md) (PC-01..11).
+- **Modais premium + botões estilizados:** todos os ~21 modais legados (`JOptionPane`) migraram para
+  `ModernFormDialog` (cabeçalho com badge+ícone+subtítulo, botões Cancelar/Confirmar com ícone, rodapé
+  fixo). `createDialogForm` passou a **grelha de 2 colunas**. Lupa de pesquisa do POS **dentro** do input.
+  Spec/harness: [docs/MODAIS_ICONES_SPEC.md](../docs/MODAIS_ICONES_SPEC.md) (MI-01..16).
+
+### Progresso — 2026-06-28 (desktop em PostgreSQL real + ícones nos modais + grelha PHC)
+
+- **Base de dados real no desktop:** o perfil `desktop` deixou de usar H2 em memória e passou a usar
+  **PostgreSQL local persistente** (BD `multicore`, role dedicada `multicore`). Credenciais fora do git:
+  password lida de `${DB_PASSWORD}` (variável de ambiente persistente da máquina).
+  [application-desktop.properties](../src/main/resources/application-desktop.properties) com
+  **Flyway dono do schema + Hibernate `validate`** (igual a prod).
+- **`V17__sync_schema_with_entities.sql`:** fecha o desvio acumulado em dev (que corria `ddl-auto=update`,
+  por isso as migrações estavam atrasadas face às entidades). Gerada a partir do diff do Hibernate:
+  colunas em falta (`stock_transfers.approved_at/approved_by/rejection_reason`), precisão numérica
+  `numeric(38,2)` em `purchase_orders`/`purchase_order_lines`, e 7 `UNIQUE` declaradas nas entidades
+  (employees, payslips, payroll_bonuses, product_batches, stocks, tax_rates). **Reposto o caminho
+  prod (Flyway+validate), que antes falhava.** Spec/harness:
+  [docs/BD_POSTGRES_DESKTOP_SPEC.md](../docs/BD_POSTGRES_DESKTOP_SPEC.md) +
+  [docs/BD_POSTGRES_DESKTOP_HARNESS.md](../docs/BD_POSTGRES_DESKTOP_HARNESS.md) (DB-01..06).
+- **Ícones nos modais de formulário:** `ModernFormDialog` ganhou ícone contextual no título (deduzido do
+  título via `iconForTitle`, domínio>verbo) + `setIconImage`, e `fas-times` no Cancelar. Cobre todos os
+  `ModernFormDialog` sem tocar nos call sites. Vocabulário `phc-icons` += Fornecedor/Categoria. Spec/harness:
+  [docs/MODAIS_ICONES_SPEC.md](../docs/MODAIS_ICONES_SPEC.md) +
+  [docs/MODAIS_ICONES_HARNESS.md](../docs/MODAIS_ICONES_HARNESS.md) (MI-01..08).
+- **Tabelas em grelha estilo PHC:** `UIHelper.styleTable` passou a desenhar linhas verticais + horizontais
+  (grelha completa, `setIntercellSpacing(1,1)`, contorno na cor da grelha).
+- **Pendente (legado):** modais baseados em `JOptionPane.showConfirmDialog` (Cadastrar Produto, Armazém,
+  Ajuste) ainda sem iconografia própria — migrar para `ModernFormDialog` numa próxima iteração.
+
+### Progresso — 2026-06-27 (IVA dinâmico no POS + altura uniforme botões/inputs)
+
+- **IVA dinâmico por produto** (decisão do utilizador): novo FK `Product.taxRate → TaxRate`
+  (entidade fiscal configurável já existente), migration `V16`. A taxa efetiva = taxa do produto,
+  ou a padrão (`TaxRates.STANDARD_VAT` 16%) quando não definida. Cálculo continua na engine única
+  `LineCalculator`. **Deixou de aplicar a constante hardcoded** no checkout do POS.
+  - `ProductDTO` passou a expor `taxRateId/taxRate/taxRateLabel`; `createProduct` aceita `taxRateId`;
+    formulário de produto (StockPanel) ganhou seletor **Taxa de IVA** (default 16%).
+  - **POS UI:** carrinho com colunas **Líquido · IVA · Total** (IVA = "Isento" a 0% ou "valor (taxa%)"),
+    rodapé **Subtotal s/ IVA · IVA** e **TOTAL A PAGAR = líquido + IVA** (pagamento/troco usam este total).
+  - **Seed:** cesta básica isenta (arroz/açúcar/farinha/feijão), massa 5%, óleo 16% — demonstra taxas
+    mistas numa só venda.
+  - Spec/harness: [docs/POS_IVA_DINAMICO_SPEC.md](../docs/POS_IVA_DINAMICO_SPEC.md) +
+    [docs/POS_IVA_DINAMICO_HARNESS.md](../docs/POS_IVA_DINAMICO_HARNESS.md) (IV-01..09). Testes:
+    `POSServiceTest` +2 (isento / 16%). **Verificado visualmente** (Açúcar isento + Óleo 16% + Massa 5%).
+- **Altura uniforme botões/inputs:** `ModernButton.getPreferredSize()` impõe altura mínima
+  `FORM_CONTROL_HEIGHT` (38px), igual aos campos, mantendo a largura natural (com ícone, sem truncar).
+- **Modais contidos na janela principal (mesmo ao arrastar):** `MainFrame.registerMainWindow(this)`
+  regista a janela e instala **um listener global** (`AWTEventListener` `COMPONENT_MOVED`) que prende
+  qualquer `Dialog` dentro da janela principal — não sai para fora nem ao arrastar (`clampInsideMain`).
+  Ao abrir, `containWithinMain` limita a ~94% e centra; `ModernFormDialog` e `makeDialogScrollable`
+  dimensionam-se pela janela principal (não pelo ecrã). Cobre os ~333 pontos de diálogo sem os tocar.
+  Spec/harness: [docs/MODAIS_CONTIDOS_SPEC.md](../docs/MODAIS_CONTIDOS_SPEC.md) +
+  [docs/MODAIS_CONTIDOS_HARNESS.md](../docs/MODAIS_CONTIDOS_HARNESS.md) (MD-01..06, manual).
+- Verificação: `mvn clean test` → **BUILD SUCCESS, 157 testes, 0 falhas**. Verificado visualmente
+  (carrinho com IVA, botões alinhados, modal "Cadastrar Produto" centrado e contido).
+
+### Progresso — 2026-06-27 (polish profissional do ecrã POS)
+
+- **`POSPanel` repolido** (só apresentação, sem mexer em Service/DTO/cálculos):
+  - Formulário esquerdo **reposto ao topo** em `onPanelSelected()` → secção DOCUMENTO (Cliente/
+    Armazém/Conta) deixa de aparecer cortada.
+  - **Emojis 🔍 removidos** dos campos de pesquisa (não renderizavam sob Metal/Ocean); pista agora é
+    **ícone vectorial** `fas-search` à esquerda (helper `searchRow`), padrão da barra de código de barras.
+  - **Total em destaque**: faixa `ModernPanel` "TOTAL A PAGAR" + valor a 26px (`%,.2f MT`).
+  - **Empty state do carrinho** via `CardLayout` (ícone + "Carrinho vazio" + dica), alternado em
+    `updateCartTotal`/`refreshCartView`.
+  - **Estado da caixa com ícone** (cadeado aberto/verde vs fechado/amarelo).
+- Spec/harness: [docs/POS_UI_POLISH_SPEC.md](../docs/POS_UI_POLISH_SPEC.md) +
+  [docs/POS_UI_POLISH_HARNESS.md](../docs/POS_UI_POLISH_HARNESS.md) (PU-01..08, manual).
+- Verificação: `mvn clean compile` → SUCCESS; `mvn test` → **155 testes, 0 falhas** (sem regressões).
 
 ### Progresso — 2026-06-26 (formulários em modal responsivo)
 
@@ -346,13 +578,15 @@ fiscal e config de impostos sem endpoint/PDF; (5) férias sem saldo e `decideVac
 - Validades **não** têm tabela autónoma — pertencem sempre a um lote (`ProductBatch`).
 - Lote/Validade no UI **read-only** — FEFO decide. Backend volta a aplicar FEFO em transacção mesmo que o UI passe `batchNumber`.
 - Spring Security é scaffold **permissivo** por agora — restringir endpoints só quando houver login HTTP real, para não quebrar o desktop que ainda chama Services directamente.
-- Flyway desactivado em dev (H2 + `ddl-auto=update`); activo em prod com `validate`.
+- Backend puro de dev (`application.properties`, `mvn spring-boot:run`) continua em **H2 + `ddl-auto=update`**.
+  O **desktop** (perfil `desktop`) usa **PostgreSQL local + Flyway + `validate`**, igual a prod (desde 2026-06-28).
+  Prod com PostgreSQL gerido externamente + Flyway + `validate`.
 
 ## Estado de build
 
 ```
 mvn clean compile   → BUILD SUCCESS
-mvn clean test      → BUILD SUCCESS, 155 testes, 0 falhas (2026-06-26)
+mvn clean test      → BUILD SUCCESS, 193 testes, 0 falhas (2026-07-01)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.

@@ -66,6 +66,7 @@ class ComercialServiceTest {
     private WalkInClientProvider walkInClientProvider;
     private DocumentNumberService documentNumberService;
     private AuditLogService auditLogService;
+    private com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
     private ComercialService service;
 
     private Company company;
@@ -96,11 +97,12 @@ class ComercialServiceTest {
         walkInClientProvider = mock(WalkInClientProvider.class);
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
+        taxRateRepository = mock(com.phcpro.modules.fiscal.repository.TaxRateRepository.class);
 
         service = new ComercialService(clientRepository, productRepository, productCategoryRepository,
                 invoiceRepository, approvalService, companyRepository, warehouseRepository, inventoryService,
                 receiptRepository, financeService, treasuryAccountRepository, orderRepository, orderLineRepository,
-                walkInClientProvider, documentNumberService, auditLogService);
+                walkInClientProvider, documentNumberService, auditLogService, taxRateRepository);
 
         company = company(COMPANY_ID);
         client = client(CLIENT_ID, "Cliente Loja");
@@ -357,6 +359,45 @@ class ComercialServiceTest {
         assertEquals(1, service.searchPendingOrders("padaria").size());
         assertEquals(2, service.searchPendingOrders("").size());
         assertTrue(service.searchPendingOrders("zzz").isEmpty());
+    }
+
+    // ────────────────────────── updateProduct ──────────────────────────
+
+    @Test
+    void updateProduct_actualizaCampos_incluindoUnidadesPorCaixa_eAudita() {
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var dto = service.updateProduct(PRODUCT_ID, null, null, "Arroz 5kg",
+                new BigDecimal("250"), new BigDecimal("180"), new BigDecimal("2"),
+                24, null, "UNIT", true, null, "saco grande");
+
+        assertEquals("Arroz 5kg", dto.name());
+        assertEquals(new BigDecimal("250"), dto.unitPrice());
+        assertEquals(24, dto.unitsPerBox());
+        verify(auditLogService).logCurrent(eq("PRODUCT_UPDATE"), any());
+    }
+
+    @Test
+    void updateProduct_referenciaDuplicadaNoutroProduto_bloqueia() {
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        Product outro = product(999L, new BigDecimal("50"));
+        when(productRepository.findByReferenceAndCompaniesId("REF-1", COMPANY_ID)).thenReturn(Optional.of(outro));
+
+        assertThrows(BusinessRuleException.class, () -> service.updateProduct(PRODUCT_ID, "REF-1", null,
+                "Arroz", new BigDecimal("100"), new BigDecimal("80"), BigDecimal.ZERO,
+                1, null, "UNIT", true, null, null));
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProduct_produtoInexistente_bloqueia() {
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.empty());
+
+        assertThrows(BusinessRuleException.class, () -> service.updateProduct(PRODUCT_ID, null, null,
+                "Arroz", new BigDecimal("100"), new BigDecimal("80"), BigDecimal.ZERO,
+                1, null, "UNIT", true, null, null));
+        verify(productRepository, never()).save(any());
     }
 
     // ────────────────────────── helpers ──────────────────────────

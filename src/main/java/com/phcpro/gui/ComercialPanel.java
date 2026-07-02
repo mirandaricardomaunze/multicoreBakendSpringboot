@@ -40,6 +40,7 @@ public class ComercialPanel extends JPanel {
     private JComboBox<String> warehouseCombo;
     private JComboBox<String> productCombo;
     private JTextField quantityField;
+    private JTextField invoiceBoxesField;
     private JTextField discountField;
     private JTextField batchField;
     private JTextField serialField;
@@ -62,6 +63,7 @@ public class ComercialPanel extends JPanel {
     private JComboBox<String> orderWarehouseCombo;
     private JComboBox<String> orderProductCombo;
     private JTextField orderQuantityField;
+    private JTextField orderBoxesField;
     private JTextField orderDiscountField;
     private JTextField orderBatchField;
     private JTextField orderSerialField;
@@ -248,7 +250,7 @@ public class ComercialPanel extends JPanel {
         // Row 3: Qtd & Desconto % (Side by Side)
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1; gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel qtyLbl = new JLabel("Qtd:");
+        JLabel qtyLbl = new JLabel("Qtd (unidades):");
         qtyLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(qtyLbl, gbc);
 
@@ -259,9 +261,23 @@ public class ComercialPanel extends JPanel {
 
         gbc.gridx = 0; gbc.gridy = 5;
         gbc.insets = new Insets(2, 8, 12, 8);
+        // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
+        JPanel qtyRow = new JPanel(new BorderLayout(6, 0));
+        qtyRow.setOpaque(false);
         quantityField = new JTextField("1");
         UIHelper.styleTextField(quantityField);
-        formCard.add(quantityField, gbc);
+        JPanel boxHelper = new JPanel(new BorderLayout(4, 0));
+        boxHelper.setOpaque(false);
+        JLabel cxLbl = new JLabel("Caixas:");
+        cxLbl.setForeground(UIHelper.TEXT_MUTED);
+        invoiceBoxesField = new JTextField(4);
+        UIHelper.styleTextField(invoiceBoxesField);
+        invoiceBoxesField.setToolTipText("Venda ao grosso: preenche a Qtd em unidades = caixas × unidades/caixa do produto.");
+        boxHelper.add(cxLbl, BorderLayout.WEST);
+        boxHelper.add(invoiceBoxesField, BorderLayout.CENTER);
+        qtyRow.add(quantityField, BorderLayout.CENTER);
+        qtyRow.add(boxHelper, BorderLayout.EAST);
+        formCard.add(qtyRow, gbc);
 
         gbc.gridx = 1;
         discountField = new JTextField("0");
@@ -407,8 +423,9 @@ public class ComercialPanel extends JPanel {
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftLine());
-        productCombo.addActionListener(e -> refreshInvoiceFEFOHint());
+        productCombo.addActionListener(e -> { refreshInvoiceFEFOHint(); applyInvoiceBoxes(); });
         warehouseCombo.addActionListener(e -> refreshInvoiceFEFOHint());
+        UIHelper.onTextChange(invoiceBoxesField, this::applyInvoiceBoxes);
         cancelInvoiceBtn.addActionListener(e -> cancelSelectedInvoice());
         payInvoiceBtn.addActionListener(e -> paySelectedInvoice());
         refreshBtn.addActionListener(e -> loadInvoicesTable());
@@ -524,6 +541,27 @@ public class ComercialPanel extends JPanel {
     }
 
 
+    /**
+     * Helper de venda ao grosso: se o operador indicar um nº de caixas e houver produto seleccionado,
+     * preenche a Qtd em UNIDADES = caixas × unidades/caixa. O cálculo de dinheiro continua por unidade
+     * (a caixa é só conversão). Campo vazio não mexe na Qtd (permite entrada directa em unidades).
+     */
+    private void applyInvoiceBoxes() {
+        if (invoiceBoxesField == null) return;
+        String raw = invoiceBoxesField.getText().trim();
+        if (raw.isEmpty()) return;
+        int idx = productCombo.getSelectedIndex();
+        if (idx < 0 || idx >= productsList.size()) return;
+        int upb = Math.max(1, productsList.get(idx).unitsPerBox());
+        try {
+            int boxes = Integer.parseInt(raw);
+            if (boxes <= 0) return;
+            quantityField.setText(String.valueOf(boxes * upb));
+        } catch (NumberFormatException ignore) {
+            // texto inválido → não altera a Qtd
+        }
+    }
+
     private void addDraftLine() {
         if (productsList.isEmpty()) return;
 
@@ -605,6 +643,7 @@ public class ComercialPanel extends JPanel {
 
         // Clear details
         quantityField.setText("1");
+        invoiceBoxesField.setText("");
         discountField.setText("0");
         serialField.setText("");
         refreshInvoiceFEFOHint();
@@ -677,15 +716,12 @@ public class ComercialPanel extends JPanel {
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = (String) invoicesTableModel.getValueAt(row, 1);
 
-        String reason = JOptionPane.showInputDialog(this, "Indique o motivo da anulação para a fatura " + invoiceNum + ":", "Anular Fatura", JOptionPane.QUESTION_MESSAGE);
-        if (reason == null) return; // user cancelled prompt
-        if (reason.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O motivo da anulação é obrigatório.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        String reason = UIHelper.promptRequiredText("Anular Fatura", "fas-ban",
+                "Fatura " + invoiceNum, "Motivo da anulação:");
+        if (reason == null) return;
 
         try {
-            comercialService.cancelInvoice(invoiceId, reason.trim());
+            comercialService.cancelInvoice(invoiceId, reason);
             JOptionPane.showMessageDialog(this, "Fatura " + invoiceNum + " anulada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadInvoicesTable();
             loadReceiptsTable();
@@ -744,8 +780,8 @@ public class ComercialPanel extends JPanel {
                 "Montante a Receber (MT):", amountField
         );
 
-        int confirm = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Registar Recebimento (Emitir Recibo)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (confirm == JOptionPane.OK_OPTION) {
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Registar Recebimento (Emitir Recibo)", "fas-receipt", "Recebimento de cliente e emissão de recibo", dialogPanel).setConfirmButton("Receber", "fas-money-bill-wave").showDialog();
+        if (confirmed) {
             try {
                 int accIdx = accCombo.getSelectedIndex();
                 if (accIdx < 0) return;
@@ -816,15 +852,12 @@ public class ComercialPanel extends JPanel {
         Long receiptId = (Long) receiptsTableModel.getValueAt(row, 0);
         String receiptNum = (String) receiptsTableModel.getValueAt(row, 1);
 
-        String reason = JOptionPane.showInputDialog(this, "Indique o motivo da anulação para o recibo " + receiptNum + ":", "Anular Recibo", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Anular Recibo", "fas-ban",
+                "Recibo " + receiptNum, "Motivo da anulação:");
         if (reason == null) return;
-        if (reason.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O motivo da anulação é obrigatório.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
 
         try {
-            comercialService.cancelReceipt(receiptId, reason.trim());
+            comercialService.cancelReceipt(receiptId, reason);
             JOptionPane.showMessageDialog(this, "Recibo " + receiptNum + " anulado com sucesso!\nStatus da fatura revertido para APROVADA.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadInvoicesTable();
             loadReceiptsTable();
@@ -909,7 +942,7 @@ public class ComercialPanel extends JPanel {
         // Row 3: Qtd & Desconto % (Side by Side)
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1; gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel qtyLbl = new JLabel("Qtd:");
+        JLabel qtyLbl = new JLabel("Qtd (unidades):");
         qtyLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(qtyLbl, gbc);
 
@@ -920,9 +953,23 @@ public class ComercialPanel extends JPanel {
 
         gbc.gridx = 0; gbc.gridy = 7;
         gbc.insets = new Insets(2, 8, 12, 8);
+        // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
+        JPanel orderQtyRow = new JPanel(new BorderLayout(6, 0));
+        orderQtyRow.setOpaque(false);
         orderQuantityField = new JTextField("1");
         UIHelper.styleTextField(orderQuantityField);
-        formCard.add(orderQuantityField, gbc);
+        JPanel orderBoxHelper = new JPanel(new BorderLayout(4, 0));
+        orderBoxHelper.setOpaque(false);
+        JLabel orderCxLbl = new JLabel("Caixas:");
+        orderCxLbl.setForeground(UIHelper.TEXT_MUTED);
+        orderBoxesField = new JTextField(4);
+        UIHelper.styleTextField(orderBoxesField);
+        orderBoxesField.setToolTipText("Venda ao grosso: preenche a Qtd em unidades = caixas × unidades/caixa do produto.");
+        orderBoxHelper.add(orderCxLbl, BorderLayout.WEST);
+        orderBoxHelper.add(orderBoxesField, BorderLayout.CENTER);
+        orderQtyRow.add(orderQuantityField, BorderLayout.CENTER);
+        orderQtyRow.add(orderBoxHelper, BorderLayout.EAST);
+        formCard.add(orderQtyRow, gbc);
 
         gbc.gridx = 1;
         orderDiscountField = new JTextField("0");
@@ -1106,7 +1153,8 @@ public class ComercialPanel extends JPanel {
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftOrderLine());
-        orderProductCombo.addActionListener(e -> refreshOrderFEFOHint());
+        orderProductCombo.addActionListener(e -> { refreshOrderFEFOHint(); applyOrderBoxes(); });
+        UIHelper.onTextChange(orderBoxesField, this::applyOrderBoxes);
         orderWarehouseCombo.addActionListener(e -> refreshOrderFEFOHint());
         issueBtn.addActionListener(e -> issueOrder());
         billOrderBtn.addActionListener(e -> billSelectedOrder());
@@ -1117,6 +1165,23 @@ public class ComercialPanel extends JPanel {
         exportOrdersBtn.addActionListener(e -> exportOrdersTable());
 
         return panel;
+    }
+
+    /** Helper de venda ao grosso na encomenda: nº de caixas → Qtd em unidades. Ver {@link #applyInvoiceBoxes()}. */
+    private void applyOrderBoxes() {
+        if (orderBoxesField == null) return;
+        String raw = orderBoxesField.getText().trim();
+        if (raw.isEmpty()) return;
+        int idx = orderProductCombo.getSelectedIndex();
+        if (idx < 0 || idx >= productsList.size()) return;
+        int upb = Math.max(1, productsList.get(idx).unitsPerBox());
+        try {
+            int boxes = Integer.parseInt(raw);
+            if (boxes <= 0) return;
+            orderQuantityField.setText(String.valueOf(boxes * upb));
+        } catch (NumberFormatException ignore) {
+            // texto inválido → não altera a Qtd
+        }
     }
 
     private void addDraftOrderLine() {
@@ -1200,6 +1265,7 @@ public class ComercialPanel extends JPanel {
 
         // Clear details
         orderQuantityField.setText("1");
+        orderBoxesField.setText("");
         orderDiscountField.setText("0");
         orderSerialField.setText("");
         refreshOrderFEFOHint();
@@ -1701,9 +1767,8 @@ public class ComercialPanel extends JPanel {
                 "Motivo do cancelamento:", reasonField
         );
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                "Cancelar Encomenda", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Cancelar Encomenda", "fas-ban", "Anular uma encomenda pendente", form).setConfirmButton("Confirmar", "fas-check").showDialog();
+        if (!confirmed) return;
 
         int idx = orderCombo.getSelectedIndex();
         if (idx < 0 || idx >= cancellable.size()) return;
@@ -1986,7 +2051,8 @@ public class ComercialPanel extends JPanel {
     private void rejectSelectedCreditNote() {
         var sel = selectedCreditNote();
         if (sel == null) return;
-        String reason = JOptionPane.showInputDialog(this, "Motivo da rejeição:", "Rejeitar Nota de Crédito", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Rejeitar Nota de Crédito", "fas-times-circle",
+                "Indique o motivo da rejeição", "Motivo da rejeição:");
         if (reason == null) return;
         try {
             creditNoteService.reject(sel.id(), reason);
@@ -2022,7 +2088,8 @@ public class ComercialPanel extends JPanel {
     private void rejectSelectedDebitNote() {
         var sel = selectedDebitNote();
         if (sel == null) return;
-        String reason = JOptionPane.showInputDialog(this, "Motivo da rejeição:", "Rejeitar Nota de Débito", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Rejeitar Nota de Débito", "fas-times-circle",
+                "Indique o motivo da rejeição", "Motivo da rejeição:");
         if (reason == null) return;
         try {
             debitNoteService.reject(sel.id(), reason);
@@ -2142,9 +2209,8 @@ public class ComercialPanel extends JPanel {
         linesWrap.add(linesScroll, BorderLayout.CENTER);
         dialogPanel.add(linesWrap, BorderLayout.CENTER);
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
-                "Emitir Nota de Crédito", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Emitir Nota de Crédito", "fas-file-invoice-dollar", "Crédito sobre fatura (devolução/correção)", dialogPanel).setConfirmButton("Emitir", "fas-check").showDialog();
+        if (!confirmed) return;
 
         if (linesTable.isEditing()) linesTable.getCellEditor().stopCellEditing();
 
@@ -2251,9 +2317,8 @@ public class ComercialPanel extends JPanel {
         linesWrap.add(lineBtns, BorderLayout.SOUTH);
         dialogPanel.add(linesWrap, BorderLayout.CENTER);
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
-                "Emitir Nota de Débito", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Emitir Nota de Débito", "fas-file-invoice-dollar", "Débito adicional sobre fatura", dialogPanel).setConfirmButton("Emitir", "fas-check").showDialog();
+        if (!confirmed) return;
 
         if (linesTable.isEditing()) linesTable.getCellEditor().stopCellEditing();
         if (linesModel.getRowCount() == 0) {
@@ -2504,10 +2569,10 @@ public class ComercialPanel extends JPanel {
                 "Referência (Nº recibo/transação):", referenceField
         );
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                "Receber Pagamento — " + sel.invoiceNumber(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
+                "Receber Pagamento — " + sel.invoiceNumber(), "fas-money-bill-wave", "Liquidação de fatura em dívida", form)
+                .setConfirmButton("Receber", "fas-money-bill-wave").showDialog();
+        if (!confirmed) return;
 
         try {
             java.math.BigDecimal amount = new java.math.BigDecimal(amountField.getText().trim());

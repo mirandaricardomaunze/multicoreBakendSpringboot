@@ -14,6 +14,8 @@ import com.phcpro.modules.numbering.service.DocumentNumberService;
 import com.phcpro.modules.purchases.dto.CreatePurchaseOrderLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseOrderRequest;
 import com.phcpro.modules.purchases.dto.PurchaseOrderDTO;
+import com.phcpro.modules.purchases.dto.ReceivePurchaseOrderRequest;
+import com.phcpro.modules.purchases.dto.ReceivePurchaseOrderRequest.ReceiveLine;
 import com.phcpro.modules.purchases.model.PurchaseOrder;
 import com.phcpro.modules.purchases.model.PurchaseOrderLine;
 import com.phcpro.modules.purchases.model.Supplier;
@@ -181,5 +183,127 @@ class PurchaseOrderServiceTest {
         assertEquals(1, service.searchOrders(COMPANY_ID, "ec-f").size());
         assertEquals(1, service.searchOrders(COMPANY_ID, "acme").size());
         assertEquals(0, service.searchOrders(COMPANY_ID, "zzz").size());
+    }
+
+    // ── Recepção parcial (RP-01..RP-12) ──────────────────────────────────────
+
+    /** Encomenda num estado dado com uma linha (qty/recebido/lineId controlados). */
+    private PurchaseOrder orderInState(String status, BigDecimal qty, BigDecimal received, Long lineId) {
+        PurchaseOrder o = new PurchaseOrder();
+        o.setId(99L); o.setOrderNumber("EC-F-2026/1"); o.setStatus(status);
+        o.setSupplier(supplier(true)); o.setWarehouse(warehouse()); o.setCompany(company());
+        PurchaseOrderLine line = new PurchaseOrderLine();
+        line.setId(lineId); line.setProduct(product());
+        line.setQuantity(qty); line.setReceivedQuantity(received);
+        line.setUnitPrice(new BigDecimal("25")); line.setTaxRate(BigDecimal.ZERO);
+        line.setLineTotal(new BigDecimal("250")); line.setBatchNumber("L1");
+        o.addLine(line);
+        when(orderRepository.findById(99L)).thenReturn(Optional.of(o));
+        return o;
+    }
+
+    private ReceivePurchaseOrderRequest receive(Long lineId, String qty) {
+        return new ReceivePurchaseOrderRequest(List.of(new ReceiveLine(lineId, new BigDecimal(qty))));
+    }
+
+    @Test // RP-01
+    void receivePartial_parteDeUmaLinha_ficaPartiallyReceived() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        PurchaseOrderDTO dto = service.receivePartial(99L, receive(5L, "6"));
+        assertEquals(PurchaseOrder.PARTIALLY_RECEIVED, dto.status());
+        assertEquals(0, new BigDecimal("6").compareTo(dto.lines().get(0).receivedQuantity()));
+        verify(inventoryService, times(1)).registerMovement(
+                any(), any(), eq(new BigDecimal("6")), eq("PURCHASE"), eq("L1"), any(), anyString(), any());
+    }
+
+    @Test // RP-02
+    void receivePartial_completaRestante_ficaReceived() {
+        orderInState(PurchaseOrder.PARTIALLY_RECEIVED, new BigDecimal("10"), new BigDecimal("6"), 5L);
+        PurchaseOrderDTO dto = service.receivePartial(99L, receive(5L, "4"));
+        assertEquals(PurchaseOrder.RECEIVED, dto.status());
+        assertNotNull(dto.receivedAt());
+        verify(inventoryService, times(1)).registerMovement(
+                any(), any(), eq(new BigDecimal("4")), eq("PURCHASE"), any(), any(), anyString(), any());
+    }
+
+    @Test // RP-03
+    void receivePartial_acimaDoEmFalta_lanca() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(5L, "12")));
+        verifyNoInteractions(inventoryService);
+    }
+
+    @Test // RP-04
+    void receivePartial_quantidadeZero_lanca() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(5L, "0")));
+    }
+
+    @Test // RP-05
+    void receivePartial_semPermissao_naoMoveStock() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        CurrentUserContext.setCurrentUser("func", "EMPLOYEE");
+        assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(5L, "5")));
+        verifyNoInteractions(inventoryService);
+    }
+
+    @Test // RP-06
+    void receivePartial_jaRecebida_lanca() {
+        orderInState(PurchaseOrder.RECEIVED, new BigDecimal("10"), new BigDecimal("10"), 5L);
+        assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(5L, "1")));
+    }
+
+    @Test // RP-07
+    void receivePartial_cancelada_lanca() {
+        orderInState(PurchaseOrder.CANCELLED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(5L, "1")));
+    }
+
+    @Test // RP-08
+    void receiveOrder_apartirDePartial_recebeSoOEmFalta() {
+        orderInState(PurchaseOrder.PARTIALLY_RECEIVED, new BigDecimal("10"), new BigDecimal("6"), 5L);
+        PurchaseOrderDTO dto = service.receiveOrder(99L);
+        assertEquals(PurchaseOrder.RECEIVED, dto.status());
+        verify(inventoryService, times(1)).registerMovement(
+                any(), any(), eq(new BigDecimal("4")), eq("PURCHASE"), any(), any(), anyString(), any());
+    }
+
+    @Test // RP-09
+    void receiveOrder_apartirDeOrdered_recebeTudo() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        PurchaseOrderDTO dto = service.receiveOrder(99L);
+        assertEquals(PurchaseOrder.RECEIVED, dto.status());
+        verify(inventoryService, times(1)).registerMovement(
+                any(), any(), eq(new BigDecimal("10")), eq("PURCHASE"), any(), any(), anyString(), any());
+    }
+
+    @Test // RP-10
+    void cancelOrder_apartirDePartial_cancela() {
+        orderInState(PurchaseOrder.PARTIALLY_RECEIVED, new BigDecimal("10"), new BigDecimal("6"), 5L);
+        PurchaseOrderDTO dto = service.cancelOrder(99L, "fornecedor não entrega o resto");
+        assertEquals(PurchaseOrder.CANCELLED, dto.status());
+        verifyNoInteractions(inventoryService);
+    }
+
+    @Test // RP-11
+    void receivePartial_multiLinha_umaCompletaOutraParcial_ficaPartial() {
+        PurchaseOrder o = orderInState(PurchaseOrder.ORDERED, new BigDecimal("5"), BigDecimal.ZERO, 5L);
+        PurchaseOrderLine b = new PurchaseOrderLine();
+        b.setId(6L); b.setProduct(product()); b.setQuantity(new BigDecimal("5"));
+        b.setReceivedQuantity(BigDecimal.ZERO); b.setUnitPrice(new BigDecimal("25"));
+        b.setTaxRate(BigDecimal.ZERO); b.setLineTotal(new BigDecimal("125"));
+        o.addLine(b);
+        ReceivePurchaseOrderRequest req = new ReceivePurchaseOrderRequest(List.of(
+                new ReceiveLine(5L, new BigDecimal("5")), new ReceiveLine(6L, new BigDecimal("2"))));
+        PurchaseOrderDTO dto = service.receivePartial(99L, req);
+        assertEquals(PurchaseOrder.PARTIALLY_RECEIVED, dto.status());
+        verify(inventoryService, times(2)).registerMovement(
+                any(), any(), any(), eq("PURCHASE"), any(), any(), anyString(), any());
+    }
+
+    @Test // RP-12
+    void receivePartial_lineIdInexistente_lanca() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(999L, "1")));
     }
 }

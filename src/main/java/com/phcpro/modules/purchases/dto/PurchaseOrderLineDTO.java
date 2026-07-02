@@ -9,10 +9,18 @@ public record PurchaseOrderLineDTO(
         String productName,
         String productSku,
         BigDecimal quantity,
+        BigDecimal receivedQuantity,
         BigDecimal unitPrice,
         BigDecimal taxRate,
         BigDecimal lineTotal,
         String batchNumber,
         LocalDate expirationDate,
         String serialNumber
-) {}
+) {
+    /** Quantidade ainda por receber (encomendada − recebida). */
+    public BigDecimal outstandingQuantity() {
+        BigDecimal q = quantity == null ? BigDecimal.ZERO : quantity;
+        BigDecimal r = receivedQuantity == null ? BigDecimal.ZERO : receivedQuantity;
+        return q.subtract(r);
+    }
+}

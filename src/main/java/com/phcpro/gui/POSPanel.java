@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ClientDTO;
@@ -25,6 +26,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -65,7 +68,14 @@ public class POSPanel extends JPanel {
 
     private DefaultTableModel cartModel;
     private JTable cartTable;
+    private JPanel cartCenter;
+    private JScrollPane formScroll;
+    private JPanel productGrid;
+    private JScrollPane productGridScroll;
+    private JPanel topSelectsBar;
     private JLabel totalLabel;
+    private JLabel subtotalValueLabel;
+    private JLabel ivaValueLabel;
 
     private ModernButton openSessionBtn;
     private ModernButton closeSessionBtn;
@@ -73,7 +83,10 @@ public class POSPanel extends JPanel {
     private ModernButton checkoutBtn;
     private ModernButton addToCartBtn;
     private JCheckBox creditCheck;
-    private JTabbedPane posTabs;
+    private JPanel viewCards;
+    private ModernButton tabVendaBtn;
+    private ModernButton tabHistBtn;
+    private boolean historyView = false;
     private DefaultTableModel salesHistoryModel;
     private JTable salesHistoryTable;
     private JLabel salesHistorySummary;
@@ -93,6 +106,7 @@ public class POSPanel extends JPanel {
         BigDecimal discount;
         String batch;
         String serial;
+        String note;
 
         CartItem(ProductDTO product, BigDecimal qty, BigDecimal discount, String batch, String serial) {
             this.product = product;
@@ -102,13 +116,24 @@ public class POSPanel extends JPanel {
             this.serial = serial;
         }
 
+        /** Líquido, IVA e total da linha — IVA dinâmico via taxa do produto. */
+        com.phcpro.architecture.pricing.LineCalculator.LineAmounts amounts() {
+            BigDecimal rate = product.taxRate() != null ? product.taxRate() : BigDecimal.ZERO;
+            return com.phcpro.architecture.pricing.LineCalculator.compute(
+                    product.unitPrice(), qty, discount, rate);
+        }
+
+        /** Valor líquido da linha (sem IVA). */
         BigDecimal getSubtotal() {
-            BigDecimal base = product.unitPrice().multiply(qty);
-            if (discount.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal discVal = base.multiply(discount.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-                return base.subtract(discVal);
-            }
-            return base;
+            return amounts().net();
+        }
+
+        BigDecimal getTax() {
+            return amounts().tax();
+        }
+
+        BigDecimal getTotal() {
+            return amounts().total();
         }
     }
 
@@ -135,32 +160,21 @@ public class POSPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        // 1. TILL SESSION CONTROL BAR
-        JPanel sessionBar = new JPanel(new GridBagLayout());
-        sessionBar.setOpaque(false);
+        // 1. TOP BAR — selector de vista (Venda POS | Histórico) à esquerda, na MESMA linha que as
+        //    acções de caixa (Abrir/Sangria/Fechar) à direita, para poupar espaço vertical.
+        tabVendaBtn = new ModernButton("Venda POS");
+        tabVendaBtn.setIcon(UIHelper.icon("fas-cash-register", 14));
+        tabVendaBtn.setPreferredSize(new Dimension(150, 38));
+        tabVendaBtn.addActionListener(e -> selectView(false));
+        tabHistBtn = new ModernButton("Histórico de Vendas");
+        tabHistBtn.setIcon(UIHelper.icon("fas-history", 14));
+        tabHistBtn.setPreferredSize(new Dimension(190, 38));
+        tabHistBtn.addActionListener(e -> selectView(true));
 
-        GridBagConstraints sGbc = new GridBagConstraints();
-        sGbc.fill = GridBagConstraints.HORIZONTAL;
-        sGbc.weightx = 1.0;
-
-        // Row 1: Heading
-        sGbc.gridx = 0; sGbc.gridy = 0; sGbc.weightx = 1.0; sGbc.anchor = GridBagConstraints.WEST;
-        JLabel heading = UIHelper.createHeading("Ponto de Venda (POS)");
-        sessionBar.add(heading, sGbc);
-
-        // Row 2: Status Label
-        sGbc.gridy = 1; sGbc.weightx = 1.0; sGbc.anchor = GridBagConstraints.WEST;
-        sGbc.insets = new Insets(10, 0, 0, 0); // space below heading
-        statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
-        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        statusLabel.setForeground(UIHelper.PENDING_YELLOW);
-        sessionBar.add(statusLabel, sGbc);
-
-        // Row 3: Action Buttons
-        sGbc.gridy = 2; sGbc.weightx = 1.0; sGbc.anchor = GridBagConstraints.WEST;
-        sGbc.insets = new Insets(10, 0, 0, 0); // space below status
-        JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        sessionActions.setOpaque(false);
+        JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        segmented.setOpaque(false);
+        segmented.add(tabVendaBtn);
+        segmented.add(tabHistBtn);
 
         openSessionBtn = UIHelper.createSuccessButton("Abrir Caixa");
         openSessionBtn.setIcon(UIHelper.icon("fas-lock-open", 14));
@@ -169,23 +183,36 @@ public class POSPanel extends JPanel {
         cashMoveBtn = UIHelper.createSecondaryButton("Sangria / Suprimento");
         cashMoveBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
 
+        JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        sessionActions.setOpaque(false);
         sessionActions.add(openSessionBtn);
         sessionActions.add(cashMoveBtn);
         sessionActions.add(closeSessionBtn);
-        sessionBar.add(sessionActions, sGbc);
 
-        // 1b. BARCODE SCANNER BAR — Enter no campo procura por código e adiciona ao carrinho
-        JPanel scannerBar = new JPanel(new BorderLayout(8, 0));
-        scannerBar.setOpaque(false);
-        scannerBar.setBorder(new EmptyBorder(8, 0, 4, 0));
-        JLabel scanIcon = new JLabel(UIHelper.icon("fas-barcode", 20, UIHelper.ACCENT));
-        scannerBar.add(scanIcon, BorderLayout.WEST);
+        JPanel topBar = new JPanel(new BorderLayout(12, 0));
+        topBar.setOpaque(false);
+        topBar.add(segmented, BorderLayout.WEST);
+        topBar.add(sessionActions, BorderLayout.EAST);
+
+        statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
+        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        statusLabel.setForeground(UIHelper.PENDING_YELLOW);
+
+        JPanel sessionBar = new JPanel(new BorderLayout(0, 8));
+        sessionBar.setOpaque(false);
+        sessionBar.add(topBar, BorderLayout.NORTH);
+        sessionBar.add(statusLabel, BorderLayout.SOUTH);
+
+        // 1b. CÓDIGO DE BARRAS — Enter procura por código e adiciona ao carrinho. Campo de altura
+        //     única com o ícone DENTRO do input, para subir e alinhar com os combos do cabeçalho
+        //     (ver POS_CABECALHO_COMPACTO_SPEC). A barra própria foi removida para ganhar altura no
+        //     catálogo de produtos.
         barcodeField = new JTextField();
         UIHelper.styleTextField(barcodeField);
-        barcodeField.putClientProperty("JTextField.placeholderText", "Ler código de barras… (Enter para adicionar)");
+        barcodeField.putClientProperty("JTextField.placeholderText", "Ler código de barras… (Enter)");
         barcodeField.setFont(new Font("Segoe UI", Font.BOLD, 14));
         barcodeField.addActionListener(e -> handleBarcodeScan());
-        scannerBar.add(barcodeField, BorderLayout.CENTER);
+        JPanel barcodeBox = iconInputBox("fas-barcode", 16, UIHelper.ACCENT, barcodeField);
 
         add(sessionBar, BorderLayout.NORTH);
 
@@ -201,117 +228,75 @@ public class POSPanel extends JPanel {
         workspace.setResizeWeight(0.0); // espaço extra da janela vai para o carrinho (direita)
         workspace.setBackground(UIHelper.BG_DARK);
 
-        // LEFT: ADD PRODUCT FORM & METADATA — largura inicial confortável; arrastável
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
-        leftPanel.setOpaque(false);
-        leftPanel.setPreferredSize(new Dimension(FORM_PANEL_WIDTH, 10));
-        leftPanel.setMinimumSize(new Dimension(300, 10));
-        leftPanel.add(UIHelper.createSubheading("Configurações & Artigos"), BorderLayout.NORTH);
-
-        // Scrollable form content (transparent inner panel)
-        JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setOpaque(false);
-        formCard.setBorder(new EmptyBorder(4, 4, 4, 4));
-
-        // Instantiate controls
+        // LEFT: CATÁLOGO DE PRODUTOS EM CARDS — clicar adiciona ao carrinho
         warehouseCombo = new JComboBox<>();
         accountCombo = new JComboBox<>();
         clientCombo = new JComboBox<>();
-        productCombo = new JComboBox<>();
         UIHelper.styleComboBox(warehouseCombo);
         UIHelper.styleComboBox(accountCombo);
         UIHelper.styleComboBox(clientCombo);
-        UIHelper.styleComboBox(productCombo);
 
         clientSearchField = new JTextField();
         productSearchField = new JTextField();
         UIHelper.styleTextField(clientSearchField);
         UIHelper.styleTextField(productSearchField);
-        clientSearchField.putClientProperty("JTextField.placeholderText", "🔍 Pesquisar cliente por nome ou NUIT…");
-        productSearchField.putClientProperty("JTextField.placeholderText", "🔍 Pesquisar produto por SKU ou nome…");
-        clientSearchField.setToolTipText("Filtrar clientes por nome ou NUIT");
-        productSearchField.setToolTipText("Filtrar produtos por SKU ou nome");
+        clientSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar cliente por nome ou NUIT…");
+        productSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar produto por SKU ou nome…");
         clientSearchField.getDocument().addDocumentListener(simpleDocumentListener(() -> filterClients(clientSearchField.getText())));
         productSearchField.getDocument().addDocumentListener(simpleDocumentListener(() -> filterProducts(productSearchField.getText())));
-
-        qtyField = new JTextField("1");
-        discountField = new JTextField("0");
-        batchField = new JTextField();
-        expirationField = new JTextField();
-        serialField = new JTextField();
-        UIHelper.styleTextField(qtyField);
-        UIHelper.styleTextField(discountField);
-        UIHelper.styleTextField(batchField);
-        UIHelper.styleTextField(expirationField);
-        UIHelper.styleTextField(serialField);
-        batchField.setEditable(false);
-        expirationField.setEditable(false);
-        batchField.setToolTipText("Lote a sair (FEFO) — preenchido automaticamente quando escolhe produto+armazém.");
-        expirationField.setToolTipText("Validade do lote a sair (FEFO).");
-        batchField.putClientProperty("JTextField.placeholderText", "— FEFO automático —");
-        expirationField.putClientProperty("JTextField.placeholderText", "— FEFO automático —");
 
         ModernButton newClientBtn = UIHelper.createSuccessButton("+ Novo");
         newClientBtn.setToolTipText("Criar novo cliente");
         newClientBtn.addActionListener(e -> createClientDialog());
 
-        // Composite pickers
+        // Barra superior compacta de selects de documento (Cliente | Armazém | Conta) — estilo web.
         JPanel clientRow = new JPanel(new BorderLayout(6, 0));
         clientRow.setOpaque(false);
         clientRow.add(clientCombo, BorderLayout.CENTER);
         clientRow.add(newClientBtn, BorderLayout.EAST);
-        JPanel clientPicker = stackedPicker(clientSearchField, clientRow);
-        JPanel productPicker = stackedPicker(productSearchField, productCombo);
+        JPanel clientPicker = stackedPicker(searchRow(clientSearchField), clientRow);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST;
-        int row = 0;
+        topSelectsBar = new JPanel(new GridBagLayout());
+        topSelectsBar.setOpaque(false);
+        topSelectsBar.setBorder(new EmptyBorder(4, 0, 4, 0));
+        GridBagConstraints tg = new GridBagConstraints();
+        tg.fill = GridBagConstraints.HORIZONTAL; tg.anchor = GridBagConstraints.NORTH; tg.gridy = 0;
+        tg.gridx = 0; tg.weightx = 0.34; tg.insets = new Insets(0, 0, 0, 12);
+        topSelectsBar.add(labeledField("Cliente", clientPicker), tg);
+        tg.gridx = 1; tg.weightx = 0.16;
+        topSelectsBar.add(labeledField("Armazém Expedição", warehouseCombo), tg);
+        tg.gridx = 2; tg.weightx = 0.16;
+        topSelectsBar.add(labeledField("Conta Tesouraria", accountCombo), tg);
+        tg.gridx = 3; tg.weightx = 0.34; tg.insets = new Insets(0, 0, 0, 0);
+        topSelectsBar.add(labeledField("Código de barras", barcodeBox), tg);
 
-        // SECTION: DOCUMENTO
-        row = addSectionHeader(formCard, gbc, row, "DOCUMENTO");
-        row = addFullRowField(formCard, gbc, row, "Cliente", clientPicker);
-        row = addTwoColumnRow(formCard, gbc, row,
-                "Armazém Expedição", warehouseCombo,
-                "Conta Tesouraria (Recebimento)", accountCombo);
+        // Catálogo (esquerda do workspace): pesquisa + grid de cards clicáveis
+        JPanel leftPanel = new JPanel(new BorderLayout(0, 10));
+        leftPanel.setOpaque(false);
+        leftPanel.setMinimumSize(new Dimension(360, 10));
+        JPanel catalogHeader = new JPanel(new BorderLayout(0, 8));
+        catalogHeader.setOpaque(false);
+        catalogHeader.add(UIHelper.createSubheading("Produtos"), BorderLayout.NORTH);
+        catalogHeader.add(searchRow(productSearchField), BorderLayout.SOUTH);
+        leftPanel.add(catalogHeader, BorderLayout.NORTH);
 
-        // SECTION: ARTIGO
-        row = addSectionHeader(formCard, gbc, row, "ARTIGO");
-        row = addFullRowField(formCard, gbc, row, "Produto", productPicker);
-        row = addTwoColumnRow(formCard, gbc, row,
-                "Quantidade", qtyField,
-                "Desconto %", discountField);
-        row = addTwoColumnRow(formCard, gbc, row,
-                "Nº Lote (FEFO)", batchField,
-                "Validade (FEFO)", expirationField);
-        row = addFullRowField(formCard, gbc, row, "Nº Série (opcional)", serialField);
+        productGrid = new JPanel(new GridLayout(0, 2, 12, 12));
+        productGrid.setOpaque(false);
+        productGridScroll = new JScrollPane(productGrid);
+        productGridScroll.setBorder(BorderFactory.createEmptyBorder());
+        productGridScroll.getViewport().setOpaque(false);
+        productGridScroll.setOpaque(false);
+        productGridScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        productGridScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        productGridScroll.getVerticalScrollBar().setUnitIncrement(16);
+        UIHelper.styleScrollPane(productGridScroll);
+        formScroll = productGridScroll; // reaproveita o reset de scroll em onPanelSelected
 
-        // Action button — full width
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(20, 6, 6, 6);
-        addToCartBtn = UIHelper.createPrimaryButton("Adicionar Artigo ao Carrinho");
-        addToCartBtn.setIcon(UIHelper.icon("fas-cart-plus", 14));
-        formCard.add(addToCartBtn, gbc);
-
-        productCombo.addActionListener(e -> refreshFEFOHint());
-        warehouseCombo.addActionListener(e -> refreshFEFOHint());
-
-        // Wrap the form in a scroll pane so nothing gets clipped on small displays
-        JScrollPane formScroll = new JScrollPane(formCard);
-        formScroll.setBorder(BorderFactory.createEmptyBorder());
-        formScroll.setOpaque(false);
-        formScroll.getViewport().setOpaque(false);
-        formScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        formScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        formScroll.getVerticalScrollBar().setUnitIncrement(16);
-        UIHelper.styleScrollPane(formScroll);
-
-        ModernPanel formCardWrapper = new ModernPanel(16);
-        formCardWrapper.setLayout(new BorderLayout());
-        formCardWrapper.setBorder(new EmptyBorder(16, 16, 16, 16));
-        formCardWrapper.add(formScroll, BorderLayout.CENTER);
-
-        leftPanel.add(formCardWrapper, BorderLayout.CENTER);
+        ModernPanel catalogCard = new ModernPanel(16);
+        catalogCard.setLayout(new BorderLayout());
+        catalogCard.setBorder(new EmptyBorder(12, 12, 12, 12));
+        catalogCard.add(productGridScroll, BorderLayout.CENTER);
+        leftPanel.add(catalogCard, BorderLayout.CENTER);
         workspace.setLeftComponent(leftPanel);
 
         // RIGHT: CART TABLE & CHECKOUT
@@ -323,7 +308,7 @@ public class POSPanel extends JPanel {
         cartCard.setLayout(new BorderLayout(0, 15));
         cartCard.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] cartCols = {"Artigo", "Preço Unit.", "Qtd", "Desc %", "Lote/Série", "Subtotal"};
+        String[] cartCols = {"Artigo", "Preço Unit.", "Qtd", "Desc %", "Lote/Série", "Líquido", "IVA", "Total"};
         cartModel = new DefaultTableModel(cartCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -333,27 +318,84 @@ public class POSPanel extends JPanel {
         cartTable.setFillsViewportHeight(true);
         cartTable.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
         // Larguras: "Artigo" leva o espaço; colunas numéricas/metadados ficam compactas.
-        cartTable.getColumnModel().getColumn(0).setPreferredWidth(260); // Artigo
-        cartTable.getColumnModel().getColumn(1).setPreferredWidth(110); // Preço Unit.
-        cartTable.getColumnModel().getColumn(2).setPreferredWidth(70);  // Qtd
-        cartTable.getColumnModel().getColumn(3).setPreferredWidth(70);  // Desc %
-        cartTable.getColumnModel().getColumn(4).setPreferredWidth(150); // Lote/Série
-        cartTable.getColumnModel().getColumn(5).setPreferredWidth(120); // Subtotal
+        cartTable.getColumnModel().getColumn(0).setPreferredWidth(240); // Artigo
+        cartTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Preço Unit.
+        cartTable.getColumnModel().getColumn(2).setPreferredWidth(60);  // Qtd
+        cartTable.getColumnModel().getColumn(3).setPreferredWidth(60);  // Desc %
+        cartTable.getColumnModel().getColumn(4).setPreferredWidth(140); // Lote/Série
+        cartTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Líquido
+        cartTable.getColumnModel().getColumn(6).setPreferredWidth(90);  // IVA
+        cartTable.getColumnModel().getColumn(7).setPreferredWidth(110); // Total
+        // Altura confortável: viewport para ~12 linhas; o scroll trata do excesso de produtos.
+        cartTable.setPreferredScrollableViewportSize(new Dimension(620, cartTable.getRowHeight() * 12));
         JScrollPane cartScroll = new JScrollPane(cartTable);
+        cartScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        cartScroll.getVerticalScrollBar().setUnitIncrement(16);
         UIHelper.styleScrollPane(cartScroll);
-        cartCard.add(cartScroll, BorderLayout.CENTER);
+
+        // Empty state — mostrado quando o carrinho está vazio (orienta o operador)
+        JPanel emptyState = new JPanel(new GridBagLayout());
+        emptyState.setOpaque(false);
+        JPanel emptyInner = new JPanel();
+        emptyInner.setLayout(new BoxLayout(emptyInner, BoxLayout.Y_AXIS));
+        emptyInner.setOpaque(false);
+        JLabel emptyIcon = new JLabel(UIHelper.icon("fas-shopping-cart", 48, UIHelper.TEXT_MUTED));
+        emptyIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel emptyTitle = new JLabel("Carrinho vazio");
+        emptyTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        emptyTitle.setForeground(UIHelper.TEXT_MUTED);
+        emptyTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel emptyHint = new JLabel("Leia um código de barras ou adicione um artigo.");
+        emptyHint.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        emptyHint.setForeground(UIHelper.TEXT_MUTED);
+        emptyHint.setAlignmentX(Component.CENTER_ALIGNMENT);
+        emptyInner.add(emptyIcon);
+        emptyInner.add(Box.createRigidArea(new Dimension(0, 12)));
+        emptyInner.add(emptyTitle);
+        emptyInner.add(Box.createRigidArea(new Dimension(0, 4)));
+        emptyInner.add(emptyHint);
+        emptyState.add(emptyInner);
+
+        cartCenter = new JPanel(new CardLayout());
+        cartCenter.setOpaque(false);
+        cartCenter.add(emptyState, "empty");
+        cartCenter.add(cartScroll, "table");
+        cartCard.add(cartCenter, BorderLayout.CENTER);
 
         // Cart Actions (Remove & Total & Checkout)
         JPanel cartBottom = new JPanel();
         cartBottom.setLayout(new BoxLayout(cartBottom, BoxLayout.Y_AXIS));
         cartBottom.setOpaque(false);
 
-        // Row 1: Total Label (Aligned Right)
-        JPanel totalRow = new JPanel(new BorderLayout());
-        totalRow.setOpaque(false);
-        totalLabel = new JLabel("Total POS: 0.00 MT");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        totalLabel.setForeground(Color.WHITE);
+        // Row 0: discriminação Subtotal s/ IVA + IVA — bloco sempre visível (legenda + valor por linha)
+        subtotalValueLabel = new JLabel("0,00 MT");
+        ivaValueLabel = new JLabel("0,00 MT");
+        JPanel breakdownRow = new JPanel(new GridBagLayout());
+        breakdownRow.setOpaque(false);
+        breakdownRow.setBorder(new EmptyBorder(2, 4, 2, 4));
+        GridBagConstraints bg = new GridBagConstraints();
+        bg.gridx = 0; bg.gridy = 0; bg.weightx = 1.0; bg.fill = GridBagConstraints.HORIZONTAL;
+        breakdownRow.add(breakdownCaption("Subtotal s/ IVA"), bg);
+        bg.gridx = 1; bg.weightx = 0; bg.fill = GridBagConstraints.NONE; bg.anchor = GridBagConstraints.EAST;
+        breakdownRow.add(breakdownValue(subtotalValueLabel), bg);
+        bg.gridx = 0; bg.gridy = 1; bg.weightx = 1.0; bg.fill = GridBagConstraints.HORIZONTAL; bg.anchor = GridBagConstraints.WEST;
+        bg.insets = new Insets(4, 0, 0, 0);
+        breakdownRow.add(breakdownCaption("IVA"), bg);
+        bg.gridx = 1; bg.weightx = 0; bg.fill = GridBagConstraints.NONE; bg.anchor = GridBagConstraints.EAST;
+        breakdownRow.add(breakdownValue(ivaValueLabel), bg);
+
+        // Row 1: Total em destaque — faixa de acento com legenda + valor grande (info nº1 do POS)
+        ModernPanel totalRow = new ModernPanel(12);
+        totalRow.setBackground(UIHelper.SELECTION_BG);
+        totalRow.setLayout(new BorderLayout());
+        totalRow.setBorder(new EmptyBorder(10, 16, 10, 16));
+        JLabel totalCaption = new JLabel("TOTAL A PAGAR");
+        totalCaption.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        totalCaption.setForeground(UIHelper.TEXT_MUTED);
+        totalLabel = new JLabel("0,00 MT");
+        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        totalLabel.setForeground(UIHelper.TEXT_LIGHT);
+        totalRow.add(totalCaption, BorderLayout.WEST);
         totalRow.add(totalLabel, BorderLayout.EAST);
 
         // Row 2: Fiado checkbox (linha própria, evita ser esmagado entre botões)
@@ -377,6 +419,8 @@ public class POSPanel extends JPanel {
         checkoutBtn.setIcon(UIHelper.icon("fas-check-circle", 14));
         buttonRow.add(checkoutBtn, BorderLayout.EAST);
 
+        cartBottom.add(breakdownRow);
+        cartBottom.add(Box.createRigidArea(new Dimension(0, 6)));
         cartBottom.add(totalRow);
         cartBottom.add(Box.createRigidArea(new Dimension(0, 8)));
         cartBottom.add(creditRow);
@@ -384,44 +428,77 @@ public class POSPanel extends JPanel {
         cartBottom.add(buttonRow);
         cartCard.add(cartBottom, BorderLayout.SOUTH);
 
-        rightPanel.add(cartCard, BorderLayout.CENTER);
+        // Container do carrinho com scroll: acompanha a largura do viewport e só faz scroll vertical
+        // quando falta altura — evita que a tabela colapse para só o cabeçalho em janelas baixas.
+        VScrollPanel cartHolder = new VScrollPanel(new BorderLayout());
+        cartHolder.add(cartCard, BorderLayout.CENTER);
+        JScrollPane cartCardScroll = new JScrollPane(cartHolder,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        cartCardScroll.setBorder(BorderFactory.createEmptyBorder());
+        cartCardScroll.setOpaque(false);
+        cartCardScroll.getViewport().setOpaque(false);
+        cartCardScroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        rightPanel.add(cartCardScroll, BorderLayout.CENTER);
         rightPanel.setMinimumSize(new Dimension(400, 10));
         workspace.setRightComponent(rightPanel);
         workspace.setDividerLocation(FORM_PANEL_WIDTH);
 
+        JPanel salesTop = new JPanel(new BorderLayout(0, 8));
+        salesTop.setOpaque(false);
+        salesTop.add(topSelectsBar, BorderLayout.NORTH);
+
         JPanel salesTab = new JPanel(new BorderLayout(0, 12));
         salesTab.setOpaque(false);
         salesTab.setBorder(new EmptyBorder(15, 5, 5, 5));
-        salesTab.add(scannerBar, BorderLayout.NORTH);
+        salesTab.add(salesTop, BorderLayout.NORTH);
         salesTab.add(workspace, BorderLayout.CENTER);
 
-        posTabs = new JTabbedPane();
-        UIHelper.styleTabbedPane(posTabs);
-        posTabs.addTab("Venda POS", UIHelper.icon("fas-cash-register", 16, UIHelper.TEXT_LIGHT), salesTab);
-        posTabs.addTab("Histórico de Vendas", UIHelper.icon("fas-history", 16, UIHelper.TEXT_LIGHT), buildSalesHistoryTab());
-        posTabs.addChangeListener(e -> {
-            if (posTabs.getSelectedIndex() == 1) {
-                refreshSalesHistory();
-            }
-        });
-        add(posTabs, BorderLayout.CENTER);
+        // Vistas comutadas pelos botões do topo (em vez de um JTabbedPane), para o selector ficar
+        // na mesma linha que as acções de caixa.
+        viewCards = new JPanel(new CardLayout());
+        viewCards.setOpaque(false);
+        viewCards.add(salesTab, "venda");
+        viewCards.add(buildSalesHistoryTab(), "hist");
+        add(viewCards, BorderLayout.CENTER);
+        selectView(false);
 
         // LISTENERS
         openSessionBtn.addActionListener(e -> openSession());
         closeSessionBtn.addActionListener(e -> closeSession());
         cashMoveBtn.addActionListener(e -> manageCashMovements());
-        addToCartBtn.addActionListener(e -> addToCart());
         removeBtn.addActionListener(e -> removeFromCart());
         checkoutBtn.addActionListener(e -> runCheckout());
 
         refreshSessionState();
     }
 
+    /** Comuta entre a vista de venda e o histórico, alternando o estilo dos botões do topo. */
+    private void selectView(boolean history) {
+        this.historyView = history;
+        if (viewCards != null) {
+            ((CardLayout) viewCards.getLayout()).show(viewCards, history ? "hist" : "venda");
+        }
+        Color active = UIHelper.ACCENT_BLUE;
+        Color activeHover = UIHelper.ACCENT_BLUE.brighter();
+        Color idle = new Color(55, 65, 81);
+        Color idleHover = new Color(75, 85, 99);
+        tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
+        tabHistBtn.setColors(history ? active : idle, history ? activeHover : idleHover);
+        if (history) {
+            refreshSalesHistory();
+        }
+    }
+
     public void onPanelSelected() {
         refreshSessionState();
         loadMetadata();
-        if (posTabs != null && posTabs.getSelectedIndex() == 1) {
+        if (historyView) {
             refreshSalesHistory();
+        }
+        // Repõe o formulário no topo para a secção DOCUMENTO (Cliente/Armazém) ficar sempre visível.
+        if (formScroll != null) {
+            SwingUtilities.invokeLater(() -> formScroll.getVerticalScrollBar().setValue(0));
         }
     }
 
@@ -435,6 +512,8 @@ public class POSPanel extends JPanel {
             statusLabel.setText(String.format("Caixa Aberta por %s | Fundo Inicial: %,.2f MT",
                     activeSession.getOperator(), activeSession.getOpeningBalance()));
             statusLabel.setForeground(UIHelper.APPROVED_GREEN);
+            statusLabel.setIcon(UIHelper.icon("fas-lock-open", 14, UIHelper.APPROVED_GREEN));
+            statusLabel.setIconTextGap(8);
             openSessionBtn.setVisible(false);
             closeSessionBtn.setVisible(true);
             cashMoveBtn.setVisible(true);
@@ -448,6 +527,8 @@ public class POSPanel extends JPanel {
             activeSession = null;
             statusLabel.setText("Caixa Fechada. É necessário abrir sessão antes de vender.");
             statusLabel.setForeground(UIHelper.PENDING_YELLOW);
+            statusLabel.setIcon(UIHelper.icon("fas-lock", 14, UIHelper.PENDING_YELLOW));
+            statusLabel.setIconTextGap(8);
             openSessionBtn.setVisible(true);
             closeSessionBtn.setVisible(false);
             cashMoveBtn.setVisible(false);
@@ -503,9 +584,143 @@ public class POSPanel extends JPanel {
                         || (p.barcode() != null && p.barcode().toLowerCase().contains(q))
                         || (p.name() != null && p.name().toLowerCase().contains(q)))
                 .toList();
-        productCombo.removeAllItems();
-        for (ProductDTO p : filteredProducts) {
-            productCombo.addItem(productLabel(p) + " (" + p.unitPrice() + " MT)");
+        rebuildProductGrid();
+    }
+
+    /** Reconstrói o grid de cards de produto a partir de {@link #filteredProducts}. */
+    private void rebuildProductGrid() {
+        if (productGrid == null) return;
+        productGrid.removeAll();
+        if (filteredProducts.isEmpty()) {
+            JLabel empty = new JLabel(productsList.isEmpty()
+                    ? "Não há produtos cadastrados."
+                    : "Nenhum produto corresponde à pesquisa.");
+            empty.setForeground(UIHelper.TEXT_MUTED);
+            empty.setBorder(new EmptyBorder(20, 8, 20, 8));
+            productGrid.add(empty);
+        } else {
+            for (ProductDTO p : filteredProducts) {
+                productGrid.add(productCard(p));
+            }
+        }
+        productGrid.revalidate();
+        productGrid.repaint();
+    }
+
+    /** Card clicável de um produto: imagem (ou marcador) + nome + preço. Clique adiciona ao carrinho. */
+    private JComponent productCard(ProductDTO p) {
+        ModernPanel card = new ModernPanel(12);
+        card.setLayout(new BorderLayout(0, 6));
+        card.setBackground(UIHelper.BG_CARD);
+        card.setBorder(new EmptyBorder(10, 10, 10, 10));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        JLabel image = new JLabel("", SwingConstants.CENTER);
+        image.setPreferredSize(new Dimension(120, 84));
+        javax.swing.Icon img = UIHelper.imageIconFromBytes(p.image(), 120, 84);
+        if (img != null) {
+            image.setIcon(img);
+        } else {
+            image.setIcon(UIHelper.icon("fas-box", 40, UIHelper.TEXT_MUTED));
+        }
+        card.add(image, BorderLayout.NORTH);
+
+        JLabel name = new JLabel("<html><div style='text-align:center'>" + escapeHtml(p.name()) + "</div></html>", SwingConstants.CENTER);
+        name.setForeground(UIHelper.TEXT_LIGHT);
+        name.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        card.add(name, BorderLayout.CENTER);
+
+        JLabel price = new JLabel(String.format("%,.2f MT", p.unitPrice()), SwingConstants.CENTER);
+        price.setForeground(UIHelper.ACCENT_BLUE);
+        price.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        card.add(price, BorderLayout.SOUTH);
+
+        card.setToolTipText(productLabel(p));
+        card.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) { addProductToCart(p); }
+        });
+        return card;
+    }
+
+    private static String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /** Legenda (esquerda) do bloco de discriminação Subtotal/IVA. */
+    private static JLabel breakdownCaption(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        l.setForeground(UIHelper.TEXT_MUTED);
+        return l;
+    }
+
+    /** Valor (direita) do bloco de discriminação Subtotal/IVA — bem visível. */
+    private static JLabel breakdownValue(JLabel l) {
+        l.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        l.setForeground(UIHelper.TEXT_LIGHT);
+        l.setHorizontalAlignment(SwingConstants.RIGHT);
+        return l;
+    }
+
+    /** Pequeno bloco "label em cima / componente em baixo" para a barra de selects do topo. */
+    private static JPanel labeledField(String label, JComponent field) {
+        JPanel p = new JPanel(new BorderLayout(0, 4));
+        p.setOpaque(false);
+        JLabel l = new JLabel(label);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setForeground(UIHelper.ACCENT);
+        p.add(l, BorderLayout.NORTH);
+        p.add(field, BorderLayout.CENTER);
+        return p;
+    }
+
+    /**
+     * Adiciona um produto ao carrinho (quantidade 1). Se já existir uma linha do mesmo produto (sem
+     * série), incrementa a quantidade — comportamento de carrinho web. Promoção automática aplicada.
+     */
+    private void addProductToCart(ProductDTO product) {
+        if (activeSession == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
+                    "Caixa Fechada", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        for (CartItem it : cartItems) {
+            if (it.serial == null && it.product.id().equals(product.id())) {
+                it.qty = it.qty.add(BigDecimal.ONE);
+                updateCartTotal();
+                return;
+            }
+        }
+        BigDecimal discount = BigDecimal.ZERO;
+        String note = "-";
+        var promo = promotionService.bestPromotion(
+                CurrentUserContext.getCurrentCompanyId(), product.id(), product.categoryId(), BigDecimal.ONE);
+        if (promo.isPresent()) {
+            discount = promo.get().discountPercent();
+            note = "Promo: " + promo.get().name();
+        }
+        CartItem item = new CartItem(product, BigDecimal.ONE, discount, null, null);
+        item.note = note;
+        cartItems.add(item);
+        updateCartTotal();
+    }
+
+    /** Reconstrói todas as linhas da tabela do carrinho a partir de {@link #cartItems}. */
+    private void rebuildCartRows() {
+        cartModel.setRowCount(0);
+        for (CartItem item : cartItems) {
+            cartModel.addRow(new Object[]{
+                    item.product.name(),
+                    String.format("%.2f MT", item.product.unitPrice()),
+                    item.qty.stripTrailingZeros().toPlainString(),
+                    item.discount.stripTrailingZeros().toPlainString() + "%",
+                    item.note != null ? item.note : "-",
+                    String.format("%,.2f MT", item.getSubtotal()),
+                    ivaCellLabel(item),
+                    String.format("%,.2f MT", item.getTotal())
+            });
         }
     }
 
@@ -541,9 +756,8 @@ public class POSPanel extends JPanel {
                 "Endereço:", addressField
         );
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form), "Novo Cliente",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Novo Cliente", "fas-address-book", "Cadastro rápido de cliente", form).showDialog();
+        if (!confirmed) return;
 
         String name = nameField.getText().trim();
         String taxId = taxIdField.getText().trim();
@@ -574,22 +788,16 @@ public class POSPanel extends JPanel {
     }
 
     private void openSession() {
-        String balStr = JOptionPane.showInputDialog(this, "Saldo de Abertura do Caixa (MT):", "Abrir Caixa", JOptionPane.QUESTION_MESSAGE);
-        if (balStr == null) return;
+        BigDecimal bal = UIHelper.promptAmount("Abrir Caixa", "fas-lock-open",
+                "Saldo inicial em numerário na gaveta", "Saldo de Abertura (MT):", BigDecimal.ZERO);
+        if (bal == null) return;
         try {
-            BigDecimal bal = new BigDecimal(balStr.trim());
-            if (bal.compareTo(BigDecimal.ZERO) < 0) {
-                JOptionPane.showMessageDialog(this, "O saldo de abertura deve ser positivo ou zero.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
             String operator = CurrentUserContext.getUsername();
             Long companyId = CurrentUserContext.getCurrentCompanyId();
 
             posService.openSession(operator, bal, companyId);
             JOptionPane.showMessageDialog(this, "Sessão de caixa aberta com sucesso!", "Informação", JOptionPane.INFORMATION_MESSAGE);
             refreshSessionState();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Valor inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
@@ -598,14 +806,14 @@ public class POSPanel extends JPanel {
     private void closeSession() {
         if (activeSession == null) return;
 
-        String balStr = JOptionPane.showInputDialog(this, "Saldo Físico no Fecho do Caixa (MT):", "Fechar Caixa", JOptionPane.QUESTION_MESSAGE);
-        if (balStr == null) return;
+        BigDecimal closingReal = UIHelper.promptAmount("Fechar Caixa", "fas-lock",
+                "Numerário fisicamente contado na gaveta", "Saldo Físico no Fecho (MT):", BigDecimal.ZERO);
+        if (closingReal == null) return;
 
         // Conta de tesouraria que recebe o depósito do numerário da sessão (opcional).
         Long depositAccountId = chooseDepositAccount();
 
         try {
-            BigDecimal closingReal = new BigDecimal(balStr.trim());
             TillSession closed = posService.closeSession(activeSession.getId(), closingReal, depositAccountId);
 
             String summary = String.format("Sessão Fechada com sucesso!\n" +
@@ -682,126 +890,8 @@ public class POSPanel extends JPanel {
         }
     }
 
-    private void addToCart() {
-        if (activeSession == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
-                    "Caixa Fechada", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        if (filteredProducts.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    productsList.isEmpty()
-                            ? "Não há produtos cadastrados."
-                            : "Nenhum produto corresponde à pesquisa.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        int prodIdx = productCombo.getSelectedIndex();
-        if (prodIdx < 0) return;
-
-        ProductDTO product = filteredProducts.get(prodIdx);
-        BigDecimal qty;
-        try {
-            qty = new BigDecimal(qtyField.getText().trim().replace(",", "."));
-            if (qty.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "A quantidade deve ser superior a 0.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        BigDecimal discount = BigDecimal.ZERO;
-        try {
-            discount = new BigDecimal(discountField.getText().trim());
-            if (discount.compareTo(BigDecimal.ZERO) < 0 || discount.compareTo(BigDecimal.valueOf(100)) > 0) {
-                throw new NumberFormatException();
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "O desconto deve ser um número entre 0 e 100.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Promoção automática: se o operador não definiu desconto manual, aplica a melhor promoção
-        // activa para o produto/categoria (traduzida em desconto % efectivo pelo PromotionService).
-        String promoName = null;
-        if (discount.compareTo(BigDecimal.ZERO) == 0) {
-            var promo = promotionService.bestPromotion(
-                    CurrentUserContext.getCurrentCompanyId(), product.id(), product.categoryId(), qty);
-            if (promo.isPresent()) {
-                discount = promo.get().discountPercent();
-                promoName = promo.get().name();
-            }
-        }
-
-        // Lote é decidido por FEFO no backend — o batchField mostra apenas previsão.
-        String previewBatch = batchField.getText().trim();
-        String batch = null;
-
-        String serial = serialField.getText().trim();
-        if (serial.isEmpty()) serial = null;
-
-        CartItem item = new CartItem(product, qty, discount, batch, serial);
-        cartItems.add(item);
-
-        String lotSer = "";
-        if (promoName != null) lotSer += "Promo: " + promoName + " ";
-        if (!previewBatch.isEmpty() && !"Sem stock".equals(previewBatch) && !"—".equals(previewBatch)) {
-            lotSer += "Lote FEFO: " + previewBatch + " ";
-        }
-        if (serial != null) lotSer += "Série: " + serial;
-        if (lotSer.isEmpty()) lotSer = "-";
-
-        cartModel.addRow(new Object[]{
-                product.name(),
-                String.format("%.2f MT", product.unitPrice()),
-                qty.stripTrailingZeros().toPlainString(),
-                discount + "%",
-                lotSer,
-                String.format("%.2f MT", item.getSubtotal())
-        });
-
-        updateCartTotal();
-
-        // Clear item-specific fields
-        qtyField.setText("1");
-        discountField.setText("0");
-        serialField.setText("");
-        refreshFEFOHint();
-    }
-
-    /**
-     * Pré-visualiza o lote/validade que vai sair (FEFO) com base no produto e armazém escolhidos.
-     * Quando a linha for confirmada, o backend volta a aplicar FEFO em transacção — esta consulta
-     * serve só para mostrar a previsão ao utilizador.
-     */
-    private void refreshFEFOHint() {
-        int prodIdx = productCombo.getSelectedIndex();
-        int whIdx = warehouseCombo.getSelectedIndex();
-        if (prodIdx < 0 || whIdx < 0
-                || filteredProducts.isEmpty() || whIdx >= warehousesList.size()) {
-            batchField.setText("");
-            expirationField.setText("");
-            return;
-        }
-        ProductDTO product = filteredProducts.get(prodIdx);
-        Warehouse warehouse = warehousesList.get(whIdx);
-        try {
-            inventoryService.findNextFEFO(product.id(), warehouse.getId()).ifPresentOrElse(
-                    b -> {
-                        batchField.setText(b.batchNumber() == null ? "—" : b.batchNumber());
-                        expirationField.setText(b.expirationDate() == null
-                                ? "—"
-                                : b.expirationDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-                    },
-                    () -> {
-                        batchField.setText("Sem stock");
-                        expirationField.setText("—");
-                    });
-        } catch (Exception ex) {
-            batchField.setText("");
-            expirationField.setText("");
-        }
-    }
+    // (Adicionar ao carrinho agora é feito por clique no card — ver addProductToCart. O FEFO é
+    //  aplicado pelo backend no checkout; deixou de haver pré-visualização no formulário.)
 
     private void removeFromCart() {
         int selected = cartTable.getSelectedRow();
@@ -815,11 +905,40 @@ public class POSPanel extends JPanel {
     }
 
     private void updateCartTotal() {
+        BigDecimal net = BigDecimal.ZERO;
+        BigDecimal tax = BigDecimal.ZERO;
         BigDecimal total = BigDecimal.ZERO;
         for (CartItem item : cartItems) {
-            total = total.add(item.getSubtotal());
+            net = net.add(item.getSubtotal());
+            tax = tax.add(item.getTax());
+            total = total.add(item.getTotal());
         }
-        totalLabel.setText(String.format("Total POS: %,.2f MT", total));
+        totalLabel.setText(String.format("%,.2f MT", total));
+        if (subtotalValueLabel != null) {
+            subtotalValueLabel.setText(String.format("%,.2f MT", net));
+        }
+        if (ivaValueLabel != null) {
+            ivaValueLabel.setText(String.format("%,.2f MT", tax));
+        }
+        rebuildCartRows();
+        refreshCartView();
+    }
+
+    /** Etiqueta da célula IVA da linha: "Isento" quando taxa 0, senão "valor (taxa%)". */
+    private static String ivaCellLabel(CartItem item) {
+        BigDecimal rate = item.product.taxRate() != null ? item.product.taxRate() : BigDecimal.ZERO;
+        if (rate.compareTo(BigDecimal.ZERO) == 0) {
+            return "Isento";
+        }
+        String pct = rate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString();
+        return String.format("%,.2f MT (%s%%)", item.getTax(), pct);
+    }
+
+    /** Alterna entre o empty state e a tabela conforme o carrinho tem ou não linhas. */
+    private void refreshCartView() {
+        if (cartCenter == null) return;
+        CardLayout layout = (CardLayout) cartCenter.getLayout();
+        layout.show(cartCenter, cartItems.isEmpty() ? "empty" : "table");
     }
 
     private void runCheckout() {
@@ -877,7 +996,7 @@ public class POSPanel extends JPanel {
 
         boolean fiado = creditCheck != null && creditCheck.isSelected();
         java.math.BigDecimal cartTotal = java.math.BigDecimal.ZERO;
-        for (CartItem item : cartItems) cartTotal = cartTotal.add(item.getSubtotal());
+        for (CartItem item : cartItems) cartTotal = cartTotal.add(item.getTotal());
         cartTotal = cartTotal.setScale(2, RoundingMode.HALF_UP);
 
         java.util.List<com.phcpro.modules.pos.dto.PosPaymentRequest> payments;
@@ -981,36 +1100,40 @@ public class POSPanel extends JPanel {
                 "Total a pagar:", totalField,
                 "Valor entregue (MT):", tenderedField
         );
+        changeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        changeLabel.setBorder(new EmptyBorder(8, 4, 0, 4));
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setOpaque(false);
         panel.add(form, BorderLayout.CENTER);
         panel.add(changeLabel, BorderLayout.SOUTH);
 
-        int opt = JOptionPane.showConfirmDialog(this, panel, "Pagamento",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return null;
-
-        int methodIdx = methodCombo.getSelectedIndex();
-        if (methodIdx == 0) {
-            // Numerário: valida valor entregue ≥ total e calcula troco no backend.
-            BigDecimal tendered;
-            try {
-                tendered = new BigDecimal(tenderedField.getText().trim().replace(",", "."));
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Valor entregue inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return askPayment(total, accountId);
-            }
-            if (tendered.compareTo(total) < 0) {
-                JOptionPane.showMessageDialog(this,
-                        "O valor entregue é inferior ao total a pagar.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return askPayment(total, accountId);
-            }
-            // Numerário durante sessão de caixa entra na gaveta — não precisa de conta de tesouraria.
-            return new com.phcpro.modules.pos.dto.PosPaymentRequest("CASH", total, tendered, null, null);
-        }
-
-        String method = (methodIdx == 1) ? "CARD" : "BANK_TRANSFER";
-        return new com.phcpro.modules.pos.dto.PosPaymentRequest(method, total, total, null, accountId);
+        // Modal premium (ModernFormDialog): ícone + subtítulo + botão estilizado. A validação corre no
+        // onSave — lançar excepção mantém o modal aberto (sem recursão).
+        com.phcpro.modules.pos.dto.PosPaymentRequest[] result = {null};
+        boolean ok = new ModernFormDialog(UIHelper.mainWindow, "Pagamento", "fas-money-bill-wave",
+                "Receba do cliente e confirme o troco", panel)
+                .setConfirmButton("Confirmar Pagamento", "fas-check")
+                .setOnSave(() -> {
+                    int methodIdx = methodCombo.getSelectedIndex();
+                    if (methodIdx == 0) {
+                        // Numerário: valida valor entregue ≥ total; entra na gaveta (sem conta).
+                        BigDecimal tendered;
+                        try {
+                            tendered = new BigDecimal(tenderedField.getText().trim().replace(",", "."));
+                        } catch (NumberFormatException ex) {
+                            throw new IllegalArgumentException("Valor entregue inválido.");
+                        }
+                        if (tendered.compareTo(total) < 0) {
+                            throw new IllegalArgumentException("O valor entregue é inferior ao total a pagar.");
+                        }
+                        result[0] = new com.phcpro.modules.pos.dto.PosPaymentRequest("CASH", total, tendered, null, null);
+                    } else {
+                        String method = (methodIdx == 1) ? "CARD" : "BANK_TRANSFER";
+                        result[0] = new com.phcpro.modules.pos.dto.PosPaymentRequest(method, total, total, null, accountId);
+                    }
+                })
+                .showDialog();
+        return ok ? result[0] : null;
     }
 
     private void printReceiptIfConfirmed(Invoice invoice) {
@@ -1044,23 +1167,29 @@ public class POSPanel extends JPanel {
             return;
         }
 
-        // Adiciona com quantidade 1 ao carrinho — mesmo formato que addToCart usa
-        CartItem item = new CartItem(product, BigDecimal.ONE, BigDecimal.ZERO, null, null);
-        cartItems.add(item);
-        cartModel.addRow(new Object[]{
-                product.name(),
-                String.format("%.2f MT", product.unitPrice()),
-                1,
-                "0%",
-                "-",
-                String.format("%.2f MT", item.getSubtotal())
-        });
-        updateCartTotal();
+        // Adiciona com quantidade 1 ao carrinho (mesmo caminho do clique no card; faz merge de qtd).
+        addProductToCart(product);
         barcodeField.setText("");
         barcodeField.requestFocusInWindow();
     }
 
     // ─── Form-layout helpers ────────────────────────────────────────────────────
+
+    /**
+     * Painel para colocar dentro de um {@link JScrollPane} vertical: acompanha a largura do viewport
+     * (sem scroll horizontal) e só permite scroll vertical quando o conteúdo é mais alto que o viewport
+     * (caso contrário, estica para preencher a altura — a tabela usa o espaço disponível).
+     */
+    private static final class VScrollPanel extends JPanel implements Scrollable {
+        VScrollPanel(LayoutManager lm) { super(lm); setOpaque(false); }
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle r, int o, int d) { return 16; }
+        @Override public int getScrollableBlockIncrement(Rectangle r, int o, int d) { return 100; }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() {
+            return getParent() instanceof JViewport vp && vp.getHeight() >= getPreferredSize().height;
+        }
+    }
 
     private static JPanel stackedPicker(JComponent top, JComponent bottom) {
         JPanel p = new JPanel(new BorderLayout(0, 6));
@@ -1070,9 +1199,50 @@ public class POSPanel extends JPanel {
         return p;
     }
 
+    /** Campo de pesquisa com ícone de lupa vectorial **dentro** do input (caixa única, aspecto profissional). */
+    private static JPanel searchRow(JTextField field) {
+        return iconInputBox("fas-search", 13, UIHelper.TEXT_MUTED, field);
+    }
+
+    /**
+     * Campo de texto de altura única ({@code FORM_CONTROL_HEIGHT}) com um ícone vectorial **dentro**
+     * do input, à esquerda. Base de {@link #searchRow} (lupa) e do campo de código de barras
+     * (`fas-barcode`), para todos alinharem com os combos do cabeçalho.
+     */
+    private static JPanel iconInputBox(String iconCode, int iconSize, Color iconColor, JTextField field) {
+        JPanel box = new JPanel(new BorderLayout(8, 0));
+        box.setBackground(UIHelper.FIELD_BG);
+        box.setBorder(iconBoxBorder(UIHelper.BORDER, 1));
+
+        JLabel icon = new JLabel(UIHelper.icon(iconCode, iconSize, iconColor));
+        box.add(icon, BorderLayout.WEST);
+
+        // O campo herda o aspecto da caixa: sem borda/fundo próprios para o ícone parecer dentro do
+        // input. O realce de foco vive na CAIXA (o campo opta por não desenhar a sua borda de foco).
+        field.putClientProperty("noFocusBorder", Boolean.TRUE);
+        field.setBorder(new EmptyBorder(6, 8, 6, 0));
+        field.setOpaque(false);
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override public void focusGained(java.awt.event.FocusEvent e) { box.setBorder(iconBoxBorder(UIHelper.ACCENT, 2)); }
+            @Override public void focusLost(java.awt.event.FocusEvent e) { box.setBorder(iconBoxBorder(UIHelper.BORDER, 1)); }
+        });
+        box.add(field, BorderLayout.CENTER);
+
+        int h = UIHelper.FORM_CONTROL_HEIGHT;
+        box.setPreferredSize(new Dimension(box.getPreferredSize().width, h));
+        box.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
+        return box;
+    }
+
+    private static javax.swing.border.Border iconBoxBorder(Color line, int thickness) {
+        return BorderFactory.createCompoundBorder(
+                new javax.swing.border.LineBorder(line, thickness, true),
+                new EmptyBorder(0, 10 - (thickness - 1), 0, 8));
+    }
+
     private static int addSectionHeader(JPanel host, GridBagConstraints gbc, int row, String text) {
         JLabel section = new JLabel(text);
-        section.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        section.setFont(new Font("Segoe UI", Font.BOLD, 12));
         section.setForeground(UIHelper.ACCENT);
         section.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 70)));
 
@@ -1282,10 +1452,9 @@ public class POSPanel extends JPanel {
                 "Motivo:", reasonField
         ), BorderLayout.SOUTH);
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(panel),
-                "Devolver / Trocar venda " + invoice.invoiceNumber(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) {
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Devolver / Trocar venda " + invoice.invoiceNumber(),
+                "fas-undo", "Devolução por nota de crédito", panel).setConfirmButton("Confirmar", "fas-check").showDialog();
+        if (!confirmed) {
             return;
         }
 
@@ -1335,8 +1504,8 @@ public class POSPanel extends JPanel {
             int exchange = JOptionPane.showConfirmDialog(this,
                     "Pretende lançar agora a venda de troca/substituição?",
                     "Troca", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (exchange == JOptionPane.YES_OPTION && posTabs != null) {
-                posTabs.setSelectedIndex(0);
+            if (exchange == JOptionPane.YES_OPTION) {
+                selectView(false);
             }
             refreshSalesHistory();
             refreshSessionState();

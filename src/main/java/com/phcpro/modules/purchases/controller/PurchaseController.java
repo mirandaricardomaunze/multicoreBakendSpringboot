@@ -79,6 +79,12 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseOrderService.receiveOrder(id));
     }
 
+    @PostMapping("/orders/{id}/receive-partial")
+    public ResponseEntity<PurchaseOrderDTO> receivePartial(
+            @PathVariable Long id, @RequestBody @Valid ReceivePurchaseOrderRequest request) {
+        return ResponseEntity.ok(purchaseOrderService.receivePartial(id, request));
+    }
+
     @PostMapping("/orders/{id}/cancel")
     public ResponseEntity<PurchaseOrderDTO> cancelOrder(
             @PathVariable Long id, @RequestParam String reason) {

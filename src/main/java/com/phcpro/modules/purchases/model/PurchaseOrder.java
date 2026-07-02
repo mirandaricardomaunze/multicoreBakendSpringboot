@@ -25,6 +25,7 @@ import java.util.List;
 public class PurchaseOrder extends BaseEntity {
 
     public static final String ORDERED = "ORDERED";
+    public static final String PARTIALLY_RECEIVED = "PARTIALLY_RECEIVED";
     public static final String RECEIVED = "RECEIVED";
     public static final String CANCELLED = "CANCELLED";
 

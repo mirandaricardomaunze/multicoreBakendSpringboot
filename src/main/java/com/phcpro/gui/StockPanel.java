@@ -52,6 +52,8 @@ public class StockPanel extends JPanel {
     private DefaultTableModel stockModel;
     private JTable stockTable;
     private List<Stock> stocksList = new ArrayList<>();
+    // ID do produto por linha visível da tabela (paralelo às linhas, respeita filtros).
+    private final java.util.List<Long> stockRowProductIds = new java.util.ArrayList<>();
 
     // Movements log
     private DefaultTableModel movementsModel;
@@ -61,7 +63,10 @@ public class StockPanel extends JPanel {
     private final com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService;
     private DefaultTableModel categoriesModel;
     private JTable categoriesTable;
+    private JTextField categorySearchField;
     private java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categoriesList = new ArrayList<>();
+    private java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categoriesFiltered = new ArrayList<>();
+    private final java.util.Map<Long, Integer> categoryProductCounts = new java.util.HashMap<>();
 
     public StockPanel(InventoryService inventoryService,
                        ComercialService comercialService,
@@ -88,11 +93,14 @@ public class StockPanel extends JPanel {
 
         ModernButton newProductBtn = UIHelper.createSuccessButton("Cadastrar Produto");
         newProductBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        ModernButton editProductBtn = UIHelper.createSecondaryButton("Editar Produto");
+        editProductBtn.setIcon(UIHelper.icon("fas-edit", 14));
         ModernButton newWarehouseBtn = UIHelper.createPrimaryButton("Criar Armazém");
         newWarehouseBtn.setIcon(UIHelper.icon("fas-warehouse", 14));
         JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         catalogueGroup.setOpaque(false);
         catalogueGroup.add(newProductBtn);
+        catalogueGroup.add(editProductBtn);
         catalogueGroup.add(newWarehouseBtn);
         topBar.add(catalogueGroup, BorderLayout.EAST);
 
@@ -112,6 +120,7 @@ public class StockPanel extends JPanel {
 
         // GLOBAL ACTION LISTENERS
         newProductBtn.addActionListener(e -> createProductDialog());
+        editProductBtn.addActionListener(e -> editProductDialog(selectedStockProductId()));
         newWarehouseBtn.addActionListener(e -> createWarehouseDialogV2());
 
         onPanelSelected();
@@ -415,6 +424,15 @@ public class StockPanel extends JPanel {
         };
         stockTable = new JTable(stockModel);
         UIHelper.styleTable(stockTable);
+        // Duplo-clique numa linha → editar esse produto directamente.
+        stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    Long id = selectedStockProductId();
+                    if (id != null) editProductDialog(id);
+                }
+            }
+        });
         JScrollPane stockScroll = new JScrollPane(stockTable);
         UIHelper.styleScrollPane(stockScroll);
         card.add(stockScroll, BorderLayout.CENTER);
@@ -557,17 +575,37 @@ public class StockPanel extends JPanel {
         refreshBtn.addActionListener(e -> loadCategories());
         actions.add(newBtn); actions.add(editBtn); actions.add(toggleBtn); actions.add(refreshBtn);
         header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+
+        // Pesquisa por código/nome
+        categorySearchField = new JTextField();
+        UIHelper.styleTextField(categorySearchField);
+        categorySearchField.putClientProperty("JTextField.placeholderText", "Pesquisar categoria por código ou nome…");
+        UIHelper.onTextChange(categorySearchField, () -> filterCategories(categorySearchField.getText()));
+        JPanel searchRow = new JPanel(new BorderLayout(8, 0));
+        searchRow.setOpaque(false);
+        searchRow.setBorder(new EmptyBorder(10, 0, 0, 0));
+        JLabel sIcon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
+        searchRow.add(sIcon, BorderLayout.WEST);
+        searchRow.add(categorySearchField, BorderLayout.CENTER);
+
+        JPanel headerWrap = new JPanel(new BorderLayout());
+        headerWrap.setOpaque(false);
+        headerWrap.add(header, BorderLayout.NORTH);
+        headerWrap.add(searchRow, BorderLayout.SOUTH);
+        tab.add(headerWrap, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        String[] cols = {"Código", "Nome", "Cor", "Estado"};
+        String[] cols = {"Código", "Nome", "Cor", "Produtos", "Estado"};
         categoriesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         categoriesTable = new JTable(categoriesModel);
         UIHelper.styleTable(categoriesTable);
+        // Coluna "Cor" com amostra visível da cor da categoria
+        categoriesTable.getColumnModel().getColumn(2).setCellRenderer(new ColorCellRenderer());
+        categoriesTable.getColumnModel().getColumn(3).setMaxWidth(90);
         JScrollPane scroll = new JScrollPane(categoriesTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
@@ -578,22 +616,82 @@ public class StockPanel extends JPanel {
     private void loadCategories() {
         if (categoriesModel == null) return;
         categoriesList = productCategoryService.getAll();
+        // Contagem de produtos por categoria (gestão profissional: saber o que está em uso)
+        categoryProductCounts.clear();
+        for (ProductDTO p : comercialService.getAllProducts()) {
+            if (p.categoryId() != null) {
+                categoryProductCounts.merge(p.categoryId(), 1, Integer::sum);
+            }
+        }
+        filterCategories(categorySearchField == null ? "" : categorySearchField.getText());
+    }
+
+    private void filterCategories(String query) {
+        if (categoriesModel == null) return;
+        String q = query == null ? "" : query.trim().toLowerCase();
+        categoriesFiltered = categoriesList.stream()
+                .filter(c -> q.isEmpty()
+                        || (c.code() != null && c.code().toLowerCase().contains(q))
+                        || (c.name() != null && c.name().toLowerCase().contains(q)))
+                .toList();
         categoriesModel.setRowCount(0);
-        for (var c : categoriesList) {
+        for (var c : categoriesFiltered) {
             categoriesModel.addRow(new Object[]{
                     c.code(), c.name(),
-                    c.colorHex() != null && !c.colorHex().isBlank() ? c.colorHex() : "-",
+                    c.colorHex() != null && !c.colorHex().isBlank() ? c.colorHex() : "—",
+                    categoryProductCounts.getOrDefault(c.id(), 0),
                     c.active() ? "Activa" : "Inactiva"});
         }
     }
 
     private com.phcpro.modules.comercial.dto.ProductCategoryDTO selectedCategory() {
         int row = categoriesTable.getSelectedRow();
-        if (row < 0 || row >= categoriesList.size()) {
+        if (row < 0 || row >= categoriesFiltered.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma categoria.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
         }
-        return categoriesList.get(row);
+        return categoriesFiltered.get(row);
+    }
+
+    /** Renderiza a coluna "Cor" com uma amostra (quadrado) da cor hex da categoria + o código hex. */
+    private static class ColorCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int col) {
+            super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, col);
+            setBackground(isSelected ? t.getSelectionBackground() : (row % 2 == 0 ? UIHelper.BG_CARD : UIHelper.ROW_ALT));
+            setForeground(UIHelper.TEXT_LIGHT);
+            String hex = value == null ? "" : value.toString();
+            setIcon(colorSwatchIcon(hex, 14));
+            setText("  " + (hex.isBlank() ? "—" : hex));
+            setBorder(new EmptyBorder(0, 10, 0, 10));
+            return this;
+        }
+    }
+
+    /** Ícone quadrado preenchido com a cor hex (ou contorno cinza quando inválida/ausente). */
+    private static javax.swing.Icon colorSwatchIcon(String hex, int size) {
+        Color c = null;
+        try {
+            if (hex != null && hex.trim().startsWith("#")) c = Color.decode(hex.trim());
+        } catch (NumberFormatException ignored) { }
+        final Color fill = c;
+        return new javax.swing.Icon() {
+            @Override public int getIconWidth() { return size; }
+            @Override public int getIconHeight() { return size; }
+            @Override public void paintIcon(Component comp, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (fill != null) {
+                    g2.setColor(fill);
+                    g2.fillRoundRect(x, y, size, size, 4, 4);
+                } else {
+                    g2.setColor(new Color(107, 114, 128));
+                    g2.drawRoundRect(x, y, size - 1, size - 1, 4, 4);
+                }
+                g2.dispose();
+            }
+        };
     }
 
     private void toggleSelectedCategory() {
@@ -611,17 +709,51 @@ public class StockPanel extends JPanel {
         boolean editing = existing != null;
         JTextField codeField = new JTextField(editing ? existing.code() : "");
         JTextField nameField = new JTextField(editing ? existing.name() : "");
-        JTextField colorField = new JTextField(editing && existing.colorHex() != null ? existing.colorHex() : "");
-        colorField.setToolTipText("Cor opcional em hexadecimal, ex.: #2E86C1");
+
+        // Seletor de cor profissional: amostra + escolher (JColorChooser) + limpar. Hex guardado num holder.
+        final String[] colorHolder = { editing && existing.colorHex() != null ? existing.colorHex() : "" };
+        JLabel swatch = new JLabel();
+        swatch.setOpaque(true);
+        swatch.setPreferredSize(new Dimension(40, UIHelper.FORM_CONTROL_HEIGHT));
+        swatch.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1, true));
+        Runnable applySwatch = () -> {
+            Color c = null;
+            try { if (colorHolder[0].startsWith("#")) c = Color.decode(colorHolder[0]); } catch (NumberFormatException ignored) { }
+            swatch.setBackground(c != null ? c : UIHelper.BG_CARD);
+            swatch.setText(c == null ? "  sem cor" : "");
+            swatch.setForeground(UIHelper.TEXT_MUTED);
+        };
+        applySwatch.run();
+        ModernButton pickBtn = UIHelper.createSecondaryButton("Escolher…");
+        pickBtn.setIcon(UIHelper.icon("fas-palette", 14));
+        pickBtn.addActionListener(ev -> {
+            Color initial = UIHelper.ACCENT_BLUE;
+            try { if (colorHolder[0].startsWith("#")) initial = Color.decode(colorHolder[0]); } catch (NumberFormatException ignored) { }
+            Color chosen = JColorChooser.showDialog(this, "Cor da categoria", initial);
+            if (chosen != null) {
+                colorHolder[0] = String.format("#%02X%02X%02X", chosen.getRed(), chosen.getGreen(), chosen.getBlue());
+                applySwatch.run();
+            }
+        });
+        ModernButton clearBtn = UIHelper.createSecondaryButton("Limpar");
+        clearBtn.setIcon(UIHelper.icon("fas-times", 14));
+        clearBtn.addActionListener(ev -> { colorHolder[0] = ""; applySwatch.run(); });
+        JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        colorPanel.setOpaque(false);
+        colorPanel.add(swatch);
+        colorPanel.add(pickBtn);
+        colorPanel.add(clearBtn);
 
         JPanel form = UIHelper.createDialogForm(
                 "Código:", codeField,
                 "Nome:", nameField,
-                "Cor (hex, opcional):", colorField);
+                "Cor (opcional):", colorPanel);
 
         Window parent = SwingUtilities.getWindowAncestor(this);
-        ModernFormDialog dlg = new ModernFormDialog(parent, editing ? "Editar Categoria" : "Nova Categoria", form);
-        dlg.setSize(460, 360);
+        ModernFormDialog dlg = new ModernFormDialog(parent,
+                editing ? "Editar Categoria" : "Nova Categoria", "fas-tags",
+                "Organize os produtos em categorias da loja", form);
+        dlg.setSize(480, 360);
         dlg.setOnSave(() -> {
             String code = codeField.getText().trim();
             String name = nameField.getText().trim();
@@ -629,7 +761,7 @@ public class StockPanel extends JPanel {
                 throw new RuntimeException("Código e nome são obrigatórios.");
             }
             var req = new com.phcpro.modules.comercial.dto.CreateProductCategoryRequest(
-                    code, name, colorField.getText().trim());
+                    code, name, colorHolder[0].isBlank() ? null : colorHolder[0]);
             if (editing) productCategoryService.update(existing.id(), req);
             else productCategoryService.create(req);
         });
@@ -683,6 +815,7 @@ public class StockPanel extends JPanel {
 
     private void filterStocks() {
         stockModel.setRowCount(0);
+        stockRowProductIds.clear();
 
         int filterIdx = warehouseFilterCombo.getSelectedIndex();
         Long filterWarehouseId = null;
@@ -729,7 +862,18 @@ public class StockPanel extends JPanel {
                     String.format("%,.2f", qtyBoxes),
                     String.format("%,.2f MT", price)
             });
+            stockRowProductIds.add(s.getProduct().getId());
         }
+    }
+
+    /** ID do produto da linha seleccionada em Níveis de Stock, ou {@code null} se nada seleccionado. */
+    private Long selectedStockProductId() {
+        if (stockTable == null) return null;
+        int viewRow = stockTable.getSelectedRow();
+        if (viewRow < 0) return null;
+        int modelRow = stockTable.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= stockRowProductIds.size()) return null;
+        return stockRowProductIds.get(modelRow);
     }
 
     private void loadMovements() {
@@ -754,43 +898,6 @@ public class StockPanel extends JPanel {
         }
     }
 
-    private void createWarehouseDialog() {
-        JTextField nameField = new JTextField();
-        JTextField locField = new JTextField();
-
-        JPanel dialogPanel = UIHelper.createDialogForm(
-                "Nome do Armazém:", nameField,
-                "Localização / Endereço:", locField
-        );
-
-        int option = JOptionPane.showConfirmDialog(this, dialogPanel, "Criar Novo Armazém", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option == JOptionPane.OK_OPTION) {
-            String name = nameField.getText().trim();
-            String location = locField.getText().trim();
-
-            if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "O nome do armazém é obrigatório.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            try {
-                // We need the active company model to create
-                // Let's resolve the current company object from DB via the id
-                // Note that the service will handle company association
-                // To keep it simple, we can fetch all company details later or pass details
-                // In inventoryService, it accepts Company object, so we find it by ID first
-                // Let's find company by ID
-                com.phcpro.modules.company.model.Company currentCompany = new com.phcpro.modules.company.model.Company();
-                currentCompany.setId(CurrentUserContext.getCurrentCompanyId());
-
-                inventoryService.createWarehouse(name, location, currentCompany);
-                JOptionPane.showMessageDialog(this, "Armazém '" + name + "' criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-                onPanelSelected();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao criar armazém: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
 
     private void createWarehouseDialogV2() {
         JTextField nameField = new JTextField();
@@ -805,8 +912,8 @@ public class StockPanel extends JPanel {
                 "Localizacao / Endereco:", locField
         );
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Criar Novo Armazem", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option == JOptionPane.OK_OPTION) {
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Criar Novo Armazém", "fas-warehouse", "Registe um novo local de stock", dialogPanel).showDialog();
+        if (confirmed) {
             String name = nameField.getText().trim();
             String warehouseNumber = numberField.getText().trim();
             String capacityStr = capacityField.getText().trim();
@@ -869,8 +976,8 @@ public class StockPanel extends JPanel {
                 "Motivo / Descrição:", reasonField
         );
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Contagem / Ajuste de Stock", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option == JOptionPane.OK_OPTION) {
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Contagem / Ajuste de Stock", "fas-clipboard-list", "Acerte a quantidade física em stock", dialogPanel).showDialog();
+        if (confirmed) {
             int prodIdx = prodCombo.getSelectedIndex();
             int whIdx = whCombo.getSelectedIndex();
 
@@ -909,6 +1016,28 @@ public class StockPanel extends JPanel {
      * Diálogo profissional de entrada de lote com validade. Se {@code preselected} for indicado,
      * pré-selecciona o produto (usado depois de cadastrar um produto novo).
      */
+    /** Inteiro ≥ 0 a partir de texto livre; vazio/inválido → 0 (para os campos de caixas). */
+    private static int parseIntOrZero(String raw) {
+        if (raw == null) return 0;
+        try {
+            int v = Integer.parseInt(raw.trim());
+            return Math.max(0, v);
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
+    }
+
+    /** Decimal ≥ 0 a partir de texto livre; vazio/inválido → 0 (para unidades soltas). */
+    private static BigDecimal parseDecimalOrZero(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return BigDecimal.ZERO;
+        try {
+            BigDecimal v = new BigDecimal(raw.trim());
+            return v.signum() < 0 ? BigDecimal.ZERO : v;
+        } catch (NumberFormatException ex) {
+            return BigDecimal.ZERO;
+        }
+    }
+
     private void createBatchEntryDialog(ProductDTO preselected) {
         List<ProductDTO> products = comercialService.getAllProducts();
         if (products.isEmpty()) {
@@ -922,7 +1051,14 @@ public class StockPanel extends JPanel {
 
         JComboBox<String> prodCombo = new JComboBox<>();
         JComboBox<String> whCombo = new JComboBox<>();
-        JTextField qtyField = new JTextField();
+        // Entrada por caixas: nº de caixas + unidades soltas → total em unidades (read-only).
+        // O stock é sempre persistido/movimentado em UNIDADES; a caixa é só camada de entrada.
+        JTextField boxesField = new JTextField("0");
+        JTextField looseField = new JTextField("0");
+        JTextField totalUnitsField = new JTextField();
+        totalUnitsField.setEditable(false);
+        JLabel unitsPerBoxHint = new JLabel(" ");
+        unitsPerBoxHint.setForeground(UIHelper.TEXT_MUTED);
         JTextField expirationField = new JTextField();
         JTextField batchField = new JTextField();
         JTextField serialField = new JTextField();
@@ -930,7 +1066,9 @@ public class StockPanel extends JPanel {
 
         UIHelper.styleComboBox(prodCombo);
         UIHelper.styleComboBox(whCombo);
-        UIHelper.styleTextField(qtyField);
+        UIHelper.styleTextField(boxesField);
+        UIHelper.styleTextField(looseField);
+        UIHelper.styleTextField(totalUnitsField);
         UIHelper.styleTextField(expirationField);
         UIHelper.styleTextField(batchField);
         UIHelper.styleTextField(serialField);
@@ -955,19 +1093,38 @@ public class StockPanel extends JPanel {
             }
         }
 
+        // Total (unidades) = nº caixas × unidades/caixa + unidades soltas. Recalcula ao mudar
+        // produto (logo unidades/caixa), nº de caixas ou unidades soltas.
+        Runnable recomputeTotal = () -> {
+            int idx = prodCombo.getSelectedIndex();
+            int upb = (idx >= 0 && idx < products.size())
+                    ? Math.max(1, products.get(idx).unitsPerBox()) : 1;
+            unitsPerBoxHint.setText(upb + " unidade(s) por caixa");
+            int boxes = parseIntOrZero(boxesField.getText());
+            BigDecimal loose = parseDecimalOrZero(looseField.getText());
+            BigDecimal total = BigDecimal.valueOf((long) boxes * upb).add(loose);
+            totalUnitsField.setText(total.stripTrailingZeros().toPlainString());
+        };
+        prodCombo.addActionListener(e -> recomputeTotal.run());
+        UIHelper.onTextChange(boxesField, recomputeTotal);
+        UIHelper.onTextChange(looseField, recomputeTotal);
+        recomputeTotal.run();
+
         JPanel dialogPanel = UIHelper.createDialogForm(
                 "Produto:", prodCombo,
                 "Armazém:", whCombo,
-                "Quantidade:", qtyField,
+                "Nº de Caixas:", boxesField,
+                "Unidades soltas:", looseField,
+                "Unidades / caixa:", unitsPerBoxHint,
+                "Total (unidades):", totalUnitsField,
                 "Validade (yyyy-MM-dd):", expirationField,
                 "Nº Lote:", batchField,
                 "Nº Série:", serialField,
                 "Descrição:", descField
         );
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
-                "Adicionar Lote / Validade", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Adicionar Lote / Validade", "fas-boxes", "Registe lote e data de validade (FEFO)", dialogPanel).showDialog();
+        if (!confirmed) return;
 
         int prodIdx = prodCombo.getSelectedIndex();
         int whIdx = whCombo.getSelectedIndex();
@@ -975,9 +1132,10 @@ public class StockPanel extends JPanel {
 
         BigDecimal qty;
         try {
-            qty = new BigDecimal(qtyField.getText().trim());
+            // A quantidade gravada é o total em unidades (caixas × und/caixa + soltas).
+            qty = new BigDecimal(totalUnitsField.getText().trim());
             if (qty.compareTo(BigDecimal.ZERO) <= 0) {
-                JOptionPane.showMessageDialog(this, "Quantidade deve ser maior que zero.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Quantidade deve ser maior que zero. Indique o nº de caixas e/ou unidades soltas.", "Erro", JOptionPane.ERROR_MESSAGE);
                 return;
             }
         } catch (NumberFormatException ex) {
@@ -1059,21 +1217,64 @@ public class StockPanel extends JPanel {
         categoryCombo.addItem("— Sem categoria —");
         for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
 
+        // IVA dinâmico: taxa de IVA por produto (default = IVA Normal 16%).
+        JComboBox<String> taxCombo = new JComboBox<>();
+        UIHelper.styleComboBox(taxCombo);
+        java.util.List<com.phcpro.modules.fiscal.dto.TaxRateDTO> vatRates =
+                comercialService.getActiveVatRates();
+        int defaultTaxIdx = 0;
+        for (int i = 0; i < vatRates.size(); i++) {
+            taxCombo.addItem(vatRates.get(i).name());
+            if ("IVA_STANDARD".equals(vatRates.get(i).type())) defaultTaxIdx = i;
+        }
+        if (taxCombo.getItemCount() > 0) taxCombo.setSelectedIndex(defaultTaxIdx);
+
+        // Selector de imagem (opcional) — guardada como thumbnail na BD para o catálogo POS em cards.
+        final byte[][] imageHolder = {null};
+        JLabel imagePreview = new JLabel("Sem imagem", SwingConstants.CENTER);
+        imagePreview.setPreferredSize(new Dimension(96, 96));
+        imagePreview.setOpaque(true);
+        imagePreview.setBackground(UIHelper.BG_CARD);
+        imagePreview.setForeground(UIHelper.TEXT_MUTED);
+        imagePreview.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1, true));
+        ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem…");
+        chooseImageBtn.setIcon(UIHelper.icon("fas-image", 14));
+        chooseImageBtn.addActionListener(ev -> {
+            JFileChooser fc = new JFileChooser();
+            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagens (png, jpg)", "png", "jpg", "jpeg"));
+            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
+                if (bytes == null) {
+                    JOptionPane.showMessageDialog(this, "Não foi possível ler a imagem.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                imageHolder[0] = bytes;
+                imagePreview.setText(null);
+                imagePreview.setIcon(UIHelper.imageIconFromBytes(bytes, 96, 96));
+            }
+        });
+        JPanel imagePanel = new JPanel(new BorderLayout(10, 0));
+        imagePanel.setOpaque(false);
+        imagePanel.add(imagePreview, BorderLayout.WEST);
+        imagePanel.add(chooseImageBtn, BorderLayout.CENTER);
+
         JPanel dialogPanel = UIHelper.createDialogForm(
                 "SKU / Codigo (Unico):", skuField,
                 "Referencia:", referenceField,
                 "Codigo de Barras:", barcodeField,
                 "Nome do Produto:", nameField,
                 "Categoria:", categoryCombo,
+                "Taxa de IVA:", taxCombo,
                 "Preço de Venda (MT):", salesPriceField,
                 "Preço de Compra (MT):", purchasePriceField,
                 "Stock Mínimo:", minStockField,
                 "Unidades por Caixa:", unitsPerBoxField,
-                "Descrição:", descField
+                "Descrição:", descField,
+                "Imagem (opcional):", imagePanel
         );
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Cadastrar Novo Produto", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option == JOptionPane.OK_OPTION) {
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Cadastrar Novo Produto", "fas-boxes", "Defina os dados e o IVA do artigo", dialogPanel).showDialog();
+        if (confirmed) {
             String sku = skuField.getText().trim();
             String reference = referenceField.getText().trim();
             String barcode = barcodeField.getText().trim();
@@ -1107,6 +1308,11 @@ public class StockPanel extends JPanel {
                 if (catIdx > 0 && (catIdx - 1) < categories.size()) {
                     categoryId = categories.get(catIdx - 1).id();
                 }
+                Long taxRateId = null;
+                int taxIdx = taxCombo.getSelectedIndex();
+                if (taxIdx >= 0 && taxIdx < vatRates.size()) {
+                    taxRateId = vatRates.get(taxIdx).id();
+                }
                 ProductDTO created = comercialService.createProduct(
                         sku,
                         reference.isEmpty() ? null : reference,
@@ -1117,7 +1323,14 @@ public class StockPanel extends JPanel {
                         minStock,
                         unitsPerBox,
                         categoryId,
+                        "UNIT",
+                        true,
+                        taxRateId,
                         desc.isEmpty() ? null : desc);
+
+                if (imageHolder[0] != null) {
+                    comercialService.updateProductImage(created.id(), imageHolder[0]);
+                }
 
                 onPanelSelected();
 
@@ -1132,6 +1345,217 @@ public class StockPanel extends JPanel {
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao cadastrar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    /**
+     * Editar um produto existente: selecciona-se o artigo num combo e o formulário pré-preenche-se.
+     * O SKU é imutável (identidade); os restantes dados — incluindo unidades/caixa e IVA — são
+     * actualizáveis. Não mexe no stock. Delega em {@link ComercialService#updateProduct}.
+     */
+    private void editProductDialog(Long preselectedProductId) {
+        java.util.List<ProductDTO> products = comercialService.getAllProducts();
+        if (products.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre primeiro um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JComboBox<String> productCombo = new JComboBox<>();
+        JTextField skuField = new JTextField();
+        skuField.setEditable(false);
+        JTextField referenceField = new JTextField();
+        JTextField barcodeField = new JTextField();
+        JTextField nameField = new JTextField();
+        JTextField salesPriceField = new JTextField();
+        JTextField purchasePriceField = new JTextField();
+        JTextField minStockField = new JTextField("0");
+        JTextField unitsPerBoxField = new JTextField("1");
+        JTextField descField = new JTextField();
+        JComboBox<String> categoryCombo = new JComboBox<>();
+
+        UIHelper.styleComboBox(productCombo);
+        UIHelper.styleTextField(skuField);
+        UIHelper.styleTextField(referenceField);
+        UIHelper.styleTextField(barcodeField);
+        UIHelper.styleTextField(nameField);
+        UIHelper.styleTextField(salesPriceField);
+        UIHelper.styleTextField(purchasePriceField);
+        UIHelper.styleTextField(minStockField);
+        UIHelper.styleTextField(unitsPerBoxField);
+        UIHelper.styleTextField(descField);
+        UIHelper.styleComboBox(categoryCombo);
+
+        for (ProductDTO p : products) productCombo.addItem(p.sku() + " — " + p.name());
+        // Abre já no produto seleccionado no inventário (ou no primeiro, se nenhum).
+        if (preselectedProductId != null) {
+            for (int i = 0; i < products.size(); i++) {
+                if (products.get(i).id().equals(preselectedProductId)) { productCombo.setSelectedIndex(i); break; }
+            }
+        }
+
+        java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categories =
+                comercialService.getActiveCategories();
+        categoryCombo.addItem("— Sem categoria —");
+        for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
+
+        JComboBox<String> taxCombo = new JComboBox<>();
+        UIHelper.styleComboBox(taxCombo);
+        java.util.List<com.phcpro.modules.fiscal.dto.TaxRateDTO> vatRates =
+                comercialService.getActiveVatRates();
+        for (var r : vatRates) taxCombo.addItem(r.name());
+
+        final byte[][] imageHolder = {null};
+        JLabel imagePreview = new JLabel("Sem imagem", SwingConstants.CENTER);
+        imagePreview.setPreferredSize(new Dimension(96, 96));
+        imagePreview.setOpaque(true);
+        imagePreview.setBackground(UIHelper.BG_CARD);
+        imagePreview.setForeground(UIHelper.TEXT_MUTED);
+        imagePreview.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1, true));
+        ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem…");
+        chooseImageBtn.setIcon(UIHelper.icon("fas-image", 14));
+        chooseImageBtn.addActionListener(ev -> {
+            JFileChooser fc = new JFileChooser();
+            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagens (png, jpg)", "png", "jpg", "jpeg"));
+            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
+                if (bytes == null) {
+                    JOptionPane.showMessageDialog(this, "Não foi possível ler a imagem.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                imageHolder[0] = bytes;
+                imagePreview.setText(null);
+                imagePreview.setIcon(UIHelper.imageIconFromBytes(bytes, 96, 96));
+            }
+        });
+        JPanel imagePanel = new JPanel(new BorderLayout(10, 0));
+        imagePanel.setOpaque(false);
+        imagePanel.add(imagePreview, BorderLayout.WEST);
+        imagePanel.add(chooseImageBtn, BorderLayout.CENTER);
+
+        // Pré-preenche o formulário com o produto seleccionado (e limpa imagem por enviar).
+        Runnable prefill = () -> {
+            int idx = productCombo.getSelectedIndex();
+            if (idx < 0 || idx >= products.size()) return;
+            ProductDTO p = products.get(idx);
+            skuField.setText(p.sku());
+            referenceField.setText(p.reference() == null ? "" : p.reference());
+            barcodeField.setText(p.barcode() == null ? "" : p.barcode());
+            nameField.setText(p.name());
+            salesPriceField.setText(p.unitPrice() == null ? "" : p.unitPrice().toPlainString());
+            purchasePriceField.setText(p.purchasePrice() == null ? "0" : p.purchasePrice().toPlainString());
+            minStockField.setText(p.minStock() == null ? "0" : p.minStock().toPlainString());
+            unitsPerBoxField.setText(String.valueOf(p.unitsPerBox()));
+            descField.setText(p.description() == null ? "" : p.description());
+
+            categoryCombo.setSelectedIndex(0);
+            if (p.categoryId() != null) {
+                for (int i = 0; i < categories.size(); i++) {
+                    if (categories.get(i).id().equals(p.categoryId())) { categoryCombo.setSelectedIndex(i + 1); break; }
+                }
+            }
+            if (p.taxRateId() != null) {
+                for (int i = 0; i < vatRates.size(); i++) {
+                    if (vatRates.get(i).id().equals(p.taxRateId())) { taxCombo.setSelectedIndex(i); break; }
+                }
+            }
+            imageHolder[0] = null; // só reenvia imagem se o operador escolher uma nova
+            if (p.image() != null && p.image().length > 0) {
+                imagePreview.setText(null);
+                imagePreview.setIcon(UIHelper.imageIconFromBytes(p.image(), 96, 96));
+            } else {
+                imagePreview.setIcon(null);
+                imagePreview.setText("Sem imagem");
+            }
+        };
+        productCombo.addActionListener(e -> prefill.run());
+        prefill.run();
+
+        JPanel dialogPanel = UIHelper.createDialogForm(
+                "Produto:", productCombo,
+                "SKU / Codigo:", skuField,
+                "Referencia:", referenceField,
+                "Codigo de Barras:", barcodeField,
+                "Nome do Produto:", nameField,
+                "Categoria:", categoryCombo,
+                "Taxa de IVA:", taxCombo,
+                "Preço de Venda (MT):", salesPriceField,
+                "Preço de Compra (MT):", purchasePriceField,
+                "Stock Mínimo:", minStockField,
+                "Unidades por Caixa:", unitsPerBoxField,
+                "Descrição:", descField,
+                "Imagem (opcional):", imagePanel
+        );
+
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Editar Produto", "fas-edit", "Actualize os dados do artigo", dialogPanel).showDialog();
+        if (!confirmed) return;
+
+        int idx = productCombo.getSelectedIndex();
+        if (idx < 0 || idx >= products.size()) return;
+        ProductDTO selected = products.get(idx);
+
+        String reference = referenceField.getText().trim();
+        String barcode = barcodeField.getText().trim();
+        String name = nameField.getText().trim();
+        String salesPriceStr = salesPriceField.getText().trim();
+        String purchasePriceStr = purchasePriceField.getText().trim();
+        String minStockStr = minStockField.getText().trim();
+        String unitsPerBoxStr = unitsPerBoxField.getText().trim();
+        String desc = descField.getText().trim();
+
+        if (name.isEmpty() || salesPriceStr.isEmpty() || purchasePriceStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nome, Preço de Venda e Preço de Compra são campos obrigatórios.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            BigDecimal salesPrice = new BigDecimal(salesPriceStr);
+            BigDecimal purchasePrice = new BigDecimal(purchasePriceStr);
+            BigDecimal minStock = new BigDecimal(minStockStr.isEmpty() ? "0" : minStockStr);
+            int unitsPerBox;
+            try {
+                unitsPerBox = unitsPerBoxStr.isEmpty() ? 1 : Integer.parseInt(unitsPerBoxStr);
+                if (unitsPerBox < 1) unitsPerBox = 1;
+            } catch (NumberFormatException nfe) {
+                JOptionPane.showMessageDialog(this, "Unidades por caixa deve ser um número inteiro.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            int catIdx = categoryCombo.getSelectedIndex();
+            Long categoryId = null;
+            if (catIdx > 0 && (catIdx - 1) < categories.size()) {
+                categoryId = categories.get(catIdx - 1).id();
+            }
+            Long taxRateId = null;
+            int taxIdx = taxCombo.getSelectedIndex();
+            if (taxIdx >= 0 && taxIdx < vatRates.size()) {
+                taxRateId = vatRates.get(taxIdx).id();
+            }
+
+            comercialService.updateProduct(
+                    selected.id(),
+                    reference.isEmpty() ? null : reference,
+                    barcode.isEmpty() ? null : barcode,
+                    name,
+                    salesPrice,
+                    purchasePrice,
+                    minStock,
+                    unitsPerBox,
+                    categoryId,
+                    selected.saleType(),
+                    selected.stockTracked(),
+                    taxRateId,
+                    desc.isEmpty() ? null : desc);
+
+            if (imageHolder[0] != null) {
+                comercialService.updateProductImage(selected.id(), imageHolder[0]);
+            }
+
+            onPanelSelected();
+            JOptionPane.showMessageDialog(this, "Produto '" + name + "' actualizado com sucesso.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Os valores de preço e stock mínimo devem ser numéricos.", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao actualizar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1253,9 +1677,8 @@ public class StockPanel extends JPanel {
         linesWrap.add(lineButtons, BorderLayout.SOUTH);
         dialogPanel.add(linesWrap, BorderLayout.CENTER);
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
-                "Nova Transferência de Stock", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Nova Transferência de Stock", "fas-exchange-alt", "Mova stock entre armazéns", dialogPanel).showDialog();
+        if (!confirmed) return;
 
         int originIdx = originCombo.getSelectedIndex();
         int destIdx = destinationCombo.getSelectedIndex();
@@ -1357,17 +1780,11 @@ public class StockPanel extends JPanel {
             return;
         }
         StockTransferDTO selected = transfersList.get(row);
-        String reason = JOptionPane.showInputDialog(this,
-                "Motivo da rejeição da guia " + selected.transferNumber() + ":",
-                "Rejeitar guia", JOptionPane.QUESTION_MESSAGE);
-        if (reason == null) return; // cancelou
-        if (reason.isBlank()) {
-            JOptionPane.showMessageDialog(this, "É obrigatório indicar o motivo da rejeição.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        String reason = UIHelper.promptRequiredText("Rejeitar Guia", "fas-times-circle",
+                "Guia " + selected.transferNumber(), "Motivo da rejeição:");
+        if (reason == null) return;
         try {
-            stockTransferService.reject(selected.id(), reason.trim());
+            stockTransferService.reject(selected.id(), reason);
             onPanelSelected();
             JOptionPane.showMessageDialog(this,
                     "Guia " + selected.transferNumber() + " rejeitada. Nenhum stock foi movido.",
