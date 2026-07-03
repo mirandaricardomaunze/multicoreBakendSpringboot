@@ -105,6 +105,7 @@ public class MainFrame extends JFrame {
             POSService posService,
             PurchaseService purchaseService,
             com.phcpro.modules.purchases.service.PurchaseOrderService purchaseOrderService,
+            com.phcpro.modules.purchases.service.ReorderService reorderService,
             com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService,
             AppUserService userService,
             AuditLogService auditLogService,
@@ -156,7 +157,7 @@ public class MainFrame extends JFrame {
         approvalsPanel  = new ApprovalsPanel(approvalService);
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
-        comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, inventoryService, comercialService, financeService);
+        comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
         configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService);
 
         contentPanel.add(dashboardPanel,  "dashboard");

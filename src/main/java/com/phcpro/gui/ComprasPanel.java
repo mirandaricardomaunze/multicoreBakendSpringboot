@@ -39,7 +39,15 @@ public class ComprasPanel extends JPanel {
 
     private final PurchaseService purchaseService;
     private final PurchaseOrderService purchaseOrderService;
+    private final com.phcpro.modules.purchases.service.ReorderService reorderService;
     private final InventoryService inventoryService;
+
+    // Reposição automática
+    private JTabbedPane tabbedPane;
+    private DefaultTableModel reorderModel;
+    private JTable reorderTable;
+    private JLabel reorderFooter;
+    private java.util.List<com.phcpro.modules.purchases.dto.ReorderSuggestionDTO> reorderList = new java.util.ArrayList<>();
     private final ComercialService comercialService;
     private final FinanceService financeService;
 
@@ -106,12 +114,14 @@ public class ComprasPanel extends JPanel {
     public ComprasPanel(
             PurchaseService purchaseService,
             PurchaseOrderService purchaseOrderService,
+            com.phcpro.modules.purchases.service.ReorderService reorderService,
             InventoryService inventoryService,
             ComercialService comercialService,
             FinanceService financeService
     ) {
         this.purchaseService = purchaseService;
         this.purchaseOrderService = purchaseOrderService;
+        this.reorderService = reorderService;
         this.inventoryService = inventoryService;
         this.comercialService = comercialService;
         this.financeService = financeService;
@@ -120,12 +130,15 @@ public class ComprasPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPane(tabbedPane);
 
         // Tab 1: Compras
         JPanel tabCompras = createComprasTab();
         tabbedPane.addTab("Faturas de Compra (V/FT)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT), tabCompras);
+
+        // Tab: Reposição automática (produtos abaixo do mínimo)
+        tabbedPane.addTab("Reposição", UIHelper.icon("fas-cart-arrow-down", 16, UIHelper.TEXT_LIGHT), createReorderTab());
 
         // Tab 2: Encomendas a Fornecedor
         tabbedPane.addTab("Encomendas a Fornecedor (EC-F)", UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT), createPurchaseOrdersTab());
@@ -511,6 +524,66 @@ public class ComprasPanel extends JPanel {
         refreshPoCombos();
         loadPurchaseOrders();
         loadPayables();
+        loadReorderSuggestions();
+    }
+
+    // ===== Reposição automática =====
+
+    private JPanel createReorderTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+
+        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
+        header.add(UIHelper.createHeading("Reposição Automática (abaixo do mínimo)"), BorderLayout.WEST);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
+        ModernButton orderBtn = UIHelper.createSuccessButton("Criar Encomenda");
+        orderBtn.setIcon(UIHelper.icon("fas-clipboard-list", 14));
+        orderBtn.setToolTipText("Abre a aba Encomendas a Fornecedor para encomendar os produtos em falta.");
+        orderBtn.addActionListener(e -> tabbedPane.setSelectedIndex(2)); // Encomendas a Fornecedor
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadReorderSuggestions());
+        actions.add(refreshBtn); actions.add(orderBtn);
+        header.add(actions, BorderLayout.EAST);
+        tab.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        String[] cols = {"Produto", "SKU", "Stock Atual", "Mínimo", "Und/Caixa", "Sugerido (caixas)", "Sugerido (unidades)"};
+        reorderModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        reorderTable = new JTable(reorderModel);
+        UIHelper.styleTable(reorderTable);
+        JScrollPane scroll = new JScrollPane(reorderTable);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
+        reorderFooter = new JLabel(" ");
+        reorderFooter.setForeground(UIHelper.TEXT_MUTED);
+        reorderFooter.setBorder(new EmptyBorder(8, 4, 0, 4));
+        card.add(reorderFooter, BorderLayout.SOUTH);
+        tab.add(card, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private void loadReorderSuggestions() {
+        if (reorderModel == null) return;
+        reorderList = reorderService.suggestions(CurrentUserContext.getCurrentCompanyId());
+        reorderModel.setRowCount(0);
+        for (var s : reorderList) {
+            reorderModel.addRow(new Object[]{
+                    s.name(), s.sku(),
+                    String.format("%,.3f", s.currentStock()),
+                    String.format("%,.3f", s.minStock()),
+                    s.unitsPerBox(),
+                    String.format("%,.0f", s.suggestedBoxes()),
+                    String.format("%,.0f", s.suggestedUnits())});
+        }
+        reorderFooter.setText(reorderList.isEmpty()
+                ? "Sem reposições pendentes — todo o stock está acima do mínimo."
+                : String.format("%d produto(s) a repor.", reorderList.size()));
     }
 
     // ===== Contas a Pagar =====

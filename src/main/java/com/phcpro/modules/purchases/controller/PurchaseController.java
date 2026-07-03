@@ -3,6 +3,7 @@ package com.phcpro.modules.purchases.controller;
 import com.phcpro.modules.purchases.dto.*;
 import com.phcpro.modules.purchases.service.PurchaseOrderService;
 import com.phcpro.modules.purchases.service.PurchaseService;
+import com.phcpro.modules.purchases.service.ReorderService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +16,19 @@ public class PurchaseController {
 
     private final PurchaseService purchaseService;
     private final PurchaseOrderService purchaseOrderService;
+    private final ReorderService reorderService;
 
-    public PurchaseController(PurchaseService purchaseService, PurchaseOrderService purchaseOrderService) {
+    public PurchaseController(PurchaseService purchaseService, PurchaseOrderService purchaseOrderService,
+                             ReorderService reorderService) {
         this.purchaseService = purchaseService;
         this.purchaseOrderService = purchaseOrderService;
+        this.reorderService = reorderService;
+    }
+
+    /** Reposição automática: produtos abaixo do stock mínimo, com quantidade sugerida (em caixas). */
+    @GetMapping("/reorder-suggestions")
+    public ResponseEntity<List<ReorderSuggestionDTO>> reorderSuggestions(@RequestParam Long companyId) {
+        return ResponseEntity.ok(reorderService.suggestions(companyId));
     }
 
     @GetMapping("/suppliers")

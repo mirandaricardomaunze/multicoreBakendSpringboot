@@ -5,6 +5,18 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-03 (reposição automática de stock — nova funcionalidade)
+
+- **Sugestão do utilizador (1/3):** novo `ReorderService.suggestions(companyId)` — lista de produtos
+  **abaixo do stock mínimo** (soma de todos os armazéns; produto sem stock = 0), com quantidade a
+  encomendar **arredondada a caixas inteiras** (`unitsPerBox`), ordenada por urgência. Leitura pura
+  (não cria encomendas). **API** `GET /api/purchases/reorder-suggestions`; **UI** nova aba
+  "Reposição" no `ComprasPanel` (botão "Criar Encomenda" salta para a aba de encomendas).
+- Spec/harness: [docs/REPOSICAO_AUTOMATICA_SPEC.md](../docs/REPOSICAO_AUTOMATICA_SPEC.md) +
+  [docs/REPOSICAO_AUTOMATICA_HARNESS.md](../docs/REPOSICAO_AUTOMATICA_HARNESS.md) (RA-01..03 auto, RA-50..52 manuais).
+- Testes: `ReorderServiceTest` (3). `mvn test` → **199, 0 falhas**.
+- **A seguir (2/3, 3/3):** Mobile Money (M-Pesa/e-Mola) e preços grosso vs retalho.
+
 ### Progresso — 2026-07-02 (resiliência das ligações à BD — PC de balcão)
 
 - **Lacuna operacional fechada:** com a app aberta e a máquina em suspensão longa, o pool Hikari
