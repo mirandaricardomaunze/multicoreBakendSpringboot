@@ -400,6 +400,43 @@ class ComercialServiceTest {
         verify(productRepository, never()).save(any());
     }
 
+    // ────────────────────────── preço grosso ──────────────────────────
+
+    @Test
+    void createInvoice_quantidadeAtingeMinimoGrosso_usaPrecoGrosso() {
+        Product wholesale = product(PRODUCT_ID, new BigDecimal("100"));
+        wholesale.setWholesalePrice(new BigDecimal("80"));
+        wholesale.setWholesaleMinQty(new BigDecimal("10"));
+        stubInvoiceLookupsWith(wholesale);
+
+        // qty 10 ≥ mínimo 10 → aplica preço de grosso (80).
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("10"), null));
+
+        assertEquals(0, new BigDecimal("80").compareTo(dto.lines().get(0).unitPrice()));
+    }
+
+    @Test
+    void createInvoice_abaixoDoMinimoGrosso_usaPrecoRetalho() {
+        Product wholesale = product(PRODUCT_ID, new BigDecimal("100"));
+        wholesale.setWholesalePrice(new BigDecimal("80"));
+        wholesale.setWholesaleMinQty(new BigDecimal("10"));
+        stubInvoiceLookupsWith(wholesale);
+
+        // qty 5 < mínimo 10 → mantém preço de retalho (100).
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("5"), null));
+
+        assertEquals(0, new BigDecimal("100").compareTo(dto.lines().get(0).unitPrice()));
+    }
+
+    private void stubInvoiceLookupsWith(Product p) {
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(p));
+        when(documentNumberService.next(DocumentSeries.INVOICE)).thenReturn("FT-2026/1");
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
+
     // ────────────────────────── helpers ──────────────────────────
 
     private Invoice invoiceDoc(String number, Client c) {

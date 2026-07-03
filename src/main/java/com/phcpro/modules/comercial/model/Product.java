@@ -42,6 +42,14 @@ public class Product extends BaseEntity {
     @Column(name = "min_stock")
     private BigDecimal minStock = BigDecimal.ZERO;
 
+    /** Preço de venda ao grosso (opcional). Aplica-se quando a quantidade da linha ≥ {@link #wholesaleMinQty}. */
+    @Column(name = "wholesale_price")
+    private BigDecimal wholesalePrice;
+
+    /** Quantidade mínima (em unidades) a partir da qual se aplica o {@link #wholesalePrice}. */
+    @Column(name = "wholesale_min_qty")
+    private BigDecimal wholesaleMinQty;
+
     /** Unidades por caixa para conversão visual (Qtd Caixas = stock / unitsPerBox). Default 1. */
     @Column(name = "units_per_box", nullable = false)
     private int unitsPerBox = 1;
@@ -83,5 +91,19 @@ public class Product extends BaseEntity {
 
     public boolean belongsToCompany(Long companyId) {
         return companyId != null && companies.stream().anyMatch(company -> companyId.equals(company.getId()));
+    }
+
+    /**
+     * Preço unitário efectivo para uma dada quantidade: aplica o preço de grosso quando definido e a
+     * quantidade atinge a mínima de grosso; caso contrário, o preço de retalho ({@link #unitPrice}).
+     * Regra pura de domínio (sem IO) — usada por faturação, encomenda e POS.
+     */
+    public BigDecimal effectiveUnitPrice(BigDecimal quantity) {
+        if (wholesalePrice != null && wholesaleMinQty != null && quantity != null
+                && wholesaleMinQty.signum() > 0
+                && quantity.compareTo(wholesaleMinQty) >= 0) {
+            return wholesalePrice;
+        }
+        return unitPrice;
     }
 }

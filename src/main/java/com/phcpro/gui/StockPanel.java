@@ -1027,6 +1027,17 @@ public class StockPanel extends JPanel {
         }
     }
 
+    /** Decimal > 0 a partir de texto livre; vazio/inválido/≤0 → null (campos opcionais de grosso). */
+    private static BigDecimal parsePositiveOrNull(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return null;
+        try {
+            BigDecimal v = new BigDecimal(raw.trim());
+            return v.signum() > 0 ? v : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
     /** Decimal ≥ 0 a partir de texto livre; vazio/inválido → 0 (para unidades soltas). */
     private static BigDecimal parseDecimalOrZero(String raw) {
         if (raw == null || raw.trim().isEmpty()) return BigDecimal.ZERO;
@@ -1198,6 +1209,8 @@ public class StockPanel extends JPanel {
         JTextField purchasePriceField = new JTextField();
         JTextField minStockField = new JTextField("0");
         JTextField unitsPerBoxField = new JTextField("1");
+        JTextField wholesalePriceField = new JTextField();
+        JTextField wholesaleMinQtyField = new JTextField();
         JTextField descField = new JTextField();
         JComboBox<String> categoryCombo = new JComboBox<>();
 
@@ -1209,8 +1222,12 @@ public class StockPanel extends JPanel {
         UIHelper.styleTextField(purchasePriceField);
         UIHelper.styleTextField(minStockField);
         UIHelper.styleTextField(unitsPerBoxField);
+        UIHelper.styleTextField(wholesalePriceField);
+        UIHelper.styleTextField(wholesaleMinQtyField);
         UIHelper.styleTextField(descField);
         UIHelper.styleComboBox(categoryCombo);
+        wholesalePriceField.putClientProperty("JTextField.placeholderText", "Opcional — preço ao grosso");
+        wholesaleMinQtyField.putClientProperty("JTextField.placeholderText", "Qtd (unidades) a partir da qual aplica");
 
         java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categories =
                 comercialService.getActiveCategories();
@@ -1269,6 +1286,8 @@ public class StockPanel extends JPanel {
                 "Preço de Compra (MT):", purchasePriceField,
                 "Stock Mínimo:", minStockField,
                 "Unidades por Caixa:", unitsPerBoxField,
+                "Preço Grosso (MT):", wholesalePriceField,
+                "Qtd mín. grosso:", wholesaleMinQtyField,
                 "Descrição:", descField,
                 "Imagem (opcional):", imagePanel
         );
@@ -1313,6 +1332,9 @@ public class StockPanel extends JPanel {
                 if (taxIdx >= 0 && taxIdx < vatRates.size()) {
                     taxRateId = vatRates.get(taxIdx).id();
                 }
+                BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
+                BigDecimal wholesaleMinQty = parsePositiveOrNull(wholesaleMinQtyField.getText());
+
                 ProductDTO created = comercialService.createProduct(
                         sku,
                         reference.isEmpty() ? null : reference,
@@ -1326,7 +1348,9 @@ public class StockPanel extends JPanel {
                         "UNIT",
                         true,
                         taxRateId,
-                        desc.isEmpty() ? null : desc);
+                        desc.isEmpty() ? null : desc,
+                        wholesalePrice,
+                        wholesaleMinQty);
 
                 if (imageHolder[0] != null) {
                     comercialService.updateProductImage(created.id(), imageHolder[0]);
@@ -1370,10 +1394,14 @@ public class StockPanel extends JPanel {
         JTextField purchasePriceField = new JTextField();
         JTextField minStockField = new JTextField("0");
         JTextField unitsPerBoxField = new JTextField("1");
+        JTextField wholesalePriceField = new JTextField();
+        JTextField wholesaleMinQtyField = new JTextField();
         JTextField descField = new JTextField();
         JComboBox<String> categoryCombo = new JComboBox<>();
 
         UIHelper.styleComboBox(productCombo);
+        UIHelper.styleTextField(wholesalePriceField);
+        UIHelper.styleTextField(wholesaleMinQtyField);
         UIHelper.styleTextField(skuField);
         UIHelper.styleTextField(referenceField);
         UIHelper.styleTextField(barcodeField);
@@ -1445,6 +1473,8 @@ public class StockPanel extends JPanel {
             purchasePriceField.setText(p.purchasePrice() == null ? "0" : p.purchasePrice().toPlainString());
             minStockField.setText(p.minStock() == null ? "0" : p.minStock().toPlainString());
             unitsPerBoxField.setText(String.valueOf(p.unitsPerBox()));
+            wholesalePriceField.setText(p.wholesalePrice() == null ? "" : p.wholesalePrice().toPlainString());
+            wholesaleMinQtyField.setText(p.wholesaleMinQty() == null ? "" : p.wholesaleMinQty().toPlainString());
             descField.setText(p.description() == null ? "" : p.description());
 
             categoryCombo.setSelectedIndex(0);
@@ -1482,6 +1512,8 @@ public class StockPanel extends JPanel {
                 "Preço de Compra (MT):", purchasePriceField,
                 "Stock Mínimo:", minStockField,
                 "Unidades por Caixa:", unitsPerBoxField,
+                "Preço Grosso (MT):", wholesalePriceField,
+                "Qtd mín. grosso:", wholesaleMinQtyField,
                 "Descrição:", descField,
                 "Imagem (opcional):", imagePanel
         );
@@ -1531,6 +1563,9 @@ public class StockPanel extends JPanel {
                 taxRateId = vatRates.get(taxIdx).id();
             }
 
+            BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
+            BigDecimal wholesaleMinQty = parsePositiveOrNull(wholesaleMinQtyField.getText());
+
             comercialService.updateProduct(
                     selected.id(),
                     reference.isEmpty() ? null : reference,
@@ -1544,7 +1579,9 @@ public class StockPanel extends JPanel {
                     selected.saleType(),
                     selected.stockTracked(),
                     taxRateId,
-                    desc.isEmpty() ? null : desc);
+                    desc.isEmpty() ? null : desc,
+                    wholesalePrice,
+                    wholesaleMinQty);
 
             if (imageHolder[0] != null) {
                 comercialService.updateProductImage(selected.id(), imageHolder[0]);

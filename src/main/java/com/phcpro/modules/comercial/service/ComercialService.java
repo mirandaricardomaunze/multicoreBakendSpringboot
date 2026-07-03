@@ -176,10 +176,13 @@ public class ComercialService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
+            // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso.
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(product.getUnitPrice());
+            line.setUnitPrice(unitPrice);
             line.setTaxRate(lineReq.taxRate());
 
             BigDecimal discountPct = lineReq.discountPercentage();
@@ -195,7 +198,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    product.getUnitPrice(), lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
 
             line.setLineTotal(amounts.total());
             invoice.addLine(line);
@@ -492,7 +495,7 @@ public class ComercialService {
                                      int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
                                      String description) {
         return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                unitsPerBox, categoryId, saleType, stockTracked, null, description);
+                unitsPerBox, categoryId, saleType, stockTracked, null, description, null, null);
     }
 
     @Transactional
@@ -500,6 +503,16 @@ public class ComercialService {
                                      BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
                                      int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
                                      Long taxRateId, String description) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, saleType, stockTracked, taxRateId, description, null, null);
+    }
+
+    @Transactional
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description,
+                                     BigDecimal wholesalePrice, BigDecimal wholesaleMinQty) {
         String cleanReference = normalizeOptional(reference);
         String cleanBarcode = normalizeOptional(barcode);
         ProductSaleType parsedSaleType = parseSaleType(saleType);
@@ -527,6 +540,8 @@ public class ComercialService {
         product.setPurchasePrice(purchasePrice);
         product.setMinStock(minStock);
         product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        product.setWholesalePrice(wholesalePrice);
+        product.setWholesaleMinQty(wholesaleMinQty);
         product.setSaleType(parsedSaleType);
         product.setStockTracked(parsedSaleType != ProductSaleType.SERVICE && stockTracked);
         product.setDescription(description);
@@ -555,6 +570,16 @@ public class ComercialService {
                                      BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
                                      int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
                                      Long taxRateId, String description) {
+        return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, saleType, stockTracked, taxRateId, description, null, null);
+    }
+
+    @Transactional
+    public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description,
+                                     BigDecimal wholesalePrice, BigDecimal wholesaleMinQty) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Product product = productRepository.findByIdAndCompaniesId(id, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
@@ -578,6 +603,8 @@ public class ComercialService {
         product.setPurchasePrice(purchasePrice);
         product.setMinStock(minStock);
         product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        product.setWholesalePrice(wholesalePrice);
+        product.setWholesaleMinQty(wholesaleMinQty);
         product.setSaleType(parsedSaleType);
         product.setStockTracked(parsedSaleType != ProductSaleType.SERVICE && stockTracked);
         product.setDescription(normalizeOptional(description));
@@ -652,6 +679,8 @@ public class ComercialService {
                 p.getUnitPrice(),
                 p.getPurchasePrice() != null ? p.getPurchasePrice() : BigDecimal.ZERO,
                 p.getMinStock() != null ? p.getMinStock() : BigDecimal.ZERO,
+                p.getWholesalePrice(),
+                p.getWholesaleMinQty(),
                 p.getUnitsPerBox() <= 0 ? 1 : p.getUnitsPerBox(),
                 p.getSaleType() != null ? p.getSaleType().name() : ProductSaleType.UNIT.name(),
                 p.isStockTracked(),
@@ -770,10 +799,12 @@ public class ComercialService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+
             OrderLine line = new OrderLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(product.getUnitPrice());
+            line.setUnitPrice(unitPrice);
             line.setTaxRate(lineReq.taxRate());
 
             BigDecimal discountPct = lineReq.discountPercentage();
@@ -786,7 +817,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    product.getUnitPrice(), lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
 
             line.setLineTotal(amounts.total());
             order.addLine(line);

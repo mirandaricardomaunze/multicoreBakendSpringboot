@@ -5,6 +5,19 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-03 (preço grosso vs retalho — por produto + qtd mínima)
+
+- **Sugestão do utilizador (3/3):** `Product` ganha `wholesalePrice` + `wholesaleMinQty` (migração
+  `V20`). Regra pura `Product.effectiveUnitPrice(qty)` — aplica grosso quando `qty ≥ min`; senão
+  retalho. **Aplicada nos 3 fluxos** (`createInvoice`, `createOrder`, `POSService.checkout`) sem
+  tocar no `LineCalculator` (recebe o preço já resolvido; IVA por unidade). `ProductDTO` +2 campos;
+  diálogos Cadastrar/Editar Produto com "Preço Grosso" e "Qtd mín. grosso" (opcionais). Retrocompatível
+  (createProduct/updateProduct antigos delegam com grosso null).
+- Spec/harness: [docs/PRECO_GROSSO_SPEC.md](../docs/PRECO_GROSSO_SPEC.md) +
+  [docs/PRECO_GROSSO_HARNESS.md](../docs/PRECO_GROSSO_HARNESS.md) (PG-01/02 auto, PG-50..53 manuais).
+- Testes: `ComercialServiceTest` +2 (grosso/retalho por quantidade). `mvn test` → **202, 0 falhas**.
+- **As 3 sugestões pedidas ficaram concluídas** (reposição automática, Mobile Money, preço grosso).
+
 ### Progresso — 2026-07-03 (Mobile Money: M-Pesa / e-Mola)
 
 - **Sugestão do utilizador (2/3):** `PaymentMethod` ganha **MPESA** e **EMOLA**, tratados como

@@ -299,11 +299,14 @@ public class POSService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
+            // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso do produto.
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(product.getUnitPrice());
-            
+            line.setUnitPrice(unitPrice);
+
             // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a
             // padrão. Não depende do NUIT do cliente.
             BigDecimal taxRate = product.getTaxRate() != null
@@ -316,7 +319,7 @@ public class POSService {
             }
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    product.getUnitPrice(), lineReq.quantity(), lineReq.discountPercentage(), taxRate);
+                    unitPrice, lineReq.quantity(), lineReq.discountPercentage(), taxRate);
 
             line.setLineTotal(amounts.total());
             line.setBatchNumber(lineReq.batchNumber());
