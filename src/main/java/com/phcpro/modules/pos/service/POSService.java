@@ -429,7 +429,7 @@ public class POSService {
 
         switch (method) {
             case CASH -> refundCash(request.operator(), request.companyId(), amount, description);
-            case CARD, BANK_TRANSFER -> {
+            case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (request.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para reembolso por " + method + ".");
                 }
@@ -518,7 +518,7 @@ public class POSService {
                             "Pagamento em numerário fora de sessão de caixa requer conta de tesouraria.");
                 }
             }
-            case CARD, BANK_TRANSFER -> {
+            case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (req.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para " + method + ".");
                 }

@@ -1054,7 +1054,7 @@ public class POSPanel extends JPanel {
      * pagamento pronto a enviar, ou {@code null} se o operador cancelar.
      */
     private com.phcpro.modules.pos.dto.PosPaymentRequest askPayment(BigDecimal total, Long accountId) {
-        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"Numerário", "Cartão", "Transferência"});
+        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"Numerário", "Cartão", "Transferência", "M-Pesa", "e-Mola"});
         UIHelper.styleComboBox(methodCombo);
 
         JTextField totalField = new JTextField(String.format("%,.2f MT", total));
@@ -1064,6 +1064,11 @@ public class POSPanel extends JPanel {
         JTextField tenderedField = new JTextField(total.toPlainString());
         UIHelper.styleTextField(tenderedField);
 
+        // Referência da transação (nº autorização cartão, comprovativo, ID M-Pesa/e-Mola).
+        JTextField refField = new JTextField();
+        UIHelper.styleTextField(refField);
+        refField.putClientProperty("JTextField.placeholderText", "ID/comprovativo (M-Pesa, e-Mola, cartão)…");
+
         JLabel changeLabel = new JLabel("Troco: 0,00 MT");
         changeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         changeLabel.setForeground(UIHelper.APPROVED_GREEN);
@@ -1072,6 +1077,7 @@ public class POSPanel extends JPanel {
         Runnable recompute = () -> {
             boolean cash = methodCombo.getSelectedIndex() == 0;
             tenderedField.setEnabled(cash);
+            refField.setEnabled(!cash); // referência só faz sentido em métodos electrónicos
             if (!cash) {
                 changeLabel.setText("Troco: —");
                 return;
@@ -1098,7 +1104,8 @@ public class POSPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm(
                 "Método de pagamento:", methodCombo,
                 "Total a pagar:", totalField,
-                "Valor entregue (MT):", tenderedField
+                "Valor entregue (MT):", tenderedField,
+                "Referência:", refField
         );
         changeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         changeLabel.setBorder(new EmptyBorder(8, 4, 0, 4));
@@ -1128,8 +1135,12 @@ public class POSPanel extends JPanel {
                         }
                         result[0] = new com.phcpro.modules.pos.dto.PosPaymentRequest("CASH", total, tendered, null, null);
                     } else {
-                        String method = (methodIdx == 1) ? "CARD" : "BANK_TRANSFER";
-                        result[0] = new com.phcpro.modules.pos.dto.PosPaymentRequest(method, total, total, null, accountId);
+                        // 1=Cartão, 2=Transferência, 3=M-Pesa, 4=e-Mola — todos electrónicos (tesouraria).
+                        String[] methods = {"CASH", "CARD", "BANK_TRANSFER", "MPESA", "EMOLA"};
+                        String method = methods[methodIdx];
+                        String ref = refField.getText().trim();
+                        result[0] = new com.phcpro.modules.pos.dto.PosPaymentRequest(
+                                method, total, total, ref.isEmpty() ? null : ref, accountId);
                     }
                 })
                 .showDialog();
@@ -1431,7 +1442,7 @@ public class POSPanel extends JPanel {
         for (Warehouse warehouse : warehousesList) {
             warehouseReturnCombo.addItem(warehouse.getName());
         }
-        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"CASH", "CARD", "BANK_TRANSFER", "CREDIT"});
+        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"CASH", "CARD", "BANK_TRANSFER", "MPESA", "EMOLA", "CREDIT"});
         JComboBox<String> refundAccountCombo = new JComboBox<>();
         for (TreasuryAccountDTO account : accountsList) {
             refundAccountCombo.addItem(account.name());

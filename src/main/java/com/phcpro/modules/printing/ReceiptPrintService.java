@@ -147,6 +147,8 @@ public class ReceiptPrintService {
             case CASH -> "Numerário";
             case CARD -> "Cartão";
             case BANK_TRANSFER -> "Transferência";
+            case MPESA -> "M-Pesa";
+            case EMOLA -> "e-Mola";
             case CREDIT -> "Fiado";
         };
     }

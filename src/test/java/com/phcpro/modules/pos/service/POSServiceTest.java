@@ -195,6 +195,18 @@ class POSServiceTest {
     }
 
     @Test
+    void checkout_mpesa_entraNaTesouraria_naoNaGaveta() {
+        stubHappyPath();
+
+        // M-Pesa é electrónico: entra na tesouraria (DEBIT), não na gaveta, e guarda a referência.
+        PosPaymentRequest mpesa = new PosPaymentRequest("MPESA", new BigDecimal("50"), null, "MP-ABC123", ACCOUNT_ID);
+        service.checkout(checkout(List.of(mpesa), null));
+
+        verify(financeService).registerTransaction(eq(ACCOUNT_ID), eq("DEBIT"), eq(new BigDecimal("50.00")), any());
+        verify(tillMovementRepository, never()).save(any(TillMovement.class));
+    }
+
+    @Test
     void checkout_walkInName_ficaGravadoNaFaturaParaRecibo() {
         stubHappyPath();
 

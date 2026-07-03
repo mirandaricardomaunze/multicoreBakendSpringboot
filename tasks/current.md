@@ -5,6 +5,18 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-03 (Mobile Money: M-Pesa / e-Mola)
+
+- **Sugestão do utilizador (2/3):** `PaymentMethod` ganha **MPESA** e **EMOLA**, tratados como
+  **electrónicos** (entram na tesouraria, não na gaveta; exigem conta; guardam a **referência** da
+  transação em `PaymentEntry.reference`). Sem migração (enum é STRING). Devolução também reembolsa
+  por tesouraria. Recibo mostra "M-Pesa"/"e-Mola". UI POS `askPayment` com os métodos + campo
+  Referência; diálogo de devolução idem.
+- Spec/harness: [docs/MOBILE_MONEY_SPEC.md](../docs/MOBILE_MONEY_SPEC.md) +
+  [docs/MOBILE_MONEY_HARNESS.md](../docs/MOBILE_MONEY_HARNESS.md) (MM-01 auto, MM-50..53 manuais).
+- Testes: `POSServiceTest` +1 (MPESA → tesouraria, não gaveta). `mvn test` → **200, 0 falhas**.
+- **A seguir (3/3):** preços grosso vs retalho.
+
 ### Progresso — 2026-07-03 (reposição automática de stock — nova funcionalidade)
 
 - **Sugestão do utilizador (1/3):** novo `ReorderService.suggestions(companyId)` — lista de produtos
