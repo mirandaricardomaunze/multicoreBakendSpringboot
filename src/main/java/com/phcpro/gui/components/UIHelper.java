@@ -372,6 +372,65 @@ public class UIHelper {
         });
     }
 
+    /**
+     * Cor semântica de um valor de estado (verde/vermelho/amarelo) ou {@code null} se não for um
+     * estado reconhecido. Usada para pintar o texto da célula e, quando existe coluna "Estado", o
+     * tom subtil da linha inteira. Vocabulário PT/EN de retalho.
+     */
+    private static Color statusColorFor(String upper) {
+        if (upper == null) return null;
+        if (eqAny(upper, "APPROVED", "APROVADO", "APROVADA", "RESOLVED", "PAID", "PAGO",
+                "RECEIVED", "RECEBIDO", "RECEBIDA", "ATIVO", "ACTIVO", "ATIVA", "ACTIVA", "OK", "EM STOCK")) {
+            return APPROVED_GREEN;
+        }
+        if (eqAny(upper, "REJECTED", "REJEITADO", "CANCELLED", "CANCELADO", "CANCELADA",
+                "ANULADO", "ANULADA", "ESGOTADO", "SEM STOCK", "INATIVO", "INACTIVO") || upper.startsWith("VENCIDO")) {
+            return REJECTED_RED;
+        }
+        if (upper.contains("PENDING") || upper.contains("PENDENTE") || upper.startsWith("VENCE")
+                || upper.equals("BAIXO") || upper.equals("STOCK BAIXO")
+                || upper.contains("DÍVIDA") || upper.contains("DIVIDA")
+                || upper.contains("PARCIAL") || upper.contains("PARTIALLY")) {
+            return PENDING_YELLOW;
+        }
+        return null;
+    }
+
+    private static boolean eqAny(String s, String... opts) {
+        for (String o : opts) if (o.equals(s)) return true;
+        return false;
+    }
+
+    /** Índice (na vista) da coluna de estado da tabela, ou -1 se não houver. */
+    private static int statusColumnIndex(JTable t) {
+        for (int i = 0; i < t.getColumnCount(); i++) {
+            String n = t.getColumnName(i);
+            if (n == null) continue;
+            String u = n.trim().toLowerCase();
+            if (u.equals("estado") || u.equals("status") || u.equals("situação") || u.equals("situacao")) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Cor de estado da linha (a partir da coluna "Estado"), ou {@code null}. */
+    private static Color rowStatusColor(JTable t, int viewRow) {
+        int col = statusColumnIndex(t);
+        if (col < 0) return null;
+        Object v = t.getValueAt(viewRow, col);
+        return v == null ? null : statusColorFor(v.toString().toUpperCase());
+    }
+
+    /** Mistura {@code accent} sobre {@code base} na proporção {@code ratio} (0..1). Adapta-se ao tema. */
+    private static Color blend(Color base, Color accent, float ratio) {
+        float r = 1f - ratio;
+        return new Color(
+                Math.round(base.getRed() * r + accent.getRed() * ratio),
+                Math.round(base.getGreen() * r + accent.getGreen() * ratio),
+                Math.round(base.getBlue() * r + accent.getBlue() * ratio));
+    }
+
     public static void styleTable(JTable table) {
         table.setBackground(BG_CARD);
         table.setForeground(TEXT_LIGHT);
@@ -428,7 +487,10 @@ public class UIHelper {
                 if (isSelected) {
                     setBackground(t.getSelectionBackground());
                 } else {
-                    setBackground(row % 2 == 0 ? BG_CARD : ROW_ALT);
+                    // Zebra + tom subtil de estado na LINHA inteira (lido da coluna "Estado", se existir).
+                    Color base = row % 2 == 0 ? BG_CARD : ROW_ALT;
+                    Color status = rowStatusColor(t, row);
+                    setBackground(status == null ? base : blend(base, status, 0.18f));
                 }
 
                 if (value != null) {
@@ -445,15 +507,9 @@ public class UIHelper {
                         setForeground(TEXT_LIGHT);
                         setFont(getFont().deriveFont(Font.PLAIN));
                     } else {
-                        String upperStr = valStr.toUpperCase();
-                        if (upperStr.equals("APPROVED") || upperStr.equals("APROVADO") || upperStr.equals("RESOLVED") || upperStr.equals("PAID") || upperStr.equals("PAGO")) {
-                            setForeground(APPROVED_GREEN);
-                            setFont(getFont().deriveFont(Font.BOLD));
-                        } else if (upperStr.equals("REJECTED") || upperStr.equals("REJEITADO") || upperStr.startsWith("VENCIDO")) {
-                            setForeground(REJECTED_RED);
-                            setFont(getFont().deriveFont(Font.BOLD));
-                        } else if (upperStr.contains("PENDING") || upperStr.contains("PENDENTE") || upperStr.startsWith("VENCE")) {
-                            setForeground(PENDING_YELLOW);
+                        Color statusText = statusColorFor(valStr.toUpperCase());
+                        if (statusText != null) {
+                            setForeground(statusText);
                             setFont(getFont().deriveFont(Font.BOLD));
                         } else {
                             setForeground(TEXT_LIGHT);

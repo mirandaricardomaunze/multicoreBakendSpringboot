@@ -551,7 +551,7 @@ public class ComprasPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        String[] cols = {"Produto", "SKU", "Stock Atual", "Mínimo", "Und/Caixa", "Sugerido (caixas)", "Sugerido (unidades)"};
+        String[] cols = {"Produto", "SKU", "Stock Atual", "Mínimo", "Und/Caixa", "Sugerido (caixas)", "Sugerido (unidades)", "Estado"};
         reorderModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -573,13 +573,15 @@ public class ComprasPanel extends JPanel {
         reorderList = reorderService.suggestions(CurrentUserContext.getCurrentCompanyId());
         reorderModel.setRowCount(0);
         for (var s : reorderList) {
+            String estado = s.currentStock().signum() <= 0 ? "ESGOTADO" : "BAIXO";
             reorderModel.addRow(new Object[]{
                     s.name(), s.sku(),
                     String.format("%,.3f", s.currentStock()),
                     String.format("%,.3f", s.minStock()),
                     s.unitsPerBox(),
                     String.format("%,.0f", s.suggestedBoxes()),
-                    String.format("%,.0f", s.suggestedUnits())});
+                    String.format("%,.0f", s.suggestedUnits()),
+                    estado});
         }
         reorderFooter.setText(reorderList.isEmpty()
                 ? "Sem reposições pendentes — todo o stock está acima do mínimo."

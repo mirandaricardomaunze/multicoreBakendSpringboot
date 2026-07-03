@@ -417,7 +417,7 @@ public class StockPanel extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Qtd Unidades", "Qtd Caixas", "Preço"};
+        String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado"};
         stockModel = new DefaultTableModel(stockCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -854,13 +854,20 @@ public class StockPanel extends JPanel {
             java.math.BigDecimal price = s.getProduct().getUnitPrice() == null
                     ? java.math.BigDecimal.ZERO : s.getProduct().getUnitPrice();
 
+            java.math.BigDecimal minStk = s.getProduct().getMinStock();
+            String estado;
+            if (qty.compareTo(java.math.BigDecimal.ZERO) <= 0) estado = "ESGOTADO";
+            else if (minStk != null && minStk.signum() > 0 && qty.compareTo(minStk) < 0) estado = "BAIXO";
+            else estado = "EM STOCK";
+
             stockModel.addRow(new Object[]{
                     s.getProduct().getBarcode() == null ? "—" : s.getProduct().getBarcode(),
                     s.getProduct().getReference() == null ? s.getProduct().getSku() : s.getProduct().getReference(),
                     s.getProduct().getName(),
                     String.format("%,.3f", qty),
                     String.format("%,.2f", qtyBoxes),
-                    String.format("%,.2f MT", price)
+                    String.format("%,.2f MT", price),
+                    estado
             });
             stockRowProductIds.add(s.getProduct().getId());
         }

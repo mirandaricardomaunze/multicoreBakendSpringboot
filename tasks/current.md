@@ -5,6 +5,17 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-03 (polish: cor de estado nas linhas)
+
+- **Pedido do utilizador:** leitura de estado **por linha**. `UIHelper.styleTable` deteta uma coluna
+  "Estado"/"Situação"/"Status" e pinta a **linha** com tom subtil (blend ~18% com a zebra, adapta ao
+  tema). Vocabulário semântico centralizado em `statusColorFor` (verde/amarelo/vermelho, PT/EN de
+  retalho, inclui ESGOTADO/BAIXO/EM STOCK/ANULADO/EM DÍVIDA…). Colunas "Estado" acrescentadas a
+  **Níveis de Stock** e **Reposição**. Automático/DRY para qualquer tabela com coluna de estado.
+- Só apresentação. Spec/harness: [docs/COR_ESTADO_LINHAS_SPEC.md](../docs/COR_ESTADO_LINHAS_SPEC.md) +
+  [docs/COR_ESTADO_LINHAS_HARNESS.md](../docs/COR_ESTADO_LINHAS_HARNESS.md) (CE-01..05 manuais).
+  `mvn test` → **202, 0 falhas**.
+
 ### Progresso — 2026-07-03 (preço grosso vs retalho — por produto + qtd mínima)
 
 - **Sugestão do utilizador (3/3):** `Product` ganha `wholesalePrice` + `wholesaleMinQty` (migração
