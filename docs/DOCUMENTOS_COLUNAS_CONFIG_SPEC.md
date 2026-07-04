@@ -36,9 +36,22 @@ quer mostrar código de barras nem validade na fatura ao cliente). Não havia fo
 - **UI (`ConfigPanel`):** secção/aba "Colunas dos Documentos" — 8 checkboxes (estado actual) + botão
   Guardar. Injecção via `MainFrame`.
 
+## Recibo do POS (extensão)
+
+O **recibo térmico do POS** (`ReceiptPrintService`, ~80mm) passou também a respeitar a mesma
+configuração, no que faz sentido num recibo estreito — mapeamento:
+
+- **Quantidade** → mostra/oculta a coluna "Qtd".
+- **Preço Unitário** → mostra/oculta a coluna "Preço".
+- **Referência** ou **Código de Barras** → aparece como **sublinha pequena** sob o nome do produto
+  (referência tem prioridade sobre código de barras).
+- **Descrição** (nome) e **Total** da linha são **sempre** mostrados (identidade + valor).
+- **Validade**, **IVA** e **Subtotal líquido** por linha **não** se aplicam ao recibo (são para os
+  documentos A4); os totais do recibo (Subtotal/IVA/TOTAL no rodapé) mantêm-se inalterados.
+
 ## Não-objetivos
 
 - Não reordenar colunas nem mudar larguras manualmente (evolução futura).
-- Não configurar recibo térmico, mapa fiscal, folha de salário ou inventário (âmbito só comercial).
+- Não configurar mapa fiscal, folha de salário ou inventário (âmbito comercial + recibo POS).
 - Não tocar em totais/IVA/matemática — só na **presença visual** de colunas.
-- Não configurar por documento individual (Fatura ≠ Encomenda): uma config cobre os quatro.
+- Não configurar por documento individual (Fatura ≠ Encomenda): uma config cobre todos.

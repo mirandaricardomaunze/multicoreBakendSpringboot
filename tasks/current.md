@@ -20,6 +20,11 @@
 - Spec/harness: [docs/DOCUMENTOS_COLUNAS_CONFIG_SPEC.md](../docs/DOCUMENTOS_COLUNAS_CONFIG_SPEC.md) +
   [docs/DOCUMENTOS_COLUNAS_CONFIG_HARNESS.md](../docs/DOCUMENTOS_COLUNAS_CONFIG_HARNESS.md) (DC-01..06 auto, DC-50..53 manuais).
 - Testes: `DocumentConfigServiceTest` (5) + `LineItemsTableRendererTest` (+1). `mvn clean test` → **209, 0 falhas**.
+- **Recibo do POS (extensão):** `ReceiptPrintService` passou a respeitar a mesma config no que cabe
+  num recibo térmico — Qtd e Preço Unit. como colunas opcionais, Referência/Código de Barras como
+  sublinha do nome; Descrição e Total sempre; Validade/IVA/subtotal por linha não aplicáveis.
+  Harness DC-54/DC-55. `mvn test` → **209, 0 falhas** (recibo continua sem teste automático, como os
+  restantes print services; validação manual).
 
 ### Progresso — 2026-07-04 (campos profissionais do armazém)
 

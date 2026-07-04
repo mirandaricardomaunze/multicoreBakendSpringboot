@@ -16,6 +16,8 @@ import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceLine;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.company.model.Company;
+import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import com.phcpro.modules.pos.model.PaymentEntry;
 import com.phcpro.modules.pos.model.PaymentMethod;
 import com.phcpro.modules.pos.repository.PaymentEntryRepository;
@@ -37,11 +39,14 @@ public class ReceiptPrintService {
 
     private final InvoiceRepository invoiceRepository;
     private final PaymentEntryRepository paymentEntryRepository;
+    private final DocumentConfigService documentConfigService;
 
     public ReceiptPrintService(InvoiceRepository invoiceRepository,
-                               PaymentEntryRepository paymentEntryRepository) {
+                               PaymentEntryRepository paymentEntryRepository,
+                               DocumentConfigService documentConfigService) {
         this.invoiceRepository = invoiceRepository;
         this.paymentEntryRepository = paymentEntryRepository;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -50,9 +55,12 @@ public class ReceiptPrintService {
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada para emissão de recibo."));
 
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
+        // O recibo do POS respeita a configuração de colunas dos documentos, no que faz sentido num
+        // recibo térmico (Qtd, Preço Unit., e Referência/Cód. Barras como sublinha da descrição).
+        DocumentColumnsDTO cols = documentConfigService.getColumns(invoice.getCompany().getId());
         return PdfDocumentBuilder.buildReceipt(doc -> {
             renderHeader(doc, invoice);
-            renderLines(doc, invoice);
+            renderLines(doc, invoice, cols);
             renderTotals(doc, invoice);
             renderPayments(doc, invoice);
             renderFooter(doc, invoice);
@@ -80,21 +88,55 @@ public class ReceiptPrintService {
         doc.add(PdfDocumentBuilder.spacer(4f));
     }
 
-    private void renderLines(Document doc, Invoice invoice) {
-        PdfPTable table = new PdfPTable(new float[]{56f, 18f, 26f});
+    private void renderLines(Document doc, Invoice invoice, DocumentColumnsDTO cols) {
+        boolean showQty = cols.quantity();
+        boolean showPrice = cols.unitPrice();
+
+        java.util.List<Float> widths = new java.util.ArrayList<>();
+        widths.add((showQty || showPrice) ? 46f : 70f); // Descrição
+        if (showQty) widths.add(14f);
+        if (showPrice) widths.add(22f);
+        widths.add(26f); // Total
+        float[] w = new float[widths.size()];
+        for (int i = 0; i < w.length; i++) w[i] = widths.get(i);
+
+        PdfPTable table = new PdfPTable(w);
         table.setWidthPercentage(100);
         table.setSpacingBefore(2f);
 
         addCell(table, "Descrição", PdfTheme.tableHeaderFont(), Element.ALIGN_LEFT, true);
-        addCell(table, "Qtd",       PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
-        addCell(table, "Total",     PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
+        if (showQty) addCell(table, "Qtd", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
+        if (showPrice) addCell(table, "Preço", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
+        addCell(table, "Total", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
 
         for (InvoiceLine line : invoice.getLines()) {
-            addCell(table, line.getProduct().getName(), PdfTheme.bodyFont(), Element.ALIGN_LEFT, false);
-            addCell(table, String.valueOf(line.getQuantity()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
+            addDescriptionCell(table, line, cols);
+            if (showQty) addCell(table, String.valueOf(line.getQuantity()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
+            if (showPrice) addCell(table, MoneyFormat.formatPlain(line.getUnitPrice()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
             addCell(table, MoneyFormat.formatPlain(line.getLineTotal()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
         }
         doc.add(table);
+    }
+
+    /** Célula da descrição: nome do produto + (opcional, por config) referência ou código de barras. */
+    private void addDescriptionCell(PdfPTable table, InvoiceLine line, DocumentColumnsDTO cols) {
+        com.lowagie.text.Phrase phrase = new com.lowagie.text.Phrase();
+        phrase.add(new Chunk(line.getProduct().getName(), PdfTheme.bodyFont()));
+        String sub = null;
+        String ref = line.getProduct().getReference();
+        String barcode = line.getProduct().getBarcode();
+        if (cols.reference() && ref != null && !ref.isBlank()) {
+            sub = "Ref: " + ref;
+        } else if (cols.barcode() && barcode != null && !barcode.isBlank()) {
+            sub = barcode;
+        }
+        if (sub != null) phrase.add(new Chunk("\n" + sub, PdfTheme.smallFont()));
+        PdfPCell cell = new PdfPCell(phrase);
+        cell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setCellEvent(DOTTED_BOTTOM);
+        cell.setPadding(3f);
+        table.addCell(cell);
     }
 
     private void renderTotals(Document doc, Invoice invoice) {

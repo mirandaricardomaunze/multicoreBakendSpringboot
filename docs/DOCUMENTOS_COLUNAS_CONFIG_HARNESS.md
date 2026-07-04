@@ -29,6 +29,8 @@
 | DC-51 | Emitir/Imprimir uma **Fatura**. | PDF sem as colunas Cód. Barras e Validade; totais inalterados. |
 | DC-52 | Imprimir **Encomenda**, **NC** e **Guia**. | Todas respeitam a mesma configuração. |
 | DC-53 | Tentar desmarcar todas e Guardar. | Erro "o documento tem de ter pelo menos uma coluna". |
+| DC-54 | Desmarcar "Quantidade" e "Preço Unitário" → vender no **POS** e imprimir recibo. | Recibo sem colunas Qtd e Preço; Descrição e Total mantêm-se; totais no rodapé inalterados. |
+| DC-55 | Marcar "Referência" → imprimir recibo POS de um produto com referência. | Referência aparece como sublinha sob o nome do produto. |
 
 ## Verificação
 
