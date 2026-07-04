@@ -1,8 +1,8 @@
 # Harness — Superadmin / Consola da Plataforma
 
 > Cenários para [SUPERADMIN_PLATAFORMA_SPEC.md](SUPERADMIN_PLATAFORMA_SPEC.md).
-> Fase 1: SA-01..SA-04 automáticos (`PlatformCompanyServiceTest`, `AuthController`/login);
-> SA-50..SA-56 manuais (UI).
+> Fase 1: SA-01..SA-04 auto + SA-50..SA-56 manuais.
+> Fase 2: SB-01..SB-05 auto (`SubscriptionServiceTest`) + SB-50..SB-54 manuais.
 
 **Última actualização:** 2026-07-04
 
@@ -30,8 +30,29 @@
 | SA-55 | Empresas → **Editar** (ou duplo-clique) → mudar Email/Nome → gravar. | Alterações reflectidas. |
 | SA-56 | Entrar como `ana` (ADMIN de tenant). | **Não** existe aba Plataforma; comportamento normal inalterado. |
 
+## Automático — Fase 2 (`SubscriptionServiceTest`)
+
+| ID    | Cenário | Esperado |
+|-------|---------|----------|
+| SB-01 | `recordPayment` com período até dentro de 1 mês numa assinatura EXPIRED. | `validUntil` estende-se; estado passa a ACTIVE; pagamento gravado. |
+| SB-02 | `recordPayment` com valor ≤ 0. | `BusinessRuleException`; nada gravado. |
+| SB-03 | `allowsLogin` numa empresa **sem** assinatura. | `true` (retrocompatível). |
+| SB-04 | `allowsLogin` com assinatura expirada (validade no passado) e com suspensa. | `false` em ambos. |
+| SB-05 | `saveSubscription` sem papel SUPERADMIN. | `BusinessRuleException`. |
+
+## Manuais — Fase 2 (UI)
+
+| ID    | Passos | Esperado |
+|-------|--------|----------|
+| SB-50 | Plataforma → **Assinaturas** → seleccionar empresa → **Definir Plano/Validade** (plano PRO, preço, validade futura). | Tabela mostra plano/estado ACTIVA/validade. |
+| SB-51 | **Registar Pagamento** (valor, método M-Pesa, período até data futura). | Pagamento gravado; validade estende-se; estado ACTIVA. |
+| SB-52 | **Ver Pagamentos** da empresa. | Lista o pagamento de SB-51. |
+| SB-53 | Definir validade no **passado** (ou **Suspender**). Sair. Tentar login de um utilizador dessa empresa. | Login recusado (assinatura expirada/suspensa). |
+| SB-54 | **Reactivar** / registar pagamento que cobre o futuro. Repetir login. | Login entra. |
+
 ## Verificação
 
-- `mvn clean test` → verde (SA-01..SA-04 em `PlatformCompanyServiceTest`). Flyway aplica `V24` no
-  arranque; `DataLoader` semeia a conta `superadmin` de forma idempotente.
+- `mvn clean test` → verde (SA-01..04 em `PlatformCompanyServiceTest`; SB-01..05 em
+  `SubscriptionServiceTest`). Flyway aplica `V24` e `V25` no arranque; `DataLoader` semeia a conta
+  `superadmin` de forma idempotente.
 </content>

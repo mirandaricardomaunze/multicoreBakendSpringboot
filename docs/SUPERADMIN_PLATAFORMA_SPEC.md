@@ -4,7 +4,7 @@
 > gere assinaturas/pagamentos, gere utilizadores globalmente e responde a pedidos de assistência.
 
 **Última actualização:** 2026-07-04
-**Estado:** Fase 1 (papel superadmin + estado da empresa + autorização) — em curso.
+**Estado:** Fase 1 (papel superadmin + estado da empresa) e Fase 2 (assinaturas + pagamentos) — feitas.
 
 ## Problema
 
@@ -58,11 +58,30 @@ para um papel de plataforma. Por isso:
 - O superadmin usa os serviços em processo (perfil desktop), como os restantes painéis — não precisa
   de cliente HTTP dedicado.
 
-## Fases seguintes (fora da Fase 1)
+## Fase 2 — Assinaturas + pagamentos (feita)
 
-- **Fase 2** — módulo `subscription`: plano, estado (TRIAL/ACTIVE/SUSPENDED/EXPIRED), validade,
-  preço; `SubscriptionPayment` (pagamentos manuais: DINHEIRO/M-PESA/E-MOLA/TRANSFERÊNCIA/OUTRO).
-  Validade expirada ⇒ empresa bloqueada no login.
+Módulo `subscription` (migração `V25`), tudo guardado por SUPERADMIN e auditado:
+
+- **`Subscription`** (1:1 com empresa via `company_id` único): `plan`
+  (`PlanType`: TRIAL/BASIC/PRO/ENTERPRISE), `status`
+  (`SubscriptionStatus`: TRIAL/ACTIVE/SUSPENDED/EXPIRED), `startDate`, `validUntil`, `monthlyPrice`.
+  **EXPIRED é derivado** (`effectiveStatus()`): validade no passado conta como expirada sem job;
+  SUSPENDED (manual) prevalece.
+- **`SubscriptionPayment`**: `amount`, `method`
+  (`PaymentMethod`: DINHEIRO/MPESA/EMOLA/TRANSFERENCIA/OUTRO), `paidAt`, período coberto
+  (`periodStart`/`periodEnd`), `note`. Registar um pagamento **estende `validUntil`** até ao fim do
+  período e põe a assinatura **ACTIVE**.
+- `SubscriptionService`: `listOverview`, `saveSubscription` (plano/preço/validade),
+  `changeStatus` (suspender/reactivar), `recordPayment`, `listPayments`, e **`allowsLogin`**
+  (política interna, sem guard). Controller `/api/platform/subscriptions`.
+- **Login:** além de `company.active`, filtra por `allowsLogin(companyId)` — empresa com assinatura
+  expirada/suspensa deixa de ser acessível; sem assinatura continua acessível (retrocompatível).
+- **Desktop:** aba **"Assinaturas & Pagamentos"** no `PlataformaPanel` — tabela (Empresa, Plano,
+  Estado, Válida até, Preço/mês, Nº pagamentos) + Definir Plano/Validade, Registar Pagamento,
+  Ver Pagamentos, Suspender/Reactivar.
+
+## Fases seguintes
+
 - **Fase 3** — `PlatformUserService`: gestão global de utilizadores (todas as empresas).
 - **Fase 4** — módulo `support`: tickets empresa→superadmin (`SupportTicket` + `SupportMessage`),
   distinto do `crm` (assistência ao cliente da empresa).

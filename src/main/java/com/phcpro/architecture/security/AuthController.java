@@ -1,6 +1,7 @@
 package com.phcpro.architecture.security;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.modules.subscription.service.SubscriptionService;
 import com.phcpro.modules.users.model.AppUser;
 import com.phcpro.modules.users.service.AppUserService;
 import jakarta.validation.Valid;
@@ -20,10 +21,13 @@ public class AuthController {
 
     private final AppUserService appUserService;
     private final AuthSessionService authSessionService;
+    private final SubscriptionService subscriptionService;
 
-    public AuthController(AppUserService appUserService, AuthSessionService authSessionService) {
+    public AuthController(AppUserService appUserService, AuthSessionService authSessionService,
+                          SubscriptionService subscriptionService) {
         this.appUserService = appUserService;
         this.authSessionService = authSessionService;
+        this.subscriptionService = subscriptionService;
     }
 
     @PostMapping("/login")
@@ -31,18 +35,21 @@ public class AuthController {
         AppUser user = appUserService.authenticate(request.username(), request.password());
         AuthSessionService.AuthSession session = authSessionService.create(user);
 
-        // Só empresas activas entram na sessão — uma empresa suspensa deixa de ser acessível.
+        // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que
+        // permita login (não expirada/suspensa). Empresa sem assinatura continua acessível.
         List<CompanyAccess> companies = user.getCompanyAccesses().stream()
                 .filter(access -> access.getCompany().isActive())
+                .filter(access -> subscriptionService.allowsLogin(access.getCompany().getId()))
                 .map(access -> new CompanyAccess(
                         access.getCompany().getId(), access.getCompany().getName(), access.getRole()))
                 .toList();
 
-        // Utilizador de tenant sem nenhuma empresa activa não entra; o superadmin pode ter zero.
+        // Utilizador de tenant sem nenhuma empresa acessível não entra; o superadmin pode ter zero.
         if (!user.isPlatformAdmin() && companies.isEmpty()) {
             authSessionService.revoke(session.token());
             throw new BusinessRuleException(
-                    "Sem empresa activa. A sua empresa pode estar suspensa — contacte o suporte.");
+                    "Sem empresa activa. A sua empresa pode estar suspensa ou com a assinatura expirada"
+                            + " — contacte o suporte.");
         }
 
         return new LoginResponse(

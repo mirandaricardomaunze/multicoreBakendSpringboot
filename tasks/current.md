@@ -5,6 +5,24 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-04 (Superadmin — Fase 2: assinaturas + pagamentos)
+
+- **Corte vertical** (backend + UI). Módulo `subscription` (migração `V25`): `Subscription` (1:1 com
+  empresa; plano TRIAL/BASIC/PRO/ENTERPRISE, estado TRIAL/ACTIVE/SUSPENDED/EXPIRED, validade, preço;
+  `effectiveStatus()` deriva EXPIRED da validade) + `SubscriptionPayment` (valor, método
+  DINHEIRO/MPESA/EMOLA/TRANSFERENCIA/OUTRO, período, nota). `SubscriptionService` (SUPERADMIN +
+  auditoria): `listOverview/saveSubscription/changeStatus/recordPayment/listPayments` + `allowsLogin`
+  (política interna). Registar pagamento **estende a validade** e reactiva. Controller
+  `/api/platform/subscriptions`.
+- **Login:** passa a filtrar por `allowsLogin` além de `company.active` — assinatura expirada/suspensa
+  bloqueia; sem assinatura continua acessível.
+- **Desktop:** aba "Assinaturas & Pagamentos" no `PlataformaPanel` (Definir Plano/Validade, Registar
+  Pagamento, Ver Pagamentos, Suspender/Reactivar).
+- Spec/harness actualizados (SB-01..05 auto, SB-50..54 manuais).
+- **Verificação:** `mvn -o compile` limpo; `SubscriptionServiceTest` (5) + `PlatformCompanyServiceTest`
+  (4) + `AuthControllerIntegrationTest` (2) + `TenantAccessServiceTest` (4) → **verdes**.
+- **Próximas:** Fase 3 (utilizadores globais), Fase 4 (tickets `support`).
+
 ### Progresso — 2026-07-04 (Superadmin / Consola da Plataforma — Fase 1)
 
 - **Pedido do utilizador:** um **superadmin** (dono da plataforma) que vê todas as empresas,
