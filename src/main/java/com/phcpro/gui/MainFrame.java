@@ -133,7 +133,8 @@ public class MainFrame extends JFrame {
             PayrollTaxService payrollTaxService,
             IvaDeclarationPrintService ivaDeclarationPrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService,
-            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService
+            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
+            com.phcpro.modules.documents.service.DocumentConfigService documentConfigService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -158,7 +159,7 @@ public class MainFrame extends JFrame {
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
         comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
-        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService);
+        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService);
 
         contentPanel.add(dashboardPanel,  "dashboard");
         contentPanel.add(posPanel,        "pos");

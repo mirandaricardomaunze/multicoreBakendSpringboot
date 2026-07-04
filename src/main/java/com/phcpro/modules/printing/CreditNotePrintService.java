@@ -7,6 +7,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.modules.comercial.model.CreditNote;
 import com.phcpro.modules.comercial.model.CreditNoteLine;
 import com.phcpro.modules.comercial.service.CreditNoteService;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +23,13 @@ public class CreditNotePrintService {
 
     private final CreditNoteService service;
     private final LineRowMapper lineRowMapper;
+    private final DocumentConfigService documentConfigService;
 
-    public CreditNotePrintService(CreditNoteService service, LineRowMapper lineRowMapper) {
+    public CreditNotePrintService(CreditNoteService service, LineRowMapper lineRowMapper,
+                                  DocumentConfigService documentConfigService) {
         this.service = service;
         this.lineRowMapper = lineRowMapper;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -39,7 +43,7 @@ public class CreditNotePrintService {
                     note.getNoteNumber()
             ));
             doc.add(buildContextBlock(note));
-            doc.add(buildLinesTable(note.getLines()));
+            doc.add(buildLinesTable(note.getLines(), note.getCompany().getId()));
             doc.add(PdfDocumentBuilder.spacer(6f));
             doc.add(TotalsBlockRenderer.build(
                     note.getTotalBeforeTax(),
@@ -95,7 +99,7 @@ public class CreditNotePrintService {
         return table;
     }
 
-    private PdfPTable buildLinesTable(List<CreditNoteLine> lines) {
+    private PdfPTable buildLinesTable(List<CreditNoteLine> lines, Long companyId) {
         return LineItemsTableRenderer.build(lines.stream().map(l -> lineRowMapper.map(
                 l.getProduct(),
                 l.getBatchNumber(),
@@ -104,7 +108,7 @@ public class CreditNotePrintService {
                 l.getTaxRate(),
                 BigDecimal.ZERO,
                 l.getLineTotal()
-        )).toList());
+        )).toList(), documentConfigService.getColumns(companyId));
     }
 
     private PdfPTable buildSignatureBlock() {

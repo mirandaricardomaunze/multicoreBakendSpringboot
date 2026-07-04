@@ -14,6 +14,8 @@ import com.phcpro.modules.backup.dto.BackupVerificationDTO;
 import com.phcpro.modules.backup.dto.PhysicalBackupResultDTO;
 import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.backup.service.DatabaseBackupService;
+import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,6 +31,7 @@ public class ConfigPanel extends JPanel {
     private final AuditLogService auditLogService;
     private final BackupService backupService;
     private final DatabaseBackupService databaseBackupService;
+    private final DocumentConfigService documentConfigService;
 
     // TAB 1: AUDIT LOGS
     private DefaultTableModel auditTableModel;
@@ -44,12 +47,23 @@ public class ConfigPanel extends JPanel {
     private DefaultTableModel usersTableModel;
     private JTable usersTable;
 
+    // TAB 4: DOCUMENT COLUMNS
+    private JCheckBox colBarcode;
+    private JCheckBox colReference;
+    private JCheckBox colDescription;
+    private JCheckBox colExpiry;
+    private JCheckBox colQuantity;
+    private JCheckBox colUnitPrice;
+    private JCheckBox colTax;
+    private JCheckBox colSubtotal;
+
     public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
-                       DatabaseBackupService databaseBackupService) {
+                       DatabaseBackupService databaseBackupService, DocumentConfigService documentConfigService) {
         this.userService = userService;
         this.auditLogService = auditLogService;
         this.backupService = backupService;
         this.databaseBackupService = databaseBackupService;
+        this.documentConfigService = documentConfigService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -71,6 +85,10 @@ public class ConfigPanel extends JPanel {
         // TAB 3: USERS
         JPanel tabUsers = createUsersTab();
         tabbedPane.addTab("Utilizadores & Permissões", UIHelper.icon("fas-user-shield", 16, UIHelper.TEXT_LIGHT), tabUsers);
+
+        // TAB 4: DOCUMENT COLUMNS
+        JPanel tabColumns = createDocumentColumnsTab();
+        tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.TEXT_LIGHT), tabColumns);
 
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -269,10 +287,105 @@ public class ConfigPanel extends JPanel {
         return panel;
     }
 
+    private JPanel createDocumentColumnsTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        panel.add(UIHelper.createHeading("Colunas Visíveis nos Documentos Comerciais"), BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 15));
+        card.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        JLabel desc = new JLabel("<html><body>Escolha que colunas aparecem na tabela de linhas da <b>Fatura</b>, "
+                + "<b>Encomenda</b>, <b>Nota de Crédito</b> e <b>Guia de Remessa</b>. A configuração é por empresa "
+                + "e não altera totais nem IVA — apenas a presença visual das colunas.</body></html>");
+        desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        desc.setForeground(UIHelper.TEXT_MUTED);
+        card.add(desc, BorderLayout.NORTH);
+
+        JPanel checks = new JPanel(new GridLayout(0, 2, 12, 8));
+        checks.setOpaque(false);
+        colBarcode = columnCheckBox("Código de Barras");
+        colReference = columnCheckBox("Referência");
+        colDescription = columnCheckBox("Descrição");
+        colExpiry = columnCheckBox("Validade");
+        colQuantity = columnCheckBox("Quantidade");
+        colUnitPrice = columnCheckBox("Preço Unitário");
+        colTax = columnCheckBox("IVA");
+        colSubtotal = columnCheckBox("Subtotal");
+        checks.add(colBarcode);
+        checks.add(colReference);
+        checks.add(colDescription);
+        checks.add(colExpiry);
+        checks.add(colQuantity);
+        checks.add(colUnitPrice);
+        checks.add(colTax);
+        checks.add(colSubtotal);
+        card.add(checks, BorderLayout.CENTER);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        actions.setOpaque(false);
+        ModernButton saveBtn = UIHelper.createSuccessButton("Guardar");
+        saveBtn.setIcon(UIHelper.icon("fas-save", 14));
+        actions.add(saveBtn);
+        card.add(actions, BorderLayout.SOUTH);
+
+        panel.add(card, BorderLayout.CENTER);
+
+        saveBtn.addActionListener(e -> saveDocumentColumns());
+        return panel;
+    }
+
+    private JCheckBox columnCheckBox(String label) {
+        JCheckBox box = new JCheckBox(label);
+        box.setOpaque(false);
+        box.setForeground(UIHelper.TEXT_LIGHT);
+        return box;
+    }
+
+    private void loadDocumentColumns() {
+        if (documentConfigService == null || colBarcode == null) {
+            return;
+        }
+        DocumentColumnsDTO cols = documentConfigService.getColumns(CurrentUserContext.getCurrentCompanyId());
+        colBarcode.setSelected(cols.barcode());
+        colReference.setSelected(cols.reference());
+        colDescription.setSelected(cols.description());
+        colExpiry.setSelected(cols.expiry());
+        colQuantity.setSelected(cols.quantity());
+        colUnitPrice.setSelected(cols.unitPrice());
+        colTax.setSelected(cols.tax());
+        colSubtotal.setSelected(cols.subtotal());
+    }
+
+    private void saveDocumentColumns() {
+        DocumentColumnsDTO dto = new DocumentColumnsDTO(
+                colBarcode.isSelected(),
+                colReference.isSelected(),
+                colDescription.isSelected(),
+                colExpiry.isSelected(),
+                colQuantity.isSelected(),
+                colUnitPrice.isSelected(),
+                colTax.isSelected(),
+                colSubtotal.isSelected()
+        );
+        try {
+            documentConfigService.save(CurrentUserContext.getCurrentCompanyId(), dto);
+            JOptionPane.showMessageDialog(this, "Colunas dos documentos guardadas com sucesso.",
+                    "Configuração Guardada", JOptionPane.INFORMATION_MESSAGE);
+            loadAuditLogs();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     public void onPanelSelected() {
         loadAuditLogs();
         loadBackupFilesList();
         loadUsersList();
+        loadDocumentColumns();
     }
 
     private void loadAuditLogs() {

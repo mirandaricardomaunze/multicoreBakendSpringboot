@@ -5,6 +5,22 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-04 (colunas configuráveis dos documentos comerciais)
+
+- **Pedido do utilizador:** poder definir **quais colunas** aparecem nos documentos comerciais
+  (Fatura/Encomenda/NC/Guia, que partilham o `LineItemsTableRenderer`). Só mostrar/ocultar.
+- **Processo:** spec+harness → skill `phc-new-module` → **implementação delegada a um agent** →
+  revisão `phc-solid-review` (sem apontamentos bloqueantes) → verificação e commit.
+- **Módulo `documents`** (`DocumentColumnConfig` por empresa, 8 flags, migração `V22`;
+  `DocumentConfigService.getColumns/save` com MANAGER/ADMIN + auditoria `DOCUMENT_COLUMNS_UPDATE` +
+  regra "pelo menos uma coluna"; `DocumentColumnsDTO` record; controller `GET/PUT /api/documents/columns`).
+  `LineItemsTableRenderer` ganhou overload `build(rows, cols)` (extraiu `record Column` + `activeColumns`,
+  **melhor DRY**; `build(rows)` delega em `all()`, retrocompatível). Os 4 serviços de impressão passam a
+  config. UI: aba "Colunas dos Documentos" no `ConfigPanel` (8 checkboxes + Guardar) + wiring no `MainFrame`.
+- Spec/harness: [docs/DOCUMENTOS_COLUNAS_CONFIG_SPEC.md](../docs/DOCUMENTOS_COLUNAS_CONFIG_SPEC.md) +
+  [docs/DOCUMENTOS_COLUNAS_CONFIG_HARNESS.md](../docs/DOCUMENTOS_COLUNAS_CONFIG_HARNESS.md) (DC-01..06 auto, DC-50..53 manuais).
+- Testes: `DocumentConfigServiceTest` (5) + `LineItemsTableRendererTest` (+1). `mvn clean test` → **209, 0 falhas**.
+
 ### Progresso — 2026-07-04 (campos profissionais do armazém)
 
 - **Pedido do utilizador:** `Warehouse` ganha (migração `V21`) **active**, **type**

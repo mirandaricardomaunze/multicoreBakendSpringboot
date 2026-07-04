@@ -5,12 +5,15 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.architecture.pricing.LineCalculator;
+import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Renders the document-line table shared by invoices, orders and credit notes.
@@ -38,32 +41,72 @@ public final class LineItemsTableRenderer {
 
     private LineItemsTableRenderer() {}
 
+    /** Uma coluna da tabela: largura, cabeçalho, alinhamento e como formatar a célula a partir da linha. */
+    private record Column(float width, String header, int align, Function<Row, String> cell) {}
+
     public static PdfPTable build(List<Row> rows) {
-        PdfPTable table = new PdfPTable(new float[]{14f, 10f, 24f, 11f, 7f, 12f, 6f, 16f});
+        return build(rows, DocumentColumnsDTO.all());
+    }
+
+    /**
+     * Monta a tabela apenas com as colunas activas em {@code cols}, mantendo por coluna a largura,
+     * o alinhamento e a formatação canónicos. Se nenhuma coluna estiver activa, mostra só Descrição
+     * (fallback defensivo). A matemática (subtotal = {@code LineCalculator.net}) fica intacta.
+     */
+    public static PdfPTable build(List<Row> rows, DocumentColumnsDTO cols) {
+        List<Column> columns = activeColumns(cols);
+
+        float[] widths = new float[columns.size()];
+        for (int i = 0; i < columns.size(); i++) {
+            widths[i] = columns.get(i).width();
+        }
+
+        PdfPTable table = new PdfPTable(widths);
         table.setWidthPercentage(100);
         table.setSpacingBefore(8f);
         table.setSpacingAfter(8f);
 
-        header(table, "Cód. Barras", Element.ALIGN_LEFT);
-        header(table, "Referência", Element.ALIGN_LEFT);
-        header(table, "Descrição", Element.ALIGN_LEFT);
-        header(table, "Validade", Element.ALIGN_CENTER);
-        header(table, "Qtd", Element.ALIGN_RIGHT);
-        header(table, "Preço Unit.", Element.ALIGN_RIGHT);
-        header(table, "IVA", Element.ALIGN_RIGHT);
-        header(table, "Subtotal", Element.ALIGN_RIGHT);
-
+        for (Column column : columns) {
+            header(table, column.header(), column.align());
+        }
         for (Row row : rows) {
-            body(table, safe(row.barcode()), Element.ALIGN_LEFT);
-            body(table, safe(row.reference()), Element.ALIGN_LEFT);
-            body(table, safe(row.description()), Element.ALIGN_LEFT);
-            body(table, formatExpiry(row.expiryDate()), Element.ALIGN_CENTER);
-            body(table, formatQuantity(row.quantity()), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(row.unitPrice()), Element.ALIGN_RIGHT);
-            body(table, formatRate(row.taxRate()), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(subtotal(row)), Element.ALIGN_RIGHT);
+            for (Column column : columns) {
+                body(table, column.cell().apply(row), column.align());
+            }
         }
         return table;
+    }
+
+    private static List<Column> activeColumns(DocumentColumnsDTO cols) {
+        List<Column> columns = new ArrayList<>();
+        if (cols.barcode()) {
+            columns.add(new Column(14f, "Cód. Barras", Element.ALIGN_LEFT, r -> safe(r.barcode())));
+        }
+        if (cols.reference()) {
+            columns.add(new Column(10f, "Referência", Element.ALIGN_LEFT, r -> safe(r.reference())));
+        }
+        if (cols.description()) {
+            columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+        }
+        if (cols.expiry()) {
+            columns.add(new Column(11f, "Validade", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
+        }
+        if (cols.quantity()) {
+            columns.add(new Column(7f, "Qtd", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
+        }
+        if (cols.unitPrice()) {
+            columns.add(new Column(12f, "Preço Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
+        }
+        if (cols.tax()) {
+            columns.add(new Column(6f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
+        }
+        if (cols.subtotal()) {
+            columns.add(new Column(16f, "Subtotal", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
+        }
+        if (columns.isEmpty()) {
+            columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+        }
+        return columns;
     }
 
     /** Subtotal líquido da linha (antes de IVA), coerente com a matemática de negócio. */

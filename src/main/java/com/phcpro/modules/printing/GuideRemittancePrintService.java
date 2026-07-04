@@ -9,6 +9,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceLine;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,10 +29,13 @@ public class GuideRemittancePrintService {
 
     private final InvoiceRepository invoiceRepository;
     private final LineRowMapper lineRowMapper;
+    private final DocumentConfigService documentConfigService;
 
-    public GuideRemittancePrintService(InvoiceRepository invoiceRepository, LineRowMapper lineRowMapper) {
+    public GuideRemittancePrintService(InvoiceRepository invoiceRepository, LineRowMapper lineRowMapper,
+                                       DocumentConfigService documentConfigService) {
         this.invoiceRepository = invoiceRepository;
         this.lineRowMapper = lineRowMapper;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -47,7 +51,8 @@ public class GuideRemittancePrintService {
                     guideNumber(invoice)
             ));
             doc.add(buildDeliveryBlock(invoice));
-            doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines())));
+            doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines()),
+                    documentConfigService.getColumns(invoice.getCompany().getId())));
             doc.add(PdfDocumentBuilder.spacer(8f));
             doc.add(buildTransportBlock());
             doc.add(PdfDocumentBuilder.spacer(24f));

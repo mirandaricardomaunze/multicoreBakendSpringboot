@@ -1,6 +1,7 @@
 package com.phcpro.modules.printing;
 
 import com.lowagie.text.pdf.PdfPTable;
+import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -39,5 +40,22 @@ class LineItemsTableRendererTest {
 
         assertEquals(8, table.getNumberOfColumns());
         assertEquals(2, table.getRows().size()); // 1 cabeçalho + 1 linha
+    }
+
+    // DC-06
+    @Test
+    void build_withConfig_omitsHiddenColumns() {
+        LineItemsTableRenderer.Row row = new LineItemsTableRenderer.Row(
+                "560000000001", "REF-1", "Iogurte", LocalDate.of(2026, 12, 31),
+                BigDecimal.ONE, new BigDecimal("100"), new BigDecimal("0.16"),
+                BigDecimal.ZERO, new BigDecimal("116.00"));
+
+        // barcode=false, expiry=false → restam 6 colunas.
+        DocumentColumnsDTO cols = new DocumentColumnsDTO(false, true, true, false, true, true, true, true);
+        PdfPTable table = LineItemsTableRenderer.build(List.of(row), cols);
+        assertEquals(6, table.getNumberOfColumns());
+
+        // build(rows) mantém as 8 canónicas.
+        assertEquals(8, LineItemsTableRenderer.build(List.of(row)).getNumberOfColumns());
     }
 }

@@ -9,6 +9,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.model.OrderLine;
 import com.phcpro.modules.comercial.repository.OrderRepository;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,10 +24,13 @@ public class OrderPrintService {
 
     private final OrderRepository orderRepository;
     private final LineRowMapper lineRowMapper;
+    private final DocumentConfigService documentConfigService;
 
-    public OrderPrintService(OrderRepository orderRepository, LineRowMapper lineRowMapper) {
+    public OrderPrintService(OrderRepository orderRepository, LineRowMapper lineRowMapper,
+                             DocumentConfigService documentConfigService) {
         this.orderRepository = orderRepository;
         this.lineRowMapper = lineRowMapper;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -42,7 +46,8 @@ public class OrderPrintService {
                     order.getOrderNumber()
             ));
             doc.add(buildClientBlock(order));
-            doc.add(LineItemsTableRenderer.build(toRows(order.getLines())));
+            doc.add(LineItemsTableRenderer.build(toRows(order.getLines()),
+                    documentConfigService.getColumns(order.getCompany().getId())));
             doc.add(TotalsBlockRenderer.build(
                     order.getTotalBeforeTax(),
                     order.getTaxAmount(),
