@@ -1,5 +1,6 @@
 package com.phcpro.architecture.security;
 
+import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.modules.users.model.AppUser;
 import com.phcpro.modules.users.service.AppUserService;
 import jakarta.validation.Valid;
@@ -29,12 +30,24 @@ public class AuthController {
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         AppUser user = appUserService.authenticate(request.username(), request.password());
         AuthSessionService.AuthSession session = authSessionService.create(user);
+
+        // Só empresas activas entram na sessão — uma empresa suspensa deixa de ser acessível.
         List<CompanyAccess> companies = user.getCompanyAccesses().stream()
+                .filter(access -> access.getCompany().isActive())
                 .map(access -> new CompanyAccess(
                         access.getCompany().getId(), access.getCompany().getName(), access.getRole()))
                 .toList();
+
+        // Utilizador de tenant sem nenhuma empresa activa não entra; o superadmin pode ter zero.
+        if (!user.isPlatformAdmin() && companies.isEmpty()) {
+            authSessionService.revoke(session.token());
+            throw new BusinessRuleException(
+                    "Sem empresa activa. A sua empresa pode estar suspensa — contacte o suporte.");
+        }
+
         return new LoginResponse(
-                session.token(), session.expiresAt(), user.getUsername(), user.getName(), user.getRole(), companies
+                session.token(), session.expiresAt(), user.getUsername(), user.getName(), user.getRole(),
+                user.isPlatformAdmin(), companies
         );
     }
 
@@ -57,6 +70,7 @@ public class AuthController {
             String username,
             String displayName,
             String role,
+            boolean superAdmin,
             List<CompanyAccess> companies
     ) {}
 

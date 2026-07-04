@@ -1057,6 +1057,7 @@ public class UIHelper {
             case "ADMIN" -> "Administrador";
             case "MANAGER" -> "Gestor";
             case "EMPLOYEE" -> "Funcionário";
+            case "SUPERADMIN" -> "Administrador da Plataforma";
             default -> role;
         };
     }

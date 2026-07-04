@@ -5,6 +5,32 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-04 (Superadmin / Consola da Plataforma — Fase 1)
+
+- **Pedido do utilizador:** um **superadmin** (dono da plataforma) que vê todas as empresas,
+  activa/desactiva, gere utilizadores/assinaturas/pagamentos e dá assistência. Decisões: aba
+  escondida no mesmo app (papel `SUPERADMIN`); pagamentos **manuais**; assistência por **tickets**
+  empresa→superadmin; empresa suspensa **bloqueia o login** (não mata sessões vivas).
+- **Processo:** spec+harness →
+  [docs/SUPERADMIN_PLATAFORMA_SPEC.md](../docs/SUPERADMIN_PLATAFORMA_SPEC.md) +
+  [docs/SUPERADMIN_PLATAFORMA_HARNESS.md](../docs/SUPERADMIN_PLATAFORMA_HARNESS.md) (SA-01..04 auto,
+  SA-50..56 manuais). Entregue **por fases**; esta é a **Fase 1**.
+- **Fase 1 (feita):** `AppUser.platformAdmin` + `Company.active` (migração `V24`); seed idempotente
+  da conta `superadmin/superadmin`. Autorização: `/api/platform/**` sai do tenant-check do
+  `SecurityInterceptor` (exige `platformAdmin`, papel `SUPERADMIN`, sem empresa);
+  `PermissionGuard.requireSuperAdmin`; `TenantAccessService.requireSuperAdmin`. Login devolve
+  `superAdmin` e só empresas **activas**; utilizador de tenant sem empresa activa é recusado.
+  Módulo `platform`: `PlatformCompanyService` (listar/criar/editar/activar-desactivar, auditado) +
+  controller `/api/platform/companies` + DTOs. Desktop: sessão transporta `superAdmin`;
+  `PlataformaPanel` (aba Empresas: tabela + Novo/Editar/Activar-Desactivar); `MainFrame` mostra só a
+  aba "Plataforma" ao superadmin (sem seletor de empresa/abas de tenant). Logout excluído do
+  interceptor (superadmin não tem empresa).
+- **Próximas fases:** 2 (assinaturas+pagamentos), 3 (utilizadores globais), 4 (tickets `support`),
+  5 (painéis Pagamentos/Utilizadores/Assistência + abrir tickets no lado da empresa).
+- **Verificação:** `mvn -o compile` limpo; `PlatformCompanyServiceTest` (4) +
+  `AuthControllerIntegrationTest` (2) + `TenantAccessServiceTest` (4) → **verdes**. Suite completa
+  não corre por falta de RAM (limitação de ambiente, como iterações anteriores).
+
 ### Progresso — 2026-07-04 (config separada por tipo de documento + comentário do recibo)
 
 - **Pedido do utilizador:** o **POS** deve ter **configuração separada** dos documentos comerciais, e

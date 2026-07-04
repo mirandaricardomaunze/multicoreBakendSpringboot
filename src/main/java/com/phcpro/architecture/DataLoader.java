@@ -84,6 +84,23 @@ public class DataLoader implements CommandLineRunner {
         this.productCategoryRepository = productCategoryRepository;
     }
 
+    /**
+     * Conta superadmin (dono da plataforma), sem empresa. Idempotente por username — corre em
+     * qualquer BD, mesmo com dados de demo já semeados. Trocar a senha em produção.
+     */
+    private void seedSuperAdmin() {
+        if (appUserRepository.findByUsername("superadmin").isPresent()) return;
+        AppUser superAdmin = new AppUser();
+        superAdmin.setUsername("superadmin");
+        superAdmin.setName("Administrador da Plataforma");
+        superAdmin.setPassword("superadmin");
+        superAdmin.setRole("ADMIN");
+        superAdmin.setActive(true);
+        superAdmin.setPlatformAdmin(true);
+        superAdmin.setCreatedBy("SYSTEM");
+        appUserRepository.save(superAdmin);
+    }
+
     private void seedProductCategories() {
         if (productCategoryRepository.count() > 0) return;
         seedCategory("ALIMENT", "Alimentação", "#F59E0B");
@@ -139,6 +156,7 @@ public class DataLoader implements CommandLineRunner {
     public void run(String... args) {
         seedMozambicanTaxRates();
         seedProductCategories();
+        seedSuperAdmin();
         // Guarda de idempotência: numa BD persistente (PostgreSQL) o seed de demo só corre uma vez.
         // Sem isto, cada arranque tentava recriar empresas/utilizadores e falhava na chave única de username.
         if (companyRepository.count() > 0) {

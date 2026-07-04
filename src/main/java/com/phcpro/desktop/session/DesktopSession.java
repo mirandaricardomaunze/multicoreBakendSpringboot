@@ -9,15 +9,17 @@ public class DesktopSession {
     private final Instant expiresAt;
     private final String username;
     private final String displayName;
+    private final boolean superAdmin;
     private final List<CompanyAccess> companies;
     private CompanyAccess activeCompany;
 
     public DesktopSession(String token, Instant expiresAt, String username, String displayName,
-                          List<CompanyAccess> companies) {
+                          boolean superAdmin, List<CompanyAccess> companies) {
         this.token = token;
         this.expiresAt = expiresAt;
         this.username = username;
         this.displayName = displayName;
+        this.superAdmin = superAdmin;
         this.companies = List.copyOf(companies);
     }
 
@@ -42,6 +44,10 @@ public class DesktopSession {
 
     public String displayName() {
         return displayName;
+    }
+
+    public boolean superAdmin() {
+        return superAdmin;
     }
 
     public List<CompanyAccess> companies() {

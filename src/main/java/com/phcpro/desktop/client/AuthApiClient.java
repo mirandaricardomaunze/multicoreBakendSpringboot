@@ -19,6 +19,7 @@ public class AuthApiClient {
                 .post("/api/auth/login", new LoginRequest(username, password), LoginResponse.class);
         return new DesktopSession(
                 response.token(), response.expiresAt(), response.username(), response.displayName(),
+                response.superAdmin(),
                 response.companies().stream()
                         .map(company -> new DesktopSession.CompanyAccess(company.id(), company.name(), company.role()))
                         .toList()
@@ -32,7 +33,7 @@ public class AuthApiClient {
     record LoginRequest(String username, String password) {}
 
     record LoginResponse(String token, Instant expiresAt, String username, String displayName, String role,
-                         List<CompanyAccess> companies) {}
+                         boolean superAdmin, List<CompanyAccess> companies) {}
 
     record CompanyAccess(Long id, String name, String role) {}
 }

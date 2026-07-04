@@ -26,4 +26,8 @@ public class Company extends BaseEntity {
 
     @Column(name = "address")
     private String address;
+
+    /** Empresa inactiva não pode iniciar sessão (suspensa pelo superadmin / falta de pagamento). */
+    @Column(name = "active", nullable = false)
+    private boolean active = true;
 }

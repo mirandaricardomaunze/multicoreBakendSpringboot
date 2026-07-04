@@ -10,4 +10,6 @@ public interface AppUserCompanyAccessRepository
         extends JpaRepository<AppUserCompanyAccess, AppUserCompanyAccessId> {
 
     long countByCompanyIdAndRoleIgnoreCase(Long companyId, String role);
+
+    long countByCompanyId(Long companyId);
 }

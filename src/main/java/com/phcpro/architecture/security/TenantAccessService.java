@@ -33,6 +33,15 @@ public class TenantAccessService {
     }
 
     @Transactional(readOnly = true)
+    public AppUser requireSuperAdmin(String username) {
+        AppUser user = requireActiveUser(username);
+        if (!user.isPlatformAdmin()) {
+            throw new BusinessRuleException("Acesso restrito ao administrador da plataforma.");
+        }
+        return user;
+    }
+
+    @Transactional(readOnly = true)
     public AppUser requireAccess(String username, Long companyId) {
         AppUser user = requireActiveUser(username);
         if (!user.hasCompany(companyId)) {

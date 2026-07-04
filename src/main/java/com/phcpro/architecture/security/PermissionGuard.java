@@ -11,8 +11,11 @@ import java.util.Set;
  */
 public final class PermissionGuard {
 
+    public static final String SUPERADMIN_ROLE = "SUPERADMIN";
+
     private static final Set<String> MANAGER_ROLES = Set.of("MANAGER", "ADMIN");
     private static final Set<String> ADMIN_ROLES = Set.of("ADMIN");
+    private static final Set<String> SUPERADMIN_ROLES = Set.of(SUPERADMIN_ROLE);
 
     private PermissionGuard() {
     }
@@ -23,6 +26,10 @@ public final class PermissionGuard {
 
     public static void requireAdmin(String operation) {
         requireAny(ADMIN_ROLES, operation, "ADMIN");
+    }
+
+    public static void requireSuperAdmin(String operation) {
+        requireAny(SUPERADMIN_ROLES, operation, "SUPERADMIN");
     }
 
     public static boolean isManagerOrAdmin() {

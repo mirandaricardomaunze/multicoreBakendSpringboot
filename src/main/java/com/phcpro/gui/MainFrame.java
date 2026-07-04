@@ -88,9 +88,11 @@ public class MainFrame extends JFrame {
     private final StockPanel stockPanel;
     private final ComprasPanel comprasPanel;
     private final ConfigPanel configPanel;
+    private final PlataformaPanel plataformaPanel;
 
     private final CompanyService companyService;
     private final DesktopSessionStore desktopSessionStore;
+    private final boolean superAdmin;
     private TopNavBar topBar;
     private String sessionDisplayName;
 
@@ -134,10 +136,12 @@ public class MainFrame extends JFrame {
             IvaDeclarationPrintService ivaDeclarationPrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService,
             com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
-            com.phcpro.modules.documents.service.DocumentConfigService documentConfigService
+            com.phcpro.modules.documents.service.DocumentConfigService documentConfigService,
+            com.phcpro.modules.platform.service.PlatformCompanyService platformCompanyService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
+        this.superAdmin = desktopSessionStore.requireSession().superAdmin();
 
         setTitle("MULTICORE — Gestão Profissional");
         setIconImage(UIHelper.iconImage("fas-cube", 64, UIHelper.ACCENT));
@@ -160,6 +164,7 @@ public class MainFrame extends JFrame {
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
         comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
         configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService);
+        plataformaPanel = new PlataformaPanel(platformCompanyService);
 
         contentPanel.add(dashboardPanel,  "dashboard");
         contentPanel.add(posPanel,        "pos");
@@ -173,6 +178,7 @@ public class MainFrame extends JFrame {
         contentPanel.add(fiscalPanel,     "fiscal");
         contentPanel.add(approvalsPanel,  "approvals");
         contentPanel.add(configPanel,     "config");
+        contentPanel.add(plataformaPanel, "plataforma");
 
         setLayout(new BorderLayout());
 
@@ -180,7 +186,12 @@ public class MainFrame extends JFrame {
         add(topBar, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
 
-        topBar.setActive("Painel Inicial");
+        if (superAdmin) {
+            navigate("plataforma");
+            topBar.setActive("Plataforma");
+        } else {
+            topBar.setActive("Painel Inicial");
+        }
     }
 
     /** Called by the application bootstrap once the user is authenticated. */
@@ -202,6 +213,10 @@ public class MainFrame extends JFrame {
     }
 
     private TopNavBar buildTopBar() {
+        if (superAdmin) {
+            return buildSuperAdminTopBar();
+        }
+
         TopNavBar bar = new TopNavBar("MULTICORE", "ERP Profissional");
 
         // Navegação: ícones-only com tooltip = nome do módulo (CONVENTIONS: UIHelper.icon, sem emojis).
@@ -235,6 +250,16 @@ public class MainFrame extends JFrame {
             bar.setSubBrand(initialSession.companies().get(0).name());
         }
 
+        return bar;
+    }
+
+    /** Barra do superadmin: só a consola da plataforma, sem seletor de empresa nem abas de tenant. */
+    private TopNavBar buildSuperAdminTopBar() {
+        TopNavBar bar = new TopNavBar("MULTICORE", "Consola da Plataforma");
+        bar.addItem(navIcon("fas-server"), "Plataforma", C_CONFIG, () -> navigate("plataforma"));
+        bar.addTrailing(buildThemeToggle());
+        bar.addTrailing(buildUserChip());
+        bar.setSubBrand("Plataforma");
         return bar;
     }
 
@@ -354,6 +379,7 @@ public class MainFrame extends JFrame {
             case "stock"      -> stockPanel.onPanelSelected();
             case "compras"    -> comprasPanel.onPanelSelected();
             case "config"     -> configPanel.onPanelSelected();
+            case "plataforma" -> plataformaPanel.onPanelSelected();
         }
     }
 
@@ -372,6 +398,7 @@ public class MainFrame extends JFrame {
             else if (comp instanceof StockPanel p)      p.onPanelSelected();
             else if (comp instanceof ComprasPanel p)    p.onPanelSelected();
             else if (comp instanceof ConfigPanel p)     p.onPanelSelected();
+            else if (comp instanceof PlataformaPanel p) p.onPanelSelected();
         }
     }
 

@@ -43,6 +43,10 @@ public class AppUser extends BaseEntity {
     @Column(name = "active")
     private boolean active = true;
 
+    /** Papel de plataforma (superadmin), ortogonal aos papéis por-empresa. Gere todas as empresas. */
+    @Column(name = "platform_admin", nullable = false)
+    private boolean platformAdmin = false;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = jakarta.persistence.CascadeType.ALL,
             orphanRemoval = true)
     private Set<AppUserCompanyAccess> companyAccesses = new LinkedHashSet<>();

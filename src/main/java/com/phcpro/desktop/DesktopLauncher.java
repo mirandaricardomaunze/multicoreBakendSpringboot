@@ -1,6 +1,7 @@
 package com.phcpro.desktop;
 
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.desktop.client.AuthApiClient;
 import com.phcpro.desktop.config.DesktopApiConfig;
 import com.phcpro.desktop.session.DesktopSession;
@@ -41,13 +42,18 @@ public class DesktopLauncher {
                 return;
             }
 
-            if (session.companies().isEmpty()) {
-                context.close();
-                throw new IllegalStateException("O utilizador autenticado não possui acesso a nenhuma empresa.");
+            if (session.superAdmin()) {
+                // Superadmin não tem empresa: corre com papel de plataforma e sem tenant activo.
+                CurrentUserContext.setCurrentUser(session.username(), PermissionGuard.SUPERADMIN_ROLE);
+            } else {
+                if (session.companies().isEmpty()) {
+                    context.close();
+                    throw new IllegalStateException("O utilizador autenticado não possui acesso a nenhuma empresa.");
+                }
+                session.selectCompany(session.companies().get(0).id());
+                CurrentUserContext.setCurrentUser(session.username(), session.activeRole());
+                CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
             }
-            session.selectCompany(session.companies().get(0).id());
-            CurrentUserContext.setCurrentUser(session.username(), session.activeRole());
-            CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
             context.getBean(DesktopSessionStore.class).setSession(session);
 
             // Trocar de tema reconstrói a janela já com a paleta nova (cobre ícones/pintura custom).
