@@ -52,6 +52,11 @@ public class StockPanel extends JPanel {
     private DefaultTableModel stockModel;
     private JTable stockTable;
     private List<Stock> stocksList = new ArrayList<>();
+
+    // Gestão de armazéns
+    private DefaultTableModel warehousesModel;
+    private JTable warehousesTable;
+    private List<Warehouse> warehousesFullList = new ArrayList<>();
     // ID do produto por linha visível da tabela (paralelo às linhas, respeita filtros).
     private final java.util.List<Long> stockRowProductIds = new java.util.ArrayList<>();
 
@@ -114,6 +119,7 @@ public class StockPanel extends JPanel {
         tabs.addTab("Lotes & Validades",             UIHelper.icon("fas-calendar-times", 16, UIHelper.TEXT_LIGHT),buildBatchesTab());
         tabs.addTab("Movimentos & Rastreabilidade",  UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT),buildMovementsTab());
         tabs.addTab("Transferências entre Armazéns", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),         buildTransfersTab());
+        tabs.addTab("Gestão de Armazéns",            UIHelper.icon("fas-warehouse", 16, UIHelper.TEXT_LIGHT),     buildWarehousesTab());
         tabs.addTab("Categorias",                    UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),         buildCategoriesTab());
 
         add(tabs, BorderLayout.CENTER);
@@ -546,6 +552,7 @@ public class StockPanel extends JPanel {
         loadTransfers();
         loadBatches();
         loadCategories();
+        loadWarehousesManagement();
     }
 
     // ===== Categorias de produto =====
@@ -906,19 +913,109 @@ public class StockPanel extends JPanel {
     }
 
 
+    private JPanel buildWarehousesTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+
+        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
+        header.add(UIHelper.createHeading("Gestão de Armazéns"), BorderLayout.WEST);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
+        ModernButton newBtn = UIHelper.createSuccessButton("Novo Armazém");
+        newBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        newBtn.addActionListener(e -> warehouseDialog(null));
+        ModernButton editBtn = UIHelper.createSecondaryButton("Editar");
+        editBtn.setIcon(UIHelper.icon("fas-edit", 14));
+        editBtn.addActionListener(e -> { Warehouse w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); });
+        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
+        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
+        toggleBtn.addActionListener(e -> toggleSelectedWarehouse());
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadWarehousesManagement());
+        actions.add(refreshBtn); actions.add(toggleBtn); actions.add(editBtn); actions.add(newBtn);
+        header.add(actions, BorderLayout.EAST);
+        tab.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout());
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        String[] cols = {"Nome", "Nº", "Tipo", "Capacidade", "Localização", "Responsável", "Telefone", "Vendas", "Estado"};
+        warehousesModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        warehousesTable = new JTable(warehousesModel);
+        UIHelper.styleTable(warehousesTable);
+        warehousesTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) { Warehouse w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); }
+            }
+        });
+        JScrollPane scroll = new JScrollPane(warehousesTable);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
+        tab.add(card, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private void loadWarehousesManagement() {
+        if (warehousesModel == null) return;
+        warehousesFullList = inventoryService.getAllWarehousesByCompany(CurrentUserContext.getCurrentCompanyId());
+        warehousesModel.setRowCount(0);
+        for (Warehouse w : warehousesFullList) {
+            warehousesModel.addRow(new Object[]{
+                    w.getName(),
+                    w.getWarehouseNumber() == null ? "—" : w.getWarehouseNumber(),
+                    w.getType() == null ? "—" : w.getType().label(),
+                    w.getCapacity() == null ? "—" : String.format("%,.2f", w.getCapacity()),
+                    w.getLocation() == null ? "—" : w.getLocation(),
+                    w.getManager() == null ? "—" : w.getManager(),
+                    w.getPhone() == null ? "—" : w.getPhone(),
+                    w.isAllowsSales() ? "Sim" : "Não",
+                    w.isActive() ? "ACTIVO" : "INATIVO"});
+        }
+    }
+
+    private Warehouse selectedManagedWarehouse() {
+        int row = warehousesTable == null ? -1 : warehousesTable.getSelectedRow();
+        if (row < 0 || row >= warehousesFullList.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione um armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return warehousesFullList.get(warehousesTable.convertRowIndexToModel(row));
+    }
+
+    private void toggleSelectedWarehouse() {
+        Warehouse w = selectedManagedWarehouse();
+        if (w == null) return;
+        try {
+            inventoryService.setWarehouseActive(w.getId(), !w.isActive());
+            onPanelSelected();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void createWarehouseDialogV2() {
-        JTextField nameField = new JTextField();
-        JTextField numberField = new JTextField();
-        JTextField capacityField = new JTextField("0");
-        JTextField locField = new JTextField();
+        warehouseDialog(null);
+    }
+
+    /** Diálogo de criar/editar armazém. {@code existing == null} → criar; senão → editar. */
+    private void warehouseDialog(Warehouse existing) {
+        boolean editing = existing != null;
+        JTextField nameField = new JTextField(editing ? existing.getName() : "");
+        JTextField numberField = new JTextField(editing && existing.getWarehouseNumber() != null ? existing.getWarehouseNumber() : "");
+        JTextField capacityField = new JTextField(editing && existing.getCapacity() != null ? existing.getCapacity().toPlainString() : "0");
+        JTextField locField = new JTextField(editing && existing.getLocation() != null ? existing.getLocation() : "");
         JComboBox<String> typeCombo = new JComboBox<>();
         for (var t : com.phcpro.modules.inventory.model.WarehouseType.values()) typeCombo.addItem(t.label());
         UIHelper.styleComboBox(typeCombo);
-        JTextField managerField = new JTextField();
-        JTextField phoneField = new JTextField();
+        if (editing && existing.getType() != null) typeCombo.setSelectedIndex(existing.getType().ordinal());
+        JTextField managerField = new JTextField(editing && existing.getManager() != null ? existing.getManager() : "");
+        JTextField phoneField = new JTextField(editing && existing.getPhone() != null ? existing.getPhone() : "");
         UIHelper.styleTextField(managerField);
         UIHelper.styleTextField(phoneField);
-        JCheckBox allowsSalesCheck = new JCheckBox("Permite vendas ao balcão (POS)", true);
+        JCheckBox allowsSalesCheck = new JCheckBox("Permite vendas ao balcão (POS)", editing ? existing.isAllowsSales() : true);
         allowsSalesCheck.setOpaque(false);
         allowsSalesCheck.setForeground(UIHelper.TEXT_LIGHT);
 
@@ -933,7 +1030,9 @@ public class StockPanel extends JPanel {
                 "Vendas:", allowsSalesCheck
         );
 
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Criar Novo Armazém", "fas-warehouse", "Registe um novo local de stock", dialogPanel).showDialog();
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
+                editing ? "Editar Armazém" : "Criar Novo Armazém", "fas-warehouse",
+                editing ? "Actualize os dados do local" : "Registe um novo local de stock", dialogPanel).showDialog();
         if (confirmed) {
             String name = nameField.getText().trim();
             String warehouseNumber = numberField.getText().trim();
@@ -951,21 +1050,26 @@ public class StockPanel extends JPanel {
                     JOptionPane.showMessageDialog(this, "A capacidade deve ser zero ou superior.", "Erro", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-
-                com.phcpro.modules.company.model.Company currentCompany = new com.phcpro.modules.company.model.Company();
-                currentCompany.setId(CurrentUserContext.getCurrentCompanyId());
-
                 com.phcpro.modules.inventory.model.WarehouseType type =
                         com.phcpro.modules.inventory.model.WarehouseType.values()[Math.max(0, typeCombo.getSelectedIndex())];
-                inventoryService.createWarehouse(name, warehouseNumber, capacity, location,
-                        type, allowsSalesCheck.isSelected(),
-                        managerField.getText().trim(), phoneField.getText().trim(), currentCompany);
-                JOptionPane.showMessageDialog(this, "Armazem '" + name + "' criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+
+                if (editing) {
+                    inventoryService.updateWarehouse(existing.getId(), name, warehouseNumber, capacity, location,
+                            type, allowsSalesCheck.isSelected(), managerField.getText().trim(), phoneField.getText().trim());
+                    JOptionPane.showMessageDialog(this, "Armazém '" + name + "' actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    com.phcpro.modules.company.model.Company currentCompany = new com.phcpro.modules.company.model.Company();
+                    currentCompany.setId(CurrentUserContext.getCurrentCompanyId());
+                    inventoryService.createWarehouse(name, warehouseNumber, capacity, location,
+                            type, allowsSalesCheck.isSelected(),
+                            managerField.getText().trim(), phoneField.getText().trim(), currentCompany);
+                    JOptionPane.showMessageDialog(this, "Armazem '" + name + "' criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                }
                 onPanelSelected();
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "A capacidade deve ser um valor numerico.", "Erro", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao criar armazem: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Erro ao gravar armazem: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

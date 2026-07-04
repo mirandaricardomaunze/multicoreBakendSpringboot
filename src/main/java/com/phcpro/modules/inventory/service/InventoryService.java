@@ -77,6 +77,50 @@ public class InventoryService {
                 .toList();
     }
 
+    /** Todos os armazéns (activos e inactivos) — para o ecrã de gestão de armazéns. */
+    @Transactional(readOnly = true)
+    public List<Warehouse> getAllWarehousesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return warehouseRepository.findByCompanyId(companyId);
+    }
+
+    @Transactional
+    public Warehouse updateWarehouse(Long id, String name, String warehouseNumber, BigDecimal capacity,
+                                     String location, com.phcpro.modules.inventory.model.WarehouseType type,
+                                     boolean allowsSales, String manager, String phone) {
+        Warehouse warehouse = loadWarehouseForActiveCompany(id);
+        warehouse.setName(name);
+        warehouse.setWarehouseNumber(warehouseNumber);
+        warehouse.setCapacity(capacity);
+        warehouse.setLocation(location);
+        warehouse.setType(type == null ? com.phcpro.modules.inventory.model.WarehouseType.STORE : type);
+        warehouse.setAllowsSales(allowsSales);
+        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
+        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
+        warehouse = warehouseRepository.save(warehouse);
+        auditLogService.logCurrent("WAREHOUSE_UPDATE", "Armazém " + warehouse.getName() + " actualizado.");
+        return warehouse;
+    }
+
+    /** Activa/desactiva um armazém (soft-delete). MANAGER/ADMIN + auditado. */
+    @Transactional
+    public Warehouse setWarehouseActive(Long id, boolean active) {
+        PermissionGuard.requireManagerOrAdmin(active ? "activar armazém" : "desactivar armazém");
+        Warehouse warehouse = loadWarehouseForActiveCompany(id);
+        warehouse.setActive(active);
+        warehouse = warehouseRepository.save(warehouse);
+        auditLogService.logCurrent("WAREHOUSE_STATUS",
+                "Armazém " + warehouse.getName() + (active ? " activado." : " desactivado."));
+        return warehouse;
+    }
+
+    private Warehouse loadWarehouseForActiveCompany(Long id) {
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        CurrentUserContext.requireCompany(warehouse.getCompany() != null ? warehouse.getCompany().getId() : null);
+        return warehouse;
+    }
+
     @Transactional(readOnly = true)
     public List<Stock> getStocksByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);

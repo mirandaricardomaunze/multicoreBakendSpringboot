@@ -27,9 +27,16 @@ não vende), e poder **desactivar** um local sem apagar o histórico.
 balcão (POS)". `InventoryService.createWarehouse` tem um novo overload com estes campos (os antigos
 delegam com defaults — retrocompatível).
 
+## Gestão de armazéns (UI)
+
+Nova aba **"Gestão de Armazéns"** no `StockPanel`: tabela com todos os armazéns (activos e inactivos)
+— Nome, Nº, Tipo, Capacidade, Localização, Responsável, Telefone, Vendas, **Estado** (ACTIVO/INATIVO,
+com cor). Acções: **Novo**, **Editar** (duplo-clique ou botão), **Activar/Desactivar**. Backend:
+`getAllWarehousesByCompany` (inclui inactivos), `updateWarehouse(...)` e `setWarehouseActive(id,
+active)` (MANAGER/ADMIN + auditoria `WAREHOUSE_STATUS`/`WAREHOUSE_UPDATE`). O diálogo de criar/editar
+é partilhado (`warehouseDialog`).
+
 ## Não-objetivos
 
-- **Não** inclui (ainda) ecrã de **gestão de armazéns** (listar/editar/activar-desactivar). O campo
-  `active` já filtra os fluxos; a alternância pela UI fica como evolução (hoje o armazém nasce activo).
 - Não liga o tipo a regras fiscais nem a logística/GPS.
 - Não altera transferências nem o stock (continuam a operar sobre armazéns activos).

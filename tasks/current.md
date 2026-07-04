@@ -16,8 +16,10 @@
 - Spec/harness: [docs/ARMAZEM_PROFISSIONAL_SPEC.md](../docs/ARMAZEM_PROFISSIONAL_SPEC.md) +
   [docs/ARMAZEM_PROFISSIONAL_HARNESS.md](../docs/ARMAZEM_PROFISSIONAL_HARNESS.md) (AR-01 auto, AR-50..53 manuais).
 - Testes: `InventoryServiceTest` +1 (filtro de vendas). `mvn test` → **203, 0 falhas**.
-- **Follow-up:** ecrã de gestão de armazéns (listar/editar/activar-desactivar) — hoje o campo `active`
-  já filtra, mas a alternância pela UI ainda não existe.
+- **Ecrã de gestão de armazéns (feito):** nova aba "Gestão de Armazéns" no `StockPanel` (tabela com
+  todos + Novo/Editar/Activar-Desactivar, duplo-clique edita). Backend `getAllWarehousesByCompany`,
+  `updateWarehouse`, `setWarehouseActive` (MANAGER/ADMIN + auditoria). Diálogo criar/editar partilhado.
+  Harness AR-53..AR-55.
 
 ### Progresso — 2026-07-03 (polish: cor de estado nas linhas)
 
