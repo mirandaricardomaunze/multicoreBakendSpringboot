@@ -47,7 +47,7 @@ public class OrderPrintService {
             ));
             doc.add(buildClientBlock(order));
             doc.add(LineItemsTableRenderer.build(toRows(order.getLines()),
-                    documentConfigService.getColumns(order.getCompany().getId())));
+                    documentConfigService.getColumns(order.getCompany().getId(), com.phcpro.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
                     order.getTotalBeforeTax(),
                     order.getTaxAmount(),

@@ -5,6 +5,22 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-04 (config separada por tipo de documento + comentário do recibo)
+
+- **Pedido do utilizador:** o **POS** deve ter **configuração separada** dos documentos comerciais, e
+  poder **definir o comentário/rodapé** que aparece no recibo.
+- Config passou a ser **por `DocumentType`** (COMMERCIAL vs POS_RECEIPT), independente por empresa
+  (entidade ganha `document_type`; unique `(company_id, document_type)`; migração `V23` recria a
+  tabela de forma portável H2+PostgreSQL). `DocumentColumnsDTO` ganha `footer`. Service/controller/UI
+  passam o tipo. Os 4 serviços comerciais usam COMMERCIAL; o `ReceiptPrintService` usa POS_RECEIPT e o
+  rodapé configurável (`footer`; vazio = "Obrigado pela sua preferência!", suporta multi-linha).
+  `ConfigPanel` ganhou selector de tipo + campo "Comentário do recibo".
+- Spec/harness actualizados (DC-07 auto; DC-54..DC-57 manuais).
+- **Verificação:** compila; testes da funcionalidade + serviços tocados → **56, 0 falhas**
+  (`DocumentConfigServiceTest` 6, `LineItemsTableRendererTest` 4, POS/Comercial/Reorder/Inventory).
+  ⚠️ A suite **completa** (209) não correu por **falta de RAM da máquina** (~568 MB livres) nos testes
+  de integração Spring — limitação de ambiente, não de código (correr num ambiente com mais memória).
+
 ### Progresso — 2026-07-04 (colunas configuráveis dos documentos comerciais)
 
 - **Pedido do utilizador:** poder definir **quais colunas** aparecem nos documentos comerciais

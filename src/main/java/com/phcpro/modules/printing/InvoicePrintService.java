@@ -50,7 +50,7 @@ public class InvoicePrintService {
             ));
             doc.add(buildClientBlock(invoice));
             doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines()),
-                    documentConfigService.getColumns(invoice.getCompany().getId())));
+                    documentConfigService.getColumns(invoice.getCompany().getId(), com.phcpro.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
                     invoice.getTotalBeforeTax(),
                     invoice.getTaxAmount(),

@@ -12,12 +12,13 @@ public record DocumentColumnsDTO(
         boolean quantity,
         boolean unitPrice,
         boolean tax,
-        boolean subtotal
+        boolean subtotal,
+        String footer
 ) {
 
-    /** Todas as colunas visíveis (default quando não há configuração guardada). */
+    /** Todas as colunas visíveis, sem comentário (default quando não há configuração guardada). */
     public static DocumentColumnsDTO all() {
-        return new DocumentColumnsDTO(true, true, true, true, true, true, true, true);
+        return new DocumentColumnsDTO(true, true, true, true, true, true, true, true, null);
     }
 
     /** True se pelo menos uma coluna estiver visível. */

@@ -36,18 +36,26 @@ quer mostrar código de barras nem validade na fatura ao cliente). Não havia fo
 - **UI (`ConfigPanel`):** secção/aba "Colunas dos Documentos" — 8 checkboxes (estado actual) + botão
   Guardar. Injecção via `MainFrame`.
 
-## Recibo do POS (extensão)
+## Configuração separada por tipo de documento (revisão)
 
-O **recibo térmico do POS** (`ReceiptPrintService`, ~80mm) passou também a respeitar a mesma
-configuração, no que faz sentido num recibo estreito — mapeamento:
+A configuração passou a ser **por tipo de documento** (`DocumentType`): **COMMERCIAL** (Fatura/
+Encomenda/NC/Guia) e **POS_RECEIPT** (recibo do POS) têm **configurações independentes**. A entidade
+`DocumentColumnConfig` ganha `document_type` e o unique passa a `(company_id, document_type)`
+(migração `V23`). `getColumns(companyId, tipo)` e `save(companyId, tipo, dto)`.
 
-- **Quantidade** → mostra/oculta a coluna "Qtd".
-- **Preço Unitário** → mostra/oculta a coluna "Preço".
-- **Referência** ou **Código de Barras** → aparece como **sublinha pequena** sob o nome do produto
-  (referência tem prioridade sobre código de barras).
-- **Descrição** (nome) e **Total** da linha são **sempre** mostrados (identidade + valor).
-- **Validade**, **IVA** e **Subtotal líquido** por linha **não** se aplicam ao recibo (são para os
-  documentos A4); os totais do recibo (Subtotal/IVA/TOTAL no rodapé) mantêm-se inalterados.
+### Recibo do POS (POS_RECEIPT)
+
+O recibo térmico (`ReceiptPrintService`, ~80mm) usa a config **POS_RECEIPT**, no que cabe num recibo:
+- **Quantidade** → coluna "Qtd"; **Preço Unitário** → coluna "Preço".
+- **Referência** ou **Código de Barras** → **sublinha** sob o nome (referência tem prioridade).
+- **Descrição** e **Total** sempre; **Validade/IVA/Subtotal** por linha não se aplicam.
+
+### Comentário/rodapé do recibo
+
+A config **POS_RECEIPT** ganha um campo de texto **`footer`** — a mensagem que aparece no fundo do
+recibo (ex.: "Obrigado pela sua preferência! Trocas em 7 dias com talão."). Se vazio, usa-se o texto
+padrão. Definível em Config → Colunas dos Documentos (tipo Recibo POS). O `footer` da config
+COMMERCIAL é ignorado.
 
 ## Não-objetivos
 

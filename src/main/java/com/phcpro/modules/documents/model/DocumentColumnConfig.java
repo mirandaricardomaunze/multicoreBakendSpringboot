@@ -12,7 +12,8 @@ import lombok.Setter;
  */
 @Entity
 @Table(name = "document_column_config",
-        uniqueConstraints = @UniqueConstraint(name = "uk_doc_col_company", columnNames = "company_id"))
+        uniqueConstraints = @UniqueConstraint(name = "uk_doc_col_company_type",
+                columnNames = {"company_id", "document_type"}))
 @Getter
 @Setter
 public class DocumentColumnConfig extends BaseEntity {
@@ -23,6 +24,11 @@ public class DocumentColumnConfig extends BaseEntity {
 
     @Column(name = "company_id", nullable = false)
     private Long companyId;
+
+    /** Tipo de documento a que esta configuração se aplica (comercial vs recibo POS). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_type", nullable = false, length = 20)
+    private DocumentType documentType = DocumentType.COMMERCIAL;
 
     @Column(name = "show_barcode", nullable = false)
     private boolean showBarcode = true;
@@ -47,4 +53,8 @@ public class DocumentColumnConfig extends BaseEntity {
 
     @Column(name = "show_subtotal", nullable = false)
     private boolean showSubtotal = true;
+
+    /** Comentário/rodapé personalizado (aplica-se ao recibo POS). Vazio = texto padrão. */
+    @Column(name = "footer_comment", length = 255)
+    private String footerComment;
 }

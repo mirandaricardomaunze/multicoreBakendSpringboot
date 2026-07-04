@@ -51,7 +51,7 @@ class LineItemsTableRendererTest {
                 BigDecimal.ZERO, new BigDecimal("116.00"));
 
         // barcode=false, expiry=false → restam 6 colunas.
-        DocumentColumnsDTO cols = new DocumentColumnsDTO(false, true, true, false, true, true, true, true);
+        DocumentColumnsDTO cols = new DocumentColumnsDTO(false, true, true, false, true, true, true, true, null);
         PdfPTable table = LineItemsTableRenderer.build(List.of(row), cols);
         assertEquals(6, table.getNumberOfColumns());
 

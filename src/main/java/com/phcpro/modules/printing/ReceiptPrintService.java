@@ -57,13 +57,14 @@ public class ReceiptPrintService {
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
         // O recibo do POS respeita a configuração de colunas dos documentos, no que faz sentido num
         // recibo térmico (Qtd, Preço Unit., e Referência/Cód. Barras como sublinha da descrição).
-        DocumentColumnsDTO cols = documentConfigService.getColumns(invoice.getCompany().getId());
+        DocumentColumnsDTO cols = documentConfigService.getColumns(
+                invoice.getCompany().getId(), com.phcpro.modules.documents.model.DocumentType.POS_RECEIPT);
         return PdfDocumentBuilder.buildReceipt(doc -> {
             renderHeader(doc, invoice);
             renderLines(doc, invoice, cols);
             renderTotals(doc, invoice);
             renderPayments(doc, invoice);
-            renderFooter(doc, invoice);
+            renderFooter(doc, cols);
         });
     }
 
@@ -195,9 +196,15 @@ public class ReceiptPrintService {
         };
     }
 
-    private void renderFooter(Document doc, Invoice invoice) {
+    private void renderFooter(Document doc, DocumentColumnsDTO cols) {
         doc.add(PdfDocumentBuilder.spacer(6f));
-        addCentered(doc, "Obrigado pela sua preferência!", PdfTheme.smallFont());
+        // Comentário/rodapé configurável do recibo; vazio → texto padrão.
+        String message = (cols.footer() != null && !cols.footer().isBlank())
+                ? cols.footer() : "Obrigado pela sua preferência!";
+        // Suporta várias linhas (o operador pode separar por \n).
+        for (String line : message.split("\\r?\\n")) {
+            addCentered(doc, line, PdfTheme.smallFont());
+        }
     }
 
     private void addCentered(Document doc, String text, com.lowagie.text.Font font) {

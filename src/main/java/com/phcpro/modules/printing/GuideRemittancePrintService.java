@@ -52,7 +52,7 @@ public class GuideRemittancePrintService {
             ));
             doc.add(buildDeliveryBlock(invoice));
             doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines()),
-                    documentConfigService.getColumns(invoice.getCompany().getId())));
+                    documentConfigService.getColumns(invoice.getCompany().getId(), com.phcpro.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(PdfDocumentBuilder.spacer(8f));
             doc.add(buildTransportBlock());
             doc.add(PdfDocumentBuilder.spacer(24f));

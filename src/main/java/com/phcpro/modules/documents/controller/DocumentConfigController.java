@@ -1,6 +1,7 @@
 package com.phcpro.modules.documents.controller;
 
 import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
+import com.phcpro.modules.documents.model.DocumentType;
 import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,13 +22,17 @@ public class DocumentConfigController {
     }
 
     @GetMapping("/columns")
-    public ResponseEntity<DocumentColumnsDTO> getColumns(@RequestParam Long companyId) {
-        return ResponseEntity.ok(service.getColumns(companyId));
+    public ResponseEntity<DocumentColumnsDTO> getColumns(
+            @RequestParam Long companyId,
+            @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType) {
+        return ResponseEntity.ok(service.getColumns(companyId, documentType));
     }
 
     @PutMapping("/columns")
-    public ResponseEntity<DocumentColumnsDTO> saveColumns(@RequestParam Long companyId,
-                                                          @RequestBody DocumentColumnsDTO dto) {
-        return ResponseEntity.ok(service.save(companyId, dto));
+    public ResponseEntity<DocumentColumnsDTO> saveColumns(
+            @RequestParam Long companyId,
+            @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType,
+            @RequestBody DocumentColumnsDTO dto) {
+        return ResponseEntity.ok(service.save(companyId, documentType, dto));
     }
 }

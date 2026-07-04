@@ -48,6 +48,7 @@ public class ConfigPanel extends JPanel {
     private JTable usersTable;
 
     // TAB 4: DOCUMENT COLUMNS
+    private JComboBox<String> docTypeCombo;
     private JCheckBox colBarcode;
     private JCheckBox colReference;
     private JCheckBox colDescription;
@@ -56,6 +57,7 @@ public class ConfigPanel extends JPanel {
     private JCheckBox colUnitPrice;
     private JCheckBox colTax;
     private JCheckBox colSubtotal;
+    private javax.swing.JTextField footerField;
 
     public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
                        DatabaseBackupService databaseBackupService, DocumentConfigService documentConfigService) {
@@ -292,7 +294,21 @@ public class ConfigPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        panel.add(UIHelper.createHeading("Colunas Visíveis nos Documentos Comerciais"), BorderLayout.NORTH);
+        JPanel north = new JPanel(new BorderLayout(0, 10));
+        north.setOpaque(false);
+        north.add(UIHelper.createHeading("Colunas Visíveis nos Documentos"), BorderLayout.NORTH);
+        JPanel typeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        typeRow.setOpaque(false);
+        JLabel typeLbl = new JLabel("Tipo de documento:");
+        typeLbl.setForeground(UIHelper.TEXT_MUTED);
+        docTypeCombo = new JComboBox<>();
+        for (var t : com.phcpro.modules.documents.model.DocumentType.values()) docTypeCombo.addItem(t.label());
+        UIHelper.styleComboBox(docTypeCombo);
+        docTypeCombo.addActionListener(e -> loadDocumentColumns());
+        typeRow.add(typeLbl);
+        typeRow.add(docTypeCombo);
+        north.add(typeRow, BorderLayout.SOUTH);
+        panel.add(north, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 15));
@@ -323,7 +339,21 @@ public class ConfigPanel extends JPanel {
         checks.add(colUnitPrice);
         checks.add(colTax);
         checks.add(colSubtotal);
-        card.add(checks, BorderLayout.CENTER);
+
+        JPanel center = new JPanel(new BorderLayout(0, 14));
+        center.setOpaque(false);
+        center.add(checks, BorderLayout.NORTH);
+        JPanel footerRow = new JPanel(new BorderLayout(0, 4));
+        footerRow.setOpaque(false);
+        JLabel footerLbl = new JLabel("Comentário do recibo (rodapé) — só para Recibo POS:");
+        footerLbl.setForeground(UIHelper.TEXT_MUTED);
+        footerField = new javax.swing.JTextField();
+        UIHelper.styleTextField(footerField);
+        footerField.setToolTipText("Vazio = 'Obrigado pela sua preferência!'. Aplica-se apenas ao Recibo POS.");
+        footerRow.add(footerLbl, BorderLayout.NORTH);
+        footerRow.add(footerField, BorderLayout.CENTER);
+        center.add(footerRow, BorderLayout.CENTER);
+        card.add(center, BorderLayout.CENTER);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actions.setOpaque(false);
@@ -345,11 +375,17 @@ public class ConfigPanel extends JPanel {
         return box;
     }
 
+    private com.phcpro.modules.documents.model.DocumentType selectedDocType() {
+        int idx = docTypeCombo == null ? 0 : Math.max(0, docTypeCombo.getSelectedIndex());
+        return com.phcpro.modules.documents.model.DocumentType.values()[idx];
+    }
+
     private void loadDocumentColumns() {
         if (documentConfigService == null || colBarcode == null) {
             return;
         }
-        DocumentColumnsDTO cols = documentConfigService.getColumns(CurrentUserContext.getCurrentCompanyId());
+        DocumentColumnsDTO cols = documentConfigService.getColumns(
+                CurrentUserContext.getCurrentCompanyId(), selectedDocType());
         colBarcode.setSelected(cols.barcode());
         colReference.setSelected(cols.reference());
         colDescription.setSelected(cols.description());
@@ -358,6 +394,7 @@ public class ConfigPanel extends JPanel {
         colUnitPrice.setSelected(cols.unitPrice());
         colTax.setSelected(cols.tax());
         colSubtotal.setSelected(cols.subtotal());
+        footerField.setText(cols.footer() == null ? "" : cols.footer());
     }
 
     private void saveDocumentColumns() {
@@ -369,11 +406,12 @@ public class ConfigPanel extends JPanel {
                 colQuantity.isSelected(),
                 colUnitPrice.isSelected(),
                 colTax.isSelected(),
-                colSubtotal.isSelected()
+                colSubtotal.isSelected(),
+                footerField.getText().trim().isEmpty() ? null : footerField.getText().trim()
         );
         try {
-            documentConfigService.save(CurrentUserContext.getCurrentCompanyId(), dto);
-            JOptionPane.showMessageDialog(this, "Colunas dos documentos guardadas com sucesso.",
+            documentConfigService.save(CurrentUserContext.getCurrentCompanyId(), selectedDocType(), dto);
+            JOptionPane.showMessageDialog(this, "Configuração de " + selectedDocType().label() + " guardada com sucesso.",
                     "Configuração Guardada", JOptionPane.INFORMATION_MESSAGE);
             loadAuditLogs();
         } catch (Exception ex) {

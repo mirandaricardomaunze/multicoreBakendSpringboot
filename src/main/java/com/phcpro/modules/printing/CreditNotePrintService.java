@@ -108,7 +108,7 @@ public class CreditNotePrintService {
                 l.getTaxRate(),
                 BigDecimal.ZERO,
                 l.getLineTotal()
-        )).toList(), documentConfigService.getColumns(companyId));
+        )).toList(), documentConfigService.getColumns(companyId, com.phcpro.modules.documents.model.DocumentType.COMMERCIAL));
     }
 
     private PdfPTable buildSignatureBlock() {
