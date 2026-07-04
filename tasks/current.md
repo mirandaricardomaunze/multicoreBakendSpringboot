@@ -5,6 +5,20 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-04 (campos profissionais do armazém)
+
+- **Pedido do utilizador:** `Warehouse` ganha (migração `V21`) **active**, **type**
+  (`WarehouseType`: Loja/Depósito/Central/Trânsito), **allowsSales**, **manager**, **phone**.
+  `getWarehousesByCompany` passa a filtrar **inactivos**; novo `getSalesWarehousesByCompany`
+  (activo + allowsSales) usado pelo **POS** (deixa de vender de depósito). Diálogo "Criar Armazém"
+  com Tipo/Responsável/Telefone/Permite vendas; `createWarehouse` overload novo (antigos delegam,
+  retrocompatível).
+- Spec/harness: [docs/ARMAZEM_PROFISSIONAL_SPEC.md](../docs/ARMAZEM_PROFISSIONAL_SPEC.md) +
+  [docs/ARMAZEM_PROFISSIONAL_HARNESS.md](../docs/ARMAZEM_PROFISSIONAL_HARNESS.md) (AR-01 auto, AR-50..53 manuais).
+- Testes: `InventoryServiceTest` +1 (filtro de vendas). `mvn test` → **203, 0 falhas**.
+- **Follow-up:** ecrã de gestão de armazéns (listar/editar/activar-desactivar) — hoje o campo `active`
+  já filtra, mas a alternância pela UI ainda não existe.
+
 ### Progresso — 2026-07-03 (polish: cor de estado nas linhas)
 
 - **Pedido do utilizador:** leitura de estado **por linha**. `UIHelper.styleTable` deteta uma coluna

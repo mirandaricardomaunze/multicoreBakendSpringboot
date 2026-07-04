@@ -546,7 +546,8 @@ public class POSPanel extends JPanel {
 
         clientsList = comercialService.getAllClients();
         productsList = comercialService.getAllProducts();
-        warehousesList = inventoryService.getWarehousesByCompany(companyId);
+        // POS só vende de armazéns activos que permitem vendas (Loja, não depósito puro).
+        warehousesList = inventoryService.getSalesWarehousesByCompany(companyId);
         accountsList = financeService.getAllAccounts();
 
         warehouseCombo.removeAllItems();

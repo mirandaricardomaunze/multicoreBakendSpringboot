@@ -62,7 +62,19 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<Warehouse> getWarehousesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId);
+        return warehouseRepository.findByCompanyId(companyId).stream()
+                .filter(Warehouse::isActive)
+                .toList();
+    }
+
+    /** Armazéns onde é permitido vender (activos e com {@code allowsSales}). Usado pelo POS. */
+    @Transactional(readOnly = true)
+    public List<Warehouse> getSalesWarehousesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return warehouseRepository.findByCompanyId(companyId).stream()
+                .filter(Warehouse::isActive)
+                .filter(Warehouse::isAllowsSales)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -89,11 +101,24 @@ public class InventoryService {
 
     @Transactional
     public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location, Company company) {
+        return createWarehouse(name, warehouseNumber, capacity, location,
+                com.phcpro.modules.inventory.model.WarehouseType.STORE, true, null, null, company);
+    }
+
+    @Transactional
+    public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location,
+                                     com.phcpro.modules.inventory.model.WarehouseType type, boolean allowsSales,
+                                     String manager, String phone, Company company) {
         Warehouse warehouse = new Warehouse();
         warehouse.setName(name);
         warehouse.setWarehouseNumber(warehouseNumber);
         warehouse.setCapacity(capacity);
         warehouse.setLocation(location);
+        warehouse.setType(type == null ? com.phcpro.modules.inventory.model.WarehouseType.STORE : type);
+        warehouse.setAllowsSales(allowsSales);
+        warehouse.setActive(true);
+        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
+        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
         warehouse.setCompany(company);
         warehouse.setCreatedBy("SYSTEM");
         return warehouseRepository.save(warehouse);

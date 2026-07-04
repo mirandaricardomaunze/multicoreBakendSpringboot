@@ -911,12 +911,26 @@ public class StockPanel extends JPanel {
         JTextField numberField = new JTextField();
         JTextField capacityField = new JTextField("0");
         JTextField locField = new JTextField();
+        JComboBox<String> typeCombo = new JComboBox<>();
+        for (var t : com.phcpro.modules.inventory.model.WarehouseType.values()) typeCombo.addItem(t.label());
+        UIHelper.styleComboBox(typeCombo);
+        JTextField managerField = new JTextField();
+        JTextField phoneField = new JTextField();
+        UIHelper.styleTextField(managerField);
+        UIHelper.styleTextField(phoneField);
+        JCheckBox allowsSalesCheck = new JCheckBox("Permite vendas ao balcão (POS)", true);
+        allowsSalesCheck.setOpaque(false);
+        allowsSalesCheck.setForeground(UIHelper.TEXT_LIGHT);
 
         JPanel dialogPanel = UIHelper.createDialogForm(
                 "Nome do Armazem:", nameField,
                 "Numero do Armazem:", numberField,
+                "Tipo:", typeCombo,
                 "Capacidade:", capacityField,
-                "Localizacao / Endereco:", locField
+                "Localizacao / Endereco:", locField,
+                "Responsável:", managerField,
+                "Telefone:", phoneField,
+                "Vendas:", allowsSalesCheck
         );
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Criar Novo Armazém", "fas-warehouse", "Registe um novo local de stock", dialogPanel).showDialog();
@@ -941,7 +955,11 @@ public class StockPanel extends JPanel {
                 com.phcpro.modules.company.model.Company currentCompany = new com.phcpro.modules.company.model.Company();
                 currentCompany.setId(CurrentUserContext.getCurrentCompanyId());
 
-                inventoryService.createWarehouse(name, warehouseNumber, capacity, location, currentCompany);
+                com.phcpro.modules.inventory.model.WarehouseType type =
+                        com.phcpro.modules.inventory.model.WarehouseType.values()[Math.max(0, typeCombo.getSelectedIndex())];
+                inventoryService.createWarehouse(name, warehouseNumber, capacity, location,
+                        type, allowsSalesCheck.isSelected(),
+                        managerField.getText().trim(), phoneField.getText().trim(), currentCompany);
                 JOptionPane.showMessageDialog(this, "Armazem '" + name + "' criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 onPanelSelected();
             } catch (NumberFormatException ex) {

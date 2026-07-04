@@ -30,13 +30,15 @@ class InventoryServiceTest {
     private static final Long COMPANY_ID = 1L;
 
     private ProductBatchService productBatchService;
+    private WarehouseRepository warehouseRepository;
     private InventoryService service;
 
     @BeforeEach
     void setUp() {
         productBatchService = mock(ProductBatchService.class);
+        warehouseRepository = mock(WarehouseRepository.class);
         service = new InventoryService(
-                mock(WarehouseRepository.class),
+                warehouseRepository,
                 mock(StockRepository.class),
                 mock(StockMovementRepository.class),
                 mock(CompanyRepository.class),
@@ -70,6 +72,29 @@ class InventoryServiceTest {
         assertThrows(BusinessRuleException.class,
                 () -> service.findExpiringBatches(999L, 30));
         verifyNoInteractions(productBatchService);
+    }
+
+    @Test
+    void getSalesWarehouses_soActivosEQuePermitemVendas() {
+        com.phcpro.modules.inventory.model.Warehouse loja = warehouse("Loja", true, true);
+        com.phcpro.modules.inventory.model.Warehouse deposito = warehouse("Depósito", true, false);   // não vende
+        com.phcpro.modules.inventory.model.Warehouse inactivo = warehouse("Antigo", false, true);     // inactivo
+        when(warehouseRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(loja, deposito, inactivo));
+
+        List<com.phcpro.modules.inventory.model.Warehouse> vendas = service.getSalesWarehousesByCompany(COMPANY_ID);
+        assertEquals(1, vendas.size());
+        assertEquals("Loja", vendas.get(0).getName());
+
+        // getWarehousesByCompany exclui inactivos, mas mantém depósitos.
+        assertEquals(2, service.getWarehousesByCompany(COMPANY_ID).size());
+    }
+
+    private com.phcpro.modules.inventory.model.Warehouse warehouse(String name, boolean active, boolean allowsSales) {
+        com.phcpro.modules.inventory.model.Warehouse w = new com.phcpro.modules.inventory.model.Warehouse();
+        w.setName(name);
+        w.setActive(active);
+        w.setAllowsSales(allowsSales);
+        return w;
     }
 
     private ProductBatchDTO batch(LocalDate expiration) {
