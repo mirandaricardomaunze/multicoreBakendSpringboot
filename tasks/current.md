@@ -5,6 +5,22 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-05 (Superadmin — Fase 4: assistência) — funcionalidade fechada
+
+- Módulo `support` (migração `V26`), distinto do `crm`: `SupportTicket` (assunto, descrição, estado
+  OPEN/IN_PROGRESS/RESOLVED/CLOSED, prioridade, responsável) + `SupportMessage` (conversa;
+  `fromSuperAdmin`). `SupportService` com **dois lados**: empresa (MANAGER/ADMIN, tenant-scoped) abre
+  e responde; superadmin vê todos, responde (assume + OPEN→IN_PROGRESS) e muda estado. Resposta da
+  empresa a RESOLVED reabre; CLOSED bloqueia. Controllers `/api/support/tickets` (tenant) e
+  `/api/platform/support/tickets` (superadmin).
+- **Desktop:** aba "Assistência" no `PlataformaPanel` (superadmin) + aba "Suporte à Plataforma" no
+  `ConfigPanel` (empresa abre/consulta/responde).
+- Spec/harness: ST-01..05 auto, ST-50..53 manuais.
+- **Verificação:** `mvn -o compile` limpo; `SupportServiceTest` (5) + `PlatformUserServiceTest` (5) +
+  `PlatformCompanyServiceTest` (4) + `SubscriptionServiceTest` (5) → **verdes**.
+- **Superadmin completo (Fases 1–4).** Assinaturas continuam manuais (sem gateway M-Pesa/e-Mola);
+  esse é o próximo passo natural se se quiser cobrança automática.
+
 ### Progresso — 2026-07-05 (Superadmin — Fase 3: utilizadores globais)
 
 - **Corte vertical.** `PlatformUserService` (SUPERADMIN + auditado) dá a visão de **todas** as

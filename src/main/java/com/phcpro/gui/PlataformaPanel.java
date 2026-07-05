@@ -17,6 +17,9 @@ import com.phcpro.modules.subscription.dto.SaveSubscriptionRequest;
 import com.phcpro.modules.subscription.dto.SubscriptionDTO;
 import com.phcpro.modules.subscription.dto.SubscriptionPaymentDTO;
 import com.phcpro.modules.subscription.service.SubscriptionService;
+import com.phcpro.modules.support.dto.SupportMessageDTO;
+import com.phcpro.modules.support.dto.SupportTicketDTO;
+import com.phcpro.modules.support.service.SupportService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -36,6 +39,7 @@ public class PlataformaPanel extends JPanel {
     private final PlatformCompanyService platformCompanyService;
     private final SubscriptionService subscriptionService;
     private final PlatformUserService platformUserService;
+    private final SupportService supportService;
 
     private DefaultTableModel companiesModel;
     private JTable companiesTable;
@@ -49,12 +53,18 @@ public class PlataformaPanel extends JPanel {
     private JTable usersTable;
     private List<PlatformUserDTO> users = new ArrayList<>();
 
+    private DefaultTableModel ticketsModel;
+    private JTable ticketsTable;
+    private List<SupportTicketDTO> tickets = new ArrayList<>();
+
     public PlataformaPanel(PlatformCompanyService platformCompanyService,
                            SubscriptionService subscriptionService,
-                           PlatformUserService platformUserService) {
+                           PlatformUserService platformUserService,
+                           SupportService supportService) {
         this.platformCompanyService = platformCompanyService;
         this.subscriptionService = subscriptionService;
         this.platformUserService = platformUserService;
+        this.supportService = supportService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -66,6 +76,7 @@ public class PlataformaPanel extends JPanel {
         tabbedPane.addTab("Assinaturas & Pagamentos", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT),
                 createSubscriptionsTab());
         tabbedPane.addTab("Utilizadores", UIHelper.icon("fas-users-cog", 16, UIHelper.TEXT_LIGHT), createUsersTab());
+        tabbedPane.addTab("Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), createSupportTab());
         add(tabbedPane, BorderLayout.CENTER);
 
         onPanelSelected();
@@ -76,6 +87,7 @@ public class PlataformaPanel extends JPanel {
         loadCompanies();
         loadSubscriptions();
         loadUsers();
+        loadTickets();
     }
 
     private JPanel createCompaniesTab() {
@@ -720,5 +732,149 @@ public class PlataformaPanel extends JPanel {
     private record CompanyItem(Long id, String name) {
         @Override
         public String toString() { return name; }
+    }
+
+    // ---------------------------------------------------------------------------- Assistência
+
+    private JPanel createSupportTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createHeading("Pedidos de Assistência"), BorderLayout.WEST);
+
+        ModernButton openBtn = UIHelper.createPrimaryButton("Abrir / Responder");
+        openBtn.setIcon(UIHelper.icon("fas-comments", 14));
+        ModernButton statusBtn = UIHelper.createSecondaryButton("Mudar Estado");
+        statusBtn.setIcon(UIHelper.icon("fas-tasks", 14));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        actions.add(statusBtn);
+        actions.add(openBtn);
+        header.add(actions, BorderLayout.EAST);
+        panel.add(header, BorderLayout.NORTH);
+
+        ModernPanel listCard = new ModernPanel(16);
+        listCard.setLayout(new BorderLayout());
+        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        String[] cols = {"#", "Empresa", "Assunto", "Prioridade", "Estado", "Responsável", "Mensagens"};
+        ticketsModel = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        ticketsTable = new JTable(ticketsModel);
+        UIHelper.styleTable(ticketsTable);
+        ticketsTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) openTicketConversation();
+            }
+        });
+        JScrollPane scroll = new JScrollPane(ticketsTable);
+        UIHelper.styleScrollPane(scroll);
+        listCard.add(scroll, BorderLayout.CENTER);
+        panel.add(listCard, BorderLayout.CENTER);
+
+        openBtn.addActionListener(e -> openTicketConversation());
+        statusBtn.addActionListener(e -> changeTicketStatus());
+        refreshBtn.addActionListener(e -> loadTickets());
+
+        return panel;
+    }
+
+    private void loadTickets() {
+        try {
+            tickets = supportService.listAllTickets();
+            ticketsModel.setRowCount(0);
+            for (SupportTicketDTO t : tickets) {
+                ticketsModel.addRow(new Object[]{
+                        t.id(), t.companyName(), t.subject(), t.priorityLabel(), t.statusLabel(),
+                        t.assignee() == null ? "—" : t.assignee(), t.messageCount()
+                });
+            }
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Assistência", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private SupportTicketDTO selectedTicket() {
+        int row = ticketsTable.getSelectedRow();
+        if (row < 0 || row >= tickets.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione um pedido na lista.", "Assistência",
+                    JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return tickets.get(row);
+    }
+
+    private void openTicketConversation() {
+        SupportTicketDTO ticket = selectedTicket();
+        if (ticket == null) return;
+
+        JTextArea thread = new JTextArea(renderThread(supportService.listPlatformMessages(ticket.id())));
+        thread.setEditable(false);
+        thread.setLineWrap(true);
+        thread.setWrapStyleWord(true);
+        JScrollPane threadScroll = new JScrollPane(thread);
+        threadScroll.setPreferredSize(new Dimension(560, 260));
+
+        JTextArea reply = new JTextArea(3, 40);
+        reply.setLineWrap(true);
+        reply.setWrapStyleWord(true);
+        JPanel form = new JPanel(new BorderLayout(0, 8));
+        form.setOpaque(false);
+        form.add(threadScroll, BorderLayout.CENTER);
+        JPanel replyBox = new JPanel(new BorderLayout(0, 4));
+        replyBox.setOpaque(false);
+        JLabel lbl = new JLabel("Resposta (deixe vazio para só consultar):");
+        lbl.setForeground(UIHelper.TEXT_MUTED);
+        replyBox.add(lbl, BorderLayout.NORTH);
+        replyBox.add(new JScrollPane(reply), BorderLayout.CENTER);
+        form.add(replyBox, BorderLayout.SOUTH);
+
+        int result = JOptionPane.showConfirmDialog(this, form,
+                "Pedido #" + ticket.id() + " — " + ticket.subject(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
+            try {
+                supportService.addSuperAdminReply(ticket.id(), reply.getText().trim());
+                loadTickets();
+            } catch (RuntimeException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Assistência", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void changeTicketStatus() {
+        SupportTicketDTO ticket = selectedTicket();
+        if (ticket == null) return;
+        JComboBox<String> statusCombo = new JComboBox<>(supportService.statusOptions().toArray(new String[0]));
+        UIHelper.styleComboBox(statusCombo);
+        statusCombo.setSelectedItem(ticket.status());
+        JPanel form = UIHelper.createDialogForm("Estado:", statusCombo);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Mudar Estado",
+                "fas-tasks", "Pedido #" + ticket.id(), form).setConfirmButton("Guardar", "fas-check");
+        dlg.setOnSave(() -> supportService.changeStatus(ticket.id(), (String) statusCombo.getSelectedItem()));
+        if (dlg.showDialog()) {
+            loadTickets();
+        }
+    }
+
+    static String renderThread(List<SupportMessageDTO> messages) {
+        if (messages.isEmpty()) return "(sem mensagens)";
+        StringBuilder sb = new StringBuilder();
+        for (SupportMessageDTO m : messages) {
+            String who = m.fromSuperAdmin() ? "Suporte" : "Empresa";
+            sb.append("[").append(who).append(" · ").append(m.author()).append("]\n");
+            sb.append(m.body()).append("\n\n");
+        }
+        return sb.toString().trim();
     }
 }

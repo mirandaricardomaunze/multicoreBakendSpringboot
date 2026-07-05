@@ -4,6 +4,7 @@
 > Fase 1: SA-01..SA-04 auto + SA-50..SA-56 manuais.
 > Fase 2: SB-01..SB-05 auto (`SubscriptionServiceTest`) + SB-50..SB-54 manuais.
 > Fase 3: SU-01..SU-05 auto (`PlatformUserServiceTest`) + SU-50..SU-53 manuais.
+> Fase 4: ST-01..ST-05 auto (`SupportServiceTest`) + ST-50..ST-53 manuais.
 
 **Última actualização:** 2026-07-04
 
@@ -70,8 +71,28 @@
 | SU-52 | **Revogar Acesso** / **Repor Senha** / **Activar-Desactivar**. | Reflectido na tabela; utilizador desactivado não entra no login. |
 | SU-53 | Tentar desactivar a conta `superadmin`. | Bloqueado com aviso. |
 
+## Automático — Fase 4 (`SupportServiceTest`)
+
+| ID    | Cenário | Esperado |
+|-------|---------|----------|
+| ST-01 | `openTicket` com empresa activa (ADMIN). | Ticket OPEN na empresa; descrição vira 1ª mensagem. |
+| ST-02 | `openTicket` como EMPLOYEE. | `BusinessRuleException` (requer MANAGER/ADMIN). |
+| ST-03 | `addCompanyMessage` num ticket de **outra** empresa. | `BusinessRuleException` (isolamento). |
+| ST-04 | `addSuperAdminReply` num ticket OPEN. | Passa a IN_PROGRESS; `assignee` = superadmin; mensagem `fromSuperAdmin`. |
+| ST-05 | `listAllTickets` sem SUPERADMIN. | `BusinessRuleException`. |
+
+## Manuais — Fase 4 (UI)
+
+| ID    | Passos | Esperado |
+|-------|--------|----------|
+| ST-50 | Como ADMIN de empresa: Configurações → **Suporte à Plataforma** → **Novo Pedido**. | Pedido criado e listado como Aberto. |
+| ST-51 | Entrar como `superadmin` → Plataforma → **Assistência** → duplo-clique no pedido → escrever resposta. | Conversa mostra a resposta; estado passa a Em curso; responsável = superadmin. |
+| ST-52 | Voltar à empresa → **Suporte à Plataforma** → abrir o pedido. | Vê a resposta do suporte e pode responder. |
+| ST-53 | Superadmin → **Mudar Estado** para Resolvido/Fechado. | Estado reflectido; pedido Fechado bloqueia novas mensagens. |
+
 ## Verificação
 
 - `mvn clean test` → verde (SA-01..04 `PlatformCompanyServiceTest`; SB-01..05 `SubscriptionServiceTest`;
-  SU-01..05 `PlatformUserServiceTest`). Flyway aplica `V24`/`V25`; `DataLoader` semeia `superadmin`.
+  SU-01..05 `PlatformUserServiceTest`; ST-01..05 `SupportServiceTest`). Flyway aplica `V24`/`V25`/`V26`;
+  `DataLoader` semeia `superadmin`.
 </content>

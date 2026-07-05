@@ -139,7 +139,8 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.documents.service.DocumentConfigService documentConfigService,
             com.phcpro.modules.platform.service.PlatformCompanyService platformCompanyService,
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
-            com.phcpro.modules.platform.service.PlatformUserService platformUserService
+            com.phcpro.modules.platform.service.PlatformUserService platformUserService,
+            com.phcpro.modules.support.service.SupportService supportService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -165,8 +166,8 @@ public class MainFrame extends JFrame {
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
         comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
-        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService);
-        plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService);
+        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService, supportService);
+        plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService, supportService);
 
         contentPanel.add(dashboardPanel,  "dashboard");
         contentPanel.add(posPanel,        "pos");

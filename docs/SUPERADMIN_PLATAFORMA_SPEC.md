@@ -4,7 +4,8 @@
 > gere assinaturas/pagamentos, gere utilizadores globalmente e responde a pedidos de assistência.
 
 **Última actualização:** 2026-07-05
-**Estado:** Fases 1 (papel + estado), 2 (assinaturas + pagamentos) e 3 (utilizadores globais) — feitas.
+**Estado:** Fases 1–4 completas (papel + estado, assinaturas + pagamentos, utilizadores globais,
+assistência). Funcionalidade fechada.
 
 ## Problema
 
@@ -92,11 +93,21 @@ Módulo `subscription` (migração `V25`), tudo guardado por SUPERADMIN e audita
 - **Desktop:** aba **"Utilizadores"** no `PlataformaPanel` — tabela (Utilizador, Nome, Empresas &
   Papéis, Estado) + Novo, Conceder/Alterar Acesso, Revogar Acesso, Repor Senha, Activar/Desactivar.
 
-## Fases seguintes
+## Fase 4 — Assistência (feita)
 
-- **Fase 4** — módulo `support`: tickets empresa→superadmin (`SupportTicket` + `SupportMessage`),
-  distinto do `crm` (assistência ao cliente da empresa); aba Assistência + ecrã de abrir tickets no
-  lado da empresa.
+Módulo `support` (migração `V26`), **distinto do `crm`** (que é assistência ao cliente da empresa —
+aqui a empresa é o cliente da plataforma):
+
+- **`SupportTicket`** (empresa, assunto, descrição, `status`
+  OPEN/IN_PROGRESS/RESOLVED/CLOSED, `priority` LOW/NORMAL/HIGH/URGENT, `assignee`) +
+  **`SupportMessage`** (conversa: autor, `fromSuperAdmin`, corpo).
+- `SupportService` com **dois lados**: empresa (MANAGER/ADMIN, limitada à empresa activa) abre e
+  responde; superadmin vê todos, responde (assume + OPEN→IN_PROGRESS) e muda estado. Resposta da
+  empresa a um pedido RESOLVED reabre-o; pedido CLOSED bloqueia novas mensagens.
+- Controllers: **`/api/support/tickets`** (tenant-scoped) e **`/api/platform/support/tickets`**
+  (superadmin).
+- **Desktop:** aba **"Assistência"** no `PlataformaPanel` (superadmin: ver/responder/mudar estado) e
+  aba **"Suporte à Plataforma"** no `ConfigPanel` (empresa: abrir pedido, ver conversa, responder).
 
 ## Não-objetivos
 

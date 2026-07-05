@@ -1,6 +1,7 @@
 package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
@@ -16,6 +17,9 @@ import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.backup.service.DatabaseBackupService;
 import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
 import com.phcpro.modules.documents.service.DocumentConfigService;
+import com.phcpro.modules.support.dto.CreateTicketRequest;
+import com.phcpro.modules.support.dto.SupportTicketDTO;
+import com.phcpro.modules.support.service.SupportService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -32,6 +36,12 @@ public class ConfigPanel extends JPanel {
     private final BackupService backupService;
     private final DatabaseBackupService databaseBackupService;
     private final DocumentConfigService documentConfigService;
+    private final SupportService supportService;
+
+    // TAB 5: SUPORTE À PLATAFORMA
+    private DefaultTableModel supportModel;
+    private JTable supportTable;
+    private java.util.List<SupportTicketDTO> supportTickets = new java.util.ArrayList<>();
 
     // TAB 1: AUDIT LOGS
     private DefaultTableModel auditTableModel;
@@ -60,12 +70,14 @@ public class ConfigPanel extends JPanel {
     private javax.swing.JTextField footerField;
 
     public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
-                       DatabaseBackupService databaseBackupService, DocumentConfigService documentConfigService) {
+                       DatabaseBackupService databaseBackupService, DocumentConfigService documentConfigService,
+                       SupportService supportService) {
         this.userService = userService;
         this.auditLogService = auditLogService;
         this.backupService = backupService;
         this.databaseBackupService = databaseBackupService;
         this.documentConfigService = documentConfigService;
+        this.supportService = supportService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -91,6 +103,10 @@ public class ConfigPanel extends JPanel {
         // TAB 4: DOCUMENT COLUMNS
         JPanel tabColumns = createDocumentColumnsTab();
         tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.TEXT_LIGHT), tabColumns);
+
+        // TAB 5: SUPORTE À PLATAFORMA
+        JPanel tabSupport = createSupportTab();
+        tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), tabSupport);
 
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -424,6 +440,7 @@ public class ConfigPanel extends JPanel {
         loadBackupFilesList();
         loadUsersList();
         loadDocumentColumns();
+        loadSupportTickets();
     }
 
     private void loadAuditLogs() {
@@ -625,6 +642,157 @@ public class ConfigPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Perfil de '" + username + "' atualizado nesta empresa.",
                     "Perfil Atualizado", JOptionPane.INFORMATION_MESSAGE);
             loadUsersList();
+        }
+    }
+
+    // ------------------------------------------------------------- TAB 5: Suporte à Plataforma
+
+    private static final String[] TICKET_PRIORITIES = {"LOW", "NORMAL", "HIGH", "URGENT"};
+
+    private JPanel createSupportTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createHeading("Pedidos de Assistência à Plataforma"), BorderLayout.WEST);
+
+        ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
+        newBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        ModernButton viewBtn = UIHelper.createPrimaryButton("Ver / Responder");
+        viewBtn.setIcon(UIHelper.icon("fas-comments", 14));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        actions.add(viewBtn);
+        actions.add(newBtn);
+        header.add(actions, BorderLayout.EAST);
+        panel.add(header, BorderLayout.NORTH);
+
+        ModernPanel listCard = new ModernPanel(16);
+        listCard.setLayout(new BorderLayout());
+        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        String[] cols = {"#", "Assunto", "Prioridade", "Estado", "Mensagens"};
+        supportModel = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        supportTable = new JTable(supportModel);
+        UIHelper.styleTable(supportTable);
+        supportTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) viewSupportTicket();
+            }
+        });
+        JScrollPane scroll = new JScrollPane(supportTable);
+        UIHelper.styleScrollPane(scroll);
+        listCard.add(scroll, BorderLayout.CENTER);
+        panel.add(listCard, BorderLayout.CENTER);
+
+        newBtn.addActionListener(e -> newSupportTicket());
+        viewBtn.addActionListener(e -> viewSupportTicket());
+        refreshBtn.addActionListener(e -> loadSupportTickets());
+
+        return panel;
+    }
+
+    private void loadSupportTickets() {
+        supportModel.setRowCount(0);
+        if (!PermissionGuard.isManagerOrAdmin()) {
+            supportModel.addRow(new Object[]{"", "Apenas gestor/administrador pode gerir pedidos.", "", "", ""});
+            return;
+        }
+        try {
+            supportTickets = supportService.listCompanyTickets();
+            for (SupportTicketDTO t : supportTickets) {
+                supportModel.addRow(new Object[]{
+                        t.id(), t.subject(), t.priorityLabel(), t.statusLabel(), t.messageCount()
+                });
+            }
+        } catch (RuntimeException ex) {
+            supportModel.addRow(new Object[]{"", ex.getMessage(), "", "", ""});
+        }
+    }
+
+    private void newSupportTicket() {
+        JTextField subjectField = new JTextField();
+        JComboBox<String> priorityCombo = new JComboBox<>(TICKET_PRIORITIES);
+        priorityCombo.setSelectedItem("NORMAL");
+        JTextArea descArea = new JTextArea(4, 30);
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        UIHelper.styleTextField(subjectField);
+        UIHelper.styleComboBox(priorityCombo);
+
+        JPanel form = UIHelper.createDialogForm(
+                "Assunto:", subjectField,
+                "Prioridade:", priorityCombo,
+                "Descrição:", new JScrollPane(descArea)
+        );
+
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Novo Pedido de Assistência",
+                "fas-headset", "Contactar o suporte da plataforma", form).setConfirmButton("Enviar", "fas-paper-plane");
+        dlg.setOnSave(() -> {
+            if (subjectField.getText().trim().isEmpty()) {
+                throw new IllegalArgumentException("O assunto é obrigatório.");
+            }
+            supportService.openTicket(new CreateTicketRequest(
+                    subjectField.getText().trim(), descArea.getText().trim(),
+                    (String) priorityCombo.getSelectedItem()));
+        });
+
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Pedido enviado ao suporte.", "Sucesso",
+                    JOptionPane.INFORMATION_MESSAGE);
+            loadSupportTickets();
+        }
+    }
+
+    private void viewSupportTicket() {
+        int row = supportTable.getSelectedRow();
+        if (row < 0 || row >= supportTickets.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione um pedido.", "Suporte", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        SupportTicketDTO ticket = supportTickets.get(row);
+
+        JTextArea thread = new JTextArea(PlataformaPanel.renderThread(supportService.listCompanyMessages(ticket.id())));
+        thread.setEditable(false);
+        thread.setLineWrap(true);
+        thread.setWrapStyleWord(true);
+        JScrollPane threadScroll = new JScrollPane(thread);
+        threadScroll.setPreferredSize(new Dimension(520, 240));
+
+        JTextArea reply = new JTextArea(3, 40);
+        reply.setLineWrap(true);
+        reply.setWrapStyleWord(true);
+        JPanel form = new JPanel(new BorderLayout(0, 8));
+        form.setOpaque(false);
+        form.add(threadScroll, BorderLayout.CENTER);
+        JPanel replyBox = new JPanel(new BorderLayout(0, 4));
+        replyBox.setOpaque(false);
+        JLabel lbl = new JLabel("Responder (deixe vazio para só consultar):");
+        lbl.setForeground(UIHelper.TEXT_MUTED);
+        replyBox.add(lbl, BorderLayout.NORTH);
+        replyBox.add(new JScrollPane(reply), BorderLayout.CENTER);
+        form.add(replyBox, BorderLayout.SOUTH);
+
+        int result = JOptionPane.showConfirmDialog(this, form,
+                "Pedido #" + ticket.id() + " — " + ticket.subject(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
+            try {
+                supportService.addCompanyMessage(ticket.id(), reply.getText().trim());
+                loadSupportTickets();
+            } catch (RuntimeException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Suporte", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }
