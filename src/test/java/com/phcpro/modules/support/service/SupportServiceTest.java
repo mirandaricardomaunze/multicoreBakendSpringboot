@@ -8,7 +8,7 @@ import com.phcpro.modules.support.dto.SupportTicketDTO;
 import com.phcpro.modules.support.model.SupportTicket;
 import com.phcpro.modules.support.model.TicketStatus;
 import com.phcpro.modules.support.repository.SupportMessageRepository;
-import com.phcpro.modules.support.repository.SupportTicketRepository;
+import com.phcpro.modules.support.repository.PlatformSupportTicketRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +25,13 @@ import static org.mockito.Mockito.*;
  */
 class SupportServiceTest {
 
-    private SupportTicketRepository ticketRepository;
+    private PlatformSupportTicketRepository ticketRepository;
     private SupportMessageRepository messageRepository;
     private SupportService service;
 
     @BeforeEach
     void setUp() {
-        ticketRepository = mock(SupportTicketRepository.class);
+        ticketRepository = mock(PlatformSupportTicketRepository.class);
         messageRepository = mock(SupportMessageRepository.class);
         service = new SupportService(ticketRepository, messageRepository, mock(CompanyRepository.class));
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(i -> {

@@ -114,7 +114,9 @@ public class ClientesPanel extends JPanel {
             }
         });
 
-        onPanelSelected();
+        // Carregamento preguiçoso: só busca clientes quando o painel é aberto (navegação chama
+        // onPanelSelected). Evita chamada HTTP no construtor — que falharia para o superadmin, que
+        // não tem empresa activa (sem X-Company-Id o servidor recusa o pedido).
     }
 
     public void onPanelSelected() {

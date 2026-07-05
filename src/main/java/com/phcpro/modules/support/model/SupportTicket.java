@@ -13,7 +13,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /** Pedido de assistência aberto por uma empresa e tratado pelo superadmin. */
-@Entity
+// Nome de entidade distinto para não colidir com crm.model.SupportTicket (suporte ao cliente).
+@Entity(name = "PlatformSupportTicket")
 @Table(name = "support_tickets")
 @Getter
 @Setter

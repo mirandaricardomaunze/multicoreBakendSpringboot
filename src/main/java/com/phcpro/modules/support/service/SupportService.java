@@ -13,7 +13,7 @@ import com.phcpro.modules.support.model.SupportTicket;
 import com.phcpro.modules.support.model.TicketPriority;
 import com.phcpro.modules.support.model.TicketStatus;
 import com.phcpro.modules.support.repository.SupportMessageRepository;
-import com.phcpro.modules.support.repository.SupportTicketRepository;
+import com.phcpro.modules.support.repository.PlatformSupportTicketRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,11 +28,11 @@ import java.util.Locale;
 @Service
 public class SupportService {
 
-    private final SupportTicketRepository ticketRepository;
+    private final PlatformSupportTicketRepository ticketRepository;
     private final SupportMessageRepository messageRepository;
     private final CompanyRepository companyRepository;
 
-    public SupportService(SupportTicketRepository ticketRepository,
+    public SupportService(PlatformSupportTicketRepository ticketRepository,
                           SupportMessageRepository messageRepository,
                           CompanyRepository companyRepository) {
         this.ticketRepository = ticketRepository;
