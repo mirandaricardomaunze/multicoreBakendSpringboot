@@ -7,7 +7,9 @@ import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
 import com.phcpro.modules.subscription.dto.RecordPaymentRequest;
 import com.phcpro.modules.subscription.dto.SaveSubscriptionRequest;
+import com.phcpro.modules.subscription.dto.MySubscriptionDTO;
 import com.phcpro.modules.subscription.dto.SubscriptionPaymentDTO;
+import com.phcpro.modules.subscription.model.PlanType;
 import com.phcpro.modules.subscription.model.Subscription;
 import com.phcpro.modules.subscription.model.SubscriptionPayment;
 import com.phcpro.modules.subscription.model.SubscriptionStatus;
@@ -106,6 +108,25 @@ class SubscriptionServiceTest {
         suspended.setValidUntil(LocalDate.now().plusYears(1));
         when(subscriptionRepository.findByCompanyId(2L)).thenReturn(Optional.of(suspended));
         assertFalse(service.allowsLogin(2L));
+    }
+
+    @Test
+    void getMySubscription_calculaDiasRestantes() { // SB-06
+        CurrentUserContext.setCurrentUser("ana", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(3L);
+        when(companyRepository.findById(3L)).thenReturn(Optional.of(company(3L)));
+        Subscription sub = new Subscription();
+        sub.setPlan(PlanType.PRO);
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setValidUntil(LocalDate.now().plusDays(5));
+        when(subscriptionRepository.findByCompanyId(3L)).thenReturn(Optional.of(sub));
+
+        MySubscriptionDTO dto = service.getMySubscription();
+
+        assertTrue(dto.hasSubscription());
+        assertEquals(5L, dto.daysRemaining());
+        assertEquals("PRO", dto.plan());
+        assertEquals("ACTIVE", dto.status());
     }
 
     @Test

@@ -135,6 +135,28 @@ public class SubscriptionService {
     }
 
     /**
+     * Resumo da assinatura da empresa activa, para o próprio assinante ver (só-leitura, tenant-scoped
+     * — não requer superadmin). Inclui os dias que faltam até expirar.
+     */
+    @Transactional(readOnly = true)
+    public com.phcpro.modules.subscription.dto.MySubscriptionDTO getMySubscription() {
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        Company company = requireCompany(companyId);
+        Subscription sub = subscriptionRepository.findByCompanyId(companyId).orElse(null);
+        if (sub == null) {
+            return new com.phcpro.modules.subscription.dto.MySubscriptionDTO(
+                    company.getName(), false, null, "—", null, "Sem assinatura", null, null, null, null);
+        }
+        SubscriptionStatus effective = sub.effectiveStatus();
+        Long daysRemaining = sub.getValidUntil() == null ? null
+                : java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), sub.getValidUntil());
+        return new com.phcpro.modules.subscription.dto.MySubscriptionDTO(
+                company.getName(), true, sub.getPlan().name(), sub.getPlan().label(),
+                effective.name(), effective.label(), sub.getStartDate(), sub.getValidUntil(),
+                daysRemaining, sub.getMonthlyPrice());
+    }
+
+    /**
      * Política de login (uso interno, sem guard): a empresa é bloqueada se tiver uma assinatura cujo
      * estado efectivo não permita login. Sem assinatura ⇒ permitido (retrocompatível).
      */

@@ -95,5 +95,9 @@ public class DesktopLauncher {
         mainFrame.setExtendedState(extendedState); // maximizado no arranque; estado preservado na reconstrução
         currentFrame = mainFrame;
         mainFrame.setVisible(true);
+        // Aviso de assinatura só no primeiro arranque (bounds == null), não na reconstrução por tema.
+        if (bounds == null) {
+            java.awt.EventQueue.invokeLater(mainFrame::checkSubscriptionOnStartup);
+        }
     }
 }

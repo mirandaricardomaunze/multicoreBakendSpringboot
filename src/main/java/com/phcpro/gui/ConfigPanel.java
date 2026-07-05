@@ -17,6 +17,8 @@ import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.backup.service.DatabaseBackupService;
 import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
 import com.phcpro.modules.documents.service.DocumentConfigService;
+import com.phcpro.modules.subscription.dto.MySubscriptionDTO;
+import com.phcpro.modules.subscription.service.SubscriptionService;
 import com.phcpro.modules.support.dto.CreateTicketRequest;
 import com.phcpro.modules.support.dto.SupportTicketDTO;
 import com.phcpro.modules.support.service.SupportService;
@@ -37,11 +39,15 @@ public class ConfigPanel extends JPanel {
     private final DatabaseBackupService databaseBackupService;
     private final DocumentConfigService documentConfigService;
     private final SupportService supportService;
+    private final SubscriptionService subscriptionService;
 
     // TAB 5: SUPORTE À PLATAFORMA
     private DefaultTableModel supportModel;
     private JTable supportTable;
     private java.util.List<SupportTicketDTO> supportTickets = new java.util.ArrayList<>();
+
+    // TAB 6: A MINHA ASSINATURA
+    private JPanel subscriptionCard;
 
     // TAB 1: AUDIT LOGS
     private DefaultTableModel auditTableModel;
@@ -71,13 +77,14 @@ public class ConfigPanel extends JPanel {
 
     public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
                        DatabaseBackupService databaseBackupService, DocumentConfigService documentConfigService,
-                       SupportService supportService) {
+                       SupportService supportService, SubscriptionService subscriptionService) {
         this.userService = userService;
         this.auditLogService = auditLogService;
         this.backupService = backupService;
         this.databaseBackupService = databaseBackupService;
         this.documentConfigService = documentConfigService;
         this.supportService = supportService;
+        this.subscriptionService = subscriptionService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -107,6 +114,10 @@ public class ConfigPanel extends JPanel {
         // TAB 5: SUPORTE À PLATAFORMA
         JPanel tabSupport = createSupportTab();
         tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), tabSupport);
+
+        // TAB 6: A MINHA ASSINATURA
+        JPanel tabSubscription = createSubscriptionTab();
+        tabbedPane.addTab("A Minha Assinatura", UIHelper.icon("fas-id-card", 16, UIHelper.TEXT_LIGHT), tabSubscription);
 
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -441,6 +452,7 @@ public class ConfigPanel extends JPanel {
         loadUsersList();
         loadDocumentColumns();
         loadSupportTickets();
+        loadMySubscription();
     }
 
     private void loadAuditLogs() {
@@ -794,5 +806,120 @@ public class ConfigPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Suporte", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    // ------------------------------------------------------------- TAB 6: A Minha Assinatura
+
+    private JPanel createSubscriptionTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createHeading("Estado da Assinatura"), BorderLayout.WEST);
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadMySubscription());
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        header.add(actions, BorderLayout.EAST);
+        panel.add(header, BorderLayout.NORTH);
+
+        subscriptionCard = new ModernPanel(16);
+        subscriptionCard.setLayout(new GridBagLayout());
+        subscriptionCard.setBorder(new EmptyBorder(24, 24, 24, 24));
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.add(subscriptionCard, BorderLayout.NORTH);
+        panel.add(wrap, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private void loadMySubscription() {
+        if (subscriptionCard == null) return;
+        subscriptionCard.removeAll();
+        try {
+            MySubscriptionDTO sub = subscriptionService.getMySubscription();
+            if (!sub.hasSubscription()) {
+                subscriptionCard.add(bigInfo("Sem assinatura definida",
+                        "A sua empresa ainda não tem um plano associado. Contacte o suporte da plataforma.",
+                        UIHelper.TEXT_MUTED));
+            } else {
+                subscriptionCard.setLayout(new GridLayout(0, 2, 24, 14));
+                subscriptionCard.add(field("Empresa", sub.companyName()));
+                subscriptionCard.add(field("Plano", sub.planLabel()));
+                subscriptionCard.add(field("Estado", sub.statusLabel(), statusColor(sub.status())));
+                subscriptionCard.add(field("Válida até",
+                        sub.validUntil() == null ? "—" : sub.validUntil().toString()));
+                subscriptionCard.add(field("Dias restantes", daysText(sub.daysRemaining()),
+                        daysColor(sub.daysRemaining())));
+                subscriptionCard.add(field("Mensalidade",
+                        sub.monthlyPrice() == null ? "—" : sub.monthlyPrice().toPlainString() + " MT"));
+            }
+        } catch (RuntimeException ex) {
+            subscriptionCard.setLayout(new GridBagLayout());
+            subscriptionCard.add(bigInfo("Não foi possível carregar a assinatura", ex.getMessage(),
+                    UIHelper.REJECTED_RED));
+        }
+        subscriptionCard.revalidate();
+        subscriptionCard.repaint();
+    }
+
+    private String daysText(Long days) {
+        if (days == null) return "—";
+        if (days < 0) return "Expirada há " + Math.abs(days) + " dia(s)";
+        if (days == 0) return "Expira hoje";
+        return days + " dia(s)";
+    }
+
+    private Color daysColor(Long days) {
+        if (days == null) return UIHelper.TEXT_LIGHT;
+        if (days < 0) return UIHelper.REJECTED_RED;
+        if (days <= 7) return UIHelper.PENDING_YELLOW;
+        return UIHelper.APPROVED_GREEN;
+    }
+
+    private Color statusColor(String status) {
+        if ("ACTIVE".equals(status) || "TRIAL".equals(status)) return UIHelper.APPROVED_GREEN;
+        if ("EXPIRED".equals(status) || "SUSPENDED".equals(status)) return UIHelper.REJECTED_RED;
+        return UIHelper.TEXT_LIGHT;
+    }
+
+    private JPanel field(String label, String value) {
+        return field(label, value, UIHelper.TEXT_LIGHT);
+    }
+
+    private JPanel field(String label, String value, Color valueColor) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        JLabel l = new JLabel(label);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setForeground(UIHelper.TEXT_MUTED);
+        JLabel v = new JLabel(value == null ? "—" : value);
+        v.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        v.setForeground(valueColor);
+        p.add(l);
+        p.add(v);
+        return p;
+    }
+
+    private JPanel bigInfo(String title, String detail, Color color) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        JLabel t = new JLabel(title);
+        t.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        t.setForeground(color);
+        JLabel d = new JLabel("<html><body style='width:360px'>" + (detail == null ? "" : detail) + "</body></html>");
+        d.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        d.setForeground(UIHelper.TEXT_MUTED);
+        p.add(t);
+        p.add(javax.swing.Box.createVerticalStrut(6));
+        p.add(d);
+        return p;
     }
 }

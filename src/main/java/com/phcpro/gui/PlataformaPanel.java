@@ -305,6 +305,18 @@ public class PlataformaPanel extends JPanel {
         };
         subsTable = new JTable(subsModel);
         UIHelper.styleTable(subsTable);
+        // Destaque: linhas a vermelho (expirada/suspensa) ou amarelo (expira em ≤7 dias). Delega no
+        // renderer do tema (fundo/selecção) e só troca a cor do texto para as linhas em risco.
+        javax.swing.table.TableCellRenderer baseRenderer = subsTable.getDefaultRenderer(Object.class);
+        subsTable.setDefaultRenderer(Object.class, (table, value, sel, focus, row, col) -> {
+            Component c = baseRenderer.getTableCellRendererComponent(table, value, sel, focus, row, col);
+            if (!sel && row >= 0 && row < subscriptions.size()) {
+                int sev = subSeverity(subscriptions.get(row));
+                if (sev == -1) c.setForeground(UIHelper.REJECTED_RED);
+                else if (sev == 0) c.setForeground(UIHelper.PENDING_YELLOW);
+            }
+            return c;
+        });
         JScrollPane scroll = new JScrollPane(subsTable);
         UIHelper.styleScrollPane(scroll);
         listCard.add(scroll, BorderLayout.CENTER);
@@ -336,6 +348,17 @@ public class PlataformaPanel extends JPanel {
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Assinaturas", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /** -1 = expirada/suspensa; 0 = a expirar em ≤7 dias; 1 = ok/sem assinatura. */
+    private static int subSeverity(SubscriptionDTO s) {
+        if (!s.hasSubscription()) return 1;
+        if ("EXPIRED".equals(s.status()) || "SUSPENDED".equals(s.status())) return -1;
+        if (s.validUntil() != null) {
+            long d = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), s.validUntil());
+            if (d >= 0 && d <= 7) return 0;
+        }
+        return 1;
     }
 
     private SubscriptionDTO selectedSubscription() {

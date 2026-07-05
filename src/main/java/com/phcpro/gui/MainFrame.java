@@ -92,9 +92,13 @@ public class MainFrame extends JFrame {
 
     private final CompanyService companyService;
     private final DesktopSessionStore desktopSessionStore;
+    private final com.phcpro.modules.subscription.service.SubscriptionService subscriptionService;
     private final boolean superAdmin;
     private TopNavBar topBar;
     private String sessionDisplayName;
+
+    /** Antecedência (dias) a partir da qual se avisa o assinante que a assinatura vai expirar. */
+    private static final long SUB_ALERT_DAYS = 7;
 
     public MainFrame(
             ComercialService comercialService,
@@ -144,6 +148,7 @@ public class MainFrame extends JFrame {
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
+        this.subscriptionService = subscriptionService;
         this.superAdmin = desktopSessionStore.requireSession().superAdmin();
 
         setTitle("MULTICORE — Gestão Profissional");
@@ -166,7 +171,7 @@ public class MainFrame extends JFrame {
         posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
         stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
         comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
-        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService, supportService);
+        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService, supportService, subscriptionService);
         plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService, supportService);
 
         contentPanel.add(dashboardPanel,  "dashboard");
@@ -244,6 +249,8 @@ public class MainFrame extends JFrame {
         // Reaplicar o renderer DEPOIS de styleComboBox (senão mostraria CompanyAccess[...]).
         applyCompanyRenderer(companyCombo);
         bar.addTrailing(buildThemeToggle());
+        javax.swing.JComponent subChip = buildSubscriptionChip();
+        if (subChip != null) bar.addTrailing(subChip);
         bar.addTrailing(companyCombo);
         bar.addTrailing(buildUserChip());
 
@@ -361,6 +368,61 @@ public class MainFrame extends JFrame {
         chip.add(textStack, BorderLayout.CENTER);
 
         return chip;
+    }
+
+    /** Assinatura da empresa activa (null para superadmin ou se falhar). Nunca deixa a UI rebentar. */
+    private com.phcpro.modules.subscription.dto.MySubscriptionDTO mySubscriptionSafe() {
+        if (superAdmin) return null;
+        try {
+            return subscriptionService.getMySubscription();
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /** -1 = expirada/suspensa (vermelho); 0 = a expirar em ≤7 dias (amarelo); 1 = ok (sem chip). */
+    private static int subscriptionSeverity(com.phcpro.modules.subscription.dto.MySubscriptionDTO s) {
+        if (s == null || !s.hasSubscription()) return 1;
+        if ("EXPIRED".equals(s.status()) || "SUSPENDED".equals(s.status())) return -1;
+        Long d = s.daysRemaining();
+        if (d != null && d >= 0 && d <= SUB_ALERT_DAYS) return 0;
+        return 1;
+    }
+
+    /** Chip na barra de topo — só aparece quando a assinatura está a expirar ou já expirou. */
+    private javax.swing.JComponent buildSubscriptionChip() {
+        com.phcpro.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
+        int sev = subscriptionSeverity(s);
+        if (sev == 1) return null;
+
+        boolean expired = sev == -1;
+        Color color = expired ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW;
+        String text = expired
+                ? "Assinatura " + s.statusLabel().toLowerCase()
+                : (s.daysRemaining() == 0 ? "Assinatura expira hoje" : "Assinatura: " + s.daysRemaining() + " dia(s)");
+
+        JLabel chip = new JLabel(text, UIHelper.icon("fas-exclamation-triangle", 14, color), JLabel.LEFT);
+        chip.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        chip.setForeground(color);
+        chip.setToolTipText("Veja Configurações → A Minha Assinatura, ou contacte o suporte.");
+        chip.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
+        return chip;
+    }
+
+    /** Aviso único no arranque quando a assinatura está a expirar/expirada. Chamado após a janela abrir. */
+    public void checkSubscriptionOnStartup() {
+        com.phcpro.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
+        int sev = subscriptionSeverity(s);
+        if (sev == 1) return;
+        boolean expired = sev == -1;
+        String msg = expired
+                ? "A assinatura da sua empresa está " + s.statusLabel().toLowerCase()
+                    + ".\nO acesso pode ser suspenso. Contacte o suporte da plataforma para regularizar."
+                : "A assinatura da sua empresa expira "
+                    + (s.daysRemaining() == 0 ? "hoje" : "em " + s.daysRemaining() + " dia(s)")
+                    + " (" + s.validUntil() + ").\nContacte o suporte da plataforma para renovar a tempo.";
+        javax.swing.JOptionPane.showMessageDialog(this, msg, "Assinatura",
+                expired ? javax.swing.JOptionPane.ERROR_MESSAGE : javax.swing.JOptionPane.WARNING_MESSAGE);
     }
 
     private void navigate(String cardName) {

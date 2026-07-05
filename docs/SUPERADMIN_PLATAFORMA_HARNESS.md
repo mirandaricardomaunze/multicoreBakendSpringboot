@@ -42,6 +42,17 @@
 | SB-04 | `allowsLogin` com assinatura expirada (validade no passado) e com suspensa. | `false` em ambos. |
 | SB-05 | `saveSubscription` sem papel SUPERADMIN. | `BusinessRuleException`. |
 
+## Fase 2b — Vista do assinante + alertas
+
+| ID    | Tipo | Cenário | Esperado |
+|-------|------|---------|----------|
+| SB-06 | auto | `getMySubscription` com validade daqui a 5 dias. | `hasSubscription=true`, `daysRemaining=5`, plano correcto. |
+| SB-55 | manual | Empresa → Configurações → **A Minha Assinatura**. | Cartão com Plano/Estado/Válida até/Dias restantes/Mensalidade; cores por estado e dias. |
+| SB-56 | manual | Superadmin põe validade daqui a 3 dias; entrar como utilizador da empresa. | **Aviso no login** ("expira em 3 dias"); **chip amarelo** no topo. |
+| SB-57 | manual | Superadmin põe validade no passado (expirada). Entrar. | Aviso vermelho de expirada; chip vermelho; login pode ser bloqueado (SB-53). |
+| SB-58 | manual | Assinatura com >7 dias de validade. | **Sem** aviso e **sem** chip (nada de ruído). |
+| SB-59 | manual | Superadmin → aba Assinaturas. | Linhas das empresas em risco a amarelo (≤7 dias) / vermelho (expirada/suspensa). |
+
 ## Manuais — Fase 2 (UI)
 
 | ID    | Passos | Esperado |

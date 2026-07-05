@@ -5,6 +5,22 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-05 (Assinante: vista própria + alertas de expiração)
+
+- **Vista do assinante** (só-leitura, tenant-scoped): `SubscriptionService.getMySubscription()` +
+  `GET /api/subscription/me` → `MySubscriptionDTO` (plano, estado, validade, **dias restantes**,
+  mensalidade). Desktop: aba **"A Minha Assinatura"** no `ConfigPanel`.
+- **Alertas (7 dias)**, severidade única (vermelho expirada/suspensa; amarelo ≤7 dias): (1) aviso no
+  login (`MainFrame.checkSubscriptionOnStartup`, disparado no `DesktopLauncher`); (2) chip permanente
+  na barra de topo (só em risco); (3) linhas coloridas na aba Assinaturas do superadmin. À prova de
+  falha (leitura falha ⇒ sem alerta, UI não rebenta).
+- Spec/harness: SB-06 auto + SB-55..59 manuais.
+- **Também corrigido no arranque real** (bugs que só aparecem a correr): colisão de bean
+  (`PlatformSupportTicketRepository`), colisão de nome de entidade (`@Entity("PlatformSupportTicket")`)
+  e crash da `MainFrame` no login do superadmin (`ClientesPanel` deixou de carregar no construtor).
+- **Verificação:** `mvn -o compile` limpo; `SubscriptionServiceTest` (6) verde; app corre em
+  PostgreSQL real (Flyway V24–V26 aplicadas).
+
 ### Progresso — 2026-07-05 (Superadmin — Fase 4: assistência) — funcionalidade fechada
 
 - Módulo `support` (migração `V26`), distinto do `crm`: `SupportTicket` (assunto, descrição, estado

@@ -81,6 +81,24 @@ Módulo `subscription` (migração `V25`), tudo guardado por SUPERADMIN e audita
   Estado, Válida até, Preço/mês, Nº pagamentos) + Definir Plano/Validade, Registar Pagamento,
   Ver Pagamentos, Suspender/Reactivar.
 
+## Fase 2b — Vista do assinante + alertas de expiração (feita)
+
+Para o assinante **não ser surpreendido** por uma expiração:
+
+- **Vista do assinante (só-leitura, tenant-scoped):** `SubscriptionService.getMySubscription()` +
+  endpoint `GET /api/subscription/me` devolvem `MySubscriptionDTO` (plano, estado efectivo,
+  validade, **dias restantes**, mensalidade) da empresa activa — sem privilégios de superadmin.
+  Desktop: aba **"A Minha Assinatura"** no `ConfigPanel` (cartão com os valores; estado e dias com
+  cor). Sem plano ⇒ "Sem assinatura definida — contacte o suporte".
+- **Alertas (antecedência de 7 dias)** — regra única de severidade
+  (`-1` expirada/suspensa → vermelho; `0` expira em ≤7 dias → amarelo; `1` ok → sem alerta):
+  1. **Aviso no login** — `MainFrame.checkSubscriptionOnStartup()` mostra um aviso **uma vez** ao
+     arrancar (só para empresa, não superadmin), disparado pelo `DesktopLauncher` após a janela abrir.
+  2. **Chip permanente** na barra de topo — só aparece em risco (amarelo/vermelho), com os dias.
+  3. **Destaque no superadmin** — na aba Assinaturas, linhas a amarelo (≤7 dias) / vermelho
+     (expirada/suspensa), delegando no renderer do tema (só troca a cor do texto).
+- Tudo à prova de falha: se a leitura da assinatura falhar, a UI não rebenta (sem alerta).
+
 ## Fase 3 — Utilizadores globais (feita)
 
 `PlatformUserService` (SUPERADMIN + auditado) dá a visão de **todas** as empresas (o
