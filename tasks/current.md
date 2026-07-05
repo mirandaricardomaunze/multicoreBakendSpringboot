@@ -5,6 +5,19 @@
 **Última actualização:** 2026-06-30
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-05 (Superadmin — Fase 3: utilizadores globais)
+
+- **Corte vertical.** `PlatformUserService` (SUPERADMIN + auditado) dá a visão de **todas** as
+  empresas: `listUsers`, `createUser` (liga a empresa/papel), `setUserActive` (não desactiva o
+  superadmin), `resetPassword`, `grantAccess`, `revokeAccess` (**protege o último ADMIN**). Controller
+  `/api/platform/users`. `AppUser.revokeCompany` novo (orphanRemoval).
+- **Desktop:** aba "Utilizadores" no `PlataformaPanel` (Novo, Conceder/Alterar Acesso, Revogar,
+  Repor Senha, Activar/Desactivar).
+- Spec/harness: SU-01..05 auto, SU-50..53 manuais.
+- **Verificação:** `mvn -o compile` limpo; `PlatformUserServiceTest` (5) + `PlatformCompanyServiceTest`
+  (4) + `SubscriptionServiceTest` (5) → **verdes**.
+- **Próxima:** Fase 4 (tickets `support` empresa→superadmin + abrir tickets no lado da empresa).
+
 ### Progresso — 2026-07-04 (Superadmin — Fase 2: assinaturas + pagamentos)
 
 - **Corte vertical** (backend + UI). Módulo `subscription` (migração `V25`): `Subscription` (1:1 com

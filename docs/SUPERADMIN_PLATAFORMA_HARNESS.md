@@ -3,6 +3,7 @@
 > Cenários para [SUPERADMIN_PLATAFORMA_SPEC.md](SUPERADMIN_PLATAFORMA_SPEC.md).
 > Fase 1: SA-01..SA-04 auto + SA-50..SA-56 manuais.
 > Fase 2: SB-01..SB-05 auto (`SubscriptionServiceTest`) + SB-50..SB-54 manuais.
+> Fase 3: SU-01..SU-05 auto (`PlatformUserServiceTest`) + SU-50..SU-53 manuais.
 
 **Última actualização:** 2026-07-04
 
@@ -50,9 +51,27 @@
 | SB-53 | Definir validade no **passado** (ou **Suspender**). Sair. Tentar login de um utilizador dessa empresa. | Login recusado (assinatura expirada/suspensa). |
 | SB-54 | **Reactivar** / registar pagamento que cobre o futuro. Repetir login. | Login entra. |
 
+## Automático — Fase 3 (`PlatformUserServiceTest`)
+
+| ID    | Cenário | Esperado |
+|-------|---------|----------|
+| SU-01 | `setUserActive(user, false)`. | Utilizador fica inactivo; gravado. |
+| SU-02 | `setUserActive(superadmin, false)`. | `BusinessRuleException` (não desactiva o superadmin). |
+| SU-03 | `revokeAccess` do único ADMIN de uma empresa. | `BusinessRuleException`; acesso mantém-se. |
+| SU-04 | `revokeAccess` de ADMIN quando há outro ADMIN. | Acesso removido; gravado. |
+| SU-05 | `listUsers` sem papel SUPERADMIN. | `BusinessRuleException`. |
+
+## Manuais — Fase 3 (UI)
+
+| ID    | Passos | Esperado |
+|-------|--------|----------|
+| SU-50 | Plataforma → **Utilizadores** → **Novo Utilizador** (empresa + papel). | Aparece na tabela com a empresa/papel. |
+| SU-51 | Seleccionar → **Conceder/Alterar Acesso** a outra empresa. | Coluna "Empresas & Papéis" passa a listar as duas. |
+| SU-52 | **Revogar Acesso** / **Repor Senha** / **Activar-Desactivar**. | Reflectido na tabela; utilizador desactivado não entra no login. |
+| SU-53 | Tentar desactivar a conta `superadmin`. | Bloqueado com aviso. |
+
 ## Verificação
 
-- `mvn clean test` → verde (SA-01..04 em `PlatformCompanyServiceTest`; SB-01..05 em
-  `SubscriptionServiceTest`). Flyway aplica `V24` e `V25` no arranque; `DataLoader` semeia a conta
-  `superadmin` de forma idempotente.
+- `mvn clean test` → verde (SA-01..04 `PlatformCompanyServiceTest`; SB-01..05 `SubscriptionServiceTest`;
+  SU-01..05 `PlatformUserServiceTest`). Flyway aplica `V24`/`V25`; `DataLoader` semeia `superadmin`.
 </content>

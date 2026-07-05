@@ -8,6 +8,10 @@ import com.phcpro.modules.platform.dto.CreateCompanyRequest;
 import com.phcpro.modules.platform.dto.PlatformCompanyDTO;
 import com.phcpro.modules.platform.dto.UpdateCompanyRequest;
 import com.phcpro.modules.platform.service.PlatformCompanyService;
+import com.phcpro.modules.platform.dto.CreatePlatformUserRequest;
+import com.phcpro.modules.platform.dto.GrantAccessRequest;
+import com.phcpro.modules.platform.dto.PlatformUserDTO;
+import com.phcpro.modules.platform.service.PlatformUserService;
 import com.phcpro.modules.subscription.dto.RecordPaymentRequest;
 import com.phcpro.modules.subscription.dto.SaveSubscriptionRequest;
 import com.phcpro.modules.subscription.dto.SubscriptionDTO;
@@ -31,6 +35,7 @@ public class PlataformaPanel extends JPanel {
 
     private final PlatformCompanyService platformCompanyService;
     private final SubscriptionService subscriptionService;
+    private final PlatformUserService platformUserService;
 
     private DefaultTableModel companiesModel;
     private JTable companiesTable;
@@ -40,10 +45,16 @@ public class PlataformaPanel extends JPanel {
     private JTable subsTable;
     private List<SubscriptionDTO> subscriptions = new ArrayList<>();
 
+    private DefaultTableModel usersModel;
+    private JTable usersTable;
+    private List<PlatformUserDTO> users = new ArrayList<>();
+
     public PlataformaPanel(PlatformCompanyService platformCompanyService,
-                           SubscriptionService subscriptionService) {
+                           SubscriptionService subscriptionService,
+                           PlatformUserService platformUserService) {
         this.platformCompanyService = platformCompanyService;
         this.subscriptionService = subscriptionService;
+        this.platformUserService = platformUserService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -54,6 +65,7 @@ public class PlataformaPanel extends JPanel {
         tabbedPane.addTab("Empresas", UIHelper.icon("fas-building", 16, UIHelper.TEXT_LIGHT), createCompaniesTab());
         tabbedPane.addTab("Assinaturas & Pagamentos", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT),
                 createSubscriptionsTab());
+        tabbedPane.addTab("Utilizadores", UIHelper.icon("fas-users-cog", 16, UIHelper.TEXT_LIGHT), createUsersTab());
         add(tabbedPane, BorderLayout.CENTER);
 
         onPanelSelected();
@@ -63,6 +75,7 @@ public class PlataformaPanel extends JPanel {
     public void onPanelSelected() {
         loadCompanies();
         loadSubscriptions();
+        loadUsers();
     }
 
     private JPanel createCompaniesTab() {
@@ -470,5 +483,242 @@ public class PlataformaPanel extends JPanel {
         } catch (java.time.format.DateTimeParseException ex) {
             throw new IllegalArgumentException("Data inválida: use o formato AAAA-MM-DD.");
         }
+    }
+
+    // ------------------------------------------------------------------------ Utilizadores globais
+
+    private static final String[] TENANT_ROLES = {"EMPLOYEE", "MANAGER", "ADMIN"};
+
+    private JPanel createUsersTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createHeading("Utilizadores de Todas as Empresas"), BorderLayout.WEST);
+
+        ModernButton newBtn = UIHelper.createSuccessButton("Novo Utilizador");
+        newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
+        ModernButton grantBtn = UIHelper.createPrimaryButton("Conceder/Alterar Acesso");
+        grantBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
+        ModernButton revokeBtn = UIHelper.createSecondaryButton("Revogar Acesso");
+        revokeBtn.setIcon(UIHelper.icon("fas-user-slash", 14));
+        ModernButton pwdBtn = UIHelper.createSecondaryButton("Repor Senha");
+        pwdBtn.setIcon(UIHelper.icon("fas-key", 14));
+        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
+        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        actions.add(toggleBtn);
+        actions.add(pwdBtn);
+        actions.add(revokeBtn);
+        actions.add(grantBtn);
+        actions.add(newBtn);
+        header.add(actions, BorderLayout.EAST);
+        panel.add(header, BorderLayout.NORTH);
+
+        ModernPanel listCard = new ModernPanel(16);
+        listCard.setLayout(new BorderLayout());
+        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        String[] cols = {"Utilizador", "Nome", "Empresas & Papéis", "Estado"};
+        usersModel = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        usersTable = new JTable(usersModel);
+        UIHelper.styleTable(usersTable);
+        JScrollPane scroll = new JScrollPane(usersTable);
+        UIHelper.styleScrollPane(scroll);
+        listCard.add(scroll, BorderLayout.CENTER);
+        panel.add(listCard, BorderLayout.CENTER);
+
+        newBtn.addActionListener(e -> createPlatformUser());
+        grantBtn.addActionListener(e -> grantAccess());
+        revokeBtn.addActionListener(e -> revokeAccess());
+        pwdBtn.addActionListener(e -> resetPassword());
+        toggleBtn.addActionListener(e -> toggleUserActive());
+        refreshBtn.addActionListener(e -> loadUsers());
+
+        return panel;
+    }
+
+    private void loadUsers() {
+        try {
+            users = platformUserService.listUsers();
+            usersModel.setRowCount(0);
+            for (PlatformUserDTO u : users) {
+                usersModel.addRow(new Object[]{
+                        u.username(), u.name(), describeAccesses(u),
+                        u.platformAdmin() ? "SUPERADMIN" : (u.active() ? "ACTIVO" : "INATIVO")
+                });
+            }
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Utilizadores", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private String describeAccesses(PlatformUserDTO u) {
+        if (u.companies().isEmpty()) return u.platformAdmin() ? "(plataforma)" : "—";
+        StringBuilder sb = new StringBuilder();
+        for (PlatformUserDTO.CompanyRoleDTO c : u.companies()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(c.companyName()).append(": ").append(UIHelper.humanRole(c.role()));
+        }
+        return sb.toString();
+    }
+
+    private PlatformUserDTO selectedUser() {
+        int row = usersTable.getSelectedRow();
+        if (row < 0 || row >= users.size()) {
+            JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Utilizadores",
+                    JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return users.get(row);
+    }
+
+    private void createPlatformUser() {
+        if (companies.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Crie primeiro uma empresa.", "Utilizadores",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        JTextField usernameField = new JTextField();
+        JTextField nameField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        JComboBox<CompanyItem> companyCombo = companyCombo();
+        JComboBox<String> roleCombo = new JComboBox<>(TENANT_ROLES);
+        UIHelper.styleTextField(usernameField);
+        UIHelper.styleTextField(nameField);
+        UIHelper.styleTextField(passwordField);
+        UIHelper.styleComboBox(companyCombo);
+        UIHelper.styleComboBox(roleCombo);
+
+        JPanel form = UIHelper.createDialogForm(
+                "Utilizador:", usernameField,
+                "Nome completo:", nameField,
+                "Senha:", passwordField,
+                "Empresa:", companyCombo,
+                "Papel:", roleCombo
+        );
+
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Novo Utilizador",
+                "fas-user-plus", "Conta ligada a uma empresa", form).setConfirmButton("Criar", "fas-check");
+        dlg.setOnSave(() -> {
+            if (usernameField.getText().trim().isEmpty() || nameField.getText().trim().isEmpty()
+                    || passwordField.getPassword().length == 0) {
+                throw new IllegalArgumentException("Utilizador, nome e senha são obrigatórios.");
+            }
+            platformUserService.createUser(new CreatePlatformUserRequest(
+                    usernameField.getText().trim(), nameField.getText().trim(),
+                    new String(passwordField.getPassword()),
+                    ((CompanyItem) companyCombo.getSelectedItem()).id(),
+                    (String) roleCombo.getSelectedItem()));
+        });
+
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Utilizador criado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadUsers();
+        }
+    }
+
+    private void grantAccess() {
+        PlatformUserDTO user = selectedUser();
+        if (user == null) return;
+        if (companies.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Não há empresas.", "Utilizadores", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        JComboBox<CompanyItem> companyCombo = companyCombo();
+        JComboBox<String> roleCombo = new JComboBox<>(TENANT_ROLES);
+        UIHelper.styleComboBox(companyCombo);
+        UIHelper.styleComboBox(roleCombo);
+
+        JPanel form = UIHelper.createDialogForm("Empresa:", companyCombo, "Papel:", roleCombo);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Conceder/Alterar Acesso",
+                "fas-user-shield", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
+        dlg.setOnSave(() -> platformUserService.grantAccess(user.username(), new GrantAccessRequest(
+                ((CompanyItem) companyCombo.getSelectedItem()).id(), (String) roleCombo.getSelectedItem())));
+
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Acesso actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadUsers();
+        }
+    }
+
+    private void revokeAccess() {
+        PlatformUserDTO user = selectedUser();
+        if (user == null) return;
+        if (user.companies().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "O utilizador não tem acessos a revogar.", "Utilizadores",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        CompanyItem[] items = user.companies().stream()
+                .map(c -> new CompanyItem(c.companyId(), c.companyName()))
+                .toArray(CompanyItem[]::new);
+        JComboBox<CompanyItem> combo = new JComboBox<>(items);
+        UIHelper.styleComboBox(combo);
+
+        JPanel form = UIHelper.createDialogForm("Empresa:", combo);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Revogar Acesso",
+                "fas-user-slash", "Utilizador: " + user.username(), form).setConfirmButton("Revogar", "fas-check");
+        dlg.setOnSave(() -> platformUserService.revokeAccess(user.username(),
+                ((CompanyItem) combo.getSelectedItem()).id()));
+
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Acesso revogado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadUsers();
+        }
+    }
+
+    private void resetPassword() {
+        PlatformUserDTO user = selectedUser();
+        if (user == null) return;
+        JPasswordField passwordField = new JPasswordField();
+        UIHelper.styleTextField(passwordField);
+        JPanel form = UIHelper.createDialogForm("Nova senha:", passwordField);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Repor Senha",
+                "fas-key", "Utilizador: " + user.username(), form).setConfirmButton("Repor", "fas-check");
+        dlg.setOnSave(() -> {
+            if (passwordField.getPassword().length == 0) {
+                throw new IllegalArgumentException("Indique a nova senha.");
+            }
+            platformUserService.resetPassword(user.username(), new String(passwordField.getPassword()));
+        });
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Senha reposta.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void toggleUserActive() {
+        PlatformUserDTO user = selectedUser();
+        if (user == null) return;
+        boolean newState = !user.active();
+        try {
+            platformUserService.setUserActive(user.username(), newState);
+            loadUsers();
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Utilizadores", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private JComboBox<CompanyItem> companyCombo() {
+        CompanyItem[] items = companies.stream()
+                .map(c -> new CompanyItem(c.id(), c.name()))
+                .toArray(CompanyItem[]::new);
+        return new JComboBox<>(items);
+    }
+
+    /** Item de combo: mostra o nome mas transporta o id da empresa. */
+    private record CompanyItem(Long id, String name) {
+        @Override
+        public String toString() { return name; }
     }
 }

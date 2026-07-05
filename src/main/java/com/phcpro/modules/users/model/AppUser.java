@@ -73,6 +73,12 @@ public class AppUser extends BaseEntity {
                 );
     }
 
+    /** Remove o acesso a uma empresa (orphanRemoval trata da eliminação). Devolve se removeu algo. */
+    public boolean revokeCompany(Long companyId) {
+        return companyAccesses.removeIf(access -> companyId != null
+                && companyId.equals(access.getCompany().getId()));
+    }
+
     public Set<Company> getCompanies() {
         return companyAccesses.stream()
                 .map(AppUserCompanyAccess::getCompany)

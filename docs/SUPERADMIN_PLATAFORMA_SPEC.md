@@ -3,8 +3,8 @@
 > Um papel **acima** do tenant que gere as empresas do produto: vê todas, activa/desactiva,
 > gere assinaturas/pagamentos, gere utilizadores globalmente e responde a pedidos de assistência.
 
-**Última actualização:** 2026-07-04
-**Estado:** Fase 1 (papel superadmin + estado da empresa) e Fase 2 (assinaturas + pagamentos) — feitas.
+**Última actualização:** 2026-07-05
+**Estado:** Fases 1 (papel + estado), 2 (assinaturas + pagamentos) e 3 (utilizadores globais) — feitas.
 
 ## Problema
 
@@ -80,13 +80,23 @@ Módulo `subscription` (migração `V25`), tudo guardado por SUPERADMIN e audita
   Estado, Válida até, Preço/mês, Nº pagamentos) + Definir Plano/Validade, Registar Pagamento,
   Ver Pagamentos, Suspender/Reactivar.
 
+## Fase 3 — Utilizadores globais (feita)
+
+`PlatformUserService` (SUPERADMIN + auditado) dá a visão de **todas** as empresas (o
+`AppUserService` é limitado à empresa activa):
+
+- `listUsers` (com acessos por empresa), `createUser` (liga já a uma empresa/papel),
+  `setUserActive` (não desactiva o superadmin), `resetPassword`, `grantAccess` (conceder/mudar papel),
+  `revokeAccess` (**protege o último ADMIN** da empresa). Controller `/api/platform/users`.
+- `AppUser.revokeCompany(companyId)` (orphanRemoval trata da eliminação).
+- **Desktop:** aba **"Utilizadores"** no `PlataformaPanel` — tabela (Utilizador, Nome, Empresas &
+  Papéis, Estado) + Novo, Conceder/Alterar Acesso, Revogar Acesso, Repor Senha, Activar/Desactivar.
+
 ## Fases seguintes
 
-- **Fase 3** — `PlatformUserService`: gestão global de utilizadores (todas as empresas).
 - **Fase 4** — módulo `support`: tickets empresa→superadmin (`SupportTicket` + `SupportMessage`),
-  distinto do `crm` (assistência ao cliente da empresa).
-- **Fase 5** — painéis Pagamentos / Utilizadores / Assistência no `PlataformaPanel` + ecrã de abrir
-  tickets no lado da empresa.
+  distinto do `crm` (assistência ao cliente da empresa); aba Assistência + ecrã de abrir tickets no
+  lado da empresa.
 
 ## Não-objetivos
 
