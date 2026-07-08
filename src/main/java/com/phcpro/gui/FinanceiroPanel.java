@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
@@ -41,19 +42,32 @@ public class FinanceiroPanel extends JPanel {
         this.financeService = financeService;
         this.comercialService = comercialService;
 
-        setLayout(new BorderLayout(0, 20));
+        setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        // TOP SECTION: TREASURY ACCOUNTS & BALANCES
-        JPanel topPanel = new JPanel(new BorderLayout(0, 10));
-        topPanel.setOpaque(false);
-        topPanel.add(UIHelper.createHeading("Tesouraria & Contas"), BorderLayout.NORTH);
+        add(UIHelper.createHeading("Tesouraria"), BorderLayout.NORTH);
+
+        // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
+        JTabbedPane tabbedPane = new JTabbedPane();
+        UIHelper.styleTabbedPane(tabbedPane);
+        tabbedPane.addTab("Contas", UIHelper.icon("fas-wallet", 16, UIHelper.TEXT_LIGHT), createAccountsTab());
+        tabbedPane.addTab("Fluxo de Caixa", UIHelper.icon("fas-exchange-alt", 16, UIHelper.TEXT_LIGHT),
+                createMovementsTab());
+        add(tabbedPane, BorderLayout.CENTER);
+
+        refreshData();
+    }
+
+    /** Aba das contas de tesouraria (tabela ocupa toda a aba). */
+    private JPanel createAccountsTab() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         ModernPanel accountsCard = new ModernPanel(16);
         accountsCard.setLayout(new BorderLayout());
         accountsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        accountsCard.setPreferredSize(new Dimension(800, 150));
 
         String[] accountCols = {"Conta de Tesouraria", "IBAN / Nº Conta", "Saldo Atual"};
         accountsModel = new DefaultTableModel(accountCols, 0) {
@@ -64,14 +78,21 @@ public class FinanceiroPanel extends JPanel {
         UIHelper.styleTable(accountsTable);
         JScrollPane accScroll = new JScrollPane(accountsTable);
         UIHelper.styleScrollPane(accScroll);
+        JTextField aSearch = TableFilter.searchField("Conta ou IBAN…");
+        TableFilter.install(accountsTable, aSearch);
+        JPanel aBar = TableFilter.bar(aSearch);
+        aBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        accountsCard.add(aBar, BorderLayout.NORTH);
         accountsCard.add(accScroll, BorderLayout.CENTER);
-        topPanel.add(accountsCard, BorderLayout.CENTER);
+        panel.add(accountsCard, BorderLayout.CENTER);
+        return panel;
+    }
 
-        add(topPanel, BorderLayout.NORTH);
-
-        // CENTER SECTION: HISTÓRICO DE FLUXO DE CAIXA (a largura total) — recebimento via modal.
+    /** Aba do histórico de fluxo de caixa (cabeçalho com acção + tabela). */
+    private JPanel createMovementsTab() {
         JPanel movementsPanel = new JPanel(new BorderLayout(0, 10));
         movementsPanel.setOpaque(false);
+        movementsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         JPanel movHeader = new JPanel(new BorderLayout());
         movHeader.setOpaque(false);
@@ -98,11 +119,19 @@ public class FinanceiroPanel extends JPanel {
         UIHelper.styleTable(movementsTable);
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
+        JTextField mSearch = TableFilter.searchField("Conta ou descrição…");
+        JComboBox<String> mTipo = TableFilter.combo("Todos os tipos", "DEBIT", "CREDIT");
+        JComboBox<String> mPeriodo = TableFilter.periodCombo();
+        TableFilter.install(movementsTable, mSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(mTipo, 3)),
+                java.util.List.of(new TableFilter.PeriodFilter(mPeriodo, 0)));
+        JPanel mBar = TableFilter.bar(mSearch, TableFilter.label("Tipo:"), mTipo,
+                TableFilter.label("Data:", "fas-calendar-alt"), mPeriodo);
+        mBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        movementsCard.add(mBar, BorderLayout.NORTH);
         movementsCard.add(movScroll, BorderLayout.CENTER);
         movementsPanel.add(movementsCard, BorderLayout.CENTER);
-        add(movementsPanel, BorderLayout.CENTER);
-
-        refreshData();
+        return movementsPanel;
     }
 
     public void refreshData() {

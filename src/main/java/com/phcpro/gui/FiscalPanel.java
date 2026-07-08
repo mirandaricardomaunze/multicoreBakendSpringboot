@@ -4,6 +4,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.fiscal.dto.CreateTaxRateRequest;
 import com.phcpro.modules.fiscal.dto.CreateWithholdingRequest;
@@ -431,6 +432,13 @@ public class FiscalPanel extends JPanel {
         UIHelper.styleTable(taxRatesTable);
         JScrollPane scroll = new JScrollPane(taxRatesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField trSearch = TableFilter.searchField("Código, designação, tipo ou base legal…");
+        JComboBox<String> trEstado = TableFilter.combo("Todos os estados", "ATIVA", "INATIVA");
+        TableFilter.install(taxRatesTable, trSearch, new TableFilter.ColumnFilter(trEstado, 5));
+        JPanel trBar = TableFilter.bar(trSearch, TableFilter.label("Estado:"), trEstado);
+        trBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(trBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -452,7 +460,7 @@ public class FiscalPanel extends JPanel {
     }
 
     private TaxRateDTO selectedTaxRate() {
-        int row = taxRatesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(taxRatesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma taxa.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -559,6 +567,19 @@ public class FiscalPanel extends JPanel {
         UIHelper.styleTable(withholdingsTable);
         JScrollPane scroll = new JScrollPane(withholdingsTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField whSearch = TableFilter.searchField("Beneficiário, NUIT, descrição ou categoria…");
+        JComboBox<String> whEstado = TableFilter.combo("Todos os estados",
+                "PENDING", "DELIVERED", "CANCELLED");
+        JComboBox<String> whPeriodo = TableFilter.periodCombo();
+        TableFilter.install(withholdingsTable, whSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(whEstado, 9)),
+                java.util.List.of(new TableFilter.PeriodFilter(whPeriodo, 0)));
+        JPanel whBar = TableFilter.bar(whSearch,
+                TableFilter.label("Estado:"), whEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), whPeriodo);
+        whBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(whBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -587,7 +608,7 @@ public class FiscalPanel extends JPanel {
     }
 
     private WithholdingRecordDTO selectedWithholding() {
-        int row = withholdingsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(withholdingsTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um registo.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;

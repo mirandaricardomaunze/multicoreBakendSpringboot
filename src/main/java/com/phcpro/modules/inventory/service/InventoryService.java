@@ -84,6 +84,51 @@ public class InventoryService {
         return warehouseRepository.findByCompanyId(companyId);
     }
 
+    /**
+     * Alerta de ruptura: produtos com controlo de stock cujo saldo total na empresa (soma de todos os
+     * armazéns) é ≤ 0 — esgotados. Inclui os que nunca tiveram entrada (saldo 0). Serviços
+     * ({@code stockTracked = false}) não entram.
+     */
+    @Transactional(readOnly = true)
+    public List<com.phcpro.modules.inventory.dto.StockAlertDTO> findOutOfStockProducts(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        java.util.Map<Long, BigDecimal> totals = new java.util.HashMap<>();
+        for (Stock s : stockRepository.findByWarehouseCompanyId(companyId)) {
+            if (s.getProduct() == null) continue;
+            totals.merge(s.getProduct().getId(),
+                    s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity(), BigDecimal::add);
+        }
+        List<com.phcpro.modules.inventory.dto.StockAlertDTO> out = new java.util.ArrayList<>();
+        for (com.phcpro.modules.comercial.model.Product p :
+                productRepository.findDistinctByCompaniesIdOrderByName(companyId)) {
+            if (!p.isStockTracked()) continue;
+            BigDecimal total = totals.getOrDefault(p.getId(), BigDecimal.ZERO);
+            if (total.signum() <= 0) {
+                out.add(new com.phcpro.modules.inventory.dto.StockAlertDTO(
+                        p.getId(), p.getSku(), p.getName(), total));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * IDs dos produtos com stock disponível ({@code quantity > 0}) em pelo menos um armazém de venda
+     * (activo + {@code allowsSales}). Usado pelo POS para esconder do catálogo os produtos esgotados.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> getInStockProductIdsForSale(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Warehouse w : getSalesWarehousesByCompany(companyId)) {
+            for (Stock s : stockRepository.findByWarehouseId(w.getId())) {
+                if (s.getProduct() != null && s.getQuantity() != null && s.getQuantity().signum() > 0) {
+                    ids.add(s.getProduct().getId());
+                }
+            }
+        }
+        return ids;
+    }
+
     @Transactional
     public Warehouse updateWarehouse(Long id, String name, String warehouseNumber, BigDecimal capacity,
                                      String location, com.phcpro.modules.inventory.model.WarehouseType type,

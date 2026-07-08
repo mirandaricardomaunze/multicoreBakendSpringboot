@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.platform.dto.CreateCompanyRequest;
 import com.phcpro.modules.platform.dto.PlatformCompanyDTO;
@@ -136,6 +137,12 @@ public class PlataformaPanel extends JPanel {
         });
         JScrollPane scroll = new JScrollPane(companiesTable);
         UIHelper.styleScrollPane(scroll);
+        JTextField cSearch = TableFilter.searchField("Nome, NUIT ou email…");
+        JComboBox<String> cEstado = TableFilter.combo("Todos os estados", "ACTIVA", "SUSPENSA");
+        TableFilter.install(companiesTable, cSearch, new TableFilter.ColumnFilter(cEstado, 4));
+        JPanel cBar = TableFilter.bar(cSearch, TableFilter.label("Estado:"), cEstado);
+        cBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(cBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -163,7 +170,7 @@ public class PlataformaPanel extends JPanel {
     }
 
     private PlatformCompanyDTO selectedCompany() {
-        int row = companiesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(companiesTable);
         if (row < 0 || row >= companies.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma empresa na lista.", "Empresas",
                     JOptionPane.WARNING_MESSAGE);
@@ -310,8 +317,9 @@ public class PlataformaPanel extends JPanel {
         javax.swing.table.TableCellRenderer baseRenderer = subsTable.getDefaultRenderer(Object.class);
         subsTable.setDefaultRenderer(Object.class, (table, value, sel, focus, row, col) -> {
             Component c = baseRenderer.getTableCellRendererComponent(table, value, sel, focus, row, col);
-            if (!sel && row >= 0 && row < subscriptions.size()) {
-                int sev = subSeverity(subscriptions.get(row));
+            int modelRow = row >= 0 ? subsTable.convertRowIndexToModel(row) : -1;
+            if (!sel && modelRow >= 0 && modelRow < subscriptions.size()) {
+                int sev = subSeverity(subscriptions.get(modelRow));
                 if (sev == -1) c.setForeground(UIHelper.REJECTED_RED);
                 else if (sev == 0) c.setForeground(UIHelper.PENDING_YELLOW);
             }
@@ -319,6 +327,14 @@ public class PlataformaPanel extends JPanel {
         });
         JScrollPane scroll = new JScrollPane(subsTable);
         UIHelper.styleScrollPane(scroll);
+        JTextField sSearch = TableFilter.searchField("Empresa…");
+        JComboBox<String> sEstado = TableFilter.combo("Todos os estados", "Activa", "Suspensa", "Expirada", "Avaliação", "Sem assinatura");
+        JComboBox<String> sPlano = TableFilter.combo("Todos os planos", "Avaliação", "Básico", "Profissional", "Empresarial");
+        TableFilter.install(subsTable, sSearch,
+                new TableFilter.ColumnFilter(sEstado, 2), new TableFilter.ColumnFilter(sPlano, 1));
+        JPanel sBar = TableFilter.bar(sSearch, TableFilter.label("Estado:"), sEstado, TableFilter.label("Plano:"), sPlano);
+        sBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(sBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -362,7 +378,7 @@ public class PlataformaPanel extends JPanel {
     }
 
     private SubscriptionDTO selectedSubscription() {
-        int row = subsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(subsTable);
         if (row < 0 || row >= subscriptions.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma empresa na lista.", "Assinaturas",
                     JOptionPane.WARNING_MESSAGE);
@@ -535,6 +551,8 @@ public class PlataformaPanel extends JPanel {
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Utilizador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
+        ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
+        editBtn.setIcon(UIHelper.icon("fas-pen", 14));
         ModernButton grantBtn = UIHelper.createPrimaryButton("Conceder/Alterar Acesso");
         grantBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
         ModernButton revokeBtn = UIHelper.createSecondaryButton("Revogar Acesso");
@@ -553,6 +571,7 @@ public class PlataformaPanel extends JPanel {
         actions.add(pwdBtn);
         actions.add(revokeBtn);
         actions.add(grantBtn);
+        actions.add(editBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
         panel.add(header, BorderLayout.NORTH);
@@ -568,12 +587,25 @@ public class PlataformaPanel extends JPanel {
         };
         usersTable = new JTable(usersModel);
         UIHelper.styleTable(usersTable);
+        usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) editUser();
+            }
+        });
         JScrollPane scroll = new JScrollPane(usersTable);
         UIHelper.styleScrollPane(scroll);
+        JTextField uSearch = TableFilter.searchField("Utilizador, nome ou empresa…");
+        JComboBox<String> uEstado = TableFilter.combo("Todos os estados", "ACTIVO", "INATIVO", "SUPERADMIN");
+        TableFilter.install(usersTable, uSearch, new TableFilter.ColumnFilter(uEstado, 3));
+        JPanel uBar = TableFilter.bar(uSearch, TableFilter.label("Estado:"), uEstado);
+        uBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(uBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
         newBtn.addActionListener(e -> createPlatformUser());
+        editBtn.addActionListener(e -> editUser());
         grantBtn.addActionListener(e -> grantAccess());
         revokeBtn.addActionListener(e -> revokeAccess());
         pwdBtn.addActionListener(e -> resetPassword());
@@ -609,13 +641,34 @@ public class PlataformaPanel extends JPanel {
     }
 
     private PlatformUserDTO selectedUser() {
-        int row = usersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(usersTable);
         if (row < 0 || row >= users.size()) {
             JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Utilizadores",
                     JOptionPane.WARNING_MESSAGE);
             return null;
         }
         return users.get(row);
+    }
+
+    private void editUser() {
+        PlatformUserDTO user = selectedUser();
+        if (user == null) return;
+
+        JTextField nameField = new JTextField(user.name());
+        UIHelper.styleTextField(nameField);
+        JPanel form = UIHelper.createDialogForm("Nome completo:", nameField);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Utilizador",
+                "fas-pen", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
+        dlg.setOnSave(() -> {
+            if (nameField.getText().trim().isEmpty()) {
+                throw new IllegalArgumentException("O nome é obrigatório.");
+            }
+            platformUserService.updateUser(user.username(), nameField.getText().trim());
+        });
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Utilizador actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadUsers();
+        }
     }
 
     private void createPlatformUser() {
@@ -802,6 +855,14 @@ public class PlataformaPanel extends JPanel {
         });
         JScrollPane scroll = new JScrollPane(ticketsTable);
         UIHelper.styleScrollPane(scroll);
+        JTextField tSearch = TableFilter.searchField("Empresa ou assunto…");
+        JComboBox<String> tEstado = TableFilter.combo("Todos os estados", "Aberto", "Em curso", "Resolvido", "Fechado");
+        JComboBox<String> tPrio = TableFilter.combo("Todas as prioridades", "Baixa", "Normal", "Alta", "Urgente");
+        TableFilter.install(ticketsTable, tSearch,
+                new TableFilter.ColumnFilter(tEstado, 4), new TableFilter.ColumnFilter(tPrio, 3));
+        JPanel tBar = TableFilter.bar(tSearch, TableFilter.label("Estado:"), tEstado, TableFilter.label("Prioridade:"), tPrio);
+        tBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(tBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -828,7 +889,7 @@ public class PlataformaPanel extends JPanel {
     }
 
     private SupportTicketDTO selectedTicket() {
-        int row = ticketsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ticketsTable);
         if (row < 0 || row >= tickets.size()) {
             JOptionPane.showMessageDialog(this, "Selecione um pedido na lista.", "Assistência",
                     JOptionPane.WARNING_MESSAGE);

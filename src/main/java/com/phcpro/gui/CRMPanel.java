@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.crm.dto.*;
 import com.phcpro.modules.crm.service.CRMService;
@@ -38,15 +39,29 @@ public class CRMPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        // TOP HALF: SUPPORT TICKETS LIST
-        JPanel topPanel = new JPanel(new BorderLayout(0, 10));
-        topPanel.setOpaque(false);
-        topPanel.add(UIHelper.createHeading("CRM & Pedidos de Assistência"), BorderLayout.NORTH);
+        add(UIHelper.createHeading("CRM & Assistência"), BorderLayout.NORTH);
+
+        // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
+        JTabbedPane tabbedPane = new JTabbedPane();
+        UIHelper.styleTabbedPane(tabbedPane);
+        tabbedPane.addTab("Pedidos de Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT),
+                createTicketsTab());
+        tabbedPane.addTab("Folhas de Obra", UIHelper.icon("fas-tools", 16, UIHelper.TEXT_LIGHT),
+                createWorkSheetsTab());
+        add(tabbedPane, BorderLayout.CENTER);
+
+        refreshData();
+    }
+
+    /** Aba dos pedidos de assistência (tabela ocupa toda a aba). */
+    private JPanel createTicketsTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         ModernPanel ticketsCard = new ModernPanel(16);
         ticketsCard.setLayout(new BorderLayout());
         ticketsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        ticketsCard.setPreferredSize(new Dimension(800, 200));
 
         String[] ticketCols = {"ID", "Data", "Cliente", "Assunto", "Descrição", "Estado"};
         ticketsModel = new DefaultTableModel(ticketCols, 0) {
@@ -57,13 +72,26 @@ public class CRMPanel extends JPanel {
         UIHelper.styleTable(ticketsTable);
         JScrollPane tScroll = new JScrollPane(ticketsTable);
         UIHelper.styleScrollPane(tScroll);
+        JTextField tSearch = TableFilter.searchField("Cliente, assunto ou descrição…");
+        JComboBox<String> tEstado = TableFilter.combo("Todos os estados", "OPEN", "RESOLVED");
+        JComboBox<String> tPeriodo = TableFilter.periodCombo();
+        TableFilter.install(ticketsTable, tSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(tEstado, 5)),
+                java.util.List.of(new TableFilter.PeriodFilter(tPeriodo, 1)));
+        JPanel tBar = TableFilter.bar(tSearch, TableFilter.label("Estado:"), tEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), tPeriodo);
+        tBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        ticketsCard.add(tBar, BorderLayout.NORTH);
         ticketsCard.add(tScroll, BorderLayout.CENTER);
-        topPanel.add(ticketsCard, BorderLayout.CENTER);
-        add(topPanel, BorderLayout.NORTH);
+        panel.add(ticketsCard, BorderLayout.CENTER);
+        return panel;
+    }
 
-        // BOTTOM HALF: FOLHAS DE OBRA (a largura total) — registo via modal.
+    /** Aba das folhas de obra (cabeçalho com acções + tabela). */
+    private JPanel createWorkSheetsTab() {
         JPanel wsPanel = new JPanel(new BorderLayout(0, 10));
         wsPanel.setOpaque(false);
+        wsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         JPanel wsHeader = new JPanel(new BorderLayout());
         wsHeader.setOpaque(false);
@@ -92,15 +120,18 @@ public class CRMPanel extends JPanel {
         UIHelper.styleTable(worksheetsTable);
         JScrollPane wsScroll = new JScrollPane(worksheetsTable);
         UIHelper.styleScrollPane(wsScroll);
+        JTextField wsSearch = TableFilter.searchField("Cliente ou técnico…");
+        JComboBox<String> wsFat = TableFilter.combo("Faturado: todos", "SIM", "NÃO");
+        TableFilter.install(worksheetsTable, wsSearch, new TableFilter.ColumnFilter(wsFat, 5));
+        JPanel wsBar = TableFilter.bar(wsSearch, wsFat);
+        wsBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        wsCard.add(wsBar, BorderLayout.NORTH);
         wsCard.add(wsScroll, BorderLayout.CENTER);
         wsPanel.add(wsCard, BorderLayout.CENTER);
-        add(wsPanel, BorderLayout.CENTER);
 
-        // Action Listeners
         newWsBtn.addActionListener(e -> registerWorkSheet());
         billBtn.addActionListener(e -> billWorkSheet());
-
-        refreshData();
+        return wsPanel;
     }
 
     public void refreshData() {
@@ -217,7 +248,7 @@ public class CRMPanel extends JPanel {
     }
 
     private void billWorkSheet() {
-        int selectedRow = worksheetsTable.getSelectedRow();
+        int selectedRow = TableFilter.selectedModelRow(worksheetsTable);
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma folha de obra na tabela para faturar.", "Informação", JOptionPane.WARNING_MESSAGE);
             return;

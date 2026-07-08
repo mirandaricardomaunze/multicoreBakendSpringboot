@@ -4,6 +4,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateCreditNoteLineRequest;
@@ -545,7 +546,8 @@ public class POSPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         clientsList = comercialService.getAllClients();
-        productsList = comercialService.getAllProducts();
+        // Catálogo do POS: só produtos vendáveis — os esgotados não aparecem (ver getSellableProducts).
+        productsList = comercialService.getSellableProducts();
         // POS só vende de armazéns activos que permitem vendas (Loja, não depósito puro).
         warehousesList = inventoryService.getSalesWarehousesByCompany(companyId);
         accountsList = financeService.getAllAccounts();
@@ -1336,7 +1338,7 @@ public class POSPanel extends JPanel {
         ModernButton reprintBtn = UIHelper.createPrimaryButton("Reimprimir Recibo");
         reprintBtn.setIcon(UIHelper.icon("fas-print", 14));
         reprintBtn.addActionListener(e -> {
-            int row = salesHistoryTable.getSelectedRow();
+            int row = TableFilter.selectedModelRow(salesHistoryTable);
             if (row < 0) {
                 JOptionPane.showMessageDialog(this, "Selecione uma venda primeiro.",
                         "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -1368,10 +1370,27 @@ public class POSPanel extends JPanel {
         buttons.add(returnBtn);
         buttons.add(reprintBtn);
 
+        JTextField shSearch = TableFilter.searchField("Nº venda, operador ou cliente…");
+        JComboBox<String> shEstado = TableFilter.combo("Todos os estados",
+                "PAID", "APPROVED", "PARTIALLY_PAID", "CANCELLED");
+        JComboBox<String> shPeriodo = TableFilter.periodCombo();
+        TableFilter.install(salesHistoryTable, shSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(shEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(shPeriodo, 2)));
+        JPanel shBar = TableFilter.bar(shSearch,
+                TableFilter.label("Estado:"), shEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), shPeriodo);
+        shBar.setBorder(new EmptyBorder(0, 0, 8, 0));
+
+        JPanel north = new JPanel(new BorderLayout());
+        north.setOpaque(false);
+        north.add(salesHistorySummary, BorderLayout.NORTH);
+        north.add(shBar, BorderLayout.SOUTH);
+
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(15, 5, 5, 5));
-        content.add(salesHistorySummary, BorderLayout.NORTH);
+        content.add(north, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
         content.add(buttons, BorderLayout.SOUTH);
         return content;
@@ -1405,7 +1424,7 @@ public class POSPanel extends JPanel {
     }
 
     private void showReturnDialog() {
-        int selectedRow = salesHistoryTable == null ? -1 : salesHistoryTable.getSelectedRow();
+        int selectedRow = salesHistoryTable == null ? -1 : TableFilter.selectedModelRow(salesHistoryTable);
         if (selectedRow < 0 || selectedRow >= salesHistoryList.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma venda no histórico primeiro.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);

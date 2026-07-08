@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.modules.comercial.dto.ClientDTO;
@@ -59,22 +60,8 @@ public class ClientesPanel extends JPanel {
         JPanel center = new JPanel(new BorderLayout(0, 12));
         center.setOpaque(false);
 
-        JPanel searchRow = new JPanel(new BorderLayout(8, 0));
-        searchRow.setOpaque(false);
-        JLabel searchLbl = new JLabel("Pesquisar:");
-        searchLbl.setForeground(UIHelper.TEXT_MUTED);
-        searchLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        searchField = new JTextField();
-        UIHelper.styleTextField(searchField);
-        searchField.putClientProperty("JTextField.placeholderText",
-                "🔍 Filtrar por nome, NUIT, email ou endereço…");
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { refilter(); }
-            @Override public void removeUpdate(DocumentEvent e) { refilter(); }
-            @Override public void changedUpdate(DocumentEvent e) { refilter(); }
-        });
-        searchRow.add(searchLbl, BorderLayout.WEST);
-        searchRow.add(searchField, BorderLayout.CENTER);
+        searchField = TableFilter.searchField("Filtrar por nome, NUIT, email ou endereço…");
+        JPanel searchRow = TableFilter.bar(searchField);
         center.add(searchRow, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
@@ -92,6 +79,7 @@ public class ClientesPanel extends JPanel {
         }
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+        TableFilter.install(table, searchField);
         card.add(scroll, BorderLayout.CENTER);
         center.add(card, BorderLayout.CENTER);
         add(center, BorderLayout.CENTER);
@@ -125,14 +113,8 @@ public class ClientesPanel extends JPanel {
     }
 
     private void refilter() {
-        String q = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
-        visibleClients = allClients.stream()
-                .filter(c -> q.isEmpty()
-                        || (c.name() != null && c.name().toLowerCase().contains(q))
-                        || (c.taxId() != null && c.taxId().toLowerCase().contains(q))
-                        || (c.email() != null && c.email().toLowerCase().contains(q))
-                        || (c.address() != null && c.address().toLowerCase().contains(q)))
-                .toList();
+        // Carrega todos; a pesquisa é aplicada pelo TableFilter (cliente).
+        visibleClients = allClients;
         model.setRowCount(0);
         for (ClientDTO c : visibleClients) {
             model.addRow(new Object[]{
@@ -146,7 +128,7 @@ public class ClientesPanel extends JPanel {
     }
 
     private ClientDTO selectedClient() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um cliente na tabela.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);

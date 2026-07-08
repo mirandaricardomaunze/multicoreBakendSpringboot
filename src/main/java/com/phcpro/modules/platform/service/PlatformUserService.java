@@ -81,6 +81,19 @@ public class PlatformUserService {
     }
 
     @Transactional
+    public PlatformUserDTO updateUser(String username, String name) {
+        PermissionGuard.requireSuperAdmin("editar um utilizador");
+        AppUser user = requireUser(username);
+        if (name == null || name.isBlank()) {
+            throw new BusinessRuleException("O nome do utilizador é obrigatório.");
+        }
+        user.setName(name.trim());
+        appUserRepository.save(user);
+        audit(username, "PLATFORM_USER_UPDATE", "Nome actualizado para '" + user.getName() + "'.");
+        return toDto(user);
+    }
+
+    @Transactional
     public PlatformUserDTO setUserActive(String username, boolean active) {
         PermissionGuard.requireSuperAdmin("mudar o estado de um utilizador");
         AppUser user = requireUser(username);

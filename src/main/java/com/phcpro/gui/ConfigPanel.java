@@ -5,6 +5,7 @@ import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.users.model.AppUser;
@@ -168,6 +169,16 @@ public class ConfigPanel extends JPanel {
         UIHelper.styleTable(auditTable);
         JScrollPane scroll = new JScrollPane(auditTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField auditSearch = TableFilter.searchField("Utilizador, ação ou detalhe…");
+        JComboBox<String> auditPeriodo = TableFilter.periodCombo();
+        TableFilter.install(auditTable, auditSearch,
+                java.util.List.of(),
+                java.util.List.of(new TableFilter.PeriodFilter(auditPeriodo, 0)));
+        JPanel auditBar = TableFilter.bar(auditSearch,
+                TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo);
+        auditBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(auditBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -280,6 +291,8 @@ public class ConfigPanel extends JPanel {
 
         ModernButton newUserBtn = UIHelper.createSuccessButton("Novo Utilizador");
         newUserBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
+        ModernButton editUserBtn = UIHelper.createPrimaryButton("Editar");
+        editUserBtn.setIcon(UIHelper.icon("fas-pen", 14));
         ModernButton updateRoleBtn = UIHelper.createPrimaryButton("Alterar Perfil");
         updateRoleBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
         ModernButton refreshUsersBtn = UIHelper.createSecondaryButton("Atualizar Lista");
@@ -288,6 +301,7 @@ public class ConfigPanel extends JPanel {
         actions.setOpaque(false);
         actions.add(refreshUsersBtn);
         actions.add(updateRoleBtn);
+        actions.add(editUserBtn);
         actions.add(newUserBtn);
         header.add(actions, BorderLayout.EAST);
         panel.add(header, BorderLayout.NORTH);
@@ -303,17 +317,63 @@ public class ConfigPanel extends JPanel {
         };
         usersTable = new JTable(usersTableModel);
         UIHelper.styleTable(usersTable);
+        usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) editSelectedUserName();
+            }
+        });
         JScrollPane scroll = new JScrollPane(usersTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField usrSearch = TableFilter.searchField("Username ou nome…");
+        JComboBox<String> usrRole = TableFilter.combo("Todos os perfis", "ADMIN", "MANAGER", "EMPLOYEE");
+        JComboBox<String> usrEstado = TableFilter.combo("Todos os estados", "ATIVO", "INATIVO");
+        TableFilter.install(usersTable, usrSearch,
+                new TableFilter.ColumnFilter(usrRole, 2),
+                new TableFilter.ColumnFilter(usrEstado, 3));
+        JPanel usrBar = TableFilter.bar(usrSearch,
+                TableFilter.label("Perfil:"), usrRole,
+                TableFilter.label("Estado:"), usrEstado);
+        usrBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(usrBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
         newUserBtn.addActionListener(e -> registerUser());
+        editUserBtn.addActionListener(e -> editSelectedUserName());
         updateRoleBtn.addActionListener(e -> updateSelectedUserRole());
         refreshUsersBtn.addActionListener(e -> loadUsersList());
 
         return panel;
+    }
+
+    /** Edição do nome do utilizador seleccionado (o username é imutável). */
+    private void editSelectedUserName() {
+        int selectedRow = TableFilter.selectedModelRow(usersTable);
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Editar", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String username = String.valueOf(usersTableModel.getValueAt(selectedRow, 0));
+        String currentName = String.valueOf(usersTableModel.getValueAt(selectedRow, 1));
+
+        javax.swing.JTextField nameField = new javax.swing.JTextField(currentName);
+        UIHelper.styleTextField(nameField);
+        JPanel form = UIHelper.createDialogForm("Nome completo:", nameField);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Utilizador",
+                "fas-pen", "Utilizador: " + username, form).setConfirmButton("Guardar", "fas-check");
+        dlg.setOnSave(() -> {
+            if (nameField.getText().trim().isEmpty()) {
+                throw new IllegalArgumentException("O nome é obrigatório.");
+            }
+            userService.updateUserName(username, nameField.getText().trim());
+        });
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Utilizador atualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadUsersList();
+        }
     }
 
     private JPanel createDocumentColumnsTab() {
@@ -634,7 +694,7 @@ public class ConfigPanel extends JPanel {
 
     /** Alteração de perfil do utilizador seleccionado, em modal profissional. */
     private void updateSelectedUserRole() {
-        int selectedRow = usersTable.getSelectedRow();
+        int selectedRow = TableFilter.selectedModelRow(usersTable);
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Perfil", JOptionPane.WARNING_MESSAGE);
             return;
@@ -704,6 +764,12 @@ public class ConfigPanel extends JPanel {
         });
         JScrollPane scroll = new JScrollPane(supportTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField supSearch = TableFilter.searchField("Assunto, prioridade ou estado…");
+        TableFilter.install(supportTable, supSearch);
+        JPanel supBar = TableFilter.bar(supSearch);
+        supBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(supBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -767,7 +833,7 @@ public class ConfigPanel extends JPanel {
     }
 
     private void viewSupportTicket() {
-        int row = supportTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(supportTable);
         if (row < 0 || row >= supportTickets.size()) {
             JOptionPane.showMessageDialog(this, "Selecione um pedido.", "Suporte", JOptionPane.WARNING_MESSAGE);
             return;

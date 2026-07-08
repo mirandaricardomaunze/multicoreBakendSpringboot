@@ -5,6 +5,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.*;
 import com.phcpro.modules.comercial.model.Receipt;
@@ -393,6 +394,14 @@ public class ComercialPanel extends JPanel {
 
         JScrollPane invoicesScroll = new JScrollPane(invoicesTable);
         UIHelper.styleScrollPane(invoicesScroll);
+        JTextField invSearch = TableFilter.searchField("Nº fatura ou cliente…");
+        JComboBox<String> invEstado = TableFilter.combo("Todos os estados",
+                "DRAFT", "PENDING_APPROVAL", "PENDING_DISCOUNT_APPROVAL", "APPROVED",
+                "PARTIALLY_PAID", "REJECTED", "PAID", "CANCELLED");
+        TableFilter.install(invoicesTable, invSearch, new TableFilter.ColumnFilter(invEstado, 3));
+        JPanel invBar = TableFilter.bar(invSearch, TableFilter.label("Estado:"), invEstado);
+        invBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(invBar, BorderLayout.NORTH);
         listCard.add(invoicesScroll, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -462,6 +471,23 @@ public class ComercialPanel extends JPanel {
 
         JScrollPane scroll = new JScrollPane(receiptsTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField rcSearch = TableFilter.searchField("Nº recibo, fatura ou cliente…");
+        JComboBox<String> rcMetodo = TableFilter.combo("Todos os métodos",
+                "CASH", "BANK_TRANSFER", "CARD");
+        JComboBox<String> rcEstado = TableFilter.combo("Todos os estados",
+                "COMPLETED", "CANCELLED");
+        JComboBox<String> rcPeriodo = TableFilter.periodCombo();
+        TableFilter.install(receiptsTable, rcSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(rcMetodo, 5),
+                        new TableFilter.ColumnFilter(rcEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(rcPeriodo, 7)));
+        JPanel rcBar = TableFilter.bar(rcSearch,
+                TableFilter.label("Método:"), rcMetodo,
+                TableFilter.label("Estado:"), rcEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), rcPeriodo);
+        rcBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(rcBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -707,7 +733,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void cancelSelectedInvoice() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela para anular.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -731,7 +757,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void paySelectedInvoice() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela para liquidar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -843,7 +869,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void cancelSelectedReceipt() {
-        int row = receiptsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(receiptsTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um recibo na tabela para anular.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1114,6 +1140,14 @@ public class ComercialPanel extends JPanel {
 
         JScrollPane ordersScroll = new JScrollPane(ordersTable);
         UIHelper.styleScrollPane(ordersScroll);
+
+        JTextField ecSearch = TableFilter.searchField("Nº encomenda ou cliente…");
+        JComboBox<String> ecEstado = TableFilter.combo("Todos os estados",
+                "PENDING", "PENDING_APPROVAL", "BILLED", "CANCELLED");
+        TableFilter.install(ordersTable, ecSearch, new TableFilter.ColumnFilter(ecEstado, 3));
+        JPanel ecBar = TableFilter.bar(ecSearch, TableFilter.label("Estado:"), ecEstado);
+        ecBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(ecBar, BorderLayout.NORTH);
         listCard.add(ordersScroll, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new GridLayout(0, 2, 10, 8));
@@ -1368,7 +1402,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void billSelectedOrder() {
-        int row = ordersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela para faturar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1433,7 +1467,7 @@ public class ComercialPanel extends JPanel {
      * confirmação obrigatória se já foi impressa antes.
      */
     private void showSelectedOrderDetails() {
-        int row = ordersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1791,7 +1825,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void printSelectedInvoice() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1807,7 +1841,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void printSelectedGuide() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1833,7 +1867,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void printSelectedOrder() {
-        int row = ordersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1922,6 +1956,23 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(creditNotesTable);
         JScrollPane scroll = new JScrollPane(creditNotesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField ncSearch = TableFilter.searchField("Nº, fatura ou cliente…");
+        JComboBox<String> ncMotivo = TableFilter.combo("Todos os motivos",
+                "RETURN", "DISCOUNT", "ERROR", "CANCELLATION");
+        JComboBox<String> ncEstado = TableFilter.combo("Todos os estados",
+                "DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        JComboBox<String> ncPeriodo = TableFilter.periodCombo();
+        TableFilter.install(creditNotesTable, ncSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ncMotivo, 4),
+                        new TableFilter.ColumnFilter(ncEstado, 7)),
+                java.util.List.of(new TableFilter.PeriodFilter(ncPeriodo, 1)));
+        JPanel ncBar = TableFilter.bar(ncSearch,
+                TableFilter.label("Motivo:"), ncMotivo,
+                TableFilter.label("Estado:"), ncEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), ncPeriodo);
+        ncBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(ncBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -1970,6 +2021,23 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(debitNotesTable);
         JScrollPane scroll = new JScrollPane(debitNotesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField ndSearch = TableFilter.searchField("Nº, fatura ou cliente…");
+        JComboBox<String> ndMotivo = TableFilter.combo("Todos os motivos",
+                "FREIGHT", "SURCHARGE", "CORRECTION", "OTHER");
+        JComboBox<String> ndEstado = TableFilter.combo("Todos os estados",
+                "DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        JComboBox<String> ndPeriodo = TableFilter.periodCombo();
+        TableFilter.install(debitNotesTable, ndSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ndMotivo, 4),
+                        new TableFilter.ColumnFilter(ndEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(ndPeriodo, 1)));
+        JPanel ndBar = TableFilter.bar(ndSearch,
+                TableFilter.label("Motivo:"), ndMotivo,
+                TableFilter.label("Estado:"), ndEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), ndPeriodo);
+        ndBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(ndBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -2015,7 +2083,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.comercial.dto.CreditNoteDTO selectedCreditNote() {
-        int row = creditNotesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(creditNotesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma nota na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -2024,7 +2092,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.comercial.dto.DebitNoteDTO selectedDebitNote() {
-        int row = debitNotesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(debitNotesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma nota na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -2411,6 +2479,14 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(movimentosTable);
         JScrollPane scroll = new JScrollPane(movimentosTable);
         UIHelper.styleScrollPane(scroll);
+        JTextField mvSearch = TableFilter.searchField("Nº documento ou cliente…");
+        JComboBox<String> mvPeriodo = TableFilter.periodCombo();
+        TableFilter.install(movimentosTable, mvSearch,
+                java.util.List.of(),
+                java.util.List.of(new TableFilter.PeriodFilter(mvPeriodo, 3)));
+        JPanel mvBar = TableFilter.bar(mvSearch, TableFilter.label("Data:", "fas-calendar-alt"), mvPeriodo);
+        mvBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(mvBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         movimentosFooter = new JLabel(" ");
@@ -2497,6 +2573,19 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(outstandingTable);
         JScrollPane scroll = new JScrollPane(outstandingTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField ccSearch = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
+        JComboBox<String> ccEstado = TableFilter.combo("Todos os estados",
+                "APPROVED", "PARTIALLY_PAID");
+        JComboBox<String> ccPeriodo = TableFilter.periodCombo();
+        TableFilter.install(outstandingTable, ccSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ccEstado, 7)),
+                java.util.List.of(new TableFilter.PeriodFilter(ccPeriodo, 1)));
+        JPanel ccBar = TableFilter.bar(ccSearch,
+                TableFilter.label("Estado:"), ccEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), ccPeriodo);
+        ccBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(ccBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -2526,7 +2615,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.comercial.dto.InvoiceDTO selectedOutstanding() {
-        int row = outstandingTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(outstandingTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);

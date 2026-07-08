@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.approvals.dto.ApprovalRequestDTO;
 import com.phcpro.modules.approvals.model.ApprovalStatus;
@@ -52,9 +53,44 @@ public class ApprovalsPanel extends JPanel {
         headerPanel.add(sub, BorderLayout.SOUTH);
         add(headerPanel, BorderLayout.NORTH);
 
-        // CENTER: tabela de pendentes a largura total + barra de acções (o detalhe vive num modal).
+        // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
+        JTabbedPane tabbedPane = new JTabbedPane();
+        UIHelper.styleTabbedPane(tabbedPane);
+        tabbedPane.addTab("Pendentes", UIHelper.icon("fas-hourglass-half", 16, UIHelper.TEXT_LIGHT),
+                createPendingTab());
+        tabbedPane.addTab("Histórico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.TEXT_LIGHT),
+                createHistoryTab());
+        add(tabbedPane, BorderLayout.CENTER);
+
+        // LISTENERS
+        pendingTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                openBtn.setEnabled(pendingTable.getSelectedRow() >= 0);
+            }
+        });
+        pendingTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent ev) {
+                if (ev.getClickCount() == 2) openDecisionForSelected();
+            }
+        });
+
+        refreshData();
+    }
+
+    public void refreshData() {
+        loadPendingTable();
+        loadHistoryTable();
+        if (openBtn != null) {
+            openBtn.setEnabled(false);
+            pendingTable.clearSelection();
+        }
+    }
+
+    /** Aba dos pedidos pendentes (cabeçalho com acção + tabela a ocupar toda a aba). */
+    private JPanel createPendingTab() {
         JPanel pendingPanel = new JPanel(new BorderLayout(0, 10));
         pendingPanel.setOpaque(false);
+        pendingPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         JPanel pendHeader = new JPanel(new BorderLayout());
         pendHeader.setOpaque(false);
@@ -84,19 +120,27 @@ public class ApprovalsPanel extends JPanel {
         pendingTable.putClientProperty("noRowInspector", Boolean.TRUE);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
         UIHelper.styleScrollPane(pendingScroll);
+        JTextField pSearch = TableFilter.searchField("Documento ou submissor…");
+        JComboBox<String> pPerfil = TableFilter.combo("Todos os perfis", "ADMIN", "MANAGER");
+        TableFilter.install(pendingTable, pSearch, new TableFilter.ColumnFilter(pPerfil, 4));
+        JPanel pBar = TableFilter.bar(pSearch, TableFilter.label("Perfil:"), pPerfil);
+        pBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        pendingCard.add(pBar, BorderLayout.NORTH);
         pendingCard.add(pendingScroll, BorderLayout.CENTER);
         pendingPanel.add(pendingCard, BorderLayout.CENTER);
-        add(pendingPanel, BorderLayout.CENTER);
+        return pendingPanel;
+    }
 
-        // BOTTOM: HISTORY LOG
+    /** Aba do histórico e auditoria (tabela ocupa toda a aba). */
+    private JPanel createHistoryTab() {
         JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
         bottomPanel.setOpaque(false);
-        bottomPanel.add(UIHelper.createSubheading("Histórico e Auditoria de Aprovacões"), BorderLayout.NORTH);
+        bottomPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        bottomPanel.add(UIHelper.createSubheading("Histórico e Auditoria de Aprovações"), BorderLayout.NORTH);
 
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout());
         historyCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        historyCard.setPreferredSize(new Dimension(800, 200));
 
         String[] historyCols = {"Data", "Tipo Doc", "Submissor", "Valor", "Estado Final", "Motivo / Comentário"};
         historyModel = new DefaultTableModel(historyCols, 0) {
@@ -107,32 +151,19 @@ public class ApprovalsPanel extends JPanel {
         UIHelper.styleTable(historyTable);
         JScrollPane historyScroll = new JScrollPane(historyTable);
         UIHelper.styleScrollPane(historyScroll);
+        JTextField hSearch = TableFilter.searchField("Documento ou submissor…");
+        JComboBox<String> hEstado = TableFilter.combo("Todos os estados", "APPROVED", "REJECTED");
+        JComboBox<String> hPeriodo = TableFilter.periodCombo();
+        TableFilter.install(historyTable, hSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(hEstado, 4)),
+                java.util.List.of(new TableFilter.PeriodFilter(hPeriodo, 0)));
+        JPanel hBar = TableFilter.bar(hSearch, TableFilter.label("Estado final:"), hEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), hPeriodo);
+        hBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        historyCard.add(hBar, BorderLayout.NORTH);
         historyCard.add(historyScroll, BorderLayout.CENTER);
         bottomPanel.add(historyCard, BorderLayout.CENTER);
-        add(bottomPanel, BorderLayout.SOUTH);
-
-        // LISTENERS
-        pendingTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                openBtn.setEnabled(pendingTable.getSelectedRow() >= 0);
-            }
-        });
-        pendingTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseClicked(java.awt.event.MouseEvent ev) {
-                if (ev.getClickCount() == 2) openDecisionForSelected();
-            }
-        });
-
-        refreshData();
-    }
-
-    public void refreshData() {
-        loadPendingTable();
-        loadHistoryTable();
-        if (openBtn != null) {
-            openBtn.setEnabled(false);
-            pendingTable.clearSelection();
-        }
+        return bottomPanel;
     }
 
     /** Tipo de documento em PT para a área de aprovação. Desconhecidos ficam como estão. */
@@ -179,7 +210,7 @@ public class ApprovalsPanel extends JPanel {
     }
 
     private void openDecisionForSelected() {
-        int row = pendingTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(pendingTable);
         if (row < 0 || row >= pendingList.size()) return;
         openDecisionDialog(pendingList.get(row));
     }

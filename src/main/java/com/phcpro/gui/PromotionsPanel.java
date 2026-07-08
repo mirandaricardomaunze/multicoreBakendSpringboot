@@ -4,6 +4,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
 import com.phcpro.modules.comercial.dto.ProductDTO;
@@ -81,6 +82,18 @@ public class PromotionsPanel extends JPanel {
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField promoSearch = TableFilter.searchField("Nome, alcance ou benefício…");
+        JComboBox<String> promoTipo = TableFilter.combo("Todos os tipos", "Percentagem", "Leve X, pague Y");
+        JComboBox<String> promoEstado = TableFilter.combo("Todos os estados", "ACTIVA", "INACTIVA");
+        TableFilter.install(table, promoSearch,
+                new TableFilter.ColumnFilter(promoTipo, 1),
+                new TableFilter.ColumnFilter(promoEstado, 6));
+        JPanel promoBar = TableFilter.bar(promoSearch,
+                TableFilter.label("Tipo:"), promoTipo,
+                TableFilter.label("Estado:"), promoEstado);
+        promoBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(promoBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
 
@@ -117,7 +130,7 @@ public class PromotionsPanel extends JPanel {
     }
 
     private void toggleSelected() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= promotions.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma promoção primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;

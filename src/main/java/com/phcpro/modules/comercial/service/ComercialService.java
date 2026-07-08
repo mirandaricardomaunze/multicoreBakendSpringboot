@@ -463,6 +463,22 @@ public class ComercialService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Catálogo vendável do POS: exclui os produtos esgotados. Um produto aparece se não controla
+     * stock (ex.: serviços) ou se tem stock disponível num armazém de venda. Ver
+     * {@link InventoryService#getInStockProductIdsForSale(Long)}.
+     */
+    @Transactional(readOnly = true)
+    public List<ProductDTO> getSellableProducts() {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        java.util.Set<Long> inStock = inventoryService.getInStockProductIdsForSale(companyId);
+        return productRepository.findDistinctByCompaniesIdOrderByName(companyId)
+                .stream()
+                .map(this::toDTO)
+                .filter(p -> !p.stockTracked() || inStock.contains(p.id()))
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ProductDTO createProduct(String sku, String name, BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, String description) {
         return createProduct(sku, null, null, name, unitPrice, purchasePrice, minStock, 1, description);

@@ -5,6 +5,7 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.SimpleBarChart;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.hr.model.ExpenseStatus;
 import com.phcpro.modules.hr.dto.AbsenceDTO;
@@ -337,6 +338,15 @@ public class HRPanel extends JPanel {
         UIHelper.styleTable(employeesTable);
         JScrollPane scroll = new JScrollPane(employeesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField empSearch = TableFilter.searchField("Nome, email, departamento ou cargo…");
+        JComboBox<String> empEstado = TableFilter.combo("Todos os estados",
+                "ACTIVE", "SUSPENDED", "TERMINATED");
+        TableFilter.install(employeesTable, empSearch,
+                new TableFilter.ColumnFilter(empEstado, 7));
+        JPanel empBar = TableFilter.bar(empSearch, TableFilter.label("Estado:"), empEstado);
+        empBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(empBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -507,6 +517,18 @@ public class HRPanel extends JPanel {
         UIHelper.styleTable(payslipsTable);
         JScrollPane scroll = new JScrollPane(payslipsTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField psSearch = TableFilter.searchField("Nº recibo, colaborador ou período…");
+        JComboBox<String> psEstado = TableFilter.combo("Todos os estados", "DRAFT", "PAID", "CANCELLED");
+        JComboBox<String> psPeriodo = TableFilter.periodCombo();
+        TableFilter.install(payslipsTable, psSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(psEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(psPeriodo, 7)));
+        JPanel psBar = TableFilter.bar(psSearch,
+                TableFilter.label("Estado:"), psEstado,
+                TableFilter.label("Data pag.:", "fas-calendar-alt"), psPeriodo);
+        psBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(psBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -639,7 +661,7 @@ public class HRPanel extends JPanel {
     }
 
     private PayslipDTO selectedPayslip() {
-        int row = payslipsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(payslipsTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um recibo na tabela primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -687,6 +709,19 @@ public class HRPanel extends JPanel {
         UIHelper.styleTable(absencesTable);
         JScrollPane scroll = new JScrollPane(absencesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField absSearch = TableFilter.searchField("Colaborador ou motivo…");
+        JComboBox<String> absTipo = TableFilter.combo("Todos os tipos",
+                "JUSTIFIED", "UNJUSTIFIED", "SICK", "MATERNITY", "OTHER");
+        JComboBox<String> absPeriodo = TableFilter.periodCombo();
+        TableFilter.install(absencesTable, absSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(absTipo, 2)),
+                java.util.List.of(new TableFilter.PeriodFilter(absPeriodo, 3)));
+        JPanel absBar = TableFilter.bar(absSearch,
+                TableFilter.label("Tipo:"), absTipo,
+                TableFilter.label("Início:", "fas-calendar-alt"), absPeriodo);
+        absBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(absBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -759,7 +794,7 @@ public class HRPanel extends JPanel {
     }
 
     private void deleteSelectedAbsence() {
-        int row = absencesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(absencesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma falta na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -820,6 +855,19 @@ public class HRPanel extends JPanel {
         UIHelper.styleTable(vacationsTable);
         JScrollPane scroll = new JScrollPane(vacationsTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField vacSearch = TableFilter.searchField("Colaborador ou decisor…");
+        JComboBox<String> vacEstado = TableFilter.combo("Todos os estados",
+                "PENDING", "APPROVED", "REJECTED", "CANCELLED");
+        JComboBox<String> vacPeriodo = TableFilter.periodCombo();
+        TableFilter.install(vacationsTable, vacSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(vacEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(vacPeriodo, 2)));
+        JPanel vacBar = TableFilter.bar(vacSearch,
+                TableFilter.label("Estado:"), vacEstado,
+                TableFilter.label("Início:", "fas-calendar-alt"), vacPeriodo);
+        vacBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(vacBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -884,7 +932,7 @@ public class HRPanel extends JPanel {
     }
 
     private void decideVacation(boolean approve) {
-        int row = vacationsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(vacationsTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um pedido na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -939,6 +987,15 @@ public class HRPanel extends JPanel {
         UIHelper.styleTable(expensesTable);
         JScrollPane scroll = new JScrollPane(expensesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField expSearch = TableFilter.searchField("Colaborador, categoria ou motivo…");
+        JComboBox<String> expEstado = TableFilter.combo("Todos os estados",
+                "PENDING_APPROVAL", "APPROVED", "REJECTED");
+        TableFilter.install(expensesTable, expSearch,
+                new TableFilter.ColumnFilter(expEstado, 3));
+        JPanel expBar = TableFilter.bar(expSearch, TableFilter.label("Estado:"), expEstado);
+        expBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(expBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

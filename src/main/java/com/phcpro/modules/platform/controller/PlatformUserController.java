@@ -3,6 +3,7 @@ package com.phcpro.modules.platform.controller;
 import com.phcpro.modules.platform.dto.CreatePlatformUserRequest;
 import com.phcpro.modules.platform.dto.GrantAccessRequest;
 import com.phcpro.modules.platform.dto.PlatformUserDTO;
+import com.phcpro.modules.platform.dto.UpdatePlatformUserRequest;
 import com.phcpro.modules.platform.service.PlatformUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +38,11 @@ public class PlatformUserController {
     @PostMapping
     public PlatformUserDTO create(@Valid @RequestBody CreatePlatformUserRequest request) {
         return platformUserService.createUser(request);
+    }
+
+    @PutMapping("/{username}")
+    public PlatformUserDTO update(@PathVariable String username, @Valid @RequestBody UpdatePlatformUserRequest request) {
+        return platformUserService.updateUser(username, request.name());
     }
 
     @PatchMapping("/{username}/active")

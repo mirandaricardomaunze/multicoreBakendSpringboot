@@ -160,33 +160,43 @@ public class MainFrame extends JFrame {
         UIHelper.registerMainWindow(this); // contém modais dentro da janela principal (mesmo ao arrastar)
         getContentPane().setBackground(UIHelper.BG_DARK);
 
-        dashboardPanel  = new DashboardPanel(comercialService, financeService, approvalService, crmService, purchaseService, inventoryService);
-        comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionService, movimentosService);
-        financeiroPanel = new FinanceiroPanel(financeService, comercialService);
-        hrPanel         = new HRPanel(hrService, payslipPrintService);
-        crmPanel        = new CRMPanel(crmService);
-        clientesPanel   = new ClientesPanel(comercialApiClient);
-        fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
-        approvalsPanel  = new ApprovalsPanel(approvalService);
-        posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
-        stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
-        comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
-        configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService, supportService, subscriptionService);
-        plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService, supportService);
+        if (superAdmin) {
+            // O superadmin só usa a consola da plataforma. Não construir os painéis de empresa evita
+            // carregamentos e avisos ("nenhum armazém disponível", etc.) de módulos que exigem uma
+            // empresa activa — que o superadmin não tem.
+            dashboardPanel = null; comercialPanel = null; financeiroPanel = null; hrPanel = null;
+            crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null;
+            posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
+            plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService, supportService);
+            contentPanel.add(plataformaPanel, "plataforma");
+        } else {
+            dashboardPanel  = new DashboardPanel(comercialService, financeService, approvalService, crmService, purchaseService, inventoryService);
+            comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionService, movimentosService);
+            financeiroPanel = new FinanceiroPanel(financeService, comercialService);
+            hrPanel         = new HRPanel(hrService, payslipPrintService);
+            crmPanel        = new CRMPanel(crmService);
+            clientesPanel   = new ClientesPanel(comercialApiClient);
+            fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
+            approvalsPanel  = new ApprovalsPanel(approvalService);
+            posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
+            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
+            comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
+            configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, documentConfigService, supportService, subscriptionService);
+            plataformaPanel = null;
 
-        contentPanel.add(dashboardPanel,  "dashboard");
-        contentPanel.add(posPanel,        "pos");
-        contentPanel.add(comercialPanel,  "comercial");
-        contentPanel.add(comprasPanel,    "compras");
-        contentPanel.add(stockPanel,      "stock");
-        contentPanel.add(financeiroPanel, "financeiro");
-        contentPanel.add(hrPanel,         "hr");
-        contentPanel.add(crmPanel,        "crm");
-        contentPanel.add(clientesPanel,   "clientes");
-        contentPanel.add(fiscalPanel,     "fiscal");
-        contentPanel.add(approvalsPanel,  "approvals");
-        contentPanel.add(configPanel,     "config");
-        contentPanel.add(plataformaPanel, "plataforma");
+            contentPanel.add(dashboardPanel,  "dashboard");
+            contentPanel.add(posPanel,        "pos");
+            contentPanel.add(comercialPanel,  "comercial");
+            contentPanel.add(comprasPanel,    "compras");
+            contentPanel.add(stockPanel,      "stock");
+            contentPanel.add(financeiroPanel, "financeiro");
+            contentPanel.add(hrPanel,         "hr");
+            contentPanel.add(crmPanel,        "crm");
+            contentPanel.add(clientesPanel,   "clientes");
+            contentPanel.add(fiscalPanel,     "fiscal");
+            contentPanel.add(approvalsPanel,  "approvals");
+            contentPanel.add(configPanel,     "config");
+        }
 
         setLayout(new BorderLayout());
 
@@ -206,7 +216,7 @@ public class MainFrame extends JFrame {
     public void applyAuthenticatedUser(String displayName, String role) {
         sessionDisplayName = displayName;
         String activeRole = CurrentUserContext.getRole();
-        dashboardPanel.updateWelcomeMessage(displayName, activeRole);
+        if (dashboardPanel != null) dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sessionUserLabel != null) sessionUserLabel.setText(displayName);
         if (sessionRoleLabel != null) sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
     }
@@ -472,7 +482,7 @@ public class MainFrame extends JFrame {
         if (sessionRoleLabel != null) {
             sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
         }
-        if (sessionDisplayName != null) {
+        if (sessionDisplayName != null && dashboardPanel != null) {
             dashboardPanel.updateWelcomeMessage(sessionDisplayName, activeRole);
         }
     }

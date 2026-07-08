@@ -4,6 +4,8 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.SearchField;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductDTO;
 import com.phcpro.modules.comercial.service.ComercialService;
@@ -116,6 +118,7 @@ public class StockPanel extends JPanel {
         UIHelper.styleTabbedPane(tabs);
 
         tabs.addTab("Níveis de Stock",               UIHelper.icon("fas-boxes", 16, UIHelper.TEXT_LIGHT),         buildLevelsTab());
+        tabs.addTab("Alertas",                       UIHelper.icon("fas-exclamation-triangle", 16, UIHelper.TEXT_LIGHT), buildAlertsTab());
         tabs.addTab("Lotes & Validades",             UIHelper.icon("fas-calendar-times", 16, UIHelper.TEXT_LIGHT),buildBatchesTab());
         tabs.addTab("Movimentos & Rastreabilidade",  UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT),buildMovementsTab());
         tabs.addTab("Transferências entre Armazéns", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),         buildTransfersTab());
@@ -134,8 +137,15 @@ public class StockPanel extends JPanel {
 
     private JTextField stockSearchField;
     private JComboBox<String> stockStatusCombo;
+    private JComboBox<String> stockCategoryCombo;
 
     // Batches tab
+    private DefaultTableModel alertsOutModel;
+    private JTable alertsOutTable;
+    private DefaultTableModel alertsExpModel;
+    private JTable alertsExpTable;
+    private JLabel alertsSummary;
+
     private DefaultTableModel batchesModel;
     private JTable batchesTable;
     private JTextField batchSearchField;
@@ -146,6 +156,131 @@ public class StockPanel extends JPanel {
 
     /** Horizonte (dias) considerado "a vencer" no resumo de validades. */
     private static final int EXPIRY_SOON_DAYS = 30;
+
+    /** Aba de alertas: produtos esgotados e lotes expirados / a expirar. Cada lista na sua sub-aba. */
+    private JPanel buildAlertsTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createSubheading("Alertas de Stock"), BorderLayout.WEST);
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadAlerts());
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        header.add(actions, BorderLayout.EAST);
+
+        alertsSummary = new JLabel(" ");
+        alertsSummary.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        alertsSummary.setForeground(UIHelper.TEXT_MUTED);
+        alertsSummary.setBorder(new EmptyBorder(2, 2, 0, 0));
+
+        JPanel topStack = new JPanel(new BorderLayout(0, 8));
+        topStack.setOpaque(false);
+        topStack.add(header, BorderLayout.NORTH);
+        topStack.add(alertsSummary, BorderLayout.SOUTH);
+        tab.add(topStack, BorderLayout.NORTH);
+
+        JTabbedPane sub = new JTabbedPane();
+        UIHelper.styleTabbedPane(sub);
+
+        // Sub-aba: produtos esgotados (com pesquisa)
+        String[] outCols = {"Artigo (SKU)", "Nome do Artigo", "Stock"};
+        alertsOutModel = new DefaultTableModel(outCols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        alertsOutTable = new JTable(alertsOutModel);
+        UIHelper.styleTable(alertsOutTable);
+        ModernPanel outCard = new ModernPanel(16);
+        outCard.setLayout(new BorderLayout());
+        outCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        JScrollPane outScroll = new JScrollPane(alertsOutTable);
+        UIHelper.styleScrollPane(outScroll);
+        outCard.add(outScroll, BorderLayout.CENTER);
+        JTextField outSearch = TableFilter.searchField("SKU ou nome…");
+        TableFilter.install(alertsOutTable, outSearch);
+        JPanel outWrap = new JPanel(new BorderLayout(0, 8));
+        outWrap.setOpaque(false);
+        outWrap.add(TableFilter.bar(outSearch), BorderLayout.NORTH);
+        outWrap.add(outCard, BorderLayout.CENTER);
+        sub.addTab("Esgotados", UIHelper.icon("fas-ban", 15, UIHelper.TEXT_LIGHT), outWrap);
+
+        // Sub-aba: validades (expirados / a expirar) — com pesquisa + filtro de estado
+        String[] expCols = {"SKU", "Nome do Artigo", "Nº Lote", "Armazém", "Validade", "Dias", "Qtd", "Estado"};
+        alertsExpModel = new DefaultTableModel(expCols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        alertsExpTable = new JTable(alertsExpModel);
+        UIHelper.styleTable(alertsExpTable);
+        // Vermelho para expirados, amarelo para a expirar (coluna Dias < 0 vs ≥ 0). Converte o índice
+        // da vista para o modelo, porque o filtro instala um TableRowSorter.
+        javax.swing.table.TableCellRenderer expBase = alertsExpTable.getDefaultRenderer(Object.class);
+        alertsExpTable.setDefaultRenderer(Object.class, (t, v, sel, foc, row, col) -> {
+            java.awt.Component c = expBase.getTableCellRendererComponent(t, v, sel, foc, row, col);
+            int modelRow = row >= 0 ? alertsExpTable.convertRowIndexToModel(row) : -1;
+            if (!sel && modelRow >= 0 && modelRow < alertsExpModel.getRowCount()) {
+                Object d = alertsExpModel.getValueAt(modelRow, 5);
+                long days = d instanceof Number n ? n.longValue() : 0;
+                c.setForeground(days < 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
+            }
+            return c;
+        });
+        ModernPanel expCard = new ModernPanel(16);
+        expCard.setLayout(new BorderLayout());
+        expCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        JScrollPane expScroll = new JScrollPane(alertsExpTable);
+        UIHelper.styleScrollPane(expScroll);
+        expCard.add(expScroll, BorderLayout.CENTER);
+        JTextField expSearch = TableFilter.searchField("SKU, nome ou lote…");
+        JComboBox<String> expEstado = TableFilter.combo("Todos", "Expirado", "A expirar");
+        TableFilter.install(alertsExpTable, expSearch, new TableFilter.ColumnFilter(expEstado, 7));
+        JPanel expWrap = new JPanel(new BorderLayout(0, 8));
+        expWrap.setOpaque(false);
+        expWrap.add(TableFilter.bar(expSearch, TableFilter.label("Estado:"), expEstado), BorderLayout.NORTH);
+        expWrap.add(expCard, BorderLayout.CENTER);
+        sub.addTab("Validade (expirados / a expirar)", UIHelper.icon("fas-calendar-times", 15, UIHelper.TEXT_LIGHT), expWrap);
+
+        tab.add(sub, BorderLayout.CENTER);
+        return tab;
+    }
+
+    /** Carrega os alertas: esgotados (saldo ≤ 0) e lotes expirados/a expirar em ≤ 30 dias (com stock). */
+    private void loadAlerts() {
+        if (alertsOutModel == null) return;
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+
+        var esgotados = inventoryService.findOutOfStockProducts(companyId);
+        alertsOutModel.setRowCount(0);
+        for (var a : esgotados) {
+            alertsOutModel.addRow(new Object[]{
+                    a.sku(), a.name(), a.currentStock() == null ? "0" : a.currentStock().toPlainString()});
+        }
+
+        var expiring = inventoryService.findExpiringBatches(companyId, 30);
+        alertsExpModel.setRowCount(0);
+        LocalDate today = LocalDate.now();
+        long expired = 0, soon = 0;
+        for (var b : expiring) {
+            long days = b.expirationDate() == null ? 0
+                    : java.time.temporal.ChronoUnit.DAYS.between(today, b.expirationDate());
+            boolean isExpired = days < 0;
+            if (isExpired) expired++; else soon++;
+            alertsExpModel.addRow(new Object[]{
+                    b.sku(), b.productName(), b.batchNumber(), b.warehouseName(),
+                    b.expirationDate() == null ? "—" : b.expirationDate().toString(),
+                    days, b.quantity() == null ? "" : b.quantity().toPlainString(),
+                    isExpired ? "Expirado" : "A expirar"});
+        }
+
+        if (alertsSummary != null) {
+            alertsSummary.setText(esgotados.size() + " produto(s) esgotado(s)  ·  "
+                    + expired + " lote(s) expirado(s)  ·  " + soon + " a expirar (≤30 dias)");
+        }
+    }
 
     private JPanel buildBatchesTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
@@ -190,9 +325,7 @@ public class StockPanel extends JPanel {
         batchExpirationCombo.setPreferredSize(new Dimension(200, 35));
         batchExpirationCombo.addActionListener(e -> filterBatches());
 
-        batchSearchField = new JTextField();
-        UIHelper.styleTextField(batchSearchField);
-        batchSearchField.putClientProperty("JTextField.placeholderText", "🔍 Pesquisar por SKU, nome ou lote…");
+        batchSearchField = new SearchField("Pesquisar por SKU, nome ou lote…");
         batchSearchField.getDocument().addDocumentListener(simpleDocumentListener(this::filterBatches));
 
         g.gridy = 0;
@@ -398,19 +531,26 @@ public class StockPanel extends JPanel {
         stockStatusCombo.addActionListener(e -> filterStocks());
         g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Estado"), g);
 
+        // Categoria
+        stockCategoryCombo = new JComboBox<>();
+        stockCategoryCombo.addItem("Todas as categorias");
+        UIHelper.styleComboBox(stockCategoryCombo);
+        stockCategoryCombo.setPreferredSize(new Dimension(200, 35));
+        stockCategoryCombo.addActionListener(e -> filterStocks());
+        g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Categoria"), g);
+
         // Search
-        stockSearchField = new JTextField();
-        UIHelper.styleTextField(stockSearchField);
-        stockSearchField.putClientProperty("JTextField.placeholderText", "🔍 Pesquisar por SKU ou nome…");
+        stockSearchField = new SearchField("Pesquisar por SKU ou nome…");
         stockSearchField.getDocument().addDocumentListener(simpleDocumentListener(this::filterStocks));
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
         filters.add(filterLabel("Pesquisa"), g);
 
         // Row 1: controls aligned below their labels
         g.gridy = 1; g.insets = new Insets(4, 0, 0, 12);
         g.gridx = 0; g.weightx = 0; filters.add(warehouseFilterCombo, g);
         g.gridx = 1; g.weightx = 0; filters.add(stockStatusCombo, g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        g.gridx = 2; g.weightx = 0; filters.add(stockCategoryCombo, g);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
         filters.add(stockSearchField, g);
 
         JPanel topStack = new JPanel(new BorderLayout(0, 10));
@@ -491,6 +631,17 @@ public class StockPanel extends JPanel {
         UIHelper.styleTable(movementsTable);
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
+        JTextField mvSearch = TableFilter.searchField("Artigo, lote, série ou descrição…");
+        JComboBox<String> mvTipo = TableFilter.combo("Todos os tipos",
+                "PURCHASE", "ENTRY", "SALE", "TRANSFER", "ADJUSTMENT", "RETURN");
+        JComboBox<String> mvPeriodo = TableFilter.periodCombo();
+        TableFilter.install(movementsTable, mvSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(mvTipo, 4)),
+                java.util.List.of(new TableFilter.PeriodFilter(mvPeriodo, 0)));
+        JPanel mvBar = TableFilter.bar(mvSearch, TableFilter.label("Tipo:"), mvTipo,
+                TableFilter.label("Data:", "fas-calendar-alt"), mvPeriodo);
+        mvBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(mvBar, BorderLayout.NORTH);
         card.add(movScroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -539,6 +690,17 @@ public class StockPanel extends JPanel {
         UIHelper.styleTable(transferTable);
         JScrollPane transferScroll = new JScrollPane(transferTable);
         UIHelper.styleScrollPane(transferScroll);
+        JTextField trSearch = TableFilter.searchField("Nº guia, origem, destino ou responsável…");
+        JComboBox<String> trEstado = TableFilter.combo("Todos os estados",
+                "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        JComboBox<String> trPeriodo = TableFilter.periodCombo();
+        TableFilter.install(transferTable, trSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(trEstado, 5)),
+                java.util.List.of(new TableFilter.PeriodFilter(trPeriodo, 1)));
+        JPanel trBar = TableFilter.bar(trSearch, TableFilter.label("Estado:"), trEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), trPeriodo);
+        trBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(trBar, BorderLayout.NORTH);
         card.add(transferScroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -551,6 +713,7 @@ public class StockPanel extends JPanel {
         loadMovements();
         loadTransfers();
         loadBatches();
+        loadAlerts();
         loadCategories();
         loadWarehousesManagement();
     }
@@ -584,9 +747,7 @@ public class StockPanel extends JPanel {
         header.add(actions, BorderLayout.EAST);
 
         // Pesquisa por código/nome
-        categorySearchField = new JTextField();
-        UIHelper.styleTextField(categorySearchField);
-        categorySearchField.putClientProperty("JTextField.placeholderText", "Pesquisar categoria por código ou nome…");
+        categorySearchField = new SearchField("Pesquisar categoria por código ou nome…");
         UIHelper.onTextChange(categorySearchField, () -> filterCategories(categorySearchField.getText()));
         JPanel searchRow = new JPanel(new BorderLayout(8, 0));
         searchRow.setOpaque(false);
@@ -817,7 +978,25 @@ public class StockPanel extends JPanel {
     private void loadStocks() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         stocksList = inventoryService.getStocksByCompany(companyId);
+        syncCategoryCombo();
         filterStocks();
+    }
+
+    /** Popula o combo de categorias com as categorias distintas presentes no stock (preserva a escolha). */
+    private void syncCategoryCombo() {
+        if (stockCategoryCombo == null) return;
+        Object selected = stockCategoryCombo.getSelectedItem();
+        java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (Stock s : stocksList) {
+            if (s.getProduct() != null && s.getProduct().getCategory() != null
+                    && s.getProduct().getCategory().getName() != null) {
+                names.add(s.getProduct().getCategory().getName());
+            }
+        }
+        stockCategoryCombo.removeAllItems();
+        stockCategoryCombo.addItem("Todas as categorias");
+        for (String n : names) stockCategoryCombo.addItem(n);
+        if (selected != null) stockCategoryCombo.setSelectedItem(selected);
     }
 
     private void filterStocks() {
@@ -834,8 +1013,16 @@ public class StockPanel extends JPanel {
         int statusIdx = stockStatusCombo == null ? 0 : stockStatusCombo.getSelectedIndex();
         java.math.BigDecimal lowThreshold = java.math.BigDecimal.valueOf(5);
 
+        String wantCategory = stockCategoryCombo != null && stockCategoryCombo.getSelectedIndex() > 0
+                ? String.valueOf(stockCategoryCombo.getSelectedItem()) : null;
+
         for (Stock s : stocksList) {
             if (filterWarehouseId != null && !s.getWarehouse().getId().equals(filterWarehouseId)) continue;
+
+            if (wantCategory != null) {
+                String cat = s.getProduct().getCategory() == null ? "" : s.getProduct().getCategory().getName();
+                if (!wantCategory.equalsIgnoreCase(cat)) continue;
+            }
 
             if (!query.isEmpty()) {
                 String sku = s.getProduct().getSku() == null ? "" : s.getProduct().getSku().toLowerCase();
@@ -953,6 +1140,19 @@ public class StockPanel extends JPanel {
         });
         JScrollPane scroll = new JScrollPane(warehousesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField whSearch = TableFilter.searchField("Nome, nº, localização ou responsável…");
+        JComboBox<String> whTipo = TableFilter.combo("Todos os tipos",
+                "Loja", "Depósito", "Armazém Central", "Trânsito");
+        JComboBox<String> whEstado = TableFilter.combo("Todos os estados", "ACTIVO", "INATIVO");
+        TableFilter.install(warehousesTable, whSearch,
+                new TableFilter.ColumnFilter(whTipo, 2),
+                new TableFilter.ColumnFilter(whEstado, 8));
+        JPanel whBar = TableFilter.bar(whSearch,
+                TableFilter.label("Tipo:"), whTipo,
+                TableFilter.label("Estado:"), whEstado);
+        whBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(whBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -1914,7 +2114,7 @@ public class StockPanel extends JPanel {
     }
 
     private void approveSelectedTransfer() {
-        int row = transferTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(transferTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma guia na tabela primeiro.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -1939,7 +2139,7 @@ public class StockPanel extends JPanel {
     }
 
     private void rejectSelectedTransfer() {
-        int row = transferTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(transferTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma guia na tabela primeiro.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -1961,7 +2161,7 @@ public class StockPanel extends JPanel {
     }
 
     private void printSelectedTransfer() {
-        int row = transferTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(transferTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma transferência na tabela primeiro.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);

@@ -4,6 +4,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductDTO;
 import com.phcpro.modules.comercial.service.ComercialService;
@@ -341,6 +342,16 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTable(purchasesTable);
         JScrollPane histScroll = new JScrollPane(purchasesTable);
         UIHelper.styleScrollPane(histScroll);
+
+        JTextField histSearch = TableFilter.searchField("Nº doc, fornecedor ou armazém…");
+        JComboBox<String> histPeriodo = TableFilter.periodCombo();
+        TableFilter.install(purchasesTable, histSearch,
+                java.util.List.of(),
+                java.util.List.of(new TableFilter.PeriodFilter(histPeriodo, 5)));
+        JPanel histBar = TableFilter.bar(histSearch,
+                TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo);
+        histBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        historyCard.add(histBar, BorderLayout.NORTH);
         historyCard.add(histScroll, BorderLayout.CENTER);
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -393,10 +404,6 @@ public class ComprasPanel extends JPanel {
 
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         headerActions.setOpaque(false);
-        JLabel searchLbl = new JLabel("Pesquisar:"); searchLbl.setForeground(UIHelper.TEXT_MUTED);
-        supplierSearchField = new JTextField(14);
-        UIHelper.styleTextField(supplierSearchField);
-        supplierSearchField.setToolTipText("Filtrar por nome ou NUIT");
         ModernButton editSupBtn = UIHelper.createSecondaryButton("Editar");
         editSupBtn.setIcon(UIHelper.icon("fas-edit", 14));
         ModernButton toggleSupBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
@@ -405,8 +412,6 @@ public class ComprasPanel extends JPanel {
         refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         ModernButton newSupBtn = UIHelper.createSuccessButton("Novo Fornecedor");
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        headerActions.add(searchLbl);
-        headerActions.add(supplierSearchField);
         headerActions.add(editSupBtn);
         headerActions.add(toggleSupBtn);
         headerActions.add(refreshSupsBtn);
@@ -428,6 +433,15 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTable(suppliersTable);
         JScrollPane scroll = new JScrollPane(suppliersTable);
         UIHelper.styleScrollPane(scroll);
+
+        supplierSearchField = TableFilter.searchField("Nome ou NUIT…");
+        JComboBox<String> supEstado = TableFilter.combo("Todos os estados", "Activo", "Inactivo");
+        TableFilter.install(suppliersTable, supplierSearchField,
+                new TableFilter.ColumnFilter(supEstado, 6));
+        JPanel supBar = TableFilter.bar(supplierSearchField,
+                TableFilter.label("Estado:"), supEstado);
+        supBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(supBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -439,13 +453,12 @@ public class ComprasPanel extends JPanel {
             if (sel != null) openSupplierDialog(sel);
         });
         toggleSupBtn.addActionListener(e -> toggleSelectedSupplier());
-        UIHelper.onTextChange(supplierSearchField, this::loadSuppliers);
 
         return panel;
     }
 
     private Supplier selectedSupplier() {
-        int row = suppliersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(suppliersTable);
         if (row < 0 || row >= suppliersList.size()) {
             JOptionPane.showMessageDialog(this, "Selecione um fornecedor na tabela.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -559,6 +572,15 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTable(reorderTable);
         JScrollPane scroll = new JScrollPane(reorderTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField reorderSearch = TableFilter.searchField("Produto ou SKU…");
+        JComboBox<String> reorderEstado = TableFilter.combo("Todos os estados", "ESGOTADO", "BAIXO");
+        TableFilter.install(reorderTable, reorderSearch,
+                new TableFilter.ColumnFilter(reorderEstado, 7));
+        JPanel reorderBar = TableFilter.bar(reorderSearch,
+                TableFilter.label("Estado:"), reorderEstado);
+        reorderBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(reorderBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         reorderFooter = new JLabel(" ");
         reorderFooter.setForeground(UIHelper.TEXT_MUTED);
@@ -619,6 +641,16 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTable(payablesTable);
         JScrollPane scroll = new JScrollPane(payablesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField paySearch = TableFilter.searchField("Nº compra ou fornecedor…");
+        JComboBox<String> payPeriodo = TableFilter.periodCombo();
+        TableFilter.install(payablesTable, paySearch,
+                java.util.List.of(),
+                java.util.List.of(new TableFilter.PeriodFilter(payPeriodo, 5)));
+        JPanel payBar = TableFilter.bar(paySearch,
+                TableFilter.label("Data:", "fas-calendar-alt"), payPeriodo);
+        payBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(payBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         payablesFooter = new JLabel(" ");
         payablesFooter.setForeground(UIHelper.TEXT_MUTED);
@@ -648,7 +680,7 @@ public class ComprasPanel extends JPanel {
     }
 
     private void openSupplierPaymentDialog() {
-        int row = payablesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(payablesTable);
         if (row < 0 || row >= payablesList.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma conta a pagar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -783,8 +815,6 @@ public class ComprasPanel extends JPanel {
         JPanel listHeader = new JPanel(new BorderLayout(8, 0)); listHeader.setOpaque(false);
         listHeader.add(UIHelper.createHeading("Encomendas Registadas"), BorderLayout.WEST);
         JPanel listActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); listActions.setOpaque(false);
-        JLabel sLbl = new JLabel("Pesquisar:"); sLbl.setForeground(UIHelper.TEXT_MUTED);
-        poSearchField = new JTextField(12); UIHelper.styleTextField(poSearchField);
         ModernButton receiveBtn = UIHelper.createSuccessButton("Receber");
         receiveBtn.setIcon(UIHelper.icon("fas-dolly", 14));
         receiveBtn.addActionListener(e -> receiveSelectedPO());
@@ -800,11 +830,9 @@ public class ComprasPanel extends JPanel {
         ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
         newOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         newOrderBtn.addActionListener(e -> openPurchaseOrderFormDialog());
-        listActions.add(sLbl); listActions.add(poSearchField);
         listActions.add(receiveBtn); listActions.add(receivePartialBtn); listActions.add(cancelBtn); listActions.add(refreshBtn);
         listActions.add(newOrderBtn);
         listHeader.add(listActions, BorderLayout.EAST);
-        UIHelper.onTextChange(poSearchField, this::loadPurchaseOrders);
 
         String[] cols = {"Nº", "Fornecedor", "Estado", "Total", "Data", "Entrega prev."};
         poListModel = new DefaultTableModel(cols, 0) {
@@ -814,6 +842,19 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTable(poListTable);
         JScrollPane listScroll = new JScrollPane(poListTable);
         UIHelper.styleScrollPane(listScroll);
+
+        poSearchField = TableFilter.searchField("Nº ou fornecedor…");
+        JComboBox<String> poEstado = TableFilter.combo("Todos os estados",
+                "ORDERED", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED");
+        JComboBox<String> poPeriodo = TableFilter.periodCombo();
+        TableFilter.install(poListTable, poSearchField,
+                java.util.List.of(new TableFilter.ColumnFilter(poEstado, 2)),
+                java.util.List.of(new TableFilter.PeriodFilter(poPeriodo, 4)));
+        JPanel poBar = TableFilter.bar(poSearchField,
+                TableFilter.label("Estado:"), poEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), poPeriodo);
+        poBar.setBorder(new EmptyBorder(10, 0, 0, 0));
+        listHeader.add(poBar, BorderLayout.SOUTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -919,9 +960,8 @@ public class ComprasPanel extends JPanel {
     private void loadPurchaseOrders() {
         if (poListModel == null) return;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        String q = poSearchField != null ? poSearchField.getText().trim() : "";
-        poList = q.isEmpty() ? purchaseOrderService.findOrdersByCompany(companyId)
-                : purchaseOrderService.searchOrders(companyId, q);
+        // Carrega todas; a pesquisa/estado/data é aplicada pelo TableFilter (cliente).
+        poList = purchaseOrderService.findOrdersByCompany(companyId);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         poListModel.setRowCount(0);
         for (PurchaseOrderDTO o : poList) {
@@ -934,7 +974,7 @@ public class ComprasPanel extends JPanel {
     }
 
     private PurchaseOrderDTO selectedPO() {
-        int row = poListTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(poListTable);
         if (row < 0 || row >= poList.size()) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -1060,12 +1100,8 @@ public class ComprasPanel extends JPanel {
             for (Supplier s : supplierComboList) poSupplierCombo.addItem(s.getName() + " (" + s.getTaxId() + ")");
         }
 
-        // Tabela: aplica pesquisa por nome/NUIT.
-        String q = supplierSearchField != null ? supplierSearchField.getText().trim().toLowerCase() : "";
-        suppliersList = q.isEmpty() ? all : all.stream()
-                .filter(s -> (s.getName() != null && s.getName().toLowerCase().contains(q))
-                        || (s.getTaxId() != null && s.getTaxId().toLowerCase().contains(q)))
-                .toList();
+        // Tabela: carrega todos; a pesquisa/estado é aplicada pelo TableFilter (cliente).
+        suppliersList = all;
         suppliersModel.setRowCount(0);
         for (Supplier s : suppliersList) {
             suppliersModel.addRow(new Object[]{
