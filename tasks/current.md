@@ -2,8 +2,28 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-06-30
+**Última actualização:** 2026-07-09
 **Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-09 (filtros profissionais em todas as tabelas + validação do backup)
+
+- **Filtros de tabela transversais:** o componente `com.phcpro.gui.components.TableFilter` (pesquisa
+  com lupa + funil + dropdowns tipo/estado + período por data, colunas ordenáveis) foi estendido a
+  **todas** as tabelas de listagem que ainda não tinham: Comercial (NC/ND/Recibos/Encomendas/Contas
+  Correntes), Compras (Faturas/Fornecedores/Reposição/Contas a Pagar/Encomendas), Clientes, Stock →
+  Gestão de Armazéns, RH (5 tabelas), Fiscal (Taxas/Retenções), Config (Auditoria/Utilizadores/
+  Suporte), POS (Histórico de Vendas), Promoções. Acções que indexam a selecção passam por
+  `TableFilter.selectedModelRow(...)` (o sorter faz a vista divergir do modelo). Fornecedores/
+  Encomendas/Clientes migraram de pesquisa server-side/própria para o filtro cliente.
+- Spec/harness: [docs/TABELAS_FILTROS_SPEC.md](../docs/TABELAS_FILTROS_SPEC.md) +
+  [docs/TABELAS_FILTROS_HARNESS.md](../docs/TABELAS_FILTROS_HARNESS.md) (FT-01..07 auto, FT-50..68 manuais).
+- **Verificação:** `mvn -o compile` limpo; `TableFilterTest` (7) verde; render confirmado ao vivo
+  (Vendas → NC/Recibos, Compras → Faturas). Commit `a3ca84f`.
+- **Backup/restore (Fase 6) — avançado:** validado ponta-a-ponta **exceto o apply final**, de forma
+  não-destrutiva sobre a BD viva (PostgreSQL 18): `pg_dump -Fc` OK (58/58 tabelas, 520 objetos),
+  `pg_restore --list` OK ⇒ arquivo completo e restaurável. **Falta** o passo BR-50..54 (restaurar em
+  BD limpa + comparar contagens), que exige role com `createdb`/superuser — a role `multicore` não
+  tem. É um passo manual de ~3 comandos (documentado no handover).
 
 ### Progresso — 2026-07-05 (Assinante: vista própria + alertas de expiração)
 
