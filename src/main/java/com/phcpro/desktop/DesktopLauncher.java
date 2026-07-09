@@ -32,36 +32,64 @@ public class DesktopLauncher {
 
             DesktopApiConfig apiConfig = DesktopApiConfig.from(context.getEnvironment());
             authApiClient = new AuthApiClient(apiConfig);
-            LoginDialog login = new LoginDialog(authApiClient);
-            login.setVisible(true);
-
-            session = login.getAuthenticatedSession();
-            if (session == null) {
-                context.close();
-                System.exit(0);
-                return;
-            }
-
-            if (session.superAdmin()) {
-                // Superadmin não tem empresa: corre com papel de plataforma e sem tenant activo.
-                CurrentUserContext.setCurrentUser(session.username(), PermissionGuard.SUPERADMIN_ROLE);
-            } else {
-                if (session.companies().isEmpty()) {
-                    context.close();
-                    throw new IllegalStateException("O utilizador autenticado não possui acesso a nenhuma empresa.");
-                }
-                session.selectCompany(session.companies().get(0).id());
-                CurrentUserContext.setCurrentUser(session.username(), session.activeRole());
-                CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
-            }
-            context.getBean(DesktopSessionStore.class).setSession(session);
 
             // Trocar de tema reconstrói a janela já com a paleta nova (cobre ícones/pintura custom).
             UIHelper.onThemeChanged = () -> EventQueue.invokeLater(this::rebuildMainFrame);
+            // Assinatura expirada com a app aberta → volta ao ecrã de login (re-login bloqueado).
+            UIHelper.onForcedLogout = () -> EventQueue.invokeLater(this::logoutToLogin);
 
-            // Arranque após login: janela maximizada (loja trabalha em ecrã cheio).
-            showMainFrame(null, java.awt.Frame.MAXIMIZED_BOTH);
+            loginAndShow();
         });
+    }
+
+    /** Mostra o login e, autenticado, prepara o contexto e abre a janela principal. */
+    private void loginAndShow() {
+        LoginDialog login = new LoginDialog(authApiClient);
+        login.setVisible(true);
+
+        session = login.getAuthenticatedSession();
+        if (session == null) {
+            context.close();
+            System.exit(0);
+            return;
+        }
+
+        if (session.superAdmin()) {
+            // Superadmin não tem empresa: corre com papel de plataforma e sem tenant activo.
+            CurrentUserContext.setCurrentUser(session.username(), PermissionGuard.SUPERADMIN_ROLE);
+        } else {
+            if (session.companies().isEmpty()) {
+                context.close();
+                throw new IllegalStateException("O utilizador autenticado não possui acesso a nenhuma empresa.");
+            }
+            session.selectCompany(session.companies().get(0).id());
+            CurrentUserContext.setCurrentUser(session.username(), session.activeRole());
+            CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
+        }
+        context.getBean(DesktopSessionStore.class).setSession(session);
+
+        // Arranque após login: janela maximizada (loja trabalha em ecrã cheio).
+        showMainFrame(null, java.awt.Frame.MAXIMIZED_BOTH);
+    }
+
+    /**
+     * Logout forçado (assinatura expirada/suspensa): invalida a sessão, fecha a janela sem encerrar a
+     * app e volta ao ecrã de login — que recusa o re-login enquanto a assinatura não for regularizada.
+     */
+    private void logoutToLogin() {
+        if (currentFrame != null) {
+            try {
+                authApiClient.logout(session);
+            } catch (RuntimeException ignore) {
+                // Melhor esforço: mesmo que a invalidação remota falhe, seguimos para o login.
+            }
+            context.getBean(DesktopSessionStore.class).clear();
+            CurrentUserContext.clear();
+            currentFrame.dispose(); // dispose programático → não dispara o fecho da app (windowClosing)
+            currentFrame = null;
+        }
+        session = null;
+        loginAndShow();
     }
 
     private void rebuildMainFrame() {

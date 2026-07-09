@@ -99,6 +99,10 @@ public class MainFrame extends JFrame {
 
     /** Antecedência (dias) a partir da qual se avisa o assinante que a assinatura vai expirar. */
     private static final long SUB_ALERT_DAYS = 7;
+    /** Intervalo da vigia de assinatura enquanto a app está aberta (6 horas). */
+    private static final int SUB_WATCH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+    private javax.swing.Timer subscriptionWatch;
+    private boolean subscriptionEnforced;
 
     public MainFrame(
             ComercialService comercialService,
@@ -210,6 +214,8 @@ public class MainFrame extends JFrame {
         } else {
             topBar.setActive("Painel Inicial");
         }
+
+        startSubscriptionWatch();
     }
 
     /** Called by the application bootstrap once the user is authenticated. */
@@ -424,15 +430,50 @@ public class MainFrame extends JFrame {
         com.phcpro.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
         int sev = subscriptionSeverity(s);
         if (sev == 1) return;
-        boolean expired = sev == -1;
-        String msg = expired
-                ? "A assinatura da sua empresa está " + s.statusLabel().toLowerCase()
-                    + ".\nO acesso pode ser suspenso. Contacte o suporte da plataforma para regularizar."
-                : "A assinatura da sua empresa expira "
-                    + (s.daysRemaining() == 0 ? "hoje" : "em " + s.daysRemaining() + " dia(s)")
-                    + " (" + s.validUntil() + ").\nContacte o suporte da plataforma para renovar a tempo.";
+        if (sev == -1) { enforceExpiredSubscription(s); return; }
+        // sev == 0: aviso ≤7 dias — só informa, não bloqueia.
+        String msg = "A assinatura da sua empresa expira "
+                + (s.daysRemaining() == 0 ? "hoje" : "em " + s.daysRemaining() + " dia(s)")
+                + " (" + s.validUntil() + ").\nContacte o suporte da plataforma para renovar a tempo.";
         javax.swing.JOptionPane.showMessageDialog(this, msg, "Assinatura",
-                expired ? javax.swing.JOptionPane.ERROR_MESSAGE : javax.swing.JOptionPane.WARNING_MESSAGE);
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+    }
+
+    /**
+     * Vigia periódica (6h) da assinatura com a app aberta. Ao detetar expiração/suspensão, avisa e
+     * força o logout para o ecrã de login — onde o re-login fica bloqueado ({@code allowsLogin}) até
+     * renovar. Superadmin não tem assinatura, por isso não é vigiado.
+     */
+    private void startSubscriptionWatch() {
+        if (superAdmin) return;
+        subscriptionWatch = new javax.swing.Timer(SUB_WATCH_INTERVAL_MS, e -> {
+            com.phcpro.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
+            if (subscriptionSeverity(s) == -1) enforceExpiredSubscription(s);
+        });
+        // O arranque já é coberto por checkSubscriptionOnStartup; a vigia trata da app já aberta.
+        subscriptionWatch.setInitialDelay(SUB_WATCH_INTERVAL_MS);
+        subscriptionWatch.start();
+    }
+
+    /** Aviso de expiração + logout forçado. Idempotente — dispara uma única vez. */
+    private void enforceExpiredSubscription(com.phcpro.modules.subscription.dto.MySubscriptionDTO s) {
+        if (subscriptionEnforced) return;
+        subscriptionEnforced = true;
+        if (subscriptionWatch != null) subscriptionWatch.stop();
+        String estado = (s != null && s.statusLabel() != null) ? s.statusLabel().toLowerCase() : "expirada";
+        javax.swing.JOptionPane.showMessageDialog(this,
+                "A assinatura da sua empresa está " + estado + ".\n"
+                        + "O acesso vai ser suspenso. Contacte o suporte da plataforma para regularizar.",
+                "Assinatura", javax.swing.JOptionPane.ERROR_MESSAGE);
+        if (UIHelper.onForcedLogout != null) {
+            UIHelper.onForcedLogout.run();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (subscriptionWatch != null) subscriptionWatch.stop();
+        super.dispose();
     }
 
     private void navigate(String cardName) {

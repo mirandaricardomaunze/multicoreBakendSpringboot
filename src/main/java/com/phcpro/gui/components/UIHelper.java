@@ -59,6 +59,14 @@ public class UIHelper {
     public static Runnable onThemeChanged;
 
     /**
+     * Rotina de <b>logout forçado → ecrã de login</b>. Registada pelo {@code DesktopLauncher}. É
+     * invocada quando a assinatura da empresa expira/é suspensa com a app aberta: mostra o aviso e
+     * volta ao login (onde o re-login fica bloqueado por {@code allowsLogin} até renovar). Sem hook
+     * (ex.: testes/backend), não há efeito.
+     */
+    public static Runnable onForcedLogout;
+
+    /**
      * Janela principal da aplicação. Registada pelo {@code MainFrame} no arranque para que os modais
      * possam ser limitados e centrados dentro dela — nunca a "sair" para fora da janela principal.
      */
