@@ -159,6 +159,31 @@ public class InventoryService {
         return warehouse;
     }
 
+    // ─── Bloqueio de stock (contagem cega / visível só para admin) ───────────
+
+    /** Está o stock trancado para esta empresa? (quantidades ocultas a não-administradores) */
+    @Transactional(readOnly = true)
+    public boolean isStockCountLocked(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return companyRepository.findById(companyId)
+                .map(com.phcpro.modules.company.model.Company::isStockCountLocked)
+                .orElse(false);
+    }
+
+    /** Tranca/destranca o stock (só ADMIN). Trancado ⇒ não-admins não vêem quantidades. */
+    @Transactional
+    public void setStockCountLocked(Long companyId, boolean locked) {
+        CurrentUserContext.requireCompany(companyId);
+        PermissionGuard.requireAdmin(locked ? "trancar o stock" : "destrancar o stock");
+        com.phcpro.modules.company.model.Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        company.setStockCountLocked(locked);
+        companyRepository.save(company);
+        auditLogService.logCurrent("STOCK_LOCK",
+                locked ? "Stock trancado (quantidades visíveis só para administradores)."
+                        : "Stock destrancado (quantidades visíveis para todos).");
+    }
+
     private Warehouse loadWarehouseForActiveCompany(Long id) {
         Warehouse warehouse = warehouseRepository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));

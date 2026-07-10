@@ -55,6 +55,11 @@ public class StockPanel extends JPanel {
     private JTable stockTable;
     private List<Stock> stocksList = new ArrayList<>();
 
+    // Bloqueio de stock (contagem cega): quantidades ocultas a não-administradores.
+    private static final String MASK = "•••";
+    private JLabel stockLockBanner;
+    private ModernButton stockLockBtn;
+
     // Gestão de armazéns
     private DefaultTableModel warehousesModel;
     private JTable warehousesTable;
@@ -104,14 +109,27 @@ public class StockPanel extends JPanel {
         editProductBtn.setIcon(UIHelper.icon("fas-edit", 14));
         ModernButton newWarehouseBtn = UIHelper.createPrimaryButton("Criar Armazém");
         newWarehouseBtn.setIcon(UIHelper.icon("fas-warehouse", 14));
+        stockLockBtn = UIHelper.createSecondaryButton("Trancar Stock");
+        stockLockBtn.setIcon(UIHelper.icon("fas-lock", 14));
+        stockLockBtn.setVisible(isAdmin()); // só ADMIN tranca/destranca
         JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         catalogueGroup.setOpaque(false);
+        catalogueGroup.add(stockLockBtn);
         catalogueGroup.add(newProductBtn);
         catalogueGroup.add(editProductBtn);
         catalogueGroup.add(newWarehouseBtn);
         topBar.add(catalogueGroup, BorderLayout.EAST);
 
-        add(topBar, BorderLayout.NORTH);
+        stockLockBanner = new JLabel(" ");
+        stockLockBanner.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        stockLockBanner.setBorder(new EmptyBorder(8, 2, 0, 0));
+        stockLockBanner.setVisible(false);
+
+        JPanel northWrap = new JPanel(new BorderLayout());
+        northWrap.setOpaque(false);
+        northWrap.add(topBar, BorderLayout.NORTH);
+        northWrap.add(stockLockBanner, BorderLayout.SOUTH);
+        add(northWrap, BorderLayout.NORTH);
 
         // TABS: Níveis | Movimentos | Transferências
         JTabbedPane tabs = new JTabbedPane();
@@ -131,6 +149,7 @@ public class StockPanel extends JPanel {
         newProductBtn.addActionListener(e -> createProductDialog());
         editProductBtn.addActionListener(e -> editProductDialog(selectedStockProductId()));
         newWarehouseBtn.addActionListener(e -> createWarehouseDialogV2());
+        stockLockBtn.addActionListener(e -> toggleStockLock());
 
         onPanelSelected();
     }
@@ -252,12 +271,14 @@ public class StockPanel extends JPanel {
     private void loadAlerts() {
         if (alertsOutModel == null) return;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
+        boolean hide = stockHidden();
 
         var esgotados = inventoryService.findOutOfStockProducts(companyId);
         alertsOutModel.setRowCount(0);
         for (var a : esgotados) {
             alertsOutModel.addRow(new Object[]{
-                    a.sku(), a.name(), a.currentStock() == null ? "0" : a.currentStock().toPlainString()});
+                    a.sku(), a.name(),
+                    hide ? MASK : (a.currentStock() == null ? "0" : a.currentStock().toPlainString())});
         }
 
         var expiring = inventoryService.findExpiringBatches(companyId, 30);
@@ -272,12 +293,14 @@ public class StockPanel extends JPanel {
             alertsExpModel.addRow(new Object[]{
                     b.sku(), b.productName(), b.batchNumber(), b.warehouseName(),
                     b.expirationDate() == null ? "—" : b.expirationDate().toString(),
-                    days, b.quantity() == null ? "" : b.quantity().toPlainString(),
+                    days, hide ? MASK : (b.quantity() == null ? "" : b.quantity().toPlainString()),
                     isExpired ? "Expirado" : "A expirar"});
         }
 
         if (alertsSummary != null) {
-            alertsSummary.setText(esgotados.size() + " produto(s) esgotado(s)  ·  "
+            alertsSummary.setText(hide
+                    ? "Quantidades ocultas — stock trancado (visível só para administradores)."
+                    : esgotados.size() + " produto(s) esgotado(s)  ·  "
                     + expired + " lote(s) expirado(s)  ·  " + soon + " a expirar (≤30 dias)");
         }
     }
@@ -414,6 +437,7 @@ public class StockPanel extends JPanel {
     private void filterBatches() {
         if (batchesModel == null) return;
         batchesModel.setRowCount(0);
+        boolean hide = stockHidden();
 
         Long filterWarehouseId = null;
         if (batchWarehouseCombo != null) {
@@ -467,7 +491,7 @@ public class StockPanel extends JPanel {
                     b.batchNumber(),
                     b.expirationDate() == null ? "—" : b.expirationDate().format(fmt),
                     daysCell,
-                    String.format("%,.3f", b.quantity()),
+                    hide ? MASK : String.format("%,.3f", b.quantity()),
                     status
             });
         }
@@ -708,6 +732,7 @@ public class StockPanel extends JPanel {
 
 
     public void onPanelSelected() {
+        refreshStockLock();
         loadWarehouses();
         loadStocks();
         loadMovements();
@@ -716,6 +741,66 @@ public class StockPanel extends JPanel {
         loadAlerts();
         loadCategories();
         loadWarehousesManagement();
+    }
+
+    // ─── Bloqueio de stock (contagem cega) ───────────────────────────────────
+
+    private static boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(CurrentUserContext.getRole());
+    }
+
+    /** As quantidades devem ser ocultadas ao utilizador actual? (trancado E não-admin) */
+    private boolean stockHidden() {
+        try {
+            return inventoryService.isStockCountLocked(CurrentUserContext.getCurrentCompanyId()) && !isAdmin();
+        } catch (RuntimeException ex) {
+            return false; // à prova de falha: em dúvida, não oculta
+        }
+    }
+
+    /** Actualiza o texto/estado do botão de bloqueio e o banner conforme o estado actual. */
+    private void refreshStockLock() {
+        boolean locked;
+        try {
+            locked = inventoryService.isStockCountLocked(CurrentUserContext.getCurrentCompanyId());
+        } catch (RuntimeException ex) {
+            locked = false;
+        }
+        if (stockLockBtn != null) {
+            stockLockBtn.setVisible(isAdmin());
+            stockLockBtn.setText(locked ? "Destrancar Stock" : "Trancar Stock");
+            stockLockBtn.setIcon(UIHelper.icon(locked ? "fas-lock-open" : "fas-lock", 14));
+        }
+        if (stockLockBanner != null) {
+            if (!locked) {
+                stockLockBanner.setVisible(false);
+            } else {
+                stockLockBanner.setVisible(true);
+                stockLockBanner.setIcon(UIHelper.icon("fas-lock", 13, UIHelper.PENDING_YELLOW));
+                stockLockBanner.setForeground(UIHelper.PENDING_YELLOW);
+                stockLockBanner.setText(isAdmin()
+                        ? "Stock trancado — os funcionários não veem quantidades. Como administrador, vê tudo."
+                        : "Stock trancado — quantidades visíveis apenas para administradores.");
+            }
+        }
+    }
+
+    private void toggleStockLock() {
+        if (!isAdmin()) return;
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        boolean locked;
+        try {
+            locked = inventoryService.isStockCountLocked(companyId);
+        } catch (RuntimeException ex) {
+            locked = false;
+        }
+        try {
+            inventoryService.setStockCountLocked(companyId, !locked);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        onPanelSelected(); // recarrega tabelas (mascaradas ou não) + banner + botão
     }
 
     // ===== Categorias de produto =====
@@ -1002,6 +1087,7 @@ public class StockPanel extends JPanel {
     private void filterStocks() {
         stockModel.setRowCount(0);
         stockRowProductIds.clear();
+        boolean hide = stockHidden();
 
         int filterIdx = warehouseFilterCombo.getSelectedIndex();
         Long filterWarehouseId = null;
@@ -1058,10 +1144,10 @@ public class StockPanel extends JPanel {
                     s.getProduct().getBarcode() == null ? "—" : s.getProduct().getBarcode(),
                     s.getProduct().getReference() == null ? s.getProduct().getSku() : s.getProduct().getReference(),
                     s.getProduct().getName(),
-                    String.format("%,.3f", qty),
-                    String.format("%,.2f", qtyBoxes),
+                    hide ? MASK : String.format("%,.3f", qty),
+                    hide ? MASK : String.format("%,.2f", qtyBoxes),
                     String.format("%,.2f MT", price),
-                    estado
+                    hide ? MASK : estado
             });
             stockRowProductIds.add(s.getProduct().getId());
         }

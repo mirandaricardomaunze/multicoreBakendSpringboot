@@ -30,4 +30,11 @@ public class Company extends BaseEntity {
     /** Empresa inactiva não pode iniciar sessão (suspensa pelo superadmin / falta de pagamento). */
     @Column(name = "active", nullable = false)
     private boolean active = true;
+
+    /**
+     * Bloqueio de stock: quando {@code true}, utilizadores sem papel ADMIN não vêem as quantidades
+     * de stock (contagem cega / inventário). O ADMIN vê sempre. Controlado pelo ADMIN.
+     */
+    @Column(name = "stock_count_locked", nullable = false)
+    private boolean stockCountLocked = false;
 }
