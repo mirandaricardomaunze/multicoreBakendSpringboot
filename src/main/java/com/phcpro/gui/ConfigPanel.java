@@ -38,6 +38,7 @@ public class ConfigPanel extends JPanel {
     private final AuditLogService auditLogService;
     private final BackupService backupService;
     private final DatabaseBackupService databaseBackupService;
+    private final com.phcpro.modules.backup.service.ScheduledBackupService scheduledBackupService;
     private final DocumentConfigService documentConfigService;
     private final SupportService supportService;
     private final SubscriptionService subscriptionService;
@@ -56,6 +57,7 @@ public class ConfigPanel extends JPanel {
 
     // TAB 2: BACKUPS
     private JTextArea backupLogArea;
+    private JLabel backupAutoStatus;
     private DefaultTableModel backupFilesModel;
     private JTable backupFilesTable;
 
@@ -77,12 +79,15 @@ public class ConfigPanel extends JPanel {
     private javax.swing.JTextField footerField;
 
     public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
-                       DatabaseBackupService databaseBackupService, DocumentConfigService documentConfigService,
+                       DatabaseBackupService databaseBackupService,
+                       com.phcpro.modules.backup.service.ScheduledBackupService scheduledBackupService,
+                       DocumentConfigService documentConfigService,
                        SupportService supportService, SubscriptionService subscriptionService) {
         this.userService = userService;
         this.auditLogService = auditLogService;
         this.backupService = backupService;
         this.databaseBackupService = databaseBackupService;
+        this.scheduledBackupService = scheduledBackupService;
         this.documentConfigService = documentConfigService;
         this.supportService = supportService;
         this.subscriptionService = subscriptionService;
@@ -210,10 +215,19 @@ public class ConfigPanel extends JPanel {
         consoleCard.setLayout(new BorderLayout(0, 15));
         consoleCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação de desastres use o <b>backup físico (BD)</b>, restaurável com fidelidade total via pg_dump/pg_restore. Os backups lógicos automáticos ocorrem a cada faturação.</body></html>");
+        JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação de desastres use o <b>backup físico (BD)</b>, restaurável com fidelidade total via pg_dump/pg_restore. O <b>backup físico automático</b> corre diariamente e apaga cópias antigas conforme a retenção.</body></html>");
         desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         desc.setForeground(UIHelper.TEXT_MUTED);
-        consoleCard.add(desc, BorderLayout.NORTH);
+
+        backupAutoStatus = new JLabel(" ");
+        backupAutoStatus.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        backupAutoStatus.setBorder(new EmptyBorder(8, 0, 0, 0));
+
+        JPanel northInfo = new JPanel(new BorderLayout(0, 4));
+        northInfo.setOpaque(false);
+        northInfo.add(desc, BorderLayout.NORTH);
+        northInfo.add(backupAutoStatus, BorderLayout.SOUTH);
+        consoleCard.add(northInfo, BorderLayout.NORTH);
 
         backupLogArea = new JTextArea();
         backupLogArea.setBackground(new Color(15, 23, 42)); // darker console bg
@@ -229,8 +243,12 @@ public class ConfigPanel extends JPanel {
         runBackupBtn.setIcon(UIHelper.icon("fas-file-code", 14));
         ModernButton runPhysicalBtn = UIHelper.createPrimaryButton("Backup Físico (BD)");
         runPhysicalBtn.setIcon(UIHelper.icon("fas-database", 14));
+        ModernButton runAutoNowBtn = UIHelper.createSecondaryButton("Backup Automático Agora");
+        runAutoNowBtn.setIcon(UIHelper.icon("fas-clock", 14));
+        runAutoNowBtn.addActionListener(e -> runAutoBackupNow());
         JPanel backupActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         backupActions.setOpaque(false);
+        backupActions.add(runAutoNowBtn);
         backupActions.add(runBackupBtn);
         backupActions.add(runPhysicalBtn);
         consoleCard.add(backupActions, BorderLayout.SOUTH);
@@ -509,10 +527,46 @@ public class ConfigPanel extends JPanel {
     public void onPanelSelected() {
         loadAuditLogs();
         loadBackupFilesList();
+        refreshAutoBackupStatus();
         loadUsersList();
         loadDocumentColumns();
         loadSupportTickets();
         loadMySubscription();
+    }
+
+    /** Estado do backup físico automático (activo/última execução) para visibilidade + alerta. */
+    private void refreshAutoBackupStatus() {
+        if (backupAutoStatus == null || scheduledBackupService == null) return;
+        String base = scheduledBackupService.isEnabled()
+                ? "Backup automático: ACTIVO (diário)"
+                : "Backup automático: desativado";
+        var last = scheduledBackupService.getLastRun();
+        if (last == null) {
+            backupAutoStatus.setText(base + " — ainda sem execução nesta sessão.");
+            backupAutoStatus.setForeground(UIHelper.TEXT_MUTED);
+            return;
+        }
+        java.time.format.DateTimeFormatter f = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        backupAutoStatus.setText(base + " — última: " + last.time().format(f)
+                + (last.success() ? "  ✓ OK" : "  ✗ FALHOU"));
+        backupAutoStatus.setForeground(last.success() ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
+    }
+
+    /** Executa já o backup físico automático (retenção + registo). Só ADMIN. */
+    private void runAutoBackupNow() {
+        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+            JOptionPane.showMessageDialog(this, "Apenas administradores podem executar o backup.",
+                    "Acesso restrito", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        UIHelper.runWithProgress(this, "A executar backup automático…",
+                () -> scheduledBackupService.runAndRecord(),
+                res -> {
+                    backupLogArea.append((res.success() ? "[OK] " : "[FALHA] ") + res.message() + "\n");
+                    refreshAutoBackupStatus();
+                    loadBackupFilesList();
+                },
+                ex -> JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
     }
 
     private void loadAuditLogs() {

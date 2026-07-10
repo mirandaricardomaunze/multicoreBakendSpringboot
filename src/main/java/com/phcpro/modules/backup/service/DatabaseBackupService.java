@@ -57,6 +57,15 @@ public class DatabaseBackupService {
      */
     public PhysicalBackupResultDTO executePhysicalBackup() {
         PermissionGuard.requireAdmin("gerar backup físico da base de dados");
+        return runPhysicalBackup();
+    }
+
+    /**
+     * Núcleo do backup físico, <b>sem verificação de permissão</b> — para uso pelo agendador
+     * ({@code ScheduledBackupService}), que corre num contexto de sistema (sem utilizador). Chamadas
+     * interactivas devem usar {@link #executePhysicalBackup()}.
+     */
+    public PhysicalBackupResultDTO runPhysicalBackup() {
         PgConnection conn = parsePgConnection(jdbcUrl);
 
         File dir = new File(backupDir);
