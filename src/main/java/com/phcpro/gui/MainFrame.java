@@ -265,7 +265,12 @@ public class MainFrame extends JFrame {
         bar.addTrailing(buildThemeToggle());
         javax.swing.JComponent subChip = buildSubscriptionChip();
         if (subChip != null) bar.addTrailing(subChip);
-        bar.addTrailing(companyCombo);
+        // Seletor de empresa só quando há mais de uma — com uma só é redundante (a sub-marca já mostra
+        // o nome). O combo é sempre construído (selecciona a empresa activa no contexto), mas só se
+        // mostra quando há escolha a fazer.
+        if (desktopSessionStore.requireSession().companies().size() > 1) {
+            bar.addTrailing(companyCombo);
+        }
         bar.addTrailing(buildUserChip());
 
         // Marca: MULTICORE no topo, nome da empresa activa por baixo.
