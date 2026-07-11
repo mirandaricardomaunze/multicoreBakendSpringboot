@@ -139,7 +139,8 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
             com.phcpro.modules.platform.service.PlatformUserService platformUserService,
             com.phcpro.modules.support.service.SupportService supportService,
-            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
+            com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -174,7 +175,7 @@ public class MainFrame extends JFrame {
             fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
             approvalsPanel  = new ApprovalsPanel(approvalService);
             posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser);
-            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, productCategoryService);
+            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productCategoryService);
             comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
             configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, scheduledBackupService, documentConfigService, supportService, subscriptionService);
             plataformaPanel = null;

@@ -40,5 +40,10 @@ que faltava (contar e acertar).
   MANAGER/ADMIN — nada de novo no domínio, só orquestração + a folha PDF.
 - Contagem cega **de verdade**: a tabela do diálogo e a folha PDF não mostram a quantidade do sistema;
   a diferença só aparece **depois** de aplicar (no resumo).
-- Não há "sessão de inventário" persistente nesta iteração (a contagem vive no diálogo até aplicar). Um
-  passo futuro seria guardar a sessão para continuar mais tarde / auditar a folha completa.
+- **Sessão de inventário persistente (feito, 2026-07-11):** a contagem passou a ser uma **sessão**
+  guardada (`InventoryCount` + `InventoryCountLine`, migração `V28`). Fluxo: **Inventário Físico** →
+  gestor de sessões (criar / retomar rascunho / aplicar / cancelar). Uma sessão nasce `DRAFT` com uma
+  linha por artigo do armazém; as contagens guardam-se (**Guardar Rascunho**) e retomam-se mais tarde;
+  ao **Aplicar Ajustes** cada linha contada gera um ajuste (via `InventoryService.adjustStock`), a
+  sessão passa a `APPLIED` e o histórico (sistema → contado por artigo) fica auditável e só-leitura.
+  Serviço `InventoryCountService` (MANAGER/ADMIN + auditoria + tenant); testes `InventoryCountServiceTest`.

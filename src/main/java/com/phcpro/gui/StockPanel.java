@@ -41,6 +41,7 @@ public class StockPanel extends JPanel {
     private final StockTransferPrintService stockTransferPrintService;
     private final InventoryReportPrintService inventoryReportPrintService;
     private final com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService;
+    private final com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService;
 
     // Transfer history
     private DefaultTableModel transferModel;
@@ -87,6 +88,7 @@ public class StockPanel extends JPanel {
                        StockTransferPrintService stockTransferPrintService,
                        InventoryReportPrintService inventoryReportPrintService,
                        com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
+                       com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
                        com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService) {
         this.inventoryService = inventoryService;
         this.comercialService = comercialService;
@@ -94,6 +96,7 @@ public class StockPanel extends JPanel {
         this.stockTransferPrintService = stockTransferPrintService;
         this.inventoryReportPrintService = inventoryReportPrintService;
         this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
+        this.inventoryCountService = inventoryCountService;
         this.productCategoryService = productCategoryService;
 
         setLayout(new BorderLayout(0, 15));
@@ -1377,119 +1380,240 @@ public class StockPanel extends JPanel {
      * tocados (só se ajusta o que foi efectivamente contado).
      */
     private void openPhysicalInventoryDialog() {
-        if (warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Cadastre um armazém primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+
+        DefaultTableModel model = new DefaultTableModel(
+                new String[]{"#", "Armazém", "Estado", "Itens", "Contados", "Criado por", "Data"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable table = new JTable(model);
+        UIHelper.styleTable(table);
+        table.putClientProperty("noRowInspector", Boolean.TRUE);
+        table.putClientProperty("noTableFooter", Boolean.TRUE);
+        JScrollPane sc = new JScrollPane(table);
+        UIHelper.styleScrollPane(sc);
+        sc.setPreferredSize(new Dimension(660, 340));
+
+        final java.util.List<com.phcpro.modules.inventory.dto.InventoryCountDTO> rows = new ArrayList<>();
+        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        Runnable reload = () -> {
+            model.setRowCount(0);
+            rows.clear();
+            for (var s : inventoryCountService.listSessions(companyId)) {
+                rows.add(s);
+                model.addRow(new Object[]{ s.id(), s.warehouseName(), inventoryCountStatusLabel(s.status()),
+                        s.totalItems(), s.countedItems(), s.createdBy(),
+                        s.createdAt() == null ? "" : s.createdAt().format(dtf) });
+            }
+        };
+        try {
+            reload.run();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.add(sc, BorderLayout.CENTER);
+
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Inventário Físico",
+                "fas-clipboard-list", "Sessões de contagem — crie, retome e aplique", content)
+                .asReadOnly("Fechar");
+
+        ModernButton newBtn = UIHelper.createPrimaryButton("Nova Contagem");
+        newBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        newBtn.addActionListener(e -> { if (startNewCountSession()) reload.run(); });
+
+        Runnable openSelected = () -> {
+            int r = table.getSelectedRow();
+            if (r < 0) { JOptionPane.showMessageDialog(this, "Selecione uma contagem.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
+            openCountSession(rows.get(r).id());
+            reload.run();
+        };
+        ModernButton openBtn = UIHelper.createSecondaryButton("Abrir");
+        openBtn.setIcon(UIHelper.icon("fas-folder-open", 14));
+        openBtn.addActionListener(e -> openSelected.run());
+
+        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar Sessão");
+        cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
+        cancelBtn.addActionListener(e -> {
+            int r = table.getSelectedRow();
+            if (r < 0) { JOptionPane.showMessageDialog(this, "Selecione uma contagem.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
+            var s = rows.get(r);
+            if (!"DRAFT".equals(s.status())) { JOptionPane.showMessageDialog(this, "Só é possível cancelar contagens em curso.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
+            if (JOptionPane.showConfirmDialog(this, "Cancelar a contagem #" + s.id() + "?", "Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+            try { inventoryCountService.cancelSession(s.id()); reload.run(); }
+            catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE); }
+        });
+
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) openSelected.run();
+            }
+        });
+
+        dlg.addActionButton(newBtn);
+        dlg.addActionButton(openBtn);
+        dlg.addActionButton(cancelBtn);
+        dlg.showDialog();
+        onPanelSelected(); // o stock pode ter mudado se alguma sessão foi aplicada
+    }
+
+    /** Cria uma nova sessão de contagem para um armazém e abre-a já para contar. */
+    private boolean startNewCountSession() {
+        if (warehousesList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre um armazém primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
         JComboBox<String> whCombo = new JComboBox<>();
         UIHelper.styleComboBox(whCombo);
         for (Warehouse w : warehousesList) whCombo.addItem(w.getName());
+        JPanel form = UIHelper.createDialogForm("Armazém a contar:", whCombo);
+        boolean ok = new ModernFormDialog(UIHelper.mainWindow, "Nova Contagem", "fas-clipboard-list",
+                "Cria uma sessão com uma linha por artigo do armazém", form)
+                .setConfirmButton("Criar", "fas-check").showDialog();
+        if (!ok) return false;
+        int idx = whCombo.getSelectedIndex();
+        if (idx < 0) return false;
+        try {
+            var session = inventoryCountService.createSession(warehousesList.get(idx).getId(), null);
+            openCountSession(session.id());
+            return true;
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
 
-        DefaultTableModel countModel = new DefaultTableModel(new String[]{"SKU", "Artigo", "Contagem"}, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return c == 2; }
+    /** Abre uma sessão: DRAFT = editar/guardar/aplicar; aplicada/cancelada = só-leitura com diferenças. */
+    private void openCountSession(Long sessionId) {
+        com.phcpro.modules.inventory.dto.InventoryCountDTO session;
+        try {
+            session = inventoryCountService.getSession(sessionId);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        boolean draft = "DRAFT".equals(session.status());
+
+        String[] cols = draft ? new String[]{"SKU", "Artigo", "Contagem"}
+                              : new String[]{"SKU", "Artigo", "Contagem", "Sistema", "Diferença"};
+        DefaultTableModel model = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return draft && c == 2; }
         };
-        JTable countTable = new JTable(countModel);
-        UIHelper.styleTable(countTable);
-        final java.util.List<Long> rowProductIds = new ArrayList<>();
-
-        Runnable reload = () -> {
-            countModel.setRowCount(0);
-            rowProductIds.clear();
-            int idx = whCombo.getSelectedIndex();
-            if (idx < 0 || idx >= warehousesList.size()) return;
-            for (Stock s : inventoryService.getStocksByWarehouse(warehousesList.get(idx).getId())) {
-                countModel.addRow(new Object[]{s.getProduct().getSku(), s.getProduct().getName(), ""});
-                rowProductIds.add(s.getProduct().getId());
+        final java.util.List<Long> productIds = new ArrayList<>();
+        for (var line : session.lines()) {
+            productIds.add(line.productId());
+            String counted = line.countedQuantity() == null ? "" : line.countedQuantity().stripTrailingZeros().toPlainString();
+            if (draft) {
+                model.addRow(new Object[]{ line.sku(), line.name(), counted });
+            } else {
+                String sys = line.systemQuantity() == null ? "" : line.systemQuantity().stripTrailingZeros().toPlainString();
+                String diff = line.difference() == null ? "" :
+                        (line.difference().signum() > 0 ? "+" : "") + line.difference().stripTrailingZeros().toPlainString();
+                model.addRow(new Object[]{ line.sku(), line.name(), counted, sys, diff });
             }
-        };
-        whCombo.addActionListener(e -> reload.run());
-        reload.run();
+        }
+        JTable countTable = new JTable(model);
+        UIHelper.styleTable(countTable);
+        countTable.putClientProperty("noRowInspector", Boolean.TRUE);
+        countTable.putClientProperty("noTableFooter", Boolean.TRUE);
+        JScrollPane sc = new JScrollPane(countTable);
+        UIHelper.styleScrollPane(sc);
+        sc.setPreferredSize(new Dimension(620, 400));
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.add(sc, BorderLayout.CENTER);
 
-        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Folha de Contagem");
+        String subtitle = "Armazém: " + session.warehouseName() + " · " + inventoryCountStatusLabel(session.status());
+
+        if (!draft) {
+            new ModernFormDialog(UIHelper.mainWindow, "Contagem #" + sessionId, "fas-clipboard-check",
+                    subtitle, content).asReadOnly("Fechar").showDialog();
+            return;
+        }
+
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Contagem #" + sessionId,
+                "fas-clipboard-check", subtitle + " — em branco = não conta", content)
+                .setConfirmButton("Aplicar Ajustes", "fas-check");
+
+        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Folha");
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> {
-            int idx = whCombo.getSelectedIndex();
-            if (idx < 0) return;
-            Warehouse w = warehousesList.get(idx);
             try {
                 byte[] pdf = inventoryCountSheetPrintService.render(
-                        CurrentUserContext.getCurrentCompanyId(), w.getId());
-                com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "folha-contagem-" + w.getName());
+                        CurrentUserContext.getCurrentCompanyId(), session.warehouseId());
+                com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "folha-contagem-" + session.warehouseName());
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        top.setOpaque(false);
-        JLabel whLbl = new JLabel("Armazém:");
-        whLbl.setForeground(UIHelper.TEXT_MUTED);
-        top.add(whLbl);
-        top.add(whCombo);
-        top.add(printBtn);
+        ModernButton saveBtn = UIHelper.createSecondaryButton("Guardar Rascunho");
+        saveBtn.setIcon(UIHelper.icon("fas-save", 14));
+        saveBtn.addActionListener(e -> {
+            try {
+                inventoryCountService.saveCounts(sessionId, readCountsFromTable(countTable, productIds));
+                JOptionPane.showMessageDialog(this, "Contagem guardada.", "Rascunho", JOptionPane.INFORMATION_MESSAGE);
+                dlg.close();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
-        JScrollPane sc = new JScrollPane(countTable);
-        UIHelper.styleScrollPane(sc);
-        sc.setPreferredSize(new Dimension(580, 380));
+        dlg.addActionButton(printBtn);
+        dlg.addActionButton(saveBtn);
+        dlg.setOnSave(() -> {
+            inventoryCountService.saveCounts(sessionId, readCountsFromTable(countTable, productIds));
+            var result = inventoryCountService.applySession(sessionId);
+            onPanelSelected();
+            int applied = 0;
+            StringBuilder diffs = new StringBuilder();
+            for (var line : result.lines()) {
+                if (line.countedQuantity() == null) continue;
+                applied++;
+                BigDecimal d = line.difference();
+                if (d != null && d.signum() != 0) {
+                    diffs.append(String.format("• %s: sistema %s → contado %s (%s%s)%n",
+                            line.name(),
+                            line.systemQuantity() == null ? "?" : line.systemQuantity().stripTrailingZeros().toPlainString(),
+                            line.countedQuantity().stripTrailingZeros().toPlainString(),
+                            d.signum() > 0 ? "+" : "", d.stripTrailingZeros().toPlainString()));
+                }
+            }
+            JOptionPane.showMessageDialog(this,
+                    applied + " artigo(s) reconciliado(s).\n\n"
+                            + (diffs.length() == 0 ? "Sem diferenças face ao sistema." : "Diferenças:\n" + diffs),
+                    "Inventário aplicado", JOptionPane.INFORMATION_MESSAGE);
+        });
+        dlg.showDialog();
+    }
 
-        JPanel content = new JPanel(new BorderLayout(0, 10));
-        content.setOpaque(false);
-        content.add(top, BorderLayout.NORTH);
-        content.add(sc, BorderLayout.CENTER);
-
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Inventário Físico (contagem cega)",
-                "fas-clipboard-check",
-                "Imprima a folha, conte fisicamente e introduza as contagens; o sistema ajusta e mostra as diferenças",
-                content).setConfirmButton("Aplicar Ajustes", "fas-check").showDialog();
-        if (!confirmed) return;
-
-        if (countTable.isEditing() && countTable.getCellEditor() != null) {
-            countTable.getCellEditor().stopCellEditing();
+    /** Lê a coluna "Contagem" da tabela para um mapa productId → quantidade (ignora vazios/não numéricos). */
+    private java.util.Map<Long, BigDecimal> readCountsFromTable(JTable table, java.util.List<Long> productIds) {
+        if (table.isEditing() && table.getCellEditor() != null) {
+            table.getCellEditor().stopCellEditing();
         }
-        int idx = whCombo.getSelectedIndex();
-        if (idx < 0) return;
-        Warehouse w = warehousesList.get(idx);
-
-        java.util.Map<Long, BigDecimal> before = new java.util.HashMap<>();
-        for (Stock s : inventoryService.getStocksByWarehouse(w.getId())) {
-            before.put(s.getProduct().getId(), s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity());
-        }
-
-        int applied = 0;
-        StringBuilder diffs = new StringBuilder();
-        for (int i = 0; i < countModel.getRowCount(); i++) {
-            Object v = countModel.getValueAt(i, 2);
+        java.util.Map<Long, BigDecimal> counts = new java.util.HashMap<>();
+        for (int i = 0; i < table.getRowCount() && i < productIds.size(); i++) {
+            Object v = table.getValueAt(i, 2);
             String txt = v == null ? "" : v.toString().trim();
             if (txt.isEmpty()) continue;
-            BigDecimal counted;
             try {
-                counted = new BigDecimal(txt.replace(",", "."));
-            } catch (NumberFormatException ex) {
-                continue; // ignora contagens não numéricas
-            }
-            Long pid = rowProductIds.get(i);
-            BigDecimal sys = before.getOrDefault(pid, BigDecimal.ZERO);
-            try {
-                inventoryService.adjustStock(new CreateStockAdjustmentRequest(
-                        CurrentUserContext.getCurrentCompanyId(), pid, w.getId(), counted,
-                        "Inventário físico (contagem cega)"));
-                applied++;
-                BigDecimal diff = counted.subtract(sys);
-                if (diff.signum() != 0) {
-                    diffs.append(String.format("• %s: sistema %s → contado %s (%s%s)%n",
-                            countModel.getValueAt(i, 1), sys.toPlainString(), counted.toPlainString(),
-                            diff.signum() > 0 ? "+" : "", diff.toPlainString()));
-                }
-            } catch (Exception ex) {
-                diffs.append(String.format("• %s: ERRO — %s%n", countModel.getValueAt(i, 1), ex.getMessage()));
-            }
+                counts.put(productIds.get(i), new BigDecimal(txt.replace(",", ".")));
+            } catch (NumberFormatException ignored) { /* ignora contagem não numérica */ }
         }
-        onPanelSelected();
-        JOptionPane.showMessageDialog(this,
-                applied + " artigo(s) reconciliado(s).\n\n"
-                        + (diffs.length() == 0 ? "Sem diferenças face ao sistema." : "Diferenças / ocorrências:\n" + diffs),
-                "Inventário concluído", JOptionPane.INFORMATION_MESSAGE);
+        return counts;
+    }
+
+    private static String inventoryCountStatusLabel(String status) {
+        return switch (status) {
+            case "DRAFT" -> "Em curso";
+            case "APPLIED" -> "Aplicada";
+            case "CANCELLED" -> "Cancelada";
+            default -> status;
+        };
     }
 
     private void createAdjustmentDialog() {
