@@ -50,7 +50,7 @@ public class FinanceiroPanel extends JPanel {
 
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
         tabbedPane.addTab("Contas", UIHelper.icon("fas-wallet", 16, UIHelper.TEXT_LIGHT), createAccountsTab());
         tabbedPane.addTab("Fluxo de Caixa", UIHelper.icon("fas-exchange-alt", 16, UIHelper.TEXT_LIGHT),
                 createMovementsTab());

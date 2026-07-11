@@ -53,7 +53,7 @@ public class SimpleBarChart extends JPanel {
         int chartWidth = Math.max(1, width - left - right);
         int chartHeight = Math.max(1, height - top - bottom);
 
-        g.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        g.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(title, 16, 26);
 
@@ -61,7 +61,7 @@ public class SimpleBarChart extends JPanel {
         g.drawLine(left, top + chartHeight, left + chartWidth, top + chartHeight);
 
         if (values.length == 0) {
-            g.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
             g.setColor(UIHelper.TEXT_MUTED);
             g.drawString("Sem dados", left, top + 30);
             g.dispose();
@@ -90,13 +90,13 @@ public class SimpleBarChart extends JPanel {
             g.setColor(barColor);
             g.fillRoundRect(x, y, barWidth, barHeight, 10, 10);
 
-            g.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            g.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
             g.setColor(UIHelper.TEXT_LIGHT);
             String valueText = formatCompact(rawValue);
             int valueWidth = g.getFontMetrics().stringWidth(valueText);
             g.drawString(valueText, x + (barWidth - valueWidth) / 2, Math.max(42, y - 7));
 
-            g.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
             g.setColor(UIHelper.TEXT_MUTED);
             String label = i < labels.length ? labels[i] : "";
             int labelWidth = g.getFontMetrics().stringWidth(label);

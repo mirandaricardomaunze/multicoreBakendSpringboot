@@ -146,7 +146,7 @@ public class ComercialPanel extends JPanel {
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
 
         // TAB 1: FATURAÇÃO
         JPanel tabFaturacao = createFaturacaoTab();
@@ -335,7 +335,7 @@ public class ComercialPanel extends JPanel {
 
         // Row 7: Total summary (a emissão é feita pelo botão Gravar do modal)
         totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
@@ -796,7 +796,7 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTextField(amountField);
 
         JLabel invoiceLbl = new JLabel(invoiceNum);
-        invoiceLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        invoiceLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         invoiceLbl.setForeground(UIHelper.TEXT_LIGHT);
 
         JPanel dialogPanel = UIHelper.createDialogForm(
@@ -1072,7 +1072,7 @@ public class ComercialPanel extends JPanel {
         summaryPanel.setOpaque(false);
 
         orderTotalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
-        orderTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        orderTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         orderTotalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
@@ -1587,7 +1587,7 @@ public class ComercialPanel extends JPanel {
     /** Rótulo pequeno/esbatido para campos de resumo em diálogos. */
     private static JLabel dialogMutedLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }
@@ -1595,7 +1595,7 @@ public class ComercialPanel extends JPanel {
     /** Valor destacado para campos de resumo em diálogos. */
     private static JLabel dialogValueLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         l.setForeground(UIHelper.TEXT_LIGHT);
         return l;
     }
@@ -1635,7 +1635,7 @@ public class ComercialPanel extends JPanel {
         JLabel clientVal = dialogValueLabel("—");
         JLabel dateVal = dialogValueLabel("—");
         JLabel totalVal = new JLabel("0,00 MT");
-        totalVal.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        totalVal.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
         totalVal.setForeground(UIHelper.APPROVED_GREEN);
         Runnable refresh = () -> {
             preview.setRowCount(0);

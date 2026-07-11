@@ -96,7 +96,7 @@ public class FiscalPanel extends JPanel {
         add(UIHelper.createHeading("Área Fiscal — Moçambique"), BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabs);
+        UIHelper.styleTabbedPanePHC(tabs);
         tabs.addTab("Apuramento IVA",   UIHelper.icon("fas-percent", 16, UIHelper.TEXT_LIGHT),       buildIvaTab());
         tabs.addTab("Taxas Fiscais",    UIHelper.icon("fas-balance-scale", 16, UIHelper.TEXT_LIGHT), buildTaxRatesTab());
         tabs.addTab("Retenções na Fonte", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), buildWithholdingsTab());
@@ -242,7 +242,7 @@ public class FiscalPanel extends JPanel {
         ivaPurchasesBaseLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
         ivaNetLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
         for (JLabel l : new JLabel[]{ivaSalesBaseLbl, ivaOutputLbl, ivaInputLbl, ivaPurchasesBaseLbl, ivaNetLbl}) {
-            l.setFont(new Font("Segoe UI", Font.BOLD, 19));
+            l.setFont(new Font(UIHelper.FONT, Font.BOLD, 19));
             l.setForeground(Color.WHITE);
         }
         kpis.add(kpiCard("IVA LIQUIDADO (VENDAS)", ivaOutputLbl,
@@ -283,7 +283,7 @@ public class FiscalPanel extends JPanel {
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
         titleLbl.setForeground(new Color(224, 242, 254));
         card.add(titleLbl, BorderLayout.NORTH);
         card.add(value, BorderLayout.CENTER);
@@ -291,9 +291,9 @@ public class FiscalPanel extends JPanel {
             JPanel sub = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
             sub.setOpaque(false);
             JLabel pre = new JLabel(subPrefix);
-            pre.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            pre.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
             pre.setForeground(new Color(224, 242, 254));
-            subValue.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            subValue.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
             subValue.setForeground(new Color(224, 242, 254));
             sub.add(pre);
             sub.add(subValue);
@@ -700,12 +700,12 @@ public class FiscalPanel extends JPanel {
         card.setBorder(new EmptyBorder(24, 24, 24, 24));
 
         JLabel title = new JLabel("Documentos para a Autoridade Tributária");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
         title.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel hint = new JLabel("<html>Estes documentos são exportados em PDF profissional, prontos para impressão e arquivo. " +
                 "Inclua todas as faturas aprovadas/pagas e compras não-canceladas do período selecionado.</html>");
-        hint.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        hint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         hint.setForeground(UIHelper.TEXT_MUTED);
 
         ModernButton ivaDocBtn = UIHelper.createSecondaryButton("Declaração Mensal de IVA");
@@ -737,7 +737,7 @@ public class FiscalPanel extends JPanel {
     private JLabel filterLabel(String text) {
         JLabel l = new JLabel(text);
         l.setForeground(UIHelper.TEXT_MUTED);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         return l;
     }
 }

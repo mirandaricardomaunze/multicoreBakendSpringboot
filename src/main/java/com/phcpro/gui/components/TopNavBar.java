@@ -47,11 +47,11 @@ public class TopNavBar extends JPanel {
 
         // ---- Brand block (left)
         brandLabel = new JLabel(brand);
-        brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
         brandLabel.setForeground(headerText());
 
         brandSubLabel = new JLabel(subBrand);
-        brandSubLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         brandSubLabel.setForeground(subText());
         brandSubLabel.setToolTipText("Empresa ativa");
 

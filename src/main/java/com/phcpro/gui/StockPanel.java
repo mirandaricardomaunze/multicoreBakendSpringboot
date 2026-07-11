@@ -40,6 +40,7 @@ public class StockPanel extends JPanel {
     private final StockTransferService stockTransferService;
     private final StockTransferPrintService stockTransferPrintService;
     private final InventoryReportPrintService inventoryReportPrintService;
+    private final com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService;
 
     // Transfer history
     private DefaultTableModel transferModel;
@@ -85,12 +86,14 @@ public class StockPanel extends JPanel {
                        StockTransferService stockTransferService,
                        StockTransferPrintService stockTransferPrintService,
                        InventoryReportPrintService inventoryReportPrintService,
+                       com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
                        com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService) {
         this.inventoryService = inventoryService;
         this.comercialService = comercialService;
         this.stockTransferService = stockTransferService;
         this.stockTransferPrintService = stockTransferPrintService;
         this.inventoryReportPrintService = inventoryReportPrintService;
+        this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
         this.productCategoryService = productCategoryService;
 
         setLayout(new BorderLayout(0, 15));
@@ -112,16 +115,20 @@ public class StockPanel extends JPanel {
         stockLockBtn = UIHelper.createSecondaryButton("Trancar Stock");
         stockLockBtn.setIcon(UIHelper.icon("fas-lock", 14));
         stockLockBtn.setVisible(isAdmin()); // só ADMIN tranca/destranca
+        ModernButton physicalInventoryBtn = UIHelper.createPrimaryButton("Inventário Físico");
+        physicalInventoryBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
+        physicalInventoryBtn.addActionListener(e -> openPhysicalInventoryDialog());
         JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         catalogueGroup.setOpaque(false);
         catalogueGroup.add(stockLockBtn);
+        catalogueGroup.add(physicalInventoryBtn);
         catalogueGroup.add(newProductBtn);
         catalogueGroup.add(editProductBtn);
         catalogueGroup.add(newWarehouseBtn);
         topBar.add(catalogueGroup, BorderLayout.EAST);
 
         stockLockBanner = new JLabel(" ");
-        stockLockBanner.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        stockLockBanner.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         stockLockBanner.setBorder(new EmptyBorder(8, 2, 0, 0));
         stockLockBanner.setVisible(false);
 
@@ -133,7 +140,7 @@ public class StockPanel extends JPanel {
 
         // TABS: Níveis | Movimentos | Transferências
         JTabbedPane tabs = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabs);
+        UIHelper.styleTabbedPanePHC(tabs);
 
         tabs.addTab("Níveis de Stock",               UIHelper.icon("fas-boxes", 16, UIHelper.TEXT_LIGHT),         buildLevelsTab());
         tabs.addTab("Alertas",                       UIHelper.icon("fas-exclamation-triangle", 16, UIHelper.TEXT_LIGHT), buildAlertsTab());
@@ -194,7 +201,7 @@ public class StockPanel extends JPanel {
         header.add(actions, BorderLayout.EAST);
 
         alertsSummary = new JLabel(" ");
-        alertsSummary.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        alertsSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         alertsSummary.setForeground(UIHelper.TEXT_MUTED);
         alertsSummary.setBorder(new EmptyBorder(2, 2, 0, 0));
 
@@ -205,7 +212,7 @@ public class StockPanel extends JPanel {
         tab.add(topStack, BorderLayout.NORTH);
 
         JTabbedPane sub = new JTabbedPane();
-        UIHelper.styleTabbedPane(sub);
+        UIHelper.styleTabbedPanePHC(sub);
 
         // Sub-aba: produtos esgotados (com pesquisa)
         String[] outCols = {"Artigo (SKU)", "Nome do Artigo", "Stock"};
@@ -363,7 +370,7 @@ public class StockPanel extends JPanel {
         filters.add(batchSearchField, g);
 
         batchesSummary = new JLabel(" ");
-        batchesSummary.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        batchesSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         batchesSummary.setForeground(UIHelper.TEXT_MUTED);
         batchesSummary.setBorder(new EmptyBorder(2, 2, 0, 0));
 
@@ -613,7 +620,7 @@ public class StockPanel extends JPanel {
     private JLabel filterLabel(String text) {
         JLabel l = new JLabel(text);
         l.setForeground(UIHelper.TEXT_MUTED);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         return l;
     }
 
@@ -1358,6 +1365,128 @@ public class StockPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Erro ao gravar armazem: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    /**
+     * Inventário físico (contagem cega): imprime a folha de contagem, permite introduzir as contagens
+     * por artigo de um armazém e reconcilia — cada artigo contado gera um ajuste de stock (define a
+     * quantidade contada) e mostra a diferença face ao sistema. Artigos deixados em branco não são
+     * tocados (só se ajusta o que foi efectivamente contado).
+     */
+    private void openPhysicalInventoryDialog() {
+        if (warehousesList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre um armazém primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JComboBox<String> whCombo = new JComboBox<>();
+        UIHelper.styleComboBox(whCombo);
+        for (Warehouse w : warehousesList) whCombo.addItem(w.getName());
+
+        DefaultTableModel countModel = new DefaultTableModel(new String[]{"SKU", "Artigo", "Contagem"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return c == 2; }
+        };
+        JTable countTable = new JTable(countModel);
+        UIHelper.styleTable(countTable);
+        final java.util.List<Long> rowProductIds = new ArrayList<>();
+
+        Runnable reload = () -> {
+            countModel.setRowCount(0);
+            rowProductIds.clear();
+            int idx = whCombo.getSelectedIndex();
+            if (idx < 0 || idx >= warehousesList.size()) return;
+            for (Stock s : inventoryService.getStocksByWarehouse(warehousesList.get(idx).getId())) {
+                countModel.addRow(new Object[]{s.getProduct().getSku(), s.getProduct().getName(), ""});
+                rowProductIds.add(s.getProduct().getId());
+            }
+        };
+        whCombo.addActionListener(e -> reload.run());
+        reload.run();
+
+        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Folha de Contagem");
+        printBtn.setIcon(UIHelper.icon("fas-print", 14));
+        printBtn.addActionListener(e -> {
+            int idx = whCombo.getSelectedIndex();
+            if (idx < 0) return;
+            Warehouse w = warehousesList.get(idx);
+            try {
+                byte[] pdf = inventoryCountSheetPrintService.render(
+                        CurrentUserContext.getCurrentCompanyId(), w.getId());
+                com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "folha-contagem-" + w.getName());
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        top.setOpaque(false);
+        JLabel whLbl = new JLabel("Armazém:");
+        whLbl.setForeground(UIHelper.TEXT_MUTED);
+        top.add(whLbl);
+        top.add(whCombo);
+        top.add(printBtn);
+
+        JScrollPane sc = new JScrollPane(countTable);
+        UIHelper.styleScrollPane(sc);
+        sc.setPreferredSize(new Dimension(580, 380));
+
+        JPanel content = new JPanel(new BorderLayout(0, 10));
+        content.setOpaque(false);
+        content.add(top, BorderLayout.NORTH);
+        content.add(sc, BorderLayout.CENTER);
+
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Inventário Físico (contagem cega)",
+                "fas-clipboard-check",
+                "Imprima a folha, conte fisicamente e introduza as contagens; o sistema ajusta e mostra as diferenças",
+                content).setConfirmButton("Aplicar Ajustes", "fas-check").showDialog();
+        if (!confirmed) return;
+
+        if (countTable.isEditing() && countTable.getCellEditor() != null) {
+            countTable.getCellEditor().stopCellEditing();
+        }
+        int idx = whCombo.getSelectedIndex();
+        if (idx < 0) return;
+        Warehouse w = warehousesList.get(idx);
+
+        java.util.Map<Long, BigDecimal> before = new java.util.HashMap<>();
+        for (Stock s : inventoryService.getStocksByWarehouse(w.getId())) {
+            before.put(s.getProduct().getId(), s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity());
+        }
+
+        int applied = 0;
+        StringBuilder diffs = new StringBuilder();
+        for (int i = 0; i < countModel.getRowCount(); i++) {
+            Object v = countModel.getValueAt(i, 2);
+            String txt = v == null ? "" : v.toString().trim();
+            if (txt.isEmpty()) continue;
+            BigDecimal counted;
+            try {
+                counted = new BigDecimal(txt.replace(",", "."));
+            } catch (NumberFormatException ex) {
+                continue; // ignora contagens não numéricas
+            }
+            Long pid = rowProductIds.get(i);
+            BigDecimal sys = before.getOrDefault(pid, BigDecimal.ZERO);
+            try {
+                inventoryService.adjustStock(new CreateStockAdjustmentRequest(
+                        CurrentUserContext.getCurrentCompanyId(), pid, w.getId(), counted,
+                        "Inventário físico (contagem cega)"));
+                applied++;
+                BigDecimal diff = counted.subtract(sys);
+                if (diff.signum() != 0) {
+                    diffs.append(String.format("• %s: sistema %s → contado %s (%s%s)%n",
+                            countModel.getValueAt(i, 1), sys.toPlainString(), counted.toPlainString(),
+                            diff.signum() > 0 ? "+" : "", diff.toPlainString()));
+                }
+            } catch (Exception ex) {
+                diffs.append(String.format("• %s: ERRO — %s%n", countModel.getValueAt(i, 1), ex.getMessage()));
+            }
+        }
+        onPanelSelected();
+        JOptionPane.showMessageDialog(this,
+                applied + " artigo(s) reconciliado(s).\n\n"
+                        + (diffs.length() == 0 ? "Sem diferenças face ao sistema." : "Diferenças / ocorrências:\n" + diffs),
+                "Inventário concluído", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void createAdjustmentDialog() {

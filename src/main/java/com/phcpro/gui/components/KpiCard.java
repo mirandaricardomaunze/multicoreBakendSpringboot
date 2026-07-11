@@ -20,7 +20,7 @@ public final class KpiCard {
     /** Label de valor em destaque (branco, negrito) com o tamanho indicado. */
     public static JLabel valueLabel(String text, int size) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, size));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, size));
         l.setForeground(Color.WHITE);
         return l;
     }
@@ -28,14 +28,14 @@ public final class KpiCard {
     public static ModernPanel create(String title, String iconCode, Color titleColor,
                                      JLabel valueLabel, JLabel subLabel,
                                      Color gradientStart, Color gradientEnd) {
-        ModernPanel card = new ModernPanel(12, gradientStart, gradientEnd);
+        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, gradientStart, gradientEnd);
         card.setLayout(new BorderLayout(6, 6));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JPanel titleRow = new JPanel(new BorderLayout(6, 0));
         titleRow.setOpaque(false);
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        titleLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         titleLabel.setForeground(titleColor);
         titleRow.add(titleLabel, BorderLayout.CENTER);
         titleRow.add(new JLabel(UIHelper.icon(iconCode, 18, titleColor)), BorderLayout.EAST);

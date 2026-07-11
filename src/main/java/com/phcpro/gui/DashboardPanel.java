@@ -72,12 +72,12 @@ public class DashboardPanel extends JPanel {
         headerPanel.setOpaque(false);
 
         welcomeLabel = new JLabel("Olá, SYSTEM! Bem-vindo ao MULTICORE.");
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
         welcomeLabel.setForeground(UIHelper.TEXT_LIGHT);
         headerPanel.add(welcomeLabel, BorderLayout.NORTH);
 
         JLabel subtitle = new JLabel("Visão geral das operações da sua empresa.");
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 14));
         subtitle.setForeground(UIHelper.TEXT_MUTED);
         headerPanel.add(subtitle, BorderLayout.SOUTH);
 
@@ -119,7 +119,7 @@ public class DashboardPanel extends JPanel {
 
         taxSummaryLabel = newValueLabel("IVA Líquido: 0.00 MT", 18);
         taxDetailLabel = new JLabel("Liquidado: 0.00 MT | Deduzido: 0.00 MT");
-        taxDetailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        taxDetailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         taxDetailLabel.setForeground(new Color(204, 251, 241));
         gridPanel.add(buildKpiCard(
                 "RESUMO FISCAL DO IVA", "fas-percentage", new Color(204, 251, 241),
@@ -128,7 +128,7 @@ public class DashboardPanel extends JPanel {
 
         stockAlertsLabel = newValueLabel("0 Artigos", 20);
         JLabel stockAlertsSub = new JLabel("Quantidade inferior a 5 unidades no armazém");
-        stockAlertsSub.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        stockAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         stockAlertsSub.setForeground(new Color(254, 226, 226));
         gridPanel.add(buildKpiCard(
                 "ALERTAS DE STOCK BAIXO", "fas-exclamation-triangle", new Color(254, 226, 226),
@@ -137,7 +137,7 @@ public class DashboardPanel extends JPanel {
 
         expiryAlertsLabel = newValueLabel("0 Lotes", 20);
         expiryAlertsSub = new JLabel("Vencidos ou a vencer em ≤ " + EXPIRY_ALERT_DAYS + " dias");
-        expiryAlertsSub.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        expiryAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         expiryAlertsSub.setForeground(new Color(255, 237, 213));
         gridPanel.add(buildKpiCard(
                 "ALERTAS DE VALIDADE", "fas-calendar-times", new Color(255, 237, 213),

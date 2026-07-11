@@ -11,7 +11,7 @@ public class ModernButton extends JButton {
     private Color hoverColor = new Color(37, 99, 235);   // Tailwind Blue-600 (#2563EB)
     private Color clickColor = new Color(29, 78, 216);   // Tailwind Blue-700 (#1D4ED8)
     private Color textColor = Color.WHITE;
-    private int cornerRadius = 20;
+    private int cornerRadius = UIHelper.RADIUS_MD;
 
     private boolean isGradient = false;
     private Color gradientStart = new Color(139, 92, 246); // Violet-500
@@ -23,7 +23,7 @@ public class ModernButton extends JButton {
         setFocusPainted(false);
         setBorderPainted(false);
         setForeground(textColor);
-        setFont(new Font("Segoe UI", Font.BOLD, 13));
+        setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         addMouseListener(new MouseAdapter() {

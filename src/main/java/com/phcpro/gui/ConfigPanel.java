@@ -99,7 +99,7 @@ public class ConfigPanel extends JPanel {
         add(buildAppearanceBar(), BorderLayout.NORTH);
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
 
         // TAB 1: AUDIT LOGS
         JPanel tabAudit = createAuditTab();
@@ -216,11 +216,11 @@ public class ConfigPanel extends JPanel {
         consoleCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JLabel desc = new JLabel("<html><body>O <b>backup lógico (.json)</b> é um snapshot de verificação por empresa (auditoria). Para recuperação de desastres use o <b>backup físico (BD)</b>, restaurável com fidelidade total via pg_dump/pg_restore. O <b>backup físico automático</b> corre diariamente e apaga cópias antigas conforme a retenção.</body></html>");
-        desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         desc.setForeground(UIHelper.TEXT_MUTED);
 
         backupAutoStatus = new JLabel(" ");
-        backupAutoStatus.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        backupAutoStatus.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         backupAutoStatus.setBorder(new EmptyBorder(8, 0, 0, 0));
 
         JPanel northInfo = new JPanel(new BorderLayout(0, 4));
@@ -422,7 +422,7 @@ public class ConfigPanel extends JPanel {
         JLabel desc = new JLabel("<html><body>Escolha que colunas aparecem na tabela de linhas da <b>Fatura</b>, "
                 + "<b>Encomenda</b>, <b>Nota de Crédito</b> e <b>Guia de Remessa</b>. A configuração é por empresa "
                 + "e não altera totais nem IVA — apenas a presença visual das colunas.</body></html>");
-        desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         desc.setForeground(UIHelper.TEXT_MUTED);
         card.add(desc, BorderLayout.NORTH);
 
@@ -1017,10 +1017,10 @@ public class ConfigPanel extends JPanel {
         p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         JLabel l = new JLabel(label);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         l.setForeground(UIHelper.TEXT_MUTED);
         JLabel v = new JLabel(value == null ? "—" : value);
-        v.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        v.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
         v.setForeground(valueColor);
         p.add(l);
         p.add(v);
@@ -1032,10 +1032,10 @@ public class ConfigPanel extends JPanel {
         p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         JLabel t = new JLabel(title);
-        t.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        t.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
         t.setForeground(color);
         JLabel d = new JLabel("<html><body style='width:360px'>" + (detail == null ? "" : detail) + "</body></html>");
-        d.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        d.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         d.setForeground(UIHelper.TEXT_MUTED);
         p.add(t);
         p.add(javax.swing.Box.createVerticalStrut(6));

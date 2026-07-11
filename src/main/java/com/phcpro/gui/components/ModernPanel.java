@@ -5,9 +5,7 @@ import java.awt.*;
 
 public class ModernPanel extends JPanel {
 
-    private int cornerRadius = 16;
-    private Color shadowColor = new Color(0, 0, 0, 40);
-    private Color borderColor = new Color(255, 255, 255, 15);
+    private int cornerRadius = UIHelper.RADIUS_LG;
     private boolean isGradient = false;
     private Color gradientStart;
     private Color gradientEnd;
@@ -22,6 +20,13 @@ public class ModernPanel extends JPanel {
         this.cornerRadius = radius;
     }
 
+    /** Fundo sólido — para painéis de conteúdo (não KPI). */
+    public ModernPanel(int radius, Color backgroundColor) {
+        this(radius);
+        setBackground(backgroundColor);
+    }
+
+    /** Gradiente — para KPI cards do dashboard. */
     public ModernPanel(int radius, Color start, Color end) {
         this(radius);
         this.isGradient = true;
@@ -53,9 +58,14 @@ public class ModernPanel extends JPanel {
 
         g2.fillRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
 
-        // Border
+        // Border — adapta ao tema:
+        // • sobre gradiente (KPI card): branco translúcido subtil
+        // • painel normal: cor BORDER do tema activo (funciona em claro E escuro)
+        Color borderColor = isGradient
+                ? new Color(255, 255, 255, 20)
+                : UIHelper.BORDER;
         g2.setColor(borderColor);
-        g2.setStroke(new BasicStroke(1.5f));
+        g2.setStroke(new BasicStroke(1f));
         g2.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
 
         g2.dispose();

@@ -132,7 +132,7 @@ public class ComprasPanel extends JPanel {
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
         tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
 
         // Tab 1: Compras
         JPanel tabCompras = createComprasTab();
@@ -303,7 +303,7 @@ public class ComprasPanel extends JPanel {
         bottomPanel.setOpaque(false);
 
         totalLabel = new JLabel("Total Compra: 0.00 MT (excl. IVA)");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
@@ -792,7 +792,7 @@ public class ComprasPanel extends JPanel {
 
         poTotalLabel = new JLabel("Total da Encomenda: 0.00 MT");
         poTotalLabel.setForeground(Color.WHITE);
-        poTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        poTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         JPanel poFooter = new JPanel(new BorderLayout()); poFooter.setOpaque(false);
         poFooter.setBorder(new EmptyBorder(8, 0, 0, 0));
         poFooter.add(poTotalLabel, BorderLayout.WEST);

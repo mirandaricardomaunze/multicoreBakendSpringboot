@@ -181,7 +181,7 @@ public final class TableFilter {
         JLabel l = new JLabel(text);
         if (iconCode != null) l.setIcon(UIHelper.icon(iconCode, 13, UIHelper.TEXT_MUTED));
         l.setIconTextGap(5);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

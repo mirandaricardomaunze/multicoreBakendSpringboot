@@ -60,19 +60,6 @@ import java.util.List;
 @org.springframework.context.annotation.Scope("prototype")
 public class MainFrame extends JFrame {
 
-    private static final Color C_DASHBOARD  = UIHelper.ACCENT_BLUE;
-    private static final Color C_POS        = new Color(236, 72, 153);
-    private static final Color C_COMERCIAL  = UIHelper.ACCENT;
-    private static final Color C_COMPRAS    = new Color(245, 158, 11);
-    private static final Color C_STOCK      = new Color(16, 185, 129);
-    private static final Color C_FINANCEIRO = UIHelper.APPROVED_GREEN;
-    private static final Color C_HR         = UIHelper.ACCENT;
-    private static final Color C_CRM        = UIHelper.ACCENT_BLUE;
-    private static final Color C_CLIENTES   = new Color(14, 165, 233);
-    private static final Color C_FISCAL     = new Color(202, 138, 4);
-    private static final Color C_APPROVALS  = UIHelper.PENDING_YELLOW;
-    private static final Color C_CONFIG     = new Color(107, 114, 128);
-
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel contentPanel = new JPanel(cardLayout);
 
@@ -95,6 +82,7 @@ public class MainFrame extends JFrame {
     private final com.phcpro.modules.subscription.service.SubscriptionService subscriptionService;
     private final boolean superAdmin;
     private TopNavBar topBar;
+    private com.phcpro.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
 
     /** Antecedência (dias) a partir da qual se avisa o assinante que a assinatura vai expirar. */
@@ -132,6 +120,7 @@ public class MainFrame extends JFrame {
             StockTransferService stockTransferService,
             StockTransferPrintService stockTransferPrintService,
             InventoryReportPrintService inventoryReportPrintService,
+            com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
             PayslipPrintService payslipPrintService,
             CreditNoteService creditNoteService,
             DebitNoteService debitNoteService,
@@ -149,7 +138,8 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.platform.service.PlatformCompanyService platformCompanyService,
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
             com.phcpro.modules.platform.service.PlatformUserService platformUserService,
-            com.phcpro.modules.support.service.SupportService supportService
+            com.phcpro.modules.support.service.SupportService supportService,
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -183,8 +173,8 @@ public class MainFrame extends JFrame {
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
             approvalsPanel  = new ApprovalsPanel(approvalService);
-            posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService);
-            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, productCategoryService);
+            posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser);
+            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, productCategoryService);
             comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
             configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, scheduledBackupService, documentConfigService, supportService, subscriptionService);
             plataformaPanel = null;
@@ -206,8 +196,10 @@ public class MainFrame extends JFrame {
         setLayout(new BorderLayout());
 
         topBar = buildTopBar();
+        statusBar = new com.phcpro.gui.components.StatusBar();
         add(topBar, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
+        add(statusBar, BorderLayout.SOUTH);
 
         if (superAdmin) {
             navigate("plataforma");
@@ -226,6 +218,11 @@ public class MainFrame extends JFrame {
         if (dashboardPanel != null) dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sessionUserLabel != null) sessionUserLabel.setText(displayName);
         if (sessionRoleLabel != null) sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
+        if (statusBar != null) {
+            DesktopSession s = desktopSessionStore.requireSession();
+            String company = s.companies().isEmpty() ? "" : s.companies().get(0).name();
+            statusBar.setContext("Painel Inicial", -1, company, displayName);
+        }
     }
 
     private javax.swing.Icon navIcon(String code) {
@@ -245,18 +242,18 @@ public class MainFrame extends JFrame {
         TopNavBar bar = new TopNavBar("MULTICORE", "ERP Profissional");
 
         // Navegação: ícones-only com tooltip = nome do módulo (CONVENTIONS: UIHelper.icon, sem emojis).
-        bar.addItem(navIcon("fas-th-large"),            "Painel Inicial",     C_DASHBOARD,  () -> navigate("dashboard"));
-        bar.addItem(navIcon("fas-cash-register"),       "POS — Caixa",        C_POS,        () -> navigate("pos"));
-        bar.addItem(navIcon("fas-file-invoice"),        "Vendas & Faturação", C_COMERCIAL,  () -> navigate("comercial"));
-        bar.addItem(navIcon("fas-shopping-cart"),       "Compras",            C_COMPRAS,    () -> navigate("compras"));
-        bar.addItem(navIcon("fas-boxes"),               "Stock & Armazéns",   C_STOCK,      () -> navigate("stock"));
-        bar.addItem(navIcon("fas-coins"),               "Tesouraria",         C_FINANCEIRO, () -> navigate("financeiro"));
-        bar.addItem(navIcon("fas-users"),               "Recursos Humanos",   C_HR,         () -> navigate("hr"));
-        bar.addItem(navIcon("fas-headset"),             "CRM & Assistência",  C_CRM,        () -> navigate("crm"));
-        bar.addItem(navIcon("fas-address-book"),        "Clientes",           C_CLIENTES,   () -> navigate("clientes"));
-        bar.addItem(navIcon("fas-percent"),             "Área Fiscal",        C_FISCAL,     () -> navigate("fiscal"));
-        bar.addItem(navIcon("fas-check-double"),        "Aprovações",         C_APPROVALS,  () -> navigate("approvals"));
-        bar.addItem(navIcon("fas-cog"),                 "Configurações",      C_CONFIG,     () -> navigate("config"));
+        bar.addItem(navIcon("fas-th-large"),            "Painel Inicial",     UIHelper.MODULE_DASHBOARD,  () -> navigate("dashboard"));
+        bar.addItem(navIcon("fas-cash-register"),       "POS — Caixa",        UIHelper.MODULE_POS,        () -> navigate("pos"));
+        bar.addItem(navIcon("fas-file-invoice"),        "Vendas & Faturação", UIHelper.MODULE_COMERCIAL,  () -> navigate("comercial"));
+        bar.addItem(navIcon("fas-shopping-cart"),       "Compras",            UIHelper.MODULE_COMPRAS,    () -> navigate("compras"));
+        bar.addItem(navIcon("fas-boxes"),               "Stock & Armazéns",   UIHelper.MODULE_STOCK,      () -> navigate("stock"));
+        bar.addItem(navIcon("fas-coins"),               "Tesouraria",         UIHelper.MODULE_FINANCEIRO, () -> navigate("financeiro"));
+        bar.addItem(navIcon("fas-users"),               "Recursos Humanos",   UIHelper.MODULE_HR,         () -> navigate("hr"));
+        bar.addItem(navIcon("fas-headset"),             "CRM & Assistência",  UIHelper.MODULE_CRM,        () -> navigate("crm"));
+        bar.addItem(navIcon("fas-address-book"),        "Clientes",           UIHelper.MODULE_CLIENTES,   () -> navigate("clientes"));
+        bar.addItem(navIcon("fas-percent"),             "Área Fiscal",        UIHelper.MODULE_FISCAL,     () -> navigate("fiscal"));
+        bar.addItem(navIcon("fas-check-double"),        "Aprovações",         UIHelper.MODULE_APPROVALS,  () -> navigate("approvals"));
+        bar.addItem(navIcon("fas-cog"),                 "Configurações",      UIHelper.MODULE_CONFIG,     () -> navigate("config"));
 
         // Área direita: seletor de empresa + chip de utilizador.
         JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
@@ -283,7 +280,7 @@ public class MainFrame extends JFrame {
     /** Barra do superadmin: só a consola da plataforma, sem seletor de empresa nem abas de tenant. */
     private TopNavBar buildSuperAdminTopBar() {
         TopNavBar bar = new TopNavBar("MULTICORE", "Consola da Plataforma");
-        bar.addItem(navIcon("fas-server"), "Plataforma", C_CONFIG, () -> navigate("plataforma"));
+        bar.addItem(navIcon("fas-server"), "Plataforma", UIHelper.MODULE_CONFIG, () -> navigate("plataforma"));
         bar.addTrailing(buildThemeToggle());
         bar.addTrailing(buildUserChip());
         bar.setSubBrand("Plataforma");
@@ -375,10 +372,10 @@ public class MainFrame extends JFrame {
         textStack.setOpaque(false);
         textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
         sessionUserLabel = new JLabel("—");
-        sessionUserLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        sessionUserLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         sessionUserLabel.setForeground(UIHelper.TEXT_LIGHT);
         sessionRoleLabel = new JLabel("—");
-        sessionRoleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        sessionRoleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         sessionRoleLabel.setForeground(new Color(156, 163, 175));
         textStack.add(sessionUserLabel);
         textStack.add(sessionRoleLabel);
@@ -419,7 +416,7 @@ public class MainFrame extends JFrame {
                 : (s.daysRemaining() == 0 ? "Assinatura expira hoje" : "Assinatura: " + s.daysRemaining() + " dia(s)");
 
         JLabel chip = new JLabel(text, UIHelper.icon("fas-exclamation-triangle", 14, color), JLabel.LEFT);
-        chip.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        chip.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         chip.setForeground(color);
         chip.setToolTipText("Veja Configurações → A Minha Assinatura, ou contacte o suporte.");
         chip.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
@@ -479,6 +476,25 @@ public class MainFrame extends JFrame {
 
     private void navigate(String cardName) {
         cardLayout.show(contentPanel, cardName);
+        if (statusBar != null) {
+            String modName = switch (cardName) {
+                case "dashboard"  -> "Painel Inicial";
+                case "pos"        -> "POS \u2014 Caixa";
+                case "comercial"  -> "Vendas & Fatura\u00e7\u00e3o";
+                case "compras"    -> "Compras";
+                case "stock"      -> "Stock & Armaz\u00e9ns";
+                case "financeiro" -> "Tesouraria";
+                case "hr"         -> "Recursos Humanos";
+                case "crm"        -> "CRM & Assist\u00eancia";
+                case "clientes"   -> "Clientes";
+                case "fiscal"     -> "\u00c1rea Fiscal";
+                case "approvals"  -> "Aprova\u00e7\u00f5es";
+                case "config"     -> "Configura\u00e7\u00f5es";
+                case "plataforma" -> "Plataforma";
+                default           -> cardName;
+            };
+            statusBar.setModule(modName);
+        }
         refreshPanel(cardName);
     }
 

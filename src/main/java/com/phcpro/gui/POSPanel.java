@@ -47,6 +47,7 @@ public class POSPanel extends JPanel {
     private final com.phcpro.modules.printing.ReceiptPrintService receiptPrintService;
     private final com.phcpro.modules.company.service.CompanyService companyService;
     private final com.phcpro.modules.promotions.service.PromotionService promotionService;
+    private final com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser;
 
     // Active session status
     private TillSession activeSession = null;
@@ -147,7 +148,8 @@ public class POSPanel extends JPanel {
             FinanceService financeService,
             com.phcpro.modules.printing.ReceiptPrintService receiptPrintService,
             com.phcpro.modules.company.service.CompanyService companyService,
-            com.phcpro.modules.promotions.service.PromotionService promotionService
+            com.phcpro.modules.promotions.service.PromotionService promotionService,
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
     ) {
         this.posService = posService;
         this.comercialService = comercialService;
@@ -156,6 +158,7 @@ public class POSPanel extends JPanel {
         this.receiptPrintService = receiptPrintService;
         this.companyService = companyService;
         this.promotionService = promotionService;
+        this.scaleBarcodeParser = scaleBarcodeParser;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -196,7 +199,7 @@ public class POSPanel extends JPanel {
         topBar.add(sessionActions, BorderLayout.EAST);
 
         statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
-        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         statusLabel.setForeground(UIHelper.PENDING_YELLOW);
 
         JPanel sessionBar = new JPanel(new BorderLayout(0, 8));
@@ -211,7 +214,7 @@ public class POSPanel extends JPanel {
         barcodeField = new JTextField();
         UIHelper.styleTextField(barcodeField);
         barcodeField.putClientProperty("JTextField.placeholderText", "Ler código de barras… (Enter)");
-        barcodeField.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        barcodeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         barcodeField.addActionListener(e -> handleBarcodeScan());
         JPanel barcodeBox = iconInputBox("fas-barcode", 16, UIHelper.ACCENT, barcodeField);
 
@@ -343,11 +346,11 @@ public class POSPanel extends JPanel {
         JLabel emptyIcon = new JLabel(UIHelper.icon("fas-shopping-cart", 48, UIHelper.TEXT_MUTED));
         emptyIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
         JLabel emptyTitle = new JLabel("Carrinho vazio");
-        emptyTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        emptyTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
         emptyTitle.setForeground(UIHelper.TEXT_MUTED);
         emptyTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         JLabel emptyHint = new JLabel("Leia um código de barras ou adicione um artigo.");
-        emptyHint.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        emptyHint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         emptyHint.setForeground(UIHelper.TEXT_MUTED);
         emptyHint.setAlignmentX(Component.CENTER_ALIGNMENT);
         emptyInner.add(emptyIcon);
@@ -391,10 +394,10 @@ public class POSPanel extends JPanel {
         totalRow.setLayout(new BorderLayout());
         totalRow.setBorder(new EmptyBorder(10, 16, 10, 16));
         JLabel totalCaption = new JLabel("TOTAL A PAGAR");
-        totalCaption.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        totalCaption.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         totalCaption.setForeground(UIHelper.TEXT_MUTED);
         totalLabel = new JLabel("0,00 MT");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 26));
         totalLabel.setForeground(UIHelper.TEXT_LIGHT);
         totalRow.add(totalCaption, BorderLayout.WEST);
         totalRow.add(totalLabel, BorderLayout.EAST);
@@ -403,7 +406,7 @@ public class POSPanel extends JPanel {
         creditCheck = new JCheckBox("Fiado (cliente paga depois)");
         creditCheck.setForeground(UIHelper.TEXT_LIGHT);
         creditCheck.setOpaque(false);
-        creditCheck.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        creditCheck.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         JPanel creditRow = new JPanel(new BorderLayout());
         creditRow.setOpaque(false);
         creditRow.add(creditCheck, BorderLayout.WEST);
@@ -630,12 +633,12 @@ public class POSPanel extends JPanel {
 
         JLabel name = new JLabel("<html><div style='text-align:center'>" + escapeHtml(p.name()) + "</div></html>", SwingConstants.CENTER);
         name.setForeground(UIHelper.TEXT_LIGHT);
-        name.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        name.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         card.add(name, BorderLayout.CENTER);
 
         JLabel price = new JLabel(String.format("%,.2f MT", p.unitPrice()), SwingConstants.CENTER);
         price.setForeground(UIHelper.ACCENT_BLUE);
-        price.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        price.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         card.add(price, BorderLayout.SOUTH);
 
         card.setToolTipText(productLabel(p));
@@ -653,14 +656,14 @@ public class POSPanel extends JPanel {
     /** Legenda (esquerda) do bloco de discriminação Subtotal/IVA. */
     private static JLabel breakdownCaption(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }
 
     /** Valor (direita) do bloco de discriminação Subtotal/IVA — bem visível. */
     private static JLabel breakdownValue(JLabel l) {
-        l.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         l.setForeground(UIHelper.TEXT_LIGHT);
         l.setHorizontalAlignment(SwingConstants.RIGHT);
         return l;
@@ -671,7 +674,7 @@ public class POSPanel extends JPanel {
         JPanel p = new JPanel(new BorderLayout(0, 4));
         p.setOpaque(false);
         JLabel l = new JLabel(label);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         l.setForeground(UIHelper.ACCENT);
         p.add(l, BorderLayout.NORTH);
         p.add(field, BorderLayout.CENTER);
@@ -1073,7 +1076,7 @@ public class POSPanel extends JPanel {
         refField.putClientProperty("JTextField.placeholderText", "ID/comprovativo (M-Pesa, e-Mola, cartão)…");
 
         JLabel changeLabel = new JLabel("Troco: 0,00 MT");
-        changeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        changeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         changeLabel.setForeground(UIHelper.APPROVED_GREEN);
 
         // Recalcula o troco a cada alteração; só relevante quando o método é numerário.
@@ -1171,6 +1174,14 @@ public class POSPanel extends JPanel {
         String code = barcodeField.getText() == null ? "" : barcodeField.getText().trim();
         if (code.isEmpty()) return;
 
+        // 1) Etiqueta de balança (código de barras de medida variável): resolve o artigo pelo PLU e
+        //    adiciona ao carrinho já com o peso lido. Se não for etiqueta de balança, segue o caminho normal.
+        var scale = scaleBarcodeParser.parse(code);
+        if (scale.isPresent()) {
+            handleScaleScan(scale.get());
+            return;
+        }
+
         ProductDTO product = comercialService.findProductByBarcode(code);
         if (product == null) {
             JOptionPane.showMessageDialog(this,
@@ -1185,6 +1196,108 @@ public class POSPanel extends JPanel {
         addProductToCart(product);
         barcodeField.setText("");
         barcodeField.requestFocusInWindow();
+    }
+
+    /**
+     * Trata uma etiqueta de balança já interpretada: resolve o artigo pelo PLU (guardado no campo
+     * "Código de barras" do produto pesado), calcula a quantidade em quilos — directamente do peso
+     * embutido, ou derivada do preço total quando a balança embute o preço — e adiciona ao carrinho.
+     */
+    private void handleScaleScan(com.phcpro.modules.pos.scale.ScaleBarcode scale) {
+        ProductDTO product = resolveWeighedProduct(scale.itemCode());
+        if (product == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Artigo pesado com código (PLU) '" + scale.itemCode() + "' não encontrado.\n"
+                            + "Registe o PLU da balança no campo \"Código de barras\" do produto.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            barcodeField.selectAll();
+            barcodeField.requestFocusInWindow();
+            return;
+        }
+        if (!"WEIGHT".equalsIgnoreCase(product.saleType())) {
+            JOptionPane.showMessageDialog(this,
+                    "O artigo '" + product.name() + "' não é vendido ao peso.\n"
+                            + "Defina o Tipo de Venda = Peso no cadastro do produto.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            barcodeField.setText("");
+            barcodeField.requestFocusInWindow();
+            return;
+        }
+
+        BigDecimal qtyKg;
+        if (scaleBarcodeParser.embedsPrice()) {
+            BigDecimal unit = product.unitPrice();
+            if (unit == null || unit.signum() <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "O artigo '" + product.name() + "' não tem preço/kg definido.",
+                        "Aviso", JOptionPane.WARNING_MESSAGE);
+                barcodeField.setText("");
+                barcodeField.requestFocusInWindow();
+                return;
+            }
+            // Balança embute o preço já calculado → deriva o peso = preço ÷ preço/kg.
+            qtyKg = scaleBarcodeParser.priceMt(scale).divide(unit, 3, RoundingMode.HALF_UP);
+        } else {
+            qtyKg = scaleBarcodeParser.weightKg(scale);
+        }
+
+        if (qtyKg.signum() <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Peso inválido (zero) na etiqueta da balança.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            barcodeField.setText("");
+            barcodeField.requestFocusInWindow();
+            return;
+        }
+
+        addWeighedProductToCart(product, qtyKg);
+        barcodeField.setText("");
+        barcodeField.requestFocusInWindow();
+    }
+
+    /** Resolve o artigo pesado pelo PLU: tenta o código tal-e-qual e depois sem zeros à esquerda. */
+    private ProductDTO resolveWeighedProduct(String itemCode) {
+        ProductDTO product = comercialService.findProductByBarcode(itemCode);
+        if (product == null) {
+            String stripped = itemCode.replaceFirst("^0+", "");
+            if (!stripped.isEmpty() && !stripped.equals(itemCode)) {
+                product = comercialService.findProductByBarcode(stripped);
+            }
+        }
+        return product;
+    }
+
+    /**
+     * Adiciona um artigo <b>vendido ao peso</b> com a quantidade (kg) lida da balança. Faz merge com
+     * uma linha existente do mesmo artigo (soma o peso), aplica a melhor promoção para a quantidade e
+     * deixa o cálculo de dinheiro à engine (preço/kg × kg, IVA por unidade), como qualquer outra linha.
+     */
+    private void addWeighedProductToCart(ProductDTO product, BigDecimal qtyKg) {
+        if (activeSession == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
+                    "Caixa Fechada", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        for (CartItem it : cartItems) {
+            if (it.serial == null && it.product.id().equals(product.id())) {
+                it.qty = it.qty.add(qtyKg);
+                updateCartTotal();
+                return;
+            }
+        }
+        BigDecimal discount = BigDecimal.ZERO;
+        String note = "-";
+        var promo = promotionService.bestPromotion(
+                CurrentUserContext.getCurrentCompanyId(), product.id(), product.categoryId(), qtyKg);
+        if (promo.isPresent()) {
+            discount = promo.get().discountPercent();
+            note = "Promo: " + promo.get().name();
+        }
+        CartItem item = new CartItem(product, qtyKg, discount, null, null);
+        item.note = note;
+        cartItems.add(item);
+        updateCartTotal();
     }
 
     // ─── Form-layout helpers ────────────────────────────────────────────────────
@@ -1256,7 +1369,7 @@ public class POSPanel extends JPanel {
 
     private static int addSectionHeader(JPanel host, GridBagConstraints gbc, int row, String text) {
         JLabel section = new JLabel(text);
-        section.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        section.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         section.setForeground(UIHelper.ACCENT);
         section.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 70)));
 

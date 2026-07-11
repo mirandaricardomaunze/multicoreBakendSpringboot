@@ -72,7 +72,7 @@ public class PlataformaPanel extends JPanel {
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
         tabbedPane.addTab("Empresas", UIHelper.icon("fas-building", 16, UIHelper.TEXT_LIGHT), createCompaniesTab());
         tabbedPane.addTab("Assinaturas & Pagamentos", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT),
                 createSubscriptionsTab());

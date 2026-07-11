@@ -2,10 +2,20 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-09
-**Estado:** software principal de prontidão para loja/mercearia concluído e testado. O que resta depende de validação manual/hardware/restore em ambiente separado. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+**Última actualização:** 2026-07-11
+**Estado:** software principal de prontidão para loja/mercearia concluído e testado. Polish visual PHC concluído (ver abaixo). A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
-### Progresso — 2026-07-09 (filtros profissionais em todas as tabelas + validação do backup)
+### Progresso — 2026-07-11 (Polish Visual PHC — aspecto ERP profissional)
+
+- **`SlimScrollBarUI`** (novo): scroll bars finas (6 px), thumb violeta arredondado, sem setas — aplicado via `UIHelper.styleScrollPane()` em todos os JScrollPane do sistema.
+- **`StatusBar`** (novo): rodapé de 24 px com módulo activo · nº registos · empresa · utilizador · hora. Timer interno (60 s) actualiza a hora. `MainFrame.navigate()` actualiza o módulo; `applyAuthenticatedUser` inicializa empresa e utilizador.
+- **`SectionHeader`** (novo): cabeçalho de secção reutilizável — ícone opcional + título + separador 1 px.
+- **`ModernPanel`** (melhorado): borda usa `UIHelper.BORDER` em painéis normais (adapta ao tema claro/escuro); painéis com gradiente mantêm branco translúcido subtil.
+- **`styleTabbedPanePHC`** (novo em `UIHelper`): tabs PHC com linha de acento 3 px na base (sem fundo cheio). Migrado em **10 painéis**: ApprovalsPanel, ComercialPanel, ComprasPanel, ConfigPanel, CRMPanel, FinanceiroPanel, FiscalPanel, HRPanel, PlataformaPanel, StockPanel.
+- **Tooltips premium** em `UIHelper.initGlobalTheme()`: fundo `BG_CARD`, borda `BORDER`, fonte 12 px, delay 600 ms.
+- Spec: [docs/PHC_UI_POLISH_SPEC.md](../docs/PHC_UI_POLISH_SPEC.md) | Harness: [docs/PHC_UI_POLISH_HARNESS.md](../docs/PHC_UI_POLISH_HARNESS.md).
+- **Verificação:** `mvn -o compile` → BUILD SUCCESS.
+
 
 - **Filtros de tabela transversais:** o componente `com.phcpro.gui.components.TableFilter` (pesquisa
   com lupa + funil + dropdowns tipo/estado + período por data, colunas ordenáveis) foi estendido a

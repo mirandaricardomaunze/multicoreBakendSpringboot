@@ -69,11 +69,11 @@ public class CollapsibleSidebar extends JPanel {
 
         // ---- Header (brand + toggle)
         brandLabel = new JLabel(brand);
-        brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
         brandLabel.setForeground(HEADER_TEXT);
 
         brandSubLabel = new JLabel(subBrand);
-        brandSubLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         brandSubLabel.setForeground(new Color(203, 213, 225)); // Slate-300 — legível sob a marca
         brandSubLabel.setToolTipText("Empresa ativa");
 
@@ -116,7 +116,7 @@ public class CollapsibleSidebar extends JPanel {
 
         // ---- Footer
         footerLabel = new JLabel("v1.0.0");
-        footerLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        footerLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         footerLabel.setForeground(SECTION_LABEL);
         footerLabel.setBorder(new EmptyBorder(10, 18, 16, 14));
         add(footerLabel, BorderLayout.SOUTH);
@@ -133,7 +133,7 @@ public class CollapsibleSidebar extends JPanel {
             body.add(Box.createRigidArea(new Dimension(0, 14)));
         }
         JLabel section = new JLabel(title.toUpperCase());
-        section.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        section.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
         section.setForeground(SECTION_LABEL);
         section.setAlignmentX(Component.LEFT_ALIGNMENT);
         section.setBorder(new EmptyBorder(0, 14, 6, 0));
@@ -298,7 +298,7 @@ public class CollapsibleSidebar extends JPanel {
                 g2.fillRoundRect(0, 0, w, h, 8, 8);
 
                 String glyph = collapsed ? "›" : "‹";
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
                 int tw = g2.getFontMetrics().stringWidth(glyph);
                 int tx = (w - tw) / 2;
                 int ty = (h + g2.getFontMetrics().getAscent() - g2.getFontMetrics().getDescent()) / 2 - 1;

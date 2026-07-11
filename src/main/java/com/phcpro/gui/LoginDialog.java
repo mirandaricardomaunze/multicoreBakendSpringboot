@@ -69,7 +69,7 @@ public class LoginDialog extends JDialog {
         g.gridy++;
         g.insets = new Insets(10, 0, 0, 0);
         JLabel brand = new JLabel("MULTICORE");
-        brand.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        brand.setFont(new Font(UIHelper.FONT, Font.BOLD, 26));
         brand.setForeground(UIHelper.TEXT_LIGHT);
         brand.setHorizontalAlignment(SwingConstants.CENTER);
         wrapper.add(brand, g);
@@ -77,7 +77,7 @@ public class LoginDialog extends JDialog {
         g.gridy++;
         g.insets = new Insets(2, 0, 22, 0);
         JLabel subtitle = new JLabel("Aceda à sua conta para continuar");
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         subtitle.setForeground(UIHelper.TEXT_MUTED);
         subtitle.setHorizontalAlignment(SwingConstants.CENTER);
         wrapper.add(subtitle, g);
@@ -114,7 +114,7 @@ public class LoginDialog extends JDialog {
         c.gridy++;
         c.insets = new Insets(0, 0, 14, 0);
         errorLabel = new JLabel(" ");
-        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        errorLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         errorLabel.setForeground(UIHelper.REJECTED_RED);
         card.add(errorLabel, c);
 
@@ -139,7 +139,7 @@ public class LoginDialog extends JDialog {
         g.gridy++;
         g.insets = new Insets(0, 0, 0, 0);
         JLabel hint = new JLabel("Contas de demonstração: maria / joao / ana  •  senha: password");
-        hint.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        hint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         hint.setForeground(UIHelper.TEXT_MUTED);
         hint.setHorizontalAlignment(SwingConstants.CENTER);
         wrapper.add(hint, g);
@@ -159,7 +159,7 @@ public class LoginDialog extends JDialog {
 
     private JLabel fieldLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

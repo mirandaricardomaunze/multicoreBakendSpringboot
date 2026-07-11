@@ -43,7 +43,7 @@ public class CRMPanel extends JPanel {
 
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
         tabbedPane.addTab("Pedidos de Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT),
                 createTicketsTab());
         tabbedPane.addTab("Folhas de Obra", UIHelper.icon("fas-tools", 16, UIHelper.TEXT_LIGHT),

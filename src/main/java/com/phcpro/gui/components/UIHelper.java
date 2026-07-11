@@ -35,14 +35,44 @@ public class UIHelper {
     public static Color BORDER = Theme.DARK.border;
     public static Color SELECTION_BG = Theme.DARK.selectionBg;
 
-    // ── Cores de acento — partilhadas entre temas (não mudam com claro/escuro) ──────────────
+    // ── Cores de acento — partilhadas entre temas (não mudam com claro/escuro). Cada acento tem o
+    //    seu tom "hover" curado (shade -600 do Tailwind), em vez de .brighter()/.darker() do AWT
+    //    (que produz tons lamacentos). ─────────────────────────────────────────────────────────
     public static final Color ACCENT = new Color(139, 92, 246);      // Violet-500 (#8B5CF6)
+    public static final Color ACCENT_HOVER = new Color(124, 58, 237); // Violet-600 (#7C3AED)
     public static final Color ACCENT_BLUE = new Color(59, 130, 246); // Blue-500 (#3B82F6)
+    public static final Color ACCENT_BLUE_HOVER = new Color(37, 99, 235); // Blue-600 (#2563EB)
     public static final Color APPROVED_GREEN = new Color(16, 185, 129); // Emerald-500 (#10B981)
+    public static final Color APPROVED_GREEN_HOVER = new Color(5, 150, 105); // Emerald-600 (#059669)
     public static final Color REJECTED_RED = new Color(239, 68, 68);    // Red-500 (#EF4444)
+    public static final Color REJECTED_RED_HOVER = new Color(220, 38, 38); // Red-600 (#DC2626)
     public static final Color PENDING_YELLOW = new Color(245, 158, 11);  // Amber-500 (#F59E0B)
     private static final Color SECONDARY = new Color(75, 85, 99);       // Gray-600 (#4B5563)
     private static final Color SECONDARY_HOVER = new Color(107, 114, 128); // Gray-500 (#6B7280)
+
+    // ── Cores de acento por módulo (partilhadas entre temas). Uma só fonte de verdade — a barra de
+    //    topo e os painéis referenciam estas em vez de literais Color soltos. ────────────────────
+    public static final Color MODULE_DASHBOARD  = ACCENT_BLUE;
+    public static final Color MODULE_POS        = new Color(236, 72, 153); // Pink-500
+    public static final Color MODULE_COMERCIAL  = ACCENT;
+    public static final Color MODULE_COMPRAS    = PENDING_YELLOW;          // Amber-500
+    public static final Color MODULE_STOCK      = APPROVED_GREEN;          // Emerald-500
+    public static final Color MODULE_FINANCEIRO = APPROVED_GREEN;
+    public static final Color MODULE_HR         = ACCENT;
+    public static final Color MODULE_CRM        = ACCENT_BLUE;
+    public static final Color MODULE_CLIENTES   = new Color(14, 165, 233); // Sky-500
+    public static final Color MODULE_FISCAL     = new Color(202, 138, 4);  // Yellow-600
+    public static final Color MODULE_APPROVALS  = PENDING_YELLOW;
+    public static final Color MODULE_CONFIG     = new Color(107, 114, 128); // Gray-500
+
+    // ── Tipografia: família base num só sítio (evita "Segoe UI" repetido; troca/fallback central). ──
+    public static final String FONT = "Segoe UI";
+
+    // ── Escala de raios de canto (px): uma linguagem única em vez de valores soltos (8/10/14/16/20). ──
+    public static final int RADIUS_SM = 8;   // realces de nav, tabs, chips
+    public static final int RADIUS_MD = 12;  // botões, cards, badges
+    public static final int RADIUS_LG = 16;  // superfícies grandes
+
     public static final int FORM_CONTROL_HEIGHT = 38;
     public static final int DIALOG_FORM_MIN_WIDTH = 560;
 
@@ -242,15 +272,15 @@ public class UIHelper {
     }
 
     public static ModernButton createPrimaryButton(String text) {
-        return new ModernButton(text, ACCENT_BLUE, ACCENT_BLUE.brighter());
+        return new ModernButton(text, ACCENT_BLUE, ACCENT_BLUE_HOVER);
     }
 
     public static ModernButton createSuccessButton(String text) {
-        return new ModernButton(text, APPROVED_GREEN, APPROVED_GREEN.brighter());
+        return new ModernButton(text, APPROVED_GREEN, APPROVED_GREEN_HOVER);
     }
 
     public static ModernButton createDangerButton(String text) {
-        return new ModernButton(text, REJECTED_RED, REJECTED_RED.brighter());
+        return new ModernButton(text, REJECTED_RED, REJECTED_RED_HOVER);
     }
 
     public static ModernButton createSecondaryButton(String text) {
@@ -271,9 +301,9 @@ public class UIHelper {
             UIManager.put("Panel.background", BG_DARK);
             UIManager.put("OptionPane.background", BG_DARK);
             UIManager.put("OptionPane.messageForeground", TEXT_LIGHT);
-            UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.BOLD, 13));
-            UIManager.put("OptionPane.buttonFont", new Font("Segoe UI", Font.BOLD, 12));
-            
+            UIManager.put("OptionPane.messageFont", new Font(FONT, Font.BOLD, 13));
+            UIManager.put("OptionPane.buttonFont", new Font(FONT, Font.BOLD, 12));
+
             // Buttons inside dialogs
             UIManager.put("Button.background", BG_CARD);
             UIManager.put("Button.foreground", TEXT_LIGHT);
@@ -285,7 +315,7 @@ public class UIHelper {
             UIManager.put("Button.gradient",
                     java.util.Arrays.asList(1f, 0f, BG_CARD, BG_CARD, BG_CARD));
             UIManager.put("Button.disabledText", TEXT_MUTED);
-            
+
             // TabbedPane dark theme consistency
             UIManager.put("TabbedPane.background", BG_CARD);
             UIManager.put("TabbedPane.foreground", TEXT_LIGHT);
@@ -297,10 +327,10 @@ public class UIHelper {
             UIManager.put("TabbedPane.light", BG_CARD);
             UIManager.put("TabbedPane.highlight", BG_CARD);
             UIManager.put("TabbedPane.focus", new Color(0, 0, 0, 0));
-            
+
             // Labels
             UIManager.put("Label.foreground", TEXT_LIGHT);
-            UIManager.put("Label.font", new Font("Segoe UI", Font.PLAIN, 13));
+            UIManager.put("Label.font", new Font(FONT, Font.PLAIN, 13));
 
             // ComboBox and TextField
             UIManager.put("ComboBox.background", FIELD_BG);
@@ -318,6 +348,18 @@ public class UIHelper {
             UIManager.put("TextArea.background", BG_DARK);
             UIManager.put("TextArea.foreground", TEXT_LIGHT);
             UIManager.put("TextArea.caretForeground", TEXT_LIGHT);
+
+            // ── Tooltips premium — fundo do tema, borda subtil, fonte Segoe UI 12 ──────────────
+            // O ToolTipManager.sharedInstance() controla o atraso; o UIManager controla o visual.
+            UIManager.put("ToolTip.background", BG_CARD);
+            UIManager.put("ToolTip.foreground", TEXT_LIGHT);
+            UIManager.put("ToolTip.font", new Font(FONT, Font.PLAIN, 12));
+            UIManager.put("ToolTip.border",
+                    BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(BORDER, 1, true),
+                            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+            ToolTipManager.sharedInstance().setInitialDelay(600);
+            ToolTipManager.sharedInstance().setDismissDelay(8000);
         } catch (Exception ignored) {}
     }
 
@@ -325,7 +367,7 @@ public class UIHelper {
         tabbedPane.setOpaque(false);
         tabbedPane.setBackground(BG_DARK);
         tabbedPane.setForeground(TEXT_LIGHT);
-        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tabbedPane.setFont(new Font(FONT, Font.BOLD, 13));
         tabbedPane.setUI(new BasicTabbedPaneUI() {
             @Override
             protected void installDefaults() {
@@ -342,7 +384,7 @@ public class UIHelper {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(isSelected ? ACCENT : BG_CARD);
-                g2.fillRoundRect(x + 2, y + 2, w - 4, h - 4, 8, 8);
+                g2.fillRoundRect(x + 2, y + 2, w - 4, h - 4, RADIUS_SM, RADIUS_SM);
                 g2.dispose();
             }
 
@@ -376,6 +418,84 @@ public class UIHelper {
                                                int tabIndex, Rectangle iconRect, Rectangle textRect,
                                                boolean isSelected) {
                 // Avoid low-contrast focus rectangles from the platform Look & Feel.
+            }
+        });
+    }
+
+    /**
+     * Estilo de tab PHC — linha de acento (3 px, ACCENT) na base da tab activa; sem fundo cheio.
+     * Texto activo: TEXT_LIGHT. Inactivo: TEXT_MUTED. Linha separadora subtil abaixo das tabs.
+     * Usar nos paineis internos (ComercialPanel, StockPanel, ...).
+     */
+    public static void styleTabbedPanePHC(JTabbedPane tabbedPane) {
+        tabbedPane.setOpaque(false);
+        tabbedPane.setBackground(BG_DARK);
+        tabbedPane.setForeground(TEXT_LIGHT);
+        tabbedPane.setFont(new Font(FONT, Font.BOLD, 13));
+        tabbedPane.setUI(new BasicTabbedPaneUI() {
+            @Override
+            protected void installDefaults() {
+                super.installDefaults();
+                tabAreaInsets = new Insets(0, 0, 0, 0);
+                contentBorderInsets = new Insets(4, 0, 0, 0);
+                tabInsets = new Insets(8, 16, 8, 16);
+                selectedTabPadInsets = new Insets(0, 0, 0, 0);
+            }
+
+            @Override
+            protected void paintTabBackground(Graphics g, int tabPlacement, int tabIndex,
+                                              int x, int y, int w, int h, boolean isSelected) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (isSelected) {
+                    // Fundo subtil: blend entre BG_DARK e BG_CARD
+                    g2.setColor(new Color(
+                            (BG_DARK.getRed()   + BG_CARD.getRed())   / 2,
+                            (BG_DARK.getGreen() + BG_CARD.getGreen()) / 2,
+                            (BG_DARK.getBlue()  + BG_CARD.getBlue())  / 2));
+                } else {
+                    g2.setColor(BG_DARK);
+                }
+                g2.fillRoundRect(x + 1, y + 1, w - 2, h - 2, RADIUS_SM, RADIUS_SM);
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintTabBorder(Graphics g, int tabPlacement, int tabIndex,
+                                          int x, int y, int w, int h, boolean isSelected) {
+                if (!isSelected) return;
+                // Linha de acento PHC -- 3 px na base
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(ACCENT);
+                g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawLine(x + 6, y + h - 2, x + w - 6, y + h - 2);
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintText(Graphics g, int tabPlacement, Font font, FontMetrics metrics,
+                                     int tabIndex, String title, Rectangle textRect, boolean isSelected) {
+                g.setFont(font);
+                g.setColor(isSelected ? TEXT_LIGHT : TEXT_MUTED);
+                int mnemonicIndex = tabPane.getDisplayedMnemonicIndexAt(tabIndex);
+                BasicGraphicsUtils.drawStringUnderlineCharAt(g, title, mnemonicIndex,
+                        textRect.x, textRect.y + metrics.getAscent());
+            }
+
+            @Override
+            protected void paintContentBorder(Graphics g, int tabPlacement, int selectedIndex) {
+                // Linha separadora subtil entre tabs e conteudo
+                int tabH = calculateTabAreaHeight(tabPlacement, runCount, maxTabHeight);
+                g.setColor(GRID);
+                g.fillRect(0, tabH - 1, tabPane.getWidth(), 1);
+            }
+
+            @Override
+            protected void paintFocusIndicator(Graphics g, int tabPlacement, Rectangle[] rects,
+                                               int tabIndex, Rectangle iconRect, Rectangle textRect,
+                                               boolean isSelected) {
+                // Sem rectangulo de foco (baixo contraste)
             }
         });
     }
@@ -443,7 +563,7 @@ public class UIHelper {
         table.setBackground(BG_CARD);
         table.setForeground(TEXT_LIGHT);
         table.setGridColor(GRID);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setFont(new Font(FONT, Font.PLAIN, 13));
         table.setRowHeight(35);
         table.setSelectionBackground(SELECTION_BG);
         table.setSelectionForeground(TEXT_LIGHT);
@@ -458,7 +578,7 @@ public class UIHelper {
         JTableHeader header = table.getTableHeader();
         header.setBackground(TABLE_HEADER_BG);
         header.setForeground(TEXT_LIGHT);
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        header.setFont(new Font(FONT, Font.BOLD, 13));
         header.setPreferredSize(new Dimension(100, 38));
         header.setReorderingAllowed(false);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, GRID));
@@ -470,7 +590,7 @@ public class UIHelper {
                 setHorizontalAlignment(numeric ? SwingConstants.RIGHT : SwingConstants.LEFT);
                 setBackground(TABLE_HEADER_BG);
                 setForeground(TEXT_LIGHT);
-                setFont(new Font("Segoe UI", Font.BOLD, 13));
+                setFont(new Font(FONT, Font.BOLD, 13));
                 // separador vertical entre colunas + linha de base (estilo grelha PHC)
                 setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 2, 1, GRID),
@@ -699,7 +819,7 @@ public class UIHelper {
             gbc.gridy = rowCount;
             gbc.weightx = 0.32;
             JLabel nameLabel = new JLabel(colName);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            nameLabel.setFont(new Font(FONT, Font.BOLD, 12));
             nameLabel.setForeground(ACCENT);
             fields.add(nameLabel, gbc);
 
@@ -805,11 +925,18 @@ public class UIHelper {
         }
     }
 
+    /**
+     * Estiliza um {@link JScrollPane} para o tema activo:
+     * borda da cor BORDER do tema, viewport transparente, scroll bars finas ({@link SlimScrollBarUI}).
+     */
     public static void styleScrollPane(JScrollPane scroll) {
-        scroll.setBorder(BorderFactory.createLineBorder(new Color(55, 65, 81), 1));
-        scroll.getViewport().setBackground(BG_DARK);
-        scroll.getVerticalScrollBar().setBackground(BG_DARK);
-        scroll.getHorizontalScrollBar().setBackground(BG_DARK);
+        scroll.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+        scroll.getViewport().setOpaque(false);
+        scroll.setOpaque(false);
+        scroll.getVerticalScrollBar().setUI(new SlimScrollBarUI());
+        scroll.getVerticalScrollBar().setOpaque(false);
+        scroll.getHorizontalScrollBar().setUI(new SlimScrollBarUI());
+        scroll.getHorizontalScrollBar().setOpaque(false);
     }
 
     /**
@@ -891,7 +1018,7 @@ public class UIHelper {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(ACCENT_BLUE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS_MD, RADIUS_MD);
                 int ix = (getWidth() - ic.getIconWidth()) / 2;
                 int iy = (getHeight() - ic.getIconHeight()) / 2;
                 ic.paintIcon(this, g2, ix, iy);
@@ -916,13 +1043,13 @@ public class UIHelper {
         texts.setOpaque(false);
         texts.setLayout(new BoxLayout(texts, BoxLayout.Y_AXIS));
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 19));
+        titleLbl.setFont(new Font(FONT, Font.BOLD, 19));
         titleLbl.setForeground(TEXT_LIGHT);
         titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         texts.add(titleLbl);
         if (subtitle != null && !subtitle.isBlank()) {
             JLabel subLbl = new JLabel(subtitle);
-            subLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            subLbl.setFont(new Font(FONT, Font.PLAIN, 12));
             subLbl.setForeground(TEXT_MUTED);
             subLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
             subLbl.setBorder(new EmptyBorder(2, 0, 0, 0));
@@ -964,7 +1091,7 @@ public class UIHelper {
         field.setBackground(FIELD_BG);
         field.setForeground(TEXT_LIGHT);
         field.setCaretColor(TEXT_LIGHT);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        field.setFont(new Font(FONT, Font.PLAIN, 13));
         installFocusBorder(field);
         applyFormControlHeight(field);
     }
@@ -1074,7 +1201,7 @@ public class UIHelper {
         field.setBackground(FIELD_BG);
         field.setForeground(TEXT_LIGHT);
         field.setCaretColor(TEXT_LIGHT);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        field.setFont(new Font(FONT, Font.PLAIN, 13));
         installFocusBorder(field);
         applyFormControlHeight(field);
     }
@@ -1083,14 +1210,14 @@ public class UIHelper {
         area.setBackground(FIELD_BG);
         area.setForeground(TEXT_LIGHT);
         area.setCaretColor(TEXT_LIGHT);
-        area.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        area.setFont(new Font(FONT, Font.PLAIN, 13));
         installFocusBorder(area);
     }
 
     public static void styleComboBox(JComboBox<?> combo) {
         combo.setBackground(FIELD_BG);
         combo.setForeground(TEXT_LIGHT);
-        combo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        combo.setFont(new Font(FONT, Font.PLAIN, 13));
         installFocusBorder(combo);
         applyFormControlHeight(combo);
         flattenComboArrow(combo);
@@ -1163,7 +1290,7 @@ public class UIHelper {
                 new LineBorder(BORDER, 1, true), new EmptyBorder(18, 26, 18, 26)));
         JLabel label = new JLabel(message);
         label.setForeground(TEXT_LIGHT);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setFont(new Font(FONT, Font.BOLD, 13));
         panel.add(label, BorderLayout.NORTH);
         panel.add(createBusyBar(), BorderLayout.SOUTH);
         dialog.setContentPane(panel);
@@ -1206,14 +1333,14 @@ public class UIHelper {
 
     public static JLabel createHeading(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        label.setFont(new Font(FONT, Font.BOLD, 22));
         label.setForeground(TEXT_LIGHT);
         return label;
     }
 
     public static JLabel createSubheading(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        label.setFont(new Font(FONT, Font.BOLD, 15));
         label.setForeground(ACCENT);
         return label;
     }
@@ -1248,7 +1375,7 @@ public class UIHelper {
 
             if (labelObj instanceof String) {
                 JLabel lbl = new JLabel((String) labelObj);
-                lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                lbl.setFont(new Font(FONT, Font.BOLD, 12));
                 lbl.setForeground(ACCENT);
                 cell.add(lbl, BorderLayout.NORTH);
             } else if (labelObj instanceof Component) {

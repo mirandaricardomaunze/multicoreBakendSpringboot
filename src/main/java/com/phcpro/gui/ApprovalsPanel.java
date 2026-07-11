@@ -48,14 +48,14 @@ public class ApprovalsPanel extends JPanel {
         headerPanel.add(UIHelper.createHeading("Fila de Aprovações de Documentos"), BorderLayout.NORTH);
         
         JLabel sub = new JLabel("Validação e controlo administrativo de limites de compras e vendas.");
-        sub.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        sub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         sub.setForeground(UIHelper.TEXT_MUTED);
         headerPanel.add(sub, BorderLayout.SOUTH);
         add(headerPanel, BorderLayout.NORTH);
 
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
         tabbedPane.addTab("Pendentes", UIHelper.icon("fas-hourglass-half", 16, UIHelper.TEXT_LIGHT),
                 createPendingTab());
         tabbedPane.addTab("Histórico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.TEXT_LIGHT),
@@ -289,7 +289,7 @@ public class ApprovalsPanel extends JPanel {
     /** Adiciona um par etiqueta (acento) → componente, empilhados, e devolve o próximo {@code gridy}. */
     private static int addFormRow(JPanel form, GridBagConstraints g, int y, String label, JComponent comp) {
         JLabel l = new JLabel(label);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         l.setForeground(UIHelper.ACCENT);
         g.gridy = y;
         g.insets = new Insets(8, 8, 2, 8);

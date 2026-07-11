@@ -90,7 +90,7 @@ public class HRPanel extends JPanel {
         add(UIHelper.createHeading("Recursos Humanos"), BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabs);
+        UIHelper.styleTabbedPanePHC(tabs);
 
         tabs.addTab("Visão Geral",        UIHelper.icon("fas-chart-pie", 16, UIHelper.TEXT_LIGHT),     buildOverviewTab());
         tabs.addTab("Colaboradores",     UIHelper.icon("fas-users", 16, UIHelper.TEXT_LIGHT),         buildEmployeesTab());
@@ -185,7 +185,7 @@ public class HRPanel extends JPanel {
 
     private static JLabel overviewSub(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         l.setForeground(new Color(229, 231, 235));
         return l;
     }
