@@ -190,13 +190,13 @@ public final class TableFilter {
         return label(text, null);
     }
 
-    /** Barra de filtros: ícone de funil como âncora visual + os componentes. */
+    /**
+     * Barra de filtros: apenas os componentes. A pesquisa já tem a lupa <b>dentro</b> do input
+     * ({@link SearchField}), por isso não se coloca nenhum ícone solto à esquerda.
+     */
     public static JPanel bar(JComponent... comps) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         p.setOpaque(false);
-        JLabel funnel = new JLabel(UIHelper.icon("fas-filter", 13, UIHelper.TEXT_MUTED));
-        funnel.setBorder(new javax.swing.border.EmptyBorder(0, 0, 0, 2));
-        p.add(funnel);
         for (JComponent c : comps) p.add(c);
         return p;
     }
