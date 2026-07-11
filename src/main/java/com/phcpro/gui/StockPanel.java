@@ -395,6 +395,7 @@ public class StockPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(batchesTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(com.phcpro.gui.components.TableFooter.install(batchesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -613,6 +614,7 @@ public class StockPanel extends JPanel {
         JScrollPane stockScroll = new JScrollPane(stockTable);
         UIHelper.styleScrollPane(stockScroll);
         card.add(stockScroll, BorderLayout.CENTER);
+        card.add(com.phcpro.gui.components.TableFooter.install(stockTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -869,6 +871,7 @@ public class StockPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(categoriesTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(com.phcpro.gui.components.TableFooter.install(categoriesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }

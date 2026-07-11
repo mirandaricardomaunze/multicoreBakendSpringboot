@@ -667,6 +667,39 @@ public class UIHelper {
         });
 
         installRowSelector(table);
+        installListingFooter(table);
+    }
+
+    /**
+     * Instala automaticamente um {@link TableFooter} (contagem + soma) por baixo das <b>tabelas de
+     * listagem</b> — as que têm um {@code RowSorter} (filtro), o que as distingue das tabelas de
+     * formulário/carrinho (sem sorter). Só o faz quando o card que contém a tabela usa
+     * {@code BorderLayout} e tem o SOUTH livre. Para excluir uma tabela específica:
+     * {@code table.putClientProperty("noTableFooter", Boolean.TRUE)}.
+     */
+    private static void installListingFooter(JTable table) {
+        if (Boolean.TRUE.equals(table.getClientProperty("listingFooterWired"))) return;
+        table.putClientProperty("listingFooterWired", Boolean.TRUE);
+        table.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) == 0) return;
+            maybeAddListingFooter(table);
+        });
+        // O sorter pode ser instalado (TableFilter) depois de a tabela já estar na árvore.
+        table.addPropertyChangeListener("rowSorter", e -> maybeAddListingFooter(table));
+    }
+
+    private static void maybeAddListingFooter(JTable table) {
+        if (Boolean.TRUE.equals(table.getClientProperty("noTableFooter"))) return;
+        if (table.getRowSorter() == null) return; // só tabelas de listagem (com filtro)
+        JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, table);
+        if (sp == null || !(sp.getParent() instanceof JComponent parent)) return;
+        if (!(parent.getLayout() instanceof BorderLayout bl)) return;
+        if (bl.getLayoutComponent(BorderLayout.SOUTH) != null) return;    // SOUTH ocupado (rodapé próprio)
+        if (Boolean.TRUE.equals(parent.getClientProperty("tableFooterAdded"))) return;
+        parent.putClientProperty("tableFooterAdded", Boolean.TRUE);
+        parent.add(TableFooter.install(table), BorderLayout.SOUTH);
+        parent.revalidate();
+        parent.repaint();
     }
 
     /**
