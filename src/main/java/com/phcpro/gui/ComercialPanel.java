@@ -105,9 +105,9 @@ public class ComercialPanel extends JPanel {
     private com.phcpro.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
     private DefaultTableModel movimentosModel;
     private JTable movimentosTable;
-    private JTextField movimentosQueryField;
-    private JTextField movimentosFromField;
-    private JTextField movimentosToField;
+    private JTextField movimentosSearch;
+    private JComboBox<String> movimentosPeriod;
+    private java.util.List<com.phcpro.modules.movimentos.dto.MovimentoDTO> movimentosData = java.util.List.of();
     private JLabel movimentosFooter;
 
     public ComercialPanel(
@@ -2434,38 +2434,14 @@ public class ComercialPanel extends JPanel {
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Movimentos — Todos os Documentos Comerciais"), BorderLayout.WEST);
 
-        JPanel filters = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        filters.setOpaque(false);
-
-        movimentosQueryField = new JTextField(16);
-        UIHelper.styleTextField(movimentosQueryField);
-        movimentosQueryField.setToolTipText("Filtrar por nº de documento ou nome do cliente");
-        movimentosFromField = new JTextField(9);
-        UIHelper.styleTextField(movimentosFromField);
-        movimentosFromField.setToolTipText("Data inicial (aaaa-MM-dd). Vazio = sem limite");
-        movimentosToField = new JTextField(9);
-        UIHelper.styleTextField(movimentosToField);
-        movimentosToField.setToolTipText("Data final (aaaa-MM-dd). Vazio = sem limite");
-
-        ModernButton applyBtn = UIHelper.createPrimaryButton("Aplicar");
-        applyBtn.setIcon(UIHelper.icon("fas-filter", 14));
-        applyBtn.addActionListener(e -> loadMovimentosTable());
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> { movimentosQueryField.setText(""); movimentosFromField.setText(""); movimentosToField.setText(""); loadMovimentosTable(); });
-
-        JLabel pesquisarLbl = new JLabel("Pesquisar:"); pesquisarLbl.setForeground(UIHelper.TEXT_MUTED);
-        JLabel deLbl = new JLabel("De:"); deLbl.setForeground(UIHelper.TEXT_MUTED);
-        JLabel ateLbl = new JLabel("Até:"); ateLbl.setForeground(UIHelper.TEXT_MUTED);
-        filters.add(pesquisarLbl); filters.add(movimentosQueryField);
-        filters.add(deLbl); filters.add(movimentosFromField);
-        filters.add(ateLbl); filters.add(movimentosToField);
-        filters.add(applyBtn); filters.add(refreshBtn);
-        header.add(filters, BorderLayout.EAST);
+        refreshBtn.addActionListener(e -> loadMovimentosTable());
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        header.add(actions, BorderLayout.EAST);
         tab.add(header, BorderLayout.NORTH);
-
-        // Filtro instantâneo por nº/cliente; datas exigem "Aplicar" (validação de formato).
-        UIHelper.onTextChange(movimentosQueryField, this::loadMovimentosTable);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -2479,12 +2455,15 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(movimentosTable);
         JScrollPane scroll = new JScrollPane(movimentosTable);
         UIHelper.styleScrollPane(scroll);
-        JTextField mvSearch = TableFilter.searchField("Nº documento ou cliente…");
-        JComboBox<String> mvPeriodo = TableFilter.periodCombo();
-        TableFilter.install(movimentosTable, mvSearch,
+        movimentosSearch = TableFilter.searchField("Nº documento ou cliente…");
+        movimentosPeriod = TableFilter.periodCombo();
+        TableFilter.install(movimentosTable, movimentosSearch,
                 java.util.List.of(),
-                java.util.List.of(new TableFilter.PeriodFilter(mvPeriodo, 3)));
-        JPanel mvBar = TableFilter.bar(mvSearch, TableFilter.label("Data:", "fas-calendar-alt"), mvPeriodo);
+                java.util.List.of(new TableFilter.PeriodFilter(movimentosPeriod, 3)));
+        // Rodapé (contagem + soma) acompanha o filtro client-side.
+        UIHelper.onTextChange(movimentosSearch, this::updateMovimentosFooter);
+        movimentosPeriod.addActionListener(e -> updateMovimentosFooter());
+        JPanel mvBar = TableFilter.bar(movimentosSearch, TableFilter.label("Data:", "fas-calendar-alt"), movimentosPeriod);
         mvBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         card.add(mvBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -2500,27 +2479,13 @@ public class ComercialPanel extends JPanel {
 
     private void loadMovimentosTable() {
         if (movimentosModel == null) return;
-        java.time.LocalDate from;
-        java.time.LocalDate to;
-        try {
-            from = parseDateOrNull(movimentosFromField.getText());
-            to = parseDateOrNull(movimentosToField.getText());
-        } catch (java.time.format.DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "Data inválida. Use o formato aaaa-MM-dd.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
         movimentosModel.setRowCount(0);
-        java.util.List<com.phcpro.modules.movimentos.dto.MovimentoDTO> movimentos =
-                movimentosService.listar(
-                        com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId(),
-                        movimentosQueryField.getText().trim(), from, to);
+        movimentosData = movimentosService.listar(
+                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId(), "", null, null);
         java.time.format.DateTimeFormatter dtf =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        java.math.BigDecimal soma = java.math.BigDecimal.ZERO;
-        for (var m : movimentos) {
+        for (var m : movimentosData) {
             java.math.BigDecimal total = m.total() == null ? java.math.BigDecimal.ZERO : m.total();
-            soma = soma.add(total);
             movimentosModel.addRow(new Object[]{
                     m.tipo().getLabel(),
                     m.numero() == null ? "-" : m.numero(),
@@ -2530,12 +2495,35 @@ public class ComercialPanel extends JPanel {
                     String.format("%,.2f MT", total)
             });
         }
-        movimentosFooter.setText(String.format("%d documento(s) · Total: %,.2f MT", movimentos.size(), soma));
+        updateMovimentosFooter();
     }
 
-    private static java.time.LocalDate parseDateOrNull(String text) {
-        if (text == null || text.trim().isEmpty()) return null;
-        return java.time.LocalDate.parse(text.trim());
+    /** Rodapé: contagem + soma dos movimentos actualmente visíveis (após pesquisa/período). */
+    private void updateMovimentosFooter() {
+        if (movimentosFooter == null) return;
+        String q = movimentosSearch == null ? "" : movimentosSearch.getText();
+        String period = movimentosPeriod == null ? null : String.valueOf(movimentosPeriod.getSelectedItem());
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.format.DateTimeFormatter dtf =
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        int count = 0;
+        java.math.BigDecimal soma = java.math.BigDecimal.ZERO;
+        for (var m : movimentosData) {
+            java.math.BigDecimal total = m.total() == null ? java.math.BigDecimal.ZERO : m.total();
+            String dataStr = m.data() == null ? "-" : m.data().format(dtf);
+            java.util.List<String> cells = java.util.List.of(
+                    m.tipo().getLabel(),
+                    m.numero() == null ? "-" : m.numero(),
+                    m.cliente() == null ? "" : m.cliente(),
+                    dataStr,
+                    m.estado() == null ? "" : m.estado(),
+                    String.format("%,.2f MT", total));
+            if (!TableFilter.rowMatches(cells, q, java.util.Map.of())) continue;
+            if (!TableFilter.matchesPeriod(TableFilter.parseCellDate(dataStr), period, today)) continue;
+            count++;
+            soma = soma.add(total);
+        }
+        movimentosFooter.setText(String.format("%d documento(s) · Total: %,.2f MT", count, soma));
     }
 
     private JPanel createOutstandingTab() {
