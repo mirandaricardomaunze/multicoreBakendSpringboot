@@ -1,10 +1,19 @@
 name: build
 
+# Corre em TODAS as branches e PRs — não só main — para que as branches de
+# trabalho (feat/*, fix/*) tenham rede de segurança antes de fundir.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
-    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # A suite de integração Spring é pesada; o runner tem folga (~7 GB).
+  MAVEN_OPTS: -Xmx3g
 
 jobs:
   build:
@@ -23,8 +32,18 @@ jobs:
       - name: Compile
         run: mvn -B -ntp clean compile
 
+      # Os testes correm em H2 in-memory (sem PostgreSQL). O smoke test de UI (Swing)
+      # precisa de um display virtual → xvfb-run.
       - name: Run tests
-        run: mvn -B -ntp test
+        run: xvfb-run -a mvn -B -ntp test
 
-      - name: Package (skip tests — already ran)
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/*.xml'
+          if-no-files-found: ignore
+
+      - name: Package (skip tests — já correram)
         run: mvn -B -ntp -DskipTests package
