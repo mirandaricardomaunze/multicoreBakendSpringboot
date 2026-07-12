@@ -22,17 +22,27 @@ public class AuthController {
     private final AppUserService appUserService;
     private final AuthSessionService authSessionService;
     private final SubscriptionService subscriptionService;
+    private final LoginRateLimiter loginRateLimiter;
 
     public AuthController(AppUserService appUserService, AuthSessionService authSessionService,
-                          SubscriptionService subscriptionService) {
+                          SubscriptionService subscriptionService, LoginRateLimiter loginRateLimiter) {
         this.appUserService = appUserService;
         this.authSessionService = authSessionService;
         this.subscriptionService = subscriptionService;
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        AppUser user = appUserService.authenticate(request.username(), request.password());
+        loginRateLimiter.checkAllowed(request.username());
+        AppUser user;
+        try {
+            user = appUserService.authenticate(request.username(), request.password());
+        } catch (RuntimeException ex) {
+            loginRateLimiter.recordFailure(request.username()); // conta falhas (senha errada, inativo, inexistente)
+            throw ex;
+        }
+        loginRateLimiter.recordSuccess(request.username());
         AuthSessionService.AuthSession session = authSessionService.create(user);
 
         // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que
