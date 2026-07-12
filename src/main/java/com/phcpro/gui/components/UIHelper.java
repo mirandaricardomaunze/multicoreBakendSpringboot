@@ -368,6 +368,7 @@ public class UIHelper {
         tabbedPane.setBackground(BG_DARK);
         tabbedPane.setForeground(TEXT_LIGHT);
         tabbedPane.setFont(new Font(FONT, Font.BOLD, 13));
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.setUI(new BasicTabbedPaneUI() {
             @Override
             protected void installDefaults() {
@@ -432,6 +433,9 @@ public class UIHelper {
         tabbedPane.setBackground(BG_DARK);
         tabbedPane.setForeground(TEXT_LIGHT);
         tabbedPane.setFont(new Font(FONT, Font.BOLD, 13));
+        // SCROLL_TAB_LAYOUT: com muitas tabs (≥5), o WRAP_TAB_LAYOUT padrão cria uma 2ª
+        // linha de tabs que fica "atrás" do conteúdo, tornando-a inacessível a cliques.
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.setUI(new BasicTabbedPaneUI() {
             @Override
             protected void installDefaults() {
@@ -809,12 +813,18 @@ public class UIHelper {
         if (declared != Object.class && declared != String.class) return false;
         int rows = Math.min(table.getRowCount(), 25);
         boolean sawValue = false;
-        for (int r = 0; r < rows; r++) {
-            Object v = table.getValueAt(r, viewCol);
-            if (v == null || v.toString().trim().isEmpty()) continue;
-            sawValue = true;
-            if (v instanceof Number) continue;
-            if (!looksNumeric(v.toString())) return false;
+        // Defensivo: um paint pode ocorrer com o modelo a meio de uma mutação (linhas já removidas mas
+        // o sorter/ vista ainda com a contagem antiga) → getValueAt lançaria. Nesse caso desiste sem rebentar.
+        try {
+            for (int r = 0; r < rows && r < table.getRowCount(); r++) {
+                Object v = table.getValueAt(r, viewCol);
+                if (v == null || v.toString().trim().isEmpty()) continue;
+                sawValue = true;
+                if (v instanceof Number) continue;
+                if (!looksNumeric(v.toString())) return false;
+            }
+        } catch (RuntimeException ex) {
+            return false;
         }
         return sawValue;
     }

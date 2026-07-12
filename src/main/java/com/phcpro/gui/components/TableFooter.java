@@ -40,7 +40,18 @@ public final class TableFooter {
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
                 new EmptyBorder(6, 4, 0, 4)));
 
-        Runnable update = () -> label.setText(render(table, moneyColumn));
+        // A actualização é DIFERIDA (invokeLater, coalescida): os eventos de modelo/sorter disparam
+        // durante a mutação da tabela (ex.: setRowCount(0) + addRow), antes de o RowSorter reprocessar
+        // — ler getValueAt aí veria estado inconsistente. Correr no fim do ciclo do EDT evita a corrida.
+        boolean[] pending = {false};
+        Runnable update = () -> {
+            if (pending[0]) return;
+            pending[0] = true;
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                pending[0] = false;
+                label.setText(render(table, moneyColumn));
+            });
+        };
         table.getModel().addTableModelListener(e -> update.run());
         table.addPropertyChangeListener("model", e -> {
             if (e.getNewValue() instanceof TableModel m) m.addTableModelListener(ev -> update.run());
@@ -74,9 +85,13 @@ public final class TableFooter {
         }
         BigDecimal sum = BigDecimal.ZERO;
         boolean any = false;
-        for (int r = 0; r < rows; r++) {
-            BigDecimal n = parseMoney(String.valueOf(table.getValueAt(r, moneyColumn)));
-            if (n != null) { sum = sum.add(n); any = true; }
+        try {
+            for (int r = 0; r < rows && r < table.getRowCount(); r++) {
+                BigDecimal n = parseMoney(String.valueOf(table.getValueAt(r, moneyColumn)));
+                if (n != null) { sum = sum.add(n); any = true; }
+            }
+        } catch (RuntimeException ex) {
+            return count; // estado transitório da tabela — recalcula na próxima actualização
         }
         return any ? count + " · Total: " + String.format("%,.2f MT", sum) : count;
     }
