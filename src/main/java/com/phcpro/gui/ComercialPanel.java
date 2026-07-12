@@ -103,6 +103,8 @@ public class ComercialPanel extends JPanel {
 
     private JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
     private com.phcpro.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
+    private JPanel orderFormContent;                // conteúdo do modal de nova encomenda
+    private OrderDTO lastCreatedOrder;
     private DefaultTableModel movimentosModel;
     private JTable movimentosTable;
     private JTextField movimentosSearch;
@@ -893,19 +895,12 @@ public class ComercialPanel extends JPanel {
     }
 
     private JPanel createEncomendasTab() {
-        // SplitPane ajustável — utilizador pode arrastar o divisor entre form e lista.
-        JPanel panel = new JPanel(new BorderLayout());
+        // Igual às Faturas: o formulário vive num modal ('Nova Encomenda'); a lista ocupa a aba inteira.
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // LEFT COLUMN: CREATE ORDER FORM
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
-        leftPanel.setOpaque(false);
-        leftPanel.setMinimumSize(new Dimension(0, 0));
-
-        JLabel leftTitle = UIHelper.createHeading("Emitir Nova Encomenda");
-        leftPanel.add(leftTitle, BorderLayout.NORTH);
-
+        // ===== FORMULÁRIO (conteúdo do modal): inputs de cabeçalho + linha =====
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
         formCard.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -1038,10 +1033,7 @@ public class ComercialPanel extends JPanel {
         addLineActionRow.add(addLineBtn);
         formCard.add(addLineActionRow, gbc);
 
-        // Row 6: Lines table (full width, grows to fill space)
-        gbc.gridx = 0; gbc.gridy = 11; gbc.gridwidth = 2; gbc.weightx = 1.0; gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.insets = new Insets(4, 8, 8, 8);
+        // ===== Cartão de rascunho: tabela de linhas + total (separado do formulário, igual às Faturas) =====
         String[] lineCols = {"Produto", "Qtd", "Preço Unit.", "Desc %", "Lote/Série", "Total"};
         orderLinesTableModel = new DefaultTableModel(lineCols, 0) {
             @Override
@@ -1059,59 +1051,45 @@ public class ComercialPanel extends JPanel {
         orderLinesTable.getColumnModel().getColumn(5).setPreferredWidth(95);
         JScrollPane linesScroll = new JScrollPane(orderLinesTable);
         UIHelper.styleScrollPane(linesScroll);
-        linesScroll.setPreferredSize(new Dimension(560, 200));
-        linesScroll.setMinimumSize(new Dimension(0, 160));
-        formCard.add(linesScroll, gbc);
-
-        // Row 7: Total + Emitir
-        gbc.gridx = 0; gbc.gridy = 12; gbc.gridwidth = 2; gbc.weighty = 0.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(8, 8, 12, 8);
-        JPanel summaryPanel = new JPanel();
-        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
-        summaryPanel.setOpaque(false);
 
         orderTotalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
         orderTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         orderTotalLabel.setForeground(Color.WHITE);
-
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
+        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         totalRow.add(orderTotalLabel, BorderLayout.EAST);
 
-        ModernButton issueBtn = UIHelper.createPrimaryButton("Emitir Encomenda");
-        issueBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
+        ModernPanel draftCard = new ModernPanel(16);
+        draftCard.setLayout(new BorderLayout(0, 10));
+        draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        draftCard.setPreferredSize(new Dimension(0, 280));
+        draftCard.add(linesScroll, BorderLayout.CENTER);
+        draftCard.add(totalRow, BorderLayout.SOUTH);
 
-        JPanel btnRow = new JPanel(new BorderLayout());
-        btnRow.setOpaque(false);
-        btnRow.add(issueBtn, BorderLayout.EAST);
+        // Conteúdo do modal 'Nova Encomenda': inputs (NORTH) + linhas de rascunho (CENTER).
+        JPanel formContent = new JPanel(new BorderLayout(0, 12));
+        formContent.setOpaque(false);
+        formContent.add(formCard, BorderLayout.NORTH);
+        JPanel draftWrap = new JPanel(new BorderLayout(0, 8));
+        draftWrap.setOpaque(false);
+        draftWrap.add(UIHelper.createSubheading("Linhas da Encomenda (Rascunho)"), BorderLayout.NORTH);
+        draftWrap.add(draftCard, BorderLayout.CENTER);
+        formContent.add(draftWrap, BorderLayout.CENTER);
+        this.orderFormContent = formContent;
 
-        summaryPanel.add(totalRow);
-        summaryPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-        summaryPanel.add(btnRow);
-        formCard.add(summaryPanel, gbc);
-
-        // Largura mínima do conteúdo: abaixo disto activa-se o scroll horizontal automaticamente.
-        formCard.setMinimumSize(new Dimension(420, 0));
-
-        // formCard inteiro envolto em scroll — form, tabela e summary scroll juntos.
-        JScrollPane formScroll = new JScrollPane(formCard);
-        formScroll.setBorder(null);
-        formScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        formScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        formScroll.getViewport().setBackground(UIHelper.BG_DARK);
-        formScroll.getVerticalScrollBar().setUnitIncrement(16);
-        formScroll.getHorizontalScrollBar().setUnitIncrement(16);
-        leftPanel.add(formScroll, BorderLayout.CENTER);
-        leftPanel.setMinimumSize(new Dimension(420, 0));
-
-        // RIGHT COLUMN: ORDER LIST
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
-        rightPanel.setOpaque(false);
-        rightPanel.setMinimumSize(new Dimension(360, 0));
-
-        JLabel rightTitle = UIHelper.createHeading("Encomendas Recentes");
-        rightPanel.add(rightTitle, BorderLayout.NORTH);
+        // ===== ABA: cabeçalho com acção 'Nova Encomenda…' + lista em ecrã inteiro (igual às Faturas) =====
+        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
+        headerBar.setOpaque(false);
+        headerBar.add(UIHelper.createHeading("Encomendas Recentes"), BorderLayout.WEST);
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
+        newOrderBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
+        newOrderBtn.addActionListener(e -> openOrderFormDialog());
+        headerActions.add(newOrderBtn);
+        headerBar.add(headerActions, BorderLayout.EAST);
+        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -1150,7 +1128,7 @@ public class ComercialPanel extends JPanel {
         listCard.add(ecBar, BorderLayout.NORTH);
         listCard.add(ordersScroll, BorderLayout.CENTER);
 
-        JPanel btnPanel = new JPanel(new GridLayout(0, 2, 10, 8));
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
         ModernButton viewDetailsBtn = UIHelper.createSecondaryButton("Ver Detalhes");
         viewDetailsBtn.setIcon(UIHelper.icon("fas-eye", 14));
@@ -1171,26 +1149,15 @@ public class ComercialPanel extends JPanel {
         btnPanel.add(billOrderBtn);
         btnPanel.add(cancelOrderBtn);
         btnPanel.add(refreshBtn);
-        btnPanel.add(Box.createGlue());
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
-        rightPanel.add(listCard, BorderLayout.CENTER);
-
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
-        split.setOpaque(false);
-        split.setBorder(null);
-        split.setResizeWeight(0.6);            // 60% form, 40% lista
-        split.setContinuousLayout(true);
-        split.setDividerSize(8);
-        SwingUtilities.invokeLater(() -> split.setDividerLocation(0.6));
-        panel.add(split, BorderLayout.CENTER);
+        panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftOrderLine());
         orderProductCombo.addActionListener(e -> { refreshOrderFEFOHint(); applyOrderBoxes(); });
         UIHelper.onTextChange(orderBoxesField, this::applyOrderBoxes);
         orderWarehouseCombo.addActionListener(e -> refreshOrderFEFOHint());
-        issueBtn.addActionListener(e -> issueOrder());
         billOrderBtn.addActionListener(e -> billSelectedOrder());
         cancelOrderBtn.addActionListener(e -> openCancelOrderDialog());
         refreshBtn.addActionListener(e -> loadOrdersTable());
@@ -1346,19 +1313,42 @@ public class ComercialPanel extends JPanel {
         }
     }
 
-    private void issueOrder() {
+    /** Abre o formulário de nova encomenda num modal (mesmo padrão de {@link #openInvoiceFormDialog()}). */
+    private void openOrderFormDialog() {
         if (warehousesList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (draftOrderLines.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Adicione pelo menos um item à encomenda.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
+        resetOrderDraft();
+        lastCreatedOrder = null;
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, "Emitir Nova Encomenda", orderFormContent);
+        dlg.setSize(880, 680);
+        dlg.setOnSave(this::issueOrderOrThrow);
+        if (dlg.showDialog() && lastCreatedOrder != null) {
+            OrderDTO created = lastCreatedOrder;
+            String estadoMsg = "PENDING_APPROVAL".equals(created.status())
+                    ? "Submetida para aprovação (valor: " + created.totalAmount() + " MT)."
+                    : "Estado: " + created.status() + " (valor: " + created.totalAmount() + " MT).";
+            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " criada!\n" + estadoMsg,
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadOrdersTable();
         }
+    }
 
+    /** Validação + emissão da encomenda. Lança {@link RuntimeException} em erro para manter o modal aberto. */
+    private void issueOrderOrThrow() {
+        if (warehousesList.isEmpty()) {
+            throw new RuntimeException("Nenhum armazém disponível para a empresa atual.");
+        }
+        if (draftOrderLines.isEmpty()) {
+            throw new RuntimeException("Adicione pelo menos um item à encomenda.");
+        }
         int clientIdx = orderClientCombo.getSelectedIndex();
         int whIdx = orderWarehouseCombo.getSelectedIndex();
-        if (whIdx < 0) return;
+        if (whIdx < 0) {
+            throw new RuntimeException("Selecione o armazém.");
+        }
 
         // O índice 0 do combo é "Consumidor Final"; índices >0 mapeiam para clientsList[idx-1].
         Long clientId = null;
@@ -1372,33 +1362,22 @@ public class ComercialPanel extends JPanel {
 
         Warehouse warehouse = warehousesList.get(whIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
+        com.phcpro.modules.comercial.dto.CreateOrderRequest request =
+                new com.phcpro.modules.comercial.dto.CreateOrderRequest(
+                        clientId, walkInName, companyId, warehouse.getId(), draftOrderLines);
+        lastCreatedOrder = comercialService.createOrder(request);
+    }
 
-        try {
-            com.phcpro.modules.comercial.dto.CreateOrderRequest request =
-                    new com.phcpro.modules.comercial.dto.CreateOrderRequest(
-                            clientId, walkInName, companyId, warehouse.getId(), draftOrderLines);
-            OrderDTO created = comercialService.createOrder(request);
-
-            String estadoMsg = "PENDING_APPROVAL".equals(created.status())
-                    ? "Submetida para aprovação (valor: " + created.totalAmount() + " MT)."
-                    : "Estado: " + created.status() + " (valor: " + created.totalAmount() + " MT).";
-            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " criada!\n" + estadoMsg,
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-
-            // Reset draft states
-            draftOrderLines.clear();
-            draftOrderSubtotal = BigDecimal.ZERO;
-            draftOrderTax = BigDecimal.ZERO;
-            draftOrderTotal = BigDecimal.ZERO;
-            orderLinesTableModel.setRowCount(0);
-            orderTotalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
-            if (orderClientWalkInField != null) orderClientWalkInField.setText("");
-            if (orderClientCombo != null) orderClientCombo.setSelectedIndex(0);
-
-            loadOrdersTable();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao emitir encomenda: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+    /** Limpa o rascunho da encomenda (linhas, totais e selecção) antes de abrir o modal. */
+    private void resetOrderDraft() {
+        draftOrderLines.clear();
+        draftOrderSubtotal = BigDecimal.ZERO;
+        draftOrderTax = BigDecimal.ZERO;
+        draftOrderTotal = BigDecimal.ZERO;
+        if (orderLinesTableModel != null) orderLinesTableModel.setRowCount(0);
+        if (orderTotalLabel != null) orderTotalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
+        if (orderClientWalkInField != null) orderClientWalkInField.setText("");
+        if (orderClientCombo != null && orderClientCombo.getItemCount() > 0) orderClientCombo.setSelectedIndex(0);
     }
 
     private void billSelectedOrder() {
