@@ -46,6 +46,7 @@ public class FiscalPanel extends JPanel {
     private final WithholdingService withholdingService;
     private final FiscalSummaryService fiscalSummaryService;
     private final FiscalSalesExportService fiscalSalesExportService;
+    private final com.phcpro.modules.fiscal.service.SaftValidationService saftValidationService;
     private final PayrollTaxService payrollTaxService;
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
     private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
@@ -77,6 +78,7 @@ public class FiscalPanel extends JPanel {
             WithholdingService withholdingService,
             FiscalSummaryService fiscalSummaryService,
             FiscalSalesExportService fiscalSalesExportService,
+            com.phcpro.modules.fiscal.service.SaftValidationService saftValidationService,
             PayrollTaxService payrollTaxService,
             IvaDeclarationPrintService ivaDeclarationPrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService
@@ -85,6 +87,7 @@ public class FiscalPanel extends JPanel {
         this.withholdingService = withholdingService;
         this.fiscalSummaryService = fiscalSummaryService;
         this.fiscalSalesExportService = fiscalSalesExportService;
+        this.saftValidationService = saftValidationService;
         this.payrollTaxService = payrollTaxService;
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
         this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
@@ -224,6 +227,12 @@ public class FiscalPanel extends JPanel {
         saftBtn.addActionListener(e -> exportSaft());
         periodPanel.add(Box.createRigidArea(new Dimension(8, 0)));
         periodPanel.add(saftBtn);
+
+        ModernButton validateSaftBtn = UIHelper.createSecondaryButton("Validar SAF-T");
+        validateSaftBtn.setIcon(UIHelper.icon("fas-check-circle", 14));
+        validateSaftBtn.addActionListener(e -> validateSaft());
+        periodPanel.add(Box.createRigidArea(new Dimension(8, 0)));
+        periodPanel.add(validateSaftBtn);
 
         topRow.add(periodPanel, BorderLayout.WEST);
         tab.add(topRow, BorderLayout.NORTH);
@@ -383,6 +392,36 @@ public class FiscalPanel extends JPanel {
                             + "Total: " + String.format("%,.2f MT", export.totalGross()) + "\n"
                             + chooser.getSelectedFile().getAbsolutePath(),
                     "SAF-T Exportado", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void validateSaft() {
+        try {
+            int year = (Integer) ivaYearSpinner.getValue();
+            int month = (Integer) ivaMonthSpinner.getValue();
+            java.time.YearMonth ym = java.time.YearMonth.of(year, month);
+            com.phcpro.modules.fiscal.dto.SaftValidationResult r = saftValidationService.validateSalesExport(
+                    CurrentUserContext.getCurrentCompanyId(), ym.atDay(1), ym.atEndOfMonth());
+            if (!r.xsdConfigured()) {
+                JOptionPane.showMessageDialog(this, r.message(), "Validação SAF-T", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (r.valid()) {
+                JOptionPane.showMessageDialog(this, "SAF-T válido face à XSD.", "Validação SAF-T",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            StringBuilder sb = new StringBuilder(r.message()).append("\n\n");
+            int shown = Math.min(r.errors().size(), 15);
+            for (int i = 0; i < shown; i++) sb.append("• ").append(r.errors().get(i)).append('\n');
+            if (r.errors().size() > shown) sb.append("… (+").append(r.errors().size() - shown).append(" erro(s))");
+            JTextArea area = new JTextArea(sb.toString(), 16, 60);
+            area.setEditable(false);
+            UIHelper.styleTextArea(area);
+            JOptionPane.showMessageDialog(this, new JScrollPane(area),
+                    "Validação SAF-T — erros", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
