@@ -107,6 +107,10 @@ public class InventoryCountService {
             if (line.getCountedQuantity() == null) continue; // não contado → não toca
             BigDecimal system = systemByProduct.getOrDefault(line.getProduct().getId(), BigDecimal.ZERO);
             line.setSystemQuantity(system);
+            if (line.getCountedQuantity().compareTo(system) == 0) { // contagem = sistema → nenhum ajuste necessário
+                line.setApplied(true);
+                continue;
+            }
             inventoryService.adjustStock(new CreateStockAdjustmentRequest(
                     companyId, line.getProduct().getId(), warehouseId, line.getCountedQuantity(),
                     "Inventário físico (contagem #" + sessionId + ")"));

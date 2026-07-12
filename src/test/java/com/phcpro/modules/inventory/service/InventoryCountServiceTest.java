@@ -112,6 +112,23 @@ class InventoryCountServiceTest {
     }
 
     @Test
+    void applySession_linhaContadaIgualAoSistema_naoGeraAjuste() {
+        // p1 contado 10 = sistema 10 (sem diferença → não chama adjustStock, que rejeitaria delta zero);
+        // p2 contado 3 ≠ sistema 5 → gera ajuste. Aplica na mesma (não faz rollback).
+        InventoryCount count = draftWith(line(p1, new BigDecimal("10")), line(p2, new BigDecimal("3")));
+        when(inventoryCountRepository.findById(5L)).thenReturn(Optional.of(count));
+        when(inventoryService.getStocksByWarehouse(WAREHOUSE_ID))
+                .thenReturn(List.of(stock(p1, new BigDecimal("10")), stock(p2, new BigDecimal("5"))));
+
+        InventoryCountDTO dto = service.applySession(5L);
+
+        assertEquals("APPLIED", dto.status());
+        ArgumentCaptor<CreateStockAdjustmentRequest> cap = ArgumentCaptor.forClass(CreateStockAdjustmentRequest.class);
+        verify(inventoryService, times(1)).adjustStock(cap.capture());
+        assertEquals(200L, cap.getValue().productId());
+    }
+
+    @Test
     void applySession_naoDraft_lanca() {
         InventoryCount count = draftWith(line(p1, new BigDecimal("8")));
         count.setStatus(InventoryCountStatus.APPLIED);

@@ -1,6 +1,6 @@
 # Inventário físico (contagem cega + reconciliação)
 
-**Última actualização:** 2026-07-10
+**Última actualização:** 2026-07-12
 **Estado:** feito.
 
 ## Objectivo
@@ -47,3 +47,12 @@ que faltava (contar e acertar).
   ao **Aplicar Ajustes** cada linha contada gera um ajuste (via `InventoryService.adjustStock`), a
   sessão passa a `APPLIED` e o histórico (sistema → contado por artigo) fica auditável e só-leitura.
   Serviço `InventoryCountService` (MANAGER/ADMIN + auditoria + tenant); testes `InventoryCountServiceTest`.
+- **API REST (feito, 2026-07-12):** `InventoryCountController` expõe as sessões em `/api/inventory/counts`
+  — `GET` (lista por empresa) · `GET /{id}` (detalhe) · `POST` (criar — `CreateInventoryCountRequest`) ·
+  `PUT /{id}/counts` (guardar contagens — `SaveCountsRequest`) · `POST /{id}/apply` (aplicar) ·
+  `POST /{id}/cancel` (cancelar). Só HTTP → delega no `InventoryCountService` (mesma lógica/regras da UI
+  desktop, que chama o serviço em processo). Sem lógica no controller, sem entidades expostas.
+- **Reconciliação sem no-op (corrigido, 2026-07-12):** ao aplicar, uma linha cuja **contagem é igual à
+  quantidade do sistema** não gera ajuste (evita o `BusinessRuleException` de delta zero do `adjustStock`)
+  mas fica na mesma marcada como aplicada, com o `systemQuantity` registado. Assim uma sessão em que o
+  contador confirma valores já correctos **aplica-se sem rollback**. Coberto por `InventoryCountServiceTest`.
