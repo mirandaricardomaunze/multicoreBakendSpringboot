@@ -30,6 +30,7 @@ import com.phcpro.modules.pos.dto.POSCheckoutRequest;
 import com.phcpro.modules.pos.dto.POSReturnRequest;
 import com.phcpro.modules.pos.dto.PosPaymentRequest;
 import com.phcpro.modules.pos.dto.TillMovementDTO;
+import com.phcpro.modules.pos.dto.PosZReportDTO;
 import com.phcpro.modules.pos.dto.TillSessionDTO;
 import com.phcpro.modules.pos.model.PaymentEntry;
 import com.phcpro.modules.pos.model.PaymentMethod;
@@ -204,6 +205,40 @@ public class POSService {
             }
         }
         return expected;
+    }
+
+    /**
+     * Dados do fecho de caixa (Z): reconciliação da gaveta (abertura + vendas em numerário +
+     * suprimentos − sangrias − devoluções = esperado) vs contado, e a diferença. Leitura pura,
+     * tenant-scoped — funciona antes e depois do fecho (permite pré-visualizar). Ver
+     * {@code docs/FECHO_CAIXA_Z_SPEC.md}.
+     */
+    @Transactional(readOnly = true)
+    public PosZReportDTO buildZReport(Long sessionId) {
+        TillSession session = tillSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
+        CurrentUserContext.requireCompany(session.getCompany().getId());
+
+        BigDecimal opening = session.getOpeningBalance() == null ? BigDecimal.ZERO : session.getOpeningBalance();
+        BigDecimal sales = BigDecimal.ZERO;
+        BigDecimal suprimentos = BigDecimal.ZERO;
+        BigDecimal sangrias = BigDecimal.ZERO;
+        BigDecimal refunds = BigDecimal.ZERO;
+        int saleCount = 0;
+        for (TillMovement m : tillMovementRepository.findByTillSessionId(sessionId)) {
+            switch (m.getMovementType()) {
+                case SALE -> { sales = sales.add(m.getAmount()); saleCount++; }
+                case SUPRIMENTO -> suprimentos = suprimentos.add(m.getAmount());
+                case SANGRIA -> sangrias = sangrias.add(m.getAmount());
+                case REFUND -> refunds = refunds.add(m.getAmount());
+            }
+        }
+        BigDecimal expected = opening.add(sales).add(suprimentos).subtract(sangrias).subtract(refunds);
+        BigDecimal counted = session.getClosingBalanceReal();
+        BigDecimal difference = counted == null ? null : counted.subtract(expected);
+        return new PosZReportDTO(session.getId(), session.getOperator(), session.getOpenDate(),
+                session.getCloseDate(), session.getStatus(), opening, sales, suprimentos, sangrias,
+                refunds, expected, counted, difference, saleCount);
     }
 
     @Transactional

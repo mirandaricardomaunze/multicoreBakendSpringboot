@@ -24,6 +24,7 @@ import com.phcpro.modules.numbering.service.DocumentSeries;
 import com.phcpro.modules.pos.dto.POSCheckoutLineRequest;
 import com.phcpro.modules.pos.dto.POSCheckoutRequest;
 import com.phcpro.modules.pos.dto.PosPaymentRequest;
+import com.phcpro.modules.pos.dto.PosZReportDTO;
 import com.phcpro.modules.pos.model.TillMovement;
 import com.phcpro.modules.pos.model.TillMovementType;
 import com.phcpro.modules.pos.model.TillSession;
@@ -388,5 +389,60 @@ class POSServiceTest {
         s.setOpeningBalance(opening);
         s.setStatus(status);
         return s;
+    }
+
+    // ────────────────────────── fecho de caixa (Z) ──────────────────────────
+
+    @Test
+    void buildZReport_reconciliaGaveta() {
+        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(session(1L, "OPEN", new BigDecimal("100"))));
+        when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of(
+                tillMove(TillMovementType.SALE, new BigDecimal("500")),
+                tillMove(TillMovementType.SUPRIMENTO, new BigDecimal("50")),
+                tillMove(TillMovementType.SANGRIA, new BigDecimal("30")),
+                tillMove(TillMovementType.REFUND, new BigDecimal("20"))));
+
+        PosZReportDTO z = service.buildZReport(1L);
+
+        assertEquals(0, new BigDecimal("600").compareTo(z.expectedCash())); // 100+500+50-30-20
+        assertEquals(0, new BigDecimal("500").compareTo(z.cashSales()));
+        assertEquals(1, z.saleCount());
+        assertNull(z.countedCash());   // sessão aberta → sem contado
+        assertNull(z.difference());
+    }
+
+    @Test
+    void buildZReport_sessaoFechada_calculaDiferenca() {
+        TillSession s = session(1L, "CLOSED", new BigDecimal("100"));
+        s.setClosingBalanceReal(new BigDecimal("590"));
+        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(s));
+        when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of(
+                tillMove(TillMovementType.SALE, new BigDecimal("500"))));
+
+        PosZReportDTO z = service.buildZReport(1L);
+
+        assertEquals(0, new BigDecimal("600").compareTo(z.expectedCash())); // 100+500
+        assertEquals(0, new BigDecimal("-10").compareTo(z.difference()));   // 590-600
+    }
+
+    @Test
+    void buildZReport_sessaoInexistente_lanca() {
+        when(tillSessionRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThrows(BusinessRuleException.class, () -> service.buildZReport(9L));
+    }
+
+    @Test
+    void buildZReport_outraEmpresa_lanca() {
+        TillSession s = session(1L, "OPEN", new BigDecimal("100"));
+        s.setCompany(company(999L));
+        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(s));
+        assertThrows(RuntimeException.class, () -> service.buildZReport(1L));
+    }
+
+    private TillMovement tillMove(TillMovementType type, BigDecimal amount) {
+        TillMovement m = new TillMovement();
+        m.setMovementType(type);
+        m.setAmount(amount);
+        return m;
     }
 }

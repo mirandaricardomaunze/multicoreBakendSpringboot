@@ -48,6 +48,7 @@ public class POSPanel extends JPanel {
     private final com.phcpro.modules.company.service.CompanyService companyService;
     private final com.phcpro.modules.promotions.service.PromotionService promotionService;
     private final com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser;
+    private final com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService;
 
     // Active session status
     private TillSession activeSession = null;
@@ -149,7 +150,8 @@ public class POSPanel extends JPanel {
             com.phcpro.modules.printing.ReceiptPrintService receiptPrintService,
             com.phcpro.modules.company.service.CompanyService companyService,
             com.phcpro.modules.promotions.service.PromotionService promotionService,
-            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
+            com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService
     ) {
         this.posService = posService;
         this.comercialService = comercialService;
@@ -159,6 +161,7 @@ public class POSPanel extends JPanel {
         this.companyService = companyService;
         this.promotionService = promotionService;
         this.scaleBarcodeParser = scaleBarcodeParser;
+        this.posZReportPrintService = posZReportPrintService;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -821,13 +824,22 @@ public class POSPanel extends JPanel {
 
         try {
             TillSession closed = posService.closeSession(activeSession.getId(), closingReal, depositAccountId);
+            Long closedId = closed.getId();
 
             String summary = String.format("Sessão Fechada com sucesso!\n" +
                     "Saldo Esperado: %,.2f MT\n" +
                     "Saldo Real: %,.2f MT\n" +
-                    "Diferença: %,.2f MT", closed.getClosingBalanceExpected(), closed.getClosingBalanceReal(), closed.getDifference());
-            JOptionPane.showMessageDialog(this, summary, "Fecho de Caixa", JOptionPane.INFORMATION_MESSAGE);
-            
+                    "Diferença: %,.2f MT\n\nImprimir o fecho de caixa (Z)?",
+                    closed.getClosingBalanceExpected(), closed.getClosingBalanceReal(), closed.getDifference());
+            int print = JOptionPane.showConfirmDialog(this, summary, "Fecho de Caixa",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+            if (print == JOptionPane.YES_OPTION) {
+                UIHelper.runWithProgress(this, "A gerar fecho (Z)…",
+                        () -> posZReportPrintService.render(closedId),
+                        pdf -> com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "fecho-caixa-Z-" + closedId),
+                        err -> JOptionPane.showMessageDialog(this, "Erro ao gerar o Z: " + err.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+            }
+
             refreshSessionState();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Valor inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
