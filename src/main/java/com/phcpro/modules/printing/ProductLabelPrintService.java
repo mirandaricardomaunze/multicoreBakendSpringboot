@@ -96,6 +96,7 @@ public class ProductLabelPrintService {
 
         Paragraph name = new Paragraph(truncate(product.name(), 30), PdfTheme.tableHeaderFont());
         name.setAlignment(Element.ALIGN_CENTER);
+        name.setSpacingAfter(7f); // afasta o nome do código de barras (não "colar")
         cell.addElement(name);
 
         Image barcode = barcodeImage(code);
@@ -106,12 +107,14 @@ public class ProductLabelPrintService {
 
         Paragraph codeText = new Paragraph(code, PdfTheme.smallFont());
         codeText.setAlignment(Element.ALIGN_CENTER);
+        codeText.setSpacingBefore(3f);
         cell.addElement(codeText);
 
         Paragraph price = new Paragraph(
                 product.unitPrice() == null ? "" : String.format("%,.2f MT", product.unitPrice()),
                 PdfTheme.subtitleFont());
         price.setAlignment(Element.ALIGN_CENTER);
+        price.setSpacingBefore(5f);
         cell.addElement(price);
         return cell;
     }
