@@ -42,6 +42,7 @@ public class StockPanel extends JPanel {
     private final InventoryReportPrintService inventoryReportPrintService;
     private final com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService;
     private final com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService;
+    private final com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService;
 
     // Transfer history
     private DefaultTableModel transferModel;
@@ -89,6 +90,7 @@ public class StockPanel extends JPanel {
                        InventoryReportPrintService inventoryReportPrintService,
                        com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
                        com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
+                       com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService,
                        com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService) {
         this.inventoryService = inventoryService;
         this.comercialService = comercialService;
@@ -97,6 +99,7 @@ public class StockPanel extends JPanel {
         this.inventoryReportPrintService = inventoryReportPrintService;
         this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
         this.inventoryCountService = inventoryCountService;
+        this.productLabelPrintService = productLabelPrintService;
         this.productCategoryService = productCategoryService;
 
         setLayout(new BorderLayout(0, 15));
@@ -121,9 +124,13 @@ public class StockPanel extends JPanel {
         ModernButton physicalInventoryBtn = UIHelper.createPrimaryButton("Inventário Físico");
         physicalInventoryBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         physicalInventoryBtn.addActionListener(e -> openPhysicalInventoryDialog());
+        ModernButton labelsBtn = UIHelper.createSecondaryButton("Etiquetas");
+        labelsBtn.setIcon(UIHelper.icon("fas-barcode", 14));
+        labelsBtn.addActionListener(e -> openLabelDialog());
         JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         catalogueGroup.setOpaque(false);
         catalogueGroup.add(stockLockBtn);
+        catalogueGroup.add(labelsBtn);
         catalogueGroup.add(physicalInventoryBtn);
         catalogueGroup.add(newProductBtn);
         catalogueGroup.add(editProductBtn);
@@ -1614,6 +1621,75 @@ public class StockPanel extends JPanel {
             case "CANCELLED" -> "Cancelada";
             default -> status;
         };
+    }
+
+    /** Diálogo de impressão de etiquetas: escolher produtos (multi-selecção) + cópias → folha PDF. */
+    private void openLabelDialog() {
+        java.util.List<ProductDTO> products = comercialService.getAllProducts();
+        if (products.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre produtos primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        DefaultTableModel model = new DefaultTableModel(new String[]{"SKU", "Artigo", "Código", "Preço"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        final java.util.List<Long> rowIds = new ArrayList<>();
+        for (ProductDTO p : products) {
+            rowIds.add(p.id());
+            String code = p.barcode() != null && !p.barcode().isBlank() ? p.barcode()
+                    : (p.reference() != null && !p.reference().isBlank() ? p.reference() : p.sku());
+            model.addRow(new Object[]{ p.sku(), p.name(), code,
+                    p.unitPrice() == null ? "" : String.format("%,.2f MT", p.unitPrice()) });
+        }
+        JTable table = new JTable(model);
+        UIHelper.styleTable(table);
+        table.putClientProperty("noRowInspector", Boolean.TRUE);
+        table.putClientProperty("noTableFooter", Boolean.TRUE);
+        table.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        JScrollPane sc = new JScrollPane(table);
+        UIHelper.styleScrollPane(sc);
+        sc.setPreferredSize(new Dimension(620, 360));
+
+        JTextField copiesField = new JTextField("1", 4);
+        UIHelper.styleTextField(copiesField);
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        top.setOpaque(false);
+        JLabel hint = new JLabel("Selecione os produtos (Ctrl/Shift para vários)");
+        hint.setForeground(UIHelper.TEXT_MUTED);
+        JLabel copiesLbl = new JLabel("   Cópias por etiqueta:");
+        copiesLbl.setForeground(UIHelper.TEXT_MUTED);
+        top.add(hint);
+        top.add(copiesLbl);
+        top.add(copiesField);
+
+        JPanel content = new JPanel(new BorderLayout(0, 10));
+        content.setOpaque(false);
+        content.add(top, BorderLayout.NORTH);
+        content.add(sc, BorderLayout.CENTER);
+
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Etiquetas de Código de Barras",
+                "fas-barcode", "Imprime uma folha A4 com o código de barras, nome e preço", content)
+                .setConfirmButton("Imprimir Selecionadas", "fas-print");
+        dlg.setOnSave(() -> {
+            int[] sel = table.getSelectedRows();
+            if (sel.length == 0) throw new IllegalArgumentException("Selecione pelo menos um produto.");
+            int copies;
+            try {
+                copies = Integer.parseInt(copiesField.getText().trim());
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException("Nº de cópias inválido.");
+            }
+            if (copies < 1 || copies > 200) throw new IllegalArgumentException("Cópias deve estar entre 1 e 200.");
+            java.util.List<Long> ids = new ArrayList<>();
+            for (int r : sel) ids.add(rowIds.get(table.convertRowIndexToModel(r)));
+            Long companyId = CurrentUserContext.getCurrentCompanyId();
+            UIHelper.runWithProgress(this, "A gerar etiquetas…",
+                    () -> productLabelPrintService.render(companyId, ids, copies),
+                    pdf -> com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "etiquetas"),
+                    err -> JOptionPane.showMessageDialog(this, "Erro: " + err.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+        });
+        dlg.showDialog();
     }
 
     private void createAdjustmentDialog() {

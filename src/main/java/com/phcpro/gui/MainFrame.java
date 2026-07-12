@@ -141,7 +141,8 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.support.service.SupportService supportService,
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
-            com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService
+            com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService,
+            com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -176,7 +177,7 @@ public class MainFrame extends JFrame {
             fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
             approvalsPanel  = new ApprovalsPanel(approvalService);
             posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
-            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productCategoryService);
+            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productLabelPrintService, productCategoryService);
             comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
             configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, scheduledBackupService, documentConfigService, supportService, subscriptionService);
             plataformaPanel = null;
