@@ -12,13 +12,7 @@ import com.phcpro.modules.fiscal.dto.IvaSummaryDTO;
 import com.phcpro.modules.fiscal.dto.TaxRateDTO;
 import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
 import com.phcpro.modules.fiscal.dto.FiscalSalesExportDTO;
-import com.phcpro.modules.fiscal.service.FiscalSalesExportService;
-import com.phcpro.modules.fiscal.service.FiscalSummaryService;
-import com.phcpro.modules.fiscal.service.TaxRateService;
-import com.phcpro.modules.fiscal.service.WithholdingService;
-import com.phcpro.modules.hr.service.PayrollTaxService;
-import com.phcpro.modules.printing.IvaDeclarationPrintService;
-import com.phcpro.modules.printing.PayrollFiscalMapPrintService;
+import com.phcpro.desktop.client.FiscalApiClient;
 import com.phcpro.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
@@ -42,14 +36,7 @@ public class FiscalPanel extends JPanel {
             "SERVICES", "RENT", "NON_RESIDENT", "OTHER"
     };
 
-    private final TaxRateService taxRateService;
-    private final WithholdingService withholdingService;
-    private final FiscalSummaryService fiscalSummaryService;
-    private final FiscalSalesExportService fiscalSalesExportService;
-    private final com.phcpro.modules.fiscal.service.SaftValidationService saftValidationService;
-    private final PayrollTaxService payrollTaxService;
-    private final IvaDeclarationPrintService ivaDeclarationPrintService;
-    private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
+    private final FiscalApiClient fiscalApiClient;
 
     // IVA tab
     private JSpinner ivaYearSpinner;
@@ -73,24 +60,8 @@ public class FiscalPanel extends JPanel {
     private JLabel payrollIrpsLabel;
     private JLabel payrollInssLabel;
 
-    public FiscalPanel(
-            TaxRateService taxRateService,
-            WithholdingService withholdingService,
-            FiscalSummaryService fiscalSummaryService,
-            FiscalSalesExportService fiscalSalesExportService,
-            com.phcpro.modules.fiscal.service.SaftValidationService saftValidationService,
-            PayrollTaxService payrollTaxService,
-            IvaDeclarationPrintService ivaDeclarationPrintService,
-            PayrollFiscalMapPrintService payrollFiscalMapPrintService
-    ) {
-        this.taxRateService = taxRateService;
-        this.withholdingService = withholdingService;
-        this.fiscalSummaryService = fiscalSummaryService;
-        this.fiscalSalesExportService = fiscalSalesExportService;
-        this.saftValidationService = saftValidationService;
-        this.payrollTaxService = payrollTaxService;
-        this.ivaDeclarationPrintService = ivaDeclarationPrintService;
-        this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
+    public FiscalPanel(FiscalApiClient fiscalApiClient) {
+        this.fiscalApiClient = fiscalApiClient;
 
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
@@ -165,7 +136,7 @@ public class FiscalPanel extends JPanel {
         if (payrollFiscalModel == null) return;
         int year = (Integer) payrollYearSpinner.getValue();
         int month = (Integer) payrollMonthSpinner.getValue();
-        var summary = payrollTaxService.fiscalSummary(year, month);
+        var summary = fiscalApiClient.fiscalSummary(year, month);
         payrollFiscalModel.setRowCount(0);
         for (var line : summary.lines()) {
             payrollFiscalModel.addRow(new Object[]{
@@ -183,7 +154,7 @@ public class FiscalPanel extends JPanel {
         try {
             int year = (Integer) payrollYearSpinner.getValue();
             int month = (Integer) payrollMonthSpinner.getValue();
-            byte[] pdf = payrollFiscalMapPrintService.render(
+            byte[] pdf = fiscalApiClient.renderPayrollFiscalMap(
                     CurrentUserContext.getCurrentCompanyId(), year, month);
             PdfFileSaver.saveAndOpen(pdf, "mapa-fiscal-salarial-" + year + "-" + String.format("%02d", month));
         } catch (Exception ex) {
@@ -329,7 +300,7 @@ public class FiscalPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         int year = (Integer) ivaYearSpinner.getValue();
         int month = (Integer) ivaMonthSpinner.getValue();
-        IvaSummaryDTO s = fiscalSummaryService.computeMonth(companyId, year, month);
+        IvaSummaryDTO s = fiscalApiClient.ivaSummary(companyId, year, month);
 
         ivaSalesBaseLbl.setText(String.format("%,.2f MT", s.salesBase()));
         ivaPurchasesBaseLbl.setText(String.format("%,.2f MT", s.purchasesBase()));
@@ -363,7 +334,7 @@ public class FiscalPanel extends JPanel {
         try {
             int year = (Integer) ivaYearSpinner.getValue();
             int month = (Integer) ivaMonthSpinner.getValue();
-            byte[] pdf = ivaDeclarationPrintService.render(
+            byte[] pdf = fiscalApiClient.renderIvaDeclaration(
                     CurrentUserContext.getCurrentCompanyId(), year, month);
             PdfFileSaver.saveAndOpen(pdf, "declaracao-iva-" + year + "-" + String.format("%02d", month));
         } catch (Exception ex) {
@@ -376,7 +347,7 @@ public class FiscalPanel extends JPanel {
             int year = (Integer) ivaYearSpinner.getValue();
             int month = (Integer) ivaMonthSpinner.getValue();
             java.time.YearMonth ym = java.time.YearMonth.of(year, month);
-            FiscalSalesExportDTO export = fiscalSalesExportService.exportSales(
+            FiscalSalesExportDTO export = fiscalApiClient.exportSaft(
                     CurrentUserContext.getCurrentCompanyId(), ym.atDay(1), ym.atEndOfMonth());
 
             JFileChooser chooser = new JFileChooser();
@@ -402,7 +373,7 @@ public class FiscalPanel extends JPanel {
             int year = (Integer) ivaYearSpinner.getValue();
             int month = (Integer) ivaMonthSpinner.getValue();
             java.time.YearMonth ym = java.time.YearMonth.of(year, month);
-            com.phcpro.modules.fiscal.dto.SaftValidationResult r = saftValidationService.validateSalesExport(
+            com.phcpro.modules.fiscal.dto.SaftValidationResult r = fiscalApiClient.validateSaft(
                     CurrentUserContext.getCurrentCompanyId(), ym.atDay(1), ym.atEndOfMonth());
             if (!r.xsdConfigured()) {
                 JOptionPane.showMessageDialog(this, r.message(), "Validação SAF-T", JOptionPane.WARNING_MESSAGE);
@@ -486,7 +457,7 @@ public class FiscalPanel extends JPanel {
     private void loadTaxRates() {
         if (taxRatesModel == null) return;
         taxRatesModel.setRowCount(0);
-        taxRatesList = taxRateService.getAll();
+        taxRatesList = fiscalApiClient.getAllTaxRates();
         for (var t : taxRatesList) {
             BigDecimal pct = t.rate().multiply(BigDecimal.valueOf(100));
             taxRatesModel.addRow(new Object[]{
@@ -542,8 +513,8 @@ public class FiscalPanel extends JPanel {
                     new BigDecimal(rateField.getText().trim()),
                     legalField.getText().trim().isEmpty() ? null : legalField.getText().trim()
             );
-            if (existing == null) taxRateService.create(req);
-            else taxRateService.update(existing.id(), req);
+            if (existing == null) fiscalApiClient.createTaxRate(req);
+            else fiscalApiClient.updateTaxRate(existing.id(), req);
             loadTaxRates();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Taxa inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
@@ -556,8 +527,8 @@ public class FiscalPanel extends JPanel {
         TaxRateDTO sel = selectedTaxRate();
         if (sel == null) return;
         try {
-            if (sel.active()) taxRateService.deactivate(sel.id());
-            else taxRateService.activate(sel.id());
+            if (sel.active()) fiscalApiClient.deactivateTaxRate(sel.id());
+            else fiscalApiClient.activateTaxRate(sel.id());
             loadTaxRates();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -627,7 +598,7 @@ public class FiscalPanel extends JPanel {
     private void loadWithholdings() {
         if (withholdingsModel == null) return;
         withholdingsModel.setRowCount(0);
-        withholdingsList = withholdingService.findByCompany(CurrentUserContext.getCurrentCompanyId());
+        withholdingsList = fiscalApiClient.getWithholdings(CurrentUserContext.getCurrentCompanyId());
         for (var w : withholdingsList) {
             BigDecimal pct = w.taxRate().multiply(BigDecimal.valueOf(100));
             withholdingsModel.addRow(new Object[]{
@@ -695,7 +666,7 @@ public class FiscalPanel extends JPanel {
                     new BigDecimal(rateField.getText().trim()),
                     (String) catCombo.getSelectedItem()
             );
-            withholdingService.create(req);
+            fiscalApiClient.createWithholding(req);
             loadWithholdings();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -706,7 +677,7 @@ public class FiscalPanel extends JPanel {
         var sel = selectedWithholding();
         if (sel == null) return;
         try {
-            withholdingService.markDelivered(sel.id());
+            fiscalApiClient.deliverWithholding(sel.id());
             loadWithholdings();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -720,7 +691,7 @@ public class FiscalPanel extends JPanel {
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (ok != JOptionPane.YES_OPTION) return;
         try {
-            withholdingService.delete(sel.id());
+            fiscalApiClient.deleteWithholding(sel.id());
             loadWithholdings();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);

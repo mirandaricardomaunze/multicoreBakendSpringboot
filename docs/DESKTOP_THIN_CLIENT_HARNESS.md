@@ -32,6 +32,7 @@ Pré-condição: backend a correr, login feito, empresa activa seleccionada.
 | TC-57  | **Promoções** (sub-tab de Comercial) → listar; criar promoção (percentagem por produto e por categoria; "leve X, pague Y"); activar/desactivar | Lista via `/api/promotions?companyId=`; produtos via `/api/comercial/products`, categorias via `/api/product-categories?onlyActive=true`; criação/toggle persistem. |
 | TC-58  | **Dashboard** (Painel Inicial) → login e navegar | 7 KPIs + 2 gráficos populam via HTTP (tesouraria, faturas, aprovações, tickets, IVA, stock baixo, validades). Compras/stock chegam como **DTOs** (`PurchaseDTO`/`StockDTO`), não entidades. Backend em baixo no arranque não bloqueia o login (dashboard fica a zeros e repovoa ao navegar). |
 | TC-59  | **RH** → abrir; CRUD de funcionários; processar folha; marcar recibo pago; faltas; férias (submeter/decidir); despesas; **imprimir recibo (PDF)** | Tudo via `/api/hr/**`; o recibo PDF vem de `/api/print/payslip/{id}` (bytes via `getBytes`) e abre no visualizador. |
+| TC-60  | **Fiscal** → apuramento IVA; taxas (CRUD + activar/desactivar); retenções (CRUD + entregar); mapa IRPS/INSS; **declaração IVA (PDF)**; **mapa fiscal salarial (PDF)**; **export SAF-T** (XML + contagem/total); **validar SAF-T** | Tudo via `/api/fiscal/**` e `/api/print/**`. Endpoints **novos**: `GET /api/fiscal/saft/export`, `GET /api/fiscal/saft/validate`, `GET /api/print/payroll-fiscal-map`. |
 
 ## Definition of done (por domínio migrado)
 

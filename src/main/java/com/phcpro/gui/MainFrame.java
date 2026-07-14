@@ -4,6 +4,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.desktop.session.DesktopSession;
 import com.phcpro.desktop.session.DesktopSessionStore;
 import com.phcpro.desktop.client.ApprovalApiClient;
+import com.phcpro.desktop.client.FiscalApiClient;
 import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
@@ -19,21 +20,15 @@ import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.financeira.service.FinanceService;
 import com.phcpro.desktop.client.HRApiClient;
-import com.phcpro.modules.hr.service.PayrollTaxService;
 import com.phcpro.modules.inventory.service.InventoryService;
 import com.phcpro.modules.inventory.service.StockTransferService;
 import com.phcpro.modules.pos.service.POSService;
 import com.phcpro.modules.printing.InvoicePrintService;
 import com.phcpro.modules.comercial.service.CreditNoteService;
 import com.phcpro.modules.comercial.service.DebitNoteService;
-import com.phcpro.modules.fiscal.service.FiscalSummaryService;
-import com.phcpro.modules.fiscal.service.TaxRateService;
-import com.phcpro.modules.fiscal.service.WithholdingService;
 import com.phcpro.modules.printing.CreditNotePrintService;
 import com.phcpro.modules.printing.DebitNotePrintService;
 import com.phcpro.modules.printing.InventoryReportPrintService;
-import com.phcpro.modules.printing.IvaDeclarationPrintService;
-import com.phcpro.modules.printing.PayrollFiscalMapPrintService;
 import com.phcpro.modules.printing.OrderPrintService;
 import com.phcpro.modules.printing.ReceiptPrintService;
 import com.phcpro.modules.printing.StockTransferPrintService;
@@ -132,13 +127,7 @@ public class MainFrame extends JFrame {
             DebitNoteService debitNoteService,
             CreditNotePrintService creditNotePrintService,
             DebitNotePrintService debitNotePrintService,
-            TaxRateService taxRateService,
-            WithholdingService withholdingService,
-            FiscalSummaryService fiscalSummaryService,
-            com.phcpro.modules.fiscal.service.FiscalSalesExportService fiscalSalesExportService,
-            PayrollTaxService payrollTaxService,
-            IvaDeclarationPrintService ivaDeclarationPrintService,
-            PayrollFiscalMapPrintService payrollFiscalMapPrintService,
+            FiscalApiClient fiscalApiClient,
             com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
             com.phcpro.modules.documents.service.DocumentConfigService documentConfigService,
             com.phcpro.modules.platform.service.PlatformCompanyService platformCompanyService,
@@ -148,8 +137,7 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
             com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService,
-            com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService,
-            com.phcpro.modules.fiscal.service.SaftValidationService saftValidationService
+            com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -181,7 +169,7 @@ public class MainFrame extends JFrame {
             hrPanel         = new HRPanel(hrApiClient);
             crmPanel        = new CRMPanel(crmApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient);
-            fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, saftValidationService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
+            fiscalPanel     = new FiscalPanel(fiscalApiClient);
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
             stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productLabelPrintService, productCategoryService);

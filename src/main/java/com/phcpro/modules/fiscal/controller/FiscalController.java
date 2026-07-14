@@ -4,10 +4,12 @@ import com.phcpro.modules.fiscal.dto.CreateTaxRateRequest;
 import com.phcpro.modules.fiscal.dto.CreateWithholdingRequest;
 import com.phcpro.modules.fiscal.dto.FiscalSalesExportDTO;
 import com.phcpro.modules.fiscal.dto.IvaSummaryDTO;
+import com.phcpro.modules.fiscal.dto.SaftValidationResult;
 import com.phcpro.modules.fiscal.dto.TaxRateDTO;
 import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
 import com.phcpro.modules.fiscal.service.FiscalSalesExportService;
 import com.phcpro.modules.fiscal.service.FiscalSummaryService;
+import com.phcpro.modules.fiscal.service.SaftValidationService;
 import com.phcpro.modules.fiscal.service.TaxRateService;
 import com.phcpro.modules.fiscal.service.WithholdingService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,6 +35,7 @@ public class FiscalController {
     private final WithholdingService withholdingService;
     private final FiscalSummaryService fiscalSummaryService;
     private final FiscalSalesExportService fiscalSalesExportService;
+    private final SaftValidationService saftValidationService;
     private final PayrollTaxService payrollTaxService;
     private final PayrollTaxConfigService payrollTaxConfigService;
 
@@ -40,12 +43,14 @@ public class FiscalController {
                             WithholdingService withholdingService,
                             FiscalSummaryService fiscalSummaryService,
                             FiscalSalesExportService fiscalSalesExportService,
+                            SaftValidationService saftValidationService,
                             PayrollTaxService payrollTaxService,
                             PayrollTaxConfigService payrollTaxConfigService) {
         this.taxRateService = taxRateService;
         this.withholdingService = withholdingService;
         this.fiscalSummaryService = fiscalSummaryService;
         this.fiscalSalesExportService = fiscalSalesExportService;
+        this.saftValidationService = saftValidationService;
         this.payrollTaxService = payrollTaxService;
         this.payrollTaxConfigService = payrollTaxConfigService;
     }
@@ -141,5 +146,25 @@ public class FiscalController {
     ) {
         FiscalSalesExportDTO export = fiscalSalesExportService.exportSales(companyId, from, to);
         return ResponseEntity.ok(export.xml());
+    }
+
+    /** Exportação SAF-T como DTO (XML + metadados) — para o desktop mostrar contagem/total. */
+    @GetMapping("/saft/export")
+    public ResponseEntity<FiscalSalesExportDTO> exportSaftDto(
+            @RequestParam Long companyId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return ResponseEntity.ok(fiscalSalesExportService.exportSales(companyId, from, to));
+    }
+
+    /** Valida a exportação SAF-T do período contra a XSD oficial (se configurada). */
+    @GetMapping("/saft/validate")
+    public ResponseEntity<SaftValidationResult> validateSaft(
+            @RequestParam Long companyId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return ResponseEntity.ok(saftValidationService.validateSalesExport(companyId, from, to));
     }
 }

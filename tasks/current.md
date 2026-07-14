@@ -17,7 +17,7 @@ migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operaciona
   checklist de hardening: [docs/DEPLOY_VPS_SPEC.md](../docs/DEPLOY_VPS_SPEC.md). **Não testado ao vivo**
   (sem Docker nesta máquina); o `SecurityConfig` fica permissivo (item #1 de go-live).
 - **Migração para cliente-fino (Track B) — arrancou:** padrão provado (inclui **PDF-over-HTTP**);
-  **7 de ~26 domínios** a passar por HTTP em vez de chamar o Service em processo:
+  **8 de ~26 domínios** a passar por HTTP em vez de chamar o Service em processo:
   - Novos clientes `@Profile("desktop")`: `ApprovalApiClient`, `CRMApiClient`, `FinanceApiClient`,
     `PromotionApiClient`, `InventoryApiClient`, `PurchaseApiClient`; `ComercialApiClient` +=
     `getAllInvoices/getAllProducts/getActiveCategories`. Painéis migrados: Aprovações, CRM, Financeiro,
@@ -28,6 +28,9 @@ migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operaciona
     os endpoints `/api/print/**` já existiam, o recibo de salário do RH imprime via
     `/api/print/payslip/{id}`. Padrão pronto para as impressões dos restantes painéis.
     Testes: `DesktopApiClientTest` passou a **7** (TC-06 postForList, TC-07 getBytes).
+  - **Fiscal** (8.º): `FiscalApiClient` colapsa os 8 serviços do painel. **1.º domínio a exigir endpoints
+    novos no backend** — `GET /api/fiscal/saft/export` (DTO com metadados), `GET /api/fiscal/saft/validate`
+    (XSD) e `GET /api/print/payroll-fiscal-map` (PDF). Harness TC-60.
   - Carregamento passou para `onPanelSelected()` (nunca no construtor) para não rebentar sem empresa.
   - **Falta:** médios (Promoções, Fiscal, RH, Dashboard) e os grandes (POS/Stock/Compras/Comercial),
     que precisam de endpoints novos. Só se fecha o PostgreSQL ao exterior quando **todos** migrarem.
