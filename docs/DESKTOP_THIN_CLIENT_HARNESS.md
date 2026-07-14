@@ -13,6 +13,8 @@ Cobrem a camada partilhada de que **todos** os clientes tipados dependem.
 | TC-03 | `post(body)`                                                  | Método POST, `Content-Type: application/json`, resposta parseada |
 | TC-04 | Resposta não-2xx com `{"message": "..."}`                     | `ApiClientException` com a mensagem do servidor         |
 | TC-05 | Sem sessão (fluxo de login)                                   | Pedido **sem** cabeçalho `Authorization`                |
+| TC-06 | `postForList()` sobre um POST que devolve array               | Método POST; lista parseada                             |
+| TC-07 | `getBytes()` (ex.: PDF de `/api/print/**`)                    | Corpo binário devolvido; pede `Accept: application/pdf` |
 
 ## Manuais — ida-e-volta HTTP ao vivo (desktop contra backend)
 
@@ -29,6 +31,7 @@ Pré-condição: backend a correr, login feito, empresa activa seleccionada.
 | TC-56  | Backend em baixo → abrir um painel migrado                             | Mensagem de erro amigável do `ApiClientException` (não *stacktrace*). |
 | TC-57  | **Promoções** (sub-tab de Comercial) → listar; criar promoção (percentagem por produto e por categoria; "leve X, pague Y"); activar/desactivar | Lista via `/api/promotions?companyId=`; produtos via `/api/comercial/products`, categorias via `/api/product-categories?onlyActive=true`; criação/toggle persistem. |
 | TC-58  | **Dashboard** (Painel Inicial) → login e navegar | 7 KPIs + 2 gráficos populam via HTTP (tesouraria, faturas, aprovações, tickets, IVA, stock baixo, validades). Compras/stock chegam como **DTOs** (`PurchaseDTO`/`StockDTO`), não entidades. Backend em baixo no arranque não bloqueia o login (dashboard fica a zeros e repovoa ao navegar). |
+| TC-59  | **RH** → abrir; CRUD de funcionários; processar folha; marcar recibo pago; faltas; férias (submeter/decidir); despesas; **imprimir recibo (PDF)** | Tudo via `/api/hr/**`; o recibo PDF vem de `/api/print/payslip/{id}` (bytes via `getBytes`) e abre no visualizador. |
 
 ## Definition of done (por domínio migrado)
 

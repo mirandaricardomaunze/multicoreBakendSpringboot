@@ -18,7 +18,7 @@ import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.financeira.service.FinanceService;
-import com.phcpro.modules.hr.service.HRService;
+import com.phcpro.desktop.client.HRApiClient;
 import com.phcpro.modules.hr.service.PayrollTaxService;
 import com.phcpro.modules.inventory.service.InventoryService;
 import com.phcpro.modules.inventory.service.StockTransferService;
@@ -35,7 +35,6 @@ import com.phcpro.modules.printing.InventoryReportPrintService;
 import com.phcpro.modules.printing.IvaDeclarationPrintService;
 import com.phcpro.modules.printing.PayrollFiscalMapPrintService;
 import com.phcpro.modules.printing.OrderPrintService;
-import com.phcpro.modules.printing.PayslipPrintService;
 import com.phcpro.modules.printing.ReceiptPrintService;
 import com.phcpro.modules.printing.StockTransferPrintService;
 import com.phcpro.modules.purchases.service.PurchaseService;
@@ -105,7 +104,7 @@ public class MainFrame extends JFrame {
             InventoryApiClient inventoryApiClient,
             PurchaseApiClient purchaseApiClient,
             CRMApiClient crmApiClient,
-            HRService hrService,
+            HRApiClient hrApiClient,
             InventoryService inventoryService,
             POSService posService,
             PurchaseService purchaseService,
@@ -129,7 +128,6 @@ public class MainFrame extends JFrame {
             StockTransferPrintService stockTransferPrintService,
             InventoryReportPrintService inventoryReportPrintService,
             com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
-            PayslipPrintService payslipPrintService,
             CreditNoteService creditNoteService,
             DebitNoteService debitNoteService,
             CreditNotePrintService creditNotePrintService,
@@ -180,7 +178,7 @@ public class MainFrame extends JFrame {
             dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);
             comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionApiClient, comercialApiClient, movimentosService);
             financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
-            hrPanel         = new HRPanel(hrService, payslipPrintService);
+            hrPanel         = new HRPanel(hrApiClient);
             crmPanel        = new CRMPanel(crmApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, saftValidationService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);

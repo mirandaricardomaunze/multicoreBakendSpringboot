@@ -118,5 +118,38 @@ class DesktopApiClientTest {
         assertTrue(req.headers().firstValue("Authorization").isEmpty());
     }
 
+    @SuppressWarnings("unchecked")
+    private void stubBytes(int status, byte[] body) throws Exception {
+        HttpResponse<byte[]> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(status);
+        when(response.body()).thenReturn(body);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+    }
+
+    // TC-06 — postForList parseia um array JSON devolvido por um POST.
+    @Test
+    void postForList_parsesJsonArray_fromPost() throws Exception {
+        stubResponse(200, "[{\"id\":1,\"name\":\"A\"},{\"id\":2,\"name\":\"B\"}]");
+
+        List<Sample> result = client.postForList("/api/x/process", null, Sample.class);
+
+        assertEquals(2, result.size());
+        assertEquals("POST", captureRequest().method());
+    }
+
+    // TC-07 — getBytes devolve o corpo binário (PDF) e pede Accept: application/pdf.
+    @Test
+    void getBytes_returnsBinaryBody_withPdfAccept() throws Exception {
+        byte[] pdf = {0x25, 0x50, 0x44, 0x46}; // "%PDF"
+        stubBytes(200, pdf);
+
+        byte[] result = client.getBytes("/api/print/payslip/9");
+
+        assertArrayEquals(pdf, result);
+        HttpRequest req = captureRequest();
+        assertEquals("GET", req.method());
+        assertTrue(req.headers().allValues("Accept").contains("application/pdf"));
+    }
+
     record Sample(long id, String name) {}
 }

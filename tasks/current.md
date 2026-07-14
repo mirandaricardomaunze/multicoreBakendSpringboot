@@ -16,14 +16,18 @@ migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operaciona
   Caddy TLS automático), [Caddyfile](../Caddyfile), `.env.example`, `.dockerignore`. Guião +
   checklist de hardening: [docs/DEPLOY_VPS_SPEC.md](../docs/DEPLOY_VPS_SPEC.md). **Não testado ao vivo**
   (sem Docker nesta máquina); o `SecurityConfig` fica permissivo (item #1 de go-live).
-- **Migração para cliente-fino (Track B) — arrancou:** padrão provado; **6 de ~26 domínios** a passar
-  por HTTP em vez de chamar o Service em processo:
+- **Migração para cliente-fino (Track B) — arrancou:** padrão provado (inclui **PDF-over-HTTP**);
+  **7 de ~26 domínios** a passar por HTTP em vez de chamar o Service em processo:
   - Novos clientes `@Profile("desktop")`: `ApprovalApiClient`, `CRMApiClient`, `FinanceApiClient`,
     `PromotionApiClient`, `InventoryApiClient`, `PurchaseApiClient`; `ComercialApiClient` +=
     `getAllInvoices/getAllProducts/getActiveCategories`. Painéis migrados: Aprovações, CRM, Financeiro,
-    Promoções, **Dashboard** (Clientes já estava). O Dashboard passou a consumir **DTOs** em vez de
-    entidades JPA (`StockDTO`/`PurchaseDTO`) e tem arranque resiliente; `ApprovalService`/`CRMService`
-    saíram do `MainFrame` (já não há painel a usá-los). Services partilhados mantidos onde ainda usados.
+    Promoções, **Dashboard**, **RH** (Clientes já estava). O Dashboard passou a consumir **DTOs** em vez
+    de entidades JPA (`StockDTO`/`PurchaseDTO`) e tem arranque resiliente; `ApprovalService`/`CRMService`/
+    `HRService`/`PayslipPrintService` saíram do `MainFrame` (já sem painel a usá-los).
+  - **PDF-over-HTTP:** `DesktopApiClient` ganhou `getBytes` (GET→PDF) e `postForList` (POST→array). Como
+    os endpoints `/api/print/**` já existiam, o recibo de salário do RH imprime via
+    `/api/print/payslip/{id}`. Padrão pronto para as impressões dos restantes painéis.
+    Testes: `DesktopApiClientTest` passou a **7** (TC-06 postForList, TC-07 getBytes).
   - Carregamento passou para `onPanelSelected()` (nunca no construtor) para não rebentar sem empresa.
   - **Falta:** médios (Promoções, Fiscal, RH, Dashboard) e os grandes (POS/Stock/Compras/Comercial),
     que precisam de endpoints novos. Só se fecha o PostgreSQL ao exterior quando **todos** migrarem.

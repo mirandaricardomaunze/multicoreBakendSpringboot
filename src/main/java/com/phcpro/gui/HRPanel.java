@@ -18,8 +18,7 @@ import com.phcpro.modules.hr.dto.ExpenseClaimDTO;
 import com.phcpro.modules.hr.dto.PayslipDTO;
 import com.phcpro.modules.hr.dto.VacationDTO;
 import com.phcpro.modules.hr.dto.UpsertEmployeeRequest;
-import com.phcpro.modules.hr.service.HRService;
-import com.phcpro.modules.printing.PayslipPrintService;
+import com.phcpro.desktop.client.HRApiClient;
 import com.phcpro.modules.printing.PdfFileSaver;
 import com.phcpro.modules.printing.TablePdfExporter;
 
@@ -42,8 +41,7 @@ public class HRPanel extends JPanel {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String[] ABSENCE_TYPES = {"JUSTIFIED", "UNJUSTIFIED", "SICK", "MATERNITY", "OTHER"};
 
-    private final HRService hrService;
-    private final PayslipPrintService payslipPrintService;
+    private final HRApiClient hrApiClient;
 
     private List<EmployeeDTO> employeesList = new ArrayList<>();
     private List<PayslipDTO> payslipsList = new ArrayList<>();
@@ -79,9 +77,8 @@ public class HRPanel extends JPanel {
     private DefaultTableModel expensesModel;
     private JTable expensesTable;
 
-    public HRPanel(HRService hrService, PayslipPrintService payslipPrintService) {
-        this.hrService = hrService;
-        this.payslipPrintService = payslipPrintService;
+    public HRPanel(HRApiClient hrApiClient) {
+        this.hrApiClient = hrApiClient;
 
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
@@ -101,7 +98,8 @@ public class HRPanel extends JPanel {
 
         add(tabs, BorderLayout.CENTER);
 
-        refreshData();
+        // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate), não no
+        // construtor — evita chamadas à API no arranque para quem não tem empresa activa.
     }
 
     public void onPanelSelected() {
@@ -245,7 +243,7 @@ public class HRPanel extends JPanel {
         ovMonthAbsencesSub.setText(unjustifiedDays + " dia(s) não justificados");
 
         // 6. Despesas pendentes de aprovação
-        List<ExpenseClaimDTO> claims = hrService.getAllExpenses();
+        List<ExpenseClaimDTO> claims = hrApiClient.getAllExpenses();
         List<ExpenseClaimDTO> pendingExp = claims.stream()
                 .filter(c -> c.status() == ExpenseStatus.PENDING_APPROVAL).toList();
         BigDecimal pendingExpSum = pendingExp.stream().map(ExpenseClaimDTO::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -353,7 +351,7 @@ public class HRPanel extends JPanel {
     }
 
     private void loadEmployees() {
-        employeesList = hrService.getAllEmployees();
+        employeesList = hrApiClient.getAllEmployees();
         employeesModel.setRowCount(0);
         for (EmployeeDTO e : employeesList) {
             employeesModel.addRow(new Object[]{
@@ -429,9 +427,9 @@ public class HRPanel extends JPanel {
                     contractEndField.getText().isBlank() ? null : LocalDate.parse(contractEndField.getText().trim())
             );
             if (existing == null) {
-                hrService.createEmployee(request);
+                hrApiClient.createEmployee(request);
             } else {
-                hrService.updateEmployee(existing.id(), request);
+                hrApiClient.updateEmployee(existing.id(), request);
             }
             loadEmployees();
             loadExpenses();
@@ -452,7 +450,7 @@ public class HRPanel extends JPanel {
                 "Alterar Estado Laboral", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option != JOptionPane.OK_OPTION) return;
         try {
-            hrService.changeEmployeeStatus(employee.id(), String.valueOf(statusCombo.getSelectedItem()));
+            hrApiClient.changeEmployeeStatus(employee.id(), String.valueOf(statusCombo.getSelectedItem()));
             loadEmployees();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -535,7 +533,7 @@ public class HRPanel extends JPanel {
     }
 
     private void loadPayslips() {
-        payslipsList = hrService.getAllPayslips();
+        payslipsList = hrApiClient.getAllPayslips();
         payslipsModel.setRowCount(0);
         for (PayslipDTO p : payslipsList) {
             payslipsModel.addRow(new Object[]{
@@ -600,7 +598,7 @@ public class HRPanel extends JPanel {
                     new BigDecimal(otherField.getText().trim()),
                     notesField.getText().trim().isEmpty() ? null : notesField.getText().trim()
             );
-            PayslipDTO created = hrService.createPayslip(req);
+            PayslipDTO created = hrApiClient.createPayslip(req);
             loadPayslips();
             int print = JOptionPane.showConfirmDialog(this,
                     "Recibo " + created.payslipNumber() + " gerado. Deseja imprimir agora?",
@@ -624,7 +622,7 @@ public class HRPanel extends JPanel {
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option != JOptionPane.OK_OPTION) return;
         try {
-            List<PayslipDTO> created = hrService.processMonthlyPayroll((Integer) year.getValue(), (Integer) month.getValue());
+            List<PayslipDTO> created = hrApiClient.processMonthlyPayroll((Integer) year.getValue(), (Integer) month.getValue());
             loadPayslips();
             JOptionPane.showMessageDialog(this, created.size() + " recibos processados automaticamente.",
                     "Folha Salarial", JOptionPane.INFORMATION_MESSAGE);
@@ -637,7 +635,7 @@ public class HRPanel extends JPanel {
         PayslipDTO sel = selectedPayslip();
         if (sel == null) return;
         try {
-            hrService.markPayslipPaid(sel.id());
+            hrApiClient.markPayslipPaid(sel.id());
             JOptionPane.showMessageDialog(this, "Recibo marcado como pago.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadPayslips();
         } catch (Exception ex) {
@@ -653,7 +651,7 @@ public class HRPanel extends JPanel {
 
     private void printPayslip(Long id, String number) {
         try {
-            byte[] pdf = payslipPrintService.render(id);
+            byte[] pdf = hrApiClient.renderPayslip(id);
             PdfFileSaver.saveAndOpen(pdf, "recibo-salario-" + number);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -728,7 +726,7 @@ public class HRPanel extends JPanel {
     }
 
     private void loadAbsences() {
-        absencesList = hrService.getAllAbsences();
+        absencesList = hrApiClient.getAllAbsences();
         absencesModel.setRowCount(0);
         for (AbsenceDTO a : absencesList) {
             absencesModel.addRow(new Object[]{
@@ -785,7 +783,7 @@ public class HRPanel extends JPanel {
                     reasonField.getText().trim().isEmpty() ? null : reasonField.getText().trim(),
                     docCheck.isSelected()
             );
-            hrService.recordAbsence(req);
+            hrApiClient.recordAbsence(req);
             JOptionPane.showMessageDialog(this, "Falta registada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadAbsences();
         } catch (Exception ex) {
@@ -804,7 +802,7 @@ public class HRPanel extends JPanel {
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (ok != JOptionPane.YES_OPTION) return;
         try {
-            hrService.deleteAbsence(sel.id());
+            hrApiClient.deleteAbsence(sel.id());
             loadAbsences();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -874,7 +872,7 @@ public class HRPanel extends JPanel {
     }
 
     private void loadVacations() {
-        vacationsList = hrService.getAllVacations();
+        vacationsList = hrApiClient.getAllVacations();
         vacationsModel.setRowCount(0);
         for (VacationDTO v : vacationsList) {
             vacationsModel.addRow(new Object[]{
@@ -923,7 +921,7 @@ public class HRPanel extends JPanel {
                     (Integer) yearSpinner.getValue(),
                     notesField.getText().trim().isEmpty() ? null : notesField.getText().trim()
             );
-            hrService.submitVacation(req);
+            hrApiClient.submitVacation(req);
             JOptionPane.showMessageDialog(this, "Pedido de férias submetido.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadVacations();
         } catch (Exception ex) {
@@ -945,7 +943,7 @@ public class HRPanel extends JPanel {
             if (reason == null) return;
         }
         try {
-            hrService.decideVacation(sel.id(), approve, reason);
+            hrApiClient.decideVacation(sel.id(), approve, reason);
             loadVacations();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1003,7 +1001,7 @@ public class HRPanel extends JPanel {
 
     private void loadExpenses() {
         expensesModel.setRowCount(0);
-        List<ExpenseClaimDTO> claims = hrService.getAllExpenses();
+        List<ExpenseClaimDTO> claims = hrApiClient.getAllExpenses();
         for (ExpenseClaimDTO c : claims) {
             expensesModel.addRow(new Object[]{
                     c.employeeName(),
@@ -1056,7 +1054,7 @@ public class HRPanel extends JPanel {
             }
             EmployeeDTO emp = employeesList.get(empCombo.getSelectedIndex());
             String cat = categoryCombo.getSelectedItem().toString().split(" ")[0];
-            hrService.submitExpense(new CreateExpenseClaimRequest(emp.id(), amount, cat, desc));
+            hrApiClient.submitExpense(new CreateExpenseClaimRequest(emp.id(), amount, cat, desc));
             JOptionPane.showMessageDialog(this, "Despesa submetida.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadExpenses();
             refreshOverview();

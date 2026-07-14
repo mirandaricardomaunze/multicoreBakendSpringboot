@@ -1,7 +1,7 @@
 # Desktop cliente-fino — migração para HTTPS (Track B)
 
 **Última actualização:** 2026-07-13
-**Estado:** padrão estabelecido e provado; **6 de ~26 domínios** migrados. Restam os médios e os
+**Estado:** padrão estabelecido e provado (inclui **PDF-over-HTTP**); **7 de ~26 domínios** migrados. Restam os médios e os
 painéis grandes (POS/Stock/Compras/Comercial). Enquanto a migração não fechar, o desktop mantém a
 ligação directa à BD para os ecrãs por migrar — logo o PostgreSQL **ainda não pode** fechar-se.
 
@@ -31,7 +31,10 @@ iteração migra os painéis, **um domínio de cada vez**, de chamadas ao Servic
 Toda a canalização partilhada vive no
 [DesktopApiClient](../src/main/java/com/phcpro/desktop/client/DesktopApiClient.java): anexa
 `Authorization: Bearer <token>` e `X-Company-Id` da sessão, serializa/deserializa JSON e traduz
-respostas não-2xx em `ApiClientException` com a mensagem do servidor.
+respostas não-2xx em `ApiClientException` com a mensagem do servidor. Ganhou `getList`/`post`/`put`/
+`delete` +, para o RH, **`postForList`** (POST → array) e **`getBytes`** (GET → PDF). Como os endpoints
+de impressão já existiam (`/api/print/**`), o **PDF-over-HTTP** reduziu-se a este único método — destrava
+as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, Compras).
 
 ## Progresso
 
@@ -43,7 +46,8 @@ respostas não-2xx em `ApiClientException` com a mensagem do servidor.
 | Financeiro  | `FinanceApiClient` + `getAllInvoices()`   | FinanceiroPanel  | ✅ |
 | Promoções   | `PromotionApiClient` + `getAllProducts()`/`getActiveCategories()` no ComercialApiClient | PromotionsPanel (sub-tab de Comercial) | ✅ |
 | Dashboard   | `InventoryApiClient` + `PurchaseApiClient` (novos) + reutiliza os outros | DashboardPanel (só-leitura; passou a consumir DTOs, não entidades) | ✅ |
-| Fiscal / RH | —                                         | —                | ⬜ (médios; têm impressão de PDF) |
+| RH          | `HRApiClient` (~16 métodos + recibo PDF via `getBytes`)  | HRPanel          | ✅ |
+| Fiscal      | —                                         | FiscalPanel      | ⬜ (médio; export XML + 2 PDFs + payroll) |
 | **POS / Stock / Compras / Comercial** | —             | —                | ⬜ (grandes, risco) |
 | Plataforma / Config (superadmin) | —                  | —                | ⬜ |
 
