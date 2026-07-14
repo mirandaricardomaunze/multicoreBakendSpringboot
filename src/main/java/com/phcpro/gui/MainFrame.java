@@ -3,16 +3,20 @@ package com.phcpro.gui;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.desktop.session.DesktopSession;
 import com.phcpro.desktop.session.DesktopSessionStore;
+import com.phcpro.desktop.client.ApprovalApiClient;
+import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.FinanceApiClient;
+import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.desktop.client.PromotionApiClient;
+import com.phcpro.desktop.client.PurchaseApiClient;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.TopNavBar;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.approvals.service.ApprovalService;
 import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.company.service.CompanyService;
-import com.phcpro.modules.crm.service.CRMService;
 import com.phcpro.modules.financeira.service.FinanceService;
 import com.phcpro.modules.hr.service.HRService;
 import com.phcpro.modules.hr.service.PayrollTaxService;
@@ -95,9 +99,12 @@ public class MainFrame extends JFrame {
     public MainFrame(
             ComercialService comercialService,
             ComercialApiClient comercialApiClient,
+            ApprovalApiClient approvalApiClient,
             FinanceService financeService,
-            ApprovalService approvalService,
-            CRMService crmService,
+            FinanceApiClient financeApiClient,
+            InventoryApiClient inventoryApiClient,
+            PurchaseApiClient purchaseApiClient,
+            CRMApiClient crmApiClient,
             HRService hrService,
             InventoryService inventoryService,
             POSService posService,
@@ -112,6 +119,7 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.backup.service.ScheduledBackupService scheduledBackupService,
             CompanyService companyService,
             com.phcpro.modules.promotions.service.PromotionService promotionService,
+            PromotionApiClient promotionApiClient,
             com.phcpro.modules.movimentos.service.MovimentosService movimentosService,
             DesktopSessionStore desktopSessionStore,
             ReceiptPrintService receiptPrintService,
@@ -169,14 +177,14 @@ public class MainFrame extends JFrame {
             plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService, supportService);
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
-            dashboardPanel  = new DashboardPanel(comercialService, financeService, approvalService, crmService, purchaseService, inventoryService);
-            comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionService, movimentosService);
-            financeiroPanel = new FinanceiroPanel(financeService, comercialService);
+            dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);
+            comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionApiClient, comercialApiClient, movimentosService);
+            financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
             hrPanel         = new HRPanel(hrService, payslipPrintService);
-            crmPanel        = new CRMPanel(crmService);
+            crmPanel        = new CRMPanel(crmApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(taxRateService, withholdingService, fiscalSummaryService, fiscalSalesExportService, saftValidationService, payrollTaxService, ivaDeclarationPrintService, payrollFiscalMapPrintService);
-            approvalsPanel  = new ApprovalsPanel(approvalService);
+            approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
             stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productLabelPrintService, productCategoryService);
             comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);

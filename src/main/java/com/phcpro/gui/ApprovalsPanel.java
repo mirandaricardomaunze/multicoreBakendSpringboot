@@ -5,9 +5,9 @@ import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ApprovalApiClient;
 import com.phcpro.modules.approvals.dto.ApprovalRequestDTO;
 import com.phcpro.modules.approvals.model.ApprovalStatus;
-import com.phcpro.modules.approvals.service.ApprovalService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,7 +19,7 @@ import java.util.List;
 
 public class ApprovalsPanel extends JPanel {
 
-    private final ApprovalService approvalService;
+    private final ApprovalApiClient approvalApiClient;
 
     // GUI Tables
     private DefaultTableModel pendingModel;
@@ -35,8 +35,8 @@ public class ApprovalsPanel extends JPanel {
     private List<ApprovalRequestDTO> pendingList = new ArrayList<>();
     private List<ApprovalRequestDTO> historyList = new ArrayList<>();
 
-    public ApprovalsPanel(ApprovalService approvalService) {
-        this.approvalService = approvalService;
+    public ApprovalsPanel(ApprovalApiClient approvalApiClient) {
+        this.approvalApiClient = approvalApiClient;
 
         setLayout(new BorderLayout(0, 20));
         setBackground(UIHelper.BG_DARK);
@@ -74,7 +74,9 @@ public class ApprovalsPanel extends JPanel {
             }
         });
 
-        refreshData();
+        // Carregamento preguiçoso: os dados são obtidos por HTTP em onPanelSelected() (via navigate),
+        // não no construtor — uma chamada à API no arranque falharia para quem não tem empresa activa
+        // (sem X-Company-Id o servidor recusa). Mesmo padrão do ClientesPanel.
     }
 
     public void refreshData() {
@@ -179,7 +181,7 @@ public class ApprovalsPanel extends JPanel {
 
     private void loadPendingTable() {
         pendingModel.setRowCount(0);
-        pendingList = approvalService.getPendingRequests();
+        pendingList = approvalApiClient.getPendingRequests();
         for (ApprovalRequestDTO req : pendingList) {
             pendingModel.addRow(new Object[]{
                     req.id(),
@@ -193,7 +195,7 @@ public class ApprovalsPanel extends JPanel {
 
     private void loadHistoryTable() {
         historyModel.setRowCount(0);
-        historyList = approvalService.getAllRequests();
+        historyList = approvalApiClient.getAllRequests();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (ApprovalRequestDTO req : historyList) {
             if (req.status() != ApprovalStatus.PENDING) {
@@ -260,7 +262,7 @@ public class ApprovalsPanel extends JPanel {
                 return;
             }
             try {
-                approvalService.rejectRequest(req.id(), reason.trim());
+                approvalApiClient.rejectRequest(req.id(), reason.trim());
                 dlg.close();
                 JOptionPane.showMessageDialog(this, "Documento rejeitado com sucesso.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 refreshData();
@@ -270,7 +272,7 @@ public class ApprovalsPanel extends JPanel {
         });
         dlg.addActionButton(rejectBtn);
         dlg.setConfirmButton("Aprovar", "fas-check");
-        dlg.setOnSave(() -> approvalService.approveRequest(req.id(), "Aprovado via interface Swing."));
+        dlg.setOnSave(() -> approvalApiClient.approveRequest(req.id(), "Aprovado via interface Swing."));
 
         boolean approved = dlg.showDialog();
         if (approved) {

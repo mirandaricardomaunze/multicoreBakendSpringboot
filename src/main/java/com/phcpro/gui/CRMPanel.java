@@ -5,8 +5,8 @@ import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.modules.crm.dto.*;
-import com.phcpro.modules.crm.service.CRMService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,7 +19,7 @@ import java.util.List;
 
 public class CRMPanel extends JPanel {
 
-    private final CRMService crmService;
+    private final CRMApiClient crmApiClient;
 
     // Support Tickets Table
     private DefaultTableModel ticketsModel;
@@ -32,8 +32,8 @@ public class CRMPanel extends JPanel {
     private List<SupportTicketDTO> ticketsList = new ArrayList<>();
     private List<WorkSheetDTO> worksheetsList = new ArrayList<>();
 
-    public CRMPanel(CRMService crmService) {
-        this.crmService = crmService;
+    public CRMPanel(CRMApiClient crmApiClient) {
+        this.crmApiClient = crmApiClient;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -50,7 +50,9 @@ public class CRMPanel extends JPanel {
                 createWorkSheetsTab());
         add(tabbedPane, BorderLayout.CENTER);
 
-        refreshData();
+        // Carregamento preguiçoso: os dados vêm por HTTP em onPanelSelected() (via navigate), não no
+        // construtor — evita uma chamada à API no arranque para quem não tem empresa activa. Mesmo
+        // padrão do ClientesPanel/ApprovalsPanel.
     }
 
     /** Aba dos pedidos de assistência (tabela ocupa toda a aba). */
@@ -142,7 +144,7 @@ public class CRMPanel extends JPanel {
 
     private void loadTicketsTable() {
         ticketsModel.setRowCount(0);
-        List<SupportTicketDTO> tickets = crmService.getAllTickets();
+        List<SupportTicketDTO> tickets = crmApiClient.getAllTickets();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (SupportTicketDTO ticket : tickets) {
             ticketsModel.addRow(new Object[]{
@@ -158,7 +160,7 @@ public class CRMPanel extends JPanel {
 
     private void loadWorkSheetsTable() {
         worksheetsModel.setRowCount(0);
-        worksheetsList = crmService.getAllWorkSheets();
+        worksheetsList = crmApiClient.getAllWorkSheets();
         for (WorkSheetDTO ws : worksheetsList) {
             worksheetsModel.addRow(new Object[]{
                     ws.id(),
@@ -173,7 +175,7 @@ public class CRMPanel extends JPanel {
 
     private void loadOpenTickets() {
         ticketsList.clear();
-        for (SupportTicketDTO ticket : crmService.getAllTickets()) {
+        for (SupportTicketDTO ticket : crmApiClient.getAllTickets()) {
             if ("OPEN".equalsIgnoreCase(ticket.status())) {
                 ticketsList.add(ticket);
             }
@@ -236,7 +238,7 @@ public class CRMPanel extends JPanel {
                 }
             }
 
-            crmService.createWorkSheet(new CreateWorkSheetRequest(
+            crmApiClient.createWorkSheet(new CreateWorkSheetRequest(
                     ticket.id(), tech, hours, desc, partsField.getText().trim(), partsCost));
         });
 
@@ -261,7 +263,7 @@ public class CRMPanel extends JPanel {
         }
 
         try {
-            crmService.billWorkSheet(ws.id());
+            crmApiClient.billWorkSheet(ws.id());
             JOptionPane.showMessageDialog(this, "Folha de obra faturada com sucesso!\n" +
                     "Uma fatura comercial foi gerada e submetida para aprovação.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             refreshData();

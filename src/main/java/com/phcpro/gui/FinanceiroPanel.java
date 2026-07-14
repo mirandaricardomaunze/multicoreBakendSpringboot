@@ -5,13 +5,12 @@ import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
-import com.phcpro.modules.comercial.service.ComercialService;
-import com.phcpro.modules.financeira.dto.PayInvoiceRequest;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
 import com.phcpro.modules.financeira.dto.TreasuryTransactionDTO;
-import com.phcpro.modules.financeira.service.FinanceService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -24,8 +23,8 @@ import java.util.List;
 
 public class FinanceiroPanel extends JPanel {
 
-    private final FinanceService financeService;
-    private final ComercialService comercialService;
+    private final FinanceApiClient financeApiClient;
+    private final ComercialApiClient comercialApiClient;
 
     // Accounts List Elements
     private DefaultTableModel accountsModel;
@@ -38,9 +37,9 @@ public class FinanceiroPanel extends JPanel {
     private List<InvoiceDTO> approvedInvoicesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
 
-    public FinanceiroPanel(FinanceService financeService, ComercialService comercialService) {
-        this.financeService = financeService;
-        this.comercialService = comercialService;
+    public FinanceiroPanel(FinanceApiClient financeApiClient, ComercialApiClient comercialApiClient) {
+        this.financeApiClient = financeApiClient;
+        this.comercialApiClient = comercialApiClient;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -56,7 +55,8 @@ public class FinanceiroPanel extends JPanel {
                 createMovementsTab());
         add(tabbedPane, BorderLayout.CENTER);
 
-        refreshData();
+        // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate), não no
+        // construtor — evita chamada à API no arranque para quem não tem empresa activa.
     }
 
     /** Aba das contas de tesouraria (tabela ocupa toda a aba). */
@@ -142,7 +142,7 @@ public class FinanceiroPanel extends JPanel {
 
     private void loadAccountsTable() {
         accountsModel.setRowCount(0);
-        accountsList = financeService.getAllAccounts();
+        accountsList = financeApiClient.getAllAccounts();
         for (TreasuryAccountDTO acc : accountsList) {
             accountsModel.addRow(new Object[]{
                     acc.name(),
@@ -154,7 +154,7 @@ public class FinanceiroPanel extends JPanel {
 
     private void loadMovementsTable() {
         movementsModel.setRowCount(0);
-        List<TreasuryTransactionDTO> txs = financeService.getAllTransactions();
+        List<TreasuryTransactionDTO> txs = financeApiClient.getAllTransactions();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (TreasuryTransactionDTO tx : txs) {
             movementsModel.addRow(new Object[]{
@@ -169,7 +169,7 @@ public class FinanceiroPanel extends JPanel {
 
     private void loadApprovedInvoices() {
         approvedInvoicesList.clear();
-        for (InvoiceDTO invoice : comercialService.getAllInvoices()) {
+        for (InvoiceDTO invoice : comercialApiClient.getAllInvoices()) {
             if (invoice.status() == InvoiceStatus.APPROVED) {
                 approvedInvoicesList.add(invoice);
             }
@@ -209,7 +209,7 @@ public class FinanceiroPanel extends JPanel {
         dlg.setOnSave(() -> {
             InvoiceDTO invoice = approvedInvoicesList.get(Math.max(0, invoiceCombo.getSelectedIndex()));
             TreasuryAccountDTO account = accountsList.get(Math.max(0, accountCombo.getSelectedIndex()));
-            financeService.payInvoice(invoice.id(), account.id());
+            financeApiClient.payInvoice(invoice.id(), account.id());
         });
 
         if (dlg.showDialog()) {

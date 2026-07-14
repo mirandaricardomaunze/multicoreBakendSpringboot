@@ -6,12 +6,12 @@ import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.PromotionApiClient;
 import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
 import com.phcpro.modules.comercial.dto.ProductDTO;
-import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.promotions.dto.CreatePromotionRequest;
 import com.phcpro.modules.promotions.dto.PromotionDTO;
-import com.phcpro.modules.promotions.service.PromotionService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -26,23 +26,23 @@ import java.util.List;
 
 /**
  * Gestão de promoções de loja: lista, criação (percentagem ou "leve X, pague Y", por produto ou
- * categoria, com janela de validade) e activação/desactivação. UI fina — a lógica vive no
- * {@link PromotionService}.
+ * categoria, com janela de validade) e activação/desactivação. UI fina — a lógica vive no backend,
+ * acedida via {@link PromotionApiClient}.
  */
 public class PromotionsPanel extends JPanel {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private final PromotionService promotionService;
-    private final ComercialService comercialService;
+    private final PromotionApiClient promotionApiClient;
+    private final ComercialApiClient comercialApiClient;
 
     private final DefaultTableModel model;
     private final JTable table;
     private List<PromotionDTO> promotions = new ArrayList<>();
 
-    public PromotionsPanel(PromotionService promotionService, ComercialService comercialService) {
-        this.promotionService = promotionService;
-        this.comercialService = comercialService;
+    public PromotionsPanel(PromotionApiClient promotionApiClient, ComercialApiClient comercialApiClient) {
+        this.promotionApiClient = promotionApiClient;
+        this.comercialApiClient = comercialApiClient;
 
         setLayout(new BorderLayout(0, 12));
         setOpaque(false);
@@ -103,7 +103,7 @@ public class PromotionsPanel extends JPanel {
     private void reload() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         try {
-            promotions = promotionService.findByCompany(companyId);
+            promotions = promotionApiClient.findByCompany(companyId);
         } catch (Exception ex) {
             promotions = new ArrayList<>();
         }
@@ -137,7 +137,7 @@ public class PromotionsPanel extends JPanel {
         }
         PromotionDTO selected = promotions.get(row);
         try {
-            promotionService.setActive(selected.id(), !selected.active());
+            promotionApiClient.setActive(selected.id(), !selected.active());
             reload();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -145,8 +145,8 @@ public class PromotionsPanel extends JPanel {
     }
 
     private void createPromotionDialog() {
-        List<ProductDTO> products = comercialService.getAllProducts();
-        List<ProductCategoryDTO> categories = comercialService.getActiveCategories();
+        List<ProductDTO> products = comercialApiClient.getAllProducts();
+        List<ProductCategoryDTO> categories = comercialApiClient.getActiveCategories();
 
         JTextField nameField = new JTextField();
         JComboBox<String> typeCombo = new JComboBox<>(new String[]{"Percentagem", "Leve X, pague Y"});
@@ -262,7 +262,7 @@ public class PromotionsPanel extends JPanel {
         }
 
         try {
-            promotionService.createPromotion(new CreatePromotionRequest(
+            promotionApiClient.createPromotion(new CreatePromotionRequest(
                     CurrentUserContext.getCurrentCompanyId(),
                     name,
                     percent ? "PERCENT" : "BUY_X_GET_Y",

@@ -98,7 +98,6 @@ public class ComercialPanel extends JPanel {
     private final com.phcpro.modules.printing.CreditNotePrintService creditNotePrintService;
     private final com.phcpro.modules.printing.DebitNotePrintService debitNotePrintService;
     private final com.phcpro.modules.pos.service.POSService posService;
-    private final com.phcpro.modules.promotions.service.PromotionService promotionService;
     private final com.phcpro.modules.movimentos.service.MovimentosService movimentosService;
 
     private JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
@@ -125,7 +124,8 @@ public class ComercialPanel extends JPanel {
             com.phcpro.modules.printing.CreditNotePrintService creditNotePrintService,
             com.phcpro.modules.printing.DebitNotePrintService debitNotePrintService,
             com.phcpro.modules.pos.service.POSService posService,
-            com.phcpro.modules.promotions.service.PromotionService promotionService,
+            com.phcpro.desktop.client.PromotionApiClient promotionApiClient,
+            com.phcpro.desktop.client.ComercialApiClient comercialApiClient,
             com.phcpro.modules.movimentos.service.MovimentosService movimentosService
     ) {
         this.comercialService = comercialService;
@@ -140,7 +140,6 @@ public class ComercialPanel extends JPanel {
         this.creditNotePrintService = creditNotePrintService;
         this.debitNotePrintService = debitNotePrintService;
         this.posService = posService;
-        this.promotionService = promotionService;
         this.movimentosService = movimentosService;
 
         setLayout(new BorderLayout());
@@ -175,7 +174,7 @@ public class ComercialPanel extends JPanel {
 
         // TAB 8: PROMOÇÕES
         tabbedPane.addTab("Promoções", UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),
-                new PromotionsPanel(promotionService, comercialService));
+                new PromotionsPanel(promotionApiClient, comercialApiClient));
 
         // TAB 9: MOVIMENTOS (vista unificada de todos os documentos comerciais)
         tabbedPane.addTab("Movimentos", UIHelper.icon("fas-list-alt", 16, UIHelper.TEXT_LIGHT), createMovimentosTab());

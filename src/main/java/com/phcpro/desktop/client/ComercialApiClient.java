@@ -1,6 +1,9 @@
 package com.phcpro.desktop.client;
 
 import com.phcpro.modules.comercial.dto.ClientDTO;
+import com.phcpro.modules.comercial.dto.InvoiceDTO;
+import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
+import com.phcpro.modules.comercial.dto.ProductDTO;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +35,19 @@ public class ComercialApiClient {
 
     public void deleteClient(Long id) {
         clientFactory.authenticatedClient().delete("/api/comercial/clients/" + id);
+    }
+
+    public List<InvoiceDTO> getAllInvoices() {
+        return clientFactory.authenticatedClient().getList("/api/comercial/invoices", InvoiceDTO.class);
+    }
+
+    public List<ProductDTO> getAllProducts() {
+        return clientFactory.authenticatedClient().getList("/api/comercial/products", ProductDTO.class);
+    }
+
+    public List<ProductCategoryDTO> getActiveCategories() {
+        return clientFactory.authenticatedClient()
+                .getList("/api/product-categories?onlyActive=true", ProductCategoryDTO.class);
     }
 
     record SaveClientRequest(String name, String taxId, String email, String address) {}

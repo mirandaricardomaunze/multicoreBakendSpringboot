@@ -5,17 +5,17 @@ import com.phcpro.gui.components.KpiCard;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.SimpleBarChart;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.approvals.service.ApprovalService;
-import com.phcpro.modules.comercial.service.ComercialService;
+import com.phcpro.desktop.client.ApprovalApiClient;
+import com.phcpro.desktop.client.CRMApiClient;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.FinanceApiClient;
+import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.desktop.client.PurchaseApiClient;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
-import com.phcpro.modules.crm.service.CRMService;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
-import com.phcpro.modules.financeira.service.FinanceService;
-import com.phcpro.modules.inventory.model.Stock;
-import com.phcpro.modules.inventory.service.InventoryService;
-import com.phcpro.modules.purchases.model.Purchase;
-import com.phcpro.modules.purchases.service.PurchaseService;
+import com.phcpro.modules.inventory.dto.StockDTO;
+import com.phcpro.modules.purchases.dto.PurchaseDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -25,12 +25,12 @@ import java.util.List;
 
 public class DashboardPanel extends JPanel {
 
-    private final ComercialService comercialService;
-    private final FinanceService financeService;
-    private final ApprovalService approvalService;
-    private final CRMService crmService;
-    private final PurchaseService purchaseService;
-    private final InventoryService inventoryService;
+    private final ComercialApiClient comercialApiClient;
+    private final FinanceApiClient financeApiClient;
+    private final ApprovalApiClient approvalApiClient;
+    private final CRMApiClient crmApiClient;
+    private final PurchaseApiClient purchaseApiClient;
+    private final InventoryApiClient inventoryApiClient;
 
     private JLabel welcomeLabel;
     private JLabel balanceValLabel;
@@ -49,19 +49,19 @@ public class DashboardPanel extends JPanel {
     private SimpleBarChart operationsChart;
 
     public DashboardPanel(
-            ComercialService comercialService,
-            FinanceService financeService,
-            ApprovalService approvalService,
-            CRMService crmService,
-            PurchaseService purchaseService,
-            InventoryService inventoryService
+            ComercialApiClient comercialApiClient,
+            FinanceApiClient financeApiClient,
+            ApprovalApiClient approvalApiClient,
+            CRMApiClient crmApiClient,
+            PurchaseApiClient purchaseApiClient,
+            InventoryApiClient inventoryApiClient
     ) {
-        this.comercialService = comercialService;
-        this.financeService = financeService;
-        this.approvalService = approvalService;
-        this.crmService = crmService;
-        this.purchaseService = purchaseService;
-        this.inventoryService = inventoryService;
+        this.comercialApiClient = comercialApiClient;
+        this.financeApiClient = financeApiClient;
+        this.approvalApiClient = approvalApiClient;
+        this.crmApiClient = crmApiClient;
+        this.purchaseApiClient = purchaseApiClient;
+        this.inventoryApiClient = inventoryApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -165,7 +165,13 @@ public class DashboardPanel extends JPanel {
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         add(scroll, BorderLayout.CENTER);
 
-        refreshData();
+        // Popula ao arrancar; se o backend falhar, não bloquear o login — o painel é repovoado ao
+        // navegar (MainFrame.navigate("dashboard") chama refreshData()).
+        try {
+            refreshData();
+        } catch (Exception ignored) {
+            // arranque resiliente
+        }
     }
 
     // Aspecto dos KPIs/gráficos partilhado com os outros painéis de visão geral (DRY): ver
@@ -193,20 +199,20 @@ public class DashboardPanel extends JPanel {
     }
 
     public void refreshData() {
-        if (financeService == null || comercialService == null || approvalService == null || crmService == null || purchaseService == null || inventoryService == null) {
+        if (financeApiClient == null || comercialApiClient == null || approvalApiClient == null || crmApiClient == null || purchaseApiClient == null || inventoryApiClient == null) {
             return;
         }
 
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         // 1. Treasury balance sum
-        BigDecimal totalBal = financeService.getAllAccounts().stream()
+        BigDecimal totalBal = financeApiClient.getAllAccounts().stream()
                 .map(TreasuryAccountDTO::balance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         balanceValLabel.setText(String.format("%,.2f MT", totalBal));
 
         // 2. Sales sum
-        List<InvoiceDTO> companyInvoices = comercialService.getInvoicesByCompany(companyId);
+        List<InvoiceDTO> companyInvoices = comercialApiClient.getAllInvoices();
         BigDecimal totalSales = companyInvoices.stream()
                 .filter(i -> i.status() == InvoiceStatus.APPROVED || i.status() == InvoiceStatus.PAID)
                 .map(InvoiceDTO::totalAmount)
@@ -214,11 +220,11 @@ public class DashboardPanel extends JPanel {
         salesValLabel.setText(String.format("%,.2f MT", totalSales));
 
         // 3. Pending approvals count
-        int appCount = approvalService.getPendingRequests().size();
+        int appCount = approvalApiClient.getPendingRequests().size();
         approvalsValLabel.setText(appCount + " Pedidos");
 
         // 4. CRM unresolved tickets count
-        long ticketCount = crmService.getAllTickets().stream()
+        long ticketCount = crmApiClient.getAllTickets().stream()
                 .filter(t -> "OPEN".equals(t.status()))
                 .count();
         ticketsValLabel.setText(ticketCount + " Tickets Abertos");
@@ -229,14 +235,14 @@ public class DashboardPanel extends JPanel {
                 .map(InvoiceDTO::taxAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<Purchase> companyPurchases = purchaseService.getPurchasesByCompany(companyId);
+        List<PurchaseDTO> companyPurchases = purchaseApiClient.getPurchasesByCompany(companyId);
         BigDecimal ivaDeduzido = companyPurchases.stream()
-                .filter(p -> !"CANCELLED".equals(p.getStatus()))
-                .map(Purchase::getTaxAmount)
+                .filter(p -> !"CANCELLED".equals(p.status()))
+                .map(PurchaseDTO::taxAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalPurchases = companyPurchases.stream()
-                .filter(p -> !"CANCELLED".equals(p.getStatus()))
-                .map(Purchase::getTotalAmount)
+                .filter(p -> !"CANCELLED".equals(p.status()))
+                .map(PurchaseDTO::totalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal ivaLiquido = ivaLiquidado.subtract(ivaDeduzido);
@@ -245,16 +251,16 @@ public class DashboardPanel extends JPanel {
         taxDetailLabel.setText(String.format("Liquidado: %,.2f MT | Deduzido: %,.2f MT", ivaLiquidado, ivaDeduzido));
 
         // 6. Stock Alerts (stocks where quantity < 5)
-        List<Stock> companyStocks = inventoryService.getStocksByCompany(companyId);
+        List<StockDTO> companyStocks = inventoryApiClient.getStocksByCompany(companyId);
         long lowStocksCount = companyStocks.stream()
-                .filter(s -> s.getQuantity().compareTo(BigDecimal.valueOf(5)) < 0)
+                .filter(s -> s.quantity().compareTo(BigDecimal.valueOf(5)) < 0)
                 .count();
         stockAlertsLabel.setText(lowStocksCount + " Artigo" + (lowStocksCount == 1 ? "" : "s"));
 
         // 7. Alertas de validade — lotes vencidos ou a vencer no horizonte definido
         java.time.LocalDate today = java.time.LocalDate.now();
         List<com.phcpro.modules.inventory.dto.ProductBatchDTO> expiring =
-                inventoryService.findExpiringBatches(companyId, EXPIRY_ALERT_DAYS);
+                inventoryApiClient.findExpiringBatches(companyId, EXPIRY_ALERT_DAYS);
         long expiredCount = expiring.stream()
                 .filter(b -> b.expirationDate() != null && b.expirationDate().isBefore(today))
                 .count();

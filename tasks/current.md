@@ -2,8 +2,36 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-11
-**Estado:** software principal de prontidão para loja/mercearia concluído e testado. Polish visual PHC concluído (ver abaixo). A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+**Última actualização:** 2026-07-13
+**Estado:** software de loja concluído. **Em curso: hospedar o backend à parte (VPS+Docker+PostgreSQL) +
+migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operacional é
+[tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-13 (Hospedagem do backend + desktop cliente-fino — Track B)
+
+- **Decisão do utilizador:** hospedar o backend Spring Boot separadamente em **VPS + Docker** com
+  **PostgreSQL** privado, e migrar o desktop para **cliente-fino (só HTTPS)** — a BD nunca exposta.
+- **Deploy (Track A) — feito:** [Dockerfile](../Dockerfile) multi-stage (inclui `postgresql-client`
+  para o backup físico), [docker-compose.yml](../docker-compose.yml) (backend + PostgreSQL privado +
+  Caddy TLS automático), [Caddyfile](../Caddyfile), `.env.example`, `.dockerignore`. Guião +
+  checklist de hardening: [docs/DEPLOY_VPS_SPEC.md](../docs/DEPLOY_VPS_SPEC.md). **Não testado ao vivo**
+  (sem Docker nesta máquina); o `SecurityConfig` fica permissivo (item #1 de go-live).
+- **Migração para cliente-fino (Track B) — arrancou:** padrão provado; **6 de ~26 domínios** a passar
+  por HTTP em vez de chamar o Service em processo:
+  - Novos clientes `@Profile("desktop")`: `ApprovalApiClient`, `CRMApiClient`, `FinanceApiClient`,
+    `PromotionApiClient`, `InventoryApiClient`, `PurchaseApiClient`; `ComercialApiClient` +=
+    `getAllInvoices/getAllProducts/getActiveCategories`. Painéis migrados: Aprovações, CRM, Financeiro,
+    Promoções, **Dashboard** (Clientes já estava). O Dashboard passou a consumir **DTOs** em vez de
+    entidades JPA (`StockDTO`/`PurchaseDTO`) e tem arranque resiliente; `ApprovalService`/`CRMService`
+    saíram do `MainFrame` (já não há painel a usá-los). Services partilhados mantidos onde ainda usados.
+  - Carregamento passou para `onPanelSelected()` (nunca no construtor) para não rebentar sem empresa.
+  - **Falta:** médios (Promoções, Fiscal, RH, Dashboard) e os grandes (POS/Stock/Compras/Comercial),
+    que precisam de endpoints novos. Só se fecha o PostgreSQL ao exterior quando **todos** migrarem.
+- Spec/harness: [docs/DESKTOP_THIN_CLIENT_SPEC.md](../docs/DESKTOP_THIN_CLIENT_SPEC.md) +
+  [docs/DESKTOP_THIN_CLIENT_HARNESS.md](../docs/DESKTOP_THIN_CLIENT_HARNESS.md) (TC-01..05 auto,
+  TC-50..56 manuais).
+- **Verificação:** `mvn -o compile` limpo; `DesktopApiClientTest` (5) verde. Ida-e-volta HTTP real de
+  cada painel valida-se ao vivo (manual) quando o backend estiver de pé.
 
 ### Progresso — 2026-07-11 (Polish Visual PHC — aspecto ERP profissional)
 
