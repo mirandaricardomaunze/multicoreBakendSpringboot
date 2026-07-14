@@ -1,0 +1,68 @@
+name: multicore
+
+# Backend Spring Boot + PostgreSQL PRIVADO + Caddy (HTTPS automático).
+# Só o Caddy publica portas para o host (80/443). O PostgreSQL e o backend ficam
+# na rede interna — o PostgreSQL NUNCA é exposto à internet (é o objetivo "BD 100% privada").
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-multicore}
+      POSTGRES_USER: ${DB_USER:-multicore}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-multicore} -d ${DB_NAME:-multicore}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      args:
+        # Coincidir com a major do PostgreSQL acima (para o pg_dump do backup).
+        PG_MAJOR: ${PG_MAJOR:-16}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-multicore}
+      DB_USER: ${DB_USER:-multicore}
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      # Backup físico (Spring relaxed binding: BACKUP_PG_BIN_DIR -> backup.pg-bin-dir).
+      BACKUP_PG_BIN_DIR: /usr/bin
+      BACKUP_DIR: /app/backups
+    volumes:
+      - ./data/backups:/app/backups
+    networks: [internal]
+    # Sem 'ports:' de propósito — o backend não é acessível a partir do host, só via Caddy.
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?defina DOMAIN no .env (ex.: erp.exemplo.co.mz)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
