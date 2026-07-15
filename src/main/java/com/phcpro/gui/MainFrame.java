@@ -32,7 +32,6 @@ import com.phcpro.modules.printing.InventoryReportPrintService;
 import com.phcpro.modules.printing.OrderPrintService;
 import com.phcpro.modules.printing.ReceiptPrintService;
 import com.phcpro.modules.printing.StockTransferPrintService;
-import com.phcpro.modules.purchases.service.PurchaseService;
 import com.phcpro.modules.users.service.AppUserService;
 
 import javax.swing.BorderFactory;
@@ -102,9 +101,6 @@ public class MainFrame extends JFrame {
             HRApiClient hrApiClient,
             InventoryService inventoryService,
             POSService posService,
-            PurchaseService purchaseService,
-            com.phcpro.modules.purchases.service.PurchaseOrderService purchaseOrderService,
-            com.phcpro.modules.purchases.service.ReorderService reorderService,
             com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService,
             AppUserService userService,
             AuditLogService auditLogService,
@@ -173,7 +169,7 @@ public class MainFrame extends JFrame {
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
             stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productLabelPrintService, productCategoryService);
-            comprasPanel    = new ComprasPanel(purchaseService, purchaseOrderService, reorderService, inventoryService, comercialService, financeService);
+            comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
             configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, scheduledBackupService, documentConfigService, supportService, subscriptionService);
             plataformaPanel = null;
 

@@ -65,6 +65,15 @@ public class DesktopApiClient {
                 .build(), responseType);
     }
 
+    public <T> T patch(String path, Object body, Class<T> responseType) {
+        return send(request(path)
+                .header("Content-Type", "application/json")
+                .method("PATCH", body == null
+                        ? HttpRequest.BodyPublishers.noBody()
+                        : HttpRequest.BodyPublishers.ofString(writeJson(body)))
+                .build(), responseType);
+    }
+
     public void delete(String path) {
         send(request(path).DELETE().build(), Void.class);
     }

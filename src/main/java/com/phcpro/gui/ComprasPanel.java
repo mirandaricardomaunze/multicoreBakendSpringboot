@@ -7,11 +7,11 @@ import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.ProductDTO;
-import com.phcpro.modules.comercial.service.ComercialService;
+import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
-import com.phcpro.modules.financeira.service.FinanceService;
-import com.phcpro.modules.inventory.model.Warehouse;
-import com.phcpro.modules.inventory.service.InventoryService;
+import com.phcpro.desktop.client.FinanceApiClient;
+import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.modules.inventory.dto.WarehouseDTO;
 import com.phcpro.modules.purchases.dto.CreatePurchaseLineRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseRequest;
 import com.phcpro.modules.purchases.dto.CreatePurchaseOrderLineRequest;
@@ -19,10 +19,9 @@ import com.phcpro.modules.purchases.dto.CreatePurchaseOrderRequest;
 import com.phcpro.modules.purchases.dto.PurchaseOrderDTO;
 import com.phcpro.modules.purchases.dto.PurchaseOrderLineDTO;
 import com.phcpro.modules.purchases.dto.ReceivePurchaseOrderRequest;
-import com.phcpro.modules.purchases.model.Supplier;
-import com.phcpro.modules.purchases.model.Purchase;
-import com.phcpro.modules.purchases.service.PurchaseOrderService;
-import com.phcpro.modules.purchases.service.PurchaseService;
+import com.phcpro.desktop.client.PurchaseApiClient;
+import com.phcpro.modules.purchases.dto.SupplierDTO;
+import com.phcpro.modules.purchases.dto.PurchaseDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -38,10 +37,8 @@ import java.util.List;
 
 public class ComprasPanel extends JPanel {
 
-    private final PurchaseService purchaseService;
-    private final PurchaseOrderService purchaseOrderService;
-    private final com.phcpro.modules.purchases.service.ReorderService reorderService;
-    private final InventoryService inventoryService;
+    private final PurchaseApiClient purchaseApiClient;
+    private final InventoryApiClient inventoryApiClient;
 
     // Reposição automática
     private JTabbedPane tabbedPane;
@@ -49,8 +46,8 @@ public class ComprasPanel extends JPanel {
     private JTable reorderTable;
     private JLabel reorderFooter;
     private java.util.List<com.phcpro.modules.purchases.dto.ReorderSuggestionDTO> reorderList = new java.util.ArrayList<>();
-    private final ComercialService comercialService;
-    private final FinanceService financeService;
+    private final ComercialApiClient comercialApiClient;
+    private final FinanceApiClient financeApiClient;
 
     // TAB ENCOMENDAS A FORNECEDOR
     private JComboBox<String> poSupplierCombo;
@@ -102,9 +99,9 @@ public class ComprasPanel extends JPanel {
     private JTable suppliersTable;
 
     // Seeding lists
-    private List<Supplier> suppliersList = new ArrayList<>();        // linhas da tabela (pode estar filtrada)
-    private List<Supplier> supplierComboList = new ArrayList<>();     // activos, para combos de compra/encomenda
-    private List<Warehouse> warehousesList = new ArrayList<>();
+    private List<SupplierDTO> suppliersList = new ArrayList<>();        // linhas da tabela (pode estar filtrada)
+    private List<SupplierDTO> supplierComboList = new ArrayList<>();     // activos, para combos de compra/encomenda
+    private List<WarehouseDTO> warehousesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
     private List<ProductDTO> productsList = new ArrayList<>();
 
@@ -113,19 +110,15 @@ public class ComprasPanel extends JPanel {
     private BigDecimal draftTotal = BigDecimal.ZERO;
 
     public ComprasPanel(
-            PurchaseService purchaseService,
-            PurchaseOrderService purchaseOrderService,
-            com.phcpro.modules.purchases.service.ReorderService reorderService,
-            InventoryService inventoryService,
-            ComercialService comercialService,
-            FinanceService financeService
+            PurchaseApiClient purchaseApiClient,
+            InventoryApiClient inventoryApiClient,
+            ComercialApiClient comercialApiClient,
+            FinanceApiClient financeApiClient
     ) {
-        this.purchaseService = purchaseService;
-        this.purchaseOrderService = purchaseOrderService;
-        this.reorderService = reorderService;
-        this.inventoryService = inventoryService;
-        this.comercialService = comercialService;
-        this.financeService = financeService;
+        this.purchaseApiClient = purchaseApiClient;
+        this.inventoryApiClient = inventoryApiClient;
+        this.comercialApiClient = comercialApiClient;
+        this.financeApiClient = financeApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -153,7 +146,8 @@ public class ComprasPanel extends JPanel {
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        onPanelSelected();
+        // Carregamento preguiçoso: os dados vêm por HTTP em onPanelSelected() (via navigate), não no
+        // construtor — evita chamadas à API no arranque para quem não tem empresa activa.
     }
 
     private JPanel createComprasTab() {
@@ -449,7 +443,7 @@ public class ComprasPanel extends JPanel {
         refreshSupsBtn.addActionListener(e -> { supplierSearchField.setText(""); loadSuppliers(); });
         newSupBtn.addActionListener(e -> openSupplierDialog(null));
         editSupBtn.addActionListener(e -> {
-            Supplier sel = selectedSupplier();
+            SupplierDTO sel = selectedSupplier();
             if (sel != null) openSupplierDialog(sel);
         });
         toggleSupBtn.addActionListener(e -> toggleSelectedSupplier());
@@ -457,7 +451,7 @@ public class ComprasPanel extends JPanel {
         return panel;
     }
 
-    private Supplier selectedSupplier() {
+    private SupplierDTO selectedSupplier() {
         int row = TableFilter.selectedModelRow(suppliersTable);
         if (row < 0 || row >= suppliersList.size()) {
             JOptionPane.showMessageDialog(this, "Selecione um fornecedor na tabela.",
@@ -468,24 +462,24 @@ public class ComprasPanel extends JPanel {
     }
 
     private void toggleSelectedSupplier() {
-        Supplier sel = selectedSupplier();
+        SupplierDTO sel = selectedSupplier();
         if (sel == null) return;
         try {
-            purchaseService.setSupplierActive(sel.getId(), CurrentUserContext.getCurrentCompanyId(), !sel.isActive());
+            purchaseApiClient.setSupplierActive(sel.id(), CurrentUserContext.getCurrentCompanyId(), !sel.active());
             loadSuppliers();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void openSupplierDialog(Supplier existing) {
+    private void openSupplierDialog(SupplierDTO existing) {
         boolean editing = existing != null;
-        JTextField nameField = new JTextField(editing ? existing.getName() : "");
-        JTextField taxIdField = new JTextField(editing ? existing.getTaxId() : "");
-        JTextField phoneField = new JTextField(editing && existing.getPhone() != null ? existing.getPhone() : "");
-        JTextField contactField = new JTextField(editing && existing.getContactPerson() != null ? existing.getContactPerson() : "");
-        JTextField emailField = new JTextField(editing && existing.getEmail() != null ? existing.getEmail() : "");
-        JTextField addressField = new JTextField(editing && existing.getAddress() != null ? existing.getAddress() : "");
+        JTextField nameField = new JTextField(editing ? existing.name() : "");
+        JTextField taxIdField = new JTextField(editing ? existing.taxId() : "");
+        JTextField phoneField = new JTextField(editing && existing.phone() != null ? existing.phone() : "");
+        JTextField contactField = new JTextField(editing && existing.contactPerson() != null ? existing.contactPerson() : "");
+        JTextField emailField = new JTextField(editing && existing.email() != null ? existing.email() : "");
+        JTextField addressField = new JTextField(editing && existing.address() != null ? existing.address() : "");
 
         JPanel form = UIHelper.createDialogForm(
                 "Nome / Empresa:", nameField,
@@ -514,9 +508,9 @@ public class ComprasPanel extends JPanel {
                             contactField.getText().trim(),
                             CurrentUserContext.getCurrentCompanyId());
             if (editing) {
-                purchaseService.updateSupplier(existing.getId(), req);
+                purchaseApiClient.updateSupplier(existing.id(), req);
             } else {
-                purchaseService.createSupplier(req);
+                purchaseApiClient.createSupplier(req);
             }
         });
 
@@ -592,7 +586,7 @@ public class ComprasPanel extends JPanel {
 
     private void loadReorderSuggestions() {
         if (reorderModel == null) return;
-        reorderList = reorderService.suggestions(CurrentUserContext.getCurrentCompanyId());
+        reorderList = purchaseApiClient.suggestions(CurrentUserContext.getCurrentCompanyId());
         reorderModel.setRowCount(0);
         for (var s : reorderList) {
             String estado = s.currentStock().signum() <= 0 ? "ESGOTADO" : "BAIXO";
@@ -662,7 +656,7 @@ public class ComprasPanel extends JPanel {
 
     private void loadPayables() {
         if (payablesModel == null) return;
-        payablesList = purchaseService.findPayablesByCompany(CurrentUserContext.getCurrentCompanyId());
+        payablesList = purchaseApiClient.findPayablesByCompany(CurrentUserContext.getCurrentCompanyId());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         BigDecimal totalDivida = BigDecimal.ZERO;
         payablesModel.setRowCount(0);
@@ -717,7 +711,7 @@ public class ComprasPanel extends JPanel {
             BigDecimal amount = new BigDecimal(amountField.getText().trim());
             Long accountId = accountsList.get(accCombo.getSelectedIndex()).id();
             String ref = refField.getText().trim();
-            purchaseService.registerSupplierPayment(pa.purchaseId(), amount, accountId, ref.isEmpty() ? null : ref);
+            purchaseApiClient.registerSupplierPayment(pa.purchaseId(), amount, accountId, ref.isEmpty() ? null : ref);
             JOptionPane.showMessageDialog(this, "Pagamento registado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadPayables();
             loadPurchasesHistory();
@@ -732,7 +726,7 @@ public class ComprasPanel extends JPanel {
     private void refreshPoCombos() {
         if (poWarehouseCombo == null) return;
         poWarehouseCombo.removeAllItems();
-        for (Warehouse w : warehousesList) poWarehouseCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) poWarehouseCombo.addItem(w.name());
         poProductCombo.removeAllItems();
         for (ProductDTO p : productsList) poProductCombo.addItem(p.name() + " (" + p.sku() + ")");
     }
@@ -944,11 +938,11 @@ public class ComprasPanel extends JPanel {
             }
         }
         CreatePurchaseOrderRequest req = new CreatePurchaseOrderRequest(
-                supplierComboList.get(supIdx).getId(),
-                warehousesList.get(whIdx).getId(),
+                supplierComboList.get(supIdx).id(),
+                warehousesList.get(whIdx).id(),
                 CurrentUserContext.getCurrentCompanyId(),
                 expected, null, new ArrayList<>(poDraftLines));
-        PurchaseOrderDTO dto = purchaseOrderService.createOrder(req);
+        PurchaseOrderDTO dto = purchaseApiClient.createOrder(req);
         poDraftLines.clear();
         if (poLinesModel != null) poLinesModel.setRowCount(0);
         recomputePoTotal();
@@ -961,7 +955,7 @@ public class ComprasPanel extends JPanel {
         if (poListModel == null) return;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         // Carrega todas; a pesquisa/estado/data é aplicada pelo TableFilter (cliente).
-        poList = purchaseOrderService.findOrdersByCompany(companyId);
+        poList = purchaseApiClient.findOrdersByCompany(companyId);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         poListModel.setRowCount(0);
         for (PurchaseOrderDTO o : poList) {
@@ -990,7 +984,7 @@ public class ComprasPanel extends JPanel {
                 "Confirmar Recepção", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (opt != JOptionPane.OK_OPTION) return;
         try {
-            purchaseOrderService.receiveOrder(sel.id());
+            purchaseApiClient.receiveOrder(sel.id());
             JOptionPane.showMessageDialog(this, "Encomenda recebida e stock actualizado.",
                     "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadPurchaseOrders();
@@ -1061,7 +1055,7 @@ public class ComprasPanel extends JPanel {
             return;
         }
         try {
-            PurchaseOrderDTO updated = purchaseOrderService.receivePartial(
+            PurchaseOrderDTO updated = purchaseApiClient.receivePartial(
                     sel.id(), new ReceivePurchaseOrderRequest(toReceive));
             JOptionPane.showMessageDialog(this,
                     "Recepção registada. Estado da encomenda: " + updated.status() + ".",
@@ -1080,7 +1074,7 @@ public class ComprasPanel extends JPanel {
                 "Encomenda " + sel.orderNumber(), "Motivo do cancelamento:");
         if (reason == null) return;
         try {
-            purchaseOrderService.cancelOrder(sel.id(), reason);
+            purchaseApiClient.cancelOrder(sel.id(), reason);
             loadPurchaseOrders();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1089,29 +1083,29 @@ public class ComprasPanel extends JPanel {
 
     private void loadSuppliers() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<Supplier> all = purchaseService.getSuppliersByCompany(companyId);
+        List<SupplierDTO> all = purchaseApiClient.getSuppliersByCompany(companyId);
 
         // Combos de compra/encomenda: só fornecedores activos.
-        supplierComboList = all.stream().filter(Supplier::isActive).toList();
+        supplierComboList = all.stream().filter(SupplierDTO::active).toList();
         supplierCombo.removeAllItems();
-        for (Supplier s : supplierComboList) supplierCombo.addItem(s.getName() + " (" + s.getTaxId() + ")");
+        for (SupplierDTO s : supplierComboList) supplierCombo.addItem(s.name() + " (" + s.taxId() + ")");
         if (poSupplierCombo != null) {
             poSupplierCombo.removeAllItems();
-            for (Supplier s : supplierComboList) poSupplierCombo.addItem(s.getName() + " (" + s.getTaxId() + ")");
+            for (SupplierDTO s : supplierComboList) poSupplierCombo.addItem(s.name() + " (" + s.taxId() + ")");
         }
 
         // Tabela: carrega todos; a pesquisa/estado é aplicada pelo TableFilter (cliente).
         suppliersList = all;
         suppliersModel.setRowCount(0);
-        for (Supplier s : suppliersList) {
+        for (SupplierDTO s : suppliersList) {
             suppliersModel.addRow(new Object[]{
-                    s.getName(),
-                    s.getTaxId(),
-                    dash(s.getPhone()),
-                    dash(s.getContactPerson()),
-                    dash(s.getEmail()),
-                    dash(s.getAddress()),
-                    s.isActive() ? "Activo" : "Inactivo"
+                    s.name(),
+                    s.taxId(),
+                    dash(s.phone()),
+                    dash(s.contactPerson()),
+                    dash(s.email()),
+                    dash(s.address()),
+                    s.active() ? "Activo" : "Inactivo"
             });
         }
     }
@@ -1123,16 +1117,16 @@ public class ComprasPanel extends JPanel {
     private void loadWarehouses() {
         warehouseCombo.removeAllItems();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        warehousesList = inventoryService.getWarehousesByCompany(companyId);
+        warehousesList = inventoryApiClient.getWarehousesByCompany(companyId);
 
-        for (Warehouse w : warehousesList) {
-            warehouseCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            warehouseCombo.addItem(w.name());
         }
     }
 
     private void loadAccounts() {
         accountCombo.removeAllItems();
-        accountsList = financeService.getAllAccounts();
+        accountsList = financeApiClient.getAllAccounts();
 
         accountCombo.addItem("— A crédito (pagar depois) —");
         for (TreasuryAccountDTO acc : accountsList) {
@@ -1142,7 +1136,7 @@ public class ComprasPanel extends JPanel {
 
     private void loadProducts() {
         productCombo.removeAllItems();
-        productsList = comercialService.getAllProducts();
+        productsList = comercialApiClient.getAllProducts();
 
         for (ProductDTO p : productsList) {
             productCombo.addItem(productLabel(p));
@@ -1264,20 +1258,20 @@ public class ComprasPanel extends JPanel {
             throw new RuntimeException("Selecione fornecedor e armazém.");
         }
 
-        Supplier supplier = supplierComboList.get(supIdx);
-        Warehouse warehouse = warehousesList.get(whIdx);
+        SupplierDTO supplier = supplierComboList.get(supIdx);
+        WarehouseDTO warehouse = warehousesList.get(whIdx);
         // Índice 0 = "a crédito" (sem conta → conta a pagar); restantes mapeiam accountsList[idx-1].
         boolean onCredit = accIdx <= 0;
         Long financeAccountId = onCredit ? null : accountsList.get(accIdx - 1).id();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         CreatePurchaseRequest request = new CreatePurchaseRequest(
-                supplier.getId(), warehouse.getId(), companyId, financeAccountId, draftLines);
-        Purchase p = purchaseService.createPurchase(request);
-        JOptionPane.showMessageDialog(this, "Compra " + p.getPurchaseNumber() + " registada com sucesso!\n" +
+                supplier.id(), warehouse.id(), companyId, financeAccountId, draftLines);
+        PurchaseDTO p = purchaseApiClient.createPurchase(request);
+        JOptionPane.showMessageDialog(this, "Compra " + p.purchaseNumber() + " registada com sucesso!\n" +
                 (onCredit
                     ? "Stock atualizado. Compra a crédito — ver tab Contas a Pagar."
-                    : "Stock atualizado e saldo deduzido de " + p.getTotalAmount() + " MT."),
+                    : "Stock atualizado e saldo deduzido de " + p.totalAmount() + " MT."),
                 "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
         draftLines.clear();
@@ -1289,19 +1283,29 @@ public class ComprasPanel extends JPanel {
     private void loadPurchasesHistory() {
         purchasesModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<Purchase> purchases = purchaseService.getPurchasesByCompany(companyId);
+        List<PurchaseDTO> purchases = purchaseApiClient.getPurchasesByCompany(companyId);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-        for (Purchase p : purchases) {
+        for (PurchaseDTO p : purchases) {
             purchasesModel.addRow(new Object[]{
-                    p.getPurchaseNumber(),
-                    p.getSupplier().getName(),
-                    p.getWarehouse().getName(),
-                    p.getTotalAmount() + " MT",
-                    p.getTaxAmount() + " MT",
-                    p.getPurchaseDate().format(dtf)
+                    p.purchaseNumber(),
+                    p.supplierName(),
+                    warehouseName(p.warehouseId()),
+                    p.totalAmount() + " MT",
+                    p.taxAmount() + " MT",
+                    p.purchaseDate().format(dtf)
             });
         }
+    }
+
+    /** Nome do armazém a partir do id, via lista de armazéns carregada (o PurchaseDTO só traz o id). */
+    private String warehouseName(Long warehouseId) {
+        if (warehouseId == null) return "—";
+        return warehousesList.stream()
+                .filter(w -> warehouseId.equals(w.id()))
+                .map(WarehouseDTO::name)
+                .findFirst()
+                .orElse("#" + warehouseId);
     }
 
     /**

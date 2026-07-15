@@ -1,7 +1,7 @@
 # Desktop cliente-fino — migração para HTTPS (Track B)
 
 **Última actualização:** 2026-07-13
-**Estado:** padrão estabelecido e provado (inclui **PDF-over-HTTP**); **8 de ~26 domínios** migrados. Restam os
+**Estado:** padrão estabelecido e provado (inclui **PDF-over-HTTP**); **9 de ~26 domínios** migrados. Restam os
 painéis grandes (POS/Stock/Compras/Comercial). Enquanto a migração não fechar, o desktop mantém a
 ligação directa à BD para os ecrãs por migrar — logo o PostgreSQL **ainda não pode** fechar-se.
 
@@ -48,7 +48,8 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
 | Dashboard   | `InventoryApiClient` + `PurchaseApiClient` (novos) + reutiliza os outros | DashboardPanel (só-leitura; passou a consumir DTOs, não entidades) | ✅ |
 | RH          | `HRApiClient` (~16 métodos + recibo PDF via `getBytes`)  | HRPanel          | ✅ |
 | Fiscal      | `FiscalApiClient` (colapsa 8 serviços) **+ 3 endpoints novos no backend** | FiscalPanel | ✅ |
-| **POS / Stock / Compras / Comercial** | —             | —                | ⬜ (grandes, risco) |
+| Compras     | `PurchaseApiClient` estendido (colapsa purchase+order+reorder) + `getWarehousesByCompany` | ComprasPanel (1.º gigante; entidades Supplier/Warehouse→DTO) | ✅ |
+| **POS / Stock / Comercial** | —                      | —                | ⬜ (gigantes restantes, risco) |
 | Plataforma / Config (superadmin) | —                  | —                | ⬜ |
 
 ## Peças
@@ -62,6 +63,10 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
   deixaram de ser injectados no `MainFrame` (nenhum painel os usa já) e foram removidos de lá.
 - **Promoções** é sub-tab do `ComercialPanel`: os clientes são passados através do construtor do
   `ComercialPanel` (que **não** foi migrado — continua a usar `ComercialService` nas suas tabs).
+- **Compras** foi o **1.º gigante** (1.324 linhas): `DesktopApiClient` ganhou `patch` (para o
+  `PATCH /suppliers/{id}/active`); `PurchaseApiClient` colapsou os serviços de compras/encomendas/
+  reposição; o painel converteu `Supplier`/`Warehouse`/`Purchase` (entidades) para os respetivos DTOs.
+  O `PurchaseDTO` não traz o nome do armazém — resolvido por lookup na lista de armazéns.
 - **Fiscal** foi o primeiro domínio que exigiu **endpoints novos no backend** (não só migração de UI):
   `GET /api/fiscal/saft/export` (DTO com metadados, além do `/saft` que só dá XML cru),
   `GET /api/fiscal/saft/validate` (validação contra a XSD) e `GET /api/print/payroll-fiscal-map` (PDF).

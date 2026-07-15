@@ -2,6 +2,7 @@ package com.phcpro.desktop.client;
 
 import com.phcpro.modules.inventory.dto.ProductBatchDTO;
 import com.phcpro.modules.inventory.dto.StockDTO;
+import com.phcpro.modules.inventory.dto.WarehouseDTO;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,11 @@ public class InventoryApiClient {
     public List<StockDTO> getStocksByCompany(Long companyId) {
         return clientFactory.authenticatedClient()
                 .getList("/api/inventory/stocks?companyId=" + companyId, StockDTO.class);
+    }
+
+    public List<WarehouseDTO> getWarehousesByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/inventory/warehouses?companyId=" + companyId, WarehouseDTO.class);
     }
 
     /**
