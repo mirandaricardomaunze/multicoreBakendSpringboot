@@ -46,5 +46,10 @@ public class PlatformSupportController {
         return supportService.changeStatus(id, request.status());
     }
 
+    @GetMapping("/status-options")
+    public List<String> statusOptions() {
+        return supportService.statusOptions();
+    }
+
     public record StatusRequest(String status) {}
 }

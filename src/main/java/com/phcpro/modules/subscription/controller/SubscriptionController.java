@@ -54,5 +54,15 @@ public class SubscriptionController {
         return subscriptionService.recordPayment(companyId, request);
     }
 
+    @GetMapping("/plan-options")
+    public List<String> planOptions() {
+        return subscriptionService.planOptions();
+    }
+
+    @GetMapping("/method-options")
+    public List<String> methodOptions() {
+        return subscriptionService.methodOptions();
+    }
+
     public record StatusRequest(String status) {}
 }

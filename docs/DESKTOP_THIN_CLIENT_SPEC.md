@@ -1,7 +1,7 @@
 # Desktop cliente-fino — migração para HTTPS (Track B)
 
 **Última actualização:** 2026-07-13
-**Estado:** padrão estabelecido e provado (inclui **PDF-over-HTTP**); **9 de ~26 domínios** migrados. Restam os
+**Estado:** padrão estabelecido e provado (inclui **PDF-over-HTTP**); **10 de ~26 domínios** migrados. Restam os
 painéis grandes (POS/Stock/Compras/Comercial). Enquanto a migração não fechar, o desktop mantém a
 ligação directa à BD para os ecrãs por migrar — logo o PostgreSQL **ainda não pode** fechar-se.
 
@@ -49,8 +49,9 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
 | RH          | `HRApiClient` (~16 métodos + recibo PDF via `getBytes`)  | HRPanel          | ✅ |
 | Fiscal      | `FiscalApiClient` (colapsa 8 serviços) **+ 3 endpoints novos no backend** | FiscalPanel | ✅ |
 | Compras     | `PurchaseApiClient` estendido (colapsa purchase+order+reorder) + `getWarehousesByCompany` | ComprasPanel (1.º gigante; entidades Supplier/Warehouse→DTO) | ✅ |
+| Plataforma  | `PlatformApiClient` (colapsa empresas+utilizadores+assinaturas+suporte) + 3 endpoints de options | PlataformaPanel (superadmin; só DTOs) | ✅ |
 | **POS / Stock / Comercial** | —                      | —                | ⬜ (gigantes restantes, risco) |
-| Plataforma / Config (superadmin) | —                  | —                | ⬜ |
+| Config (empresa) | —                                  | ConfigPanel      | ⬜ |
 
 ## Peças
 

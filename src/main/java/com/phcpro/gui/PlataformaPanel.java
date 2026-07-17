@@ -8,19 +8,16 @@ import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.platform.dto.CreateCompanyRequest;
 import com.phcpro.modules.platform.dto.PlatformCompanyDTO;
 import com.phcpro.modules.platform.dto.UpdateCompanyRequest;
-import com.phcpro.modules.platform.service.PlatformCompanyService;
+import com.phcpro.desktop.client.PlatformApiClient;
 import com.phcpro.modules.platform.dto.CreatePlatformUserRequest;
 import com.phcpro.modules.platform.dto.GrantAccessRequest;
 import com.phcpro.modules.platform.dto.PlatformUserDTO;
-import com.phcpro.modules.platform.service.PlatformUserService;
 import com.phcpro.modules.subscription.dto.RecordPaymentRequest;
 import com.phcpro.modules.subscription.dto.SaveSubscriptionRequest;
 import com.phcpro.modules.subscription.dto.SubscriptionDTO;
 import com.phcpro.modules.subscription.dto.SubscriptionPaymentDTO;
-import com.phcpro.modules.subscription.service.SubscriptionService;
 import com.phcpro.modules.support.dto.SupportMessageDTO;
 import com.phcpro.modules.support.dto.SupportTicketDTO;
-import com.phcpro.modules.support.service.SupportService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -37,10 +34,7 @@ import java.util.List;
  */
 public class PlataformaPanel extends JPanel {
 
-    private final PlatformCompanyService platformCompanyService;
-    private final SubscriptionService subscriptionService;
-    private final PlatformUserService platformUserService;
-    private final SupportService supportService;
+    private final PlatformApiClient platformApiClient;
 
     private DefaultTableModel companiesModel;
     private JTable companiesTable;
@@ -58,14 +52,8 @@ public class PlataformaPanel extends JPanel {
     private JTable ticketsTable;
     private List<SupportTicketDTO> tickets = new ArrayList<>();
 
-    public PlataformaPanel(PlatformCompanyService platformCompanyService,
-                           SubscriptionService subscriptionService,
-                           PlatformUserService platformUserService,
-                           SupportService supportService) {
-        this.platformCompanyService = platformCompanyService;
-        this.subscriptionService = subscriptionService;
-        this.platformUserService = platformUserService;
-        this.supportService = supportService;
+    public PlataformaPanel(PlatformApiClient platformApiClient) {
+        this.platformApiClient = platformApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -80,7 +68,8 @@ public class PlataformaPanel extends JPanel {
         tabbedPane.addTab("Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), createSupportTab());
         add(tabbedPane, BorderLayout.CENTER);
 
-        onPanelSelected();
+        // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate no arranque do
+        // superadmin), não no construtor — arranque resiliente se o backend falhar.
     }
 
     /** Chamado pela MainFrame quando o painel fica activo. */
@@ -156,7 +145,7 @@ public class PlataformaPanel extends JPanel {
 
     private void loadCompanies() {
         try {
-            companies = platformCompanyService.listCompanies();
+            companies = platformApiClient.listCompanies();
             companiesModel.setRowCount(0);
             for (PlatformCompanyDTO c : companies) {
                 companiesModel.addRow(new Object[]{
@@ -203,7 +192,7 @@ public class PlataformaPanel extends JPanel {
             if (nameField.getText().trim().isEmpty() || taxIdField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("Nome e NUIT são obrigatórios.");
             }
-            platformCompanyService.createCompany(new CreateCompanyRequest(
+            platformApiClient.createCompany(new CreateCompanyRequest(
                     nameField.getText().trim(), taxIdField.getText().trim(),
                     emailField.getText().trim(), addressField.getText().trim()));
         });
@@ -238,7 +227,7 @@ public class PlataformaPanel extends JPanel {
             if (nameField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
-            platformCompanyService.updateCompany(company.id(), new UpdateCompanyRequest(
+            platformApiClient.updateCompany(company.id(), new UpdateCompanyRequest(
                     nameField.getText().trim(), emailField.getText().trim(), addressField.getText().trim()));
         });
 
@@ -262,7 +251,7 @@ public class PlataformaPanel extends JPanel {
         if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
-            platformCompanyService.setCompanyActive(company.id(), newState);
+            platformApiClient.setCompanyActive(company.id(), newState);
             loadCompanies();
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Empresas", JOptionPane.ERROR_MESSAGE);
@@ -349,7 +338,7 @@ public class PlataformaPanel extends JPanel {
 
     private void loadSubscriptions() {
         try {
-            subscriptions = subscriptionService.listOverview();
+            subscriptions = platformApiClient.listOverview();
             subsModel.setRowCount(0);
             for (SubscriptionDTO s : subscriptions) {
                 subsModel.addRow(new Object[]{
@@ -391,7 +380,7 @@ public class PlataformaPanel extends JPanel {
         SubscriptionDTO sub = selectedSubscription();
         if (sub == null) return;
 
-        JComboBox<String> planCombo = new JComboBox<>(subscriptionService.planOptions().toArray(new String[0]));
+        JComboBox<String> planCombo = new JComboBox<>(platformApiClient.planOptions().toArray(new String[0]));
         UIHelper.styleComboBox(planCombo);
         if (sub.plan() != null) planCombo.setSelectedItem(sub.plan());
         JTextField priceField = new JTextField(sub.monthlyPrice() == null ? "" : sub.monthlyPrice().toPlainString());
@@ -407,7 +396,7 @@ public class PlataformaPanel extends JPanel {
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Definir Assinatura",
                 "fas-sliders-h", sub.companyName(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> subscriptionService.saveSubscription(sub.companyId(), new SaveSubscriptionRequest(
+        dlg.setOnSave(() -> platformApiClient.saveSubscription(sub.companyId(), new SaveSubscriptionRequest(
                 (String) planCombo.getSelectedItem(),
                 parseAmount(priceField.getText(), "preço mensal"),
                 parseDate(validField.getText()))));
@@ -424,7 +413,7 @@ public class PlataformaPanel extends JPanel {
         if (sub == null) return;
 
         JTextField amountField = new JTextField();
-        JComboBox<String> methodCombo = new JComboBox<>(subscriptionService.methodOptions().toArray(new String[0]));
+        JComboBox<String> methodCombo = new JComboBox<>(platformApiClient.methodOptions().toArray(new String[0]));
         UIHelper.styleComboBox(methodCombo);
         JTextField paidAtField = new JTextField(LocalDate.now().toString());
         JTextField startField = new JTextField();
@@ -448,7 +437,7 @@ public class PlataformaPanel extends JPanel {
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Registar Pagamento",
                 "fas-money-bill-wave", sub.companyName() + " — o período até estende a validade", form)
                 .setConfirmButton("Registar", "fas-check");
-        dlg.setOnSave(() -> subscriptionService.recordPayment(sub.companyId(), new RecordPaymentRequest(
+        dlg.setOnSave(() -> platformApiClient.recordPayment(sub.companyId(), new RecordPaymentRequest(
                 parseAmount(amountField.getText(), "valor"),
                 (String) methodCombo.getSelectedItem(),
                 parseDate(paidAtField.getText()),
@@ -467,7 +456,7 @@ public class PlataformaPanel extends JPanel {
         SubscriptionDTO sub = selectedSubscription();
         if (sub == null) return;
 
-        List<SubscriptionPaymentDTO> payments = subscriptionService.listPayments(sub.companyId());
+        List<SubscriptionPaymentDTO> payments = platformApiClient.listPayments(sub.companyId());
         String[] cols = {"Pago em", "Valor", "Método", "Período", "Nota"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
@@ -511,7 +500,7 @@ public class PlataformaPanel extends JPanel {
         if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
-            subscriptionService.changeStatus(sub.companyId(), target);
+            platformApiClient.changeSubscriptionStatus(sub.companyId(), target);
             loadSubscriptions();
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Assinaturas", JOptionPane.ERROR_MESSAGE);
@@ -617,7 +606,7 @@ public class PlataformaPanel extends JPanel {
 
     private void loadUsers() {
         try {
-            users = platformUserService.listUsers();
+            users = platformApiClient.listUsers();
             usersModel.setRowCount(0);
             for (PlatformUserDTO u : users) {
                 usersModel.addRow(new Object[]{
@@ -663,7 +652,7 @@ public class PlataformaPanel extends JPanel {
             if (nameField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
-            platformUserService.updateUser(user.username(), nameField.getText().trim());
+            platformApiClient.updateUser(user.username(), nameField.getText().trim());
         });
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Utilizador actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -703,7 +692,7 @@ public class PlataformaPanel extends JPanel {
                     || passwordField.getPassword().length == 0) {
                 throw new IllegalArgumentException("Utilizador, nome e senha são obrigatórios.");
             }
-            platformUserService.createUser(new CreatePlatformUserRequest(
+            platformApiClient.createUser(new CreatePlatformUserRequest(
                     usernameField.getText().trim(), nameField.getText().trim(),
                     new String(passwordField.getPassword()),
                     ((CompanyItem) companyCombo.getSelectedItem()).id(),
@@ -731,7 +720,7 @@ public class PlataformaPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Empresa:", companyCombo, "Papel:", roleCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Conceder/Alterar Acesso",
                 "fas-user-shield", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> platformUserService.grantAccess(user.username(), new GrantAccessRequest(
+        dlg.setOnSave(() -> platformApiClient.grantAccess(user.username(), new GrantAccessRequest(
                 ((CompanyItem) companyCombo.getSelectedItem()).id(), (String) roleCombo.getSelectedItem())));
 
         if (dlg.showDialog()) {
@@ -757,7 +746,7 @@ public class PlataformaPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Empresa:", combo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Revogar Acesso",
                 "fas-user-slash", "Utilizador: " + user.username(), form).setConfirmButton("Revogar", "fas-check");
-        dlg.setOnSave(() -> platformUserService.revokeAccess(user.username(),
+        dlg.setOnSave(() -> platformApiClient.revokeAccess(user.username(),
                 ((CompanyItem) combo.getSelectedItem()).id()));
 
         if (dlg.showDialog()) {
@@ -778,7 +767,7 @@ public class PlataformaPanel extends JPanel {
             if (passwordField.getPassword().length == 0) {
                 throw new IllegalArgumentException("Indique a nova senha.");
             }
-            platformUserService.resetPassword(user.username(), new String(passwordField.getPassword()));
+            platformApiClient.resetPassword(user.username(), new String(passwordField.getPassword()));
         });
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Senha reposta.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -790,7 +779,7 @@ public class PlataformaPanel extends JPanel {
         if (user == null) return;
         boolean newState = !user.active();
         try {
-            platformUserService.setUserActive(user.username(), newState);
+            platformApiClient.setUserActive(user.username(), newState);
             loadUsers();
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Utilizadores", JOptionPane.ERROR_MESSAGE);
@@ -875,7 +864,7 @@ public class PlataformaPanel extends JPanel {
 
     private void loadTickets() {
         try {
-            tickets = supportService.listAllTickets();
+            tickets = platformApiClient.listAllTickets();
             ticketsModel.setRowCount(0);
             for (SupportTicketDTO t : tickets) {
                 ticketsModel.addRow(new Object[]{
@@ -902,7 +891,7 @@ public class PlataformaPanel extends JPanel {
         SupportTicketDTO ticket = selectedTicket();
         if (ticket == null) return;
 
-        JTextArea thread = new JTextArea(renderThread(supportService.listPlatformMessages(ticket.id())));
+        JTextArea thread = new JTextArea(renderThread(platformApiClient.listPlatformMessages(ticket.id())));
         thread.setEditable(false);
         thread.setLineWrap(true);
         thread.setWrapStyleWord(true);
@@ -928,7 +917,7 @@ public class PlataformaPanel extends JPanel {
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
             try {
-                supportService.addSuperAdminReply(ticket.id(), reply.getText().trim());
+                platformApiClient.addSuperAdminReply(ticket.id(), reply.getText().trim());
                 loadTickets();
             } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Assistência", JOptionPane.ERROR_MESSAGE);
@@ -939,13 +928,13 @@ public class PlataformaPanel extends JPanel {
     private void changeTicketStatus() {
         SupportTicketDTO ticket = selectedTicket();
         if (ticket == null) return;
-        JComboBox<String> statusCombo = new JComboBox<>(supportService.statusOptions().toArray(new String[0]));
+        JComboBox<String> statusCombo = new JComboBox<>(platformApiClient.statusOptions().toArray(new String[0]));
         UIHelper.styleComboBox(statusCombo);
         statusCombo.setSelectedItem(ticket.status());
         JPanel form = UIHelper.createDialogForm("Estado:", statusCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Mudar Estado",
                 "fas-tasks", "Pedido #" + ticket.id(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> supportService.changeStatus(ticket.id(), (String) statusCombo.getSelectedItem()));
+        dlg.setOnSave(() -> platformApiClient.changeTicketStatus(ticket.id(), (String) statusCombo.getSelectedItem()));
         if (dlg.showDialog()) {
             loadTickets();
         }

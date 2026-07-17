@@ -5,6 +5,7 @@ import com.phcpro.desktop.session.DesktopSession;
 import com.phcpro.desktop.session.DesktopSessionStore;
 import com.phcpro.desktop.client.ApprovalApiClient;
 import com.phcpro.desktop.client.FiscalApiClient;
+import com.phcpro.desktop.client.PlatformApiClient;
 import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
@@ -126,9 +127,8 @@ public class MainFrame extends JFrame {
             FiscalApiClient fiscalApiClient,
             com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
             com.phcpro.modules.documents.service.DocumentConfigService documentConfigService,
-            com.phcpro.modules.platform.service.PlatformCompanyService platformCompanyService,
+            PlatformApiClient platformApiClient,
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
-            com.phcpro.modules.platform.service.PlatformUserService platformUserService,
             com.phcpro.modules.support.service.SupportService supportService,
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
@@ -156,7 +156,7 @@ public class MainFrame extends JFrame {
             dashboardPanel = null; comercialPanel = null; financeiroPanel = null; hrPanel = null;
             crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null;
             posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
-            plataformaPanel = new PlataformaPanel(platformCompanyService, subscriptionService, platformUserService, supportService);
+            plataformaPanel = new PlataformaPanel(platformApiClient);
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
             dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);

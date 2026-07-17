@@ -17,7 +17,7 @@ migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operaciona
   checklist de hardening: [docs/DEPLOY_VPS_SPEC.md](../docs/DEPLOY_VPS_SPEC.md). **Não testado ao vivo**
   (sem Docker nesta máquina); o `SecurityConfig` fica permissivo (item #1 de go-live).
 - **Migração para cliente-fino (Track B) — arrancou:** padrão provado (inclui **PDF-over-HTTP** e o
-  1.º painel gigante); **9 de ~26 domínios** a passar por HTTP em vez de chamar o Service em processo:
+  1.º painel gigante); **10 de ~26 domínios** a passar por HTTP em vez de chamar o Service em processo:
   - Novos clientes `@Profile("desktop")`: `ApprovalApiClient`, `CRMApiClient`, `FinanceApiClient`,
     `PromotionApiClient`, `InventoryApiClient`, `PurchaseApiClient`; `ComercialApiClient` +=
     `getAllInvoices/getAllProducts/getActiveCategories`. Painéis migrados: Aprovações, CRM, Financeiro,
@@ -35,6 +35,9 @@ migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operaciona
     purchase+order+reorder; `DesktopApiClient` ganhou `patch` (PATCH do estado do fornecedor);
     `InventoryApiClient` += armazéns. O painel converteu `Supplier`/`Warehouse`/`Purchase` (entidades)
     para DTOs (nome do armazém resolvido por lookup, pois o `PurchaseDTO` só traz o id). Harness TC-61.
+  - **Plataforma** (10.º, superadmin): `PlatformApiClient` colapsa empresas+utilizadores+assinaturas+
+    suporte (~22 métodos, só DTOs). 3 endpoints novos de options (plan/method/status). `/api/platform/**`
+    não precisa de empresa. `PlatformCompanyService`/`PlatformUserService` saíram do `MainFrame`. Harness TC-62.
   - Carregamento passou para `onPanelSelected()` (nunca no construtor) para não rebentar sem empresa.
   - **Falta:** médios (Promoções, Fiscal, RH, Dashboard) e os grandes (POS/Stock/Compras/Comercial),
     que precisam de endpoints novos. Só se fecha o PostgreSQL ao exterior quando **todos** migrarem.
