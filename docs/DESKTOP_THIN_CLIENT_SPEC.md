@@ -50,7 +50,8 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
 | Fiscal      | `FiscalApiClient` (colapsa 8 serviços) **+ 3 endpoints novos no backend** | FiscalPanel | ✅ |
 | Compras     | `PurchaseApiClient` estendido (colapsa purchase+order+reorder) + `getWarehousesByCompany` | ComprasPanel (1.º gigante; entidades Supplier/Warehouse→DTO) | ✅ |
 | Plataforma  | `PlatformApiClient` (colapsa empresas+utilizadores+assinaturas+suporte) + 3 endpoints de options | PlataformaPanel (superadmin; só DTOs) | ✅ |
-| **POS / Stock / Comercial** | —                      | —                | ⬜ (gigantes restantes, risco) |
+| Stock       | `InventoryApiClient` estendido + `StockTransferApiClient`/`InventoryCountApiClient`/`ProductCategoryApiClient` novos + `ComercialApiClient` (produtos/IVA) **+ 13 endpoints novos no backend** | StockPanel (2.º gigante, 2.633 linhas; `Stock`/`StockMovement`/`Warehouse` entidades→DTO) | ✅ |
+| **POS / Comercial** | —                      | —                | ⬜ (gigantes restantes, risco) |
 | Config (empresa) | 3 controllers novos (users/audit/backup) + 6 clientes | ConfigPanel (backup server-side; audit server-side) | ✅ |
 
 ## Peças
@@ -72,6 +73,23 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
   `GET /api/fiscal/saft/export` (DTO com metadados, além do `/saft` que só dá XML cru),
   `GET /api/fiscal/saft/validate` (validação contra a XSD) e `GET /api/print/payroll-fiscal-map` (PDF).
   Um `FiscalApiClient` colapsou os 8 serviços que o painel usava num só cliente.
+- **Stock** foi o **2.º gigante** (2.633 linhas) e o mais pesado em navegação de grafo de entidades.
+  Exigiu **13 endpoints novos no backend** (produtos criar/editar/imagem, taxas de IVA, armazéns
+  all/editar/activar, movimentos, FEFO, esgotados, bloqueio de contagem) e **4 clientes**:
+  `InventoryApiClient` (estendido, ~18 métodos incl. 3 PDFs via `getBytes`), `StockTransferApiClient`,
+  `InventoryCountApiClient`, `ProductCategoryApiClient`; o `ComercialApiClient` ganhou
+  criar/editar produto, imagem (`postBytes`) e `getActiveVatRates()`. O `DesktopApiClient` ganhou
+  `postBytes` (octet-stream, para a imagem do produto). Os DTOs de resposta `StockDTO` e `WarehouseDTO`
+  foram **enriquecidos** (flat-DTO) — `StockDTO` +categoryName/unitPrice/unitsPerBox; `WarehouseDTO`
+  +type/allowsSales/manager/phone/active — para o painel deixar de navegar `stock.getProduct()…`.
+  A entrada de lote deixou de construir um `Product` entidade no cliente e passa a `RegisterMovementRequest`.
+- **Concorrência de stock (verificado no código, não só assumido):** faturar a descoberto está fechado
+  **no servidor**, e a migração para cliente-fino **não o enfraqueceu** (o mesmo `ComercialService.createInvoice`
+  corre no backend). Garantias: `@Version` (optimistic lock) em `Stock` **e** `ProductBatch`;
+  `ProductBatchService.consumeFEFO` lança `BusinessRuleException("Stock insuficiente…")` dentro da
+  transação da fatura. Dois utilizadores a vender o mesmo saldo → o 2.º é recusado (via consumeFEFO ou
+  `OptimisticLockException`+rollback). O défice restante é só **UX** (tabela desactualizada): mitigar com
+  botões *Atualizar* e recarregar-ao-abrir nos seletores de produto de Faturação/POS quando forem migrados.
 - `DesktopApiClientTest` — teste de contrato da camada partilhada (headers, token, empresa, parse de
   objecto/lista, mapeamento de erro).
 

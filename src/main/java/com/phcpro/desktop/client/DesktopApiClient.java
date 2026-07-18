@@ -91,6 +91,14 @@ public class DesktopApiClient {
         }
     }
 
+    /** POST de bytes crus (ex.: imagem de produto) como application/octet-stream. */
+    public void postBytes(String path, byte[] body) {
+        sendRaw(request(path)
+                .header("Content-Type", "application/octet-stream")
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build());
+    }
+
     /** GET que devolve bytes — ex.: os PDFs de {@code /api/print/**}. */
     public byte[] getBytes(String path) {
         HttpRequest httpRequest = request(path).header("Accept", "application/pdf").GET().build();

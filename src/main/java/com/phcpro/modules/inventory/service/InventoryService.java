@@ -381,6 +381,10 @@ public class InventoryService {
                 request.warehouseNumber(),
                 request.capacity(),
                 request.location(),
+                request.type(),
+                request.allowsSales(),
+                request.manager(),
+                request.phone(),
                 company
         );
         return toDTO(warehouse);
@@ -491,22 +495,31 @@ public class InventoryService {
                 w.getLocation(),
                 w.getWarehouseNumber(),
                 w.getCapacity(),
-                w.getCompany() != null ? w.getCompany().getId() : null
+                w.getCompany() != null ? w.getCompany().getId() : null,
+                w.getType(),
+                w.isAllowsSales(),
+                w.getManager(),
+                w.getPhone(),
+                w.isActive()
         );
     }
 
     public StockDTO toDTO(Stock s) {
+        var product = s.getProduct();
         return new StockDTO(
                 s.getId(),
-                s.getProduct().getId(),
-                s.getProduct().getSku(),
-                s.getProduct().getReference(),
-                s.getProduct().getBarcode(),
-                s.getProduct().getName(),
+                product.getId(),
+                product.getSku(),
+                product.getReference(),
+                product.getBarcode(),
+                product.getName(),
                 s.getWarehouse().getId(),
                 s.getWarehouse().getName(),
                 s.getQuantity(),
-                s.getProduct().getMinStock() != null ? s.getProduct().getMinStock() : BigDecimal.ZERO
+                product.getMinStock() != null ? product.getMinStock() : BigDecimal.ZERO,
+                product.getCategory() != null ? product.getCategory().getName() : null,
+                product.getUnitPrice() != null ? product.getUnitPrice() : BigDecimal.ZERO,
+                product.getUnitsPerBox()
         );
     }
 
