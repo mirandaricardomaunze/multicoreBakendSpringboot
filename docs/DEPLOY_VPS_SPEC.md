@@ -47,10 +47,11 @@ docker compose logs -f backend     # acompanhar o arranque + Flyway
 No primeiro arranque o **Flyway** aplica `V1..V30` numa BD vazia (perfil `prod`: `validate` +
 `baseline-on-migrate`). Confirmar no log `Successfully applied N migrations`.
 
-Verificar (deve responder, mesmo que 401/404 — a app está viva):
+Verificar (smoke test pós-deploy — health, auth, login):
 ```bash
-curl -sS -o /dev/null -w "%{http_code}\n" https://$DOMAIN/api/auth/login
+./scripts/deploy-smoke.sh https://$DOMAIN
 ```
+Deve terminar com `== SMOKE OK ==` (health UP, `/api/**` a recusar 401 sem token, login público a responder).
 
 ### Migrar dados de uma BD existente (opcional)
 

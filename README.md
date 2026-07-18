@@ -114,6 +114,21 @@ mvn test                    # testes
 ### Console H2
 Com o backend a correr: `http://localhost:8080/h2-console`
 
+## Deploy em produção (VPS)
+
+O backend (`com.phcpro.MulticoreApplication`, headless) é hospedável à parte com **Docker + PostgreSQL
+privado + Caddy (HTTPS automático)**:
+
+```bash
+cp .env.example .env      # editar: DOMAIN, DB_PASSWORD, PG_MAJOR
+docker compose up -d --build
+./scripts/deploy-smoke.sh https://o-teu-dominio   # verificação pós-deploy
+```
+
+Guião completo, arquitetura e **checklist de hardening**: [docs/DEPLOY_VPS_SPEC.md](docs/DEPLOY_VPS_SPEC.md).
+Segurança: `/api/**` exige token válido (Spring Security + `SecurityInterceptor`); só `/actuator/health`
+e o login são públicos — ver [docs/SEGURANCA_HARDENING_SPEC.md](docs/SEGURANCA_HARDENING_SPEC.md).
+
 ## Documentação
 
 | Ficheiro | Para quê |

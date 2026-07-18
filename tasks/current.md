@@ -2,10 +2,22 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-13
+**Última actualização:** 2026-07-18
 **Estado:** software de loja concluído. **Em curso: hospedar o backend à parte (VPS+Docker+PostgreSQL) +
-migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operacional é
-[tasks/retail_store_readiness.md](retail_store_readiness.md).
+migrar o desktop para cliente-fino (HTTPS-only).** 11 de ~26 domínios migrados; segurança endurecida e
+**validada ao vivo**. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-18 (Endurecimento de segurança + validação ao vivo do deploy)
+
+- **Segurança (item #1 de go-live):** `TokenAuthenticationFilter` valida o token opaco e o `SecurityConfig`
+  deixou de ser `permitAll()` — `/api/**` exige token; login/logout e `/actuator/health` públicos. Actuator
+  expõe só health. Dockerfile healthcheck → `/actuator/health`. Spec/harness:
+  [docs/SEGURANCA_HARDENING_SPEC.md](../docs/SEGURANCA_HARDENING_SPEC.md) (SH-01..07).
+- **Validado AO VIVO** (backend `prod` standalone contra PostgreSQL 18 real): app arranca, Flyway valida 30
+  migrações, sem token→401, com token→200, health UP, login errado→400. Os 11 domínios migrados também
+  responderam ao vivo (ex.: `/api/platform/companies` devolveu empresas reais).
+- **Deploy:** `scripts/deploy-smoke.sh` (verificação pós-deploy) + secção de deploy no README.
+- Commits: `e1202db` (hardening). Falta: os 3 gigantes (POS/Stock/Comercial), 1.º `docker compose up` real, merge.
 
 ### Progresso — 2026-07-13 (Hospedagem do backend + desktop cliente-fino — Track B)
 
