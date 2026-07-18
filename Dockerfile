@@ -43,8 +43,8 @@ EXPOSE 8080
 # Limita o heap à RAM do container (evita OOM-kill em VPS pequenos).
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -Djava.security.egd=file:/dev/./urandom"
 
-# Verifica só que a porta 8080 está a aceitar ligações (não há endpoint /health sem actuator).
+# Health check via Actuator (só o endpoint /actuator/health está exposto).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
-  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1
+  CMD curl -fsS http://127.0.0.1:8080/actuator/health || exit 1
 
 ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -jar app.jar"]

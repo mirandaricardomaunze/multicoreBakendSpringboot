@@ -81,7 +81,7 @@ Config já ligada no compose:
 
 | # | Item | Estado |
 |---|------|--------|
-| 1 | **Fechar o filtro Spring Security** — hoje é `permitAll()`; quem protege é o `SecurityInterceptor`. Para go-live: escrever um filtro que valide o token opaco (`AuthSessionService`) e popule o `SecurityContext`, e restringir `/api/**` a autenticado (deixando `/api/auth/login` público). **Não** fechar às cegas — parte-se a API. | ⬜ pendente |
+| 1 | **Fechar o filtro Spring Security** — feito: `TokenAuthenticationFilter` valida o token opaco e o `SecurityConfig` recusa `/api/**` sem token (login/logout/health públicos). Defense-in-depth por cima do `SecurityInterceptor`. Ver [SEGURANCA_HARDENING_SPEC.md](SEGURANCA_HARDENING_SPEC.md). | ✅ **feito + validado ao vivo** |
 | 2 | **Firewall**: só 80/443 abertas; 5432 fechada. O compose já mantém o PostgreSQL interno. | ⬜ |
 | 3 | **Sessões em memória** (`AuthSessionService` usa um `Map`): uma só instância de backend. Escalar horizontalmente exige um store partilhado (Redis) — não agora. | ⬜ (aceite p/ 1 instância) |
 | 4 | **DB_PASSWORD** forte e único; rotação documentada. | ⬜ |

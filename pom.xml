@@ -69,6 +69,12 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Actuator: health check profissional (usado pelo healthcheck do container). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Springdoc OpenAPI 3 / Swagger UI -->
         <dependency>
             <groupId>org.springdoc</groupId>
