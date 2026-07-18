@@ -1,6 +1,7 @@
 package com.phcpro.modules.inventory.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.modules.inventory.dto.RegisterMovementRequest;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.modules.audit.service.AuditLogService;
@@ -383,6 +384,19 @@ public class InventoryService {
                 company
         );
         return toDTO(warehouse);
+    }
+
+    /** Registo de movimento por ids (ex.: entrada de lote), para a fronteira HTTP. */
+    @Transactional
+    public StockMovementDTO registerMovement(RegisterMovementRequest request) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Product product = productRepository.findByIdAndCompaniesId(request.productId(), companyId)
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        StockMovement movement = registerMovement(product, warehouse, request.quantity(), request.movementType(),
+                request.batchNumber(), request.serialNumber(), request.description(), request.expirationDate());
+        return movement == null ? null : toDTO(movement);
     }
 
     @Transactional

@@ -25,6 +25,8 @@ public class PrintController {
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
     private final GuideRemittancePrintService guideRemittancePrintService;
     private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
+    private final ProductLabelPrintService productLabelPrintService;
+    private final InventoryCountSheetPrintService inventoryCountSheetPrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -37,7 +39,9 @@ public class PrintController {
             InventoryReportPrintService inventoryReportPrintService,
             IvaDeclarationPrintService ivaDeclarationPrintService,
             GuideRemittancePrintService guideRemittancePrintService,
-            PayrollFiscalMapPrintService payrollFiscalMapPrintService
+            PayrollFiscalMapPrintService payrollFiscalMapPrintService,
+            ProductLabelPrintService productLabelPrintService,
+            InventoryCountSheetPrintService inventoryCountSheetPrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -50,6 +54,8 @@ public class PrintController {
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
         this.guideRemittancePrintService = guideRemittancePrintService;
         this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
+        this.productLabelPrintService = productLabelPrintService;
+        this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
     }
 
     @GetMapping("/receipt/{invoiceId}")
@@ -122,6 +128,24 @@ public class PrintController {
         return pdfResponse(
                 payrollFiscalMapPrintService.render(companyId, year, month),
                 "mapa-fiscal-salarial-" + year + "-" + String.format("%02d", month));
+    }
+
+    @GetMapping("/product-label")
+    public ResponseEntity<Resource> productLabel(
+            @org.springframework.web.bind.annotation.RequestParam Long companyId,
+            @org.springframework.web.bind.annotation.RequestParam java.util.List<Long> productIds,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "1") int copies
+    ) {
+        return pdfResponse(productLabelPrintService.render(companyId, productIds, copies), "etiquetas-" + companyId);
+    }
+
+    @GetMapping("/inventory-count-sheet")
+    public ResponseEntity<Resource> inventoryCountSheet(
+            @org.springframework.web.bind.annotation.RequestParam Long companyId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Long warehouseId
+    ) {
+        return pdfResponse(inventoryCountSheetPrintService.render(companyId, warehouseId),
+                "folha-contagem-" + companyId);
     }
 
     private ResponseEntity<Resource> pdfResponse(byte[] bytes, String fileBase) {
