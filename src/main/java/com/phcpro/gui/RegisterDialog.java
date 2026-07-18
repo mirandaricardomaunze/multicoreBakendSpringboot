@@ -63,7 +63,7 @@ public class RegisterDialog extends JDialog {
         g.gridy++;
         g.insets = new Insets(10, 0, 0, 0);
         JLabel brand = new JLabel("Criar Nova Conta");
-        brand.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        brand.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
         brand.setForeground(UIHelper.TEXT_LIGHT);
         brand.setHorizontalAlignment(SwingConstants.CENTER);
         wrapper.add(brand, g);
@@ -71,7 +71,7 @@ public class RegisterDialog extends JDialog {
         g.gridy++;
         g.insets = new Insets(2, 0, 22, 0);
         JLabel subtitle = new JLabel("Preencha os dados para registar o seu acesso");
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         subtitle.setForeground(UIHelper.TEXT_MUTED);
         subtitle.setHorizontalAlignment(SwingConstants.CENTER);
         wrapper.add(subtitle, g);
@@ -134,7 +134,7 @@ public class RegisterDialog extends JDialog {
         c.gridy = row++;
         c.insets = new Insets(4, 0, 10, 0);
         errorLabel = new JLabel(" ");
-        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        errorLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         errorLabel.setForeground(UIHelper.REJECTED_RED);
         card.add(errorLabel, c);
 
@@ -164,7 +164,7 @@ public class RegisterDialog extends JDialog {
 
     private JLabel fieldLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }

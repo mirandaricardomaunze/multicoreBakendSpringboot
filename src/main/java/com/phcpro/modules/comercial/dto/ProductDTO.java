@@ -11,10 +11,16 @@ public record ProductDTO(
     BigDecimal unitPrice,
     BigDecimal purchasePrice,
     BigDecimal minStock,
+    BigDecimal wholesalePrice,
+    BigDecimal wholesaleMinQty,
     int unitsPerBox,
     String saleType,
     boolean stockTracked,
     Long categoryId,
     String categoryName,
-    String description
+    Long taxRateId,
+    BigDecimal taxRate,
+    String taxRateLabel,
+    String description,
+    byte[] image
 ) {}

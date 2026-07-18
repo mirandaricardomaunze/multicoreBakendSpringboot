@@ -17,6 +17,10 @@ public interface ProductBatchRepository extends JpaRepository<ProductBatch, Long
     Optional<ProductBatch> findByProductIdAndWarehouseIdAndBatchNumber(
             Long productId, Long warehouseId, String batchNumber);
 
+    /** Resolve a validade de um lote por produto + número de lote (independente do armazém). */
+    Optional<ProductBatch> findFirstByProductIdAndBatchNumberOrderByExpirationDateAsc(
+            Long productId, String batchNumber);
+
     @Query("SELECT b FROM ProductBatch b " +
             "WHERE b.product.id = :productId AND b.warehouse.id = :warehouseId AND b.quantity > 0 " +
             "ORDER BY b.expirationDate ASC, b.entryDate ASC, b.id ASC")

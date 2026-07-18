@@ -1,5 +1,7 @@
 package com.phcpro.modules.numbering.service;
 
+import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.numbering.model.DocumentSequence;
 import com.phcpro.modules.numbering.repository.DocumentSequenceRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,15 +30,20 @@ public class DocumentNumberService {
     }
 
     /**
-     * Devolve o próximo número da série indicada para o ano corrente,
-     * no formato {@code SERIE-ANO/N} (ex.: {@code FT-2026/1}).
+     * Devolve o próximo número da série indicada, <b>para a empresa activa</b> e o ano corrente,
+     * no formato {@code SERIE-ANO/N} (ex.: {@code FT-2026/1}). Cada empresa (NUIT) tem a sua própria
+     * sequência gapless — documentos de outras empresas não criam saltos.
      */
     @Transactional(propagation = Propagation.REQUIRED)
     public String next(String series) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (companyId == null) {
+            throw new BusinessRuleException("Empresa activa em falta para numerar o documento.");
+        }
         int year = LocalDate.now().getYear();
 
-        DocumentSequence sequence = repository.lockBySeriesAndYear(series, year)
-                .orElseGet(() -> createSequence(series, year));
+        DocumentSequence sequence = repository.lockByCompanyAndSeriesAndYear(companyId, series, year)
+                .orElseGet(() -> createSequence(companyId, series, year));
 
         long number = sequence.getLastNumber() + 1;
         sequence.setLastNumber(number);
@@ -45,8 +52,9 @@ public class DocumentNumberService {
         return series + "-" + year + "/" + number;
     }
 
-    private DocumentSequence createSequence(String series, int year) {
+    private DocumentSequence createSequence(Long companyId, String series, int year) {
         DocumentSequence sequence = new DocumentSequence();
+        sequence.setCompanyId(companyId);
         sequence.setSeries(series);
         sequence.setYear(year);
         sequence.setLastNumber(0);
@@ -54,7 +62,7 @@ public class DocumentNumberService {
             return repository.saveAndFlush(sequence);
         } catch (DataIntegrityViolationException concurrentInsert) {
             // Outra transação criou a série em paralelo — relê já com bloqueio.
-            return repository.lockBySeriesAndYear(series, year)
+            return repository.lockByCompanyAndSeriesAndYear(companyId, series, year)
                     .orElseThrow(() -> concurrentInsert);
         }
     }

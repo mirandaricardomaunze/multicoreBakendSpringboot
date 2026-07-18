@@ -43,6 +43,10 @@ public class AppUser extends BaseEntity {
     @Column(name = "active")
     private boolean active = true;
 
+    /** Papel de plataforma (superadmin), ortogonal aos papéis por-empresa. Gere todas as empresas. */
+    @Column(name = "platform_admin", nullable = false)
+    private boolean platformAdmin = false;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = jakarta.persistence.CascadeType.ALL,
             orphanRemoval = true)
     private Set<AppUserCompanyAccess> companyAccesses = new LinkedHashSet<>();
@@ -67,6 +71,12 @@ public class AppUser extends BaseEntity {
                         access -> access.setRole(normalizedRole),
                         () -> companyAccesses.add(new AppUserCompanyAccess(this, company, normalizedRole))
                 );
+    }
+
+    /** Remove o acesso a uma empresa (orphanRemoval trata da eliminação). Devolve se removeu algo. */
+    public boolean revokeCompany(Long companyId) {
+        return companyAccesses.removeIf(access -> companyId != null
+                && companyId.equals(access.getCompany().getId()));
     }
 
     public Set<Company> getCompanies() {

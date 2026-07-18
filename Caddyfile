@@ -1,0 +1,35 @@
+# Caddy: TLS automático (Let's Encrypt) para o backend.
+#
+# Requer que {$DOMAIN} seja um domínio público a apontar (registo A) para o IP do VPS,
+# com as portas 80 e 443 abertas. O Caddy trata do certificado e da renovação sozinho.
+
+{$DOMAIN} {
+	encode gzip
+
+	# Faz proxy só da API. Qualquer outro caminho devolve 404 (reduz superfície).
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+	handle {
+		respond 404
+	}
+
+	# Cabeçalhos de segurança básicos.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		-Server
+	}
+}
+
+# --- Alternativa sem domínio público (só VPN / rede interna) ---
+# Comentar o bloco acima e usar TLS interno (certificado auto-assinado do Caddy):
+#
+# https://erp.local {
+# 	tls internal
+# 	handle /api/* {
+# 		reverse_proxy backend:8080
+# 	}
+# 	respond 404
+# }

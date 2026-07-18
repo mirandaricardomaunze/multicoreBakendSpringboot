@@ -13,6 +13,7 @@ public record PurchaseDTO(
         Long companyId,
         BigDecimal totalAmount,
         BigDecimal taxAmount,
+        BigDecimal amountPaid,
         String status,
         LocalDateTime purchaseDate,
         List<PurchaseLineDTO> lines

@@ -6,15 +6,19 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Configuração de segurança baseline. Hoje permite todos os pedidos para não quebrar o desktop
- * (que ainda chama Services directamente, sem passar pela API). À medida que a migração para
- * HTTP avança (ver ARCHITECTURE.md §7), endpoints devem ser progressivamente restringidos:
+ * Configuração de segurança endurecida para hospedagem: o {@link TokenAuthenticationFilter} valida o
+ * token opaco e o filtro recusa {@code /api/**} sem token válido (login/logout e health públicos).
+ * O {@link SecurityInterceptor} continua por cima a resolver empresa/papel e a auditar. As chamadas
+ * em processo do desktop não passam por este filtro (não são HTTP), pelo que não são afectadas.
+ * Exemplo do endurecimento aplicado:
  *
  *   .authorizeHttpRequests(auth -> auth
  *       .requestMatchers("/api/auth/**").permitAll()
@@ -45,13 +49,25 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   TokenAuthenticationFilter tokenAuthenticationFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // H2 console
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // H2 console (dev)
+                // Defense-in-depth: o Spring Security recusa /api/** sem token válido (o filtro popula
+                // o SecurityContext). Login/logout e o health check ficam públicos. O SecurityInterceptor
+                // continua a resolver empresa/papel e a auditar por cima disto.
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
+                )
+                .exceptionHandling(e -> e.authenticationEntryPoint((request, response, ex) ->
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Autenticação necessária.")))
+                .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);
         return http.build();

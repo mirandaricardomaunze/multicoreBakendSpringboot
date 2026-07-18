@@ -1,6 +1,7 @@
 package com.phcpro.desktop;
 
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.desktop.client.AuthApiClient;
 import com.phcpro.desktop.config.DesktopApiConfig;
 import com.phcpro.desktop.session.DesktopSession;
@@ -17,6 +18,9 @@ import java.awt.event.WindowEvent;
 public class DesktopLauncher {
 
     private final ConfigurableApplicationContext context;
+    private AuthApiClient authApiClient;
+    private DesktopSession session;
+    private MainFrame currentFrame;
 
     public DesktopLauncher(ConfigurableApplicationContext context) {
         this.context = context;
@@ -24,20 +28,36 @@ public class DesktopLauncher {
 
     public void launch() {
         EventQueue.invokeLater(() -> {
-            UIHelper.initGlobalTheme();
+            UIHelper.loadAndApplySavedTheme();
 
             DesktopApiConfig apiConfig = DesktopApiConfig.from(context.getEnvironment());
-            AuthApiClient authApiClient = new AuthApiClient(apiConfig);
-            LoginDialog login = new LoginDialog(authApiClient);
-            login.setVisible(true);
+            authApiClient = new AuthApiClient(apiConfig);
 
-            DesktopSession session = login.getAuthenticatedSession();
-            if (session == null) {
-                context.close();
-                System.exit(0);
-                return;
-            }
+            // Trocar de tema reconstrói a janela já com a paleta nova (cobre ícones/pintura custom).
+            UIHelper.onThemeChanged = () -> EventQueue.invokeLater(this::rebuildMainFrame);
+            // Assinatura expirada com a app aberta → volta ao ecrã de login (re-login bloqueado).
+            UIHelper.onForcedLogout = () -> EventQueue.invokeLater(this::logoutToLogin);
 
+            loginAndShow();
+        });
+    }
+
+    /** Mostra o login e, autenticado, prepara o contexto e abre a janela principal. */
+    private void loginAndShow() {
+        LoginDialog login = new LoginDialog(authApiClient);
+        login.setVisible(true);
+
+        session = login.getAuthenticatedSession();
+        if (session == null) {
+            context.close();
+            System.exit(0);
+            return;
+        }
+
+        if (session.superAdmin()) {
+            // Superadmin não tem empresa: corre com papel de plataforma e sem tenant activo.
+            CurrentUserContext.setCurrentUser(session.username(), PermissionGuard.SUPERADMIN_ROLE);
+        } else {
             if (session.companies().isEmpty()) {
                 context.close();
                 throw new IllegalStateException("O utilizador autenticado não possui acesso a nenhuma empresa.");
@@ -45,23 +65,67 @@ public class DesktopLauncher {
             session.selectCompany(session.companies().get(0).id());
             CurrentUserContext.setCurrentUser(session.username(), session.activeRole());
             CurrentUserContext.setCurrentCompanyId(session.activeCompanyId());
-            context.getBean(DesktopSessionStore.class).setSession(session);
+        }
+        context.getBean(DesktopSessionStore.class).setSession(session);
 
-            MainFrame mainFrame = context.getBean(MainFrame.class);
-            mainFrame.applyAuthenticatedUser(session.displayName(), session.activeRole());
-            mainFrame.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowClosing(WindowEvent event) {
-                    try {
-                        authApiClient.logout(session);
-                    } finally {
-                        context.getBean(DesktopSessionStore.class).clear();
-                        CurrentUserContext.clear();
-                        context.close();
-                    }
+        // Arranque após login: janela maximizada (loja trabalha em ecrã cheio).
+        showMainFrame(null, java.awt.Frame.MAXIMIZED_BOTH);
+    }
+
+    /**
+     * Logout forçado (assinatura expirada/suspensa): invalida a sessão, fecha a janela sem encerrar a
+     * app e volta ao ecrã de login — que recusa o re-login enquanto a assinatura não for regularizada.
+     */
+    private void logoutToLogin() {
+        if (currentFrame != null) {
+            try {
+                authApiClient.logout(session);
+            } catch (RuntimeException ignore) {
+                // Melhor esforço: mesmo que a invalidação remota falhe, seguimos para o login.
+            }
+            context.getBean(DesktopSessionStore.class).clear();
+            CurrentUserContext.clear();
+            currentFrame.dispose(); // dispose programático → não dispara o fecho da app (windowClosing)
+            currentFrame = null;
+        }
+        session = null;
+        loginAndShow();
+    }
+
+    private void rebuildMainFrame() {
+        // Preserva tamanho/posição E estado (maximizado/normal) ao reconstruir por troca de tema.
+        java.awt.Rectangle bounds = currentFrame != null ? currentFrame.getBounds() : null;
+        int extendedState = currentFrame != null ? currentFrame.getExtendedState() : java.awt.Frame.MAXIMIZED_BOTH;
+        if (currentFrame != null) {
+            currentFrame.dispose(); // dispose programático → não dispara o logout (que é em windowClosing)
+        }
+        showMainFrame(bounds, extendedState);
+    }
+
+    private void showMainFrame(java.awt.Rectangle bounds, int extendedState) {
+        MainFrame mainFrame = context.getBean(MainFrame.class); // prototype → instância nova com o tema activo
+        mainFrame.applyAuthenticatedUser(session.displayName(), session.activeRole());
+        mainFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent event) {
+                try {
+                    authApiClient.logout(session);
+                } finally {
+                    context.getBean(DesktopSessionStore.class).clear();
+                    CurrentUserContext.clear();
+                    context.close();
                 }
-            });
-            mainFrame.setVisible(true);
+            }
         });
+        if (bounds != null) {
+            mainFrame.setBounds(bounds); // preserva tamanho/posição ao reconstruir
+        }
+        mainFrame.setExtendedState(extendedState); // maximizado no arranque; estado preservado na reconstrução
+        currentFrame = mainFrame;
+        mainFrame.setVisible(true);
+        // Aviso de assinatura só no primeiro arranque (bounds == null), não na reconstrução por tema.
+        if (bounds == null) {
+            java.awt.EventQueue.invokeLater(mainFrame::checkSubscriptionOnStartup);
+        }
     }
 }

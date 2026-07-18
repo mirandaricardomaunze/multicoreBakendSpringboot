@@ -6,5 +6,8 @@ public record SupplierDTO(
         String taxId,
         String email,
         String address,
+        String phone,
+        String contactPerson,
+        boolean active,
         Long companyId
 ) {}

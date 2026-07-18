@@ -30,6 +30,7 @@ import com.phcpro.modules.pos.dto.POSCheckoutRequest;
 import com.phcpro.modules.pos.dto.POSReturnRequest;
 import com.phcpro.modules.pos.dto.PosPaymentRequest;
 import com.phcpro.modules.pos.dto.TillMovementDTO;
+import com.phcpro.modules.pos.dto.PosZReportDTO;
 import com.phcpro.modules.pos.dto.TillSessionDTO;
 import com.phcpro.modules.pos.model.PaymentEntry;
 import com.phcpro.modules.pos.model.PaymentMethod;
@@ -206,6 +207,40 @@ public class POSService {
         return expected;
     }
 
+    /**
+     * Dados do fecho de caixa (Z): reconciliação da gaveta (abertura + vendas em numerário +
+     * suprimentos − sangrias − devoluções = esperado) vs contado, e a diferença. Leitura pura,
+     * tenant-scoped — funciona antes e depois do fecho (permite pré-visualizar). Ver
+     * {@code docs/FECHO_CAIXA_Z_SPEC.md}.
+     */
+    @Transactional(readOnly = true)
+    public PosZReportDTO buildZReport(Long sessionId) {
+        TillSession session = tillSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
+        CurrentUserContext.requireCompany(session.getCompany().getId());
+
+        BigDecimal opening = session.getOpeningBalance() == null ? BigDecimal.ZERO : session.getOpeningBalance();
+        BigDecimal sales = BigDecimal.ZERO;
+        BigDecimal suprimentos = BigDecimal.ZERO;
+        BigDecimal sangrias = BigDecimal.ZERO;
+        BigDecimal refunds = BigDecimal.ZERO;
+        int saleCount = 0;
+        for (TillMovement m : tillMovementRepository.findByTillSessionId(sessionId)) {
+            switch (m.getMovementType()) {
+                case SALE -> { sales = sales.add(m.getAmount()); saleCount++; }
+                case SUPRIMENTO -> suprimentos = suprimentos.add(m.getAmount());
+                case SANGRIA -> sangrias = sangrias.add(m.getAmount());
+                case REFUND -> refunds = refunds.add(m.getAmount());
+            }
+        }
+        BigDecimal expected = opening.add(sales).add(suprimentos).subtract(sangrias).subtract(refunds);
+        BigDecimal counted = session.getClosingBalanceReal();
+        BigDecimal difference = counted == null ? null : counted.subtract(expected);
+        return new PosZReportDTO(session.getId(), session.getOperator(), session.getOpenDate(),
+                session.getCloseDate(), session.getStatus(), opening, sales, suprimentos, sangrias,
+                refunds, expected, counted, difference, saleCount);
+    }
+
     @Transactional
     public TillMovement addCashMovement(Long sessionId, String type, BigDecimal amount, String description) {
         TillSession session = tillSessionRepository.findById(sessionId)
@@ -279,6 +314,9 @@ public class POSService {
 
         Invoice invoice = new Invoice();
         invoice.setClient(client);
+        // Nome a imprimir no recibo: o rótulo walk-in escrito pelo operador, ou o nome do
+        // cliente registado quando não há rótulo livre.
+        invoice.setCustomerName(walkInLabel != null ? walkInLabel : client.getName());
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
         invoice.setStatus(InvoiceStatus.PAID); // Immediate payment for POS sales
@@ -296,13 +334,19 @@ public class POSService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
+            // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso do produto.
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(product.getUnitPrice());
-            
-            // IVA à taxa-padrão (não depende do NUIT do cliente).
-            BigDecimal taxRate = TaxRates.STANDARD_VAT;
+            line.setUnitPrice(unitPrice);
+
+            // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a
+            // padrão. Não depende do NUIT do cliente.
+            BigDecimal taxRate = product.getTaxRate() != null
+                    ? product.getTaxRate().getRate()
+                    : TaxRates.STANDARD_VAT;
             line.setTaxRate(taxRate);
 
             if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.ZERO) > 0) {
@@ -310,7 +354,7 @@ public class POSService {
             }
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    product.getUnitPrice(), lineReq.quantity(), lineReq.discountPercentage(), taxRate);
+                    unitPrice, lineReq.quantity(), lineReq.discountPercentage(), taxRate);
 
             line.setLineTotal(amounts.total());
             line.setBatchNumber(lineReq.batchNumber());
@@ -423,7 +467,7 @@ public class POSService {
 
         switch (method) {
             case CASH -> refundCash(request.operator(), request.companyId(), amount, description);
-            case CARD, BANK_TRANSFER -> {
+            case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (request.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para reembolso por " + method + ".");
                 }
@@ -512,7 +556,7 @@ public class POSService {
                             "Pagamento em numerário fora de sessão de caixa requer conta de tesouraria.");
                 }
             }
-            case CARD, BANK_TRANSFER -> {
+            case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (req.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para " + method + ".");
                 }

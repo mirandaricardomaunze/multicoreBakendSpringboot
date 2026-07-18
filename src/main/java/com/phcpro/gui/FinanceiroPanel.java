@@ -1,15 +1,16 @@
 package com.phcpro.gui;
 
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
-import com.phcpro.modules.comercial.service.ComercialService;
-import com.phcpro.modules.financeira.dto.PayInvoiceRequest;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
 import com.phcpro.modules.financeira.dto.TreasuryTransactionDTO;
-import com.phcpro.modules.financeira.service.FinanceService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,8 +23,8 @@ import java.util.List;
 
 public class FinanceiroPanel extends JPanel {
 
-    private final FinanceService financeService;
-    private final ComercialService comercialService;
+    private final FinanceApiClient financeApiClient;
+    private final ComercialApiClient comercialApiClient;
 
     // Accounts List Elements
     private DefaultTableModel accountsModel;
@@ -33,30 +34,40 @@ public class FinanceiroPanel extends JPanel {
     private DefaultTableModel movementsModel;
     private JTable movementsTable;
 
-    // Settle elements
-    private JComboBox<String> approvedInvoicesCombo;
-    private JComboBox<String> targetAccountCombo;
-
     private List<InvoiceDTO> approvedInvoicesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
 
-    public FinanceiroPanel(FinanceService financeService, ComercialService comercialService) {
-        this.financeService = financeService;
-        this.comercialService = comercialService;
+    public FinanceiroPanel(FinanceApiClient financeApiClient, ComercialApiClient comercialApiClient) {
+        this.financeApiClient = financeApiClient;
+        this.comercialApiClient = comercialApiClient;
 
-        setLayout(new BorderLayout(0, 20));
+        setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        // TOP SECTION: TREASURY ACCOUNTS & BALANCES
-        JPanel topPanel = new JPanel(new BorderLayout(0, 10));
-        topPanel.setOpaque(false);
-        topPanel.add(UIHelper.createHeading("Tesouraria & Contas"), BorderLayout.NORTH);
+        add(UIHelper.createHeading("Tesouraria"), BorderLayout.NORTH);
+
+        // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
+        JTabbedPane tabbedPane = new JTabbedPane();
+        UIHelper.styleTabbedPanePHC(tabbedPane);
+        tabbedPane.addTab("Contas", UIHelper.icon("fas-wallet", 16, UIHelper.TEXT_LIGHT), createAccountsTab());
+        tabbedPane.addTab("Fluxo de Caixa", UIHelper.icon("fas-exchange-alt", 16, UIHelper.TEXT_LIGHT),
+                createMovementsTab());
+        add(tabbedPane, BorderLayout.CENTER);
+
+        // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate), não no
+        // construtor — evita chamada à API no arranque para quem não tem empresa activa.
+    }
+
+    /** Aba das contas de tesouraria (tabela ocupa toda a aba). */
+    private JPanel createAccountsTab() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         ModernPanel accountsCard = new ModernPanel(16);
         accountsCard.setLayout(new BorderLayout());
         accountsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        accountsCard.setPreferredSize(new Dimension(800, 150));
 
         String[] accountCols = {"Conta de Tesouraria", "IBAN / Nº Conta", "Saldo Atual"};
         accountsModel = new DefaultTableModel(accountCols, 0) {
@@ -67,19 +78,33 @@ public class FinanceiroPanel extends JPanel {
         UIHelper.styleTable(accountsTable);
         JScrollPane accScroll = new JScrollPane(accountsTable);
         UIHelper.styleScrollPane(accScroll);
+        JTextField aSearch = TableFilter.searchField("Conta ou IBAN…");
+        TableFilter.install(accountsTable, aSearch);
+        JPanel aBar = TableFilter.bar(aSearch);
+        aBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        accountsCard.add(aBar, BorderLayout.NORTH);
         accountsCard.add(accScroll, BorderLayout.CENTER);
-        topPanel.add(accountsCard, BorderLayout.CENTER);
+        panel.add(accountsCard, BorderLayout.CENTER);
+        return panel;
+    }
 
-        add(topPanel, BorderLayout.NORTH);
-
-        // CENTER SECTION: TRANSACTION LOG (LEFT) & RECEIVE PAYMENT FORM (RIGHT)
-        JPanel centerPanel = new JPanel(new GridLayout(1, 2, 20, 0));
-        centerPanel.setOpaque(false);
-
-        // Left Center: Transaction movements
+    /** Aba do histórico de fluxo de caixa (cabeçalho com acção + tabela). */
+    private JPanel createMovementsTab() {
         JPanel movementsPanel = new JPanel(new BorderLayout(0, 10));
         movementsPanel.setOpaque(false);
-        movementsPanel.add(UIHelper.createSubheading("Histórico de Fluxo de Caixa"), BorderLayout.NORTH);
+        movementsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+        JPanel movHeader = new JPanel(new BorderLayout());
+        movHeader.setOpaque(false);
+        movHeader.add(UIHelper.createSubheading("Histórico de Fluxo de Caixa"), BorderLayout.WEST);
+        ModernButton payBtn = UIHelper.createSuccessButton("Registar Recebimento");
+        payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
+        payBtn.addActionListener(e -> registerReceipt());
+        JPanel movActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        movActions.setOpaque(false);
+        movActions.add(payBtn);
+        movHeader.add(movActions, BorderLayout.EAST);
+        movementsPanel.add(movHeader, BorderLayout.NORTH);
 
         ModernPanel movementsCard = new ModernPanel(16);
         movementsCard.setLayout(new BorderLayout());
@@ -94,76 +119,30 @@ public class FinanceiroPanel extends JPanel {
         UIHelper.styleTable(movementsTable);
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
+        JTextField mSearch = TableFilter.searchField("Conta ou descrição…");
+        JComboBox<String> mTipo = TableFilter.combo("Todos os tipos", "DEBIT", "CREDIT");
+        JComboBox<String> mPeriodo = TableFilter.periodCombo();
+        TableFilter.install(movementsTable, mSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(mTipo, 3)),
+                java.util.List.of(new TableFilter.PeriodFilter(mPeriodo, 0)));
+        JPanel mBar = TableFilter.bar(mSearch, TableFilter.label("Tipo:"), mTipo,
+                TableFilter.label("Data:", "fas-calendar-alt"), mPeriodo);
+        mBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        movementsCard.add(mBar, BorderLayout.NORTH);
         movementsCard.add(movScroll, BorderLayout.CENTER);
         movementsPanel.add(movementsCard, BorderLayout.CENTER);
-        centerPanel.add(movementsPanel);
-
-        // Right Center: Settlement / Registar Recebimento
-        JPanel settlementPanel = new JPanel(new BorderLayout(0, 10));
-        settlementPanel.setOpaque(false);
-        settlementPanel.add(UIHelper.createSubheading("Liquidacão de Documentos (Receber Venda)"), BorderLayout.NORTH);
-
-        ModernPanel settlementCard = new ModernPanel(16);
-        settlementCard.setLayout(new GridBagLayout());
-        settlementCard.setBorder(new EmptyBorder(25, 25, 25, 25));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        // Form Row 1: Invoice selector
-        gbc.gridx = 0; gbc.gridy = 0;
-        gbc.insets = new Insets(10, 10, 2, 10);
-        JLabel invLbl = new JLabel("Selecionar Fatura Aprovada:");
-        invLbl.setForeground(UIHelper.TEXT_MUTED);
-        settlementCard.add(invLbl, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(2, 10, 12, 10);
-        approvedInvoicesCombo = new JComboBox<>();
-        UIHelper.styleComboBox(approvedInvoicesCombo);
-        settlementCard.add(approvedInvoicesCombo, gbc);
-
-        // Form Row 2: Target account selector
-        gbc.gridy = 2;
-        gbc.insets = new Insets(10, 10, 2, 10);
-        JLabel accLbl = new JLabel("Conta de Recebimento:");
-        accLbl.setForeground(UIHelper.TEXT_MUTED);
-        settlementCard.add(accLbl, gbc);
-
-        gbc.gridy = 3;
-        gbc.insets = new Insets(2, 10, 12, 10);
-        targetAccountCombo = new JComboBox<>();
-        UIHelper.styleComboBox(targetAccountCombo);
-        settlementCard.add(targetAccountCombo, gbc);
-
-        // Form Row 3: Submit Button
-        gbc.gridy = 4;
-        gbc.insets = new Insets(20, 10, 10, 10);
-        ModernButton payBtn = UIHelper.createSuccessButton("Registar Recebimento");
-        payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
-        settlementCard.add(payBtn, gbc);
-
-        settlementPanel.add(settlementCard, BorderLayout.CENTER);
-        centerPanel.add(settlementPanel);
-
-        add(centerPanel, BorderLayout.CENTER);
-
-        // Action Listener
-        payBtn.addActionListener(e -> registerReceipt());
-
-        refreshData();
+        return movementsPanel;
     }
 
     public void refreshData() {
         loadAccountsTable();
         loadMovementsTable();
-        loadSettlementCombos();
+        loadApprovedInvoices();
     }
 
     private void loadAccountsTable() {
         accountsModel.setRowCount(0);
-        accountsList = financeService.getAllAccounts();
+        accountsList = financeApiClient.getAllAccounts();
         for (TreasuryAccountDTO acc : accountsList) {
             accountsModel.addRow(new Object[]{
                     acc.name(),
@@ -175,7 +154,7 @@ public class FinanceiroPanel extends JPanel {
 
     private void loadMovementsTable() {
         movementsModel.setRowCount(0);
-        List<TreasuryTransactionDTO> txs = financeService.getAllTransactions();
+        List<TreasuryTransactionDTO> txs = financeApiClient.getAllTransactions();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (TreasuryTransactionDTO tx : txs) {
             movementsModel.addRow(new Object[]{
@@ -188,26 +167,16 @@ public class FinanceiroPanel extends JPanel {
         }
     }
 
-    private void loadSettlementCombos() {
-        approvedInvoicesCombo.removeAllItems();
-        targetAccountCombo.removeAllItems();
-
-        // 1. Load approved invoices
+    private void loadApprovedInvoices() {
         approvedInvoicesList.clear();
-        List<InvoiceDTO> allInvoices = comercialService.getAllInvoices();
-        for (InvoiceDTO invoice : allInvoices) {
+        for (InvoiceDTO invoice : comercialApiClient.getAllInvoices()) {
             if (invoice.status() == InvoiceStatus.APPROVED) {
                 approvedInvoicesList.add(invoice);
-                approvedInvoicesCombo.addItem(invoice.invoiceNumber() + " - " + invoice.clientName() + " (" + invoice.totalAmount() + " MT)");
             }
-        }
-
-        // 2. Load accounts into targets
-        for (TreasuryAccountDTO acc : accountsList) {
-            targetAccountCombo.addItem(acc.name());
         }
     }
 
+    /** Registo de recebimento (liquidação de fatura aprovada) em modal profissional. */
     private void registerReceipt() {
         if (approvedInvoicesList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Não existem faturas aprovadas pendentes de recebimento.", "Informação", JOptionPane.WARNING_MESSAGE);
@@ -218,21 +187,35 @@ public class FinanceiroPanel extends JPanel {
             return;
         }
 
-        int invoiceIdx = approvedInvoicesCombo.getSelectedIndex();
-        int accountIdx = targetAccountCombo.getSelectedIndex();
+        JComboBox<String> invoiceCombo = new JComboBox<>();
+        UIHelper.styleComboBox(invoiceCombo);
+        for (InvoiceDTO inv : approvedInvoicesList) {
+            invoiceCombo.addItem(inv.invoiceNumber() + " - " + inv.clientName() + " (" + String.format("%,.2f MT", inv.totalAmount()) + ")");
+        }
+        JComboBox<String> accountCombo = new JComboBox<>();
+        UIHelper.styleComboBox(accountCombo);
+        for (TreasuryAccountDTO acc : accountsList) {
+            accountCombo.addItem(acc.name());
+        }
 
-        if (invoiceIdx < 0 || accountIdx < 0) return;
+        JPanel form = UIHelper.createDialogForm(
+                "Fatura Aprovada:", invoiceCombo,
+                "Conta de Recebimento:", accountCombo
+        );
 
-        InvoiceDTO invoice = approvedInvoicesList.get(invoiceIdx);
-        TreasuryAccountDTO account = accountsList.get(accountIdx);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Registar Recebimento",
+                "fas-money-bill-wave", "Liquidação de fatura aprovada", form)
+                .setConfirmButton("Receber", "fas-check");
+        dlg.setOnSave(() -> {
+            InvoiceDTO invoice = approvedInvoicesList.get(Math.max(0, invoiceCombo.getSelectedIndex()));
+            TreasuryAccountDTO account = accountsList.get(Math.max(0, accountCombo.getSelectedIndex()));
+            financeApiClient.payInvoice(invoice.id(), account.id());
+        });
 
-        try {
-            financeService.payInvoice(invoice.id(), account.id());
-            JOptionPane.showMessageDialog(this, "Recebimento da fatura " + invoice.invoiceNumber() + " registado com sucesso.\n" +
-                    "Saldo da conta " + account.name() + " atualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        if (dlg.showDialog()) {
+            JOptionPane.showMessageDialog(this, "Recebimento registado com sucesso.\nSaldo da conta atualizado.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             refreshData();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao registar recebimento: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 

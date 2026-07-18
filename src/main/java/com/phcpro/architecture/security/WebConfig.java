@@ -18,7 +18,8 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(securityInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/auth/login");
+                // Login e logout só precisam do corpo/token; não exigem empresa (o superadmin não tem).
+                .excludePathPatterns("/api/auth/login", "/api/auth/logout");
     }
 
     @Override

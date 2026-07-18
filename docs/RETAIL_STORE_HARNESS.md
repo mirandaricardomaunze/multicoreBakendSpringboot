@@ -46,16 +46,31 @@ Criar ou confirmar:
 
 ## Testes automatizados esperados
 
-Adicionar ou manter testes para:
+Estado por Service (verde em `mvn test`, 71 testes):
 
-- `POSService.checkout`: venda sem sessao, stock insuficiente, multi-pagamento, fiado, FEFO.
-- `POSService.closeSession`: saldo esperado, diferenca, deposito de fecho.
-- `CreditNoteService`: devolucao com e sem reposicao de stock, limite contra documento origem.
-- `InventoryService`/`ProductBatchService`: ajuste, lote vencido, FEFO multi-lote.
-- `StockTransferService`: estados, duplicacao de movimentos, permissao.
-- `DocumentNumberService`: sequencia por serie e empresa quando aplicavel.
-- `SecurityInterceptor`/`TenantAccessService`: token, empresa e role.
-- `BackupService`: exporta dados obrigatorios e fluxo de restore quando implementado.
+- [x] `POSService.checkout`/`closeSession`: sem sessao, via legada vs multi-metodo, fiado parcial,
+  numerario+cartao sem dupla contagem, fecho sem diferenca, diferenca exige permissao, deposito de
+  fecho na tesouraria — `POSServiceTest` (10).
+- [x] `CreditNoteService`: devolucao RETURN repoe stock so na aprovacao, motivo nao-RETURN nao mexe
+  stock, limite de quantidade vs ja devolvido, valor vs fatura, permissao MANAGER/ADMIN — `CreditNoteServiceTest` (8).
+- [x] `ProductBatchService`: FEFO single/multi-lote, stock insuficiente, ajuste de lote, **bloqueio de
+  entrada de lote vencido (RS-12)** — `ProductBatchServiceTest` (12).
+- [x] `ComercialService`: faturação directa (APPROVED + baixa stock), desconto >10% exige aprovação,
+  faturação de encomenda, anulação com reposição, permissão MANAGER/ADMIN — `ComercialServiceTest` (8).
+- [x] `StockTransferService`: estados, stock so na aprovacao, permissao — `StockTransferServiceTest` (9).
+- [x] `DocumentNumberService`: sequencia gapless por serie/ano, series independentes, corrida na
+  criacao, serie ND — `DocumentNumberServiceTest` (6).
+- [x] `TenantAccessService`/isolamento por empresa — `TenantAccessServiceTest`, `TenantIsolationIntegrationTest`.
+- [x] login/token via API — `AuthControllerIntegrationTest`.
+- [x] **segurança ponta-a-ponta por API (spec §9):** 401 sem token, 403 empresa sem acesso, role
+  gate ao faturar (EMPLOYEE bloqueado / ADMIN passa) — `SecurityApiIntegrationTest` (4). O enforcement
+  vive no `SecurityInterceptor` (token+empresa em todo o `/api/**` excepto login); o filtro Spring
+  permissivo não é uma falha — a guarda é o interceptor.
+- [x] `BackupService`: export e verificacao nao destrutiva — `BackupServiceTest`. Restore real continua a exigir ambiente separado.
+
+Regra de **lote vencido (RS-12)** implementada em `ProductBatchService.addToBatch`: entrada de stock
+com validade já no passado é bloqueada com `BusinessRuleException` (validade hoje ainda entra; produto
+sem validade não é afectado). Guarda todas as entradas porque a compra/ENTRY passa por `addToBatch`.
 
 ## Endpoints implementados para o harness
 
@@ -67,15 +82,15 @@ Adicionar ou manter testes para:
 ## Checklist de pre-producao
 
 - [x] `mvn -q clean compile` passa.
-- [x] `mvn -q test` passa.
-- [ ] Migration PostgreSQL aplicada em base limpa.
-- [ ] Login, tenant e roles testados por API.
-- [ ] POS testado com leitor de codigo de barras real.
-- [ ] Impressora real testada com factura/recibo.
-- [ ] Fecho de caixa validado por operador e gerente.
-- [ ] Backup restaurado num ambiente separado.
-- [ ] Relatorios diarios batem com documentos e tesouraria.
-- [ ] `tasks/current.md` actualizado com estado e bloqueios reais.
+- [x] `mvn -q test` passa (86 testes).
+- [x] Login, tenant e roles testados por API — `SecurityApiIntegrationTest`.
+- [ ] Migration PostgreSQL aplicada em base limpa. *(operacional — requer instância Postgres)*
+- [ ] POS testado com leitor de codigo de barras real. *(hardware)*
+- [ ] Impressora real testada com factura/recibo. *(hardware)*
+- [ ] Fecho de caixa validado por operador e gerente. *(manual)*
+- [ ] Backup restaurado num ambiente separado. *(manual)*
+- [ ] Relatorios diarios batem com documentos e tesouraria. *(manual)*
+- [x] `tasks/current.md` actualizado com estado e bloqueios reais.
 
 ## Regra de falha
 

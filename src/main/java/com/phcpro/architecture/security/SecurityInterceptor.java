@@ -18,9 +18,15 @@ public class SecurityInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String companyId = request.getHeader("X-Company-Id");
         String authorization = request.getHeader("Authorization");
 
+        // Endpoints de plataforma são geridos pelo superadmin: token obrigatório, mas sem empresa.
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/api/platform/")) {
+            return handlePlatform(request, response, authorization);
+        }
+
+        String companyId = request.getHeader("X-Company-Id");
         if (authorization == null || !authorization.startsWith("Bearer ")
                 || companyId == null || companyId.isBlank()) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token e empresa são obrigatórios.");
@@ -41,6 +47,24 @@ public class SecurityInterceptor implements HandlerInterceptor {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
         }
         return false;
+    }
+
+    private boolean handlePlatform(HttpServletRequest request, HttpServletResponse response, String authorization)
+            throws Exception {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token é obrigatório.");
+            return false;
+        }
+        try {
+            String token = authorization.substring(7).trim();
+            String username = authSessionService.requireValid(token).username();
+            var user = tenantAccessService.requireSuperAdmin(username);
+            CurrentUserContext.setCurrentUser(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
+            return true;
+        } catch (RuntimeException ex) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
+            return false;
+        }
     }
 
     @Override

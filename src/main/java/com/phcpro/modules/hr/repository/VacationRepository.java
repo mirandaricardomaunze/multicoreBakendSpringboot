@@ -15,4 +15,10 @@ public interface VacationRepository extends JpaRepository<Vacation, Long> {
     List<Vacation> findAllWithEmployeeByCompanyId(@Param("companyId") Long companyId);
 
     java.util.Optional<Vacation> findByIdAndEmployeeCompanyId(Long id, Long companyId);
+
+    /** Dias já reservados (aprovados ou pendentes) por colaborador e ano de referência. */
+    @Query("SELECT COALESCE(SUM(v.totalDays), 0) FROM Vacation v "
+            + "WHERE v.employee.id = :employeeId AND v.yearReference = :year "
+            + "AND v.status IN ('APPROVED', 'PENDING')")
+    int sumReservedDays(@Param("employeeId") Long employeeId, @Param("year") int year);
 }

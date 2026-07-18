@@ -149,7 +149,7 @@ public class SidebarNavItem extends JComponent {
     }
 
     private void paintLabel(Graphics2D g2, int h) {
-        g2.setFont(new Font("Segoe UI", active ? Font.BOLD : Font.PLAIN, 13));
+        g2.setFont(new Font(UIHelper.FONT, active ? Font.BOLD : Font.PLAIN, 13));
         FontMetrics fm = g2.getFontMetrics();
         int labelY = (h + fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(active ? TEXT_ACTIVE : TEXT_INACTIVE);

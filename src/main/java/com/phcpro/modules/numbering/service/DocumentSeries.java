@@ -15,10 +15,16 @@ public final class DocumentSeries {
     public static final String RECEIPT = "RC";
     /** Nota de crédito. */
     public static final String CREDIT_NOTE = "NC";
+    /** Nota de débito. */
+    public static final String DEBIT_NOTE = "ND";
     /** Transferência de stock entre armazéns. */
     public static final String STOCK_TRANSFER = "TRF";
     /** Documento interno de compra a fornecedor. */
     public static final String PURCHASE = "V/FT";
+    /** Encomenda a fornecedor (purchase order). */
+    public static final String PURCHASE_ORDER = "EC-F";
+    /** Recibo de vencimento (folha salarial). */
+    public static final String PAYSLIP = "REC";
 
     private DocumentSeries() {}
 }

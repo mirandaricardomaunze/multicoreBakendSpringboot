@@ -9,6 +9,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.model.OrderLine;
 import com.phcpro.modules.comercial.repository.OrderRepository;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +23,14 @@ public class OrderPrintService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final OrderRepository orderRepository;
+    private final LineRowMapper lineRowMapper;
+    private final DocumentConfigService documentConfigService;
 
-    public OrderPrintService(OrderRepository orderRepository) {
+    public OrderPrintService(OrderRepository orderRepository, LineRowMapper lineRowMapper,
+                             DocumentConfigService documentConfigService) {
         this.orderRepository = orderRepository;
+        this.lineRowMapper = lineRowMapper;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -40,7 +46,8 @@ public class OrderPrintService {
                     order.getOrderNumber()
             ));
             doc.add(buildClientBlock(order));
-            doc.add(LineItemsTableRenderer.build(toRows(order.getLines())));
+            doc.add(LineItemsTableRenderer.build(toRows(order.getLines()),
+                    documentConfigService.getColumns(order.getCompany().getId(), com.phcpro.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
                     order.getTotalBeforeTax(),
                     order.getTaxAmount(),
@@ -88,9 +95,9 @@ public class OrderPrintService {
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<OrderLine> lines) {
-        return lines.stream().map(l -> new LineItemsTableRenderer.Row(
-                l.getProduct().getSku(),
-                l.getProduct().getName(),
+        return lines.stream().map(l -> lineRowMapper.map(
+                l.getProduct(),
+                l.getBatchNumber(),
                 l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),

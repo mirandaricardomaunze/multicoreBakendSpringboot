@@ -97,6 +97,22 @@ public class AppUserService {
     }
 
     @Transactional
+    public AppUser updateUserName(String username, String name) {
+        requireAdmin();
+        if (name == null || name.isBlank()) {
+            throw new BusinessRuleException("O nome do utilizador é obrigatório.");
+        }
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        AppUser user = appUserRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+        if (user.findCompanyAccess(companyId).isEmpty()) {
+            throw new BusinessRuleException("O utilizador não pertence à empresa ativa.");
+        }
+        user.setName(name.trim());
+        return appUserRepository.save(user);
+    }
+
+    @Transactional
     public AppUser grantCompanyAccess(String username, Long companyId) {
         return grantCompanyAccess(username, companyId, "EMPLOYEE");
     }

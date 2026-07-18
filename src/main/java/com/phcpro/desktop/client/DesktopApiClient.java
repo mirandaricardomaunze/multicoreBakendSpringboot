@@ -65,8 +65,47 @@ public class DesktopApiClient {
                 .build(), responseType);
     }
 
+    public <T> T patch(String path, Object body, Class<T> responseType) {
+        return send(request(path)
+                .header("Content-Type", "application/json")
+                .method("PATCH", body == null
+                        ? HttpRequest.BodyPublishers.noBody()
+                        : HttpRequest.BodyPublishers.ofString(writeJson(body)))
+                .build(), responseType);
+    }
+
     public void delete(String path) {
         send(request(path).DELETE().build(), Void.class);
+    }
+
+    public <T> List<T> postForList(String path, Object body, Class<T> elementType) {
+        try {
+            HttpResponse<String> response = sendRaw(request(path)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(writeJson(body)))
+                    .build());
+            return objectMapper.readValue(response.body(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, elementType));
+        } catch (IOException ex) {
+            throw new ApiClientException("O servidor devolveu dados num formato inválido.", ex);
+        }
+    }
+
+    /** GET que devolve bytes — ex.: os PDFs de {@code /api/print/**}. */
+    public byte[] getBytes(String path) {
+        HttpRequest httpRequest = request(path).header("Accept", "application/pdf").GET().build();
+        try {
+            HttpResponse<byte[]> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new ApiClientException(response.statusCode(), "O servidor recusou o pedido de documento.");
+            }
+            return response.body();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ApiClientException("A comunicação com o servidor foi interrompida.", ex);
+        } catch (IOException ex) {
+            throw new ApiClientException("Não foi possível obter o documento do servidor.", ex);
+        }
     }
 
     private HttpRequest.Builder request(String path) {

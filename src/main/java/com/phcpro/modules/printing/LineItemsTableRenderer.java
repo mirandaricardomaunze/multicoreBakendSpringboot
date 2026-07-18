@@ -4,20 +4,34 @@ import com.lowagie.text.Element;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
+import com.phcpro.architecture.pricing.LineCalculator;
+import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
- * Renders the document-line table shared by invoices, orders and purchases.
- * Caller provides rows in the canonical order; alignment and styling are
- * decided here so all documents match.
+ * Renders the document-line table shared by invoices, orders and credit notes.
+ * Caller provides rows in the canonical order; columns, alignment and formatting
+ * are decided here so every commercial document looks identical.
+ *
+ * Colunas canónicas (ver docs/DOCUMENT_LINE_COLUMNS_SPEC.md):
+ * Cód. Barras · Referência · Descrição · Validade · Qtd · Preço Unit. · IVA · Subtotal.
  */
 public final class LineItemsTableRenderer {
 
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     public record Row(
-            String sku,
+            String barcode,
+            String reference,
             String description,
+            LocalDate expiryDate,
             BigDecimal quantity,
             BigDecimal unitPrice,
             BigDecimal taxRate,
@@ -27,30 +41,78 @@ public final class LineItemsTableRenderer {
 
     private LineItemsTableRenderer() {}
 
+    /** Uma coluna da tabela: largura, cabeçalho, alinhamento e como formatar a célula a partir da linha. */
+    private record Column(float width, String header, int align, Function<Row, String> cell) {}
+
     public static PdfPTable build(List<Row> rows) {
-        PdfPTable table = new PdfPTable(new float[]{12f, 38f, 8f, 14f, 8f, 8f, 14f});
+        return build(rows, DocumentColumnsDTO.all());
+    }
+
+    /**
+     * Monta a tabela apenas com as colunas activas em {@code cols}, mantendo por coluna a largura,
+     * o alinhamento e a formatação canónicos. Se nenhuma coluna estiver activa, mostra só Descrição
+     * (fallback defensivo). A matemática (subtotal = {@code LineCalculator.net}) fica intacta.
+     */
+    public static PdfPTable build(List<Row> rows, DocumentColumnsDTO cols) {
+        List<Column> columns = activeColumns(cols);
+
+        float[] widths = new float[columns.size()];
+        for (int i = 0; i < columns.size(); i++) {
+            widths[i] = columns.get(i).width();
+        }
+
+        PdfPTable table = new PdfPTable(widths);
         table.setWidthPercentage(100);
         table.setSpacingBefore(8f);
         table.setSpacingAfter(8f);
 
-        header(table, "Código", Element.ALIGN_LEFT);
-        header(table, "Descrição", Element.ALIGN_LEFT);
-        header(table, "Qtd", Element.ALIGN_RIGHT);
-        header(table, "Preço Unit.", Element.ALIGN_RIGHT);
-        header(table, "IVA", Element.ALIGN_RIGHT);
-        header(table, "Desc.", Element.ALIGN_RIGHT);
-        header(table, "Total", Element.ALIGN_RIGHT);
-
+        for (Column column : columns) {
+            header(table, column.header(), column.align());
+        }
         for (Row row : rows) {
-            body(table, row.sku() == null ? "" : row.sku(), Element.ALIGN_LEFT);
-            body(table, row.description() == null ? "" : row.description(), Element.ALIGN_LEFT);
-            body(table, formatQuantity(row.quantity()), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(row.unitPrice()), Element.ALIGN_RIGHT);
-            body(table, formatRate(row.taxRate()), Element.ALIGN_RIGHT);
-            body(table, formatRate(row.discountPercentage() == null ? BigDecimal.ZERO : row.discountPercentage().movePointLeft(2)), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(row.lineTotal()), Element.ALIGN_RIGHT);
+            for (Column column : columns) {
+                body(table, column.cell().apply(row), column.align());
+            }
         }
         return table;
+    }
+
+    private static List<Column> activeColumns(DocumentColumnsDTO cols) {
+        List<Column> columns = new ArrayList<>();
+        if (cols.barcode()) {
+            columns.add(new Column(14f, "Cód. Barras", Element.ALIGN_LEFT, r -> safe(r.barcode())));
+        }
+        if (cols.reference()) {
+            columns.add(new Column(10f, "Referência", Element.ALIGN_LEFT, r -> safe(r.reference())));
+        }
+        if (cols.description()) {
+            columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+        }
+        if (cols.expiry()) {
+            columns.add(new Column(11f, "Validade", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
+        }
+        if (cols.quantity()) {
+            columns.add(new Column(7f, "Qtd", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
+        }
+        if (cols.unitPrice()) {
+            columns.add(new Column(12f, "Preço Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
+        }
+        if (cols.tax()) {
+            columns.add(new Column(6f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
+        }
+        if (cols.subtotal()) {
+            columns.add(new Column(16f, "Subtotal", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
+        }
+        if (columns.isEmpty()) {
+            columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+        }
+        return columns;
+    }
+
+    /** Subtotal líquido da linha (antes de IVA), coerente com a matemática de negócio. */
+    static BigDecimal subtotal(Row row) {
+        return LineCalculator.compute(row.unitPrice(), row.quantity(), row.discountPercentage(), row.taxRate())
+                .net().setScale(2, RoundingMode.HALF_UP);
     }
 
     private static void header(PdfPTable table, String text, int align) {
@@ -68,6 +130,14 @@ public final class LineItemsTableRenderer {
         cell.setHorizontalAlignment(align);
         cell.setPadding(4f);
         table.addCell(cell);
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    static String formatExpiry(LocalDate expiry) {
+        return expiry == null ? "—" : expiry.format(DATE_FMT);
     }
 
     private static String formatRate(BigDecimal rate) {

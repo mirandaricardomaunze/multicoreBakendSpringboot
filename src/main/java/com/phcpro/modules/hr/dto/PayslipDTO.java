@@ -19,6 +19,7 @@ public record PayslipDTO(
         BigDecimal employerInss,
         BigDecimal taxableIncome,
         BigDecimal otherDeductions,
+        BigDecimal absenceDeduction,
         BigDecimal grossPay,
         BigDecimal totalDeductions,
         BigDecimal netPay,

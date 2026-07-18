@@ -66,9 +66,28 @@ modules/<nome>/
 ## Como correr
 
 ### Desktop (uso diário)
+
+O `pom.xml` fixa `<mainClass>com.phcpro.MulticoreApplication</mainClass>`, pelo que
+`mvn spring-boot:run` arranca **sempre o backend puro** (sem janela) — o
+`-Dspring-boot.run.main-class` da linha de comando **não** sobrepõe um valor literal
+da configuração. Para arrancar o cliente desktop, correr o `DesktopApplication` directamente:
+
 ```powershell
-mvn spring-boot:run "-Dspring-boot.run.main-class=com.phcpro.desktop.DesktopApplication"
+mvn -q compile
+mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
+$cp = "target/classes;" + (Get-Content target/cp.txt -Raw)
+java -cp $cp com.phcpro.desktop.DesktopApplication
 ```
+
+> 🗄️ **Base de dados:** o perfil `desktop` usa **PostgreSQL local** (`jdbc:postgresql://localhost:5432/multicore`),
+> não H2 — os dados persistem. Requer um servidor PostgreSQL a correr, a BD `multicore` + role `multicore`,
+> e a variável de ambiente **`DB_PASSWORD`** com a password da role. Flyway é dono do schema (`V1..V17`),
+> Hibernate apenas valida. Detalhes em [docs/BD_POSTGRES_DESKTOP_SPEC.md](docs/BD_POSTGRES_DESKTOP_SPEC.md).
+> Para criar a BD/role de raiz:
+> ```sql
+> CREATE ROLE multicore LOGIN PASSWORD 'a_tua_password';
+> CREATE DATABASE multicore OWNER multicore;
+> ```
 
 O login e a seleção de empresa do desktop comunicam com a API HTTP. Por defeito,
 o modo desktop usa o backend local em `http://localhost:8080`. Para apontar para
@@ -94,6 +113,21 @@ mvn test                    # testes
 
 ### Console H2
 Com o backend a correr: `http://localhost:8080/h2-console`
+
+## Deploy em produção (VPS)
+
+O backend (`com.phcpro.MulticoreApplication`, headless) é hospedável à parte com **Docker + PostgreSQL
+privado + Caddy (HTTPS automático)**:
+
+```bash
+cp .env.example .env      # editar: DOMAIN, DB_PASSWORD, PG_MAJOR
+docker compose up -d --build
+./scripts/deploy-smoke.sh https://o-teu-dominio   # verificação pós-deploy
+```
+
+Guião completo, arquitetura e **checklist de hardening**: [docs/DEPLOY_VPS_SPEC.md](docs/DEPLOY_VPS_SPEC.md).
+Segurança: `/api/**` exige token válido (Spring Security + `SecurityInterceptor`); só `/actuator/health`
+e o login são públicos — ver [docs/SEGURANCA_HARDENING_SPEC.md](docs/SEGURANCA_HARDENING_SPEC.md).
 
 ## Documentação
 

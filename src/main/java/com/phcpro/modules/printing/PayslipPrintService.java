@@ -132,11 +132,13 @@ public class PayslipPrintService {
         header(table, "Descontos", Element.ALIGN_LEFT);
         header(table, "Valor (MT)", Element.ALIGN_RIGHT);
 
-        line(table, "IRPS",                p.getIrpsDeduction());
-        line(table, "INSS",                p.getInssDeduction());
-        line(table, "Outros Descontos",    p.getOtherDeductions());
+        line(table, "IRPS",                    p.getIrpsDeduction());
+        line(table, "INSS",                    p.getInssDeduction());
+        line(table, "Faltas Injustificadas",   p.getAbsenceDeduction());
+        line(table, "Outros Descontos",        p.getOtherDeductions());
 
-        BigDecimal total = p.getIrpsDeduction().add(p.getInssDeduction()).add(p.getOtherDeductions());
+        BigDecimal total = p.getIrpsDeduction().add(p.getInssDeduction())
+                .add(p.getAbsenceDeduction()).add(p.getOtherDeductions());
         totalLine(table, "Total de Descontos", total);
         line(table, "INSS Patronal (informativo)", p.getEmployerInss());
         return table;

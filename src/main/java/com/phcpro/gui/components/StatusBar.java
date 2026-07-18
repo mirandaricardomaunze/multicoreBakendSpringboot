@@ -1,0 +1,133 @@
+package com.phcpro.gui.components;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * Barra de estado no rodapé da janela principal — padrão de ERP profissional (PHC, Primavera, Sage).
+ * Mostra: módulo activo · nº registos · empresa · utilizador · hora.
+ * Actualiza a hora a cada minuto via {@link javax.swing.Timer} interno.
+ *
+ * <p>Uso:</p>
+ * <pre>
+ *   StatusBar bar = new StatusBar();
+ *   frame.add(bar, BorderLayout.SOUTH);
+ *   bar.setContext("Faturação", 42, "Loja Central", "maria");
+ * </pre>
+ */
+public class StatusBar extends JPanel {
+
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final int BAR_HEIGHT = 24;
+
+    private final JLabel moduleLabel   = slimLabel("");
+    private final JLabel recordsLabel  = slimLabel("");
+    private final JLabel companyLabel  = slimLabel("");
+    private final JLabel userLabel     = slimLabel("");
+    private final JLabel clockLabel    = slimLabel(LocalTime.now().format(TIME_FMT));
+
+    public StatusBar() {
+        setLayout(new BorderLayout(0, 0));
+        setPreferredSize(new Dimension(0, BAR_HEIGHT));
+        setBackground(barBg());
+        setBorder(new EmptyBorder(0, 8, 0, 8));
+
+        // Lado esquerdo — módulo e nº registos
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        left.setOpaque(false);
+        left.add(iconLabel("fas-layer-group", UIHelper.ACCENT));
+        left.add(moduleLabel);
+        left.add(separator());
+        left.add(iconLabel("fas-list", UIHelper.TEXT_MUTED));
+        left.add(recordsLabel);
+        add(left, BorderLayout.WEST);
+
+        // Lado direito — empresa, utilizador, hora
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+        right.add(iconLabel("fas-building", UIHelper.TEXT_MUTED));
+        right.add(companyLabel);
+        right.add(separator());
+        right.add(iconLabel("fas-user-circle", UIHelper.TEXT_MUTED));
+        right.add(userLabel);
+        right.add(separator());
+        right.add(iconLabel("fas-clock", UIHelper.TEXT_MUTED));
+        right.add(clockLabel);
+        add(right, BorderLayout.EAST);
+
+        // Timer de hora — dispara a cada minuto no EDT
+        new javax.swing.Timer(60_000, e -> {
+            clockLabel.setText(LocalTime.now().format(TIME_FMT));
+            setBackground(barBg());  // acompanha troca de tema em runtime
+            left.setBackground(barBg());
+            right.setBackground(barBg());
+        }).start();
+    }
+
+    /**
+     * Actualiza o contexto visível na barra.
+     * @param module   nome do módulo activo (ex.: "Faturação")
+     * @param records  número de registos na tabela activa (-1 = oculta)
+     * @param company  nome da empresa activa
+     * @param user     nome de utilizador
+     */
+    public void setContext(String module, int records, String company, String user) {
+        moduleLabel.setText(module == null ? "" : module);
+        recordsLabel.setText(records < 0 ? "" : records + " registo" + (records == 1 ? "" : "s"));
+        companyLabel.setText(company == null ? "" : company);
+        userLabel.setText(user == null ? "" : user);
+    }
+
+    /** Actualiza apenas o nº de registos (ex.: após filtro ser aplicado). */
+    public void setRecords(int records) {
+        recordsLabel.setText(records < 0 ? "" : records + " registo" + (records == 1 ? "" : "s"));
+    }
+
+    /** Actualiza apenas o módulo activo. */
+    public void setModule(String module) {
+        moduleLabel.setText(module == null ? "" : module);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────────────────────
+
+    private static Color barBg() {
+        return UIHelper.isLight() ? new Color(241, 245, 249) : new Color(15, 23, 42);
+    }
+
+    private static JLabel slimLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        l.setForeground(UIHelper.TEXT_MUTED);
+        return l;
+    }
+
+    private static JLabel iconLabel(String iconCode, Color color) {
+        JLabel l = new JLabel(UIHelper.icon(iconCode, 12, color));
+        l.setOpaque(false);
+        return l;
+    }
+
+    private static JLabel separator() {
+        JLabel sep = new JLabel("·");
+        sep.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        sep.setForeground(UIHelper.TEXT_MUTED);
+        return sep;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        try {
+            // Linha de topo — separador visual com o conteúdo acima
+            g2.setColor(barBg());
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.setColor(UIHelper.BORDER);
+            g2.fillRect(0, 0, getWidth(), 1);
+        } finally {
+            g2.dispose();
+        }
+    }
+}

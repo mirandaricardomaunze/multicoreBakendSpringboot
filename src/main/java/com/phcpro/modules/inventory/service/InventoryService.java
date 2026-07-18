@@ -62,7 +62,133 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<Warehouse> getWarehousesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
+        return warehouseRepository.findByCompanyId(companyId).stream()
+                .filter(Warehouse::isActive)
+                .toList();
+    }
+
+    /** Armazéns onde é permitido vender (activos e com {@code allowsSales}). Usado pelo POS. */
+    @Transactional(readOnly = true)
+    public List<Warehouse> getSalesWarehousesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return warehouseRepository.findByCompanyId(companyId).stream()
+                .filter(Warehouse::isActive)
+                .filter(Warehouse::isAllowsSales)
+                .toList();
+    }
+
+    /** Todos os armazéns (activos e inactivos) — para o ecrã de gestão de armazéns. */
+    @Transactional(readOnly = true)
+    public List<Warehouse> getAllWarehousesByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
         return warehouseRepository.findByCompanyId(companyId);
+    }
+
+    /**
+     * Alerta de ruptura: produtos com controlo de stock cujo saldo total na empresa (soma de todos os
+     * armazéns) é ≤ 0 — esgotados. Inclui os que nunca tiveram entrada (saldo 0). Serviços
+     * ({@code stockTracked = false}) não entram.
+     */
+    @Transactional(readOnly = true)
+    public List<com.phcpro.modules.inventory.dto.StockAlertDTO> findOutOfStockProducts(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        java.util.Map<Long, BigDecimal> totals = new java.util.HashMap<>();
+        for (Stock s : stockRepository.findByWarehouseCompanyId(companyId)) {
+            if (s.getProduct() == null) continue;
+            totals.merge(s.getProduct().getId(),
+                    s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity(), BigDecimal::add);
+        }
+        List<com.phcpro.modules.inventory.dto.StockAlertDTO> out = new java.util.ArrayList<>();
+        for (com.phcpro.modules.comercial.model.Product p :
+                productRepository.findDistinctByCompaniesIdOrderByName(companyId)) {
+            if (!p.isStockTracked()) continue;
+            BigDecimal total = totals.getOrDefault(p.getId(), BigDecimal.ZERO);
+            if (total.signum() <= 0) {
+                out.add(new com.phcpro.modules.inventory.dto.StockAlertDTO(
+                        p.getId(), p.getSku(), p.getName(), total));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * IDs dos produtos com stock disponível ({@code quantity > 0}) em pelo menos um armazém de venda
+     * (activo + {@code allowsSales}). Usado pelo POS para esconder do catálogo os produtos esgotados.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> getInStockProductIdsForSale(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Warehouse w : getSalesWarehousesByCompany(companyId)) {
+            for (Stock s : stockRepository.findByWarehouseId(w.getId())) {
+                if (s.getProduct() != null && s.getQuantity() != null && s.getQuantity().signum() > 0) {
+                    ids.add(s.getProduct().getId());
+                }
+            }
+        }
+        return ids;
+    }
+
+    @Transactional
+    public Warehouse updateWarehouse(Long id, String name, String warehouseNumber, BigDecimal capacity,
+                                     String location, com.phcpro.modules.inventory.model.WarehouseType type,
+                                     boolean allowsSales, String manager, String phone) {
+        Warehouse warehouse = loadWarehouseForActiveCompany(id);
+        warehouse.setName(name);
+        warehouse.setWarehouseNumber(warehouseNumber);
+        warehouse.setCapacity(capacity);
+        warehouse.setLocation(location);
+        warehouse.setType(type == null ? com.phcpro.modules.inventory.model.WarehouseType.STORE : type);
+        warehouse.setAllowsSales(allowsSales);
+        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
+        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
+        warehouse = warehouseRepository.save(warehouse);
+        auditLogService.logCurrent("WAREHOUSE_UPDATE", "Armazém " + warehouse.getName() + " actualizado.");
+        return warehouse;
+    }
+
+    /** Activa/desactiva um armazém (soft-delete). MANAGER/ADMIN + auditado. */
+    @Transactional
+    public Warehouse setWarehouseActive(Long id, boolean active) {
+        PermissionGuard.requireManagerOrAdmin(active ? "activar armazém" : "desactivar armazém");
+        Warehouse warehouse = loadWarehouseForActiveCompany(id);
+        warehouse.setActive(active);
+        warehouse = warehouseRepository.save(warehouse);
+        auditLogService.logCurrent("WAREHOUSE_STATUS",
+                "Armazém " + warehouse.getName() + (active ? " activado." : " desactivado."));
+        return warehouse;
+    }
+
+    // ─── Bloqueio de stock (contagem cega / visível só para admin) ───────────
+
+    /** Está o stock trancado para esta empresa? (quantidades ocultas a não-administradores) */
+    @Transactional(readOnly = true)
+    public boolean isStockCountLocked(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return companyRepository.findById(companyId)
+                .map(com.phcpro.modules.company.model.Company::isStockCountLocked)
+                .orElse(false);
+    }
+
+    /** Tranca/destranca o stock (só ADMIN). Trancado ⇒ não-admins não vêem quantidades. */
+    @Transactional
+    public void setStockCountLocked(Long companyId, boolean locked) {
+        CurrentUserContext.requireCompany(companyId);
+        PermissionGuard.requireAdmin(locked ? "trancar o stock" : "destrancar o stock");
+        com.phcpro.modules.company.model.Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        company.setStockCountLocked(locked);
+        companyRepository.save(company);
+        auditLogService.logCurrent("STOCK_LOCK",
+                locked ? "Stock trancado (quantidades visíveis só para administradores)."
+                        : "Stock destrancado (quantidades visíveis para todos).");
+    }
+
+    private Warehouse loadWarehouseForActiveCompany(Long id) {
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        CurrentUserContext.requireCompany(warehouse.getCompany() != null ? warehouse.getCompany().getId() : null);
+        return warehouse;
     }
 
     @Transactional(readOnly = true)
@@ -89,11 +215,24 @@ public class InventoryService {
 
     @Transactional
     public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location, Company company) {
+        return createWarehouse(name, warehouseNumber, capacity, location,
+                com.phcpro.modules.inventory.model.WarehouseType.STORE, true, null, null, company);
+    }
+
+    @Transactional
+    public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location,
+                                     com.phcpro.modules.inventory.model.WarehouseType type, boolean allowsSales,
+                                     String manager, String phone, Company company) {
         Warehouse warehouse = new Warehouse();
         warehouse.setName(name);
         warehouse.setWarehouseNumber(warehouseNumber);
         warehouse.setCapacity(capacity);
         warehouse.setLocation(location);
+        warehouse.setType(type == null ? com.phcpro.modules.inventory.model.WarehouseType.STORE : type);
+        warehouse.setAllowsSales(allowsSales);
+        warehouse.setActive(true);
+        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
+        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
         warehouse.setCompany(company);
         warehouse.setCreatedBy("SYSTEM");
         return warehouseRepository.save(warehouse);
@@ -318,6 +457,17 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public java.util.Optional<com.phcpro.modules.inventory.dto.ProductBatchDTO> findNextFEFO(Long productId, Long warehouseId) {
         return productBatchService.findNextFEFO(productId, warehouseId);
+    }
+
+    /**
+     * Alerta de validade: lotes com stock (qty &gt; 0) cuja validade já passou ou ocorre dentro
+     * de {@code daysAhead} dias. Inclui já-vencidos (validade no passado). Lotes sem validade
+     * (LEGACY 9999) ficam de fora. Base do cartão de validades no dashboard e do resumo na loja.
+     */
+    @Transactional(readOnly = true)
+    public List<com.phcpro.modules.inventory.dto.ProductBatchDTO> findExpiringBatches(Long companyId, int daysAhead) {
+        CurrentUserContext.requireCompany(companyId);
+        return productBatchService.findExpiringByCompany(companyId, LocalDate.now().plusDays(daysAhead));
     }
 
     public WarehouseDTO toDTO(Warehouse w) {

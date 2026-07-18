@@ -9,6 +9,7 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceLine;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +26,14 @@ public class InvoicePrintService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final InvoiceRepository invoiceRepository;
+    private final LineRowMapper lineRowMapper;
+    private final DocumentConfigService documentConfigService;
 
-    public InvoicePrintService(InvoiceRepository invoiceRepository) {
+    public InvoicePrintService(InvoiceRepository invoiceRepository, LineRowMapper lineRowMapper,
+                               DocumentConfigService documentConfigService) {
         this.invoiceRepository = invoiceRepository;
+        this.lineRowMapper = lineRowMapper;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +49,8 @@ public class InvoicePrintService {
                     invoice.getInvoiceNumber()
             ));
             doc.add(buildClientBlock(invoice));
-            doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines())));
+            doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines()),
+                    documentConfigService.getColumns(invoice.getCompany().getId(), com.phcpro.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
                     invoice.getTotalBeforeTax(),
                     invoice.getTaxAmount(),
@@ -93,9 +100,9 @@ public class InvoicePrintService {
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<InvoiceLine> lines) {
-        return lines.stream().map(l -> new LineItemsTableRenderer.Row(
-                l.getProduct().getSku(),
-                l.getProduct().getName(),
+        return lines.stream().map(l -> lineRowMapper.map(
+                l.getProduct(),
+                l.getBatchNumber(),
                 l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),

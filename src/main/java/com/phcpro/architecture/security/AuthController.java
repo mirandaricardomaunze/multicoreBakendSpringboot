@@ -1,5 +1,7 @@
 package com.phcpro.architecture.security;
 
+import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.modules.subscription.service.SubscriptionService;
 import com.phcpro.modules.users.model.AppUser;
 import com.phcpro.modules.users.service.AppUserService;
 import jakarta.validation.Valid;
@@ -19,22 +21,50 @@ public class AuthController {
 
     private final AppUserService appUserService;
     private final AuthSessionService authSessionService;
+    private final SubscriptionService subscriptionService;
+    private final LoginRateLimiter loginRateLimiter;
 
-    public AuthController(AppUserService appUserService, AuthSessionService authSessionService) {
+    public AuthController(AppUserService appUserService, AuthSessionService authSessionService,
+                          SubscriptionService subscriptionService, LoginRateLimiter loginRateLimiter) {
         this.appUserService = appUserService;
         this.authSessionService = authSessionService;
+        this.subscriptionService = subscriptionService;
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        AppUser user = appUserService.authenticate(request.username(), request.password());
+        loginRateLimiter.checkAllowed(request.username());
+        AppUser user;
+        try {
+            user = appUserService.authenticate(request.username(), request.password());
+        } catch (RuntimeException ex) {
+            loginRateLimiter.recordFailure(request.username()); // conta falhas (senha errada, inativo, inexistente)
+            throw ex;
+        }
+        loginRateLimiter.recordSuccess(request.username());
         AuthSessionService.AuthSession session = authSessionService.create(user);
+
+        // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que
+        // permita login (não expirada/suspensa). Empresa sem assinatura continua acessível.
         List<CompanyAccess> companies = user.getCompanyAccesses().stream()
+                .filter(access -> access.getCompany().isActive())
+                .filter(access -> subscriptionService.allowsLogin(access.getCompany().getId()))
                 .map(access -> new CompanyAccess(
                         access.getCompany().getId(), access.getCompany().getName(), access.getRole()))
                 .toList();
+
+        // Utilizador de tenant sem nenhuma empresa acessível não entra; o superadmin pode ter zero.
+        if (!user.isPlatformAdmin() && companies.isEmpty()) {
+            authSessionService.revoke(session.token());
+            throw new BusinessRuleException(
+                    "Sem empresa activa. A sua empresa pode estar suspensa ou com a assinatura expirada"
+                            + " — contacte o suporte.");
+        }
+
         return new LoginResponse(
-                session.token(), session.expiresAt(), user.getUsername(), user.getName(), user.getRole(), companies
+                session.token(), session.expiresAt(), user.getUsername(), user.getName(), user.getRole(),
+                user.isPlatformAdmin(), companies
         );
     }
 
@@ -57,6 +87,7 @@ public class AuthController {
             String username,
             String displayName,
             String role,
+            boolean superAdmin,
             List<CompanyAccess> companies
     ) {}
 

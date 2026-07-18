@@ -19,6 +19,9 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- Override do Lombok gerido pelo Spring Boot: versões mais novas suportam JDKs
+             recentes (corrige o "TypeTag :: UNKNOWN" do language server do IDE). -->
+        <lombok.version>1.18.34</lombok.version>
     </properties>
 
     <dependencies>
@@ -64,6 +67,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Actuator: health check profissional (usado pelo healthcheck do container). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
         <!-- Springdoc OpenAPI 3 / Swagger UI -->

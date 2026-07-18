@@ -3,10 +3,18 @@ package com.phcpro.modules.hr.service;
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.approvals.service.ApprovalService;
+import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
+import com.phcpro.modules.financeira.service.FinanceService;
+import com.phcpro.modules.hr.dto.CreatePayslipRequest;
+import com.phcpro.modules.hr.dto.CreateVacationRequest;
+import com.phcpro.modules.hr.dto.PayrollCalculationDTO;
 import com.phcpro.modules.hr.dto.UpsertEmployeeRequest;
+import com.phcpro.modules.numbering.service.DocumentNumberService;
+import com.phcpro.modules.hr.model.Absence;
 import com.phcpro.modules.hr.model.Employee;
+import com.phcpro.modules.hr.model.Payslip;
 import com.phcpro.modules.hr.repository.AbsenceRepository;
 import com.phcpro.modules.hr.repository.EmployeeRepository;
 import com.phcpro.modules.hr.repository.ExpenseClaimRepository;
@@ -24,6 +32,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,21 +41,36 @@ class HRServiceTest {
 
     private EmployeeRepository employeeRepository;
     private CompanyRepository companyRepository;
+    private AuditLogService auditLogService;
+    private VacationRepository vacationRepository;
+    private PayslipRepository payslipRepository;
+    private AbsenceRepository absenceRepository;
+    private PayrollTaxService payrollTaxService;
+    private DocumentNumberService documentNumberService;
     private HRService service;
 
     @BeforeEach
     void setUp() {
         employeeRepository = mock(EmployeeRepository.class);
         companyRepository = mock(CompanyRepository.class);
+        auditLogService = mock(AuditLogService.class);
+        vacationRepository = mock(VacationRepository.class);
+        payslipRepository = mock(PayslipRepository.class);
+        absenceRepository = mock(AbsenceRepository.class);
+        payrollTaxService = mock(PayrollTaxService.class);
+        documentNumberService = mock(DocumentNumberService.class);
         service = new HRService(
                 employeeRepository,
                 mock(ExpenseClaimRepository.class),
-                mock(PayslipRepository.class),
-                mock(AbsenceRepository.class),
-                mock(VacationRepository.class),
+                payslipRepository,
+                absenceRepository,
+                vacationRepository,
                 companyRepository,
-                mock(PayrollTaxService.class),
-                mock(ApprovalService.class)
+                payrollTaxService,
+                mock(ApprovalService.class),
+                documentNumberService,
+                auditLogService,
+                mock(FinanceService.class)
         );
         CurrentUserContext.setCurrentCompanyId(7L);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
@@ -84,6 +108,7 @@ class HRServiceTest {
 
         assertEquals("EMP-10", result.employeeNumber());
         assertEquals("ACTIVE", result.status());
+        verify(auditLogService).logCurrent(eq("EMPLOYEE_CREATE"), any());
     }
 
     @Test
@@ -100,6 +125,54 @@ class HRServiceTest {
 
         assertThrows(BusinessRuleException.class,
                 () -> service.updateEmployee(99L, request("EMP-99", "outro@empresa.test")));
+    }
+
+    @Test
+    void submitVacation_aboveAnnualBalance_isBlocked() {
+        Employee active = employee(5L, "EMP-5", "Ferias");
+        when(employeeRepository.findByIdAndCompanyId(5L, 7L)).thenReturn(Optional.of(active));
+        // Direito anual 22; já reservados 20 → restam 2; pedir 6 dias (01→06) excede o saldo.
+        when(vacationRepository.sumReservedDays(5L, 2026)).thenReturn(20);
+
+        var ex = assertThrows(BusinessRuleException.class, () -> service.submitVacation(
+                new CreateVacationRequest(5L, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 6), 2026, null)));
+        assertEquals(true, ex.getMessage().contains("Saldo de férias insuficiente"));
+    }
+
+    @Test
+    void decideVacation_employeeRole_isBlocked() {
+        CurrentUserContext.setCurrentUser("operador", "EMPLOYEE");
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.decideVacation(1L, true, null));
+    }
+
+    @Test
+    void createPayslip_withUnjustifiedAbsence_deductsFromNet() {
+        Employee emp = employee(8L, "EMP-8", "Faltoso");
+        emp.setBaseSalary(new BigDecimal("30000")); // valor/dia = 30000/30 = 1000
+        when(employeeRepository.findByIdAndCompanyId(8L, 7L)).thenReturn(Optional.of(emp));
+        when(payslipRepository.findByEmployeeIdAndYearAndMonth(8L, 2026, 6)).thenReturn(Optional.empty());
+        when(documentNumberService.next(any())).thenReturn("REC-2026/1");
+        // 3 dias de falta injustificada dentro de Junho → desconto de 3 × 1000 = 3000
+        Absence ab = new Absence();
+        ab.setStartDate(LocalDate.of(2026, 6, 10));
+        ab.setEndDate(LocalDate.of(2026, 6, 12));
+        when(absenceRepository.findUnjustifiedOverlapping(eq(8L), any(), any())).thenReturn(List.of(ab));
+        // Impostos a zero para isolar o desconto por faltas.
+        when(payrollTaxService.calculate(any(), any(), any(), eq(2026), eq(6)))
+                .thenReturn(new PayrollCalculationDTO(
+                        new BigDecimal("30000"), new BigDecimal("30000"),
+                        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("30000"),
+                        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, "cfg", "lei"));
+        when(payslipRepository.save(any(Payslip.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var dto = service.createPayslip(new CreatePayslipRequest(
+                8L, 2026, 6, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null));
+
+        assertEquals(0, new BigDecimal("3000.00").compareTo(dto.absenceDeduction()));
+        assertEquals(0, new BigDecimal("27000.00").compareTo(dto.netPay())); // 30000 − 3000
     }
 
     private static UpsertEmployeeRequest request(String number, String email) {

@@ -7,6 +7,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.phcpro.modules.comercial.model.CreditNote;
 import com.phcpro.modules.comercial.model.CreditNoteLine;
 import com.phcpro.modules.comercial.service.CreditNoteService;
+import com.phcpro.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +22,14 @@ public class CreditNotePrintService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final CreditNoteService service;
+    private final LineRowMapper lineRowMapper;
+    private final DocumentConfigService documentConfigService;
 
-    public CreditNotePrintService(CreditNoteService service) {
+    public CreditNotePrintService(CreditNoteService service, LineRowMapper lineRowMapper,
+                                  DocumentConfigService documentConfigService) {
         this.service = service;
+        this.lineRowMapper = lineRowMapper;
+        this.documentConfigService = documentConfigService;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +43,7 @@ public class CreditNotePrintService {
                     note.getNoteNumber()
             ));
             doc.add(buildContextBlock(note));
-            doc.add(buildLinesTable(note.getLines()));
+            doc.add(buildLinesTable(note.getLines(), note.getCompany().getId()));
             doc.add(PdfDocumentBuilder.spacer(6f));
             doc.add(TotalsBlockRenderer.build(
                     note.getTotalBeforeTax(),
@@ -93,16 +99,16 @@ public class CreditNotePrintService {
         return table;
     }
 
-    private PdfPTable buildLinesTable(List<CreditNoteLine> lines) {
-        return LineItemsTableRenderer.build(lines.stream().map(l -> new LineItemsTableRenderer.Row(
-                l.getProduct().getSku(),
-                l.getProduct().getName() + (l.getBatchNumber() != null ? "  (Lote: " + l.getBatchNumber() + ")" : ""),
+    private PdfPTable buildLinesTable(List<CreditNoteLine> lines, Long companyId) {
+        return LineItemsTableRenderer.build(lines.stream().map(l -> lineRowMapper.map(
+                l.getProduct(),
+                l.getBatchNumber(),
                 l.getQuantity() == null ? BigDecimal.ZERO : l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),
                 BigDecimal.ZERO,
                 l.getLineTotal()
-        )).toList());
+        )).toList(), documentConfigService.getColumns(companyId, com.phcpro.modules.documents.model.DocumentType.COMMERCIAL));
     }
 
     private PdfPTable buildSignatureBlock() {

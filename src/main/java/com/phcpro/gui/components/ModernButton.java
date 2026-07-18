@@ -11,7 +11,7 @@ public class ModernButton extends JButton {
     private Color hoverColor = new Color(37, 99, 235);   // Tailwind Blue-600 (#2563EB)
     private Color clickColor = new Color(29, 78, 216);   // Tailwind Blue-700 (#1D4ED8)
     private Color textColor = Color.WHITE;
-    private int cornerRadius = 20;
+    private int cornerRadius = UIHelper.RADIUS_MD;
 
     private boolean isGradient = false;
     private Color gradientStart = new Color(139, 92, 246); // Violet-500
@@ -23,7 +23,7 @@ public class ModernButton extends JButton {
         setFocusPainted(false);
         setBorderPainted(false);
         setForeground(textColor);
-        setFont(new Font("Segoe UI", Font.BOLD, 13));
+        setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         addMouseListener(new MouseAdapter() {
@@ -62,6 +62,16 @@ public class ModernButton extends JButton {
         setBackground(normalColor);
     }
 
+    /** Redefine as cores do botão em runtime (ex.: alternar estado activo/inactivo num segmented control). */
+    public void setColors(Color base, Color hover) {
+        this.normalColor = base;
+        this.hoverColor = hover;
+        this.clickColor = base.darker();
+        this.isGradient = false;
+        setBackground(base);
+        repaint();
+    }
+
     public void setGradient(Color start, Color end) {
         this.isGradient = true;
         this.gradientStart = start;
@@ -72,6 +82,21 @@ public class ModernButton extends JButton {
     public void setCornerRadius(int radius) {
         this.cornerRadius = radius;
         repaint();
+    }
+
+    /**
+     * Garante que os botões têm pelo menos a altura dos campos de formulário
+     * ({@link UIHelper#FORM_CONTROL_HEIGHT}), para botões e inputs alinharem na mesma linha.
+     * A largura mantém-se natural (inclui o ícone); tamanhos definidos via {@code setPreferredSize}
+     * são respeitados tal como estão.
+     */
+    @Override
+    public Dimension getPreferredSize() {
+        Dimension d = super.getPreferredSize();
+        if (isPreferredSizeSet() || d == null) {
+            return d;
+        }
+        return new Dimension(d.width, Math.max(d.height, UIHelper.FORM_CONTROL_HEIGHT));
     }
 
     @Override

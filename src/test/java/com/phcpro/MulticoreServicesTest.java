@@ -63,6 +63,9 @@ public class MulticoreServicesTest {
     private BackupService backupService;
 
     @Autowired
+    private com.phcpro.modules.approvals.service.ApprovalService approvalService;
+
+    @Autowired
     private CompanyRepository companyRepository;
 
     @Autowired
@@ -171,7 +174,11 @@ public class MulticoreServicesTest {
                 .findFirst()
                 .orElseThrow();
 
-        // 1. Discount = 5% (<= 10%), status should be PENDING_APPROVAL (standard approval flow)
+        // Garante stock disponível — a faturação directa baixa stock no acto.
+        inventoryService.registerMovement(product, warehouse, new BigDecimal("10"),
+                "ENTRY", "LOTE-DISC", "SERIE-DISC", "Stock para teste de desconto");
+
+        // 1. Discount = 5% (<= 10%): faturação directa → APPROVED (sem Engine de Aprovações).
         CreateInvoiceLineRequest lineNormal = new CreateInvoiceLineRequest(
                 product.getId(),
                 1,
@@ -188,7 +195,7 @@ public class MulticoreServicesTest {
         );
 
         InvoiceDTO invNormal = comercialService.createInvoice(reqNormal);
-        assertEquals(InvoiceStatus.PENDING_APPROVAL, invNormal.status());
+        assertEquals(InvoiceStatus.APPROVED, invNormal.status());
 
         // 2. Discount = 15% (> 10%), status should be PENDING_DISCOUNT_APPROVAL
         CreateInvoiceLineRequest lineHigh = new CreateInvoiceLineRequest(
@@ -291,7 +298,8 @@ public class MulticoreServicesTest {
 
         var order = comercialService.createOrder(request);
         assertNotNull(order);
-        assertEquals("PENDING", order.status());
+        // Encomenda entra na Engine de Aprovações (total > 500 → requer ADMIN).
+        assertEquals("PENDING_APPROVAL", order.status());
         assertTrue(order.orderNumber().startsWith("EC-2026/"));
 
         // 3. Stock should NOT be deducted upon order creation
@@ -299,7 +307,15 @@ public class MulticoreServicesTest {
                 .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
         assertEquals(stockBefore, stockAfterOrder);
 
-        // 4. Bill the order (FT)
+        // 4. Aprovar a encomenda (contexto de teste corre como ADMIN) → fica faturável (PENDING).
+        Long orderId = order.id();
+        var pendingReq = approvalService.getPendingRequests().stream()
+                .filter(r -> "ORDER".equals(r.documentType()) && orderId.equals(r.documentId()))
+                .findFirst()
+                .orElseThrow();
+        approvalService.approveRequest(pendingReq.id(), "Aprovado para teste");
+
+        // 5. Bill the order (FT)
         var invoice = comercialService.billOrder(order.id());
         assertNotNull(invoice);
         assertEquals(InvoiceStatus.APPROVED, invoice.status());

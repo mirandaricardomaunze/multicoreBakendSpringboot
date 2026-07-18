@@ -29,6 +29,11 @@ public class Invoice extends BaseEntity {
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
+    /** Nome do comprador a mostrar no recibo. Para vendas de balcão (walk-in) guarda o nome
+     *  escrito pelo operador; quando nulo, o recibo usa o nome do cliente registado. */
+    @Column(name = "customer_name", length = 120)
+    private String customerName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;

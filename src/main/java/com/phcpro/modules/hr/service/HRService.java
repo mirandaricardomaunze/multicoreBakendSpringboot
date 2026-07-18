@@ -3,8 +3,12 @@ package com.phcpro.modules.hr.service;
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.approvals.service.ApprovalService;
+import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
+import com.phcpro.modules.financeira.service.FinanceService;
+import com.phcpro.modules.numbering.service.DocumentNumberService;
+import com.phcpro.modules.numbering.service.DocumentSeries;
 import com.phcpro.modules.hr.dto.AbsenceDTO;
 import com.phcpro.modules.hr.dto.CreateAbsenceRequest;
 import com.phcpro.modules.hr.dto.CreateExpenseClaimRequest;
@@ -31,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -40,6 +45,9 @@ import java.util.stream.Collectors;
 @Service
 public class HRService {
 
+    /** Direito anual de férias por defeito (dias). Base: Lei do Trabalho MZ; configurável no futuro. */
+    private static final int DEFAULT_ANNUAL_VACATION_DAYS = 22;
+
     private final EmployeeRepository employeeRepository;
     private final ExpenseClaimRepository expenseClaimRepository;
     private final PayslipRepository payslipRepository;
@@ -48,6 +56,9 @@ public class HRService {
     private final CompanyRepository companyRepository;
     private final PayrollTaxService payrollTaxService;
     private final ApprovalService approvalService;
+    private final DocumentNumberService documentNumberService;
+    private final AuditLogService auditLogService;
+    private final FinanceService financeService;
 
     public HRService(
             EmployeeRepository employeeRepository,
@@ -57,7 +68,10 @@ public class HRService {
             VacationRepository vacationRepository,
             CompanyRepository companyRepository,
             PayrollTaxService payrollTaxService,
-            @Lazy ApprovalService approvalService // Lazy injection to break potential cycles
+            @Lazy ApprovalService approvalService, // Lazy injection to break potential cycles
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            @Lazy FinanceService financeService
     ) {
         this.employeeRepository = employeeRepository;
         this.expenseClaimRepository = expenseClaimRepository;
@@ -67,6 +81,9 @@ public class HRService {
         this.companyRepository = companyRepository;
         this.payrollTaxService = payrollTaxService;
         this.approvalService = approvalService;
+        this.documentNumberService = documentNumberService;
+        this.auditLogService = auditLogService;
+        this.financeService = financeService;
     }
 
     @Transactional
@@ -116,7 +133,10 @@ public class HRService {
         employee.setCompany(currentCompany());
         employee.setStatus("ACTIVE");
         applyEmployee(employee, request);
-        return employeeToDTO(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        auditLogService.logCurrent("EMPLOYEE_CREATE", String.format(
+                "Colaborador %s (nº %s) criado", saved.getName(), saved.getEmployeeNumber()));
+        return employeeToDTO(saved);
     }
 
     @Transactional
@@ -126,7 +146,10 @@ public class HRService {
         Employee employee = findEmployee(id);
         validateEmployeeUniqueness(companyId, id, request);
         applyEmployee(employee, request);
-        return employeeToDTO(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        auditLogService.logCurrent("EMPLOYEE_UPDATE", String.format(
+                "Colaborador %s (nº %s) actualizado", saved.getName(), saved.getEmployeeNumber()));
+        return employeeToDTO(saved);
     }
 
     @Transactional
@@ -138,7 +161,11 @@ public class HRService {
             throw new BusinessRuleException("Estado laboral inválido.");
         }
         employee.setStatus(normalized);
-        return employeeToDTO(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        auditLogService.logCurrent("EMPLOYEE_STATUS", String.format(
+                "Estado laboral de %s (nº %s) alterado para %s",
+                saved.getName(), saved.getEmployeeNumber(), normalized));
+        return employeeToDTO(saved);
     }
 
     private ExpenseClaimDTO toDTO(ExpenseClaim claim) {
@@ -185,18 +212,23 @@ public class HRService {
         p.setTaxConfigName(tax.configName());
         p.setTaxLegalBasis(tax.legalBasis());
         p.setOtherDeductions(orZero(request.otherDeductions()));
+        p.setAbsenceDeduction(calculateAbsenceDeduction(employee, request.year(), request.month()));
         p.setNetPay(calculateNet(p));
         p.setStatus("DRAFT");
         p.setNotes(request.notes());
-        p.setPayslipNumber(generatePayslipNumber(request.year(), request.month()));
+        p.setPayslipNumber(documentNumberService.next(DocumentSeries.PAYSLIP));
 
-        return payslipToDTO(payslipRepository.save(p));
+        Payslip saved = payslipRepository.save(p);
+        auditLogService.logCurrent("PAYSLIP_ISSUE", String.format(
+                "Recibo %s emitido para %s (%d/%d), líquido %s",
+                saved.getPayslipNumber(), employee.getName(), request.month(), request.year(), saved.getNetPay()));
+        return payslipToDTO(saved);
     }
 
     @Transactional
     public List<PayslipDTO> processMonthlyPayroll(int year, int month) {
         ensureHrManager();
-        return employeeRepository.findByCompanyIdOrderByName(currentCompanyId()).stream()
+        List<PayslipDTO> generated = employeeRepository.findByCompanyIdOrderByName(currentCompanyId()).stream()
                 .filter(e -> "ACTIVE".equals(e.getStatus()))
                 .filter(e -> payslipRepository.findByEmployeeIdAndYearAndMonth(e.getId(), year, month).isEmpty())
                 .map(e -> createPayslip(new CreatePayslipRequest(
@@ -205,6 +237,9 @@ public class HRService {
                         "Processamento mensal automático"
                 )))
                 .toList();
+        auditLogService.logCurrent("PAYROLL_PROCESS", String.format(
+                "Folha mensal %d/%d processada: %d recibo(s) gerado(s)", month, year, generated.size()));
+        return generated;
     }
 
     @Transactional
@@ -217,7 +252,15 @@ public class HRService {
         }
         p.setStatus("PAID");
         p.setPaymentDate(LocalDate.now());
-        return payslipToDTO(payslipRepository.save(p));
+        Payslip saved = payslipRepository.save(p);
+
+        // Saída de tesouraria pelo líquido pago (espelho do reembolso de despesa).
+        financeService.registerAutoPayout(saved.getNetPay(), String.format(
+                "Pagamento Salário %s - %s", saved.getPayslipNumber(), saved.getEmployee().getName()));
+        auditLogService.logCurrent("PAYSLIP_PAID", String.format(
+                "Recibo %s pago a %s, líquido %s",
+                saved.getPayslipNumber(), saved.getEmployee().getName(), saved.getNetPay()));
+        return payslipToDTO(saved);
     }
 
     @Transactional
@@ -229,7 +272,10 @@ public class HRService {
             throw new BusinessRuleException("Não é possível cancelar um recibo já pago.");
         }
         p.setStatus("CANCELLED");
-        return payslipToDTO(payslipRepository.save(p));
+        Payslip saved = payslipRepository.save(p);
+        auditLogService.logCurrent("PAYSLIP_CANCEL", String.format(
+                "Recibo %s cancelado (%s)", saved.getPayslipNumber(), saved.getEmployee().getName()));
+        return payslipToDTO(saved);
     }
 
     @Transactional(readOnly = true)
@@ -246,12 +292,35 @@ public class HRService {
 
     private BigDecimal calculateNet(Payslip p) {
         BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime());
-        BigDecimal deductions = p.getIrpsDeduction().add(p.getInssDeduction()).add(p.getOtherDeductions());
+        BigDecimal deductions = p.getIrpsDeduction().add(p.getInssDeduction())
+                .add(p.getOtherDeductions()).add(p.getAbsenceDeduction());
         return gross.subtract(deductions);
     }
 
-    private String generatePayslipNumber(int year, int month) {
-        return String.format("RS-%04d%02d-%d", year, month, System.currentTimeMillis() % 100000);
+    /**
+     * Desconto por faltas injustificadas (não remuneradas) que se sobrepõem ao mês do recibo.
+     * Valor/dia = salário base / 30 (divisor mensal padrão MZ); só conta os dias dentro do mês.
+     */
+    private BigDecimal calculateAbsenceDeduction(Employee employee, int year, int month) {
+        BigDecimal baseSalary = employee.getBaseSalary();
+        if (baseSalary == null || baseSalary.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        LocalDate periodStart = LocalDate.of(year, month, 1);
+        LocalDate periodEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
+        int unpaidDays = absenceRepository
+                .findUnjustifiedOverlapping(employee.getId(), periodStart, periodEnd).stream()
+                .mapToInt(a -> {
+                    LocalDate from = a.getStartDate().isBefore(periodStart) ? periodStart : a.getStartDate();
+                    LocalDate to = a.getEndDate().isAfter(periodEnd) ? periodEnd : a.getEndDate();
+                    return (int) (ChronoUnit.DAYS.between(from, to) + 1);
+                })
+                .sum();
+        if (unpaidDays <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal dailyRate = baseSalary.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
+        return dailyRate.multiply(BigDecimal.valueOf(unpaidDays)).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal orZero(BigDecimal v) {
@@ -260,7 +329,8 @@ public class HRService {
 
     private PayslipDTO payslipToDTO(Payslip p) {
         BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime());
-        BigDecimal totalDeductions = p.getIrpsDeduction().add(p.getInssDeduction()).add(p.getOtherDeductions());
+        BigDecimal totalDeductions = p.getIrpsDeduction().add(p.getInssDeduction())
+                .add(p.getOtherDeductions()).add(p.getAbsenceDeduction());
         return new PayslipDTO(
                 p.getId(),
                 p.getPayslipNumber(),
@@ -277,6 +347,7 @@ public class HRService {
                 p.getEmployerInss(),
                 p.getTaxableIncome(),
                 p.getOtherDeductions(),
+                p.getAbsenceDeduction(),
                 gross,
                 totalDeductions,
                 p.getNetPay(),
@@ -344,11 +415,22 @@ public class HRService {
             throw new BusinessRuleException("A data de fim não pode ser anterior à data de início.");
         }
 
+        int requestedDays = (int) (ChronoUnit.DAYS.between(request.startDate(), request.endDate()) + 1);
+        int reserved = vacationRepository.sumReservedDays(employee.getId(), request.yearReference());
+        int remaining = DEFAULT_ANNUAL_VACATION_DAYS - reserved;
+        if (requestedDays > remaining) {
+            throw new BusinessRuleException(String.format(
+                    "Saldo de férias insuficiente para %d: pedido de %d dia(s), disponível %d "
+                            + "(direito anual %d, já reservados %d).",
+                    request.yearReference(), requestedDays, Math.max(remaining, 0),
+                    DEFAULT_ANNUAL_VACATION_DAYS, reserved));
+        }
+
         Vacation v = new Vacation();
         v.setEmployee(employee);
         v.setStartDate(request.startDate());
         v.setEndDate(request.endDate());
-        v.setTotalDays((int) (ChronoUnit.DAYS.between(request.startDate(), request.endDate()) + 1));
+        v.setTotalDays(requestedDays);
         v.setYearReference(request.yearReference());
         v.setStatus("PENDING");
         v.setNotes(request.notes());
@@ -356,19 +438,30 @@ public class HRService {
     }
 
     @Transactional
-    public VacationDTO decideVacation(Long id, boolean approve, String decidedBy, String rejectionReason) {
+    public VacationDTO decideVacation(Long id, boolean approve, String rejectionReason) {
+        ensureHrManager();
         Vacation v = vacationRepository.findByIdAndEmployeeCompanyId(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Pedido de férias não encontrado."));
         if (!"PENDING".equals(v.getStatus())) {
             throw new BusinessRuleException("Apenas pedidos pendentes podem ser decididos.");
         }
+        if (!approve && (rejectionReason == null || rejectionReason.isBlank())) {
+            throw new BusinessRuleException("Indique o motivo da rejeição das férias.");
+        }
+        // O decisor vem sempre do contexto autenticado, nunca de input do cliente.
+        String decidedBy = CurrentUserContext.getUsername();
         v.setStatus(approve ? "APPROVED" : "REJECTED");
         v.setDecisionBy(decidedBy);
         v.setDecisionAt(LocalDateTime.now());
         if (!approve) {
             v.setRejectionReason(rejectionReason);
         }
-        return vacationToDTO(vacationRepository.save(v));
+        Vacation saved = vacationRepository.save(v);
+        auditLogService.logCurrent("VACATION_DECISION", String.format(
+                "Férias de %s %s por %s%s",
+                saved.getEmployee().getName(), approve ? "aprovadas" : "rejeitadas", decidedBy,
+                approve ? "" : " (motivo: " + rejectionReason + ")"));
+        return vacationToDTO(saved);
     }
 
     @Transactional(readOnly = true)

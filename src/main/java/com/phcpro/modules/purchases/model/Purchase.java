@@ -46,8 +46,19 @@ public class Purchase extends BaseEntity {
     @Column(name = "tax_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal taxAmount;
 
+    @Column(name = "amount_paid", nullable = false, precision = 12, scale = 2)
+    private BigDecimal amountPaid = BigDecimal.ZERO;
+
     @Column(name = "status", nullable = false)
     private String status = "COMPLETED"; // COMPLETED, CANCELLED
+
+    @Transient
+    public BigDecimal getOutstanding() {
+        BigDecimal total = totalAmount == null ? BigDecimal.ZERO : totalAmount;
+        BigDecimal paid = amountPaid == null ? BigDecimal.ZERO : amountPaid;
+        BigDecimal out = total.subtract(paid);
+        return out.signum() > 0 ? out : BigDecimal.ZERO;
+    }
 
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseLine> lines = new ArrayList<>();

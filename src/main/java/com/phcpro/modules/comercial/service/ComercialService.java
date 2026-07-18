@@ -50,6 +50,7 @@ public class ComercialService {
     private final WalkInClientProvider walkInClientProvider;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -67,7 +68,8 @@ public class ComercialService {
             OrderLineRepository orderLineRepository,
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository
     ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -85,6 +87,7 @@ public class ComercialService {
         this.walkInClientProvider = walkInClientProvider;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.taxRateRepository = taxRateRepository;
     }
 
 
@@ -146,6 +149,9 @@ public class ComercialService {
     @Transactional
     public InvoiceDTO createInvoice(CreateInvoiceRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
+        // Emitir fatura é operação directa de quem tem perfil autorizado (atribuído pelo admin) —
+        // não passa pela Engine de Aprovações. Só o desconto sensível (>10%) é que exige aprovação.
+        PermissionGuard.requireManagerOrAdmin("emitir fatura");
         Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         Company company = companyRepository.findById(request.companyId())
@@ -160,7 +166,7 @@ public class ComercialService {
         invoice.setClient(client);
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
-        invoice.setStatus(InvoiceStatus.PENDING_APPROVAL);
+        // Estado definido no fim: APPROVED (directa) ou PENDING_DISCOUNT_APPROVAL (desconto >10%).
 
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
@@ -170,10 +176,13 @@ public class ComercialService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
+            // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso.
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(product.getUnitPrice());
+            line.setUnitPrice(unitPrice);
             line.setTaxRate(lineReq.taxRate());
 
             BigDecimal discountPct = lineReq.discountPercentage();
@@ -189,7 +198,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    product.getUnitPrice(), lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
 
             line.setLineTotal(amounts.total());
             invoice.addLine(line);
@@ -202,23 +211,47 @@ public class ComercialService {
         invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
 
-        if (hasHighDiscount) {
-            invoice.setStatus(InvoiceStatus.PENDING_DISCOUNT_APPROVAL);
-        }
-
         // Número fiscal sequencial e sem saltos (série FT).
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
-        invoice.setCreatedBy("SYSTEM");
+        invoice.setCreatedBy(CurrentUserContext.getUsername());
 
-        invoice = invoiceRepository.save(invoice);
-
-        // Submit to Approvals Engine
-        String approvalDesc = String.format("Fatura %s para %s - Total: %s MT%s", 
-                invoice.getInvoiceNumber(), client.getName(), invoice.getTotalAmount(),
-                hasHighDiscount ? " (Aprovação de Desconto Especial >10%)" : "");
-        approvalService.submitRequest("INVOICE", invoice.getId(), invoice.getTotalAmount(), approvalDesc);
+        if (hasHighDiscount) {
+            // Desconto sensível (>10%) continua a exigir aprovação do gerente. O stock só baixa
+            // na aprovação (InvoiceApprovalCallback.onApproved).
+            invoice.setStatus(InvoiceStatus.PENDING_DISCOUNT_APPROVAL);
+            invoice = invoiceRepository.save(invoice);
+            String approvalDesc = String.format(
+                    "Fatura %s para %s - Total: %s MT (Aprovação de Desconto Especial >10%%)",
+                    invoice.getInvoiceNumber(), client.getName(), invoice.getTotalAmount());
+            approvalService.submitRequest("INVOICE", invoice.getId(), invoice.getTotalAmount(), approvalDesc);
+        } else {
+            // Faturação directa: emite já APROVADA e baixa o stock no acto (como POS/encomenda).
+            invoice.setStatus(InvoiceStatus.APPROVED);
+            invoice = invoiceRepository.save(invoice);
+            deductStockForInvoice(invoice);
+            auditLogService.logCurrent("INVOICE_ISSUE",
+                    "Fatura " + invoice.getInvoiceNumber() + " emitida e aprovada para "
+                            + client.getName() + ". Total: " + invoice.getTotalAmount() + " MT.");
+        }
 
         return toDTO(invoice);
+    }
+
+    /** Baixa de stock (saída SALE) por cada linha da fatura, no armazém da fatura. */
+    private void deductStockForInvoice(Invoice invoice) {
+        invoice.getLines().forEach(line -> {
+            String desc = String.format("Saída Fatura %s - Cliente %s",
+                    invoice.getInvoiceNumber(), invoice.getClient().getName());
+            inventoryService.registerMovement(
+                    line.getProduct(),
+                    invoice.getWarehouse(),
+                    line.getQuantity().negate(),
+                    "SALE",
+                    line.getBatchNumber(),
+                    line.getSerialNumber(),
+                    desc
+            );
+        });
     }
 
     @Transactional
@@ -363,6 +396,21 @@ public class ComercialService {
     }
 
     /**
+     * Localiza faturas da empresa activa por nº de fatura OU nome de cliente (pesquisa parcial,
+     * sem distinção de maiúsculas). Usado pelos diálogos de Nota de Crédito/Débito para encontrar
+     * o documento de origem ao estilo PHC. {@code query} vazio devolve todas as faturas.
+     */
+    @Transactional(readOnly = true)
+    public List<InvoiceDTO> searchInvoices(String query) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return invoiceRepository.findByCompanyId(companyId).stream()
+                .filter(i -> matches(i.getInvoiceNumber(), query)
+                        || (i.getClient() != null && matches(i.getClient().getName(), query)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Histórico de vendas POS (canal {@code SalesChannel.POS}), ordenadas da mais recente para a
      * mais antiga. Inclui {@code createdBy} = operador da caixa que efectuou a venda.
      */
@@ -415,6 +463,22 @@ public class ComercialService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Catálogo vendável do POS: exclui os produtos esgotados. Um produto aparece se não controla
+     * stock (ex.: serviços) ou se tem stock disponível num armazém de venda. Ver
+     * {@link InventoryService#getInStockProductIdsForSale(Long)}.
+     */
+    @Transactional(readOnly = true)
+    public List<ProductDTO> getSellableProducts() {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        java.util.Set<Long> inStock = inventoryService.getInStockProductIdsForSale(companyId);
+        return productRepository.findDistinctByCompaniesIdOrderByName(companyId)
+                .stream()
+                .map(this::toDTO)
+                .filter(p -> !p.stockTracked() || inStock.contains(p.id()))
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ProductDTO createProduct(String sku, String name, BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, String description) {
         return createProduct(sku, null, null, name, unitPrice, purchasePrice, minStock, 1, description);
@@ -446,6 +510,25 @@ public class ComercialService {
                                      BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
                                      int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
                                      String description) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, saleType, stockTracked, null, description, null, null);
+    }
+
+    @Transactional
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, saleType, stockTracked, taxRateId, description, null, null);
+    }
+
+    @Transactional
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description,
+                                     BigDecimal wholesalePrice, BigDecimal wholesaleMinQty) {
         String cleanReference = normalizeOptional(reference);
         String cleanBarcode = normalizeOptional(barcode);
         ProductSaleType parsedSaleType = parseSaleType(saleType);
@@ -473,6 +556,8 @@ public class ComercialService {
         product.setPurchasePrice(purchasePrice);
         product.setMinStock(minStock);
         product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        product.setWholesalePrice(wholesalePrice);
+        product.setWholesaleMinQty(wholesaleMinQty);
         product.setSaleType(parsedSaleType);
         product.setStockTracked(parsedSaleType != ProductSaleType.SERVICE && stockTracked);
         product.setDescription(description);
@@ -480,9 +565,80 @@ public class ComercialService {
             product.setCategory(productCategoryRepository.findByIdAndCompaniesId(categoryId, companyId)
                     .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
         }
+        if (taxRateId != null) {
+            product.setTaxRate(taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
+        }
         product.setCreatedBy("SYSTEM");
         product.getCompanies().add(companyRepository.getReferenceById(companyId));
         product = productRepository.save(product);
+        return toDTO(product);
+    }
+
+    /**
+     * Actualiza os dados de um produto da empresa activa. O SKU é imutável (identidade do artigo);
+     * referência e código de barras revalidam unicidade excluindo o próprio. Não toca no stock — só
+     * no cadastro. `unitsPerBox` afecta apenas a conversão para caixas no inventário (o stock
+     * continua em unidades).
+     */
+    @Transactional
+    public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description) {
+        return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, categoryId, saleType, stockTracked, taxRateId, description, null, null);
+    }
+
+    @Transactional
+    public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
+                                     BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+                                     int unitsPerBox, Long categoryId, String saleType, boolean stockTracked,
+                                     Long taxRateId, String description,
+                                     BigDecimal wholesalePrice, BigDecimal wholesaleMinQty) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Product product = productRepository.findByIdAndCompaniesId(id, companyId)
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        String cleanReference = normalizeOptional(reference);
+        String cleanBarcode = normalizeOptional(barcode);
+        if (cleanReference != null) {
+            productRepository.findByReferenceAndCompaniesId(cleanReference, companyId)
+                    .filter(p -> !p.getId().equals(id))
+                    .ifPresent(p -> { throw new BusinessRuleException("Ja existe outro produto com a referencia indicada."); });
+        }
+        if (cleanBarcode != null) {
+            productRepository.findByBarcodeAndCompaniesId(cleanBarcode, companyId)
+                    .filter(p -> !p.getId().equals(id))
+                    .ifPresent(p -> { throw new BusinessRuleException("Ja existe outro produto com o codigo de barras indicado."); });
+        }
+        ProductSaleType parsedSaleType = parseSaleType(saleType);
+        product.setReference(cleanReference);
+        product.setBarcode(cleanBarcode);
+        product.setName(name);
+        product.setUnitPrice(unitPrice);
+        product.setPurchasePrice(purchasePrice);
+        product.setMinStock(minStock);
+        product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        product.setWholesalePrice(wholesalePrice);
+        product.setWholesaleMinQty(wholesaleMinQty);
+        product.setSaleType(parsedSaleType);
+        product.setStockTracked(parsedSaleType != ProductSaleType.SERVICE && stockTracked);
+        product.setDescription(normalizeOptional(description));
+        if (categoryId != null) {
+            product.setCategory(productCategoryRepository.findByIdAndCompaniesId(categoryId, companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
+        } else {
+            product.setCategory(null);
+        }
+        if (taxRateId != null) {
+            product.setTaxRate(taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
+        } else {
+            product.setTaxRate(null);
+        }
+        product = productRepository.save(product);
+        auditLogService.logCurrent("PRODUCT_UPDATE",
+                "Produto " + product.getSku() + " (" + product.getName() + ") actualizado.");
         return toDTO(product);
     }
 
@@ -511,7 +667,25 @@ public class ComercialService {
                 .toList();
     }
 
+    /** Taxas de IVA activas da empresa (apenas tipos IVA_*), para escolha no cadastro de produto. */
+    @Transactional(readOnly = true)
+    public List<com.phcpro.modules.fiscal.dto.TaxRateDTO> getActiveVatRates() {
+        return taxRateRepository.findDistinctByCompaniesIdAndActiveTrueOrderByTypeAscRateDesc(
+                        CurrentUserContext.getCurrentCompanyId()).stream()
+                .filter(t -> t.getType() != null && t.getType().name().startsWith("IVA"))
+                .map(t -> new com.phcpro.modules.fiscal.dto.TaxRateDTO(
+                        t.getId(), t.getCode(), t.getName(), t.getType().name(),
+                        t.getRate(), t.getLegalBasis(), t.isActive()))
+                .toList();
+    }
+
     public ProductDTO toDTO(Product p) {
+        // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a padrão.
+        boolean hasRate = p.getTaxRate() != null;
+        BigDecimal effectiveRate = hasRate ? p.getTaxRate().getRate()
+                : com.phcpro.architecture.pricing.TaxRates.STANDARD_VAT;
+        Long taxRateId = hasRate ? p.getTaxRate().getId() : null;
+        String taxRateLabel = hasRate ? p.getTaxRate().getName() : "IVA Normal (16%)";
         return new ProductDTO(
                 p.getId(),
                 p.getSku(),
@@ -521,13 +695,30 @@ public class ComercialService {
                 p.getUnitPrice(),
                 p.getPurchasePrice() != null ? p.getPurchasePrice() : BigDecimal.ZERO,
                 p.getMinStock() != null ? p.getMinStock() : BigDecimal.ZERO,
+                p.getWholesalePrice(),
+                p.getWholesaleMinQty(),
                 p.getUnitsPerBox() <= 0 ? 1 : p.getUnitsPerBox(),
                 p.getSaleType() != null ? p.getSaleType().name() : ProductSaleType.UNIT.name(),
                 p.isStockTracked(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
                 p.getCategory() != null ? p.getCategory().getName() : null,
-                p.getDescription()
+                taxRateId,
+                effectiveRate,
+                taxRateLabel,
+                p.getDescription(),
+                p.getImageData()
         );
+    }
+
+    /** Guarda/actualiza a imagem (thumbnail) de um produto da empresa actual. */
+    @Transactional
+    public void updateProductImage(Long productId, byte[] imageData) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Product product = productRepository.findById(productId)
+                .filter(p -> p.belongsToCompany(companyId))
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        product.setImageData(imageData);
+        productRepository.save(product);
     }
 
     private String normalizeOptional(String value) {
@@ -611,7 +802,8 @@ public class ComercialService {
         order.setClient(client);
         order.setCompany(company);
         order.setWarehouse(warehouse);
-        order.setStatus("PENDING");
+        // Encomenda passa pela Engine de Aprovações antes de ser faturável (ver OrderApprovalCallback).
+        order.setStatus("PENDING_APPROVAL");
         if (request.walkInName() != null && !request.walkInName().isBlank()) {
             order.setWalkInName(request.walkInName().trim());
         }
@@ -623,10 +815,12 @@ public class ComercialService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+
             OrderLine line = new OrderLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(product.getUnitPrice());
+            line.setUnitPrice(unitPrice);
             line.setTaxRate(lineReq.taxRate());
 
             BigDecimal discountPct = lineReq.discountPercentage();
@@ -639,7 +833,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    product.getUnitPrice(), lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
 
             line.setLineTotal(amounts.total());
             order.addLine(line);
@@ -654,9 +848,15 @@ public class ComercialService {
 
         // Número sequencial da encomenda (série EC, independente da série de faturas).
         order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));
-        order.setCreatedBy("SYSTEM");
+        order.setCreatedBy(CurrentUserContext.getUsername());
 
         order = orderRepository.save(order);
+
+        // Submete à Engine de Aprovações. O encaminhamento por valor (auto ≤50 / MANAGER / ADMIN)
+        // e a promoção a PENDING (faturável) acontecem em OrderApprovalCallback.
+        String approvalDesc = String.format("Encomenda %s para %s - Total: %s MT",
+                order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
+        approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), approvalDesc);
 
         return toDTO(order);
     }
@@ -728,6 +928,53 @@ public class ComercialService {
     }
 
     /**
+     * Encomendas que ainda podem ser canceladas (não faturadas nem já canceladas), localizadas por
+     * nº ou cliente (pesquisa parcial). Cobre tanto PENDING_APPROVAL como PENDING. Usado pelo diálogo
+     * "Cancelar Encomenda" ao estilo PHC. {@code query} vazio devolve todas as canceláveis.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDTO> searchCancellableOrders(String query) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return orderRepository.findByCompanyId(companyId).stream()
+                .filter(o -> !"BILLED".equalsIgnoreCase(o.getStatus())
+                        && !"CANCELLED".equalsIgnoreCase(o.getStatus()))
+                .filter(o -> matches(o.getOrderNumber(), query)
+                        || (o.getClient() != null && matches(o.getClient().getName(), query)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Cancela uma encomenda ainda não faturada. Regra de negócio (mirror de {@code cancelInvoice}):
+     * exige perfil MANAGER/ADMIN e motivo; uma encomenda já faturada não se cancela (anula-se a
+     * fatura); fecha também o pedido de aprovação aberto, se existir; audita.
+     */
+    @Transactional
+    public void cancelOrder(Long orderId, String reason) {
+        PermissionGuard.requireManagerOrAdmin("cancelar encomenda");
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessRuleException("É necessário indicar o motivo do cancelamento.");
+        }
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        CurrentUserContext.requireCompany(order.getCompany().getId());
+        if ("BILLED".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Encomenda já faturada — anule a fatura associada.");
+        }
+        if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Esta encomenda já se encontra cancelada.");
+        }
+
+        // Fecha o pedido de aprovação ainda aberto (encomenda em PENDING_APPROVAL).
+        approvalService.cancelPendingForDocument("ORDER", order.getId(), reason);
+
+        order.setStatus("CANCELLED");
+        orderRepository.save(order);
+        auditLogService.logCurrent("ORDER_CANCEL",
+                "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
+    }
+
+    /**
      * Devolve as encomendas PENDENTES (status PENDING e ainda sem invoiceId) — as únicas que
      * podem ser convertidas em fatura. Usado pelo diálogo "Faturar Encomenda" no tab das Faturas
      * para impedir dupla faturação a montante (a validação final está em {@link #billOrder}).
@@ -738,6 +985,29 @@ public class ComercialService {
         return orderRepository
                 .findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING")
                 .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Localiza encomendas PENDENTES (não faturadas) da empresa activa por nº de encomenda OU nome
+     * de cliente (pesquisa parcial, sem distinção de maiúsculas). Usado pelo diálogo "Faturar
+     * Encomenda" ao estilo PHC. {@code query} vazio devolve todas as pendentes.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDTO> searchPendingOrders(String query) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING").stream()
+                .filter(o -> matches(o.getOrderNumber(), query)
+                        || (o.getClient() != null && matches(o.getClient().getName(), query)))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /** Substring case-insensitive, null-safe. {@code needle} vazio/nulo → corresponde sempre. */
+    private boolean matches(String haystack, String needle) {
+        if (needle == null || needle.isBlank()) return true;
+        if (haystack == null) return false;
+        return haystack.toLowerCase(java.util.Locale.ROOT)
+                .contains(needle.trim().toLowerCase(java.util.Locale.ROOT));
     }
 
     public OrderDTO toDTO(Order order) {

@@ -3,7 +3,9 @@ package com.phcpro.gui;
 import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.modules.comercial.dto.*;
 import com.phcpro.modules.comercial.model.Receipt;
@@ -31,6 +33,7 @@ public class ComercialPanel extends JPanel {
     private final FinanceService financeService;
     private final com.phcpro.modules.printing.InvoicePrintService invoicePrintService;
     private final com.phcpro.modules.printing.OrderPrintService orderPrintService;
+    private final com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService;
     private final com.phcpro.modules.company.service.CompanyService companyService;
 
     // TAB 1: FATURAÇÃO ELEMENTS
@@ -38,6 +41,7 @@ public class ComercialPanel extends JPanel {
     private JComboBox<String> warehouseCombo;
     private JComboBox<String> productCombo;
     private JTextField quantityField;
+    private JTextField invoiceBoxesField;
     private JTextField discountField;
     private JTextField batchField;
     private JTextField serialField;
@@ -53,10 +57,6 @@ public class ComercialPanel extends JPanel {
     private JTable receiptsTable;
 
     // TAB 3: REGISTAR CLIENTE ELEMENTS
-    private JTextField clientNameField;
-    private JTextField clientTaxIdField;
-    private JTextField clientEmailField;
-    private JTextField clientAddressField;
 
     // TAB 4: ENCOMENDAS ELEMENTS
     private JComboBox<String> orderClientCombo;
@@ -64,6 +64,7 @@ public class ComercialPanel extends JPanel {
     private JComboBox<String> orderWarehouseCombo;
     private JComboBox<String> orderProductCombo;
     private JTextField orderQuantityField;
+    private JTextField orderBoxesField;
     private JTextField orderDiscountField;
     private JTextField orderBatchField;
     private JTextField orderSerialField;
@@ -97,6 +98,18 @@ public class ComercialPanel extends JPanel {
     private final com.phcpro.modules.printing.CreditNotePrintService creditNotePrintService;
     private final com.phcpro.modules.printing.DebitNotePrintService debitNotePrintService;
     private final com.phcpro.modules.pos.service.POSService posService;
+    private final com.phcpro.modules.movimentos.service.MovimentosService movimentosService;
+
+    private JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
+    private com.phcpro.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
+    private JPanel orderFormContent;                // conteúdo do modal de nova encomenda
+    private OrderDTO lastCreatedOrder;
+    private DefaultTableModel movimentosModel;
+    private JTable movimentosTable;
+    private JTextField movimentosSearch;
+    private JComboBox<String> movimentosPeriod;
+    private java.util.List<com.phcpro.modules.movimentos.dto.MovimentoDTO> movimentosData = java.util.List.of();
+    private JLabel movimentosFooter;
 
     public ComercialPanel(
             ComercialService comercialService,
@@ -104,31 +117,37 @@ public class ComercialPanel extends JPanel {
             FinanceService financeService,
             com.phcpro.modules.printing.InvoicePrintService invoicePrintService,
             com.phcpro.modules.printing.OrderPrintService orderPrintService,
+            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
             com.phcpro.modules.company.service.CompanyService companyService,
             com.phcpro.modules.comercial.service.CreditNoteService creditNoteService,
             com.phcpro.modules.comercial.service.DebitNoteService debitNoteService,
             com.phcpro.modules.printing.CreditNotePrintService creditNotePrintService,
             com.phcpro.modules.printing.DebitNotePrintService debitNotePrintService,
-            com.phcpro.modules.pos.service.POSService posService
+            com.phcpro.modules.pos.service.POSService posService,
+            com.phcpro.desktop.client.PromotionApiClient promotionApiClient,
+            com.phcpro.desktop.client.ComercialApiClient comercialApiClient,
+            com.phcpro.modules.movimentos.service.MovimentosService movimentosService
     ) {
         this.comercialService = comercialService;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
         this.invoicePrintService = invoicePrintService;
         this.orderPrintService = orderPrintService;
+        this.guideRemittancePrintService = guideRemittancePrintService;
         this.companyService = companyService;
         this.creditNoteService = creditNoteService;
         this.debitNoteService = debitNoteService;
         this.creditNotePrintService = creditNotePrintService;
         this.debitNotePrintService = debitNotePrintService;
         this.posService = posService;
+        this.movimentosService = movimentosService;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        UIHelper.styleTabbedPane(tabbedPane);
+        UIHelper.styleTabbedPanePHC(tabbedPane);
 
         // TAB 1: FATURAÇÃO
         JPanel tabFaturacao = createFaturacaoTab();
@@ -138,9 +157,7 @@ public class ComercialPanel extends JPanel {
         JPanel tabRecibos = createRecibosTab();
         tabbedPane.addTab("Recibos (RC)", UIHelper.icon("fas-receipt", 16, UIHelper.TEXT_LIGHT), tabRecibos);
 
-        // TAB 3: REGISTAR CLIENTE
-        JPanel tabRegistarCliente = createRegistarClienteTab();
-        tabbedPane.addTab("Registar Cliente", UIHelper.icon("fas-user-plus", 16, UIHelper.TEXT_LIGHT), tabRegistarCliente);
+        // Registo/gestão de clientes vive na área "Clientes" do menu de topo, não aqui.
 
         // TAB 4: ENCOMENDAS (EC)
         JPanel tabEncomendas = createEncomendasTab();
@@ -155,6 +172,13 @@ public class ComercialPanel extends JPanel {
         // TAB 7: CONTAS CORRENTES (FIADOS)
         tabbedPane.addTab("Contas Correntes", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), createOutstandingTab());
 
+        // TAB 8: PROMOÇÕES
+        tabbedPane.addTab("Promoções", UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),
+                new PromotionsPanel(promotionApiClient, comercialApiClient));
+
+        // TAB 9: MOVIMENTOS (vista unificada de todos os documentos comerciais)
+        tabbedPane.addTab("Movimentos", UIHelper.icon("fas-list-alt", 16, UIHelper.TEXT_LIGHT), createMovimentosTab());
+
         add(tabbedPane, BorderLayout.CENTER);
 
         onPanelSelected();
@@ -162,7 +186,7 @@ public class ComercialPanel extends JPanel {
 
 
     private JPanel createFaturacaoTab() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 20, 0));
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
@@ -228,7 +252,7 @@ public class ComercialPanel extends JPanel {
         // Row 3: Qtd & Desconto % (Side by Side)
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1; gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel qtyLbl = new JLabel("Qtd:");
+        JLabel qtyLbl = new JLabel("Qtd (unidades):");
         qtyLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(qtyLbl, gbc);
 
@@ -239,9 +263,23 @@ public class ComercialPanel extends JPanel {
 
         gbc.gridx = 0; gbc.gridy = 5;
         gbc.insets = new Insets(2, 8, 12, 8);
+        // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
+        JPanel qtyRow = new JPanel(new BorderLayout(6, 0));
+        qtyRow.setOpaque(false);
         quantityField = new JTextField("1");
         UIHelper.styleTextField(quantityField);
-        formCard.add(quantityField, gbc);
+        JPanel boxHelper = new JPanel(new BorderLayout(4, 0));
+        boxHelper.setOpaque(false);
+        JLabel cxLbl = new JLabel("Caixas:");
+        cxLbl.setForeground(UIHelper.TEXT_MUTED);
+        invoiceBoxesField = new JTextField(4);
+        UIHelper.styleTextField(invoiceBoxesField);
+        invoiceBoxesField.setToolTipText("Venda ao grosso: preenche a Qtd em unidades = caixas × unidades/caixa do produto.");
+        boxHelper.add(cxLbl, BorderLayout.WEST);
+        boxHelper.add(invoiceBoxesField, BorderLayout.CENTER);
+        qtyRow.add(quantityField, BorderLayout.CENTER);
+        qtyRow.add(boxHelper, BorderLayout.EAST);
+        formCard.add(qtyRow, gbc);
 
         gbc.gridx = 1;
         discountField = new JTextField("0");
@@ -296,60 +334,47 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleEmbeddedTableScrollPane(linesScroll, linesTable, 4);
         // Draft table is placed in its own card below the input form.
 
-        // Row 7: Total summary and Issue button
-        gbc.gridy = 10; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel summaryPanel = new JPanel();
-        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
-        summaryPanel.setOpaque(false);
-        summaryPanel.setBorder(new EmptyBorder(12, 0, 0, 0));
-
+        // Row 7: Total summary (a emissão é feita pelo botão Gravar do modal)
         totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         totalLabel.setForeground(Color.WHITE);
 
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
+        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         totalRow.add(totalLabel, BorderLayout.EAST);
 
-        ModernButton issueBtn = UIHelper.createPrimaryButton("Emitir Fatura");
-        issueBtn.setIcon(UIHelper.icon("fas-file-invoice", 14));
-
-        JPanel btnRow = new JPanel(new BorderLayout());
-        btnRow.setOpaque(false);
-        btnRow.add(issueBtn, BorderLayout.EAST);
-
-        summaryPanel.add(totalRow);
-        summaryPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-        summaryPanel.add(btnRow);
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
         draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        draftCard.setMinimumSize(new Dimension(0, 260));
-        draftCard.setPreferredSize(new Dimension(0, 300));
+        draftCard.setPreferredSize(new Dimension(0, 280));
         draftCard.add(linesScroll, BorderLayout.CENTER);
-        draftCard.add(summaryPanel, BorderLayout.SOUTH);
+        draftCard.add(totalRow, BorderLayout.SOUTH);
 
-        JPanel leftContent = new JPanel(new BorderLayout(0, 15));
-        leftContent.setOpaque(false);
-        JScrollPane formScroll = new JScrollPane(formCard);
-        formScroll.setBorder(null);
-        formScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        formScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        formScroll.getViewport().setBackground(UIHelper.BG_DARK);
-        formScroll.setPreferredSize(new Dimension(0, 300));
-        formScroll.setMinimumSize(new Dimension(0, 220));
-        leftContent.add(formScroll, BorderLayout.NORTH);
-        leftContent.add(draftCard, BorderLayout.CENTER);
+        // Conteúdo do formulário (vai para o modal responsivo): inputs + linhas de rascunho.
+        JPanel formContent = new JPanel(new BorderLayout(0, 12));
+        formContent.setOpaque(false);
+        formContent.add(formCard, BorderLayout.NORTH);
+        JPanel draftWrap = new JPanel(new BorderLayout(0, 8));
+        draftWrap.setOpaque(false);
+        draftWrap.add(UIHelper.createSubheading("Linhas da Fatura (Rascunho)"), BorderLayout.NORTH);
+        draftWrap.add(draftCard, BorderLayout.CENTER);
+        formContent.add(draftWrap, BorderLayout.CENTER);
+        this.invoiceFormContent = formContent;
 
-        leftPanel.add(leftContent, BorderLayout.CENTER);
-        panel.add(leftPanel);
-
-        // RIGHT COLUMN: INVOICE LIST
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
-        rightPanel.setOpaque(false);
-
-        JLabel rightTitle = UIHelper.createHeading("Faturas Recentes");
-        rightPanel.add(rightTitle, BorderLayout.NORTH);
+        // TAB: cabeçalho com acções + lista de faturas em ecrã inteiro.
+        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
+        headerBar.setOpaque(false);
+        headerBar.add(UIHelper.createHeading("Faturas Recentes"), BorderLayout.WEST);
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        ModernButton newInvoiceBtn = UIHelper.createPrimaryButton("Nova Fatura…");
+        newInvoiceBtn.setIcon(UIHelper.icon("fas-file-invoice", 14));
+        newInvoiceBtn.addActionListener(e -> openInvoiceFormDialog());
+        headerActions.add(billFromOrderBtn);
+        headerActions.add(newInvoiceBtn);
+        headerBar.add(headerActions, BorderLayout.EAST);
+        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -370,12 +395,22 @@ public class ComercialPanel extends JPanel {
 
         JScrollPane invoicesScroll = new JScrollPane(invoicesTable);
         UIHelper.styleScrollPane(invoicesScroll);
+        JTextField invSearch = TableFilter.searchField("Nº fatura ou cliente…");
+        JComboBox<String> invEstado = TableFilter.combo("Todos os estados",
+                "DRAFT", "PENDING_APPROVAL", "PENDING_DISCOUNT_APPROVAL", "APPROVED",
+                "PARTIALLY_PAID", "REJECTED", "PAID", "CANCELLED");
+        TableFilter.install(invoicesTable, invSearch, new TableFilter.ColumnFilter(invEstado, 3));
+        JPanel invBar = TableFilter.bar(invSearch, TableFilter.label("Estado:"), invEstado);
+        invBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(invBar, BorderLayout.NORTH);
         listCard.add(invoicesScroll, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
         ModernButton printInvoiceBtn = UIHelper.createSecondaryButton("Imprimir PDF");
         printInvoiceBtn.setIcon(UIHelper.icon("fas-print", 14));
+        ModernButton printGuideBtn = UIHelper.createSecondaryButton("Imprimir Guia");
+        printGuideBtn.setIcon(UIHelper.icon("fas-truck", 14));
         ModernButton exportTableBtn = UIHelper.createSecondaryButton("Exportar Tabela");
         exportTableBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         ModernButton cancelInvoiceBtn = UIHelper.createDangerButton("Anular Fatura");
@@ -386,24 +421,26 @@ public class ComercialPanel extends JPanel {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
 
         btnPanel.add(printInvoiceBtn);
+        btnPanel.add(printGuideBtn);
         btnPanel.add(exportTableBtn);
         btnPanel.add(cancelInvoiceBtn);
         btnPanel.add(payInvoiceBtn);
         btnPanel.add(refreshBtn);
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
-        rightPanel.add(listCard, BorderLayout.CENTER);
-        panel.add(rightPanel);
+        // Lista de faturas ocupa a tab inteira; o formulário vive no modal.
+        panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftLine());
-        productCombo.addActionListener(e -> refreshInvoiceFEFOHint());
+        productCombo.addActionListener(e -> { refreshInvoiceFEFOHint(); applyInvoiceBoxes(); });
         warehouseCombo.addActionListener(e -> refreshInvoiceFEFOHint());
-        issueBtn.addActionListener(e -> issueInvoice());
+        UIHelper.onTextChange(invoiceBoxesField, this::applyInvoiceBoxes);
         cancelInvoiceBtn.addActionListener(e -> cancelSelectedInvoice());
         payInvoiceBtn.addActionListener(e -> paySelectedInvoice());
         refreshBtn.addActionListener(e -> loadInvoicesTable());
         printInvoiceBtn.addActionListener(e -> printSelectedInvoice());
+        printGuideBtn.addActionListener(e -> printSelectedGuide());
         exportTableBtn.addActionListener(e -> exportInvoicesTable());
 
         return panel;
@@ -435,6 +472,23 @@ public class ComercialPanel extends JPanel {
 
         JScrollPane scroll = new JScrollPane(receiptsTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField rcSearch = TableFilter.searchField("Nº recibo, fatura ou cliente…");
+        JComboBox<String> rcMetodo = TableFilter.combo("Todos os métodos",
+                "CASH", "BANK_TRANSFER", "CARD");
+        JComboBox<String> rcEstado = TableFilter.combo("Todos os estados",
+                "COMPLETED", "CANCELLED");
+        JComboBox<String> rcPeriodo = TableFilter.periodCombo();
+        TableFilter.install(receiptsTable, rcSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(rcMetodo, 5),
+                        new TableFilter.ColumnFilter(rcEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(rcPeriodo, 7)));
+        JPanel rcBar = TableFilter.bar(rcSearch,
+                TableFilter.label("Método:"), rcMetodo,
+                TableFilter.label("Estado:"), rcEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), rcPeriodo);
+        rcBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(rcBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -458,92 +512,6 @@ public class ComercialPanel extends JPanel {
         return panel;
     }
 
-    private JPanel createRegistarClienteTab() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0; gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        ModernPanel card = new ModernPanel(16);
-        card.setPreferredSize(new Dimension(500, 420));
-        card.setLayout(new GridBagLayout());
-        card.setBorder(new EmptyBorder(25, 25, 25, 25));
-
-        GridBagConstraints cardGbc = new GridBagConstraints();
-        cardGbc.fill = GridBagConstraints.HORIZONTAL;
-        cardGbc.insets = new Insets(12, 12, 12, 12);
-        cardGbc.weightx = 1.0;
-
-        // Title
-        cardGbc.gridx = 0; cardGbc.gridy = 0; cardGbc.gridwidth = 2;
-        JLabel cardTitle = UIHelper.createSubheading("Registo de Novo Cliente");
-        cardTitle.setHorizontalAlignment(SwingConstants.CENTER);
-        cardTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-        card.add(cardTitle, cardGbc);
-
-        // Name
-        cardGbc.gridy = 1; cardGbc.gridwidth = 1; cardGbc.weightx = 0.3;
-        JLabel nameLbl = new JLabel("Nome Completo:");
-        nameLbl.setForeground(UIHelper.TEXT_MUTED);
-        card.add(nameLbl, cardGbc);
-
-        cardGbc.gridx = 1; cardGbc.weightx = 0.7;
-        clientNameField = new JTextField();
-        UIHelper.styleTextField(clientNameField);
-        card.add(clientNameField, cardGbc);
-
-        // NUIT
-        cardGbc.gridx = 0; cardGbc.gridy = 2; cardGbc.weightx = 0.3;
-        JLabel taxLbl = new JLabel("NUIT / NIF (9 dígitos):");
-        taxLbl.setForeground(UIHelper.TEXT_MUTED);
-        card.add(taxLbl, cardGbc);
-
-        cardGbc.gridx = 1; cardGbc.weightx = 0.7;
-        clientTaxIdField = new JTextField();
-        UIHelper.styleTextField(clientTaxIdField);
-        card.add(clientTaxIdField, cardGbc);
-
-        // Email
-        cardGbc.gridx = 0; cardGbc.gridy = 3; cardGbc.weightx = 0.3;
-        JLabel emailLbl = new JLabel("Correio Eletrónico:");
-        emailLbl.setForeground(UIHelper.TEXT_MUTED);
-        card.add(emailLbl, cardGbc);
-
-        cardGbc.gridx = 1; cardGbc.weightx = 0.7;
-        clientEmailField = new JTextField();
-        UIHelper.styleTextField(clientEmailField);
-        card.add(clientEmailField, cardGbc);
-
-        // Address
-        cardGbc.gridx = 0; cardGbc.gridy = 4; cardGbc.weightx = 0.3;
-        JLabel addrLbl = new JLabel("Endereço:");
-        addrLbl.setForeground(UIHelper.TEXT_MUTED);
-        card.add(addrLbl, cardGbc);
-
-        cardGbc.gridx = 1; cardGbc.weightx = 0.7;
-        clientAddressField = new JTextField();
-        UIHelper.styleTextField(clientAddressField);
-        card.add(clientAddressField, cardGbc);
-
-        // Save Button
-        cardGbc.gridx = 0; cardGbc.gridy = 5; cardGbc.gridwidth = 2; cardGbc.weightx = 1.0;
-        cardGbc.insets = new Insets(24, 12, 12, 12);
-        ModernButton saveBtn = UIHelper.createSuccessButton("Gravar Cliente");
-        saveBtn.setIcon(UIHelper.icon("fas-save", 14));
-        card.add(saveBtn, cardGbc);
-
-        panel.add(card, gbc);
-
-        // LISTENERS
-        saveBtn.addActionListener(e -> registerClient());
-
-        return panel;
-    }
-
     public void onPanelSelected() {
         loadClientsAndProducts();
         loadWarehouses();
@@ -553,6 +521,7 @@ public class ComercialPanel extends JPanel {
         loadCreditNotesTable();
         loadDebitNotesTable();
         loadOutstandingTable();
+        loadMovimentosTable();
     }
 
     private void loadClientsAndProducts() {
@@ -598,6 +567,27 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+
+    /**
+     * Helper de venda ao grosso: se o operador indicar um nº de caixas e houver produto seleccionado,
+     * preenche a Qtd em UNIDADES = caixas × unidades/caixa. O cálculo de dinheiro continua por unidade
+     * (a caixa é só conversão). Campo vazio não mexe na Qtd (permite entrada directa em unidades).
+     */
+    private void applyInvoiceBoxes() {
+        if (invoiceBoxesField == null) return;
+        String raw = invoiceBoxesField.getText().trim();
+        if (raw.isEmpty()) return;
+        int idx = productCombo.getSelectedIndex();
+        if (idx < 0 || idx >= productsList.size()) return;
+        int upb = Math.max(1, productsList.get(idx).unitsPerBox());
+        try {
+            int boxes = Integer.parseInt(raw);
+            if (boxes <= 0) return;
+            quantityField.setText(String.valueOf(boxes * upb));
+        } catch (NumberFormatException ignore) {
+            // texto inválido → não altera a Qtd
+        }
+    }
 
     private void addDraftLine() {
         if (productsList.isEmpty()) return;
@@ -680,12 +670,14 @@ public class ComercialPanel extends JPanel {
 
         // Clear details
         quantityField.setText("1");
+        invoiceBoxesField.setText("");
         discountField.setText("0");
         serialField.setText("");
         refreshInvoiceFEFOHint();
     }
 
-    private void issueInvoice() {
+    /** Abre o formulário de nova fatura num modal responsivo (com scroll). */
+    private void openInvoiceFormDialog() {
         if (clientsList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Nenhum cliente disponível.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -694,49 +686,55 @@ public class ComercialPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (draftLines.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Adicione pelo menos um item à fatura.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        int clientIdx = clientCombo.getSelectedIndex();
-        int whIdx = warehouseCombo.getSelectedIndex();
-        if (clientIdx < 0 || whIdx < 0) return;
-
-        ClientDTO client = clientsList.get(clientIdx);
-        Warehouse warehouse = warehousesList.get(whIdx);
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-
-        try {
-            CreateInvoiceRequest request = new CreateInvoiceRequest(client.id(), companyId, warehouse.getId(), draftLines);
-            InvoiceDTO created = comercialService.createInvoice(request);
-
-            // Notify user and reset form
+        resetInvoiceDraft();
+        lastCreatedInvoice = null;
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, "Emitir Nova Fatura", invoiceFormContent);
+        dlg.setSize(880, 680);
+        dlg.setOnSave(this::submitInvoiceOrThrow);
+        if (dlg.showDialog() && lastCreatedInvoice != null) {
+            InvoiceDTO created = lastCreatedInvoice;
             if (created.status() == InvoiceStatus.PENDING_DISCOUNT_APPROVAL) {
                 JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida!\n" +
                         "Bloqueada para Aprovação de Desconto (superior a 10%).\n" +
                         "Valor: " + created.totalAmount() + " MT.", "Bloqueio de Desconto", JOptionPane.WARNING_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida com sucesso!\n" +
-                        "Submetida para aprovação (valor: " + created.totalAmount() + " MT).", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                        "Valor: " + created.totalAmount() + " MT.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             }
-
-            // Reset draft states
-            draftLines.clear();
-            draftSubtotal = BigDecimal.ZERO;
-            draftTax = BigDecimal.ZERO;
-            draftTotal = BigDecimal.ZERO;
-            linesTableModel.setRowCount(0);
-            totalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
-
             loadInvoicesTable();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao emitir fatura: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    /** Validação + emissão. Lança {@link RuntimeException} em erro para manter o modal aberto. */
+    private void submitInvoiceOrThrow() {
+        if (draftLines.isEmpty()) {
+            throw new RuntimeException("Adicione pelo menos um item à fatura.");
+        }
+        int clientIdx = clientCombo.getSelectedIndex();
+        int whIdx = warehouseCombo.getSelectedIndex();
+        if (clientIdx < 0 || whIdx < 0) {
+            throw new RuntimeException("Selecione cliente e armazém.");
+        }
+        ClientDTO client = clientsList.get(clientIdx);
+        Warehouse warehouse = warehousesList.get(whIdx);
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        CreateInvoiceRequest request = new CreateInvoiceRequest(client.id(), companyId, warehouse.getId(), draftLines);
+        lastCreatedInvoice = comercialService.createInvoice(request);
+        resetInvoiceDraft();
+    }
+
+    private void resetInvoiceDraft() {
+        draftLines.clear();
+        draftSubtotal = BigDecimal.ZERO;
+        draftTax = BigDecimal.ZERO;
+        draftTotal = BigDecimal.ZERO;
+        if (linesTableModel != null) linesTableModel.setRowCount(0);
+        if (totalLabel != null) totalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
+    }
+
     private void cancelSelectedInvoice() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela para anular.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -745,15 +743,12 @@ public class ComercialPanel extends JPanel {
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = (String) invoicesTableModel.getValueAt(row, 1);
 
-        String reason = JOptionPane.showInputDialog(this, "Indique o motivo da anulação para a fatura " + invoiceNum + ":", "Anular Fatura", JOptionPane.QUESTION_MESSAGE);
-        if (reason == null) return; // user cancelled prompt
-        if (reason.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O motivo da anulação é obrigatório.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        String reason = UIHelper.promptRequiredText("Anular Fatura", "fas-ban",
+                "Fatura " + invoiceNum, "Motivo da anulação:");
+        if (reason == null) return;
 
         try {
-            comercialService.cancelInvoice(invoiceId, reason.trim());
+            comercialService.cancelInvoice(invoiceId, reason);
             JOptionPane.showMessageDialog(this, "Fatura " + invoiceNum + " anulada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadInvoicesTable();
             loadReceiptsTable();
@@ -763,7 +758,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void paySelectedInvoice() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela para liquidar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -802,7 +797,7 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTextField(amountField);
 
         JLabel invoiceLbl = new JLabel(invoiceNum);
-        invoiceLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        invoiceLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         invoiceLbl.setForeground(UIHelper.TEXT_LIGHT);
 
         JPanel dialogPanel = UIHelper.createDialogForm(
@@ -812,8 +807,8 @@ public class ComercialPanel extends JPanel {
                 "Montante a Receber (MT):", amountField
         );
 
-        int confirm = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel), "Registar Recebimento (Emitir Recibo)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (confirm == JOptionPane.OK_OPTION) {
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Registar Recebimento (Emitir Recibo)", "fas-receipt", "Recebimento de cliente e emissão de recibo", dialogPanel).setConfirmButton("Receber", "fas-money-bill-wave").showDialog();
+        if (confirmed) {
             try {
                 int accIdx = accCombo.getSelectedIndex();
                 if (accIdx < 0) return;
@@ -875,7 +870,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void cancelSelectedReceipt() {
-        int row = receiptsTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(receiptsTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione um recibo na tabela para anular.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -884,15 +879,12 @@ public class ComercialPanel extends JPanel {
         Long receiptId = (Long) receiptsTableModel.getValueAt(row, 0);
         String receiptNum = (String) receiptsTableModel.getValueAt(row, 1);
 
-        String reason = JOptionPane.showInputDialog(this, "Indique o motivo da anulação para o recibo " + receiptNum + ":", "Anular Recibo", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Anular Recibo", "fas-ban",
+                "Recibo " + receiptNum, "Motivo da anulação:");
         if (reason == null) return;
-        if (reason.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O motivo da anulação é obrigatório.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
 
         try {
-            comercialService.cancelReceipt(receiptId, reason.trim());
+            comercialService.cancelReceipt(receiptId, reason);
             JOptionPane.showMessageDialog(this, "Recibo " + receiptNum + " anulado com sucesso!\nStatus da fatura revertido para APROVADA.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadInvoicesTable();
             loadReceiptsTable();
@@ -901,48 +893,13 @@ public class ComercialPanel extends JPanel {
         }
     }
 
-    private void registerClient() {
-        String name = clientNameField.getText().trim();
-        String taxId = clientTaxIdField.getText().trim();
-        String email = clientEmailField.getText().trim();
-        String address = clientAddressField.getText().trim();
-
-        if (name.isEmpty() || taxId.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nome e NUIT/NIF são campos obrigatórios.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            comercialService.createClient(name, taxId, email, address);
-            JOptionPane.showMessageDialog(this, "Cliente '" + name + "' cadastrado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            
-            // Clear fields
-            clientNameField.setText("");
-            clientTaxIdField.setText("");
-            clientEmailField.setText("");
-            clientAddressField.setText("");
-
-            // Reload dropdown
-            loadClientsAndProducts();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao cadastrar cliente: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
     private JPanel createEncomendasTab() {
-        // SplitPane ajustável — utilizador pode arrastar o divisor entre form e lista.
-        JPanel panel = new JPanel(new BorderLayout());
+        // Igual às Faturas: o formulário vive num modal ('Nova Encomenda'); a lista ocupa a aba inteira.
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // LEFT COLUMN: CREATE ORDER FORM
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
-        leftPanel.setOpaque(false);
-        leftPanel.setMinimumSize(new Dimension(0, 0));
-
-        JLabel leftTitle = UIHelper.createHeading("Emitir Nova Encomenda");
-        leftPanel.add(leftTitle, BorderLayout.NORTH);
-
+        // ===== FORMULÁRIO (conteúdo do modal): inputs de cabeçalho + linha =====
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
         formCard.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -1005,7 +962,7 @@ public class ComercialPanel extends JPanel {
         // Row 3: Qtd & Desconto % (Side by Side)
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1; gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel qtyLbl = new JLabel("Qtd:");
+        JLabel qtyLbl = new JLabel("Qtd (unidades):");
         qtyLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(qtyLbl, gbc);
 
@@ -1016,9 +973,23 @@ public class ComercialPanel extends JPanel {
 
         gbc.gridx = 0; gbc.gridy = 7;
         gbc.insets = new Insets(2, 8, 12, 8);
+        // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
+        JPanel orderQtyRow = new JPanel(new BorderLayout(6, 0));
+        orderQtyRow.setOpaque(false);
         orderQuantityField = new JTextField("1");
         UIHelper.styleTextField(orderQuantityField);
-        formCard.add(orderQuantityField, gbc);
+        JPanel orderBoxHelper = new JPanel(new BorderLayout(4, 0));
+        orderBoxHelper.setOpaque(false);
+        JLabel orderCxLbl = new JLabel("Caixas:");
+        orderCxLbl.setForeground(UIHelper.TEXT_MUTED);
+        orderBoxesField = new JTextField(4);
+        UIHelper.styleTextField(orderBoxesField);
+        orderBoxesField.setToolTipText("Venda ao grosso: preenche a Qtd em unidades = caixas × unidades/caixa do produto.");
+        orderBoxHelper.add(orderCxLbl, BorderLayout.WEST);
+        orderBoxHelper.add(orderBoxesField, BorderLayout.CENTER);
+        orderQtyRow.add(orderQuantityField, BorderLayout.CENTER);
+        orderQtyRow.add(orderBoxHelper, BorderLayout.EAST);
+        formCard.add(orderQtyRow, gbc);
 
         gbc.gridx = 1;
         orderDiscountField = new JTextField("0");
@@ -1061,10 +1032,7 @@ public class ComercialPanel extends JPanel {
         addLineActionRow.add(addLineBtn);
         formCard.add(addLineActionRow, gbc);
 
-        // Row 6: Lines table (full width, grows to fill space)
-        gbc.gridx = 0; gbc.gridy = 11; gbc.gridwidth = 2; gbc.weightx = 1.0; gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.insets = new Insets(4, 8, 8, 8);
+        // ===== Cartão de rascunho: tabela de linhas + total (separado do formulário, igual às Faturas) =====
         String[] lineCols = {"Produto", "Qtd", "Preço Unit.", "Desc %", "Lote/Série", "Total"};
         orderLinesTableModel = new DefaultTableModel(lineCols, 0) {
             @Override
@@ -1082,59 +1050,45 @@ public class ComercialPanel extends JPanel {
         orderLinesTable.getColumnModel().getColumn(5).setPreferredWidth(95);
         JScrollPane linesScroll = new JScrollPane(orderLinesTable);
         UIHelper.styleScrollPane(linesScroll);
-        linesScroll.setPreferredSize(new Dimension(560, 200));
-        linesScroll.setMinimumSize(new Dimension(0, 160));
-        formCard.add(linesScroll, gbc);
-
-        // Row 7: Total + Emitir
-        gbc.gridx = 0; gbc.gridy = 12; gbc.gridwidth = 2; gbc.weighty = 0.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(8, 8, 12, 8);
-        JPanel summaryPanel = new JPanel();
-        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
-        summaryPanel.setOpaque(false);
 
         orderTotalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
-        orderTotalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        orderTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         orderTotalLabel.setForeground(Color.WHITE);
-
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
+        totalRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         totalRow.add(orderTotalLabel, BorderLayout.EAST);
 
-        ModernButton issueBtn = UIHelper.createPrimaryButton("Emitir Encomenda");
-        issueBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
+        ModernPanel draftCard = new ModernPanel(16);
+        draftCard.setLayout(new BorderLayout(0, 10));
+        draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        draftCard.setPreferredSize(new Dimension(0, 280));
+        draftCard.add(linesScroll, BorderLayout.CENTER);
+        draftCard.add(totalRow, BorderLayout.SOUTH);
 
-        JPanel btnRow = new JPanel(new BorderLayout());
-        btnRow.setOpaque(false);
-        btnRow.add(issueBtn, BorderLayout.EAST);
+        // Conteúdo do modal 'Nova Encomenda': inputs (NORTH) + linhas de rascunho (CENTER).
+        JPanel formContent = new JPanel(new BorderLayout(0, 12));
+        formContent.setOpaque(false);
+        formContent.add(formCard, BorderLayout.NORTH);
+        JPanel draftWrap = new JPanel(new BorderLayout(0, 8));
+        draftWrap.setOpaque(false);
+        draftWrap.add(UIHelper.createSubheading("Linhas da Encomenda (Rascunho)"), BorderLayout.NORTH);
+        draftWrap.add(draftCard, BorderLayout.CENTER);
+        formContent.add(draftWrap, BorderLayout.CENTER);
+        this.orderFormContent = formContent;
 
-        summaryPanel.add(totalRow);
-        summaryPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-        summaryPanel.add(btnRow);
-        formCard.add(summaryPanel, gbc);
-
-        // Largura mínima do conteúdo: abaixo disto activa-se o scroll horizontal automaticamente.
-        formCard.setMinimumSize(new Dimension(420, 0));
-
-        // formCard inteiro envolto em scroll — form, tabela e summary scroll juntos.
-        JScrollPane formScroll = new JScrollPane(formCard);
-        formScroll.setBorder(null);
-        formScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        formScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        formScroll.getViewport().setBackground(UIHelper.BG_DARK);
-        formScroll.getVerticalScrollBar().setUnitIncrement(16);
-        formScroll.getHorizontalScrollBar().setUnitIncrement(16);
-        leftPanel.add(formScroll, BorderLayout.CENTER);
-        leftPanel.setMinimumSize(new Dimension(420, 0));
-
-        // RIGHT COLUMN: ORDER LIST
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
-        rightPanel.setOpaque(false);
-        rightPanel.setMinimumSize(new Dimension(360, 0));
-
-        JLabel rightTitle = UIHelper.createHeading("Encomendas Recentes");
-        rightPanel.add(rightTitle, BorderLayout.NORTH);
+        // ===== ABA: cabeçalho com acção 'Nova Encomenda…' + lista em ecrã inteiro (igual às Faturas) =====
+        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
+        headerBar.setOpaque(false);
+        headerBar.add(UIHelper.createHeading("Encomendas Recentes"), BorderLayout.WEST);
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
+        newOrderBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
+        newOrderBtn.addActionListener(e -> openOrderFormDialog());
+        headerActions.add(newOrderBtn);
+        headerBar.add(headerActions, BorderLayout.EAST);
+        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -1163,9 +1117,17 @@ public class ComercialPanel extends JPanel {
 
         JScrollPane ordersScroll = new JScrollPane(ordersTable);
         UIHelper.styleScrollPane(ordersScroll);
+
+        JTextField ecSearch = TableFilter.searchField("Nº encomenda ou cliente…");
+        JComboBox<String> ecEstado = TableFilter.combo("Todos os estados",
+                "PENDING", "PENDING_APPROVAL", "BILLED", "CANCELLED");
+        TableFilter.install(ordersTable, ecSearch, new TableFilter.ColumnFilter(ecEstado, 3));
+        JPanel ecBar = TableFilter.bar(ecSearch, TableFilter.label("Estado:"), ecEstado);
+        ecBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(ecBar, BorderLayout.NORTH);
         listCard.add(ordersScroll, BorderLayout.CENTER);
 
-        JPanel btnPanel = new JPanel(new GridLayout(0, 2, 10, 8));
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
         ModernButton viewDetailsBtn = UIHelper.createSecondaryButton("Ver Detalhes");
         viewDetailsBtn.setIcon(UIHelper.icon("fas-eye", 14));
@@ -1175,6 +1137,8 @@ public class ComercialPanel extends JPanel {
         exportOrdersBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         ModernButton billOrderBtn = UIHelper.createSuccessButton("Faturar Encomenda");
         billOrderBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
+        ModernButton cancelOrderBtn = UIHelper.createDangerButton("Cancelar Encomenda…");
+        cancelOrderBtn.setIcon(UIHelper.icon("fas-ban", 14));
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
 
@@ -1182,33 +1146,42 @@ public class ComercialPanel extends JPanel {
         btnPanel.add(printOrderBtn);
         btnPanel.add(exportOrdersBtn);
         btnPanel.add(billOrderBtn);
+        btnPanel.add(cancelOrderBtn);
         btnPanel.add(refreshBtn);
-        btnPanel.add(Box.createGlue());
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
-        rightPanel.add(listCard, BorderLayout.CENTER);
-
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
-        split.setOpaque(false);
-        split.setBorder(null);
-        split.setResizeWeight(0.6);            // 60% form, 40% lista
-        split.setContinuousLayout(true);
-        split.setDividerSize(8);
-        SwingUtilities.invokeLater(() -> split.setDividerLocation(0.6));
-        panel.add(split, BorderLayout.CENTER);
+        panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftOrderLine());
-        orderProductCombo.addActionListener(e -> refreshOrderFEFOHint());
+        orderProductCombo.addActionListener(e -> { refreshOrderFEFOHint(); applyOrderBoxes(); });
+        UIHelper.onTextChange(orderBoxesField, this::applyOrderBoxes);
         orderWarehouseCombo.addActionListener(e -> refreshOrderFEFOHint());
-        issueBtn.addActionListener(e -> issueOrder());
         billOrderBtn.addActionListener(e -> billSelectedOrder());
+        cancelOrderBtn.addActionListener(e -> openCancelOrderDialog());
         refreshBtn.addActionListener(e -> loadOrdersTable());
         viewDetailsBtn.addActionListener(e -> showSelectedOrderDetails());
         printOrderBtn.addActionListener(e -> printSelectedOrder());
         exportOrdersBtn.addActionListener(e -> exportOrdersTable());
 
         return panel;
+    }
+
+    /** Helper de venda ao grosso na encomenda: nº de caixas → Qtd em unidades. Ver {@link #applyInvoiceBoxes()}. */
+    private void applyOrderBoxes() {
+        if (orderBoxesField == null) return;
+        String raw = orderBoxesField.getText().trim();
+        if (raw.isEmpty()) return;
+        int idx = orderProductCombo.getSelectedIndex();
+        if (idx < 0 || idx >= productsList.size()) return;
+        int upb = Math.max(1, productsList.get(idx).unitsPerBox());
+        try {
+            int boxes = Integer.parseInt(raw);
+            if (boxes <= 0) return;
+            orderQuantityField.setText(String.valueOf(boxes * upb));
+        } catch (NumberFormatException ignore) {
+            // texto inválido → não altera a Qtd
+        }
     }
 
     private void addDraftOrderLine() {
@@ -1292,6 +1265,7 @@ public class ComercialPanel extends JPanel {
 
         // Clear details
         orderQuantityField.setText("1");
+        orderBoxesField.setText("");
         orderDiscountField.setText("0");
         orderSerialField.setText("");
         refreshOrderFEFOHint();
@@ -1338,19 +1312,42 @@ public class ComercialPanel extends JPanel {
         }
     }
 
-    private void issueOrder() {
+    /** Abre o formulário de nova encomenda num modal (mesmo padrão de {@link #openInvoiceFormDialog()}). */
+    private void openOrderFormDialog() {
         if (warehousesList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (draftOrderLines.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Adicione pelo menos um item à encomenda.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
+        resetOrderDraft();
+        lastCreatedOrder = null;
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        ModernFormDialog dlg = new ModernFormDialog(parent, "Emitir Nova Encomenda", orderFormContent);
+        dlg.setSize(880, 680);
+        dlg.setOnSave(this::issueOrderOrThrow);
+        if (dlg.showDialog() && lastCreatedOrder != null) {
+            OrderDTO created = lastCreatedOrder;
+            String estadoMsg = "PENDING_APPROVAL".equals(created.status())
+                    ? "Submetida para aprovação (valor: " + created.totalAmount() + " MT)."
+                    : "Estado: " + created.status() + " (valor: " + created.totalAmount() + " MT).";
+            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " criada!\n" + estadoMsg,
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadOrdersTable();
         }
+    }
 
+    /** Validação + emissão da encomenda. Lança {@link RuntimeException} em erro para manter o modal aberto. */
+    private void issueOrderOrThrow() {
+        if (warehousesList.isEmpty()) {
+            throw new RuntimeException("Nenhum armazém disponível para a empresa atual.");
+        }
+        if (draftOrderLines.isEmpty()) {
+            throw new RuntimeException("Adicione pelo menos um item à encomenda.");
+        }
         int clientIdx = orderClientCombo.getSelectedIndex();
         int whIdx = orderWarehouseCombo.getSelectedIndex();
-        if (whIdx < 0) return;
+        if (whIdx < 0) {
+            throw new RuntimeException("Selecione o armazém.");
+        }
 
         // O índice 0 do combo é "Consumidor Final"; índices >0 mapeiam para clientsList[idx-1].
         Long clientId = null;
@@ -1364,34 +1361,26 @@ public class ComercialPanel extends JPanel {
 
         Warehouse warehouse = warehousesList.get(whIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
+        com.phcpro.modules.comercial.dto.CreateOrderRequest request =
+                new com.phcpro.modules.comercial.dto.CreateOrderRequest(
+                        clientId, walkInName, companyId, warehouse.getId(), draftOrderLines);
+        lastCreatedOrder = comercialService.createOrder(request);
+    }
 
-        try {
-            com.phcpro.modules.comercial.dto.CreateOrderRequest request =
-                    new com.phcpro.modules.comercial.dto.CreateOrderRequest(
-                            clientId, walkInName, companyId, warehouse.getId(), draftOrderLines);
-            OrderDTO created = comercialService.createOrder(request);
-
-            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " emitida com sucesso!\n" +
-                    "Estado: PENDING (valor: " + created.totalAmount() + " MT).", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-
-            // Reset draft states
-            draftOrderLines.clear();
-            draftOrderSubtotal = BigDecimal.ZERO;
-            draftOrderTax = BigDecimal.ZERO;
-            draftOrderTotal = BigDecimal.ZERO;
-            orderLinesTableModel.setRowCount(0);
-            orderTotalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
-            if (orderClientWalkInField != null) orderClientWalkInField.setText("");
-            if (orderClientCombo != null) orderClientCombo.setSelectedIndex(0);
-
-            loadOrdersTable();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao emitir encomenda: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+    /** Limpa o rascunho da encomenda (linhas, totais e selecção) antes de abrir o modal. */
+    private void resetOrderDraft() {
+        draftOrderLines.clear();
+        draftOrderSubtotal = BigDecimal.ZERO;
+        draftOrderTax = BigDecimal.ZERO;
+        draftOrderTotal = BigDecimal.ZERO;
+        if (orderLinesTableModel != null) orderLinesTableModel.setRowCount(0);
+        if (orderTotalLabel != null) orderTotalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
+        if (orderClientWalkInField != null) orderClientWalkInField.setText("");
+        if (orderClientCombo != null && orderClientCombo.getItemCount() > 0) orderClientCombo.setSelectedIndex(0);
     }
 
     private void billSelectedOrder() {
-        int row = ordersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela para faturar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1456,7 +1445,7 @@ public class ComercialPanel extends JPanel {
      * confirmação obrigatória se já foi impressa antes.
      */
     private void showSelectedOrderDetails() {
-        int row = ordersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1573,9 +1562,26 @@ public class ComercialPanel extends JPanel {
      * delega para {@code ComercialService.billOrder(...)} — que valida atomicamente o estado e
      * impede dupla faturação.
      */
+    /** Rótulo pequeno/esbatido para campos de resumo em diálogos. */
+    private static JLabel dialogMutedLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        l.setForeground(UIHelper.TEXT_MUTED);
+        return l;
+    }
+
+    /** Valor destacado para campos de resumo em diálogos. */
+    private static JLabel dialogValueLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        l.setForeground(UIHelper.TEXT_LIGHT);
+        return l;
+    }
+
     private void openBillFromOrderDialog() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        java.util.List<OrderDTO> pending = comercialService.getPendingOrdersByCompany(companyId);
+        // Lista mutável: a pesquisa substitui o conteúdo, mantendo a referência final para os lambdas.
+        java.util.List<OrderDTO> pending = new ArrayList<>(comercialService.getPendingOrdersByCompany(companyId));
         if (pending.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Não há encomendas pendentes para faturar.",
@@ -1586,13 +1592,11 @@ public class ComercialPanel extends JPanel {
         java.time.format.DateTimeFormatter dtf =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+        // Pesquisa ao estilo PHC: filtra encomendas pendentes por nº ou cliente.
+        JTextField searchField = new JTextField();
+        UIHelper.styleTextField(searchField);
+
         JComboBox<String> orderCombo = new JComboBox<>();
-        for (OrderDTO o : pending) {
-            String walk = (o.walkInName() != null && !o.walkInName().isBlank())
-                    ? " (" + o.walkInName() + ")" : "";
-            orderCombo.addItem(String.format("%s — %s%s — %s MT",
-                    o.orderNumber(), o.clientName(), walk, o.totalAmount()));
-        }
         UIHelper.styleComboBox(orderCombo);
 
         // Preview das linhas da encomenda seleccionada
@@ -1605,49 +1609,114 @@ public class ComercialPanel extends JPanel {
         JScrollPane previewScroll = new JScrollPane(previewTable);
         previewScroll.setPreferredSize(new Dimension(560, 180));
 
-        JLabel header = new JLabel(" ");
+        JLabel orderNumVal = dialogValueLabel("—");
+        JLabel clientVal = dialogValueLabel("—");
+        JLabel dateVal = dialogValueLabel("—");
+        JLabel totalVal = new JLabel("0,00 MT");
+        totalVal.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
+        totalVal.setForeground(UIHelper.APPROVED_GREEN);
         Runnable refresh = () -> {
             preview.setRowCount(0);
             int idx = orderCombo.getSelectedIndex();
-            if (idx < 0) return;
+            if (idx < 0 || idx >= pending.size()) {
+                orderNumVal.setText("—"); clientVal.setText("—"); dateVal.setText("—");
+                totalVal.setText("0,00 MT");
+                return;
+            }
             OrderDTO o = pending.get(idx);
             String walk = (o.walkInName() != null && !o.walkInName().isBlank())
-                    ? " <i>(comprador: " + o.walkInName() + ")</i>" : "";
-            header.setText(String.format(
-                    "<html><b>Encomenda:</b> %s<br><b>Cliente:</b> %s%s<br><b>Data:</b> %s<br><b>Total:</b> %s MT</html>",
-                    o.orderNumber(),
-                    o.clientName(), walk,
-                    o.createdAt() != null ? o.createdAt().format(dtf) : "—",
-                    o.totalAmount()));
+                    ? "  (" + o.walkInName() + ")" : "";
+            orderNumVal.setText(o.orderNumber());
+            clientVal.setText(o.clientName() + walk);
+            dateVal.setText(o.createdAt() != null ? o.createdAt().format(dtf) : "—");
+            totalVal.setText(String.format("%,.2f MT", o.totalAmount()));
             for (var l : o.lines()) {
                 preview.addRow(new Object[]{
                         l.productName(),
                         l.batchNumber() == null ? "—" : l.batchNumber(),
                         l.quantity(),
-                        l.unitPrice() + " MT",
-                        l.lineTotal() + " MT"
+                        String.format("%,.2f MT", l.unitPrice()),
+                        String.format("%,.2f MT", l.lineTotal())
                 });
             }
         };
         orderCombo.addActionListener(e -> refresh.run());
-        refresh.run();
 
-        JPanel content = new JPanel(new BorderLayout(0, 10));
-        content.setOpaque(false);
-        JPanel top = new JPanel(new BorderLayout(0, 8));
-        top.setOpaque(false);
-        top.add(new JLabel("Encomenda a faturar:"), BorderLayout.NORTH);
-        top.add(orderCombo, BorderLayout.CENTER);
-        top.add(header, BorderLayout.SOUTH);
-        content.add(top, BorderLayout.NORTH);
-        content.add(previewScroll, BorderLayout.CENTER);
+        Runnable rebuildCombo = () -> {
+            orderCombo.removeAllItems();
+            for (OrderDTO o : pending) {
+                String walk = (o.walkInName() != null && !o.walkInName().isBlank())
+                        ? " (" + o.walkInName() + ")" : "";
+                orderCombo.addItem(String.format("%s — %s%s — %s MT",
+                        o.orderNumber(), o.clientName(), walk, o.totalAmount()));
+            }
+            if (orderCombo.getItemCount() > 0) orderCombo.setSelectedIndex(0);
+            refresh.run();
+        };
+        UIHelper.onTextChange(searchField, () -> {
+            pending.clear();
+            pending.addAll(comercialService.searchPendingOrders(searchField.getText()));
+            rebuildCombo.run();
+        });
+        rebuildCombo.run();
 
-        String[] options = {"Faturar", "Cancelar"};
-        int choice = JOptionPane.showOptionDialog(this,
-                UIHelper.makeDialogScrollable(content),
+        // Selector (pesquisa + combo) com o estilo do projecto.
+        JPanel selectorForm = UIHelper.createDialogForm(
+                "Pesquisar (nº ou cliente):", searchField,
+                "Encomenda a faturar:", orderCombo
+        );
+
+        // Card de resumo: dados da encomenda à esquerda, TOTAL destacado à direita.
+        ModernPanel summary = new ModernPanel(14);
+        summary.setLayout(new BorderLayout(16, 0));
+        summary.setBorder(new EmptyBorder(14, 16, 14, 16));
+        JPanel info = new JPanel(new GridBagLayout());
+        info.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.anchor = GridBagConstraints.WEST;
+        g.insets = new Insets(3, 0, 3, 16);
+        g.gridx = 0; g.gridy = 0; info.add(dialogMutedLabel("Encomenda"), g);
+        g.gridx = 1; info.add(orderNumVal, g);
+        g.gridx = 0; g.gridy = 1; info.add(dialogMutedLabel("Cliente"), g);
+        g.gridx = 1; info.add(clientVal, g);
+        g.gridx = 0; g.gridy = 2; info.add(dialogMutedLabel("Data"), g);
+        g.gridx = 1; info.add(dateVal, g);
+
+        JPanel totalBox = new JPanel();
+        totalBox.setOpaque(false);
+        totalBox.setLayout(new BoxLayout(totalBox, BoxLayout.Y_AXIS));
+        JLabel totalCap = dialogMutedLabel("TOTAL A FATURAR");
+        totalCap.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        totalVal.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        totalBox.add(totalCap);
+        totalBox.add(totalVal);
+        summary.add(info, BorderLayout.CENTER);
+        summary.add(totalBox, BorderLayout.EAST);
+
+        // Card dos itens.
+        ModernPanel linesCard = new ModernPanel(14);
+        linesCard.setLayout(new BorderLayout(0, 8));
+        linesCard.setBorder(new EmptyBorder(14, 16, 14, 16));
+        linesCard.add(UIHelper.createSubheading("Itens da encomenda"), BorderLayout.NORTH);
+        linesCard.add(previewScroll, BorderLayout.CENTER);
+
+        JPanel center = new JPanel(new BorderLayout(0, 12));
+        center.setOpaque(false);
+        center.add(summary, BorderLayout.NORTH);
+        center.add(linesCard, BorderLayout.CENTER);
+
+        JPanel content = new JPanel(new BorderLayout(0, 12));
+        content.setBackground(UIHelper.BG_DARK);
+        content.setBorder(new EmptyBorder(6, 8, 6, 8));
+        content.add(selectorForm, BorderLayout.NORTH);
+        content.add(center, BorderLayout.CENTER);
+        content.setPreferredSize(new Dimension(640, 480));
+
+        String[] options = {"Faturar Encomenda", "Cancelar"};
+        int choice = JOptionPane.showOptionDialog(this, content,
                 "Faturar Encomenda",
                 JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE,
-                null, options, options[1]);
+                null, options, options[0]);
         if (choice != 0) return;
 
         int idx = orderCombo.getSelectedIndex();
@@ -1667,8 +1736,74 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    /**
+     * Diálogo "Cancelar Encomenda" (estilo PHC): pesquisa por nº ou cliente, selecciona a encomenda
+     * cancelável (não faturada) e exige motivo. Delega para {@code ComercialService.cancelOrder(...)},
+     * que valida permissão/estado e fecha o pedido de aprovação aberto.
+     */
+    private void openCancelOrderDialog() {
+        java.util.List<OrderDTO> cancellable = new ArrayList<>(comercialService.searchCancellableOrders(""));
+        if (cancellable.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Não há encomendas canceláveis. Apenas encomendas ainda não faturadas podem ser canceladas.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JTextField searchField = new JTextField();
+        UIHelper.styleTextField(searchField);
+        JComboBox<String> orderCombo = new JComboBox<>();
+        UIHelper.styleComboBox(orderCombo);
+        JTextField reasonField = new JTextField();
+        UIHelper.styleTextField(reasonField);
+
+        Runnable rebuildCombo = () -> {
+            orderCombo.removeAllItems();
+            for (OrderDTO o : cancellable) {
+                String estado = "PENDING_APPROVAL".equals(o.status()) ? "por aprovar" : "aprovada";
+                orderCombo.addItem(String.format("%s — %s — %s MT (%s)",
+                        o.orderNumber(), o.clientName(), o.totalAmount(), estado));
+            }
+            if (orderCombo.getItemCount() > 0) orderCombo.setSelectedIndex(0);
+        };
+        UIHelper.onTextChange(searchField, () -> {
+            cancellable.clear();
+            cancellable.addAll(comercialService.searchCancellableOrders(searchField.getText()));
+            rebuildCombo.run();
+        });
+        rebuildCombo.run();
+
+        JPanel form = UIHelper.createDialogForm(
+                "Pesquisar (nº ou cliente):", searchField,
+                "Encomenda a cancelar:", orderCombo,
+                "Motivo do cancelamento:", reasonField
+        );
+
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Cancelar Encomenda", "fas-ban", "Anular uma encomenda pendente", form).setConfirmButton("Confirmar", "fas-check").showDialog();
+        if (!confirmed) return;
+
+        int idx = orderCombo.getSelectedIndex();
+        if (idx < 0 || idx >= cancellable.size()) return;
+        OrderDTO chosen = cancellable.get(idx);
+        String reason = reasonField.getText().trim();
+        if (reason.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Indique o motivo do cancelamento.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            comercialService.cancelOrder(chosen.id(), reason);
+            JOptionPane.showMessageDialog(this,
+                    "Encomenda " + chosen.orderNumber() + " cancelada.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadOrdersTable();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void printSelectedInvoice() {
-        int row = invoicesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1683,6 +1818,22 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    private void printSelectedGuide() {
+        int row = TableFilter.selectedModelRow(invoicesTable);
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
+        String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
+        try {
+            byte[] pdf = guideRemittancePrintService.render(invoiceId);
+            com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "guia-remessa-" + invoiceNum);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao gerar Guia: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void exportInvoicesTable() {
         try {
             com.phcpro.modules.company.model.Company company = currentCompany();
@@ -1694,7 +1845,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private void printSelectedOrder() {
-        int row = ordersTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1783,6 +1934,23 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(creditNotesTable);
         JScrollPane scroll = new JScrollPane(creditNotesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField ncSearch = TableFilter.searchField("Nº, fatura ou cliente…");
+        JComboBox<String> ncMotivo = TableFilter.combo("Todos os motivos",
+                "RETURN", "DISCOUNT", "ERROR", "CANCELLATION");
+        JComboBox<String> ncEstado = TableFilter.combo("Todos os estados",
+                "DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        JComboBox<String> ncPeriodo = TableFilter.periodCombo();
+        TableFilter.install(creditNotesTable, ncSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ncMotivo, 4),
+                        new TableFilter.ColumnFilter(ncEstado, 7)),
+                java.util.List.of(new TableFilter.PeriodFilter(ncPeriodo, 1)));
+        JPanel ncBar = TableFilter.bar(ncSearch,
+                TableFilter.label("Motivo:"), ncMotivo,
+                TableFilter.label("Estado:"), ncEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), ncPeriodo);
+        ncBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(ncBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -1831,6 +1999,23 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(debitNotesTable);
         JScrollPane scroll = new JScrollPane(debitNotesTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField ndSearch = TableFilter.searchField("Nº, fatura ou cliente…");
+        JComboBox<String> ndMotivo = TableFilter.combo("Todos os motivos",
+                "FREIGHT", "SURCHARGE", "CORRECTION", "OTHER");
+        JComboBox<String> ndEstado = TableFilter.combo("Todos os estados",
+                "DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        JComboBox<String> ndPeriodo = TableFilter.periodCombo();
+        TableFilter.install(debitNotesTable, ndSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ndMotivo, 4),
+                        new TableFilter.ColumnFilter(ndEstado, 6)),
+                java.util.List.of(new TableFilter.PeriodFilter(ndPeriodo, 1)));
+        JPanel ndBar = TableFilter.bar(ndSearch,
+                TableFilter.label("Motivo:"), ndMotivo,
+                TableFilter.label("Estado:"), ndEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), ndPeriodo);
+        ndBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(ndBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -1876,7 +2061,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.comercial.dto.CreditNoteDTO selectedCreditNote() {
-        int row = creditNotesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(creditNotesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma nota na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -1885,7 +2070,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.comercial.dto.DebitNoteDTO selectedDebitNote() {
-        int row = debitNotesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(debitNotesTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma nota na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -1912,7 +2097,8 @@ public class ComercialPanel extends JPanel {
     private void rejectSelectedCreditNote() {
         var sel = selectedCreditNote();
         if (sel == null) return;
-        String reason = JOptionPane.showInputDialog(this, "Motivo da rejeição:", "Rejeitar Nota de Crédito", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Rejeitar Nota de Crédito", "fas-times-circle",
+                "Indique o motivo da rejeição", "Motivo da rejeição:");
         if (reason == null) return;
         try {
             creditNoteService.reject(sel.id(), reason);
@@ -1948,7 +2134,8 @@ public class ComercialPanel extends JPanel {
     private void rejectSelectedDebitNote() {
         var sel = selectedDebitNote();
         if (sel == null) return;
-        String reason = JOptionPane.showInputDialog(this, "Motivo da rejeição:", "Rejeitar Nota de Débito", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Rejeitar Nota de Débito", "fas-times-circle",
+                "Indique o motivo da rejeição", "Motivo da rejeição:");
         if (reason == null) return;
         try {
             debitNoteService.reject(sel.id(), reason);
@@ -1970,15 +2157,17 @@ public class ComercialPanel extends JPanel {
     }
 
     private void openCreateCreditNoteDialog() {
-        var invoices = comercialService.getInvoicesByCompany(
-                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId());
+        // Lista mutável: a pesquisa substitui o conteúdo (estilo PHC — localizar a fatura de origem).
+        java.util.List<InvoiceDTO> invoices = new ArrayList<>(comercialService.getInvoicesByCompany(
+                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId()));
         if (invoices.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Precisa de pelo menos uma fatura cadastrada.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        JTextField invoiceSearch = new JTextField();
+        UIHelper.styleTextField(invoiceSearch);
         JComboBox<String> invoiceCombo = new JComboBox<>();
-        for (var i : invoices) invoiceCombo.addItem(i.invoiceNumber() + " — " + i.clientName());
         UIHelper.styleComboBox(invoiceCombo);
 
         JComboBox<String> reasonCombo = new JComboBox<>(CREDIT_REASONS);
@@ -2035,9 +2224,22 @@ public class ComercialPanel extends JPanel {
             }
         };
         invoiceCombo.addActionListener(e -> populateLines.run());
-        populateLines.run();
+
+        Runnable rebuildInvoiceCombo = () -> {
+            invoiceCombo.removeAllItems();
+            for (var i : invoices) invoiceCombo.addItem(i.invoiceNumber() + " — " + i.clientName());
+            if (invoiceCombo.getItemCount() > 0) invoiceCombo.setSelectedIndex(0);
+            populateLines.run();
+        };
+        UIHelper.onTextChange(invoiceSearch, () -> {
+            invoices.clear();
+            invoices.addAll(comercialService.searchInvoices(invoiceSearch.getText()));
+            rebuildInvoiceCombo.run();
+        });
+        rebuildInvoiceCombo.run();
 
         JPanel form = UIHelper.createDialogForm(
+                "Pesquisar (nº ou cliente):", invoiceSearch,
                 "Fatura:", invoiceCombo,
                 "Motivo:", reasonCombo,
                 "Armazém (devolução):", warehouseCombo,
@@ -2053,9 +2255,8 @@ public class ComercialPanel extends JPanel {
         linesWrap.add(linesScroll, BorderLayout.CENTER);
         dialogPanel.add(linesWrap, BorderLayout.CENTER);
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
-                "Emitir Nota de Crédito", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Emitir Nota de Crédito", "fas-file-invoice-dollar", "Crédito sobre fatura (devolução/correção)", dialogPanel).setConfirmButton("Emitir", "fas-check").showDialog();
+        if (!confirmed) return;
 
         if (linesTable.isEditing()) linesTable.getCellEditor().stopCellEditing();
 
@@ -2091,16 +2292,29 @@ public class ComercialPanel extends JPanel {
     }
 
     private void openCreateDebitNoteDialog() {
-        var invoices = comercialService.getInvoicesByCompany(
-                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId());
+        // Lista mutável: a pesquisa substitui o conteúdo (estilo PHC — localizar a fatura de origem).
+        java.util.List<InvoiceDTO> invoices = new ArrayList<>(comercialService.getInvoicesByCompany(
+                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId()));
         if (invoices.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Precisa de pelo menos uma fatura cadastrada.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        JTextField invoiceSearch = new JTextField();
+        UIHelper.styleTextField(invoiceSearch);
         JComboBox<String> invoiceCombo = new JComboBox<>();
-        for (var i : invoices) invoiceCombo.addItem(i.invoiceNumber() + " — " + i.clientName());
         UIHelper.styleComboBox(invoiceCombo);
+        Runnable rebuildInvoiceCombo = () -> {
+            invoiceCombo.removeAllItems();
+            for (var i : invoices) invoiceCombo.addItem(i.invoiceNumber() + " — " + i.clientName());
+            if (invoiceCombo.getItemCount() > 0) invoiceCombo.setSelectedIndex(0);
+        };
+        UIHelper.onTextChange(invoiceSearch, () -> {
+            invoices.clear();
+            invoices.addAll(comercialService.searchInvoices(invoiceSearch.getText()));
+            rebuildInvoiceCombo.run();
+        });
+        rebuildInvoiceCombo.run();
 
         JComboBox<String> reasonCombo = new JComboBox<>(DEBIT_REASONS);
         UIHelper.styleComboBox(reasonCombo);
@@ -2133,6 +2347,7 @@ public class ComercialPanel extends JPanel {
         linesModel.addRow(new Object[]{"Frete adicional", "0", "0"});
 
         JPanel form = UIHelper.createDialogForm(
+                "Pesquisar (nº ou cliente):", invoiceSearch,
                 "Fatura:", invoiceCombo,
                 "Motivo:", reasonCombo,
                 "Descrição:", descField
@@ -2148,9 +2363,8 @@ public class ComercialPanel extends JPanel {
         linesWrap.add(lineBtns, BorderLayout.SOUTH);
         dialogPanel.add(linesWrap, BorderLayout.CENTER);
 
-        int option = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(dialogPanel),
-                "Emitir Nota de Débito", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (option != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Emitir Nota de Débito", "fas-file-invoice-dollar", "Débito adicional sobre fatura", dialogPanel).setConfirmButton("Emitir", "fas-check").showDialog();
+        if (!confirmed) return;
 
         if (linesTable.isEditing()) linesTable.getCellEditor().stopCellEditing();
         if (linesModel.getRowCount() == 0) {
@@ -2189,6 +2403,107 @@ public class ComercialPanel extends JPanel {
     private JTable outstandingTable;
     private java.util.List<com.phcpro.modules.comercial.dto.InvoiceDTO> outstandingList = new ArrayList<>();
 
+    private JPanel createMovimentosTab() {
+        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+
+        JPanel header = new JPanel(new BorderLayout(8, 0));
+        header.setOpaque(false);
+        header.add(UIHelper.createSubheading("Movimentos — Todos os Documentos Comerciais"), BorderLayout.WEST);
+
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> loadMovimentosTable());
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refreshBtn);
+        header.add(actions, BorderLayout.EAST);
+        tab.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout());
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        String[] cols = {"Tipo", "Nº", "Cliente", "Data", "Estado", "Total"};
+        movimentosModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        movimentosTable = new JTable(movimentosModel);
+        UIHelper.styleTable(movimentosTable);
+        JScrollPane scroll = new JScrollPane(movimentosTable);
+        UIHelper.styleScrollPane(scroll);
+        movimentosSearch = TableFilter.searchField("Nº documento ou cliente…");
+        movimentosPeriod = TableFilter.periodCombo();
+        TableFilter.install(movimentosTable, movimentosSearch,
+                java.util.List.of(),
+                java.util.List.of(new TableFilter.PeriodFilter(movimentosPeriod, 3)));
+        // Rodapé (contagem + soma) acompanha o filtro client-side.
+        UIHelper.onTextChange(movimentosSearch, this::updateMovimentosFooter);
+        movimentosPeriod.addActionListener(e -> updateMovimentosFooter());
+        JPanel mvBar = TableFilter.bar(movimentosSearch, TableFilter.label("Data:", "fas-calendar-alt"), movimentosPeriod);
+        mvBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(mvBar, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+
+        movimentosFooter = new JLabel(" ");
+        movimentosFooter.setForeground(UIHelper.TEXT_MUTED);
+        movimentosFooter.setBorder(new EmptyBorder(8, 4, 0, 4));
+        card.add(movimentosFooter, BorderLayout.SOUTH);
+
+        tab.add(card, BorderLayout.CENTER);
+        return tab;
+    }
+
+    private void loadMovimentosTable() {
+        if (movimentosModel == null) return;
+        movimentosModel.setRowCount(0);
+        movimentosData = movimentosService.listar(
+                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId(), "", null, null);
+        java.time.format.DateTimeFormatter dtf =
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        for (var m : movimentosData) {
+            java.math.BigDecimal total = m.total() == null ? java.math.BigDecimal.ZERO : m.total();
+            movimentosModel.addRow(new Object[]{
+                    m.tipo().getLabel(),
+                    m.numero() == null ? "-" : m.numero(),
+                    m.cliente(),
+                    m.data() == null ? "-" : m.data().format(dtf),
+                    m.estado(),
+                    String.format("%,.2f MT", total)
+            });
+        }
+        updateMovimentosFooter();
+    }
+
+    /** Rodapé: contagem + soma dos movimentos actualmente visíveis (após pesquisa/período). */
+    private void updateMovimentosFooter() {
+        if (movimentosFooter == null) return;
+        String q = movimentosSearch == null ? "" : movimentosSearch.getText();
+        String period = movimentosPeriod == null ? null : String.valueOf(movimentosPeriod.getSelectedItem());
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.format.DateTimeFormatter dtf =
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        int count = 0;
+        java.math.BigDecimal soma = java.math.BigDecimal.ZERO;
+        for (var m : movimentosData) {
+            java.math.BigDecimal total = m.total() == null ? java.math.BigDecimal.ZERO : m.total();
+            String dataStr = m.data() == null ? "-" : m.data().format(dtf);
+            java.util.List<String> cells = java.util.List.of(
+                    m.tipo().getLabel(),
+                    m.numero() == null ? "-" : m.numero(),
+                    m.cliente() == null ? "" : m.cliente(),
+                    dataStr,
+                    m.estado() == null ? "" : m.estado(),
+                    String.format("%,.2f MT", total));
+            if (!TableFilter.rowMatches(cells, q, java.util.Map.of())) continue;
+            if (!TableFilter.matchesPeriod(TableFilter.parseCellDate(dataStr), period, today)) continue;
+            count++;
+            soma = soma.add(total);
+        }
+        movimentosFooter.setText(String.format("%d documento(s) · Total: %,.2f MT", count, soma));
+    }
+
     private JPanel createOutstandingTab() {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
@@ -2224,6 +2539,19 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTable(outstandingTable);
         JScrollPane scroll = new JScrollPane(outstandingTable);
         UIHelper.styleScrollPane(scroll);
+
+        JTextField ccSearch = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
+        JComboBox<String> ccEstado = TableFilter.combo("Todos os estados",
+                "APPROVED", "PARTIALLY_PAID");
+        JComboBox<String> ccPeriodo = TableFilter.periodCombo();
+        TableFilter.install(outstandingTable, ccSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ccEstado, 7)),
+                java.util.List.of(new TableFilter.PeriodFilter(ccPeriodo, 1)));
+        JPanel ccBar = TableFilter.bar(ccSearch,
+                TableFilter.label("Estado:"), ccEstado,
+                TableFilter.label("Data:", "fas-calendar-alt"), ccPeriodo);
+        ccBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(ccBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -2253,7 +2581,7 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.comercial.dto.InvoiceDTO selectedOutstanding() {
-        int row = outstandingTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(outstandingTable);
         if (row < 0) {
             JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -2296,10 +2624,10 @@ public class ComercialPanel extends JPanel {
                 "Referência (Nº recibo/transação):", referenceField
         );
 
-        int opt = JOptionPane.showConfirmDialog(this, UIHelper.makeDialogScrollable(form),
-                "Receber Pagamento — " + sel.invoiceNumber(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
+                "Receber Pagamento — " + sel.invoiceNumber(), "fas-money-bill-wave", "Liquidação de fatura em dívida", form)
+                .setConfirmButton("Receber", "fas-money-bill-wave").showDialog();
+        if (!confirmed) return;
 
         try {
             java.math.BigDecimal amount = new java.math.BigDecimal(amountField.getText().trim());

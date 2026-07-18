@@ -5,6 +5,7 @@ build/
 
 # Runtime data and backups
 backups/
+data/
 *.db
 *.db-journal
 *.sqlite
