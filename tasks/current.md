@@ -38,6 +38,11 @@ migrar o desktop para cliente-fino (HTTPS-only).** A fonte de verdade operaciona
   - **Plataforma** (10.º, superadmin): `PlatformApiClient` colapsa empresas+utilizadores+assinaturas+
     suporte (~22 métodos, só DTOs). 3 endpoints novos de options (plan/method/status). `/api/platform/**`
     não precisa de empresa. `PlatformCompanyService`/`PlatformUserService` saíram do `MainFrame`. Harness TC-62.
+  - **Config** (11.º): maior esforço single-panel. **3 controllers novos** (`/api/users`, `/api/audit`,
+    `/api/backup`) + `AppUserDTO`/`AuditLogDTO`/`BackupStatusDTO` + 6 clientes. **Decisão de design:** o
+    **backup corre no servidor** (onde está a BD) e a auditoria dos backups é registada server-side (o
+    desktop deixou de chamar `logEvent`). Papel do utilizador = por empresa. 7 serviços saíram do
+    `MainFrame`. Harness TC-63.
   - Carregamento passou para `onPanelSelected()` (nunca no construtor) para não rebentar sem empresa.
   - **Falta:** médios (Promoções, Fiscal, RH, Dashboard) e os grandes (POS/Stock/Compras/Comercial),
     que precisam de endpoints novos. Só se fecha o PostgreSQL ao exterior quando **todos** migrarem.

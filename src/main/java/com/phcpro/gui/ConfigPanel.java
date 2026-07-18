@@ -8,21 +8,21 @@ import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.users.model.AppUser;
-import com.phcpro.modules.users.service.AppUserService;
-import com.phcpro.modules.audit.model.AuditLog;
-import com.phcpro.modules.audit.service.AuditLogService;
+import com.phcpro.desktop.client.AuditApiClient;
+import com.phcpro.desktop.client.BackupApiClient;
+import com.phcpro.desktop.client.UserApiClient;
+import com.phcpro.modules.users.dto.AppUserDTO;
+import com.phcpro.modules.audit.dto.AuditLogDTO;
+import com.phcpro.modules.backup.dto.BackupStatusDTO;
 import com.phcpro.modules.backup.dto.BackupVerificationDTO;
 import com.phcpro.modules.backup.dto.PhysicalBackupResultDTO;
-import com.phcpro.modules.backup.service.BackupService;
-import com.phcpro.modules.backup.service.DatabaseBackupService;
 import com.phcpro.modules.documents.dto.DocumentColumnsDTO;
-import com.phcpro.modules.documents.service.DocumentConfigService;
+import com.phcpro.desktop.client.DocumentConfigApiClient;
 import com.phcpro.modules.subscription.dto.MySubscriptionDTO;
-import com.phcpro.modules.subscription.service.SubscriptionService;
+import com.phcpro.desktop.client.MySubscriptionApiClient;
 import com.phcpro.modules.support.dto.CreateTicketRequest;
 import com.phcpro.modules.support.dto.SupportTicketDTO;
-import com.phcpro.modules.support.service.SupportService;
+import com.phcpro.desktop.client.SupportApiClient;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -34,14 +34,12 @@ import java.util.List;
 
 public class ConfigPanel extends JPanel {
 
-    private final AppUserService userService;
-    private final AuditLogService auditLogService;
-    private final BackupService backupService;
-    private final DatabaseBackupService databaseBackupService;
-    private final com.phcpro.modules.backup.service.ScheduledBackupService scheduledBackupService;
-    private final DocumentConfigService documentConfigService;
-    private final SupportService supportService;
-    private final SubscriptionService subscriptionService;
+    private final UserApiClient userApiClient;
+    private final AuditApiClient auditApiClient;
+    private final BackupApiClient backupApiClient;
+    private final DocumentConfigApiClient documentConfigApiClient;
+    private final SupportApiClient supportApiClient;
+    private final MySubscriptionApiClient mySubscriptionApiClient;
 
     // TAB 5: SUPORTE À PLATAFORMA
     private DefaultTableModel supportModel;
@@ -78,19 +76,15 @@ public class ConfigPanel extends JPanel {
     private JCheckBox colSubtotal;
     private javax.swing.JTextField footerField;
 
-    public ConfigPanel(AppUserService userService, AuditLogService auditLogService, BackupService backupService,
-                       DatabaseBackupService databaseBackupService,
-                       com.phcpro.modules.backup.service.ScheduledBackupService scheduledBackupService,
-                       DocumentConfigService documentConfigService,
-                       SupportService supportService, SubscriptionService subscriptionService) {
-        this.userService = userService;
-        this.auditLogService = auditLogService;
-        this.backupService = backupService;
-        this.databaseBackupService = databaseBackupService;
-        this.scheduledBackupService = scheduledBackupService;
-        this.documentConfigService = documentConfigService;
-        this.supportService = supportService;
-        this.subscriptionService = subscriptionService;
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient) {
+        this.userApiClient = userApiClient;
+        this.auditApiClient = auditApiClient;
+        this.backupApiClient = backupApiClient;
+        this.documentConfigApiClient = documentConfigApiClient;
+        this.supportApiClient = supportApiClient;
+        this.mySubscriptionApiClient = mySubscriptionApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -127,7 +121,8 @@ public class ConfigPanel extends JPanel {
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        onPanelSelected();
+        // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate), não no
+        // construtor — arranque resiliente se o backend falhar.
     }
 
     private JPanel buildAppearanceBar() {
@@ -386,7 +381,7 @@ public class ConfigPanel extends JPanel {
             if (nameField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
-            userService.updateUserName(username, nameField.getText().trim());
+            userApiClient.updateUserName(username, nameField.getText().trim());
         });
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Utilizador atualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -486,10 +481,10 @@ public class ConfigPanel extends JPanel {
     }
 
     private void loadDocumentColumns() {
-        if (documentConfigService == null || colBarcode == null) {
+        if (documentConfigApiClient == null || colBarcode == null) {
             return;
         }
-        DocumentColumnsDTO cols = documentConfigService.getColumns(
+        DocumentColumnsDTO cols = documentConfigApiClient.getColumns(
                 CurrentUserContext.getCurrentCompanyId(), selectedDocType());
         colBarcode.setSelected(cols.barcode());
         colReference.setSelected(cols.reference());
@@ -515,7 +510,7 @@ public class ConfigPanel extends JPanel {
                 footerField.getText().trim().isEmpty() ? null : footerField.getText().trim()
         );
         try {
-            documentConfigService.save(CurrentUserContext.getCurrentCompanyId(), selectedDocType(), dto);
+            documentConfigApiClient.save(CurrentUserContext.getCurrentCompanyId(), selectedDocType(), dto);
             JOptionPane.showMessageDialog(this, "Configuração de " + selectedDocType().label() + " guardada com sucesso.",
                     "Configuração Guardada", JOptionPane.INFORMATION_MESSAGE);
             loadAuditLogs();
@@ -536,20 +531,21 @@ public class ConfigPanel extends JPanel {
 
     /** Estado do backup físico automático (activo/última execução) para visibilidade + alerta. */
     private void refreshAutoBackupStatus() {
-        if (backupAutoStatus == null || scheduledBackupService == null) return;
-        String base = scheduledBackupService.isEnabled()
+        if (backupAutoStatus == null) return;
+        BackupStatusDTO st = backupApiClient.status();
+        String base = st.autoEnabled()
                 ? "Backup automático: ACTIVO (diário)"
                 : "Backup automático: desativado";
-        var last = scheduledBackupService.getLastRun();
-        if (last == null) {
+        if (st.lastTime() == null) {
             backupAutoStatus.setText(base + " — ainda sem execução nesta sessão.");
             backupAutoStatus.setForeground(UIHelper.TEXT_MUTED);
             return;
         }
+        boolean ok = Boolean.TRUE.equals(st.lastSuccess());
         java.time.format.DateTimeFormatter f = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        backupAutoStatus.setText(base + " — última: " + last.time().format(f)
-                + (last.success() ? "  ✓ OK" : "  ✗ FALHOU"));
-        backupAutoStatus.setForeground(last.success() ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
+        backupAutoStatus.setText(base + " — última: " + st.lastTime().format(f)
+                + (ok ? "  ✓ OK" : "  ✗ FALHOU"));
+        backupAutoStatus.setForeground(ok ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
     }
 
     /** Executa já o backup físico automático (retenção + registo). Só ADMIN. */
@@ -560,7 +556,7 @@ public class ConfigPanel extends JPanel {
             return;
         }
         UIHelper.runWithProgress(this, "A executar backup automático…",
-                () -> scheduledBackupService.runAndRecord(),
+                () -> backupApiClient.runAuto(),
                 res -> {
                     backupLogArea.append((res.success() ? "[OK] " : "[FALHA] ") + res.message() + "\n");
                     refreshAutoBackupStatus();
@@ -572,15 +568,15 @@ public class ConfigPanel extends JPanel {
     private void loadAuditLogs() {
         auditTableModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<AuditLog> logs = auditLogService.getLogsByCompany(companyId);
+        List<AuditLogDTO> logs = auditApiClient.getLogsByCompany(companyId);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
-        for (AuditLog l : logs) {
+        for (AuditLogDTO l : logs) {
             auditTableModel.addRow(new Object[]{
-                    l.getEventTime().format(dtf),
-                    l.getUsername(),
-                    l.getAction(),
-                    l.getDetails()
+                    l.eventTime().format(dtf),
+                    l.username(),
+                    l.action(),
+                    l.details()
             });
         }
     }
@@ -596,13 +592,10 @@ public class ConfigPanel extends JPanel {
 
         backupLogArea.append(">> A iniciar cópia de segurança manual (" + activeUser + ")...\n");
         try {
-            String path = backupService.executeBackup();
+            String path = backupApiClient.executeBackup();
             backupLogArea.append(">> Backup efetuado com sucesso!\n");
             backupLogArea.append(">> Destino: " + path + "\n");
-            
-            // Log backup event
-            auditLogService.logEvent(activeUser, CurrentUserContext.getCurrentCompanyId(), "BACKUP_MANUAL", "Cópia de segurança gerada: " + path);
-            
+            // A auditoria (BACKUP_MANUAL) é registada pelo servidor.
             JOptionPane.showMessageDialog(this, "Cópia de segurança gravada com sucesso em:\n" + path, "Backup Concluído", JOptionPane.INFORMATION_MESSAGE);
             loadBackupFilesList();
             loadAuditLogs();
@@ -621,13 +614,11 @@ public class ConfigPanel extends JPanel {
 
         backupLogArea.append(">> A iniciar backup físico da base de dados (" + activeUser + ")...\n");
         UIHelper.runWithProgress(this, "A gerar backup físico da base de dados…",
-                databaseBackupService::executePhysicalBackup,
+                backupApiClient::executePhysical,
                 result -> {
                     backupLogArea.append(">> Backup físico concluído!\n");
                     backupLogArea.append(">> Destino: " + result.filePath() + "\n");
                     backupLogArea.append(">> Base de dados: " + result.database() + " (" + (result.sizeBytes() / 1024) + " KB)\n");
-                    auditLogService.logEvent(activeUser, CurrentUserContext.getCurrentCompanyId(), "BACKUP_FISICO",
-                            "Backup físico gerado: " + result.filePath());
                     JOptionPane.showMessageDialog(this, "Backup físico restaurável gravado em:\n" + result.filePath(),
                             "Backup Físico Concluído", JOptionPane.INFORMATION_MESSAGE);
                     loadAuditLogs();
@@ -651,18 +642,13 @@ public class ConfigPanel extends JPanel {
         }
 
         String fileName = String.valueOf(backupFilesModel.getValueAt(selectedRow, 0));
-        File backupFile = new File("backups", fileName);
         backupLogArea.append(">> A verificar backup: " + fileName + "\n");
         try {
-            BackupVerificationDTO verification = backupService.verifyBackup(backupFile.getPath());
+            BackupVerificationDTO verification = backupApiClient.verify(fileName);
             backupLogArea.append(">> Backup válido para a empresa " + verification.companyId() + "\n");
             backupLogArea.append(">> Gerado em: " + verification.generatedAt() + "\n");
             backupLogArea.append(">> Secções verificadas: " + verification.totalSections() + "\n");
             backupLogArea.append(">> Registos: " + verification.itemCounts() + "\n");
-            auditLogService.logEvent(CurrentUserContext.getUsername(),
-                    CurrentUserContext.getCurrentCompanyId(),
-                    "BACKUP_VERIFY",
-                    "Backup verificado: " + verification.fileName());
             JOptionPane.showMessageDialog(this,
                     "Backup verificado com sucesso.\nFicheiro: " + verification.fileName(),
                     "Backup Válido",
@@ -676,20 +662,15 @@ public class ConfigPanel extends JPanel {
 
     private void loadBackupFilesList() {
         backupFilesModel.setRowCount(0);
-        File backupsDir = new File("backups");
-        if (backupsDir.exists() && backupsDir.isDirectory()) {
-            String prefix = "company_" + CurrentUserContext.getCurrentCompanyId() + "_backup_";
-            File[] files = backupsDir.listFiles((dir, name) ->
-                    name.startsWith(prefix) && name.toLowerCase().endsWith(".json"));
-            if (files != null) {
-                for (File f : files) {
-                    double kbSize = (double) f.length() / 1024.0;
-                    backupFilesModel.addRow(new Object[]{
-                            f.getName(),
-                            String.format("%.2f KB", kbSize)
-                    });
+        String prefix = "company_" + CurrentUserContext.getCurrentCompanyId() + "_backup_";
+        try {
+            for (String name : backupApiClient.files()) {
+                if (name.startsWith(prefix) && name.toLowerCase().endsWith(".json")) {
+                    backupFilesModel.addRow(new Object[]{name, "—"});
                 }
             }
+        } catch (Exception ignored) {
+            // Servidor indisponível → lista vazia (não bloqueia o painel).
         }
     }
 
@@ -701,13 +682,13 @@ public class ConfigPanel extends JPanel {
             });
             return;
         }
-        List<AppUser> users = userService.getAllUsers();
-        for (AppUser u : users) {
+        List<AppUserDTO> users = userApiClient.getAllUsers();
+        for (AppUserDTO u : users) {
             usersTableModel.addRow(new Object[]{
-                    u.getUsername(),
-                    u.getName(),
-                    u.getRoleForCompany(CurrentUserContext.getCurrentCompanyId()),
-                    u.isActive() ? "ATIVO" : "INATIVO"
+                    u.username(),
+                    u.name(),
+                    u.role(),
+                    u.active() ? "ATIVO" : "INATIVO"
             });
         }
     }
@@ -737,7 +718,7 @@ public class ConfigPanel extends JPanel {
             if (username.isEmpty() || fullName.isEmpty() || password.isEmpty()) {
                 throw new IllegalArgumentException("Todos os campos são obrigatórios.");
             }
-            userService.createUser(username, fullName, password, role);
+            userApiClient.createUser(username, fullName, password, role);
         });
 
         if (dlg.showDialog()) {
@@ -762,7 +743,7 @@ public class ConfigPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Novo Perfil:", roleCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Alterar Perfil",
                 "fas-user-shield", "Utilizador: " + username, form).setConfirmButton("Alterar", "fas-check");
-        dlg.setOnSave(() -> userService.updateCompanyRole(username, (String) roleCombo.getSelectedItem()));
+        dlg.setOnSave(() -> userApiClient.updateCompanyRole(username, (String) roleCombo.getSelectedItem()));
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Perfil de '" + username + "' atualizado nesta empresa.",
@@ -841,7 +822,7 @@ public class ConfigPanel extends JPanel {
             return;
         }
         try {
-            supportTickets = supportService.listCompanyTickets();
+            supportTickets = supportApiClient.listCompanyTickets();
             for (SupportTicketDTO t : supportTickets) {
                 supportModel.addRow(new Object[]{
                         t.id(), t.subject(), t.priorityLabel(), t.statusLabel(), t.messageCount()
@@ -874,7 +855,7 @@ public class ConfigPanel extends JPanel {
             if (subjectField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O assunto é obrigatório.");
             }
-            supportService.openTicket(new CreateTicketRequest(
+            supportApiClient.openTicket(new CreateTicketRequest(
                     subjectField.getText().trim(), descArea.getText().trim(),
                     (String) priorityCombo.getSelectedItem()));
         });
@@ -894,7 +875,7 @@ public class ConfigPanel extends JPanel {
         }
         SupportTicketDTO ticket = supportTickets.get(row);
 
-        JTextArea thread = new JTextArea(PlataformaPanel.renderThread(supportService.listCompanyMessages(ticket.id())));
+        JTextArea thread = new JTextArea(PlataformaPanel.renderThread(supportApiClient.listCompanyMessages(ticket.id())));
         thread.setEditable(false);
         thread.setLineWrap(true);
         thread.setWrapStyleWord(true);
@@ -920,7 +901,7 @@ public class ConfigPanel extends JPanel {
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
             try {
-                supportService.addCompanyMessage(ticket.id(), reply.getText().trim());
+                supportApiClient.addCompanyMessage(ticket.id(), reply.getText().trim());
                 loadSupportTickets();
             } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Suporte", JOptionPane.ERROR_MESSAGE);
@@ -962,7 +943,7 @@ public class ConfigPanel extends JPanel {
         if (subscriptionCard == null) return;
         subscriptionCard.removeAll();
         try {
-            MySubscriptionDTO sub = subscriptionService.getMySubscription();
+            MySubscriptionDTO sub = mySubscriptionApiClient.getMySubscription();
             if (!sub.hasSubscription()) {
                 subscriptionCard.add(bigInfo("Sem assinatura definida",
                         "A sua empresa ainda não tem um plano associado. Contacte o suporte da plataforma.",

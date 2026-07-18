@@ -6,6 +6,12 @@ import com.phcpro.desktop.session.DesktopSessionStore;
 import com.phcpro.desktop.client.ApprovalApiClient;
 import com.phcpro.desktop.client.FiscalApiClient;
 import com.phcpro.desktop.client.PlatformApiClient;
+import com.phcpro.desktop.client.UserApiClient;
+import com.phcpro.desktop.client.AuditApiClient;
+import com.phcpro.desktop.client.BackupApiClient;
+import com.phcpro.desktop.client.DocumentConfigApiClient;
+import com.phcpro.desktop.client.SupportApiClient;
+import com.phcpro.desktop.client.MySubscriptionApiClient;
 import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
@@ -15,8 +21,6 @@ import com.phcpro.desktop.client.PurchaseApiClient;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.TopNavBar;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.audit.service.AuditLogService;
-import com.phcpro.modules.backup.service.BackupService;
 import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.financeira.service.FinanceService;
@@ -33,7 +37,6 @@ import com.phcpro.modules.printing.InventoryReportPrintService;
 import com.phcpro.modules.printing.OrderPrintService;
 import com.phcpro.modules.printing.ReceiptPrintService;
 import com.phcpro.modules.printing.StockTransferPrintService;
-import com.phcpro.modules.users.service.AppUserService;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -103,11 +106,12 @@ public class MainFrame extends JFrame {
             InventoryService inventoryService,
             POSService posService,
             com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService,
-            AppUserService userService,
-            AuditLogService auditLogService,
-            BackupService backupService,
-            com.phcpro.modules.backup.service.DatabaseBackupService databaseBackupService,
-            com.phcpro.modules.backup.service.ScheduledBackupService scheduledBackupService,
+            UserApiClient userApiClient,
+            AuditApiClient auditApiClient,
+            BackupApiClient backupApiClient,
+            DocumentConfigApiClient documentConfigApiClient,
+            SupportApiClient supportApiClient,
+            MySubscriptionApiClient mySubscriptionApiClient,
             CompanyService companyService,
             com.phcpro.modules.promotions.service.PromotionService promotionService,
             PromotionApiClient promotionApiClient,
@@ -126,10 +130,8 @@ public class MainFrame extends JFrame {
             DebitNotePrintService debitNotePrintService,
             FiscalApiClient fiscalApiClient,
             com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
-            com.phcpro.modules.documents.service.DocumentConfigService documentConfigService,
             PlatformApiClient platformApiClient,
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
-            com.phcpro.modules.support.service.SupportService supportService,
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
             com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService,
@@ -170,7 +172,7 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
             stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productLabelPrintService, productCategoryService);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
-            configPanel     = new ConfigPanel(userService, auditLogService, backupService, databaseBackupService, scheduledBackupService, documentConfigService, supportService, subscriptionService);
+            configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);
             plataformaPanel = null;
 
             contentPanel.add(dashboardPanel,  "dashboard");
