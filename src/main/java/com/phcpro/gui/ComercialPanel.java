@@ -7,14 +7,18 @@ import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.CreditNoteApiClient;
+import com.phcpro.desktop.client.DebitNoteApiClient;
+import com.phcpro.desktop.client.FinanceApiClient;
+import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.desktop.client.MovimentosApiClient;
+import com.phcpro.desktop.client.POSApiClient;
+import com.phcpro.desktop.client.PromotionApiClient;
 import com.phcpro.modules.comercial.dto.*;
-import com.phcpro.modules.comercial.model.Receipt;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
-import com.phcpro.modules.comercial.service.ComercialService;
-import com.phcpro.modules.inventory.model.Warehouse;
-import com.phcpro.modules.inventory.service.InventoryService;
+import com.phcpro.modules.inventory.dto.WarehouseDTO;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
-import com.phcpro.modules.financeira.service.FinanceService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -28,13 +32,9 @@ import java.util.List;
 
 public class ComercialPanel extends JPanel {
 
-    private final ComercialService comercialService;
-    private final InventoryService inventoryService;
-    private final FinanceService financeService;
-    private final com.phcpro.modules.printing.InvoicePrintService invoicePrintService;
-    private final com.phcpro.modules.printing.OrderPrintService orderPrintService;
-    private final com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService;
-    private final com.phcpro.modules.company.service.CompanyService companyService;
+    private final ComercialApiClient comercialApiClient;
+    private final InventoryApiClient inventoryApiClient;
+    private final FinanceApiClient financeApiClient;
 
     // TAB 1: FATURAÇÃO ELEMENTS
     private JComboBox<String> clientCombo;
@@ -78,7 +78,7 @@ public class ComercialPanel extends JPanel {
     // Seeding lists for selections
     private List<ClientDTO> clientsList = new ArrayList<>();
     private List<ProductDTO> productsList = new ArrayList<>();
-    private List<Warehouse> warehousesList = new ArrayList<>();
+    private List<WarehouseDTO> warehousesList = new ArrayList<>();
     
     // In-memory line items of the invoice currently being drafted
     private final List<CreateInvoiceLineRequest> draftLines = new ArrayList<>();
@@ -93,12 +93,10 @@ public class ComercialPanel extends JPanel {
     private BigDecimal draftOrderTotal = BigDecimal.ZERO;
 
 
-    private final com.phcpro.modules.comercial.service.CreditNoteService creditNoteService;
-    private final com.phcpro.modules.comercial.service.DebitNoteService debitNoteService;
-    private final com.phcpro.modules.printing.CreditNotePrintService creditNotePrintService;
-    private final com.phcpro.modules.printing.DebitNotePrintService debitNotePrintService;
-    private final com.phcpro.modules.pos.service.POSService posService;
-    private final com.phcpro.modules.movimentos.service.MovimentosService movimentosService;
+    private final CreditNoteApiClient creditNoteApiClient;
+    private final DebitNoteApiClient debitNoteApiClient;
+    private final POSApiClient posApiClient;
+    private final MovimentosApiClient movimentosApiClient;
 
     private JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
     private com.phcpro.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
@@ -112,35 +110,22 @@ public class ComercialPanel extends JPanel {
     private JLabel movimentosFooter;
 
     public ComercialPanel(
-            ComercialService comercialService,
-            InventoryService inventoryService,
-            FinanceService financeService,
-            com.phcpro.modules.printing.InvoicePrintService invoicePrintService,
-            com.phcpro.modules.printing.OrderPrintService orderPrintService,
-            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
-            com.phcpro.modules.company.service.CompanyService companyService,
-            com.phcpro.modules.comercial.service.CreditNoteService creditNoteService,
-            com.phcpro.modules.comercial.service.DebitNoteService debitNoteService,
-            com.phcpro.modules.printing.CreditNotePrintService creditNotePrintService,
-            com.phcpro.modules.printing.DebitNotePrintService debitNotePrintService,
-            com.phcpro.modules.pos.service.POSService posService,
-            com.phcpro.desktop.client.PromotionApiClient promotionApiClient,
-            com.phcpro.desktop.client.ComercialApiClient comercialApiClient,
-            com.phcpro.modules.movimentos.service.MovimentosService movimentosService
+            ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient,
+            FinanceApiClient financeApiClient,
+            CreditNoteApiClient creditNoteApiClient,
+            DebitNoteApiClient debitNoteApiClient,
+            POSApiClient posApiClient,
+            MovimentosApiClient movimentosApiClient,
+            PromotionApiClient promotionApiClient
     ) {
-        this.comercialService = comercialService;
-        this.inventoryService = inventoryService;
-        this.financeService = financeService;
-        this.invoicePrintService = invoicePrintService;
-        this.orderPrintService = orderPrintService;
-        this.guideRemittancePrintService = guideRemittancePrintService;
-        this.companyService = companyService;
-        this.creditNoteService = creditNoteService;
-        this.debitNoteService = debitNoteService;
-        this.creditNotePrintService = creditNotePrintService;
-        this.debitNotePrintService = debitNotePrintService;
-        this.posService = posService;
-        this.movimentosService = movimentosService;
+        this.comercialApiClient = comercialApiClient;
+        this.inventoryApiClient = inventoryApiClient;
+        this.financeApiClient = financeApiClient;
+        this.creditNoteApiClient = creditNoteApiClient;
+        this.debitNoteApiClient = debitNoteApiClient;
+        this.posApiClient = posApiClient;
+        this.movimentosApiClient = movimentosApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -530,8 +515,8 @@ public class ComercialPanel extends JPanel {
         orderClientCombo.removeAllItems();
         orderProductCombo.removeAllItems();
 
-        clientsList = comercialService.getAllClients();
-        productsList = comercialService.getAllProducts();
+        clientsList = comercialApiClient.getAllClients();
+        productsList = comercialApiClient.getAllProducts();
 
         // Encomendas aceitam venda sem cliente registado — primeiro item do combo.
         orderClientCombo.addItem("— Consumidor Final (sem registo) —");
@@ -559,11 +544,11 @@ public class ComercialPanel extends JPanel {
         warehouseCombo.removeAllItems();
         orderWarehouseCombo.removeAllItems();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        warehousesList = inventoryService.getWarehousesByCompany(companyId);
+        warehousesList = inventoryApiClient.getWarehousesByCompany(companyId);
 
-        for (Warehouse w : warehousesList) {
-            warehouseCombo.addItem(w.getName());
-            orderWarehouseCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            warehouseCombo.addItem(w.name());
+            orderWarehouseCombo.addItem(w.name());
         }
     }
 
@@ -717,10 +702,10 @@ public class ComercialPanel extends JPanel {
             throw new RuntimeException("Selecione cliente e armazém.");
         }
         ClientDTO client = clientsList.get(clientIdx);
-        Warehouse warehouse = warehousesList.get(whIdx);
+        WarehouseDTO warehouse = warehousesList.get(whIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        CreateInvoiceRequest request = new CreateInvoiceRequest(client.id(), companyId, warehouse.getId(), draftLines);
-        lastCreatedInvoice = comercialService.createInvoice(request);
+        CreateInvoiceRequest request = new CreateInvoiceRequest(client.id(), companyId, warehouse.id(), draftLines);
+        lastCreatedInvoice = comercialApiClient.createInvoice(request);
         resetInvoiceDraft();
     }
 
@@ -748,7 +733,7 @@ public class ComercialPanel extends JPanel {
         if (reason == null) return;
 
         try {
-            comercialService.cancelInvoice(invoiceId, reason);
+            comercialApiClient.cancelInvoice(invoiceId, reason);
             JOptionPane.showMessageDialog(this, "Fatura " + invoiceNum + " anulada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadInvoicesTable();
             loadReceiptsTable();
@@ -777,7 +762,7 @@ public class ComercialPanel extends JPanel {
         BigDecimal invoiceTotal = new BigDecimal(totalStr);
 
         // Load accounts
-        List<TreasuryAccountDTO> accounts = financeService.getAllAccounts();
+        List<TreasuryAccountDTO> accounts = financeApiClient.getAllAccounts();
         if (accounts.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Não existem contas de tesouraria registadas.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -822,7 +807,7 @@ public class ComercialPanel extends JPanel {
                     return;
                 }
 
-                comercialService.createReceipt(invoiceId, accId, paymentMethod, amountPaid);
+                comercialApiClient.createReceipt(invoiceId, accId, paymentMethod, amountPaid);
                 JOptionPane.showMessageDialog(this, "Fatura liquidada com sucesso! Recibo (RC) emitido.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 
                 loadInvoicesTable();
@@ -838,7 +823,7 @@ public class ComercialPanel extends JPanel {
     public void loadInvoicesTable() {
         invoicesTableModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<InvoiceDTO> invoices = comercialService.getInvoicesByCompany(companyId);
+        List<InvoiceDTO> invoices = comercialApiClient.getInvoicesByCompany(companyId);
         for (InvoiceDTO invoice : invoices) {
             invoicesTableModel.addRow(new Object[]{
                     invoice.id(),
@@ -853,18 +838,18 @@ public class ComercialPanel extends JPanel {
     private void loadReceiptsTable() {
         receiptsTableModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<Receipt> receipts = comercialService.getReceiptsByCompany(companyId);
+        List<ReceiptDTO> receipts = comercialApiClient.getReceiptsByCompany(companyId);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (Receipt r : receipts) {
+        for (ReceiptDTO r : receipts) {
             receiptsTableModel.addRow(new Object[]{
-                    r.getId(),
-                    r.getReceiptNumber(),
-                    r.getInvoice().getInvoiceNumber(),
-                    r.getInvoice().getClient().getName(),
-                    r.getAmountPaid() + " MT",
-                    r.getPaymentMethod(),
-                    r.getStatus(),
-                    r.getReceiptDate().format(dtf)
+                    r.id(),
+                    r.receiptNumber(),
+                    r.invoiceNumber(),
+                    r.clientName(),
+                    r.amountPaid() + " MT",
+                    r.paymentMethod(),
+                    r.status(),
+                    r.receiptDate().format(dtf)
             });
         }
     }
@@ -884,7 +869,7 @@ public class ComercialPanel extends JPanel {
         if (reason == null) return;
 
         try {
-            comercialService.cancelReceipt(receiptId, reason);
+            comercialApiClient.cancelReceipt(receiptId, reason);
             JOptionPane.showMessageDialog(this, "Recibo " + receiptNum + " anulado com sucesso!\nStatus da fatura revertido para APROVADA.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadInvoicesTable();
             loadReceiptsTable();
@@ -1296,9 +1281,9 @@ public class ComercialPanel extends JPanel {
             return;
         }
         ProductDTO product = sourceProducts.get(prodIdx);
-        Warehouse warehouse = warehousesList.get(whIdx);
+        WarehouseDTO warehouse = warehousesList.get(whIdx);
         try {
-            inventoryService.findNextFEFO(product.id(), warehouse.getId()).ifPresentOrElse(
+            inventoryApiClient.findNextFEFO(product.id(), warehouse.id()).ifPresentOrElse(
                     b -> {
                         String lote = b.batchNumber() == null ? "—" : b.batchNumber();
                         String val = b.expirationDate() == null
@@ -1359,12 +1344,12 @@ public class ComercialPanel extends JPanel {
             if (!typed.isEmpty()) walkInName = typed;
         }
 
-        Warehouse warehouse = warehousesList.get(whIdx);
+        WarehouseDTO warehouse = warehousesList.get(whIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         com.phcpro.modules.comercial.dto.CreateOrderRequest request =
                 new com.phcpro.modules.comercial.dto.CreateOrderRequest(
-                        clientId, walkInName, companyId, warehouse.getId(), draftOrderLines);
-        lastCreatedOrder = comercialService.createOrder(request);
+                        clientId, walkInName, companyId, warehouse.id(), draftOrderLines);
+        lastCreatedOrder = comercialApiClient.createOrder(request);
     }
 
     /** Limpa o rascunho da encomenda (linhas, totais e selecção) antes de abrir o modal. */
@@ -1396,7 +1381,7 @@ public class ComercialPanel extends JPanel {
         }
 
         try {
-            InvoiceDTO invoice = comercialService.billOrder(orderId);
+            InvoiceDTO invoice = comercialApiClient.billOrder(orderId);
             JOptionPane.showMessageDialog(this, "Encomenda " + orderNum + " faturada com sucesso!\n" +
                     "Fatura " + invoice.invoiceNumber() + " gerada com o mesmo número de sequência.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
@@ -1410,7 +1395,7 @@ public class ComercialPanel extends JPanel {
     public void loadOrdersTable() {
         ordersTableModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<OrderDTO> orders = comercialService.getOrdersByCompany(companyId);
+        List<OrderDTO> orders = comercialApiClient.getOrdersByCompany(companyId);
         java.time.format.DateTimeFormatter dtfShort =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
         for (OrderDTO order : orders) {
@@ -1453,7 +1438,7 @@ public class ComercialPanel extends JPanel {
         Long orderId = (Long) ordersTableModel.getValueAt(row, 0);
         OrderDTO order;
         try {
-            order = comercialService.getOrderById(orderId);
+            order = comercialApiClient.getOrderById(orderId);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -1548,9 +1533,9 @@ public class ComercialPanel extends JPanel {
             if (confirm != JOptionPane.YES_OPTION) return;
         }
         try {
-            byte[] pdf = orderPrintService.render(order.id());
+            byte[] pdf = comercialApiClient.renderOrder(order.id());
             com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "encomenda-" + order.orderNumber());
-            comercialService.markOrderPrinted(order.id(),
+            comercialApiClient.markOrderPrinted(order.id(),
                     com.phcpro.architecture.security.CurrentUserContext.getUsername());
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1581,7 +1566,7 @@ public class ComercialPanel extends JPanel {
     private void openBillFromOrderDialog() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         // Lista mutável: a pesquisa substitui o conteúdo, mantendo a referência final para os lambdas.
-        java.util.List<OrderDTO> pending = new ArrayList<>(comercialService.getPendingOrdersByCompany(companyId));
+        java.util.List<OrderDTO> pending = new ArrayList<>(comercialApiClient.getPendingOrdersByCompany(companyId));
         if (pending.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Não há encomendas pendentes para faturar.",
@@ -1655,7 +1640,7 @@ public class ComercialPanel extends JPanel {
         };
         UIHelper.onTextChange(searchField, () -> {
             pending.clear();
-            pending.addAll(comercialService.searchPendingOrders(searchField.getText()));
+            pending.addAll(comercialApiClient.searchPendingOrders(searchField.getText()));
             rebuildCombo.run();
         });
         rebuildCombo.run();
@@ -1724,7 +1709,7 @@ public class ComercialPanel extends JPanel {
         OrderDTO chosen = pending.get(idx);
 
         try {
-            InvoiceDTO invoice = comercialService.billOrder(chosen.id());
+            InvoiceDTO invoice = comercialApiClient.billOrder(chosen.id());
             JOptionPane.showMessageDialog(this,
                     "Fatura " + invoice.invoiceNumber() + " emitida a partir da encomenda "
                             + chosen.orderNumber() + ".",
@@ -1742,7 +1727,7 @@ public class ComercialPanel extends JPanel {
      * que valida permissão/estado e fecha o pedido de aprovação aberto.
      */
     private void openCancelOrderDialog() {
-        java.util.List<OrderDTO> cancellable = new ArrayList<>(comercialService.searchCancellableOrders(""));
+        java.util.List<OrderDTO> cancellable = new ArrayList<>(comercialApiClient.searchCancellableOrders(""));
         if (cancellable.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Não há encomendas canceláveis. Apenas encomendas ainda não faturadas podem ser canceladas.",
@@ -1768,7 +1753,7 @@ public class ComercialPanel extends JPanel {
         };
         UIHelper.onTextChange(searchField, () -> {
             cancellable.clear();
-            cancellable.addAll(comercialService.searchCancellableOrders(searchField.getText()));
+            cancellable.addAll(comercialApiClient.searchCancellableOrders(searchField.getText()));
             rebuildCombo.run();
         });
         rebuildCombo.run();
@@ -1792,7 +1777,7 @@ public class ComercialPanel extends JPanel {
         }
 
         try {
-            comercialService.cancelOrder(chosen.id(), reason);
+            comercialApiClient.cancelOrder(chosen.id(), reason);
             JOptionPane.showMessageDialog(this,
                     "Encomenda " + chosen.orderNumber() + " cancelada.",
                     "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -1811,7 +1796,7 @@ public class ComercialPanel extends JPanel {
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
         try {
-            byte[] pdf = invoicePrintService.render(invoiceId);
+            byte[] pdf = comercialApiClient.renderInvoice(invoiceId);
             com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "fatura-" + invoiceNum);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1827,7 +1812,7 @@ public class ComercialPanel extends JPanel {
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
         try {
-            byte[] pdf = guideRemittancePrintService.render(invoiceId);
+            byte[] pdf = comercialApiClient.renderGuide(invoiceId);
             com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "guia-remessa-" + invoiceNum);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar Guia: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1852,7 +1837,7 @@ public class ComercialPanel extends JPanel {
         }
         Long orderId = (Long) ordersTableModel.getValueAt(row, 0);
         try {
-            OrderDTO order = comercialService.getOrderById(orderId);
+            OrderDTO order = comercialApiClient.getOrderById(orderId);
             printOrderWithConfirmation(order);
             loadOrdersTable();
         } catch (Exception ex) {
@@ -1871,11 +1856,10 @@ public class ComercialPanel extends JPanel {
     }
 
     private com.phcpro.modules.company.model.Company currentCompany() {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        return companyService.getAllCompanies().stream()
-                .filter(c -> c.getId().equals(companyId))
-                .findFirst()
-                .orElse(null);
+        // Cliente-fino: o exportador de tabelas só precisa do id da empresa activa (cabeçalho do PDF).
+        com.phcpro.modules.company.model.Company company = new com.phcpro.modules.company.model.Company();
+        company.setId(CurrentUserContext.getCurrentCompanyId());
+        return company;
     }
 
     // ─── Notas de Crédito / Débito ─────────────────────────────────────────────
@@ -2024,7 +2008,7 @@ public class ComercialPanel extends JPanel {
     private void loadCreditNotesTable() {
         if (creditNotesModel == null) return;
         creditNotesModel.setRowCount(0);
-        creditNotesList = creditNoteService.findByCompany(
+        creditNotesList = creditNoteApiClient.findByCompany(
                 com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId());
         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (var n : creditNotesList) {
@@ -2044,7 +2028,7 @@ public class ComercialPanel extends JPanel {
     private void loadDebitNotesTable() {
         if (debitNotesModel == null) return;
         debitNotesModel.setRowCount(0);
-        debitNotesList = debitNoteService.findByCompany(
+        debitNotesList = debitNoteApiClient.findByCompany(
                 com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId());
         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (var n : debitNotesList) {
@@ -2082,7 +2066,7 @@ public class ComercialPanel extends JPanel {
         var sel = selectedCreditNote();
         if (sel == null) return;
         try {
-            var approved = creditNoteService.approve(sel.id());
+            var approved = creditNoteApiClient.approve(sel.id());
             String msg = "Nota " + approved.noteNumber() + " aprovada.";
             if ("RETURN".equals(approved.reason())) {
                 msg += "\nStock foi devolvido ao armazém " + approved.warehouseName() + ".";
@@ -2101,7 +2085,7 @@ public class ComercialPanel extends JPanel {
                 "Indique o motivo da rejeição", "Motivo da rejeição:");
         if (reason == null) return;
         try {
-            creditNoteService.reject(sel.id(), reason);
+            creditNoteApiClient.reject(sel.id(), reason);
             loadCreditNotesTable();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -2112,7 +2096,7 @@ public class ComercialPanel extends JPanel {
         var sel = selectedCreditNote();
         if (sel == null) return;
         try {
-            byte[] pdf = creditNotePrintService.render(sel.id());
+            byte[] pdf = creditNoteApiClient.renderCreditNote(sel.id());
             com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "nota-credito-" + sel.noteNumber());
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -2123,7 +2107,7 @@ public class ComercialPanel extends JPanel {
         var sel = selectedDebitNote();
         if (sel == null) return;
         try {
-            debitNoteService.approve(sel.id());
+            debitNoteApiClient.approve(sel.id());
             JOptionPane.showMessageDialog(this, "Nota " + sel.noteNumber() + " aprovada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadDebitNotesTable();
         } catch (Exception ex) {
@@ -2138,7 +2122,7 @@ public class ComercialPanel extends JPanel {
                 "Indique o motivo da rejeição", "Motivo da rejeição:");
         if (reason == null) return;
         try {
-            debitNoteService.reject(sel.id(), reason);
+            debitNoteApiClient.reject(sel.id(), reason);
             loadDebitNotesTable();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -2149,7 +2133,7 @@ public class ComercialPanel extends JPanel {
         var sel = selectedDebitNote();
         if (sel == null) return;
         try {
-            byte[] pdf = debitNotePrintService.render(sel.id());
+            byte[] pdf = debitNoteApiClient.renderDebitNote(sel.id());
             com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "nota-debito-" + sel.noteNumber());
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -2158,7 +2142,7 @@ public class ComercialPanel extends JPanel {
 
     private void openCreateCreditNoteDialog() {
         // Lista mutável: a pesquisa substitui o conteúdo (estilo PHC — localizar a fatura de origem).
-        java.util.List<InvoiceDTO> invoices = new ArrayList<>(comercialService.getInvoicesByCompany(
+        java.util.List<InvoiceDTO> invoices = new ArrayList<>(comercialApiClient.getInvoicesByCompany(
                 com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId()));
         if (invoices.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Precisa de pelo menos uma fatura cadastrada.", "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -2174,7 +2158,7 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleComboBox(reasonCombo);
 
         JComboBox<String> warehouseCombo = new JComboBox<>();
-        for (var w : warehousesList) warehouseCombo.addItem(w.getName());
+        for (var w : warehousesList) warehouseCombo.addItem(w.name());
         UIHelper.styleComboBox(warehouseCombo);
 
         JTextField descField = new JTextField();
@@ -2204,7 +2188,7 @@ public class ComercialPanel extends JPanel {
             var invoice = invoices.get(idx);
             java.util.Map<Long, BigDecimal> alreadyReturned;
             try {
-                alreadyReturned = creditNoteService.getReturnedQuantitiesByInvoiceLine(invoice.id());
+                alreadyReturned = creditNoteApiClient.getReturnedQuantitiesByInvoiceLine(invoice.id());
             } catch (Exception ex) {
                 alreadyReturned = java.util.Collections.emptyMap();
             }
@@ -2233,7 +2217,7 @@ public class ComercialPanel extends JPanel {
         };
         UIHelper.onTextChange(invoiceSearch, () -> {
             invoices.clear();
-            invoices.addAll(comercialService.searchInvoices(invoiceSearch.getText()));
+            invoices.addAll(comercialApiClient.searchInvoices(invoiceSearch.getText()));
             rebuildInvoiceCombo.run();
         });
         rebuildInvoiceCombo.run();
@@ -2277,11 +2261,11 @@ public class ComercialPanel extends JPanel {
             var req = new com.phcpro.modules.comercial.dto.CreateCreditNoteRequest(
                     invoices.get(invoiceCombo.getSelectedIndex()).id(),
                     (String) reasonCombo.getSelectedItem(),
-                    warehousesList.isEmpty() ? null : warehousesList.get(warehouseCombo.getSelectedIndex()).getId(),
+                    warehousesList.isEmpty() ? null : warehousesList.get(warehouseCombo.getSelectedIndex()).id(),
                     descField.getText().trim().isEmpty() ? null : descField.getText().trim(),
                     lines
             );
-            var created = creditNoteService.create(req);
+            var created = creditNoteApiClient.create(req);
             JOptionPane.showMessageDialog(this, "Nota " + created.noteNumber() + " emitida (pendente de aprovação).", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadCreditNotesTable();
         } catch (NumberFormatException ex) {
@@ -2293,7 +2277,7 @@ public class ComercialPanel extends JPanel {
 
     private void openCreateDebitNoteDialog() {
         // Lista mutável: a pesquisa substitui o conteúdo (estilo PHC — localizar a fatura de origem).
-        java.util.List<InvoiceDTO> invoices = new ArrayList<>(comercialService.getInvoicesByCompany(
+        java.util.List<InvoiceDTO> invoices = new ArrayList<>(comercialApiClient.getInvoicesByCompany(
                 com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId()));
         if (invoices.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Precisa de pelo menos uma fatura cadastrada.", "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -2311,7 +2295,7 @@ public class ComercialPanel extends JPanel {
         };
         UIHelper.onTextChange(invoiceSearch, () -> {
             invoices.clear();
-            invoices.addAll(comercialService.searchInvoices(invoiceSearch.getText()));
+            invoices.addAll(comercialApiClient.searchInvoices(invoiceSearch.getText()));
             rebuildInvoiceCombo.run();
         });
         rebuildInvoiceCombo.run();
@@ -2387,7 +2371,7 @@ public class ComercialPanel extends JPanel {
                     descField.getText().trim().isEmpty() ? null : descField.getText().trim(),
                     lines
             );
-            var created = debitNoteService.create(req);
+            var created = debitNoteApiClient.create(req);
             JOptionPane.showMessageDialog(this, "Nota " + created.noteNumber() + " emitida (pendente de aprovação).", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadDebitNotesTable();
         } catch (NumberFormatException ex) {
@@ -2458,7 +2442,7 @@ public class ComercialPanel extends JPanel {
     private void loadMovimentosTable() {
         if (movimentosModel == null) return;
         movimentosModel.setRowCount(0);
-        movimentosData = movimentosService.listar(
+        movimentosData = movimentosApiClient.listar(
                 com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId(), "", null, null);
         java.time.format.DateTimeFormatter dtf =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -2560,7 +2544,7 @@ public class ComercialPanel extends JPanel {
     private void loadOutstandingTable() {
         if (outstandingModel == null) return;
         outstandingModel.setRowCount(0);
-        outstandingList = comercialService.getOutstandingInvoicesByCompany(
+        outstandingList = comercialApiClient.getOutstandingInvoicesByCompany(
                 com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId());
         java.time.format.DateTimeFormatter dtf =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -2604,7 +2588,7 @@ public class ComercialPanel extends JPanel {
         UIHelper.styleTextField(amountField);
         UIHelper.styleTextField(referenceField);
 
-        var accounts = financeService.getAllAccounts();
+        var accounts = financeApiClient.getAllAccounts();
         JComboBox<String> accountCombo = new JComboBox<>();
         for (var a : accounts) accountCombo.addItem(a.name());
         UIHelper.styleComboBox(accountCombo);
@@ -2644,7 +2628,7 @@ public class ComercialPanel extends JPanel {
                             amount,  // tendered = amount (sem troco para late payments)
                             referenceField.getText().trim().isEmpty() ? null : referenceField.getText().trim(),
                             accountId);
-            posService.registerLatePayment(sel.id(), req);
+            posApiClient.registerLatePayment(sel.id(), req);
             JOptionPane.showMessageDialog(this, "Pagamento registado com sucesso.",
                     "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadOutstandingTable();

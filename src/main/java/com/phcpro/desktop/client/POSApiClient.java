@@ -7,6 +7,7 @@ import com.phcpro.modules.pos.dto.CloseSessionRequest;
 import com.phcpro.modules.pos.dto.OpenSessionRequest;
 import com.phcpro.modules.pos.dto.POSCheckoutRequest;
 import com.phcpro.modules.pos.dto.POSReturnRequest;
+import com.phcpro.modules.pos.dto.PosPaymentRequest;
 import com.phcpro.modules.pos.dto.TillMovementDTO;
 import com.phcpro.modules.pos.dto.TillSessionDTO;
 import org.springframework.context.annotation.Profile;
@@ -57,6 +58,11 @@ public class POSApiClient {
 
     public CreditNoteDTO returnSale(POSReturnRequest request) {
         return clientFactory.authenticatedClient().post("/api/pos/returns", request, CreditNoteDTO.class);
+    }
+
+    /** Pagamento posterior (fiado) de uma fatura em dívida. */
+    public void registerLatePayment(Long invoiceId, PosPaymentRequest request) {
+        clientFactory.authenticatedClient().post("/api/pos/invoices/" + invoiceId + "/late-payment", request);
     }
 
     /** Recibo da venda em PDF ({@code /api/print/receipt/{invoiceId}}). */

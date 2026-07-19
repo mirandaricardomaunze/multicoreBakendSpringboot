@@ -78,4 +78,12 @@ public class POSController {
     public ResponseEntity<CreditNoteDTO> returnSale(@RequestBody @Valid POSReturnRequest request) {
         return ResponseEntity.ok(posService.returnSale(request));
     }
+
+    /** Regista um pagamento posterior (fiado) sobre uma fatura em dívida. */
+    @PostMapping("/invoices/{invoiceId}/late-payment")
+    public ResponseEntity<Void> registerLatePayment(@PathVariable Long invoiceId,
+                                                    @RequestBody @Valid PosPaymentRequest request) {
+        posService.registerLatePayment(invoiceId, request);
+        return ResponseEntity.noContent().build();
+    }
 }

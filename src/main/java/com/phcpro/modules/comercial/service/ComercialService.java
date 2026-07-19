@@ -447,6 +447,20 @@ public class ComercialService {
         return receiptRepository.findByCompanyId(companyId);
     }
 
+    /** Recibo → DTO (achata fatura/cliente) para a fronteira HTTP. */
+    public com.phcpro.modules.comercial.dto.ReceiptDTO toDTO(Receipt r) {
+        return new com.phcpro.modules.comercial.dto.ReceiptDTO(
+                r.getId(),
+                r.getReceiptNumber(),
+                r.getInvoice() != null ? r.getInvoice().getInvoiceNumber() : null,
+                r.getInvoice() != null && r.getInvoice().getClient() != null
+                        ? r.getInvoice().getClient().getName() : null,
+                r.getAmountPaid(),
+                r.getPaymentMethod(),
+                r.getStatus(),
+                r.getReceiptDate());
+    }
+
     @Transactional(readOnly = true)
     public List<ClientDTO> getAllClients() {
         return clientRepository.findDistinctByCompaniesIdOrderByName(CurrentUserContext.getCurrentCompanyId())

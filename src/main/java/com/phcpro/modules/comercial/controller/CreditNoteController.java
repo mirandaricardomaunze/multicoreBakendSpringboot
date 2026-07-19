@@ -2,6 +2,7 @@ package com.phcpro.modules.comercial.controller;
 
 import com.phcpro.modules.comercial.dto.CreateCreditNoteRequest;
 import com.phcpro.modules.comercial.dto.CreditNoteDTO;
+import com.phcpro.modules.comercial.dto.ReturnedQtyDTO;
 import com.phcpro.modules.comercial.service.CreditNoteService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,16 @@ public class CreditNoteController {
     @GetMapping("/{id}")
     public ResponseEntity<CreditNoteDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.findById(id));
+    }
+
+    /** Quantidades já devolvidas por linha de uma fatura (para limitar novas devoluções). */
+    @GetMapping("/returned-quantities")
+    public ResponseEntity<List<ReturnedQtyDTO>> returnedQuantities(@RequestParam Long invoiceId) {
+        List<ReturnedQtyDTO> result = service.getReturnedQuantitiesByInvoiceLine(invoiceId)
+                .entrySet().stream()
+                .map(e -> new ReturnedQtyDTO(e.getKey(), e.getValue()))
+                .toList();
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping

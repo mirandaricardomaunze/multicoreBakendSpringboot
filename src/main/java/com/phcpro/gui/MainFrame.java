@@ -14,6 +14,9 @@ import com.phcpro.desktop.client.SupportApiClient;
 import com.phcpro.desktop.client.MySubscriptionApiClient;
 import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.CreditNoteApiClient;
+import com.phcpro.desktop.client.DebitNoteApiClient;
+import com.phcpro.desktop.client.MovimentosApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.desktop.client.InventoryApiClient;
 import com.phcpro.desktop.client.InventoryCountApiClient;
@@ -98,10 +101,11 @@ public class MainFrame extends JFrame {
     private boolean subscriptionEnforced;
 
     public MainFrame(
-            ComercialService comercialService,
             ComercialApiClient comercialApiClient,
+            CreditNoteApiClient creditNoteApiClient,
+            DebitNoteApiClient debitNoteApiClient,
+            MovimentosApiClient movimentosApiClient,
             ApprovalApiClient approvalApiClient,
-            FinanceService financeService,
             FinanceApiClient financeApiClient,
             InventoryApiClient inventoryApiClient,
             StockTransferApiClient stockTransferApiClient,
@@ -110,8 +114,6 @@ public class MainFrame extends JFrame {
             PurchaseApiClient purchaseApiClient,
             CRMApiClient crmApiClient,
             HRApiClient hrApiClient,
-            InventoryService inventoryService,
-            POSService posService,
             UserApiClient userApiClient,
             AuditApiClient auditApiClient,
             BackupApiClient backupApiClient,
@@ -121,16 +123,8 @@ public class MainFrame extends JFrame {
             CompanyService companyService,
             PromotionApiClient promotionApiClient,
             POSApiClient posApiClient,
-            com.phcpro.modules.movimentos.service.MovimentosService movimentosService,
             DesktopSessionStore desktopSessionStore,
-            InvoicePrintService invoicePrintService,
-            OrderPrintService orderPrintService,
-            CreditNoteService creditNoteService,
-            DebitNoteService debitNoteService,
-            CreditNotePrintService creditNotePrintService,
-            DebitNotePrintService debitNotePrintService,
             FiscalApiClient fiscalApiClient,
-            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
             PlatformApiClient platformApiClient,
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
@@ -160,7 +154,7 @@ public class MainFrame extends JFrame {
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
             dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);
-            comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionApiClient, comercialApiClient, movimentosService);
+            comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient);
             financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
             hrPanel         = new HRPanel(hrApiClient);
             crmPanel        = new CRMPanel(crmApiClient);

@@ -52,7 +52,7 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
 | Plataforma  | `PlatformApiClient` (colapsa empresas+utilizadores+assinaturas+suporte) + 3 endpoints de options | PlataformaPanel (superadmin; só DTOs) | ✅ |
 | Stock       | `InventoryApiClient` estendido + `StockTransferApiClient`/`InventoryCountApiClient`/`ProductCategoryApiClient` novos + `ComercialApiClient` (produtos/IVA) **+ 13 endpoints novos no backend** | StockPanel (2.º gigante, 2.633 linhas; `Stock`/`StockMovement`/`Warehouse` entidades→DTO) | ✅ |
 | POS         | `POSApiClient` (novo; sessões/checkout/devoluções/recibo/Z) + extensões Comercial (barcode/vendáveis/pos-sales) / Inventory (armazéns-de-venda) / Promotion (melhor-promoção) **+ 6 endpoints novos no backend** | POSPanel (checkout com concorrência; `TillSession`/`Warehouse`/`Invoice` entidades→DTO) | ✅ |
-| **Comercial** | —                      | —                | ⬜ (último gigante) |
+| Comercial   | `ComercialApiClient` muito estendido (faturas/encomendas/recibos + prints) + `CreditNoteApiClient`/`DebitNoteApiClient`/`MovimentosApiClient` novos **+ ~18 endpoints novos no backend** | ComercialPanel (último e maior gigante, 2.657 linhas; `Receipt`/`Warehouse`/`Company` entidades→DTO/stub) | ✅ |
 | Config (empresa) | 3 controllers novos (users/audit/backup) + 6 clientes | ConfigPanel (backup server-side; audit server-side) | ✅ |
 
 ## Peças
@@ -104,6 +104,23 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
   usado) foi removido do painel. No `MainFrame` removeram-se 3 params só-POS (receipt/promotion/Z-report).
   A **mesma garantia de concorrência do Stock** aplica-se ao checkout POS (`POSService.checkout` corre no
   servidor, dentro de transação, com `consumeFEFO`+`@Version`).
+- **Comercial** foi o **4.º e último gigante** (2.657 linhas) e o de maior superfície de backend.
+  Os controllers de notas de crédito/débito e de movimentos **já existiam** (só precisaram de clientes);
+  todos os endpoints de impressão (fatura, encomenda, guia, NC, ND) **já existiam**. O grosso foi o
+  `ComercialController`: **~16 endpoints novos** — faturas (`?companyId=`, `/search`, `/outstanding`,
+  `/{id}/cancel`), **encomendas** (listar/pendentes/pesquisas/`{id}`, criar, `/bill`, `/cancel`,
+  `/print`) e **recibos** (listar/criar/cancelar). Mais: `GET /credit-notes/returned-quantities`
+  (com `ReturnedQtyDTO`; o cliente reconstrói o `Map<Long,BigDecimal>`) e
+  `POST /pos/invoices/{id}/late-payment` (pagamento de fiado). `ReceiptDTO` novo + `toDTO(Receipt)`
+  (não existia). O `POSController.checkout`/`late-payment` reutiliza o padrão já criado no POS.
+  Clientes novos: `CreditNoteApiClient`, `DebitNoteApiClient`, `MovimentosApiClient`; `ComercialApiClient`
+  ganhou ~20 métodos. `currentCompany()` deixou de usar `CompanyService` — o `TablePdfExporter` só precisa
+  do id, resolvido com um `Company` stub (padrão herdado do StockPanel). Entidades `Receipt`/`Warehouse` → DTO.
+- **Fecho do Track B:** com o Comercial migrado, **todos os 14 painéis** são cliente-fino. O `MainFrame`
+  deixou de injectar 12 serviços de backend (comercial/inventory/finance/pos/movimentos + 5 print services
+  + 2 note services), agora órfãos — removidos. O único serviço ainda injectado no `MainFrame` é o
+  `CompanyService` (usado fora dos painéis). **Próximo passo fora do âmbito da UI:** o perfil `desktop`
+  deixar de configurar `DataSource`/JPA — só então o PostgreSQL pode ser fechado ao exterior.
 - `DesktopApiClientTest` — teste de contrato da camada partilhada (headers, token, empresa, parse de
   objecto/lista, mapeamento de erro).
 
