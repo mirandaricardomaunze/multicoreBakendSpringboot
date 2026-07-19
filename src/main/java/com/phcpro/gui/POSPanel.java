@@ -6,22 +6,22 @@ import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.FinanceApiClient;
+import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.desktop.client.POSApiClient;
+import com.phcpro.desktop.client.PromotionApiClient;
 import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateCreditNoteLineRequest;
 import com.phcpro.modules.comercial.dto.CreditNoteDTO;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.dto.ProductDTO;
-import com.phcpro.modules.comercial.model.Invoice;
-import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
-import com.phcpro.modules.financeira.service.FinanceService;
-import com.phcpro.modules.inventory.model.Warehouse;
-import com.phcpro.modules.inventory.service.InventoryService;
-import com.phcpro.modules.pos.model.TillSession;
+import com.phcpro.modules.inventory.dto.WarehouseDTO;
 import com.phcpro.modules.pos.dto.POSCheckoutLineRequest;
 import com.phcpro.modules.pos.dto.POSCheckoutRequest;
 import com.phcpro.modules.pos.dto.POSReturnRequest;
-import com.phcpro.modules.pos.service.POSService;
+import com.phcpro.modules.pos.dto.TillSessionDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -40,18 +40,15 @@ public class POSPanel extends JPanel {
     /** Largura fixa do formulário (esquerda) para deixar o resto do espaço ao carrinho. */
     private static final int FORM_PANEL_WIDTH = 400;
 
-    private final POSService posService;
-    private final ComercialService comercialService;
-    private final InventoryService inventoryService;
-    private final FinanceService financeService;
-    private final com.phcpro.modules.printing.ReceiptPrintService receiptPrintService;
-    private final com.phcpro.modules.company.service.CompanyService companyService;
-    private final com.phcpro.modules.promotions.service.PromotionService promotionService;
+    private final POSApiClient posApiClient;
+    private final ComercialApiClient comercialApiClient;
+    private final InventoryApiClient inventoryApiClient;
+    private final FinanceApiClient financeApiClient;
+    private final PromotionApiClient promotionApiClient;
     private final com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser;
-    private final com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService;
 
     // Active session status
-    private TillSession activeSession = null;
+    private TillSessionDTO activeSession = null;
 
     // GUI elements
     private JLabel statusLabel;
@@ -99,7 +96,7 @@ public class POSPanel extends JPanel {
     private List<ProductDTO> filteredProducts = new ArrayList<>();
     private List<ClientDTO> clientsList = new ArrayList<>();
     private List<ClientDTO> filteredClients = new ArrayList<>();
-    private List<Warehouse> warehousesList = new ArrayList<>();
+    private List<WarehouseDTO> warehousesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
 
     // Cart items representation
@@ -143,25 +140,19 @@ public class POSPanel extends JPanel {
     private final List<CartItem> cartItems = new ArrayList<>();
 
     public POSPanel(
-            POSService posService,
-            ComercialService comercialService,
-            InventoryService inventoryService,
-            FinanceService financeService,
-            com.phcpro.modules.printing.ReceiptPrintService receiptPrintService,
-            com.phcpro.modules.company.service.CompanyService companyService,
-            com.phcpro.modules.promotions.service.PromotionService promotionService,
-            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
-            com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService
+            POSApiClient posApiClient,
+            ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient,
+            FinanceApiClient financeApiClient,
+            PromotionApiClient promotionApiClient,
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
     ) {
-        this.posService = posService;
-        this.comercialService = comercialService;
-        this.inventoryService = inventoryService;
-        this.financeService = financeService;
-        this.receiptPrintService = receiptPrintService;
-        this.companyService = companyService;
-        this.promotionService = promotionService;
+        this.posApiClient = posApiClient;
+        this.comercialApiClient = comercialApiClient;
+        this.inventoryApiClient = inventoryApiClient;
+        this.financeApiClient = financeApiClient;
+        this.promotionApiClient = promotionApiClient;
         this.scaleBarcodeParser = scaleBarcodeParser;
-        this.posZReportPrintService = posZReportPrintService;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -513,11 +504,11 @@ public class POSPanel extends JPanel {
         String operator = CurrentUserContext.getUsername();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
-        Optional<TillSession> sessionOpt = posService.getActiveSession(operator, companyId);
+        Optional<TillSessionDTO> sessionOpt = posApiClient.getActiveSession(operator, companyId);
         if (sessionOpt.isPresent()) {
             activeSession = sessionOpt.get();
             statusLabel.setText(String.format("Caixa Aberta por %s | Fundo Inicial: %,.2f MT",
-                    activeSession.getOperator(), activeSession.getOpeningBalance()));
+                    activeSession.operator(), activeSession.openingBalance()));
             statusLabel.setForeground(UIHelper.APPROVED_GREEN);
             statusLabel.setIcon(UIHelper.icon("fas-lock-open", 14, UIHelper.APPROVED_GREEN));
             statusLabel.setIconTextGap(8);
@@ -551,17 +542,17 @@ public class POSPanel extends JPanel {
     private void loadMetadata() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
-        clientsList = comercialService.getAllClients();
+        clientsList = comercialApiClient.getAllClients();
         // Catálogo do POS: só produtos vendáveis — os esgotados não aparecem (ver getSellableProducts).
-        productsList = comercialService.getSellableProducts();
+        productsList = comercialApiClient.getSellableProducts();
         // POS só vende de armazéns activos que permitem vendas (Loja, não depósito puro).
-        warehousesList = inventoryService.getSalesWarehousesByCompany(companyId);
-        accountsList = financeService.getAllAccounts();
+        warehousesList = inventoryApiClient.getSalesWarehousesByCompany(companyId);
+        accountsList = financeApiClient.getAllAccounts();
 
         warehouseCombo.removeAllItems();
         accountCombo.removeAllItems();
-        for (Warehouse w : warehousesList) {
-            warehouseCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            warehouseCombo.addItem(w.name());
         }
         for (TreasuryAccountDTO acc : accountsList) {
             accountCombo.addItem(acc.name() + " (" + String.format("%.2f", acc.balance()) + " MT)");
@@ -704,7 +695,7 @@ public class POSPanel extends JPanel {
         }
         BigDecimal discount = BigDecimal.ZERO;
         String note = "-";
-        var promo = promotionService.bestPromotion(
+        var promo = promotionApiClient.bestPromotion(
                 CurrentUserContext.getCurrentCompanyId(), product.id(), product.categoryId(), BigDecimal.ONE);
         if (promo.isPresent()) {
             discount = promo.get().discountPercent();
@@ -780,8 +771,8 @@ public class POSPanel extends JPanel {
         }
 
         try {
-            ClientDTO created = comercialService.createClient(name, taxId, email, address);
-            clientsList = comercialService.getAllClients();
+            ClientDTO created = comercialApiClient.createClient(name, taxId, email, address);
+            clientsList = comercialApiClient.getAllClients();
             clientSearchField.setText(created.name());
             filterClients(clientSearchField.getText());
             int idx = -1;
@@ -804,7 +795,7 @@ public class POSPanel extends JPanel {
             String operator = CurrentUserContext.getUsername();
             Long companyId = CurrentUserContext.getCurrentCompanyId();
 
-            posService.openSession(operator, bal, companyId);
+            posApiClient.openSession(operator, bal, companyId);
             JOptionPane.showMessageDialog(this, "Sessão de caixa aberta com sucesso!", "Informação", JOptionPane.INFORMATION_MESSAGE);
             refreshSessionState();
         } catch (Exception ex) {
@@ -823,19 +814,19 @@ public class POSPanel extends JPanel {
         Long depositAccountId = chooseDepositAccount();
 
         try {
-            TillSession closed = posService.closeSession(activeSession.getId(), closingReal, depositAccountId);
-            Long closedId = closed.getId();
+            TillSessionDTO closed = posApiClient.closeSession(activeSession.id(), closingReal, depositAccountId);
+            Long closedId = closed.id();
 
             String summary = String.format("Sessão Fechada com sucesso!\n" +
                     "Saldo Esperado: %,.2f MT\n" +
                     "Saldo Real: %,.2f MT\n" +
                     "Diferença: %,.2f MT\n\nImprimir o fecho de caixa (Z)?",
-                    closed.getClosingBalanceExpected(), closed.getClosingBalanceReal(), closed.getDifference());
+                    closed.closingBalanceExpected(), closed.closingBalanceReal(), closed.difference());
             int print = JOptionPane.showConfirmDialog(this, summary, "Fecho de Caixa",
                     JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
             if (print == JOptionPane.YES_OPTION) {
                 UIHelper.runWithProgress(this, "A gerar fecho (Z)…",
-                        () -> posZReportPrintService.render(closedId),
+                        () -> posApiClient.renderZReport(closedId),
                         pdf -> com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "fecho-caixa-Z-" + closedId),
                         err -> JOptionPane.showMessageDialog(this, "Erro ao gerar o Z: " + err.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
             }
@@ -898,7 +889,7 @@ public class POSPanel extends JPanel {
                     JOptionPane.showMessageDialog(this, "O valor deve ser maior do que zero.", "Erro", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                posService.addCashMovement(activeSession.getId(), type, amt, desc);
+                posApiClient.addCashMovement(activeSession.id(), type, amt, desc);
                 JOptionPane.showMessageDialog(this, "Movimento de caixa registado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Valor de montante inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
@@ -995,7 +986,7 @@ public class POSPanel extends JPanel {
             String typed = clientSearchField == null ? "" : clientSearchField.getText().trim();
             if (!typed.isEmpty()) walkInName = typed;
         }
-        Warehouse wh = warehousesList.get(whIdx);
+        WarehouseDTO wh = warehousesList.get(whIdx);
         TreasuryAccountDTO acc = accountsList.get(accIdx);
 
         List<POSCheckoutLineRequest> lines = new ArrayList<>();
@@ -1037,7 +1028,7 @@ public class POSPanel extends JPanel {
                 companyId,
                 client != null ? client.id() : null,
                 walkInName,
-                wh.getId(),
+                wh.id(),
                 treasuryAccountId,
                 lines,
                 payments
@@ -1045,12 +1036,12 @@ public class POSPanel extends JPanel {
 
         // Checkout corre fora do EDT com indicador "a finalizar venda…" (não congela a UI).
         UIHelper.runWithProgress(this, "A finalizar venda…",
-                () -> posService.checkout(request),
+                () -> posApiClient.checkout(request),
                 inv -> {
                     String paymentLabel = fiado ? "EM DÍVIDA (fiado)" : "PAGO";
                     JOptionPane.showMessageDialog(this, "Venda POS efetuada com sucesso!\n" +
-                            "Documento emitido: " + inv.getInvoiceNumber() + "\n" +
-                            "Valor Total: " + inv.getTotalAmount() + " MT (" + paymentLabel + ")", "Venda Concluída", JOptionPane.INFORMATION_MESSAGE);
+                            "Documento emitido: " + inv.invoiceNumber() + "\n" +
+                            "Valor Total: " + inv.totalAmount() + " MT (" + paymentLabel + ")", "Venda Concluída", JOptionPane.INFORMATION_MESSAGE);
 
                     if (fiado && creditCheck != null) creditCheck.setSelected(false);
 
@@ -1165,14 +1156,14 @@ public class POSPanel extends JPanel {
         return ok ? result[0] : null;
     }
 
-    private void printReceiptIfConfirmed(Invoice invoice) {
+    private void printReceiptIfConfirmed(InvoiceDTO invoice) {
         int choice = JOptionPane.showConfirmDialog(this,
-                "Deseja imprimir o recibo da venda " + invoice.getInvoiceNumber() + "?",
+                "Deseja imprimir o recibo da venda " + invoice.invoiceNumber() + "?",
                 "Imprimir Recibo", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
         UIHelper.runWithProgress(this, "A gerar recibo…",
                 () -> { com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(
-                            receiptPrintService.render(invoice.getId()), "recibo-" + invoice.getInvoiceNumber());
+                            posApiClient.renderReceipt(invoice.id()), "recibo-" + invoice.invoiceNumber());
                         return null; },
                 ok -> { },
                 ex -> JOptionPane.showMessageDialog(this, "Erro ao imprimir recibo: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
@@ -1194,7 +1185,7 @@ public class POSPanel extends JPanel {
             return;
         }
 
-        ProductDTO product = comercialService.findProductByBarcode(code);
+        ProductDTO product = comercialApiClient.findProductByBarcode(code);
         if (product == null) {
             JOptionPane.showMessageDialog(this,
                     "Produto com código de barras '" + code + "' não encontrado.",
@@ -1269,11 +1260,11 @@ public class POSPanel extends JPanel {
 
     /** Resolve o artigo pesado pelo PLU: tenta o código tal-e-qual e depois sem zeros à esquerda. */
     private ProductDTO resolveWeighedProduct(String itemCode) {
-        ProductDTO product = comercialService.findProductByBarcode(itemCode);
+        ProductDTO product = comercialApiClient.findProductByBarcode(itemCode);
         if (product == null) {
             String stripped = itemCode.replaceFirst("^0+", "");
             if (!stripped.isEmpty() && !stripped.equals(itemCode)) {
-                product = comercialService.findProductByBarcode(stripped);
+                product = comercialApiClient.findProductByBarcode(stripped);
             }
         }
         return product;
@@ -1300,7 +1291,7 @@ public class POSPanel extends JPanel {
         }
         BigDecimal discount = BigDecimal.ZERO;
         String note = "-";
-        var promo = promotionService.bestPromotion(
+        var promo = promotionApiClient.bestPromotion(
                 CurrentUserContext.getCurrentCompanyId(), product.id(), product.categoryId(), qtyKg);
         if (promo.isPresent()) {
             discount = promo.get().discountPercent();
@@ -1473,7 +1464,7 @@ public class POSPanel extends JPanel {
             String invNum = String.valueOf(salesHistoryModel.getValueAt(row, 1));
             UIHelper.runWithProgress(this, "A gerar recibo…",
                     () -> { com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(
-                                receiptPrintService.render(invoiceId), "recibo-" + invNum);
+                                posApiClient.renderReceipt(invoiceId), "recibo-" + invNum);
                             return null; },
                     ok -> { },
                     ex -> JOptionPane.showMessageDialog(this,
@@ -1525,7 +1516,7 @@ public class POSPanel extends JPanel {
         if (salesHistoryModel == null || salesHistorySummary == null) return;
 
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        salesHistoryList = comercialService.getPOSSalesByCompany(companyId);
+        salesHistoryList = comercialApiClient.getPOSSalesByCompany(companyId);
         java.time.format.DateTimeFormatter dtf =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         salesHistoryModel.setRowCount(0);
@@ -1584,8 +1575,8 @@ public class POSPanel extends JPanel {
         linesTable.getColumnModel().getColumn(0).setWidth(0);
 
         JComboBox<String> warehouseReturnCombo = new JComboBox<>();
-        for (Warehouse warehouse : warehousesList) {
-            warehouseReturnCombo.addItem(warehouse.getName());
+        for (WarehouseDTO warehouse : warehousesList) {
+            warehouseReturnCombo.addItem(warehouse.name());
         }
         JComboBox<String> methodCombo = new JComboBox<>(new String[]{"CASH", "CARD", "BANK_TRANSFER", "MPESA", "EMOLA", "CREDIT"});
         JComboBox<String> refundAccountCombo = new JComboBox<>();
@@ -1643,11 +1634,11 @@ public class POSPanel extends JPanel {
         }
 
         try {
-            CreditNoteDTO note = posService.returnSale(new POSReturnRequest(
+            CreditNoteDTO note = posApiClient.returnSale(new POSReturnRequest(
                     CurrentUserContext.getUsername(),
                     CurrentUserContext.getCurrentCompanyId(),
                     invoice.id(),
-                    warehousesList.get(warehouseReturnCombo.getSelectedIndex()).getId(),
+                    warehousesList.get(warehouseReturnCombo.getSelectedIndex()).id(),
                     reasonField.getText().trim(),
                     method,
                     accountId,

@@ -12,5 +12,8 @@ public record StockDTO(
         Long warehouseId,
         String warehouseName,
         BigDecimal quantity,
-        BigDecimal minStock
+        BigDecimal minStock,
+        String categoryName,
+        BigDecimal unitPrice,
+        int unitsPerBox
 ) {}

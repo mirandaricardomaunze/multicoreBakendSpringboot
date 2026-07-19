@@ -1,5 +1,6 @@
 package com.phcpro.modules.inventory.dto;
 
+import com.phcpro.modules.inventory.model.WarehouseType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -11,5 +12,9 @@ public record CreateWarehouseRequest(
         @NotBlank(message = "Numero do armazem e obrigatorio.") String warehouseNumber,
         @PositiveOrZero(message = "Capacidade deve ser zero ou superior.") BigDecimal capacity,
         String location,
-        @NotNull(message = "Empresa e obrigatoria.") Long companyId
+        @NotNull(message = "Empresa e obrigatoria.") Long companyId,
+        WarehouseType type,
+        boolean allowsSales,
+        String manager,
+        String phone
 ) {}

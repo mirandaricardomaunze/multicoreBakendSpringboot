@@ -1,19 +1,18 @@
 package com.phcpro.modules.inventory.dto;
 
 import com.phcpro.modules.inventory.model.WarehouseType;
+import jakarta.validation.constraints.NotBlank;
 
 import java.math.BigDecimal;
 
-public record WarehouseDTO(
-        Long id,
-        String name,
-        String location,
+/** Edição de um armazém (PUT /warehouses/{id}). */
+public record UpdateWarehouseRequest(
+        @NotBlank String name,
         String warehouseNumber,
         BigDecimal capacity,
-        Long companyId,
+        String location,
         WarehouseType type,
         boolean allowsSales,
         String manager,
-        String phone,
-        boolean active
+        String phone
 ) {}

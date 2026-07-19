@@ -1,5 +1,6 @@
 package com.phcpro.modules.promotions.controller;
 
+import com.phcpro.modules.promotions.dto.AppliedPromotionDTO;
 import com.phcpro.modules.promotions.dto.CreatePromotionRequest;
 import com.phcpro.modules.promotions.dto.PromotionDTO;
 import com.phcpro.modules.promotions.service.PromotionService;
@@ -7,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -32,5 +34,17 @@ public class PromotionController {
     @PostMapping("/{id}/active")
     public ResponseEntity<PromotionDTO> setActive(@PathVariable Long id, @RequestParam boolean active) {
         return ResponseEntity.ok(promotionService.setActive(id, active));
+    }
+
+    /** Melhor promoção aplicável a uma linha (produto/categoria/quantidade). Corpo {@code null} se nenhuma. */
+    @GetMapping("/best")
+    public ResponseEntity<AppliedPromotionDTO> best(
+            @RequestParam Long companyId,
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam BigDecimal quantity) {
+        return ResponseEntity.ok(promotionService.bestPromotion(companyId, productId, categoryId, quantity)
+                .map(p -> new AppliedPromotionDTO(p.name(), p.discountPercent()))
+                .orElse(null));
     }
 }

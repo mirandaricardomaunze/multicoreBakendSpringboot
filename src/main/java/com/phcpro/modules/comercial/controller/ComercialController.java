@@ -46,13 +46,142 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getAllProducts());
     }
 
+    /** Produtos vendáveis no POS (com stock rastreado e activos). */
+    @GetMapping("/products/sellable")
+    public ResponseEntity<List<ProductDTO>> getSellableProducts() {
+        return ResponseEntity.ok(comercialService.getSellableProducts());
+    }
+
+    /** Localiza um produto pelo código de barras (leitor do POS). Corpo {@code null} se não existir. */
+    @GetMapping("/products/by-barcode")
+    public ResponseEntity<ProductDTO> findProductByBarcode(@RequestParam String barcode) {
+        return ResponseEntity.ok(comercialService.findProductByBarcode(barcode));
+    }
+
+    @PostMapping("/products")
+    public ResponseEntity<ProductDTO> createProduct(@RequestBody @Valid CreateProductRequest r) {
+        return ResponseEntity.ok(comercialService.createProduct(
+                r.sku(), r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
+                r.unitsPerBox(), r.categoryId(), r.saleType(), r.stockTracked(), r.taxRateId(), r.description(),
+                r.wholesalePrice(), r.wholesaleMinQty()));
+    }
+
+    @PutMapping("/products/{id}")
+    public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id, @RequestBody @Valid CreateProductRequest r) {
+        return ResponseEntity.ok(comercialService.updateProduct(
+                id, r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
+                r.unitsPerBox(), r.categoryId(), r.saleType(), r.stockTracked(), r.taxRateId(), r.description(),
+                r.wholesalePrice(), r.wholesaleMinQty()));
+    }
+
+    @PostMapping(value = "/products/{id}/image", consumes = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Void> updateProductImage(@PathVariable Long id, @RequestBody byte[] image) {
+        comercialService.updateProductImage(id, image);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/vat-rates")
+    public ResponseEntity<List<com.phcpro.modules.fiscal.dto.TaxRateDTO>> getVatRates() {
+        return ResponseEntity.ok(comercialService.getActiveVatRates());
+    }
+
     @GetMapping("/invoices")
-    public ResponseEntity<List<InvoiceDTO>> getInvoices() {
-        return ResponseEntity.ok(comercialService.getAllInvoices());
+    public ResponseEntity<List<InvoiceDTO>> getInvoices(@RequestParam(required = false) Long companyId) {
+        return ResponseEntity.ok(companyId != null
+                ? comercialService.getInvoicesByCompany(companyId)
+                : comercialService.getAllInvoices());
+    }
+
+    @GetMapping("/invoices/search")
+    public ResponseEntity<List<InvoiceDTO>> searchInvoices(@RequestParam String query) {
+        return ResponseEntity.ok(comercialService.searchInvoices(query));
+    }
+
+    @GetMapping("/invoices/outstanding")
+    public ResponseEntity<List<InvoiceDTO>> getOutstandingInvoices(@RequestParam Long companyId) {
+        return ResponseEntity.ok(comercialService.getOutstandingInvoicesByCompany(companyId));
+    }
+
+    /** Vendas de balcão (POS) da empresa — histórico do painel de vendas. */
+    @GetMapping("/pos-sales")
+    public ResponseEntity<List<InvoiceDTO>> getPOSSales(@RequestParam Long companyId) {
+        return ResponseEntity.ok(comercialService.getPOSSalesByCompany(companyId));
     }
 
     @PostMapping("/invoices")
     public ResponseEntity<InvoiceDTO> createInvoice(@RequestBody @Valid CreateInvoiceRequest request) {
         return ResponseEntity.ok(comercialService.createInvoice(request));
+    }
+
+    @PostMapping("/invoices/{id}/cancel")
+    public ResponseEntity<Void> cancelInvoice(@PathVariable Long id, @RequestBody CancelReasonRequest request) {
+        comercialService.cancelInvoice(id, request.reason());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─── Encomendas ──────────────────────────────────────────────────────────
+    @GetMapping("/orders")
+    public ResponseEntity<List<OrderDTO>> getOrders(@RequestParam Long companyId) {
+        return ResponseEntity.ok(comercialService.getOrdersByCompany(companyId));
+    }
+
+    @GetMapping("/orders/pending")
+    public ResponseEntity<List<OrderDTO>> getPendingOrders(@RequestParam Long companyId) {
+        return ResponseEntity.ok(comercialService.getPendingOrdersByCompany(companyId));
+    }
+
+    @GetMapping("/orders/pending/search")
+    public ResponseEntity<List<OrderDTO>> searchPendingOrders(@RequestParam String query) {
+        return ResponseEntity.ok(comercialService.searchPendingOrders(query));
+    }
+
+    @GetMapping("/orders/cancellable/search")
+    public ResponseEntity<List<OrderDTO>> searchCancellableOrders(@RequestParam String query) {
+        return ResponseEntity.ok(comercialService.searchCancellableOrders(query));
+    }
+
+    @GetMapping("/orders/{id}")
+    public ResponseEntity<OrderDTO> getOrderById(@PathVariable Long id) {
+        return ResponseEntity.ok(comercialService.getOrderById(id));
+    }
+
+    @PostMapping("/orders")
+    public ResponseEntity<OrderDTO> createOrder(@RequestBody @Valid CreateOrderRequest request) {
+        return ResponseEntity.ok(comercialService.createOrder(request));
+    }
+
+    @PostMapping("/orders/{id}/bill")
+    public ResponseEntity<InvoiceDTO> billOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(comercialService.billOrder(id));
+    }
+
+    @PostMapping("/orders/{id}/cancel")
+    public ResponseEntity<Void> cancelOrder(@PathVariable Long id, @RequestBody CancelReasonRequest request) {
+        comercialService.cancelOrder(id, request.reason());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/orders/{id}/print")
+    public ResponseEntity<OrderDTO> markOrderPrinted(@PathVariable Long id, @RequestParam String operator) {
+        return ResponseEntity.ok(comercialService.markOrderPrinted(id, operator));
+    }
+
+    // ─── Recibos ─────────────────────────────────────────────────────────────
+    @GetMapping("/receipts")
+    public ResponseEntity<List<ReceiptDTO>> getReceipts(@RequestParam Long companyId) {
+        return ResponseEntity.ok(comercialService.getReceiptsByCompany(companyId)
+                .stream().map(comercialService::toDTO).toList());
+    }
+
+    @PostMapping("/receipts")
+    public ResponseEntity<ReceiptDTO> createReceipt(@RequestBody @Valid CreateReceiptRequest request) {
+        return ResponseEntity.ok(comercialService.toDTO(comercialService.createReceipt(
+                request.invoiceId(), request.treasuryAccountId(), request.paymentMethod(), request.amountPaid())));
+    }
+
+    @PostMapping("/receipts/{id}/cancel")
+    public ResponseEntity<Void> cancelReceipt(@PathVariable Long id, @RequestBody CancelReasonRequest request) {
+        comercialService.cancelReceipt(id, request.reason());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -7,20 +7,23 @@ import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.SearchField;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.desktop.client.InventoryCountApiClient;
+import com.phcpro.desktop.client.ProductCategoryApiClient;
+import com.phcpro.desktop.client.StockTransferApiClient;
 import com.phcpro.modules.comercial.dto.ProductDTO;
-import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.inventory.dto.CreateStockAdjustmentRequest;
 import com.phcpro.modules.inventory.dto.CreateStockTransferLineRequest;
 import com.phcpro.modules.inventory.dto.CreateStockTransferRequest;
+import com.phcpro.modules.inventory.dto.CreateWarehouseRequest;
+import com.phcpro.modules.inventory.dto.RegisterMovementRequest;
+import com.phcpro.modules.inventory.dto.StockDTO;
+import com.phcpro.modules.inventory.dto.StockMovementDTO;
 import com.phcpro.modules.inventory.dto.StockTransferDTO;
-import com.phcpro.modules.inventory.model.Stock;
-import com.phcpro.modules.inventory.model.StockMovement;
-import com.phcpro.modules.inventory.model.Warehouse;
-import com.phcpro.modules.inventory.service.InventoryService;
-import com.phcpro.modules.inventory.service.StockTransferService;
-import com.phcpro.modules.printing.InventoryReportPrintService;
+import com.phcpro.modules.inventory.dto.UpdateWarehouseRequest;
+import com.phcpro.modules.inventory.dto.WarehouseDTO;
 import com.phcpro.modules.printing.PdfFileSaver;
-import com.phcpro.modules.printing.StockTransferPrintService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -35,14 +38,11 @@ import java.util.List;
 
 public class StockPanel extends JPanel {
 
-    private final InventoryService inventoryService;
-    private final ComercialService comercialService;
-    private final StockTransferService stockTransferService;
-    private final StockTransferPrintService stockTransferPrintService;
-    private final InventoryReportPrintService inventoryReportPrintService;
-    private final com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService;
-    private final com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService;
-    private final com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService;
+    private final InventoryApiClient inventoryApiClient;
+    private final ComercialApiClient comercialApiClient;
+    private final StockTransferApiClient stockTransferApiClient;
+    private final InventoryCountApiClient inventoryCountApiClient;
+    private final ProductCategoryApiClient productCategoryApiClient;
 
     // Transfer history
     private DefaultTableModel transferModel;
@@ -51,12 +51,12 @@ public class StockPanel extends JPanel {
 
     // Warehouses list
     private JComboBox<String> warehouseFilterCombo;
-    private List<Warehouse> warehousesList = new ArrayList<>();
+    private List<WarehouseDTO> warehousesList = new ArrayList<>();
 
     // Stock levels
     private DefaultTableModel stockModel;
     private JTable stockTable;
-    private List<Stock> stocksList = new ArrayList<>();
+    private List<StockDTO> stocksList = new ArrayList<>();
 
     // Bloqueio de stock (contagem cega): quantidades ocultas a não-administradores.
     private static final String MASK = "•••";
@@ -66,7 +66,7 @@ public class StockPanel extends JPanel {
     // Gestão de armazéns
     private DefaultTableModel warehousesModel;
     private JTable warehousesTable;
-    private List<Warehouse> warehousesFullList = new ArrayList<>();
+    private List<WarehouseDTO> warehousesFullList = new ArrayList<>();
     // ID do produto por linha visível da tabela (paralelo às linhas, respeita filtros).
     private final java.util.List<Long> stockRowProductIds = new java.util.ArrayList<>();
 
@@ -75,7 +75,6 @@ public class StockPanel extends JPanel {
     private JTable movementsTable;
 
     // Categorias
-    private final com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService;
     private DefaultTableModel categoriesModel;
     private JTable categoriesTable;
     private JTextField categorySearchField;
@@ -83,24 +82,16 @@ public class StockPanel extends JPanel {
     private java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categoriesFiltered = new ArrayList<>();
     private final java.util.Map<Long, Integer> categoryProductCounts = new java.util.HashMap<>();
 
-    public StockPanel(InventoryService inventoryService,
-                       ComercialService comercialService,
-                       StockTransferService stockTransferService,
-                       StockTransferPrintService stockTransferPrintService,
-                       InventoryReportPrintService inventoryReportPrintService,
-                       com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
-                       com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
-                       com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService,
-                       com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService) {
-        this.inventoryService = inventoryService;
-        this.comercialService = comercialService;
-        this.stockTransferService = stockTransferService;
-        this.stockTransferPrintService = stockTransferPrintService;
-        this.inventoryReportPrintService = inventoryReportPrintService;
-        this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
-        this.inventoryCountService = inventoryCountService;
-        this.productLabelPrintService = productLabelPrintService;
-        this.productCategoryService = productCategoryService;
+    public StockPanel(InventoryApiClient inventoryApiClient,
+                       ComercialApiClient comercialApiClient,
+                       StockTransferApiClient stockTransferApiClient,
+                       InventoryCountApiClient inventoryCountApiClient,
+                       ProductCategoryApiClient productCategoryApiClient) {
+        this.inventoryApiClient = inventoryApiClient;
+        this.comercialApiClient = comercialApiClient;
+        this.stockTransferApiClient = stockTransferApiClient;
+        this.inventoryCountApiClient = inventoryCountApiClient;
+        this.productCategoryApiClient = productCategoryApiClient;
 
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
@@ -290,7 +281,7 @@ public class StockPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         boolean hide = stockHidden();
 
-        var esgotados = inventoryService.findOutOfStockProducts(companyId);
+        var esgotados = inventoryApiClient.findOutOfStockProducts(companyId);
         alertsOutModel.setRowCount(0);
         for (var a : esgotados) {
             alertsOutModel.addRow(new Object[]{
@@ -298,7 +289,7 @@ public class StockPanel extends JPanel {
                     hide ? MASK : (a.currentStock() == null ? "0" : a.currentStock().toPlainString())});
         }
 
-        var expiring = inventoryService.findExpiringBatches(companyId, 30);
+        var expiring = inventoryApiClient.findExpiringBatches(companyId, 30);
         alertsExpModel.setRowCount(0);
         LocalDate today = LocalDate.now();
         long expired = 0, soon = 0;
@@ -413,15 +404,15 @@ public class StockPanel extends JPanel {
     private void loadBatches() {
         if (batchesModel == null) return;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        batchesList = inventoryService.findBatchesByCompany(companyId);
+        batchesList = inventoryApiClient.findBatchesByCompany(companyId);
 
         // Sync the batch warehouse combo with the warehouses list (skipping the first time)
         if (batchWarehouseCombo != null) {
             Object selected = batchWarehouseCombo.getSelectedItem();
             batchWarehouseCombo.removeAllItems();
             batchWarehouseCombo.addItem("--- Todos os Armazéns ---");
-            for (com.phcpro.modules.inventory.model.Warehouse w : warehousesList) {
-                batchWarehouseCombo.addItem(w.getName());
+            for (WarehouseDTO w : warehousesList) {
+                batchWarehouseCombo.addItem(w.name());
             }
             if (selected != null) batchWarehouseCombo.setSelectedItem(selected);
         }
@@ -461,7 +452,7 @@ public class StockPanel extends JPanel {
         if (batchWarehouseCombo != null) {
             int idx = batchWarehouseCombo.getSelectedIndex();
             if (idx > 0 && (idx - 1) < warehousesList.size()) {
-                filterWarehouseId = warehousesList.get(idx - 1).getId();
+                filterWarehouseId = warehousesList.get(idx - 1).id();
             }
         }
 
@@ -771,7 +762,7 @@ public class StockPanel extends JPanel {
     /** As quantidades devem ser ocultadas ao utilizador actual? (trancado E não-admin) */
     private boolean stockHidden() {
         try {
-            return inventoryService.isStockCountLocked(CurrentUserContext.getCurrentCompanyId()) && !isAdmin();
+            return inventoryApiClient.isStockCountLocked(CurrentUserContext.getCurrentCompanyId()) && !isAdmin();
         } catch (RuntimeException ex) {
             return false; // à prova de falha: em dúvida, não oculta
         }
@@ -781,7 +772,7 @@ public class StockPanel extends JPanel {
     private void refreshStockLock() {
         boolean locked;
         try {
-            locked = inventoryService.isStockCountLocked(CurrentUserContext.getCurrentCompanyId());
+            locked = inventoryApiClient.isStockCountLocked(CurrentUserContext.getCurrentCompanyId());
         } catch (RuntimeException ex) {
             locked = false;
         }
@@ -809,12 +800,12 @@ public class StockPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         boolean locked;
         try {
-            locked = inventoryService.isStockCountLocked(companyId);
+            locked = inventoryApiClient.isStockCountLocked(companyId);
         } catch (RuntimeException ex) {
             locked = false;
         }
         try {
-            inventoryService.setStockCountLocked(companyId, !locked);
+            inventoryApiClient.setStockCountLocked(companyId, !locked);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -888,10 +879,10 @@ public class StockPanel extends JPanel {
 
     private void loadCategories() {
         if (categoriesModel == null) return;
-        categoriesList = productCategoryService.getAll();
+        categoriesList = productCategoryApiClient.getAll();
         // Contagem de produtos por categoria (gestão profissional: saber o que está em uso)
         categoryProductCounts.clear();
-        for (ProductDTO p : comercialService.getAllProducts()) {
+        for (ProductDTO p : comercialApiClient.getAllProducts()) {
             if (p.categoryId() != null) {
                 categoryProductCounts.merge(p.categoryId(), 1, Integer::sum);
             }
@@ -971,7 +962,7 @@ public class StockPanel extends JPanel {
         var sel = selectedCategory();
         if (sel == null) return;
         try {
-            productCategoryService.setActive(sel.id(), !sel.active());
+            productCategoryApiClient.setActive(sel.id(), !sel.active());
             loadCategories();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1035,8 +1026,8 @@ public class StockPanel extends JPanel {
             }
             var req = new com.phcpro.modules.comercial.dto.CreateProductCategoryRequest(
                     code, name, colorHolder[0].isBlank() ? null : colorHolder[0]);
-            if (editing) productCategoryService.update(existing.id(), req);
-            else productCategoryService.create(req);
+            if (editing) productCategoryApiClient.update(existing.id(), req);
+            else productCategoryApiClient.create(req);
         });
         if (dlg.showDialog()) {
             loadCategories();
@@ -1046,7 +1037,7 @@ public class StockPanel extends JPanel {
     private void loadTransfers() {
         transferModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        transfersList = stockTransferService.findByCompany(companyId);
+        transfersList = stockTransferApiClient.findByCompany(companyId);
 
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (StockTransferDTO t : transfersList) {
@@ -1064,15 +1055,15 @@ public class StockPanel extends JPanel {
 
     private void loadWarehouses() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        warehousesList = inventoryService.getWarehousesByCompany(companyId);
+        warehousesList = inventoryApiClient.getWarehousesByCompany(companyId);
 
         // Disable listeners temporarily
         Object selectedItem = warehouseFilterCombo.getSelectedItem();
         warehouseFilterCombo.removeAllItems();
         warehouseFilterCombo.addItem("--- Todos os Armazéns ---");
 
-        for (Warehouse w : warehousesList) {
-            warehouseFilterCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            warehouseFilterCombo.addItem(w.name());
         }
 
         if (selectedItem != null) {
@@ -1082,7 +1073,7 @@ public class StockPanel extends JPanel {
 
     private void loadStocks() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        stocksList = inventoryService.getStocksByCompany(companyId);
+        stocksList = inventoryApiClient.getStocksByCompany(companyId);
         syncCategoryCombo();
         filterStocks();
     }
@@ -1092,10 +1083,9 @@ public class StockPanel extends JPanel {
         if (stockCategoryCombo == null) return;
         Object selected = stockCategoryCombo.getSelectedItem();
         java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        for (Stock s : stocksList) {
-            if (s.getProduct() != null && s.getProduct().getCategory() != null
-                    && s.getProduct().getCategory().getName() != null) {
-                names.add(s.getProduct().getCategory().getName());
+        for (StockDTO s : stocksList) {
+            if (s.categoryName() != null) {
+                names.add(s.categoryName());
             }
         }
         stockCategoryCombo.removeAllItems();
@@ -1112,7 +1102,7 @@ public class StockPanel extends JPanel {
         int filterIdx = warehouseFilterCombo.getSelectedIndex();
         Long filterWarehouseId = null;
         if (filterIdx > 0 && (filterIdx - 1) < warehousesList.size()) {
-            filterWarehouseId = warehousesList.get(filterIdx - 1).getId();
+            filterWarehouseId = warehousesList.get(filterIdx - 1).id();
         }
 
         String query = stockSearchField == null ? "" : stockSearchField.getText().trim().toLowerCase();
@@ -1122,23 +1112,23 @@ public class StockPanel extends JPanel {
         String wantCategory = stockCategoryCombo != null && stockCategoryCombo.getSelectedIndex() > 0
                 ? String.valueOf(stockCategoryCombo.getSelectedItem()) : null;
 
-        for (Stock s : stocksList) {
-            if (filterWarehouseId != null && !s.getWarehouse().getId().equals(filterWarehouseId)) continue;
+        for (StockDTO s : stocksList) {
+            if (filterWarehouseId != null && !filterWarehouseId.equals(s.warehouseId())) continue;
 
             if (wantCategory != null) {
-                String cat = s.getProduct().getCategory() == null ? "" : s.getProduct().getCategory().getName();
+                String cat = s.categoryName() == null ? "" : s.categoryName();
                 if (!wantCategory.equalsIgnoreCase(cat)) continue;
             }
 
             if (!query.isEmpty()) {
-                String sku = s.getProduct().getSku() == null ? "" : s.getProduct().getSku().toLowerCase();
-                String reference = s.getProduct().getReference() == null ? "" : s.getProduct().getReference().toLowerCase();
-                String barcode = s.getProduct().getBarcode() == null ? "" : s.getProduct().getBarcode().toLowerCase();
-                String name = s.getProduct().getName() == null ? "" : s.getProduct().getName().toLowerCase();
+                String sku = s.sku() == null ? "" : s.sku().toLowerCase();
+                String reference = s.reference() == null ? "" : s.reference().toLowerCase();
+                String barcode = s.barcode() == null ? "" : s.barcode().toLowerCase();
+                String name = s.productName() == null ? "" : s.productName().toLowerCase();
                 if (!sku.contains(query) && !reference.contains(query) && !barcode.contains(query) && !name.contains(query)) continue;
             }
 
-            java.math.BigDecimal qty = s.getQuantity() == null ? java.math.BigDecimal.ZERO : s.getQuantity();
+            java.math.BigDecimal qty = s.quantity() == null ? java.math.BigDecimal.ZERO : s.quantity();
             int statusOk = switch (statusIdx) {
                 case 1 -> qty.compareTo(java.math.BigDecimal.ZERO) > 0 ? 1 : 0;        // Em stock
                 case 2 -> qty.compareTo(java.math.BigDecimal.ZERO) > 0
@@ -1148,28 +1138,28 @@ public class StockPanel extends JPanel {
             };
             if (statusOk == 0) continue;
 
-            int unitsPerBox = s.getProduct().getUnitsPerBox() <= 0 ? 1 : s.getProduct().getUnitsPerBox();
+            int unitsPerBox = s.unitsPerBox() <= 0 ? 1 : s.unitsPerBox();
             java.math.BigDecimal qtyBoxes = qty.divide(
                     java.math.BigDecimal.valueOf(unitsPerBox), 2, java.math.RoundingMode.HALF_UP);
-            java.math.BigDecimal price = s.getProduct().getUnitPrice() == null
-                    ? java.math.BigDecimal.ZERO : s.getProduct().getUnitPrice();
+            java.math.BigDecimal price = s.unitPrice() == null
+                    ? java.math.BigDecimal.ZERO : s.unitPrice();
 
-            java.math.BigDecimal minStk = s.getProduct().getMinStock();
+            java.math.BigDecimal minStk = s.minStock();
             String estado;
             if (qty.compareTo(java.math.BigDecimal.ZERO) <= 0) estado = "ESGOTADO";
             else if (minStk != null && minStk.signum() > 0 && qty.compareTo(minStk) < 0) estado = "BAIXO";
             else estado = "EM STOCK";
 
             stockModel.addRow(new Object[]{
-                    s.getProduct().getBarcode() == null ? "—" : s.getProduct().getBarcode(),
-                    s.getProduct().getReference() == null ? s.getProduct().getSku() : s.getProduct().getReference(),
-                    s.getProduct().getName(),
+                    s.barcode() == null ? "—" : s.barcode(),
+                    s.reference() == null ? s.sku() : s.reference(),
+                    s.productName(),
                     hide ? MASK : String.format("%,.3f", qty),
                     hide ? MASK : String.format("%,.2f", qtyBoxes),
                     String.format("%,.2f MT", price),
                     hide ? MASK : estado
             });
-            stockRowProductIds.add(s.getProduct().getId());
+            stockRowProductIds.add(s.productId());
         }
     }
 
@@ -1186,21 +1176,21 @@ public class StockPanel extends JPanel {
     private void loadMovements() {
         movementsModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<StockMovement> movements = inventoryService.getMovementsByCompany(companyId);
+        List<StockMovementDTO> movements = inventoryApiClient.getMovementsByCompany(companyId);
 
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (StockMovement m : movements) {
-            BigDecimal qty = m.getQuantity();
+        for (StockMovementDTO m : movements) {
+            BigDecimal qty = m.quantity();
             String formattedQty = (qty.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + String.format("%,.3f", qty);
             movementsModel.addRow(new Object[]{
-                    m.getMovementDate().format(dtf),
-                    m.getProduct().getName(),
-                    m.getWarehouse().getName(),
+                    m.movementDate().format(dtf),
+                    m.productName(),
+                    m.warehouseName(),
                     formattedQty,
-                    m.getMovementType(),
-                    m.getBatchNumber() != null ? m.getBatchNumber() : "-",
-                    m.getSerialNumber() != null ? m.getSerialNumber() : "-",
-                    m.getDescription()
+                    m.movementType(),
+                    m.batchNumber() != null ? m.batchNumber() : "-",
+                    m.serialNumber() != null ? m.serialNumber() : "-",
+                    m.description()
             });
         }
     }
@@ -1219,7 +1209,7 @@ public class StockPanel extends JPanel {
         newBtn.addActionListener(e -> warehouseDialog(null));
         ModernButton editBtn = UIHelper.createSecondaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        editBtn.addActionListener(e -> { Warehouse w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); });
+        editBtn.addActionListener(e -> { WarehouseDTO w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); });
         ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
         toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         toggleBtn.addActionListener(e -> toggleSelectedWarehouse());
@@ -1241,7 +1231,7 @@ public class StockPanel extends JPanel {
         UIHelper.styleTable(warehousesTable);
         warehousesTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) { Warehouse w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); }
+                if (e.getClickCount() == 2) { WarehouseDTO w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); }
             }
         });
         JScrollPane scroll = new JScrollPane(warehousesTable);
@@ -1266,23 +1256,23 @@ public class StockPanel extends JPanel {
 
     private void loadWarehousesManagement() {
         if (warehousesModel == null) return;
-        warehousesFullList = inventoryService.getAllWarehousesByCompany(CurrentUserContext.getCurrentCompanyId());
+        warehousesFullList = inventoryApiClient.getAllWarehousesByCompany(CurrentUserContext.getCurrentCompanyId());
         warehousesModel.setRowCount(0);
-        for (Warehouse w : warehousesFullList) {
+        for (WarehouseDTO w : warehousesFullList) {
             warehousesModel.addRow(new Object[]{
-                    w.getName(),
-                    w.getWarehouseNumber() == null ? "—" : w.getWarehouseNumber(),
-                    w.getType() == null ? "—" : w.getType().label(),
-                    w.getCapacity() == null ? "—" : String.format("%,.2f", w.getCapacity()),
-                    w.getLocation() == null ? "—" : w.getLocation(),
-                    w.getManager() == null ? "—" : w.getManager(),
-                    w.getPhone() == null ? "—" : w.getPhone(),
-                    w.isAllowsSales() ? "Sim" : "Não",
-                    w.isActive() ? "ACTIVO" : "INATIVO"});
+                    w.name(),
+                    w.warehouseNumber() == null ? "—" : w.warehouseNumber(),
+                    w.type() == null ? "—" : w.type().label(),
+                    w.capacity() == null ? "—" : String.format("%,.2f", w.capacity()),
+                    w.location() == null ? "—" : w.location(),
+                    w.manager() == null ? "—" : w.manager(),
+                    w.phone() == null ? "—" : w.phone(),
+                    w.allowsSales() ? "Sim" : "Não",
+                    w.active() ? "ACTIVO" : "INATIVO"});
         }
     }
 
-    private Warehouse selectedManagedWarehouse() {
+    private WarehouseDTO selectedManagedWarehouse() {
         int row = warehousesTable == null ? -1 : warehousesTable.getSelectedRow();
         if (row < 0 || row >= warehousesFullList.size()) {
             JOptionPane.showMessageDialog(this, "Selecione um armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -1292,10 +1282,10 @@ public class StockPanel extends JPanel {
     }
 
     private void toggleSelectedWarehouse() {
-        Warehouse w = selectedManagedWarehouse();
+        WarehouseDTO w = selectedManagedWarehouse();
         if (w == null) return;
         try {
-            inventoryService.setWarehouseActive(w.getId(), !w.isActive());
+            inventoryApiClient.setWarehouseActive(w.id(), !w.active());
             onPanelSelected();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -1307,21 +1297,21 @@ public class StockPanel extends JPanel {
     }
 
     /** Diálogo de criar/editar armazém. {@code existing == null} → criar; senão → editar. */
-    private void warehouseDialog(Warehouse existing) {
+    private void warehouseDialog(WarehouseDTO existing) {
         boolean editing = existing != null;
-        JTextField nameField = new JTextField(editing ? existing.getName() : "");
-        JTextField numberField = new JTextField(editing && existing.getWarehouseNumber() != null ? existing.getWarehouseNumber() : "");
-        JTextField capacityField = new JTextField(editing && existing.getCapacity() != null ? existing.getCapacity().toPlainString() : "0");
-        JTextField locField = new JTextField(editing && existing.getLocation() != null ? existing.getLocation() : "");
+        JTextField nameField = new JTextField(editing ? existing.name() : "");
+        JTextField numberField = new JTextField(editing && existing.warehouseNumber() != null ? existing.warehouseNumber() : "");
+        JTextField capacityField = new JTextField(editing && existing.capacity() != null ? existing.capacity().toPlainString() : "0");
+        JTextField locField = new JTextField(editing && existing.location() != null ? existing.location() : "");
         JComboBox<String> typeCombo = new JComboBox<>();
         for (var t : com.phcpro.modules.inventory.model.WarehouseType.values()) typeCombo.addItem(t.label());
         UIHelper.styleComboBox(typeCombo);
-        if (editing && existing.getType() != null) typeCombo.setSelectedIndex(existing.getType().ordinal());
-        JTextField managerField = new JTextField(editing && existing.getManager() != null ? existing.getManager() : "");
-        JTextField phoneField = new JTextField(editing && existing.getPhone() != null ? existing.getPhone() : "");
+        if (editing && existing.type() != null) typeCombo.setSelectedIndex(existing.type().ordinal());
+        JTextField managerField = new JTextField(editing && existing.manager() != null ? existing.manager() : "");
+        JTextField phoneField = new JTextField(editing && existing.phone() != null ? existing.phone() : "");
         UIHelper.styleTextField(managerField);
         UIHelper.styleTextField(phoneField);
-        JCheckBox allowsSalesCheck = new JCheckBox("Permite vendas ao balcão (POS)", editing ? existing.isAllowsSales() : true);
+        JCheckBox allowsSalesCheck = new JCheckBox("Permite vendas ao balcão (POS)", editing ? existing.allowsSales() : true);
         allowsSalesCheck.setOpaque(false);
         allowsSalesCheck.setForeground(UIHelper.TEXT_LIGHT);
 
@@ -1360,15 +1350,16 @@ public class StockPanel extends JPanel {
                         com.phcpro.modules.inventory.model.WarehouseType.values()[Math.max(0, typeCombo.getSelectedIndex())];
 
                 if (editing) {
-                    inventoryService.updateWarehouse(existing.getId(), name, warehouseNumber, capacity, location,
-                            type, allowsSalesCheck.isSelected(), managerField.getText().trim(), phoneField.getText().trim());
+                    inventoryApiClient.updateWarehouse(existing.id(), new UpdateWarehouseRequest(
+                            name, warehouseNumber, capacity, location,
+                            type, allowsSalesCheck.isSelected(),
+                            managerField.getText().trim(), phoneField.getText().trim()));
                     JOptionPane.showMessageDialog(this, "Armazém '" + name + "' actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    com.phcpro.modules.company.model.Company currentCompany = new com.phcpro.modules.company.model.Company();
-                    currentCompany.setId(CurrentUserContext.getCurrentCompanyId());
-                    inventoryService.createWarehouse(name, warehouseNumber, capacity, location,
+                    inventoryApiClient.createWarehouse(new CreateWarehouseRequest(
+                            name, warehouseNumber, capacity, location, CurrentUserContext.getCurrentCompanyId(),
                             type, allowsSalesCheck.isSelected(),
-                            managerField.getText().trim(), phoneField.getText().trim(), currentCompany);
+                            managerField.getText().trim(), phoneField.getText().trim()));
                     JOptionPane.showMessageDialog(this, "Armazem '" + name + "' criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
                 }
                 onPanelSelected();
@@ -1406,7 +1397,7 @@ public class StockPanel extends JPanel {
         Runnable reload = () -> {
             model.setRowCount(0);
             rows.clear();
-            for (var s : inventoryCountService.listSessions(companyId)) {
+            for (var s : inventoryCountApiClient.listSessions(companyId)) {
                 rows.add(s);
                 model.addRow(new Object[]{ s.id(), s.warehouseName(), inventoryCountStatusLabel(s.status()),
                         s.totalItems(), s.countedItems(), s.createdBy(),
@@ -1450,7 +1441,7 @@ public class StockPanel extends JPanel {
             var s = rows.get(r);
             if (!"DRAFT".equals(s.status())) { JOptionPane.showMessageDialog(this, "Só é possível cancelar contagens em curso.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
             if (JOptionPane.showConfirmDialog(this, "Cancelar a contagem #" + s.id() + "?", "Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
-            try { inventoryCountService.cancelSession(s.id()); reload.run(); }
+            try { inventoryCountApiClient.cancelSession(s.id()); reload.run(); }
             catch (Exception ex) { JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE); }
         });
 
@@ -1475,7 +1466,7 @@ public class StockPanel extends JPanel {
         }
         JComboBox<String> whCombo = new JComboBox<>();
         UIHelper.styleComboBox(whCombo);
-        for (Warehouse w : warehousesList) whCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) whCombo.addItem(w.name());
         JPanel form = UIHelper.createDialogForm("Armazém a contar:", whCombo);
         boolean ok = new ModernFormDialog(UIHelper.mainWindow, "Nova Contagem", "fas-clipboard-list",
                 "Cria uma sessão com uma linha por artigo do armazém", form)
@@ -1484,7 +1475,7 @@ public class StockPanel extends JPanel {
         int idx = whCombo.getSelectedIndex();
         if (idx < 0) return false;
         try {
-            var session = inventoryCountService.createSession(warehousesList.get(idx).getId(), null);
+            var session = inventoryCountApiClient.createSession(warehousesList.get(idx).id(), null);
             openCountSession(session.id());
             return true;
         } catch (Exception ex) {
@@ -1497,7 +1488,7 @@ public class StockPanel extends JPanel {
     private void openCountSession(Long sessionId) {
         com.phcpro.modules.inventory.dto.InventoryCountDTO session;
         try {
-            session = inventoryCountService.getSession(sessionId);
+            session = inventoryCountApiClient.getSession(sessionId);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
@@ -1549,7 +1540,7 @@ public class StockPanel extends JPanel {
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> {
             try {
-                byte[] pdf = inventoryCountSheetPrintService.render(
+                byte[] pdf = inventoryApiClient.renderCountSheet(
                         CurrentUserContext.getCurrentCompanyId(), session.warehouseId());
                 com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "folha-contagem-" + session.warehouseName());
             } catch (Exception ex) {
@@ -1561,7 +1552,7 @@ public class StockPanel extends JPanel {
         saveBtn.setIcon(UIHelper.icon("fas-save", 14));
         saveBtn.addActionListener(e -> {
             try {
-                inventoryCountService.saveCounts(sessionId, readCountsFromTable(countTable, productIds));
+                inventoryCountApiClient.saveCounts(sessionId, readCountsFromTable(countTable, productIds));
                 JOptionPane.showMessageDialog(this, "Contagem guardada.", "Rascunho", JOptionPane.INFORMATION_MESSAGE);
                 dlg.close();
             } catch (Exception ex) {
@@ -1572,8 +1563,8 @@ public class StockPanel extends JPanel {
         dlg.addActionButton(printBtn);
         dlg.addActionButton(saveBtn);
         dlg.setOnSave(() -> {
-            inventoryCountService.saveCounts(sessionId, readCountsFromTable(countTable, productIds));
-            var result = inventoryCountService.applySession(sessionId);
+            inventoryCountApiClient.saveCounts(sessionId, readCountsFromTable(countTable, productIds));
+            var result = inventoryCountApiClient.applySession(sessionId);
             onPanelSelected();
             int applied = 0;
             StringBuilder diffs = new StringBuilder();
@@ -1625,7 +1616,7 @@ public class StockPanel extends JPanel {
 
     /** Diálogo de impressão de etiquetas: escolher produtos (multi-selecção) + cópias → folha PDF. */
     private void openLabelDialog() {
-        java.util.List<ProductDTO> products = comercialService.getAllProducts();
+        java.util.List<ProductDTO> products = comercialApiClient.getAllProducts();
         if (products.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Cadastre produtos primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1685,7 +1676,7 @@ public class StockPanel extends JPanel {
             for (int r : sel) ids.add(rowIds.get(table.convertRowIndexToModel(r)));
             Long companyId = CurrentUserContext.getCurrentCompanyId();
             UIHelper.runWithProgress(this, "A gerar etiquetas…",
-                    () -> productLabelPrintService.render(companyId, ids, copies),
+                    () -> inventoryApiClient.renderProductLabels(companyId, ids, copies),
                     pdf -> com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "etiquetas"),
                     err -> JOptionPane.showMessageDialog(this, "Erro: " + err.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
         });
@@ -1693,7 +1684,7 @@ public class StockPanel extends JPanel {
     }
 
     private void createAdjustmentDialog() {
-        List<ProductDTO> products = comercialService.getAllProducts();
+        List<ProductDTO> products = comercialApiClient.getAllProducts();
         if (products.isEmpty() || warehousesList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Necessário cadastrar produtos e armazéns primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1712,8 +1703,8 @@ public class StockPanel extends JPanel {
         for (ProductDTO p : products) {
             prodCombo.addItem(p.name());
         }
-        for (Warehouse w : warehousesList) {
-            whCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            whCombo.addItem(w.name());
         }
 
         JPanel dialogPanel = UIHelper.createDialogForm(
@@ -1731,7 +1722,7 @@ public class StockPanel extends JPanel {
             if (prodIdx < 0 || whIdx < 0) return;
 
             ProductDTO selectedProductDTO = products.get(prodIdx);
-            Warehouse selectedWarehouse = warehousesList.get(whIdx);
+            WarehouseDTO selectedWarehouse = warehousesList.get(whIdx);
 
             try {
                 BigDecimal counted = new BigDecimal(countedField.getText().trim().replace(",", "."));
@@ -1741,10 +1732,10 @@ public class StockPanel extends JPanel {
                     return;
                 }
 
-                inventoryService.adjustStock(new CreateStockAdjustmentRequest(
+                inventoryApiClient.adjustStock(new CreateStockAdjustmentRequest(
                         CurrentUserContext.getCurrentCompanyId(),
                         selectedProductDTO.id(),
-                        selectedWarehouse.getId(),
+                        selectedWarehouse.id(),
                         counted,
                         reason
                 ));
@@ -1797,7 +1788,7 @@ public class StockPanel extends JPanel {
     }
 
     private void createBatchEntryDialog(ProductDTO preselected) {
-        List<ProductDTO> products = comercialService.getAllProducts();
+        List<ProductDTO> products = comercialApiClient.getAllProducts();
         if (products.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Cadastre primeiro um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1839,8 +1830,8 @@ public class StockPanel extends JPanel {
         for (ProductDTO p : products) {
             prodCombo.addItem(p.sku() + " — " + p.name());
         }
-        for (Warehouse w : warehousesList) {
-            whCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            whCombo.addItem(w.name());
         }
         if (preselected != null) {
             for (int i = 0; i < products.size(); i++) {
@@ -1927,17 +1918,12 @@ public class StockPanel extends JPanel {
         String desc = descField.getText().trim();
 
         ProductDTO selectedDTO = products.get(prodIdx);
-        Warehouse selectedWarehouse = warehousesList.get(whIdx);
-
-        com.phcpro.modules.comercial.model.Product p = new com.phcpro.modules.comercial.model.Product();
-        p.setId(selectedDTO.id());
-        p.setName(selectedDTO.name());
-        p.setSku(selectedDTO.sku());
+        WarehouseDTO selectedWarehouse = warehousesList.get(whIdx);
 
         try {
-            inventoryService.registerMovement(
-                    p, selectedWarehouse, qty, "ENTRY",
-                    batch, serial, desc, expirationDate);
+            inventoryApiClient.registerMovement(new RegisterMovementRequest(
+                    selectedDTO.id(), selectedWarehouse.id(), qty, "ENTRY",
+                    batch, serial, desc, expirationDate));
             JOptionPane.showMessageDialog(this,
                     "Lote registado com sucesso para '" + selectedDTO.name() + "'.",
                     "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -1977,7 +1963,7 @@ public class StockPanel extends JPanel {
         wholesaleMinQtyField.putClientProperty("JTextField.placeholderText", "Qtd (unidades) a partir da qual aplica");
 
         java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categories =
-                comercialService.getActiveCategories();
+                comercialApiClient.getActiveCategories();
         categoryCombo.addItem("— Sem categoria —");
         for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
 
@@ -1985,7 +1971,7 @@ public class StockPanel extends JPanel {
         JComboBox<String> taxCombo = new JComboBox<>();
         UIHelper.styleComboBox(taxCombo);
         java.util.List<com.phcpro.modules.fiscal.dto.TaxRateDTO> vatRates =
-                comercialService.getActiveVatRates();
+                comercialApiClient.getActiveVatRates();
         int defaultTaxIdx = 0;
         for (int i = 0; i < vatRates.size(); i++) {
             taxCombo.addItem(vatRates.get(i).name());
@@ -2082,7 +2068,7 @@ public class StockPanel extends JPanel {
                 BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
                 BigDecimal wholesaleMinQty = parsePositiveOrNull(wholesaleMinQtyField.getText());
 
-                ProductDTO created = comercialService.createProduct(
+                ProductDTO created = comercialApiClient.createProduct(
                         sku,
                         reference.isEmpty() ? null : reference,
                         barcode.isEmpty() ? null : barcode,
@@ -2100,7 +2086,7 @@ public class StockPanel extends JPanel {
                         wholesaleMinQty);
 
                 if (imageHolder[0] != null) {
-                    comercialService.updateProductImage(created.id(), imageHolder[0]);
+                    comercialApiClient.updateProductImage(created.id(), imageHolder[0]);
                 }
 
                 onPanelSelected();
@@ -2122,10 +2108,10 @@ public class StockPanel extends JPanel {
     /**
      * Editar um produto existente: selecciona-se o artigo num combo e o formulário pré-preenche-se.
      * O SKU é imutável (identidade); os restantes dados — incluindo unidades/caixa e IVA — são
-     * actualizáveis. Não mexe no stock. Delega em {@link ComercialService#updateProduct}.
+     * actualizáveis. Não mexe no stock. Delega em {@code ComercialApiClient.updateProduct}.
      */
     private void editProductDialog(Long preselectedProductId) {
-        java.util.List<ProductDTO> products = comercialService.getAllProducts();
+        java.util.List<ProductDTO> products = comercialApiClient.getAllProducts();
         if (products.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Cadastre primeiro um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
@@ -2169,14 +2155,14 @@ public class StockPanel extends JPanel {
         }
 
         java.util.List<com.phcpro.modules.comercial.dto.ProductCategoryDTO> categories =
-                comercialService.getActiveCategories();
+                comercialApiClient.getActiveCategories();
         categoryCombo.addItem("— Sem categoria —");
         for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
 
         JComboBox<String> taxCombo = new JComboBox<>();
         UIHelper.styleComboBox(taxCombo);
         java.util.List<com.phcpro.modules.fiscal.dto.TaxRateDTO> vatRates =
-                comercialService.getActiveVatRates();
+                comercialApiClient.getActiveVatRates();
         for (var r : vatRates) taxCombo.addItem(r.name());
 
         final byte[][] imageHolder = {null};
@@ -2313,7 +2299,7 @@ public class StockPanel extends JPanel {
             BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
             BigDecimal wholesaleMinQty = parsePositiveOrNull(wholesaleMinQtyField.getText());
 
-            comercialService.updateProduct(
+            comercialApiClient.updateProduct(
                     selected.id(),
                     reference.isEmpty() ? null : reference,
                     barcode.isEmpty() ? null : barcode,
@@ -2331,7 +2317,7 @@ public class StockPanel extends JPanel {
                     wholesaleMinQty);
 
             if (imageHolder[0] != null) {
-                comercialService.updateProductImage(selected.id(), imageHolder[0]);
+                comercialApiClient.updateProductImage(selected.id(), imageHolder[0]);
             }
 
             onPanelSelected();
@@ -2350,7 +2336,7 @@ public class StockPanel extends JPanel {
                     "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        List<ProductDTO> products = comercialService.getAllProducts();
+        List<ProductDTO> products = comercialApiClient.getAllProducts();
         if (products.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "É necessário cadastrar produtos antes de transferir.",
@@ -2362,9 +2348,9 @@ public class StockPanel extends JPanel {
         JComboBox<String> destinationCombo = new JComboBox<>();
         UIHelper.styleComboBox(originCombo);
         UIHelper.styleComboBox(destinationCombo);
-        for (Warehouse w : warehousesList) {
-            originCombo.addItem(w.getName());
-            destinationCombo.addItem(w.getName());
+        for (WarehouseDTO w : warehousesList) {
+            originCombo.addItem(w.name());
+            destinationCombo.addItem(w.name());
         }
         if (warehousesList.size() > 1) destinationCombo.setSelectedIndex(1);
 
@@ -2393,7 +2379,7 @@ public class StockPanel extends JPanel {
 
         Runnable refreshTransferFEFO = () -> {
             int wIdx = originCombo.getSelectedIndex();
-            Warehouse origin = (wIdx >= 0 && wIdx < warehousesList.size()) ? warehousesList.get(wIdx) : null;
+            WarehouseDTO origin = (wIdx >= 0 && wIdx < warehousesList.size()) ? warehousesList.get(wIdx) : null;
             for (int i = 0; i < linesModel.getRowCount(); i++) {
                 String name = String.valueOf(linesModel.getValueAt(i, 0));
                 ProductDTO p = products.stream().filter(x -> x.name().equals(name)).findFirst().orElse(null);
@@ -2403,7 +2389,7 @@ public class StockPanel extends JPanel {
                     continue;
                 }
                 try {
-                    var opt = inventoryService.findNextFEFO(p.id(), origin.getId());
+                    var opt = inventoryApiClient.findNextFEFO(p.id(), origin.id());
                     if (opt.isPresent()) {
                         var b = opt.get();
                         linesModel.setValueAt(b.batchNumber() == null ? "—" : b.batchNumber(), i, 2);
@@ -2502,20 +2488,20 @@ public class StockPanel extends JPanel {
             return;
         }
 
-        Warehouse origin = warehousesList.get(originIdx);
-        Warehouse destination = warehousesList.get(destIdx);
+        WarehouseDTO origin = warehousesList.get(originIdx);
+        WarehouseDTO destination = warehousesList.get(destIdx);
 
         try {
             CreateStockTransferRequest request = new CreateStockTransferRequest(
                     CurrentUserContext.getCurrentCompanyId(),
-                    origin.getId(),
-                    destination.getId(),
+                    origin.id(),
+                    destination.id(),
                     responsibleField.getText().trim(),
                     vehicleField.getText().trim(),
                     notesField.getText().trim(),
                     lines
             );
-            StockTransferDTO created = stockTransferService.create(request);
+            StockTransferDTO created = stockTransferApiClient.create(request);
             onPanelSelected();
 
             int print = JOptionPane.showConfirmDialog(this,
@@ -2546,7 +2532,7 @@ public class StockPanel extends JPanel {
                 "Confirmar aprovação", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) return;
         try {
-            stockTransferService.approve(selected.id());
+            stockTransferApiClient.approve(selected.id());
             onPanelSelected();
             JOptionPane.showMessageDialog(this,
                     "Guia " + selected.transferNumber() + " aprovada. Stock movido — ver aba Movimentos.",
@@ -2568,7 +2554,7 @@ public class StockPanel extends JPanel {
                 "Guia " + selected.transferNumber(), "Motivo da rejeição:");
         if (reason == null) return;
         try {
-            stockTransferService.reject(selected.id(), reason);
+            stockTransferApiClient.reject(selected.id(), reason);
             onPanelSelected();
             JOptionPane.showMessageDialog(this,
                     "Guia " + selected.transferNumber() + " rejeitada. Nenhum stock foi movido.",
@@ -2591,7 +2577,7 @@ public class StockPanel extends JPanel {
 
     private void printTransfer(Long transferId, String transferNumber) {
         try {
-            byte[] pdf = stockTransferPrintService.render(transferId);
+            byte[] pdf = stockTransferApiClient.renderTransfer(transferId);
             PdfFileSaver.saveAndOpen(pdf, "transferencia-" + transferNumber);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(),
@@ -2610,20 +2596,20 @@ public class StockPanel extends JPanel {
         if (warehouseFilterCombo != null) {
             int idx = warehouseFilterCombo.getSelectedIndex();
             if (idx > 0 && (idx - 1) < warehousesList.size()) {
-                Warehouse selectedWarehouse = warehousesList.get(idx - 1);
-                warehouseId = selectedWarehouse.getId();
-                fileSuffix = selectedWarehouse.getName()
+                WarehouseDTO selectedWarehouse = warehousesList.get(idx - 1);
+                warehouseId = selectedWarehouse.id();
+                fileSuffix = selectedWarehouse.name()
                         .toLowerCase()
                         .replaceAll("[^a-z0-9]+", "-")
                         .replaceAll("(^-|-$)", "");
                 if (fileSuffix.isBlank()) {
-                    fileSuffix = "armazem-" + selectedWarehouse.getId();
+                    fileSuffix = "armazem-" + selectedWarehouse.id();
                 }
             }
         }
 
         try {
-            byte[] pdf = inventoryReportPrintService.render(CurrentUserContext.getCurrentCompanyId(), warehouseId);
+            byte[] pdf = inventoryApiClient.renderInventoryReport(CurrentUserContext.getCurrentCompanyId(), warehouseId);
             PdfFileSaver.saveAndOpen(pdf, "inventario-stock-" + fileSuffix);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(),

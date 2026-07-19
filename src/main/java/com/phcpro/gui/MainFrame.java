@@ -14,10 +14,17 @@ import com.phcpro.desktop.client.SupportApiClient;
 import com.phcpro.desktop.client.MySubscriptionApiClient;
 import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.desktop.client.ComercialApiClient;
+import com.phcpro.desktop.client.CreditNoteApiClient;
+import com.phcpro.desktop.client.DebitNoteApiClient;
+import com.phcpro.desktop.client.MovimentosApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.desktop.client.InventoryApiClient;
+import com.phcpro.desktop.client.InventoryCountApiClient;
+import com.phcpro.desktop.client.ProductCategoryApiClient;
+import com.phcpro.desktop.client.POSApiClient;
 import com.phcpro.desktop.client.PromotionApiClient;
 import com.phcpro.desktop.client.PurchaseApiClient;
+import com.phcpro.desktop.client.StockTransferApiClient;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.TopNavBar;
 import com.phcpro.gui.components.UIHelper;
@@ -78,9 +85,8 @@ public class MainFrame extends JFrame {
     private final ConfigPanel configPanel;
     private final PlataformaPanel plataformaPanel;
 
-    private final CompanyService companyService;
     private final DesktopSessionStore desktopSessionStore;
-    private final com.phcpro.modules.subscription.service.SubscriptionService subscriptionService;
+    private final MySubscriptionApiClient mySubscriptionApiClient;
     private final boolean superAdmin;
     private TopNavBar topBar;
     private com.phcpro.gui.components.StatusBar statusBar;
@@ -94,52 +100,34 @@ public class MainFrame extends JFrame {
     private boolean subscriptionEnforced;
 
     public MainFrame(
-            ComercialService comercialService,
             ComercialApiClient comercialApiClient,
+            CreditNoteApiClient creditNoteApiClient,
+            DebitNoteApiClient debitNoteApiClient,
+            MovimentosApiClient movimentosApiClient,
             ApprovalApiClient approvalApiClient,
-            FinanceService financeService,
             FinanceApiClient financeApiClient,
             InventoryApiClient inventoryApiClient,
+            StockTransferApiClient stockTransferApiClient,
+            InventoryCountApiClient inventoryCountApiClient,
+            ProductCategoryApiClient productCategoryApiClient,
             PurchaseApiClient purchaseApiClient,
             CRMApiClient crmApiClient,
             HRApiClient hrApiClient,
-            InventoryService inventoryService,
-            POSService posService,
-            com.phcpro.modules.comercial.service.ProductCategoryService productCategoryService,
             UserApiClient userApiClient,
             AuditApiClient auditApiClient,
             BackupApiClient backupApiClient,
             DocumentConfigApiClient documentConfigApiClient,
             SupportApiClient supportApiClient,
             MySubscriptionApiClient mySubscriptionApiClient,
-            CompanyService companyService,
-            com.phcpro.modules.promotions.service.PromotionService promotionService,
             PromotionApiClient promotionApiClient,
-            com.phcpro.modules.movimentos.service.MovimentosService movimentosService,
+            POSApiClient posApiClient,
             DesktopSessionStore desktopSessionStore,
-            ReceiptPrintService receiptPrintService,
-            InvoicePrintService invoicePrintService,
-            OrderPrintService orderPrintService,
-            StockTransferService stockTransferService,
-            StockTransferPrintService stockTransferPrintService,
-            InventoryReportPrintService inventoryReportPrintService,
-            com.phcpro.modules.printing.InventoryCountSheetPrintService inventoryCountSheetPrintService,
-            CreditNoteService creditNoteService,
-            DebitNoteService debitNoteService,
-            CreditNotePrintService creditNotePrintService,
-            DebitNotePrintService debitNotePrintService,
             FiscalApiClient fiscalApiClient,
-            com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
             PlatformApiClient platformApiClient,
-            com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
-            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
-            com.phcpro.modules.inventory.service.InventoryCountService inventoryCountService,
-            com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService,
-            com.phcpro.modules.printing.ProductLabelPrintService productLabelPrintService
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
     ) {
-        this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
-        this.subscriptionService = subscriptionService;
+        this.mySubscriptionApiClient = mySubscriptionApiClient;
         this.superAdmin = desktopSessionStore.requireSession().superAdmin();
 
         setTitle("MULTICORE — Gestão Profissional");
@@ -162,15 +150,15 @@ public class MainFrame extends JFrame {
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
             dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);
-            comercialPanel  = new ComercialPanel(comercialService, inventoryService, financeService, invoicePrintService, orderPrintService, guideRemittancePrintService, companyService, creditNoteService, debitNoteService, creditNotePrintService, debitNotePrintService, posService, promotionApiClient, comercialApiClient, movimentosService);
+            comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient);
             financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
             hrPanel         = new HRPanel(hrApiClient);
             crmPanel        = new CRMPanel(crmApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(fiscalApiClient);
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
-            posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
-            stockPanel      = new StockPanel(inventoryService, comercialService, stockTransferService, stockTransferPrintService, inventoryReportPrintService, inventoryCountSheetPrintService, inventoryCountService, productLabelPrintService, productCategoryService);
+            posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
+            stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
             configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);
             plataformaPanel = null;
@@ -389,7 +377,7 @@ public class MainFrame extends JFrame {
     private com.phcpro.modules.subscription.dto.MySubscriptionDTO mySubscriptionSafe() {
         if (superAdmin) return null;
         try {
-            return subscriptionService.getMySubscription();
+            return mySubscriptionApiClient.getMySubscription();
         } catch (RuntimeException ex) {
             return null;
         }

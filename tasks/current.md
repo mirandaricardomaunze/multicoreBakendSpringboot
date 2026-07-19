@@ -2,10 +2,30 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-18
-**Estado:** software de loja concluído. **Em curso: hospedar o backend à parte (VPS+Docker+PostgreSQL) +
-migrar o desktop para cliente-fino (HTTPS-only).** 11 de ~26 domínios migrados; segurança endurecida e
-**validada ao vivo**. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+**Última actualização:** 2026-07-19
+**Estado:** software de loja concluído. **Track B (desktop cliente-fino) FECHADO** — o desktop arranca
+**SEM base de dados**; os 4 gigantes (Stock/POS/Comercial + runtime) já passam por HTTP. Segurança
+endurecida e **validada ao vivo**. **Falta** para fechar a hospedagem: 1.º `docker compose up` real numa
+VPS + merge de `feat/stock-thin-client` → `main`. A fonte de verdade operacional é
+[tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-19 (Track B FECHADO — desktop cliente-fino completo)
+
+- **Os 4 gigantes migraram para HTTP:** Stock (`884d67c`), POS (`da3596b`), Comercial (`d85febd`,
+  "4.º/último gigante — fecha Track B"). Cada painel deixou de chamar o Service em processo.
+- **Runtime cliente-fino (`a1af165`) — fecha o objetivo:** `DesktopApplication` passou a um contexto
+  **não-web** (`WebApplicationType.NONE`), sem `DataSource`/JPA/Flyway; scan só de `com.phcpro.desktop`
+  + `com.phcpro.gui` + `com.phcpro.modules.pos.scale`. `application-desktop.properties` reduzido a
+  `desktop.api.base-url`. **O desktop arranca SEM base de dados.** `MainFrame` já não depende de nenhum
+  `@Service`/`@Repository` (últimos 2 removidos: `companyService` morto, `subscriptionService` →
+  `MySubscriptionApiClient`).
+- **Consequência:** o PostgreSQL pode agora ser fechado ao exterior — só o backend lhe acede.
+- **Testes:** `DesktopThinContextTest` (novo) prova que o contexto desktop arranca sem `DataSource` e
+  sem serviços/repositórios de backend, só com clientes HTTP. `MainFrameNavigationSmokeTest` removido
+  (testava o desktop GORDO em processo, arquitetura extinta). Fluxos de dinheiro por HTTP cobertos no
+  harness (`aa43d36`). `mvn -o clean test` → **281 testes, 0 falhas**.
+- **Falta:** 1.º `docker compose up` real numa VPS (sem Docker nesta máquina) + merge para `main`
+  (`feat/stock-thin-client` está 6 commits à frente).
 
 ### Progresso — 2026-07-18 (Endurecimento de segurança + validação ao vivo do deploy)
 
