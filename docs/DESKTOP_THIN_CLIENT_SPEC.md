@@ -117,10 +117,19 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
   ganhou ~20 métodos. `currentCompany()` deixou de usar `CompanyService` — o `TablePdfExporter` só precisa
   do id, resolvido com um `Company` stub (padrão herdado do StockPanel). Entidades `Receipt`/`Warehouse` → DTO.
 - **Fecho do Track B:** com o Comercial migrado, **todos os 14 painéis** são cliente-fino. O `MainFrame`
-  deixou de injectar 12 serviços de backend (comercial/inventory/finance/pos/movimentos + 5 print services
-  + 2 note services), agora órfãos — removidos. O único serviço ainda injectado no `MainFrame` é o
-  `CompanyService` (usado fora dos painéis). **Próximo passo fora do âmbito da UI:** o perfil `desktop`
-  deixar de configurar `DataSource`/JPA — só então o PostgreSQL pode ser fechado ao exterior.
+  deixou de injectar 14 serviços de backend (comercial/inventory/finance/pos/movimentos + 5 print services
+  + 2 note services + `CompanyService` morto + `SubscriptionService`→`MySubscriptionApiClient`) — já **não
+  depende de nenhum `@Service`/`@Repository`**.
+- **Runtime cliente-fino (fecha o objectivo):** o `DesktopApplication` deixou de arrancar o
+  `MulticoreApplication`. É agora um contexto próprio, **não-web** (`WebApplicationType.NONE`), que
+  **exclui** `DataSource`/JPA/Flyway e faz scan só de `com.phcpro.desktop` + `com.phcpro.gui` +
+  `com.phcpro.modules.pos.scale`. O `application-desktop.properties` perdeu toda a configuração de BD —
+  fica só `desktop.api.base-url`. É `@Configuration @Profile("desktop") @EnableAutoConfiguration` (e **não**
+  `@SpringBootApplication`) de propósito: assim não é um `@SpringBootConfiguration` que polua a descoberta
+  de contexto dos testes, e o `@Profile` impede que as exclusões vazem para o contexto do backend quando
+  este faz scan de `com.phcpro`. **Prova automática:** `DesktopThinContextTest` — o contexto arranca **sem
+  nenhum `DataSource`** e sem `@Service`/`@Repository` de backend, só com os clientes HTTP.
+  Consequência: **o PostgreSQL pode agora ser fechado ao exterior** (só o backend lhe acede).
 - `DesktopApiClientTest` — teste de contrato da camada partilhada (headers, token, empresa, parse de
   objecto/lista, mapeamento de erro).
 
@@ -129,7 +138,9 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
 - **Verificado: compilação + ligação.** O **ida-e-volta HTTP real** de cada painel só se confirma com o
   desktop a correr contra o backend (validação manual — ver harness TC-50+).
 - A lógica de negócio (Services) **não muda** — sem risco de regressão nos testes existentes.
-- **Só se pode fechar o PostgreSQL ao exterior quando TODOS os painéis estiverem migrados** e o perfil
-  `desktop` deixar de configurar `DataSource`. Até lá, backend hospedado + BD acessível por VPN.
-- Os painéis grandes (POS/Stock/Compras/Comercial) exigem endpoints novos e migração cuidadosa,
-  um a um — são o grosso do trabalho restante.
+- **Feito:** todos os painéis migrados **e** o runtime desktop já não configura `DataSource` (ver
+  `DesktopThinContextTest`). O PostgreSQL pode ser fechado ao exterior — só o backend lhe acede.
+- **Por validar ao vivo:** o ida-e-volta HTTP real de cada painel confirma-se com o desktop a correr
+  contra um backend a sério (harness TC-50+). Verificado até agora: compilação, suite de testes completa,
+  e o *backend* do Stock contra PostgreSQL real. Os fluxos de dinheiro (checkout POS, emissão de fatura)
+  ainda não foram exercidos ao vivo ponta-a-ponta.

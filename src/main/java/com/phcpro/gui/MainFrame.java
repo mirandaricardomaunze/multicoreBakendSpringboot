@@ -85,9 +85,8 @@ public class MainFrame extends JFrame {
     private final ConfigPanel configPanel;
     private final PlataformaPanel plataformaPanel;
 
-    private final CompanyService companyService;
     private final DesktopSessionStore desktopSessionStore;
-    private final com.phcpro.modules.subscription.service.SubscriptionService subscriptionService;
+    private final MySubscriptionApiClient mySubscriptionApiClient;
     private final boolean superAdmin;
     private TopNavBar topBar;
     private com.phcpro.gui.components.StatusBar statusBar;
@@ -120,18 +119,15 @@ public class MainFrame extends JFrame {
             DocumentConfigApiClient documentConfigApiClient,
             SupportApiClient supportApiClient,
             MySubscriptionApiClient mySubscriptionApiClient,
-            CompanyService companyService,
             PromotionApiClient promotionApiClient,
             POSApiClient posApiClient,
             DesktopSessionStore desktopSessionStore,
             FiscalApiClient fiscalApiClient,
             PlatformApiClient platformApiClient,
-            com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
     ) {
-        this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
-        this.subscriptionService = subscriptionService;
+        this.mySubscriptionApiClient = mySubscriptionApiClient;
         this.superAdmin = desktopSessionStore.requireSession().superAdmin();
 
         setTitle("MULTICORE — Gestão Profissional");
@@ -381,7 +377,7 @@ public class MainFrame extends JFrame {
     private com.phcpro.modules.subscription.dto.MySubscriptionDTO mySubscriptionSafe() {
         if (superAdmin) return null;
         try {
-            return subscriptionService.getMySubscription();
+            return mySubscriptionApiClient.getMySubscription();
         } catch (RuntimeException ex) {
             return null;
         }
