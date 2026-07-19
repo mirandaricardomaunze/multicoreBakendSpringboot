@@ -14,7 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "customer_orders")
+@Table(name = "customer_orders", uniqueConstraints = @UniqueConstraint(
+        name = "uk_customer_orders_company_number", columnNames = {"company_id", "order_number"}))
 @Getter
 @Setter
 public class Order extends BaseEntity {
@@ -23,7 +24,7 @@ public class Order extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_number", unique = true)
+    @Column(name = "order_number")
     private String orderNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -11,7 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "stock_transfers")
+@Table(name = "stock_transfers", uniqueConstraints = @UniqueConstraint(
+        name = "uk_stock_transfers_company_number", columnNames = {"company_id", "transfer_number"}))
 @Getter
 @Setter
 public class StockTransfer extends BaseEntity {
@@ -20,7 +21,7 @@ public class StockTransfer extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "transfer_number", nullable = false, unique = true)
+    @Column(name = "transfer_number", nullable = false)
     private String transferNumber;
 
     @Column(name = "transfer_date", nullable = false)

@@ -1,5 +1,6 @@
 package com.phcpro.modules.comercial.controller;
 
+import com.phcpro.architecture.concurrency.ConcurrencyRetry;
 import com.phcpro.modules.comercial.dto.*;
 import com.phcpro.modules.comercial.service.ComercialService;
 import jakarta.validation.Valid;
@@ -13,9 +14,11 @@ import java.util.List;
 public class ComercialController {
 
     private final ComercialService comercialService;
+    private final ConcurrencyRetry concurrencyRetry;
 
-    public ComercialController(ComercialService comercialService) {
+    public ComercialController(ComercialService comercialService, ConcurrencyRetry concurrencyRetry) {
         this.comercialService = comercialService;
+        this.concurrencyRetry = concurrencyRetry;
     }
 
     @GetMapping("/clients")
@@ -110,7 +113,8 @@ public class ComercialController {
 
     @PostMapping("/invoices")
     public ResponseEntity<InvoiceDTO> createInvoice(@RequestBody @Valid CreateInvoiceRequest request) {
-        return ResponseEntity.ok(comercialService.createInvoice(request));
+        // Rede de segurança para conflitos de concorrência (stock/tesouraria) entre postos.
+        return ResponseEntity.ok(concurrencyRetry.run(() -> comercialService.createInvoice(request)));
     }
 
     @PostMapping("/invoices/{id}/cancel")

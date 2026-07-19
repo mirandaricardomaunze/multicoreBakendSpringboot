@@ -1,5 +1,6 @@
 package com.phcpro.modules.pos.controller;
 
+import com.phcpro.architecture.concurrency.ConcurrencyRetry;
 import com.phcpro.modules.comercial.dto.CreditNoteDTO;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.service.ComercialService;
@@ -17,10 +18,13 @@ public class POSController {
 
     private final POSService posService;
     private final ComercialService comercialService;
+    private final ConcurrencyRetry concurrencyRetry;
 
-    public POSController(POSService posService, ComercialService comercialService) {
+    public POSController(POSService posService, ComercialService comercialService,
+                         ConcurrencyRetry concurrencyRetry) {
         this.posService = posService;
         this.comercialService = comercialService;
+        this.concurrencyRetry = concurrencyRetry;
     }
 
     @GetMapping("/sessions/active")
@@ -71,7 +75,9 @@ public class POSController {
 
     @PostMapping("/checkout")
     public ResponseEntity<InvoiceDTO> checkout(@RequestBody @Valid POSCheckoutRequest request) {
-        return ResponseEntity.ok(comercialService.toDTO(posService.checkout(request)));
+        // Rede de segurança: se dois postos colidirem na MESMA linha (stock/tesouraria) no mesmo
+        // instante, repete a venda numa transação nova em vez de falhar na cara do operador.
+        return ResponseEntity.ok(concurrencyRetry.run(() -> comercialService.toDTO(posService.checkout(request))));
     }
 
     @PostMapping("/returns")

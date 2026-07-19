@@ -12,7 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "debit_notes")
+@Table(name = "debit_notes", uniqueConstraints = @UniqueConstraint(
+        name = "uk_debit_notes_company_number", columnNames = {"company_id", "note_number"}))
 @Getter
 @Setter
 public class DebitNote extends BaseEntity {
@@ -21,7 +22,7 @@ public class DebitNote extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "note_number", nullable = false, unique = true)
+    @Column(name = "note_number", nullable = false)
     private String noteNumber;
 
     @Column(name = "issue_date", nullable = false)
