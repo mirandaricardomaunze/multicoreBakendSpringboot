@@ -16,6 +16,17 @@ Cobrem a camada partilhada de que **todos** os clientes tipados dependem.
 | TC-06 | `postForList()` sobre um POST que devolve array               | Método POST; lista parseada                             |
 | TC-07 | `getBytes()` (ex.: PDF de `/api/print/**`)                    | Corpo binário devolvido; pede `Accept: application/pdf` |
 
+## Automáticos — contexto cliente-fino & fluxos de dinheiro (HTTP real)
+
+Provam, sem intervenção manual, o que antes estava só "a compilar". Correm na suite (`mvn test`).
+
+| ID    | Teste                              | Cenário / Esperado                                                                 |
+|-------|------------------------------------|------------------------------------------------------------------------------------|
+| TC-08 | `DesktopThinContextTest`           | O contexto Spring do desktop arranca **sem `DataSource`** e sem `@Service`/`@Repository` de backend — só os clientes HTTP. (Prova que o PostgreSQL pode ser fechado ao exterior.) |
+| TC-09 | `MoneyFlowHttpIntegrationTest` (fatura) | Login (ADMIN) → semear stock (ENTRADA) → **emitir fatura** desconta stock exactamente; **vender a descoberto → HTTP 400** (`consumeFEFO`+`@Version`); stock intacto após a recusa. Pelos mesmos endpoints/cabeçalhos que o desktop usa. |
+| TC-10 | `MoneyFlowHttpIntegrationTest` (POS) | Abrir caixa → **checkout** devolve **`InvoiceDTO`** (id+número+total) e desconta stock. |
+| TC-11 | `MoneyFlowHttpIntegrationTest` (encomenda) | Criar encomenda (`POST /orders`) e consultá-la (`GET /orders/{id}` + listagem). |
+
 ## Manuais — ida-e-volta HTTP ao vivo (desktop contra backend)
 
 Pré-condição: backend a correr, login feito, empresa activa seleccionada.
