@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
@@ -46,6 +48,28 @@ public class ComercialApiClient {
 
     public List<ProductDTO> getAllProducts() {
         return clientFactory.authenticatedClient().getList("/api/comercial/products", ProductDTO.class);
+    }
+
+    public List<ClientDTO> getAllClients() {
+        return getClients();
+    }
+
+    /** Produtos vendáveis no POS (stock rastreado + activos). */
+    public List<ProductDTO> getSellableProducts() {
+        return clientFactory.authenticatedClient().getList("/api/comercial/products/sellable", ProductDTO.class);
+    }
+
+    /** Produto pelo código de barras (leitor do POS); {@code null} se não existir. */
+    public ProductDTO findProductByBarcode(String barcode) {
+        String enc = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);
+        return clientFactory.authenticatedClient()
+                .get("/api/comercial/products/by-barcode?barcode=" + enc, ProductDTO.class);
+    }
+
+    /** Histórico de vendas de balcão (POS) da empresa. */
+    public List<InvoiceDTO> getPOSSalesByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/comercial/pos-sales?companyId=" + companyId, InvoiceDTO.class);
     }
 
     public List<ProductCategoryDTO> getActiveCategories() {

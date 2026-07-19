@@ -1,7 +1,8 @@
 package com.phcpro.modules.pos.controller;
 
-import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.dto.CreditNoteDTO;
+import com.phcpro.modules.comercial.dto.InvoiceDTO;
+import com.phcpro.modules.comercial.service.ComercialService;
 import com.phcpro.modules.pos.dto.*;
 import com.phcpro.modules.pos.service.POSService;
 import jakarta.validation.Valid;
@@ -15,9 +16,11 @@ import java.util.List;
 public class POSController {
 
     private final POSService posService;
+    private final ComercialService comercialService;
 
-    public POSController(POSService posService) {
+    public POSController(POSService posService, ComercialService comercialService) {
         this.posService = posService;
+        this.comercialService = comercialService;
     }
 
     @GetMapping("/sessions/active")
@@ -67,9 +70,8 @@ public class POSController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<Long> checkout(@RequestBody @Valid POSCheckoutRequest request) {
-        Invoice invoice = posService.checkout(request);
-        return ResponseEntity.ok(invoice.getId());
+    public ResponseEntity<InvoiceDTO> checkout(@RequestBody @Valid POSCheckoutRequest request) {
+        return ResponseEntity.ok(comercialService.toDTO(posService.checkout(request)));
     }
 
     @PostMapping("/returns")

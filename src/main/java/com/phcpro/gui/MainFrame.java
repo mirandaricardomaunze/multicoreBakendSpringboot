@@ -18,6 +18,7 @@ import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.desktop.client.InventoryApiClient;
 import com.phcpro.desktop.client.InventoryCountApiClient;
 import com.phcpro.desktop.client.ProductCategoryApiClient;
+import com.phcpro.desktop.client.POSApiClient;
 import com.phcpro.desktop.client.PromotionApiClient;
 import com.phcpro.desktop.client.PurchaseApiClient;
 import com.phcpro.desktop.client.StockTransferApiClient;
@@ -118,11 +119,10 @@ public class MainFrame extends JFrame {
             SupportApiClient supportApiClient,
             MySubscriptionApiClient mySubscriptionApiClient,
             CompanyService companyService,
-            com.phcpro.modules.promotions.service.PromotionService promotionService,
             PromotionApiClient promotionApiClient,
+            POSApiClient posApiClient,
             com.phcpro.modules.movimentos.service.MovimentosService movimentosService,
             DesktopSessionStore desktopSessionStore,
-            ReceiptPrintService receiptPrintService,
             InvoicePrintService invoicePrintService,
             OrderPrintService orderPrintService,
             CreditNoteService creditNoteService,
@@ -133,8 +133,7 @@ public class MainFrame extends JFrame {
             com.phcpro.modules.printing.GuideRemittancePrintService guideRemittancePrintService,
             PlatformApiClient platformApiClient,
             com.phcpro.modules.subscription.service.SubscriptionService subscriptionService,
-            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
-            com.phcpro.modules.printing.POSZReportPrintService posZReportPrintService
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
     ) {
         this.companyService = companyService;
         this.desktopSessionStore = desktopSessionStore;
@@ -168,7 +167,7 @@ public class MainFrame extends JFrame {
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(fiscalApiClient);
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
-            posPanel        = new POSPanel(posService, comercialService, inventoryService, financeService, receiptPrintService, companyService, promotionService, scaleBarcodeParser, posZReportPrintService);
+            posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
             stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
             configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);

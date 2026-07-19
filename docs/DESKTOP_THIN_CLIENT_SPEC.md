@@ -51,7 +51,8 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
 | Compras     | `PurchaseApiClient` estendido (colapsa purchase+order+reorder) + `getWarehousesByCompany` | ComprasPanel (1.º gigante; entidades Supplier/Warehouse→DTO) | ✅ |
 | Plataforma  | `PlatformApiClient` (colapsa empresas+utilizadores+assinaturas+suporte) + 3 endpoints de options | PlataformaPanel (superadmin; só DTOs) | ✅ |
 | Stock       | `InventoryApiClient` estendido + `StockTransferApiClient`/`InventoryCountApiClient`/`ProductCategoryApiClient` novos + `ComercialApiClient` (produtos/IVA) **+ 13 endpoints novos no backend** | StockPanel (2.º gigante, 2.633 linhas; `Stock`/`StockMovement`/`Warehouse` entidades→DTO) | ✅ |
-| **POS / Comercial** | —                      | —                | ⬜ (gigantes restantes, risco) |
+| POS         | `POSApiClient` (novo; sessões/checkout/devoluções/recibo/Z) + extensões Comercial (barcode/vendáveis/pos-sales) / Inventory (armazéns-de-venda) / Promotion (melhor-promoção) **+ 6 endpoints novos no backend** | POSPanel (checkout com concorrência; `TillSession`/`Warehouse`/`Invoice` entidades→DTO) | ✅ |
+| **Comercial** | —                      | —                | ⬜ (último gigante) |
 | Config (empresa) | 3 controllers novos (users/audit/backup) + 6 clientes | ConfigPanel (backup server-side; audit server-side) | ✅ |
 
 ## Peças
@@ -90,6 +91,19 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
   transação da fatura. Dois utilizadores a vender o mesmo saldo → o 2.º é recusado (via consumeFEFO ou
   `OptimisticLockException`+rollback). O défice restante é só **UX** (tabela desactualizada): mitigar com
   botões *Atualizar* e recarregar-ao-abrir nos seletores de produto de Faturação/POS quando forem migrados.
+- **POS** foi o **3.º gigante** (1.673 linhas). O `POSController` já existia (sessões/checkout/
+  devoluções); precisou de **6 endpoints novos**: `GET /comercial/products/sellable`,
+  `GET /comercial/products/by-barcode` (corpo `null` = não encontrado, preservando a semântica do
+  painel), `GET /comercial/pos-sales`, `GET /inventory/warehouses/sales`, `GET /promotions/best`
+  (com `AppliedPromotionDTO` novo) e `GET /print/pos-z-report/{sessionId}`. O `checkout` passou a
+  devolver **`InvoiceDTO`** (antes só `Long`) para o painel ter número+total do documento para o recibo
+  — o `POSController` passou a injectar `ComercialService` para o `toDTO(Invoice)`. Cliente novo
+  `POSApiClient` (sessão activa via 204→`Optional.empty`, checkout, devolução, recibo/Z via `getBytes`);
+  operador/barcode vão **URL-encoded**. `ScaleBarcodeParser` (parser puro, sem BD) permanece bean local
+  do desktop. Entidades `TillSession`/`Warehouse`/`Invoice` → DTO; `CompanyService` (injectado mas nunca
+  usado) foi removido do painel. No `MainFrame` removeram-se 3 params só-POS (receipt/promotion/Z-report).
+  A **mesma garantia de concorrência do Stock** aplica-se ao checkout POS (`POSService.checkout` corre no
+  servidor, dentro de transação, com `consumeFEFO`+`@Version`).
 - `DesktopApiClientTest` — teste de contrato da camada partilhada (headers, token, empresa, parse de
   objecto/lista, mapeamento de erro).
 

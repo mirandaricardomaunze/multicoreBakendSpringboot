@@ -29,6 +29,13 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.findWarehousesByCompany(companyId));
     }
 
+    /** Armazéns que permitem vendas ao balcão (POS) — só estes aparecem no seletor de caixa. */
+    @GetMapping("/warehouses/sales")
+    public ResponseEntity<List<WarehouseDTO>> getSalesWarehouses(@RequestParam Long companyId) {
+        return ResponseEntity.ok(inventoryService.getSalesWarehousesByCompany(companyId)
+                .stream().map(inventoryService::toDTO).toList());
+    }
+
     @PostMapping("/warehouses")
     public ResponseEntity<WarehouseDTO> createWarehouse(@RequestBody @Valid CreateWarehouseRequest request) {
         return ResponseEntity.ok(inventoryService.createWarehouse(request));

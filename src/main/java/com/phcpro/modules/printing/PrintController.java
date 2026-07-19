@@ -27,6 +27,7 @@ public class PrintController {
     private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
     private final ProductLabelPrintService productLabelPrintService;
     private final InventoryCountSheetPrintService inventoryCountSheetPrintService;
+    private final POSZReportPrintService posZReportPrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -41,7 +42,8 @@ public class PrintController {
             GuideRemittancePrintService guideRemittancePrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService,
             ProductLabelPrintService productLabelPrintService,
-            InventoryCountSheetPrintService inventoryCountSheetPrintService
+            InventoryCountSheetPrintService inventoryCountSheetPrintService,
+            POSZReportPrintService posZReportPrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -56,11 +58,17 @@ public class PrintController {
         this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
         this.productLabelPrintService = productLabelPrintService;
         this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
+        this.posZReportPrintService = posZReportPrintService;
     }
 
     @GetMapping("/receipt/{invoiceId}")
     public ResponseEntity<Resource> receipt(@PathVariable Long invoiceId) {
         return pdfResponse(receiptPrintService.render(invoiceId), "recibo-" + invoiceId);
+    }
+
+    @GetMapping("/pos-z-report/{sessionId}")
+    public ResponseEntity<Resource> posZReport(@PathVariable Long sessionId) {
+        return pdfResponse(posZReportPrintService.render(sessionId), "fecho-caixa-Z-" + sessionId);
     }
 
     @GetMapping("/invoice/{invoiceId}")

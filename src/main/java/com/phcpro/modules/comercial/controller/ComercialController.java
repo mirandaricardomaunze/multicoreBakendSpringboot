@@ -46,6 +46,18 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getAllProducts());
     }
 
+    /** Produtos vendáveis no POS (com stock rastreado e activos). */
+    @GetMapping("/products/sellable")
+    public ResponseEntity<List<ProductDTO>> getSellableProducts() {
+        return ResponseEntity.ok(comercialService.getSellableProducts());
+    }
+
+    /** Localiza um produto pelo código de barras (leitor do POS). Corpo {@code null} se não existir. */
+    @GetMapping("/products/by-barcode")
+    public ResponseEntity<ProductDTO> findProductByBarcode(@RequestParam String barcode) {
+        return ResponseEntity.ok(comercialService.findProductByBarcode(barcode));
+    }
+
     @PostMapping("/products")
     public ResponseEntity<ProductDTO> createProduct(@RequestBody @Valid CreateProductRequest r) {
         return ResponseEntity.ok(comercialService.createProduct(
@@ -76,6 +88,12 @@ public class ComercialController {
     @GetMapping("/invoices")
     public ResponseEntity<List<InvoiceDTO>> getInvoices() {
         return ResponseEntity.ok(comercialService.getAllInvoices());
+    }
+
+    /** Vendas de balcão (POS) da empresa — histórico do painel de vendas. */
+    @GetMapping("/pos-sales")
+    public ResponseEntity<List<InvoiceDTO>> getPOSSales(@RequestParam Long companyId) {
+        return ResponseEntity.ok(comercialService.getPOSSalesByCompany(companyId));
     }
 
     @PostMapping("/invoices")

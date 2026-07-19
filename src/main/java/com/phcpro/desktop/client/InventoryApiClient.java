@@ -49,6 +49,12 @@ public class InventoryApiClient {
                 .getList("/api/inventory/warehouses/all?companyId=" + companyId, WarehouseDTO.class);
     }
 
+    /** Armazéns que permitem vendas ao balcão (POS). */
+    public List<WarehouseDTO> getSalesWarehousesByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/inventory/warehouses/sales?companyId=" + companyId, WarehouseDTO.class);
+    }
+
     public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
         return clientFactory.authenticatedClient()
                 .post("/api/inventory/warehouses", request, WarehouseDTO.class);
