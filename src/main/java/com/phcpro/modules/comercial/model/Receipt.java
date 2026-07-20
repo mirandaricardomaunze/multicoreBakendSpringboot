@@ -11,7 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "receipts")
+@Table(name = "receipts", uniqueConstraints = @UniqueConstraint(
+        name = "uk_receipts_company_number", columnNames = {"company_id", "receipt_number"}))
 @Getter
 @Setter
 public class Receipt extends BaseEntity {
@@ -20,7 +21,7 @@ public class Receipt extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "receipt_number", nullable = false, unique = true)
+    @Column(name = "receipt_number", nullable = false)
     private String receiptNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)

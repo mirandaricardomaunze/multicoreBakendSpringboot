@@ -13,7 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "credit_notes")
+@Table(name = "credit_notes", uniqueConstraints = @UniqueConstraint(
+        name = "uk_credit_notes_company_number", columnNames = {"company_id", "note_number"}))
 @Getter
 @Setter
 public class CreditNote extends BaseEntity {
@@ -22,7 +23,7 @@ public class CreditNote extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "note_number", nullable = false, unique = true)
+    @Column(name = "note_number", nullable = false)
     private String noteNumber;
 
     @Column(name = "issue_date", nullable = false)

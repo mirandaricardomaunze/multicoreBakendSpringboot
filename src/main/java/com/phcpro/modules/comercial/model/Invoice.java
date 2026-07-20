@@ -13,7 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "invoices")
+@Table(name = "invoices", uniqueConstraints = @UniqueConstraint(
+        name = "uk_invoices_company_number", columnNames = {"company_id", "invoice_number"}))
 @Getter
 @Setter
 public class Invoice extends BaseEntity {
@@ -22,7 +23,7 @@ public class Invoice extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "invoice_number", unique = true)
+    @Column(name = "invoice_number")
     private String invoiceNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)

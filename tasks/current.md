@@ -9,6 +9,27 @@ endurecida e **validada ao vivo**. **Falta** para fechar a hospedagem: 1.º `doc
 VPS + merge de `feat/stock-thin-client` → `main`. A fonte de verdade operacional é
 [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-19 (bug multi-tenant: numeração de documentos + rede de retry)
+
+- **Bug encontrado ao validar "vários postos ao mesmo tempo"** (2 sessões HTTP em paralelo contra o
+  backend `prod`/PostgreSQL real): a numeração é **por empresa** (`document_sequences` chave
+  `(company_id, series, doc_year)`, V30) mas a coluna do número tinha `UNIQUE` **global**. Duas empresas
+  que cheguem ao mesmo número (ex.: ambas `FT-2026/5`) colidem → **HTTP 500**, mesmo **sem concorrência**.
+  Afeta 8 tabelas (invoices, credit_notes, debit_notes, customer_orders, purchase_orders, purchases,
+  receipts, stock_transfers). Relevante para a plataforma multi-empresa (superadmin + vários NUITs numa BD).
+- **Correcção:** `UNIQUE(numero)` → `UNIQUE(company_id, numero)` nas 8 entidades + migração **V31**
+  (`per_company_document_numbers`). Número string mantém-se (`FT-2026/N`); a empresa distingue pelo
+  cabeçalho/NUIT. **Follow-up:** `payslips` não tem `company_id` (fica de fora, documentado).
+- **Rede de segurança de concorrência:** `ConcurrencyRetry` (`architecture/concurrency`) — reexecuta a
+  escrita em `ConcurrencyFailureException` (lock optimista `@Version` / pessimista), 3 tentativas,
+  cada uma em transação nova. Ligado em `POSController.checkout` e `ComercialController.createInvoice`.
+- **Verificação AO VIVO:** antes → MZ `FT-2026/5` colidia com PT `FT-2026/5` (500). Depois → MZ criou
+  `FT-2026/5..12` **coexistindo** com a PT; **mesma empresa**, 2 postos, 8 faturas em paralelo →
+  `FT-2026/6..13` gapless/distintas, stock −8. `mvn -o test` (Comercial+POS+PurchaseOrder) **64, 0 falhas**.
+- Spec/harness: [docs/NUMERACAO_MULTIEMPRESA_SPEC.md](../docs/NUMERACAO_MULTIEMPRESA_SPEC.md) +
+  [docs/NUMERACAO_MULTIEMPRESA_HARNESS.md](../docs/NUMERACAO_MULTIEMPRESA_HARNESS.md) (NM-01..02 auto,
+  NM-50..55 manuais).
+
 ### Progresso — 2026-07-19 (Track B FECHADO — desktop cliente-fino completo)
 
 - **Os 4 gigantes migraram para HTTP:** Stock (`884d67c`), POS (`da3596b`), Comercial (`d85febd`,

@@ -19,7 +19,8 @@ import java.util.List;
  * Ciclo: {@code ORDERED → RECEIVED} / {@code CANCELLED}.
  */
 @Entity
-@Table(name = "purchase_orders")
+@Table(name = "purchase_orders", uniqueConstraints = @UniqueConstraint(
+        name = "uk_purchase_orders_company_number", columnNames = {"company_id", "order_number"}))
 @Getter
 @Setter
 public class PurchaseOrder extends BaseEntity {
@@ -33,7 +34,7 @@ public class PurchaseOrder extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_number", nullable = false, unique = true)
+    @Column(name = "order_number", nullable = false)
     private String orderNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
