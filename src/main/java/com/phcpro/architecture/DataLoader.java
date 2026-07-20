@@ -30,6 +30,7 @@ import com.phcpro.modules.users.model.AppUser;
 import com.phcpro.modules.users.repository.AppUserRepository;
 import com.phcpro.modules.purchases.model.Supplier;
 import com.phcpro.modules.purchases.repository.SupplierRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -53,6 +54,10 @@ public class DataLoader implements CommandLineRunner {
     private final SupplierRepository supplierRepository;
     private final TaxRateRepository taxRateRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    /** Dados de demonstração (empresas/utilizadores/produtos fictícios). Falso em produção. */
+    private final boolean seedDemoData;
+    /** Senha inicial do superadmin. Vazia (ex.: prod sem env) ⇒ conta não é criada automaticamente. */
+    private final String superAdminPassword;
 
     public DataLoader(
             EmployeeRepository employeeRepository,
@@ -67,7 +72,9 @@ public class DataLoader implements CommandLineRunner {
             AppUserRepository appUserRepository,
             SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
-            ProductCategoryRepository productCategoryRepository
+            ProductCategoryRepository productCategoryRepository,
+            @Value("${app.seed-demo-data:true}") boolean seedDemoData,
+            @Value("${app.superadmin.password:superadmin}") String superAdminPassword
     ) {
         this.employeeRepository = employeeRepository;
         this.clientRepository = clientRepository;
@@ -82,6 +89,8 @@ public class DataLoader implements CommandLineRunner {
         this.supplierRepository = supplierRepository;
         this.taxRateRepository = taxRateRepository;
         this.productCategoryRepository = productCategoryRepository;
+        this.seedDemoData = seedDemoData;
+        this.superAdminPassword = superAdminPassword;
     }
 
     /**
@@ -90,10 +99,13 @@ public class DataLoader implements CommandLineRunner {
      */
     private void seedSuperAdmin() {
         if (appUserRepository.findByUsername("superadmin").isPresent()) return;
+        // Sem senha configurada (ex.: produção sem SUPERADMIN_PASSWORD) NÃO se cria uma conta
+        // superadmin com senha default — teria de ser criada deliberadamente.
+        if (superAdminPassword == null || superAdminPassword.isBlank()) return;
         AppUser superAdmin = new AppUser();
         superAdmin.setUsername("superadmin");
         superAdmin.setName("Administrador da Plataforma");
-        superAdmin.setPassword("superadmin");
+        superAdmin.setPassword(superAdminPassword);
         superAdmin.setRole("ADMIN");
         superAdmin.setActive(true);
         superAdmin.setPlatformAdmin(true);
@@ -157,6 +169,11 @@ public class DataLoader implements CommandLineRunner {
         seedMozambicanTaxRates();
         seedProductCategories();
         seedSuperAdmin();
+        // Dados de DEMONSTRAÇÃO (empresas/utilizadores/produtos fictícios) NÃO entram em produção
+        // (app.seed-demo-data=false no perfil prod). Taxas de IVA e categorias acima são referência.
+        if (!seedDemoData) {
+            return;
+        }
         // Guarda de idempotência: numa BD persistente (PostgreSQL) o seed de demo só corre uma vez.
         // Sem isto, cada arranque tentava recriar empresas/utilizadores e falhava na chave única de username.
         if (companyRepository.count() > 0) {

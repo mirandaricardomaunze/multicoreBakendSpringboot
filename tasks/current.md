@@ -2,12 +2,29 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-19
-**Estado:** software de loja concluído. **Track B (desktop cliente-fino) FECHADO** — o desktop arranca
-**SEM base de dados**; os 4 gigantes (Stock/POS/Comercial + runtime) já passam por HTTP. Segurança
-endurecida e **validada ao vivo**. **Falta** para fechar a hospedagem: 1.º `docker compose up` real numa
-VPS + merge de `feat/stock-thin-client` → `main`. A fonte de verdade operacional é
-[tasks/retail_store_readiness.md](retail_store_readiness.md).
+**Última actualização:** 2026-07-20
+**Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
+**Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
+(falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅. **Falta:** ligar
+a proteção de branch; 1.º `docker compose up` real numa VPS + smoke; backup restaurável verificado;
+`payslips` sem `company_id`. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-20 (profissionalização rumo a produção — #1, #2, #6)
+
+- **#1 Teste de regressão** do bug multi-empresa: `InvoiceNumberUniquenessPerCompanyTest` (`@DataJpaTest`,
+  leve — corre onde a suite `@SpringBootTest` não corre por RAM). Prova que o mesmo número coexiste em
+  empresas diferentes e é rejeitado na mesma empresa. **Verificado que FALHA contra o código antigo** e
+  passa com o fix. (`76f5d6e`)
+- **#2 CI + gate de merge:** `build.yml` endurecido (`permissions: contents:read`, `timeout-minutes`).
+  Confirmado via API pública que a **suite completa passa na CI** (o problema de RAM é só local).
+  Documentado no README como ligar a **proteção de branch** (require PR + check `build`) — só o dono
+  pode no GitHub. (`af5d28b`)
+- **#6 Sem dados/segredos de demo em produção:** `DataLoader` gatado por `app.seed-demo-data` (default
+  `true` em dev; `false` no perfil `prod`) — empresas/utilizadores/produtos fictícios já não entram em
+  prod (taxas de IVA e categorias, de referência, continuam). Superadmin: senha por
+  `${SUPERADMIN_PASSWORD}`; **sem env → conta não é criada** (fim do `superadmin/superadmin` default).
+  **Verificado ao vivo** (H2 fresca, config tipo-prod): `ana/password`→400, `superadmin/superadmin`→400,
+  `superadmin/<senha-config>`→OK (0 empresas). Senhas são bcrypt (legadas re-encriptadas no 1.º login).
 
 ### Progresso — 2026-07-19 (bug multi-tenant: numeração de documentos + rede de retry)
 
