@@ -114,6 +114,23 @@ mvn test                    # testes
 ### Console H2
 Com o backend a correr: `http://localhost:8080/h2-console`
 
+### CI e gate de merge
+A CI ([.github/workflows/build.yml](.github/workflows/build.yml)) corre em **todas as branches e PRs**:
+compila e corre a **suite completa** (unit + integração Spring, em H2; UI Swing via `xvfb`). Qualquer
+teste que parta **reprova o build**.
+
+Para a CI **travar o merge** (e não só sinalizar), é preciso ligar a **proteção de branch** em `main`
+no GitHub — é uma definição do repositório, não do workflow. Em **Settings → Branches → Add rule
+(ou ruleset)** para `main`:
+- ✅ *Require a pull request before merging*
+- ✅ *Require status checks to pass before merging* → escolher o check **`build`**
+- ✅ *Require branches to be up to date before merging*
+- (opcional) *Do not allow bypassing the above settings*
+
+Sem isto, um build vermelho **não** impede o merge — foi assim que o bug de numeração multi-empresa
+chegou a `main`. Com isto ligado, o fluxo passa a ser por **Pull Request** (deixa de se fazer push
+directo para `main`).
+
 ## Deploy em produção (VPS)
 
 O backend (`com.phcpro.MulticoreApplication`, headless) é hospedável à parte com **Docker + PostgreSQL
