@@ -196,6 +196,7 @@ public class HRService {
 
         Payslip p = new Payslip();
         p.setEmployee(employee);
+        p.setCompany(employee.getCompany()); // recibo pertence à empresa do colaborador (numeração por empresa)
         p.setYear(request.year());
         p.setMonth(request.month());
         p.setBaseSalary(employee.getBaseSalary() != null ? employee.getBaseSalary() : BigDecimal.ZERO);

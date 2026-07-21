@@ -2,14 +2,15 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-20
+**Última actualização:** 2026-07-21
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
-(falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅. **Falta:** ligar
-a proteção de branch; 1.º `docker compose up` real numa VPS + smoke; backup restaurável verificado;
-`payslips` sem `company_id`. A fonte de verdade operacional é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+(falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
+multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
+VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
+é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
-### Progresso — 2026-07-20 (profissionalização rumo a produção — #1, #2, #6)
+### Progresso — 2026-07-20/21 (profissionalização rumo a produção — #1, #2, #6, #7)
 
 - **#1 Teste de regressão** do bug multi-empresa: `InvoiceNumberUniquenessPerCompanyTest` (`@DataJpaTest`,
   leve — corre onde a suite `@SpringBootTest` não corre por RAM). Prova que o mesmo número coexiste em
@@ -25,8 +26,13 @@ a proteção de branch; 1.º `docker compose up` real numa VPS + smoke; backup r
   `${SUPERADMIN_PASSWORD}`; **sem env → conta não é criada** (fim do `superadmin/superadmin` default).
   **Verificado ao vivo** (H2 fresca, config tipo-prod): `ana/password`→400, `superadmin/superadmin`→400,
   `superadmin/<senha-config>`→OK (0 empresas). Senhas são bcrypt (legadas re-encriptadas no 1.º login).
-
-### Progresso — 2026-07-19 (bug multi-tenant: numeração de documentos + rede de retry)
+- **#7 Numeração multi-empresa dos `payslips`** (fecha o follow-up do V31): a tabela não tinha
+  `company_id` e a numeração (via `DocumentNumberService`) colidiria entre empresas. `Payslip` ganhou
+  `company` (= empresa do colaborador), migração **V32** (add `company_id` + backfill de `employees` +
+  FK + `UNIQUE(company_id, payslip_number)` no lugar da global). Teste de regressão
+  `PayslipNumberUniquenessPerCompanyTest` (`@DataJpaTest`, **verificado que falha contra o código antigo**).
+  **Verificado ao vivo:** PT e MZ emitiram ambos `REC-2026/3` e **coexistem** (V32 aplicada em PostgreSQL
+  real, backfill 0 nulos). Dados de teste limpos.
 
 - **Bug encontrado ao validar "vários postos ao mesmo tempo"** (2 sessões HTTP em paralelo contra o
   backend `prod`/PostgreSQL real): a numeração é **por empresa** (`document_sequences` chave
