@@ -97,7 +97,7 @@ class PlatformCompanyServiceTest {
                 .thenReturn(Optional.of(company(9L, "Existente", true)));
 
         assertThrows(BusinessRuleException.class, () -> service.createCompany(
-                new CreateCompanyRequest("Nova", "400123456", "n@n.mz", "Maputo")));
+                new CreateCompanyRequest("Nova", "400123456", "n@n.mz", "Maputo", "+258 84 000 0000")));
         verify(companyRepository, never()).save(any());
     }
 }

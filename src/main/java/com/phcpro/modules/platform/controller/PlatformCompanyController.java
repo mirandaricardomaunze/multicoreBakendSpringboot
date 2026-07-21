@@ -42,6 +42,12 @@ public class PlatformCompanyController {
         return platformCompanyService.updateCompany(id, request);
     }
 
+    /** Logótipo da empresa (imagem já reduzida no cliente), para os cabeçalhos dos documentos. */
+    @PostMapping(value = "/{id}/logo", consumes = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public void uploadLogo(@PathVariable Long id, @RequestBody byte[] logo) {
+        platformCompanyService.updateCompanyLogo(id, logo);
+    }
+
     @PatchMapping("/{id}/active")
     public PlatformCompanyDTO setActive(@PathVariable Long id, @RequestBody SetActiveRequest request) {
         return platformCompanyService.setCompanyActive(id, request.active());

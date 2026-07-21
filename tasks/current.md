@@ -10,6 +10,23 @@ multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `d
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-21 (dados completos da empresa em TODOS os documentos)
+
+- **Pedido do utilizador:** todos os documentos com os dados da empresa. Auditoria: já mostravam Nome/
+  NUIT/Morada (A4 também Email) via `CompanyHeaderRenderer` partilhado; **faltavam Telefone e Logótipo**.
+- **Feito:** `Company` + `phone` + `logo` (`bytea`, migração **V33**). `CompanyHeaderRenderer` (cobre ~13
+  documentos A4, DRY) e `ReceiptPrintService` (recibo térmico) passam a desenhar **Logótipo + Nome + NUIT
+  + Morada + Telefone + Email**. À prova de falha: sem logo/telefone → sai na mesma; logótipo inválido →
+  try/catch, sem crash. Entrada pelo **superadmin**: `Create/UpdateCompanyRequest` += `phone`,
+  `PlatformCompanyDTO` += `phone`/`hasLogo`, endpoint `POST /api/platform/companies/{id}/logo`
+  (octet-stream) + `PlataformaPanel` (campo Telefone + seletor de logótipo, reusa `UIHelper.readScaledImage`).
+- **Verificado AO VIVO** (PostgreSQL real): definido telefone+logo na MZ; extração de texto do PDF de
+  **fatura** e **recibo** confirma o cabeçalho completo + imagem embutida (`PdfVerify.java` com OpenPDF).
+  Fail-safe (sem dados / logo inválido) OK. `mvn -o test` (Platform/Comercial/POS + regressão) **50, 0 falhas**.
+  Dados de teste repostos.
+- Spec/harness: [docs/DADOS_EMPRESA_DOCUMENTOS_SPEC.md](../docs/DADOS_EMPRESA_DOCUMENTOS_SPEC.md) +
+  [docs/DADOS_EMPRESA_DOCUMENTOS_HARNESS.md](../docs/DADOS_EMPRESA_DOCUMENTOS_HARNESS.md) (DE-01..03 auto, DE-50..55 manuais).
+
 ### Progresso — 2026-07-20/21 (profissionalização rumo a produção — #1, #2, #6, #7)
 
 - **#1 Teste de regressão** do bug multi-empresa: `InvoiceNumberUniquenessPerCompanyTest` (`@DataJpaTest`,

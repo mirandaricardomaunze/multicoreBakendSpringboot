@@ -2,6 +2,7 @@ package com.phcpro.modules.printing;
 
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Element;
+import com.lowagie.text.Image;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
@@ -34,6 +35,8 @@ public final class CompanyHeaderRenderer {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(PdfPCell.NO_BORDER);
 
+        addLogo(cell, company);
+
         Paragraph name = new Paragraph(safe(company == null ? null : company.getName(), "Empresa"), PdfTheme.titleFont());
         name.setSpacingAfter(2f);
         cell.addElement(name);
@@ -42,14 +45,34 @@ public final class CompanyHeaderRenderer {
             if (company.getTaxId() != null) {
                 cell.addElement(new Paragraph("NUIT: " + company.getTaxId(), PdfTheme.bodyFont()));
             }
-            if (company.getAddress() != null && !company.getAddress().isBlank()) {
+            if (notBlank(company.getAddress())) {
                 cell.addElement(new Paragraph(company.getAddress(), PdfTheme.bodyFont()));
             }
-            if (company.getEmail() != null && !company.getEmail().isBlank()) {
+            if (notBlank(company.getPhone())) {
+                cell.addElement(new Paragraph("Tel: " + company.getPhone(), PdfTheme.bodyFont()));
+            }
+            if (notBlank(company.getEmail())) {
                 cell.addElement(new Paragraph(company.getEmail(), PdfTheme.bodyFont()));
             }
         }
         return cell;
+    }
+
+    /** Logótipo (se existir), escalado a uma altura fixa. À prova de falha: bytes inválidos → sem imagem. */
+    private static void addLogo(PdfPCell cell, Company company) {
+        if (company == null || company.getLogo() == null || company.getLogo().length == 0) return;
+        try {
+            Image logo = Image.getInstance(company.getLogo());
+            logo.scaleToFit(150f, 50f);
+            logo.setSpacingAfter(4f);
+            cell.addElement(logo);
+        } catch (Exception ignored) {
+            // logótipo ilegível — o documento sai na mesma, sem imagem.
+        }
+    }
+
+    private static boolean notBlank(String value) {
+        return value != null && !value.isBlank();
     }
 
     private static PdfPCell documentCell(String title, String number) {

@@ -7,6 +7,8 @@ public record PlatformCompanyDTO(
         String taxId,
         String email,
         String address,
+        String phone,
+        boolean hasLogo,
         boolean active,
         long userCount
 ) {}
