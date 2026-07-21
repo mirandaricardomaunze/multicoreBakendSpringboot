@@ -1,6 +1,7 @@
 package com.phcpro.modules.hr.model;
 
 import com.phcpro.architecture.BaseEntity;
+import com.phcpro.modules.company.model.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +11,8 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "payslips", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"employee_id", "ref_year", "ref_month"})
+        @UniqueConstraint(columnNames = {"employee_id", "ref_year", "ref_month"}),
+        @UniqueConstraint(name = "uk_payslips_company_number", columnNames = {"company_id", "payslip_number"})
 })
 @Getter
 @Setter
@@ -20,12 +22,17 @@ public class Payslip extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "payslip_number", nullable = false, unique = true)
+    @Column(name = "payslip_number", nullable = false)
     private String payslipNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
+
+    /** Empresa do recibo (= empresa do colaborador). Torna o payslip_number único POR EMPRESA. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @Column(name = "ref_year", nullable = false)
     private int year;

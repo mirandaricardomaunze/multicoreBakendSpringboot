@@ -29,8 +29,11 @@ documento impresso identifica a empresa pelo cabeçalho/NUIT.
   `uk_<tabela>_company_number (company_id, numero)`. Seguro sobre dados existentes (a global garantia
   que não há repetidos, logo também não há dentro de nenhuma empresa).
 
-**Fora de âmbito (follow-up):** `payslips` (`payslip_number`) **não tem `company_id`** — precisa de
-uma coluna/relacionamento de empresa antes de aplicar o mesmo. Documentado, não corrigido aqui.
+**`payslips` (feito na V32):** a tabela não tinha `company_id`, pelo que a mesma correcção exigiu
+primeiro adicionar a coluna (= empresa do colaborador, backfill de `employees`) e a FK, antes de trocar
+`UNIQUE(payslip_number)` por `UNIQUE(company_id, payslip_number)`. `Payslip` ganhou o campo `company`
+(definido em `HRService.createPayslip` a partir do `employee`). Regressão:
+`PayslipNumberUniquenessPerCompanyTest`.
 
 ## Rede de segurança de concorrência (relacionada)
 
