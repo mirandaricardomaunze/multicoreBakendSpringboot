@@ -27,6 +27,13 @@ public class Company extends BaseEntity {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "phone", length = 40)
+    private String phone;
+
+    /** Logótipo da empresa (imagem reduzida) para os cabeçalhos dos documentos. Espelha Product.imageData. */
+    @Column(name = "logo")
+    private byte[] logo;
+
     /** Empresa inactiva não pode iniciar sessão (suspensa pelo superadmin / falta de pagamento). */
     @Column(name = "active", nullable = false)
     private boolean active = true;

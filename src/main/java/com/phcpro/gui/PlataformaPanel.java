@@ -173,16 +173,21 @@ public class PlataformaPanel extends JPanel {
         JTextField taxIdField = new JTextField();
         JTextField emailField = new JTextField();
         JTextField addressField = new JTextField();
+        JTextField phoneField = new JTextField();
         UIHelper.styleTextField(nameField);
         UIHelper.styleTextField(taxIdField);
         UIHelper.styleTextField(emailField);
         UIHelper.styleTextField(addressField);
+        UIHelper.styleTextField(phoneField);
+        final byte[][] logoHolder = {null};
 
         JPanel form = UIHelper.createDialogForm(
                 "Nome:", nameField,
                 "NUIT:", taxIdField,
                 "Email:", emailField,
-                "Endereço:", addressField
+                "Endereço:", addressField,
+                "Telefone:", phoneField,
+                "Logótipo:", logoPicker(logoHolder, false)
         );
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Nova Empresa",
@@ -192,9 +197,12 @@ public class PlataformaPanel extends JPanel {
             if (nameField.getText().trim().isEmpty() || taxIdField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("Nome e NUIT são obrigatórios.");
             }
-            platformApiClient.createCompany(new CreateCompanyRequest(
+            PlatformCompanyDTO created = platformApiClient.createCompany(new CreateCompanyRequest(
                     nameField.getText().trim(), taxIdField.getText().trim(),
-                    emailField.getText().trim(), addressField.getText().trim()));
+                    emailField.getText().trim(), addressField.getText().trim(), phoneField.getText().trim()));
+            if (logoHolder[0] != null) {
+                platformApiClient.updateCompanyLogo(created.id(), logoHolder[0]);
+            }
         });
 
         if (dlg.showDialog()) {
@@ -211,14 +219,19 @@ public class PlataformaPanel extends JPanel {
         JTextField nameField = new JTextField(company.name());
         JTextField emailField = new JTextField(company.email() == null ? "" : company.email());
         JTextField addressField = new JTextField(company.address() == null ? "" : company.address());
+        JTextField phoneField = new JTextField(company.phone() == null ? "" : company.phone());
         UIHelper.styleTextField(nameField);
         UIHelper.styleTextField(emailField);
         UIHelper.styleTextField(addressField);
+        UIHelper.styleTextField(phoneField);
+        final byte[][] logoHolder = {null};
 
         JPanel form = UIHelper.createDialogForm(
                 "Nome:", nameField,
                 "Email:", emailField,
-                "Endereço:", addressField
+                "Endereço:", addressField,
+                "Telefone:", phoneField,
+                "Logótipo:", logoPicker(logoHolder, company.hasLogo())
         );
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Empresa",
@@ -228,7 +241,11 @@ public class PlataformaPanel extends JPanel {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
             platformApiClient.updateCompany(company.id(), new UpdateCompanyRequest(
-                    nameField.getText().trim(), emailField.getText().trim(), addressField.getText().trim()));
+                    nameField.getText().trim(), emailField.getText().trim(),
+                    addressField.getText().trim(), phoneField.getText().trim()));
+            if (logoHolder[0] != null) {
+                platformApiClient.updateCompanyLogo(company.id(), logoHolder[0]);
+            }
         });
 
         if (dlg.showDialog()) {
@@ -236,6 +253,31 @@ public class PlataformaPanel extends JPanel {
                     JOptionPane.INFORMATION_MESSAGE);
             loadCompanies();
         }
+    }
+
+    /** Selector de logótipo: botão + pré-visualização. Só define bytes quando o utilizador escolhe um. */
+    private javax.swing.JComponent logoPicker(byte[][] holder, boolean hasExisting) {
+        javax.swing.JLabel preview = new javax.swing.JLabel(hasExisting ? "(logótipo actual definido)" : "(sem logótipo)");
+        javax.swing.JButton pick = new javax.swing.JButton("Escolher imagem…", UIHelper.icon("fas-image", 16));
+        pick.addActionListener(e -> {
+            javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagens (PNG, JPG)", "png", "jpg", "jpeg"));
+            if (fc.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
+                if (bytes == null) {
+                    JOptionPane.showMessageDialog(this, "Imagem inválida.", "Logótipo", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                holder[0] = bytes;
+                preview.setText(null);
+                preview.setIcon(UIHelper.imageIconFromBytes(bytes, 64, 40));
+            }
+        });
+        JPanel p = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
+        p.setOpaque(false);
+        p.add(pick);
+        p.add(preview);
+        return p;
     }
 
     private void toggleSelectedCompany() {

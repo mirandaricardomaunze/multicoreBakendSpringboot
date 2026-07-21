@@ -70,13 +70,16 @@ public class ReceiptPrintService {
 
     private void renderHeader(Document doc, Invoice invoice) {
         Company company = invoice.getCompany();
+        addCenteredLogo(doc, company);
         Paragraph name = new Paragraph(company == null ? "Empresa" : company.getName(), PdfTheme.subtitleFont());
         name.setAlignment(Element.ALIGN_CENTER);
         doc.add(name);
 
         if (company != null) {
             if (company.getTaxId() != null) addCentered(doc, "NUIT: " + company.getTaxId(), PdfTheme.smallFont());
-            if (company.getAddress() != null) addCentered(doc, company.getAddress(), PdfTheme.smallFont());
+            if (notBlank(company.getAddress())) addCentered(doc, company.getAddress(), PdfTheme.smallFont());
+            if (notBlank(company.getPhone())) addCentered(doc, "Tel: " + company.getPhone(), PdfTheme.smallFont());
+            if (notBlank(company.getEmail())) addCentered(doc, company.getEmail(), PdfTheme.smallFont());
         }
         addDottedLine(doc);
 
@@ -211,6 +214,23 @@ public class ReceiptPrintService {
         Paragraph p = new Paragraph(text, font);
         p.setAlignment(Element.ALIGN_CENTER);
         doc.add(p);
+    }
+
+    /** Logótipo centrado no topo do recibo, escalado à largura térmica. À prova de falha. */
+    private void addCenteredLogo(Document doc, Company company) {
+        if (company == null || company.getLogo() == null || company.getLogo().length == 0) return;
+        try {
+            com.lowagie.text.Image logo = com.lowagie.text.Image.getInstance(company.getLogo());
+            logo.scaleToFit(160f, 60f);
+            logo.setAlignment(com.lowagie.text.Image.ALIGN_CENTER);
+            doc.add(logo);
+        } catch (Exception ignored) {
+            // logótipo ilegível — o recibo sai na mesma, sem imagem.
+        }
+    }
+
+    private boolean notBlank(String value) {
+        return value != null && !value.isBlank();
     }
 
     private void addRight(Document doc, String text, com.lowagie.text.Font font) {

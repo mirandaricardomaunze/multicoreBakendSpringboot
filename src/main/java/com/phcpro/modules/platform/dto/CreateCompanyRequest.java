@@ -7,5 +7,6 @@ public record CreateCompanyRequest(
         @NotBlank String name,
         @NotBlank String taxId,
         String email,
-        String address
+        String address,
+        String phone
 ) {}

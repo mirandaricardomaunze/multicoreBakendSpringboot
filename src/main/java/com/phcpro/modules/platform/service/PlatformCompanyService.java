@@ -67,6 +67,7 @@ public class PlatformCompanyService {
         company.setTaxId(taxId);
         company.setEmail(request.email());
         company.setAddress(request.address());
+        company.setPhone(request.phone());
         company.setActive(true);
         company.setCreatedBy(CurrentUserContext.getUsername());
         company = companyRepository.save(company);
@@ -82,10 +83,22 @@ public class PlatformCompanyService {
         company.setName(requireText(request.name(), "O nome da empresa é obrigatório."));
         company.setEmail(request.email());
         company.setAddress(request.address());
+        company.setPhone(request.phone());
         companyRepository.save(company);
         auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "PLATFORM_COMPANY_UPDATE",
                 "Empresa actualizada: " + company.getName());
         return toDto(company);
+    }
+
+    /** Carrega/actualiza o logótipo da empresa (imagem já reduzida no cliente). */
+    @Transactional
+    public void updateCompanyLogo(Long companyId, byte[] logo) {
+        PermissionGuard.requireSuperAdmin("actualizar o logótipo da empresa");
+        Company company = requireCompany(companyId);
+        company.setLogo(logo != null && logo.length > 0 ? logo : null);
+        companyRepository.save(company);
+        auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "PLATFORM_COMPANY_LOGO",
+                "Logótipo actualizado: " + company.getName());
     }
 
     private Company requireCompany(Long companyId) {
@@ -103,7 +116,9 @@ public class PlatformCompanyService {
     private PlatformCompanyDTO toDto(Company company) {
         return new PlatformCompanyDTO(
                 company.getId(), company.getName(), company.getTaxId(), company.getEmail(),
-                company.getAddress(), company.isActive(),
+                company.getAddress(), company.getPhone(),
+                company.getLogo() != null && company.getLogo().length > 0,
+                company.isActive(),
                 companyAccessRepository.countByCompanyId(company.getId()));
     }
 }

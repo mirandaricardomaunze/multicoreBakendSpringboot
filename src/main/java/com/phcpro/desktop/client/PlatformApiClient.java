@@ -51,6 +51,11 @@ public class PlatformApiClient {
                 .patch("/api/platform/companies/" + id + "/active", Map.of("active", active), PlatformCompanyDTO.class);
     }
 
+    /** Envia o logótipo (imagem já reduzida) da empresa como octet-stream. */
+    public void updateCompanyLogo(Long id, byte[] logo) {
+        clientFactory.authenticatedClient().postBytes("/api/platform/companies/" + id + "/logo", logo);
+    }
+
     // ─── Utilizadores globais ─────────────────────────────────────────────────
     public List<PlatformUserDTO> listUsers() {
         return clientFactory.authenticatedClient().getList("/api/platform/users", PlatformUserDTO.class);
