@@ -15,6 +15,8 @@ Não há teste automático dedicado: a colisão é uma regra **da BD** (restriç
 |----|---------|----------|
 | NM-01 | `mvn -o compile` após alterar as 8 entidades | BUILD SUCCESS |
 | NM-02 | `ComercialServiceTest` + `POSServiceTest` + `PurchaseOrderServiceTest` | 64, 0 falhas |
+| NM-03 | `InvoiceNumberUniquenessPerCompanyTest` (@DataJpaTest, comportamento em H2) | 2, 0 falhas |
+| NM-04 | `DocumentNumberPerCompanyConstraintTest` — invariante por reflexão nos **9** tipos de documento: `@Table` declara `UNIQUE(company_id, número)` e a coluna **não** tem `unique=true` | 9, 0 falhas; falha se qualquer entidade for revertida (flip-proof feito no `Order`) |
 
 ## Manuais (ao vivo)
 
