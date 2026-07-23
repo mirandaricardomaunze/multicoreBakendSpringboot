@@ -2,13 +2,75 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-21
+**Última actualização:** 2026-07-23
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
 (falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
 multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-07-23 (barra lateral de navegação em todas as tabelas)
+
+- **Pedido do utilizador:** botões laterais nas tabelas para navegar (topo/cima/baixo/fundo), como
+  noutros sistemas. Spec+harness.
+- **Feito (só UI, sem backend):** novo componente `com.phcpro.gui.components.TableNavigator` — barra
+  vertical flutuante (Topo `fas-angle-double-up`, Página acima `fas-angle-up`, Página abaixo
+  `fas-angle-down`, Fundo `fas-angle-double-down`), encostada à direita da tabela. **DRY:** ligada
+  **num só ponto** — `UIHelper.styleScrollPane(...)` instala-a quando o conteúdo é uma `JTable`, pelo
+  que **cobre transversalmente todas as ~60 tabelas** sem tocar nos ~80 sítios. Opera sobre a
+  `JScrollBar` vertical (independente do modelo/filtro), idempotente, ícones vectoriais (sem emojis).
+- **Verificação:** `TableNavigatorTest` (7, JUnit puro — TN-01..07). Spec/harness:
+  [docs/TABELAS_NAVEGACAO_SPEC.md](../docs/TABELAS_NAVEGACAO_SPEC.md) +
+  [docs/TABELAS_NAVEGACAO_HARNESS.md](../docs/TABELAS_NAVEGACAO_HARNESS.md).
+
+### Progresso — 2026-07-23 (Guia de Remessa ao cliente a partir da encomenda — backend + desktop)
+
+- **Pedido do utilizador:** converter encomenda em guia, à maneira profissional (spec+harness).
+  **Reverte** a decisão de 2026-06-21 (MOVIMENTOS_COMERCIAIS §7.1 dizia "não é requisito").
+- **Regra central (decidida com o utilizador): caminhos separados.** Uma encomenda vira **guia OU
+  fatura**, nunca as duas; para faturar mercadoria expedida por guia, faz-se **nova encomenda**.
+  Consequência: **`billOrder` NÃO foi alterado** (continua a exigir `PENDING` e a baixar stock).
+- **Feito (backend):** novo documento `DeliveryGuide` + linhas no módulo `comercial`, série **`GR`**
+  numerada por empresa (migração **V34**, `UNIQUE(company_id, guide_number)` — respeita a V31).
+  `DeliveryGuideService` no molde do `StockTransfer`: nasce `PENDING_APPROVAL` e o **stock (SALE) sai
+  só na aprovação** (FEFO, via `inventoryService.registerMovement` — mesmo caminho da faturação),
+  MANAGER/ADMIN + auditoria. Gerar a guia trava a encomenda (`PENDING → GUIDE_PENDING → GUIDED`);
+  rejeitar/cancelar liberta-a (`→ PENDING`). Controller `/api/comercial/delivery-guides`
+  (create/approve/reject/cancel/list/get) + PDF `DeliveryGuidePrintService`
+  (`GET /api/print/delivery-guide/{id}`, reutiliza cabeçalho/linhas partilhados + transporte/assinaturas).
+- **Verificação:** `mvn clean compile` → **BUILD SUCCESS** (461 fontes);
+  `DeliveryGuideServiceTest` (9, Mockito puro — GR-01..GR-10); `mvn test` → **305 testes,
+  0 falhas/erros/ignorados** (48 suites; contexto Spring arranca com os novos beans).
+- Spec/harness: [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](../docs/GUIA_REMESSA_ENCOMENDA_SPEC.md) +
+  [docs/GUIA_REMESSA_ENCOMENDA_HARNESS.md](../docs/GUIA_REMESSA_ENCOMENDA_HARNESS.md) (§9 UI, GR-60..69).
+  Canónico [MOVIMENTOS_COMERCIAIS.md](../MOVIMENTOS_COMERCIAIS.md) actualizado (§1, §2, §4, §5.1, §7.1).
+- **Fase 2 (feita) — UI cliente-fino + Movimentos:** `ComercialApiClient` ganhou list/get/create/
+  approve/reject/cancel/print da guia (só HTTP/DTO). `ComercialPanel`: botão **"Converter em Guia"** na
+  aba Encomendas (modal de transporte) + aba **"Guias de Remessa (GR)"** (aprovar/rejeitar/cancelar/
+  imprimir/atualizar, com aviso de saída de stock na aprovação). **A conversão aparece nos Movimentos:**
+  `MovimentoTipo.GUIA_REMESSA` + `MovimentosService` agrega `delivery_guides` (`MovimentosServiceTest`
+  ajustado ao novo repositório). Harness GR-60..69 actualizado com o percurso desktop completo.
+- **Pendente manual:** validação ao vivo (GR-50..55 backend, GR-61..69 desktop) com o backend de pé; regra de
+  stock/guardas ficam no backend (a UI só chama HTTP).
+
+### Progresso — 2026-07-22 (suite completa a correr localmente — fim da limitação de RAM)
+
+- **Lacuna fechada:** a suite `@SpringBootTest` **só corria na CI** — localmente rebentava por RAM
+  (visto em várias iterações). Causa raiz: cada teste de integração define um `spring.datasource.url`
+  próprio → **contexto Spring distinto** por classe; a cache não os reutiliza mas mantinha **8 contextos
+  ERP completos vivos ao mesmo tempo**.
+- **Fix (só código de teste/build, nada no runtime de produção):**
+  - `src/test/resources/spring.properties` → `spring.test.context.cache.maxSize=1` (evicta o contexto
+    anterior antes de construir o próximo; pico de RAM ~8× menor, **sem** perda de reutilização — cada
+    contexto já era usado por uma só classe).
+  - `src/test/resources/application-test.properties` (perfil `test`): pool Hikari mínimo, springdoc +
+    consola H2 desligados, logging silencioso. **Não** mexe em `headless` — os testes de contexto
+    completo carregam beans Swing e exigem `headless=false` (ver `MulticoreServicesTest`).
+  - `pom.xml`: `maven-surefire-plugin` com `forkCount=1`/`reuseForks=true` (um só JVM, para a cache ser
+    eficaz) + `-Xmx1536m`.
+- **Verificado localmente:** `mvn -o clean test` → **296 testes, 0 falhas, 0 erros, 0 ignorados** (47
+  classes). Log confirma a eviction (pool do contexto anterior fecha ao arrancar o seguinte).
 
 ### Progresso — 2026-07-21 (dados completos da empresa em TODOS os documentos)
 

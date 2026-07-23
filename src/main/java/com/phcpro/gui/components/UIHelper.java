@@ -980,6 +980,9 @@ public class UIHelper {
         scroll.getVerticalScrollBar().setOpaque(false);
         scroll.getHorizontalScrollBar().setUI(new SlimScrollBarUI());
         scroll.getHorizontalScrollBar().setOpaque(false);
+        // Barra lateral de navegação (topo/cima/baixo/fundo) — só quando o conteúdo é uma tabela.
+        // Central: cobre transversalmente todas as listagens. Ver TableNavigator / TABELAS_NAVEGACAO_SPEC.
+        TableNavigator.install(scroll);
     }
 
     /**
