@@ -1568,23 +1568,28 @@ public class ComercialPanel extends JPanel {
 
     private void loadDeliveryGuidesTable() {
         if (deliveryGuidesTableModel == null) return;
-        deliveryGuidesTableModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (DeliveryGuideDTO guide : comercialApiClient.getDeliveryGuidesByCompany(companyId)) {
-            deliveryGuidesTableModel.addRow(new Object[]{
-                    guide.id(),
-                    guide.guideNumber(),
-                    guide.guideDate() == null ? "—" : guide.guideDate().format(dateFormat),
-                    guide.orderNumber(),
-                    guide.clientName(),
-                    guide.warehouseName(),
-                    guide.responsible() == null || guide.responsible().isBlank() ? "—" : guide.responsible(),
-                    guide.vehicle() == null || guide.vehicle().isBlank() ? "—" : guide.vehicle(),
-                    String.format("%,.2f MT", guide.totalAmount()),
-                    guide.status()
-            });
-        }
+        // Carrega fora do EDT (cursor de espera) e preenche ao chegar — não congela a UI.
+        UIHelper.loadAsync(this,
+                () -> comercialApiClient.getDeliveryGuidesByCompany(companyId),
+                guides -> {
+                    deliveryGuidesTableModel.setRowCount(0);
+                    DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                    for (DeliveryGuideDTO guide : guides) {
+                        deliveryGuidesTableModel.addRow(new Object[]{
+                                guide.id(),
+                                guide.guideNumber(),
+                                guide.guideDate() == null ? "—" : guide.guideDate().format(dateFormat),
+                                guide.orderNumber(),
+                                guide.clientName(),
+                                guide.warehouseName(),
+                                guide.responsible() == null || guide.responsible().isBlank() ? "—" : guide.responsible(),
+                                guide.vehicle() == null || guide.vehicle().isBlank() ? "—" : guide.vehicle(),
+                                String.format("%,.2f MT", guide.totalAmount()),
+                                guide.status()
+                        });
+                    }
+                });
     }
 
     private void approveSelectedDeliveryGuide() {

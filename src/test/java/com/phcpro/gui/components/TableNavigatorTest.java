@@ -71,4 +71,15 @@ class TableNavigatorTest {
             TableNavigator.pageDown(null);
         });
     }
+
+    @Test // UX-01
+    void overflowed_quandoConteudoTransborda() {
+        assertTrue(TableNavigator.overflowed(0, 200, 20));
+    }
+
+    @Test // UX-02
+    void overflowed_quandoConteudoCabe() {
+        assertFalse(TableNavigator.overflowed(0, 20, 20)); // extent >= amplitude
+        assertFalse(TableNavigator.overflowed(0, 15, 20));
+    }
 }

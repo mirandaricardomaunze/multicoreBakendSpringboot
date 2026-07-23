@@ -1,12 +1,16 @@
 package com.phcpro.gui.components;
 
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import java.awt.BorderLayout;
@@ -19,19 +23,21 @@ import java.awt.GridLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
 import java.awt.event.HierarchyEvent;
+import java.awt.event.KeyEvent;
 
 /**
  * Barra lateral de navegação para tabelas: <b>Topo · Página acima · Página abaixo · Fundo</b>.
  *
  * <p>Colocada <b>fora da tabela</b>, no lado direito (região EAST) do contentor que aloja o scroll —
- * exactamente o mesmo padrão que o rodapé de listagem já usa (ver
- * {@code UIHelper.maybeAddListingFooter}, que adiciona ao SOUTH). Não sobrepõe células.</p>
+ * o mesmo padrão do rodapé de listagem (que vai ao SOUTH). Não sobrepõe células.</p>
  *
- * <p>Instalada centralmente por {@link UIHelper#styleScrollPane(JScrollPane)} — como quase todas as
- * tabelas passam por lá, uma só ligação cobre-as todas (DRY). As acções operam sobre a
- * {@link JScrollBar} vertical do scroll, pelo que são independentes do modelo/filtro. Ver
- * docs/TABELAS_NAVEGACAO_SPEC.md.</p>
+ * <p><b>Auto-esconder:</b> só é visível quando a tabela transborda (há mais linhas do que cabem).
+ * <b>Teclado:</b> Home/End/PageUp/PageDown na tabela fazem topo/fundo/página.</p>
+ *
+ * <p>Instalada centralmente por {@link UIHelper#styleScrollPane(JScrollPane)}. Ver
+ * docs/TABELAS_NAVEGACAO_SPEC.md e docs/UI_TABELAS_UX_SPEC.md.</p>
  */
 public final class TableNavigator {
 
@@ -40,60 +46,72 @@ public final class TableNavigator {
 
     private TableNavigator() {}
 
-    /**
-     * Liga a barra a um scroll cujo conteúdo é uma {@link JTable}. A barra só é anexada quando o
-     * scroll já está num contentor {@link BorderLayout} com a região EAST livre (adiada até lá).
-     * Idempotente e segura.
-     */
     public static void install(JScrollPane scroll) {
         if (scroll == null || scroll.getViewport() == null) return;
-        if (!(scroll.getViewport().getView() instanceof JTable)) return;
+        if (!(scroll.getViewport().getView() instanceof JTable table)) return;
         if (Boolean.TRUE.equals(scroll.getClientProperty(INSTALLED))) return;
         scroll.putClientProperty(INSTALLED, Boolean.TRUE);
 
-        // O scroll ainda não tem contentor quando styleScrollPane corre; anexa quando ganhar um.
+        bindKeys(table, scroll.getVerticalScrollBar());
+
         scroll.addHierarchyListener(e -> {
             if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0
                     && !Boolean.TRUE.equals(scroll.getClientProperty(ATTACHED))) {
                 SwingUtilities.invokeLater(() -> attachToHost(scroll));
             }
         });
-        attachToHost(scroll); // defensivo, caso já esteja na árvore
+        attachToHost(scroll);
     }
 
-    /** Adiciona a barra ao EAST do contentor do scroll, se este for um BorderLayout com EAST livre. */
+    /** Adiciona a barra ao EAST do contentor do scroll (fora da tabela) e liga o auto-esconder. */
     private static void attachToHost(JScrollPane scroll) {
         if (Boolean.TRUE.equals(scroll.getClientProperty(ATTACHED))) return;
         Container host = scroll.getParent();
         if (!(host instanceof JComponent parent)) return;
         if (!(parent.getLayout() instanceof BorderLayout bl)) return;
-        if (!BorderLayout.CENTER.equals(bl.getConstraints(scroll))) return; // barra só faz sentido ao lado do centro
-        if (bl.getLayoutComponent(BorderLayout.EAST) != null) return;        // EAST ocupado — não intromete
+        if (!BorderLayout.CENTER.equals(bl.getConstraints(scroll))) return;
+        if (bl.getLayoutComponent(BorderLayout.EAST) != null) return;
 
         scroll.putClientProperty(ATTACHED, Boolean.TRUE);
-        parent.add(buildBar(scroll.getVerticalScrollBar()), BorderLayout.EAST);
+        JScrollBar sb = scroll.getVerticalScrollBar();
+        JComponent bar = buildBar(sb);
+        parent.add(bar, BorderLayout.EAST);
+
+        // Auto-esconder: só visível quando a lista transborda.
+        Runnable sync = () -> {
+            boolean show = overflowed(sb.getMinimum(), sb.getMaximum(), sb.getVisibleAmount());
+            if (bar.isVisible() != show) {
+                bar.setVisible(show);
+                parent.revalidate();
+                parent.repaint();
+            }
+        };
+        sb.getModel().addChangeListener(e -> sync.run());
+        sync.run();
+
         parent.revalidate();
         parent.repaint();
     }
 
+    /** true quando o conteúdo é maior do que a área visível (vale a pena navegar). */
+    public static boolean overflowed(int min, int max, int extent) {
+        return (max - min) > extent;
+    }
+
     // ─── Acções de scroll (puras, testáveis sem display) ─────────────────────
 
-    /** Rola para o topo da lista. */
     public static void top(JScrollBar bar) {
         if (bar != null) bar.setValue(bar.getMinimum());
     }
 
-    /** Rola para o fundo da lista (a BoundedRangeModel limita a maximum - extent). */
     public static void bottom(JScrollBar bar) {
         if (bar != null) bar.setValue(bar.getMaximum());
     }
 
-    /** Sobe uma página (altura visível). Limita ao topo. */
     public static void pageUp(JScrollBar bar) {
         if (bar != null) bar.setValue(bar.getValue() - page(bar));
     }
 
-    /** Desce uma página (altura visível). Limita ao fundo. */
     public static void pageDown(JScrollBar bar) {
         if (bar != null) bar.setValue(bar.getValue() + page(bar));
     }
@@ -104,20 +122,40 @@ public final class TableNavigator {
         return Math.max(1, extent > 0 ? extent : block);
     }
 
+    // ─── Teclado ──────────────────────────────────────────────────────────────
+
+    private static void bindKeys(JTable table, JScrollBar sb) {
+        InputMap im = table.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap am = table.getActionMap();
+        bind(im, am, "tnTop", KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), () -> top(sb));
+        bind(im, am, "tnBottom", KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), () -> bottom(sb));
+        bind(im, am, "tnPageUp", KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, 0), () -> pageUp(sb));
+        bind(im, am, "tnPageDown", KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, 0), () -> pageDown(sb));
+    }
+
+    private static void bind(InputMap im, ActionMap am, String key, KeyStroke ks, Runnable action) {
+        im.put(ks, key);
+        am.put(key, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                action.run();
+            }
+        });
+    }
+
     // ─── UI ──────────────────────────────────────────────────────────────────
 
-    /** Coluna EAST: cluster de 4 botões num cartão arredondado, centrado na vertical, com folga à esquerda. */
     private static JComponent buildBar(JScrollBar bar) {
         Strip cluster = new Strip();
-        cluster.add(navButton("fas-angle-double-up", "Ir para o topo", () -> top(bar)));
-        cluster.add(navButton("fas-angle-up", "Página acima", () -> pageUp(bar)));
-        cluster.add(navButton("fas-angle-down", "Página abaixo", () -> pageDown(bar)));
-        cluster.add(navButton("fas-angle-double-down", "Ir para o fundo", () -> bottom(bar)));
+        cluster.add(navButton("fas-angle-double-up", "Ir para o topo (Home)", () -> top(bar)));
+        cluster.add(navButton("fas-angle-up", "Página acima (PageUp)", () -> pageUp(bar)));
+        cluster.add(navButton("fas-angle-down", "Página abaixo (PageDown)", () -> pageDown(bar)));
+        cluster.add(navButton("fas-angle-double-down", "Ir para o fundo (End)", () -> bottom(bar)));
 
         JPanel column = new JPanel(new GridBagLayout());
         column.setOpaque(false);
-        column.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0)); // separa da tabela
-        column.add(cluster, new GridBagConstraints()); // default: centrado
+        column.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+        column.add(cluster, new GridBagConstraints());
         return column;
     }
 
@@ -134,7 +172,6 @@ public final class TableNavigator {
         return b;
     }
 
-    /** Cartão arredondado que alberga os 4 botões. */
     private static final class Strip extends JPanel {
         Strip() {
             setOpaque(false);

@@ -980,9 +980,40 @@ public class UIHelper {
         scroll.getVerticalScrollBar().setOpaque(false);
         scroll.getHorizontalScrollBar().setUI(new SlimScrollBarUI());
         scroll.getHorizontalScrollBar().setOpaque(false);
-        // Barra lateral de navegação (topo/cima/baixo/fundo) — só quando o conteúdo é uma tabela.
-        // Central: cobre transversalmente todas as listagens. Ver TableNavigator / TABELAS_NAVEGACAO_SPEC.
-        TableNavigator.install(scroll);
+        // UX transversal das tabelas — só quando o conteúdo é uma JTable (cada instalador guarda-se
+        // a si próprio). Central: cobre todas as listagens. Ver UI_TABELAS_UX_SPEC.
+        TableNavigator.install(scroll);   // barra lateral (fora da tabela) + auto-hide + teclado
+        TableEmptyState.install(scroll);  // "Sem registos." quando vazio
+        TableContextMenu.install(scroll); // botão direito: copiar/ir topo-fundo
+    }
+
+    /**
+     * Carrega dados fora do EDT (evita "congelar" a UI nas chamadas HTTP do cliente-fino) e aplica o
+     * resultado no EDT quando chega, com cursor de espera na janela. {@code fetch} corre em segundo
+     * plano; {@code onDone} corre no EDT. Ver UI_TABELAS_UX_SPEC §4.
+     */
+    public static <T> void loadAsync(JComponent scope, java.util.concurrent.Callable<T> fetch,
+                                     java.util.function.Consumer<T> onDone) {
+        java.awt.Window window = scope == null ? null : SwingUtilities.getWindowAncestor(scope);
+        java.awt.Cursor previous = window == null ? null : window.getCursor();
+        if (window != null) window.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR));
+        new javax.swing.SwingWorker<T, Void>() {
+            @Override protected T doInBackground() throws Exception {
+                return fetch.call();
+            }
+
+            @Override protected void done() {
+                try {
+                    onDone.accept(get());
+                } catch (Exception ignore) {
+                    // Falha de carregamento não deve rebentar a UI; o painel mostra o seu próprio erro.
+                } finally {
+                    if (window != null) {
+                        window.setCursor(previous != null ? previous : java.awt.Cursor.getDefaultCursor());
+                    }
+                }
+            }
+        }.execute();
     }
 
     /**

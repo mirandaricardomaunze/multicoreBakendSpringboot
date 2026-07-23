@@ -10,6 +10,20 @@ multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `d
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
 
+### Progresso — 2026-07-23 (lote de UX das tabelas: auto-hide, estados vazios, menu de contexto, loading)
+
+- **Pedido do utilizador (4 melhoras de UI, todas):** ligadas centralmente em `styleScrollPane`.
+  1. **Barra de navegação auto-esconde** (só quando a tabela transborda) + **atalhos** Home/End/
+     PgUp/PgDn na tabela (`TableNavigator`).
+  2. **Estados vazios** (`TableEmptyState`, novo): tabela sem linhas mostra "Sem registos." (texto
+     personalizável por `putClientProperty("emptyText", …)`), overlay centrado que não tapa dados.
+  3. **Menu de contexto** (`TableContextMenu`, novo): botão direito selecciona a linha e abre
+     Copiar linha/célula · Ir topo/fundo (genérico; acções de domínio ficam nos botões).
+  4. **Feedback de carregamento** (`UIHelper.loadAsync`): busca fora do EDT + cursor de espera;
+     adoptado na aba **Guias de Remessa** (referência; restantes painéis adoptam incrementalmente).
+- **Verificação:** `TableNavigatorTest` (9, +UX-01/02) + `TableUxTest` (5, UX-03..06). Spec/harness:
+  [docs/UI_TABELAS_UX_SPEC.md](../docs/UI_TABELAS_UX_SPEC.md) + [docs/UI_TABELAS_UX_HARNESS.md](../docs/UI_TABELAS_UX_HARNESS.md).
+
 ### Progresso — 2026-07-23 (barra lateral de navegação em todas as tabelas)
 
 - **Pedido do utilizador:** botões laterais nas tabelas para navegar (topo/cima/baixo/fundo), como
