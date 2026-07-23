@@ -75,6 +75,10 @@ public class ComercialPanel extends JPanel {
     private DefaultTableModel ordersTableModel;
     private JTable ordersTable;
 
+    // TAB 5: GUIAS DE REMESSA ELEMENTS
+    private DefaultTableModel deliveryGuidesTableModel;
+    private JTable deliveryGuidesTable;
+
     // Seeding lists for selections
     private List<ClientDTO> clientsList = new ArrayList<>();
     private List<ProductDTO> productsList = new ArrayList<>();
@@ -148,20 +152,24 @@ public class ComercialPanel extends JPanel {
         JPanel tabEncomendas = createEncomendasTab();
         tabbedPane.addTab("Encomendas (EC)", UIHelper.icon("fas-file-signature", 16, UIHelper.TEXT_LIGHT), tabEncomendas);
 
-        // TAB 5: NOTAS DE CRÉDITO (NC)
+        // TAB 5: GUIAS DE REMESSA (GR)
+        tabbedPane.addTab("Guias de Remessa (GR)", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),
+                createDeliveryGuidesTab());
+
+        // TAB 6: NOTAS DE CRÉDITO (NC)
         tabbedPane.addTab("Notas de Crédito (NC)", UIHelper.icon("fas-undo-alt", 16, UIHelper.TEXT_LIGHT), createCreditNotesTab());
 
-        // TAB 6: NOTAS DE DÉBITO (ND)
+        // TAB 7: NOTAS DE DÉBITO (ND)
         tabbedPane.addTab("Notas de Débito (ND)", UIHelper.icon("fas-plus-circle", 16, UIHelper.TEXT_LIGHT), createDebitNotesTab());
 
-        // TAB 7: CONTAS CORRENTES (FIADOS)
+        // TAB 8: CONTAS CORRENTES (FIADOS)
         tabbedPane.addTab("Contas Correntes", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), createOutstandingTab());
 
-        // TAB 8: PROMOÇÕES
+        // TAB 9: PROMOÇÕES
         tabbedPane.addTab("Promoções", UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),
                 new PromotionsPanel(promotionApiClient, comercialApiClient));
 
-        // TAB 9: MOVIMENTOS (vista unificada de todos os documentos comerciais)
+        // TAB 10: MOVIMENTOS (vista unificada de todos os documentos comerciais)
         tabbedPane.addTab("Movimentos", UIHelper.icon("fas-list-alt", 16, UIHelper.TEXT_LIGHT), createMovimentosTab());
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -503,6 +511,7 @@ public class ComercialPanel extends JPanel {
         loadInvoicesTable();
         loadReceiptsTable();
         loadOrdersTable();
+        loadDeliveryGuidesTable();
         loadCreditNotesTable();
         loadDebitNotesTable();
         loadOutstandingTable();
@@ -1105,7 +1114,7 @@ public class ComercialPanel extends JPanel {
 
         JTextField ecSearch = TableFilter.searchField("Nº encomenda ou cliente…");
         JComboBox<String> ecEstado = TableFilter.combo("Todos os estados",
-                "PENDING", "PENDING_APPROVAL", "BILLED", "CANCELLED");
+                "PENDING", "PENDING_APPROVAL", "GUIDE_PENDING", "GUIDED", "BILLED", "CANCELLED");
         TableFilter.install(ordersTable, ecSearch, new TableFilter.ColumnFilter(ecEstado, 3));
         JPanel ecBar = TableFilter.bar(ecSearch, TableFilter.label("Estado:"), ecEstado);
         ecBar.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -1122,6 +1131,9 @@ public class ComercialPanel extends JPanel {
         exportOrdersBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         ModernButton billOrderBtn = UIHelper.createSuccessButton("Faturar Encomenda");
         billOrderBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
+        ModernButton convertGuideBtn = UIHelper.createPrimaryButton("Converter em Guia");
+        convertGuideBtn.setIcon(UIHelper.icon("fas-truck", 14));
+        convertGuideBtn.setToolTipText("Criar uma Guia de Remessa a partir da encomenda aprovada selecionada.");
         ModernButton cancelOrderBtn = UIHelper.createDangerButton("Cancelar Encomenda…");
         cancelOrderBtn.setIcon(UIHelper.icon("fas-ban", 14));
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
@@ -1131,6 +1143,7 @@ public class ComercialPanel extends JPanel {
         btnPanel.add(printOrderBtn);
         btnPanel.add(exportOrdersBtn);
         btnPanel.add(billOrderBtn);
+        btnPanel.add(convertGuideBtn);
         btnPanel.add(cancelOrderBtn);
         btnPanel.add(refreshBtn);
         listCard.add(btnPanel, BorderLayout.SOUTH);
@@ -1143,6 +1156,7 @@ public class ComercialPanel extends JPanel {
         UIHelper.onTextChange(orderBoxesField, this::applyOrderBoxes);
         orderWarehouseCombo.addActionListener(e -> refreshOrderFEFOHint());
         billOrderBtn.addActionListener(e -> billSelectedOrder());
+        convertGuideBtn.addActionListener(e -> convertSelectedOrderToGuide());
         cancelOrderBtn.addActionListener(e -> openCancelOrderDialog());
         refreshBtn.addActionListener(e -> loadOrdersTable());
         viewDetailsBtn.addActionListener(e -> showSelectedOrderDetails());
@@ -1150,6 +1164,88 @@ public class ComercialPanel extends JPanel {
         exportOrdersBtn.addActionListener(e -> exportOrdersTable());
 
         return panel;
+    }
+
+    private JPanel createDeliveryGuidesTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new BorderLayout(8, 0));
+        header.setOpaque(false);
+        header.add(UIHelper.createHeading("Guias de Remessa"), BorderLayout.WEST);
+        panel.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        String[] columns = {"ID", "Nº Guia", "Data", "Encomenda", "Cliente", "Armazém",
+                "Responsável", "Viatura", "Total", "Estado"};
+        deliveryGuidesTableModel = new DefaultTableModel(columns, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        deliveryGuidesTable = new JTable(deliveryGuidesTableModel);
+        UIHelper.styleTable(deliveryGuidesTable);
+        deliveryGuidesTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        deliveryGuidesTable.setFillsViewportHeight(true);
+        hideTableColumn(deliveryGuidesTable, 0);
+        deliveryGuidesTable.getColumnModel().getColumn(1).setPreferredWidth(105);
+        deliveryGuidesTable.getColumnModel().getColumn(2).setPreferredWidth(90);
+        deliveryGuidesTable.getColumnModel().getColumn(3).setPreferredWidth(105);
+        deliveryGuidesTable.getColumnModel().getColumn(4).setPreferredWidth(150);
+        deliveryGuidesTable.getColumnModel().getColumn(5).setPreferredWidth(120);
+        deliveryGuidesTable.getColumnModel().getColumn(6).setPreferredWidth(120);
+        deliveryGuidesTable.getColumnModel().getColumn(7).setPreferredWidth(90);
+        deliveryGuidesTable.getColumnModel().getColumn(8).setPreferredWidth(90);
+        deliveryGuidesTable.getColumnModel().getColumn(9).setPreferredWidth(115);
+
+        JTextField search = TableFilter.searchField("Nº guia, encomenda, cliente ou viatura…");
+        JComboBox<String> status = TableFilter.combo("Todos os estados",
+                "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        TableFilter.install(deliveryGuidesTable, search, new TableFilter.ColumnFilter(status, 9));
+        JPanel filterBar = TableFilter.bar(search, TableFilter.label("Estado:"), status);
+        filterBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(filterBar, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(deliveryGuidesTable);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
+
+        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir");
+        printBtn.setIcon(UIHelper.icon("fas-print", 14));
+        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
+        cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
+        ModernButton rejectBtn = UIHelper.createDangerButton("Rejeitar");
+        rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
+        ModernButton approveBtn = UIHelper.createSuccessButton("Aprovar");
+        approveBtn.setIcon(UIHelper.icon("fas-check", 14));
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actions.setOpaque(false);
+        actions.add(printBtn);
+        actions.add(cancelBtn);
+        actions.add(rejectBtn);
+        actions.add(approveBtn);
+        actions.add(refreshBtn);
+        card.add(actions, BorderLayout.SOUTH);
+
+        printBtn.addActionListener(e -> printSelectedDeliveryGuide());
+        cancelBtn.addActionListener(e -> cancelSelectedDeliveryGuide());
+        rejectBtn.addActionListener(e -> rejectSelectedDeliveryGuide());
+        approveBtn.addActionListener(e -> approveSelectedDeliveryGuide());
+        refreshBtn.addActionListener(e -> loadDeliveryGuidesTable());
+
+        panel.add(card, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private static void hideTableColumn(JTable table, int index) {
+        table.getColumnModel().getColumn(index).setMinWidth(0);
+        table.getColumnModel().getColumn(index).setMaxWidth(0);
+        table.getColumnModel().getColumn(index).setWidth(0);
     }
 
     /** Helper de venda ao grosso na encomenda: nº de caixas → Qtd em unidades. Ver {@link #applyInvoiceBoxes()}. */
@@ -1390,6 +1486,206 @@ public class ComercialPanel extends JPanel {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao faturar encomenda: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void convertSelectedOrderToGuide() {
+        int row = TableFilter.selectedModelRow(ordersTable);
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela para converter em guia.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Long orderId = (Long) ordersTableModel.getValueAt(row, 0);
+        String status = String.valueOf(ordersTableModel.getValueAt(row, 3));
+        if (!"PENDING".equals(status)) {
+            JOptionPane.showMessageDialog(this,
+                    "Apenas encomendas aprovadas no estado PENDING podem ser convertidas em guia. Estado atual: " + status,
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        OrderDTO order;
+        try {
+            order = comercialApiClient.getOrderById(orderId);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JTextField orderField = new JTextField(order.orderNumber());
+        JTextField clientField = new JTextField(order.clientName());
+        JTextField totalField = new JTextField(String.format("%,.2f MT", order.totalAmount()));
+        JTextField responsibleField = new JTextField();
+        JTextField vehicleField = new JTextField();
+        JTextArea notesArea = new JTextArea(3, 28);
+        for (JTextField field : List.of(orderField, clientField, totalField, responsibleField, vehicleField)) {
+            UIHelper.styleTextField(field);
+        }
+        orderField.setEditable(false);
+        clientField.setEditable(false);
+        totalField.setEditable(false);
+        responsibleField.putClientProperty("JTextField.placeholderText", "Nome de quem acompanha a expedição");
+        vehicleField.putClientProperty("JTextField.placeholderText", "Matrícula ou identificação da viatura");
+        UIHelper.styleTextArea(notesArea);
+        notesArea.setLineWrap(true);
+        notesArea.setWrapStyleWord(true);
+        JScrollPane notesScroll = new JScrollPane(notesArea);
+        UIHelper.styleScrollPane(notesScroll);
+
+        JPanel form = UIHelper.createDialogForm(
+                "Encomenda:", orderField,
+                "Cliente:", clientField,
+                "Total:", totalField,
+                "Responsável pelo transporte:", responsibleField,
+                "Viatura / Matrícula:", vehicleField,
+                "Observações:", notesScroll
+        );
+
+        DeliveryGuideDTO[] created = new DeliveryGuideDTO[1];
+        ModernFormDialog dialog = new ModernFormDialog(SwingUtilities.getWindowAncestor(this),
+                "Converter em Guia", "fas-truck",
+                "Dados de transporte da Guia de Remessa", form)
+                .setConfirmButton("Criar Guia", "fas-truck")
+                .setOnSave(() -> created[0] = comercialApiClient.createDeliveryGuide(
+                        order.id(), blankToNull(responsibleField.getText()), blankToNull(vehicleField.getText()),
+                        blankToNull(notesArea.getText())));
+
+        if (dialog.showDialog() && created[0] != null) {
+            JOptionPane.showMessageDialog(this,
+                    "Guia " + created[0].guideNumber() + " criada e submetida para aprovação.\n"
+                            + "O stock só será movimentado quando a guia for aprovada.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadOrdersTable();
+            loadDeliveryGuidesTable();
+        }
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
+    }
+
+    private void loadDeliveryGuidesTable() {
+        if (deliveryGuidesTableModel == null) return;
+        deliveryGuidesTableModel.setRowCount(0);
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        for (DeliveryGuideDTO guide : comercialApiClient.getDeliveryGuidesByCompany(companyId)) {
+            deliveryGuidesTableModel.addRow(new Object[]{
+                    guide.id(),
+                    guide.guideNumber(),
+                    guide.guideDate() == null ? "—" : guide.guideDate().format(dateFormat),
+                    guide.orderNumber(),
+                    guide.clientName(),
+                    guide.warehouseName(),
+                    guide.responsible() == null || guide.responsible().isBlank() ? "—" : guide.responsible(),
+                    guide.vehicle() == null || guide.vehicle().isBlank() ? "—" : guide.vehicle(),
+                    String.format("%,.2f MT", guide.totalAmount()),
+                    guide.status()
+            });
+        }
+    }
+
+    private void approveSelectedDeliveryGuide() {
+        int row = selectedDeliveryGuideRow("aprovar");
+        if (row < 0) return;
+        if (!ensurePendingDeliveryGuide(row)) return;
+
+        String number = String.valueOf(deliveryGuidesTableModel.getValueAt(row, 1));
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "A aprovação da guia " + number + " dará saída definitiva ao stock.\n\nPretende continuar?",
+                "Confirmar Aprovação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        Long id = (Long) deliveryGuidesTableModel.getValueAt(row, 0);
+        try {
+            comercialApiClient.approveDeliveryGuide(id);
+            JOptionPane.showMessageDialog(this, "Guia " + number + " aprovada. O stock foi atualizado.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadDeliveryGuidesTable();
+            loadOrdersTable();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void rejectSelectedDeliveryGuide() {
+        int row = selectedDeliveryGuideRow("rejeitar");
+        if (row < 0) return;
+        if (!ensurePendingDeliveryGuide(row)) return;
+
+        String number = String.valueOf(deliveryGuidesTableModel.getValueAt(row, 1));
+        String reason = UIHelper.promptRequiredText("Rejeitar Guia de Remessa", "fas-times",
+                "Guia " + number, "Motivo da rejeição:");
+        if (reason == null) return;
+
+        Long id = (Long) deliveryGuidesTableModel.getValueAt(row, 0);
+        try {
+            comercialApiClient.rejectDeliveryGuide(id, reason);
+            JOptionPane.showMessageDialog(this,
+                    "Guia " + number + " rejeitada. A encomenda voltou a ficar disponível.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadDeliveryGuidesTable();
+            loadOrdersTable();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void cancelSelectedDeliveryGuide() {
+        int row = selectedDeliveryGuideRow("cancelar");
+        if (row < 0) return;
+        if (!ensurePendingDeliveryGuide(row)) return;
+
+        String number = String.valueOf(deliveryGuidesTableModel.getValueAt(row, 1));
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Cancelar a guia " + number + "?\nA encomenda voltará a ficar disponível para faturação ou nova guia.",
+                "Confirmar Cancelamento", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        Long id = (Long) deliveryGuidesTableModel.getValueAt(row, 0);
+        try {
+            comercialApiClient.cancelDeliveryGuide(id);
+            JOptionPane.showMessageDialog(this, "Guia " + number + " cancelada.",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadDeliveryGuidesTable();
+            loadOrdersTable();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void printSelectedDeliveryGuide() {
+        int row = selectedDeliveryGuideRow("imprimir");
+        if (row < 0) return;
+        Long id = (Long) deliveryGuidesTableModel.getValueAt(row, 0);
+        String number = String.valueOf(deliveryGuidesTableModel.getValueAt(row, 1));
+        try {
+            byte[] pdf = comercialApiClient.renderDeliveryGuide(id);
+            com.phcpro.modules.printing.PdfFileSaver.saveAndOpen(pdf, "guia-remessa-" + number);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao gerar Guia de Remessa: " + ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private int selectedDeliveryGuideRow(String action) {
+        int row = TableFilter.selectedModelRow(deliveryGuidesTable);
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione uma guia na tabela para " + action + ".",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+        }
+        return row;
+    }
+
+    private boolean ensurePendingDeliveryGuide(int row) {
+        String status = String.valueOf(deliveryGuidesTableModel.getValueAt(row, 9));
+        if ("PENDING_APPROVAL".equals(status)) return true;
+        JOptionPane.showMessageDialog(this,
+                "Esta ação só é permitida para guias pendentes de aprovação. Estado atual: " + status,
+                "Erro", JOptionPane.ERROR_MESSAGE);
+        return false;
     }
 
     public void loadOrdersTable() {

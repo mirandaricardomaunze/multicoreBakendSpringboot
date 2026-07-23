@@ -4,8 +4,10 @@ import com.phcpro.modules.comercial.dto.CancelReasonRequest;
 import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
 import com.phcpro.modules.comercial.dto.CreateOrderRequest;
+import com.phcpro.modules.comercial.dto.CreateDeliveryGuideRequest;
 import com.phcpro.modules.comercial.dto.CreateProductRequest;
 import com.phcpro.modules.comercial.dto.CreateReceiptRequest;
+import com.phcpro.modules.comercial.dto.DeliveryGuideDTO;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.dto.OrderDTO;
 import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
@@ -180,6 +182,41 @@ public class ComercialApiClient {
                 "/api/comercial/orders/" + orderId + "/print?operator=" + enc(operator), null, OrderDTO.class);
     }
 
+    // ─── Guias de Remessa (GR) ───────────────────────────────────────────────
+    public List<DeliveryGuideDTO> getDeliveryGuidesByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/comercial/delivery-guides?companyId=" + companyId, DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO getDeliveryGuideById(Long id) {
+        return clientFactory.authenticatedClient()
+                .get("/api/comercial/delivery-guides/" + id, DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO createDeliveryGuide(Long orderId, String responsible, String vehicle, String notes) {
+        return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides",
+                new CreateDeliveryGuideRequest(orderId, responsible, vehicle, notes), DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO approveDeliveryGuide(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/delivery-guides/" + id + "/approve", null, DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO rejectDeliveryGuide(Long id, String reason) {
+        return clientFactory.authenticatedClient().post(
+                "/api/comercial/delivery-guides/" + id + "/reject", new RejectGuideRequest(reason), DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO cancelDeliveryGuide(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/delivery-guides/" + id + "/cancel", null, DeliveryGuideDTO.class);
+    }
+
+    public byte[] renderDeliveryGuide(Long id) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/delivery-guide/" + id);
+    }
+
     // ─── Recibos ─────────────────────────────────────────────────────────────
     public List<ReceiptDTO> getReceiptsByCompany(Long companyId) {
         return clientFactory.authenticatedClient()
@@ -215,4 +252,7 @@ public class ComercialApiClient {
     }
 
     record SaveClientRequest(String name, String taxId, String email, String address) {}
+
+    /** Corpo do reject da guia — chave "rejectionReason" espelha o esperado pelo controller. */
+    record RejectGuideRequest(String rejectionReason) {}
 }

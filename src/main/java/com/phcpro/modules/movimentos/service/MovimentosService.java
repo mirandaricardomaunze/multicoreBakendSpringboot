@@ -4,10 +4,12 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.model.Client;
 import com.phcpro.modules.comercial.model.CreditNote;
 import com.phcpro.modules.comercial.model.DebitNote;
+import com.phcpro.modules.comercial.model.DeliveryGuide;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.repository.CreditNoteRepository;
 import com.phcpro.modules.comercial.repository.DebitNoteRepository;
+import com.phcpro.modules.comercial.repository.DeliveryGuideRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.OrderRepository;
 import com.phcpro.modules.movimentos.dto.MovimentoDTO;
@@ -35,17 +37,20 @@ public class MovimentosService {
     private final OrderRepository orderRepository;
     private final CreditNoteRepository creditNoteRepository;
     private final DebitNoteRepository debitNoteRepository;
+    private final DeliveryGuideRepository deliveryGuideRepository;
 
     public MovimentosService(
             InvoiceRepository invoiceRepository,
             OrderRepository orderRepository,
             CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository
+            DebitNoteRepository debitNoteRepository,
+            DeliveryGuideRepository deliveryGuideRepository
     ) {
         this.invoiceRepository = invoiceRepository;
         this.orderRepository = orderRepository;
         this.creditNoteRepository = creditNoteRepository;
         this.debitNoteRepository = debitNoteRepository;
+        this.deliveryGuideRepository = deliveryGuideRepository;
     }
 
     /**
@@ -81,6 +86,16 @@ public class MovimentosService {
                     order.getCreatedAt(),
                     order.getStatus(),
                     order.getTotalAmount()));
+        }
+        for (DeliveryGuide guide : deliveryGuideRepository.findByCompanyId(companyId)) {
+            movimentos.add(new MovimentoDTO(
+                    MovimentoTipo.GUIA_REMESSA,
+                    guide.getId(),
+                    guide.getGuideNumber(),
+                    nameOf(guide.getClient(), guide.getWalkInName()),
+                    guide.getGuideDate(),
+                    statusName(guide.getStatus()),
+                    guide.getTotalAmount()));
         }
         for (CreditNote note : creditNoteRepository.findByCompanyId(companyId)) {
             movimentos.add(new MovimentoDTO(

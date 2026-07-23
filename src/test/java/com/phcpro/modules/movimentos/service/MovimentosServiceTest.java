@@ -11,6 +11,7 @@ import com.phcpro.modules.comercial.model.NoteStatus;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.repository.CreditNoteRepository;
 import com.phcpro.modules.comercial.repository.DebitNoteRepository;
+import com.phcpro.modules.comercial.repository.DeliveryGuideRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.OrderRepository;
 import com.phcpro.modules.movimentos.dto.MovimentoDTO;
@@ -40,6 +41,7 @@ class MovimentosServiceTest {
     private OrderRepository orderRepository;
     private CreditNoteRepository creditNoteRepository;
     private DebitNoteRepository debitNoteRepository;
+    private DeliveryGuideRepository deliveryGuideRepository;
     private MovimentosService service;
 
     @BeforeEach
@@ -48,8 +50,9 @@ class MovimentosServiceTest {
         orderRepository = mock(OrderRepository.class);
         creditNoteRepository = mock(CreditNoteRepository.class);
         debitNoteRepository = mock(DebitNoteRepository.class);
+        deliveryGuideRepository = mock(DeliveryGuideRepository.class);
         service = new MovimentosService(invoiceRepository, orderRepository,
-                creditNoteRepository, debitNoteRepository);
+                creditNoteRepository, debitNoteRepository, deliveryGuideRepository);
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
@@ -134,7 +137,8 @@ class MovimentosServiceTest {
     @Test // MU-07
     void listar_empresaDiferenteDaActiva_lancaBusinessRule() {
         assertThrows(BusinessRuleException.class, () -> service.listar(999L, null, null, null));
-        verifyNoInteractions(invoiceRepository, orderRepository, creditNoteRepository, debitNoteRepository);
+        verifyNoInteractions(invoiceRepository, orderRepository, creditNoteRepository, debitNoteRepository,
+                deliveryGuideRepository);
     }
 
     // ---- builders ----

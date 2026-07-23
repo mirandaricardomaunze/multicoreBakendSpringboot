@@ -54,13 +54,18 @@ public class Order extends BaseEntity {
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(name = "status", nullable = false)
-    private String status = "PENDING"; // PENDING, BILLED, CANCELLED
+    private String status = "PENDING"; // PENDING_APPROVAL, PENDING, GUIDE_PENDING, GUIDED, BILLED, CANCELLED
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderLine> lines = new ArrayList<>();
 
     @Column(name = "invoice_id")
     private Long invoiceId;
+
+    /** Guia de remessa gerada a partir desta encomenda (null enquanto não houver guia activa).
+     *  Caminho separado da faturação: uma encomenda vira guia OU fatura, nunca as duas. */
+    @Column(name = "delivery_guide_id")
+    private Long deliveryGuideId;
 
     /** Timestamp da última impressão da encomenda (null se nunca foi impressa). */
     @Column(name = "printed_at")

@@ -24,6 +24,7 @@ public class PrintController {
     private final InventoryReportPrintService inventoryReportPrintService;
     private final IvaDeclarationPrintService ivaDeclarationPrintService;
     private final GuideRemittancePrintService guideRemittancePrintService;
+    private final DeliveryGuidePrintService deliveryGuidePrintService;
     private final PayrollFiscalMapPrintService payrollFiscalMapPrintService;
     private final ProductLabelPrintService productLabelPrintService;
     private final InventoryCountSheetPrintService inventoryCountSheetPrintService;
@@ -40,6 +41,7 @@ public class PrintController {
             InventoryReportPrintService inventoryReportPrintService,
             IvaDeclarationPrintService ivaDeclarationPrintService,
             GuideRemittancePrintService guideRemittancePrintService,
+            DeliveryGuidePrintService deliveryGuidePrintService,
             PayrollFiscalMapPrintService payrollFiscalMapPrintService,
             ProductLabelPrintService productLabelPrintService,
             InventoryCountSheetPrintService inventoryCountSheetPrintService,
@@ -55,6 +57,7 @@ public class PrintController {
         this.inventoryReportPrintService = inventoryReportPrintService;
         this.ivaDeclarationPrintService = ivaDeclarationPrintService;
         this.guideRemittancePrintService = guideRemittancePrintService;
+        this.deliveryGuidePrintService = deliveryGuidePrintService;
         this.payrollFiscalMapPrintService = payrollFiscalMapPrintService;
         this.productLabelPrintService = productLabelPrintService;
         this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
@@ -84,6 +87,11 @@ public class PrintController {
     @GetMapping("/guide/{invoiceId}")
     public ResponseEntity<Resource> guide(@PathVariable Long invoiceId) {
         return pdfResponse(guideRemittancePrintService.render(invoiceId), "guia-remessa-" + invoiceId);
+    }
+
+    @GetMapping("/delivery-guide/{guideId}")
+    public ResponseEntity<Resource> deliveryGuide(@PathVariable Long guideId) {
+        return pdfResponse(deliveryGuidePrintService.render(guideId), "guia-remessa-" + guideId);
     }
 
     @GetMapping("/stock-transfer/{transferId}")
