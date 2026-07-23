@@ -131,6 +131,22 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--
+              Testes: um único JVM reutilizado (forkCount=1/reuseForks=true, os defaults, tornados
+              explícitos) para que a cache de contextos do Spring (limitada a 1 em spring.properties)
+              seja eficaz. -Xmx1536m dá folga a um contexto ERP completo sem, num PC de RAM curta,
+              o JVM tentar crescer até ao default (~1/4 da RAM física) e falhar a alocação.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <argLine>-Xmx1536m</argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
