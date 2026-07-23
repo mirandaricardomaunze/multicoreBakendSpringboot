@@ -2,39 +2,48 @@ package com.phcpro.gui.components;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.ScrollPaneLayout;
+import javax.swing.SwingUtilities;
 
-import java.awt.Component;
+import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.HierarchyEvent;
 
 /**
  * Barra lateral de navegação para tabelas: <b>Topo · Página acima · Página abaixo · Fundo</b>.
  *
+ * <p>Colocada <b>fora da tabela</b>, no lado direito (região EAST) do contentor que aloja o scroll —
+ * exactamente o mesmo padrão que o rodapé de listagem já usa (ver
+ * {@code UIHelper.maybeAddListingFooter}, que adiciona ao SOUTH). Não sobrepõe células.</p>
+ *
  * <p>Instalada centralmente por {@link UIHelper#styleScrollPane(JScrollPane)} — como quase todas as
- * tabelas do sistema passam por lá, uma só ligação cobre-as todas (DRY). Opera sobre a
- * {@link JScrollBar} vertical do scroll, pelo que é independente do modelo/filtro da tabela. Ver
+ * tabelas passam por lá, uma só ligação cobre-as todas (DRY). As acções operam sobre a
+ * {@link JScrollBar} vertical do scroll, pelo que são independentes do modelo/filtro. Ver
  * docs/TABELAS_NAVEGACAO_SPEC.md.</p>
  */
 public final class TableNavigator {
 
     private static final String INSTALLED = "tableNavigator.installed";
+    private static final String ATTACHED = "tableNavigator.attached";
 
     private TableNavigator() {}
 
     /**
-     * Liga a barra lateral a um scroll cujo conteúdo é uma {@link JTable}. Idempotente e seguro:
-     * ignora scrolls sem tabela ou já equipados.
+     * Liga a barra a um scroll cujo conteúdo é uma {@link JTable}. A barra só é anexada quando o
+     * scroll já está num contentor {@link BorderLayout} com a região EAST livre (adiada até lá).
+     * Idempotente e segura.
      */
     public static void install(JScrollPane scroll) {
         if (scroll == null || scroll.getViewport() == null) return;
@@ -42,19 +51,29 @@ public final class TableNavigator {
         if (Boolean.TRUE.equals(scroll.getClientProperty(INSTALLED))) return;
         scroll.putClientProperty(INSTALLED, Boolean.TRUE);
 
-        JScrollBar bar = scroll.getVerticalScrollBar();
-        Strip strip = new Strip();
-        strip.add(navButton("fas-angle-double-up", "Ir para o topo", () -> top(bar)));
-        strip.add(navButton("fas-angle-up", "Página acima", () -> pageUp(bar)));
-        strip.add(navButton("fas-angle-down", "Página abaixo", () -> pageDown(bar)));
-        strip.add(navButton("fas-angle-double-down", "Ir para o fundo", () -> bottom(bar)));
+        // O scroll ainda não tem contentor quando styleScrollPane corre; anexa quando ganhar um.
+        scroll.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0
+                    && !Boolean.TRUE.equals(scroll.getClientProperty(ATTACHED))) {
+                SwingUtilities.invokeLater(() -> attachToHost(scroll));
+            }
+        });
+        attachToHost(scroll); // defensivo, caso já esteja na árvore
+    }
 
-        NavLayout layout = new NavLayout(strip);
-        scroll.setLayout(layout);
-        layout.syncWithScrollPane(scroll);
-        scroll.add(strip);
-        scroll.setComponentZOrder(strip, 0); // sobre o viewport
-        scroll.revalidate();
+    /** Adiciona a barra ao EAST do contentor do scroll, se este for um BorderLayout com EAST livre. */
+    private static void attachToHost(JScrollPane scroll) {
+        if (Boolean.TRUE.equals(scroll.getClientProperty(ATTACHED))) return;
+        Container host = scroll.getParent();
+        if (!(host instanceof JComponent parent)) return;
+        if (!(parent.getLayout() instanceof BorderLayout bl)) return;
+        if (!BorderLayout.CENTER.equals(bl.getConstraints(scroll))) return; // barra só faz sentido ao lado do centro
+        if (bl.getLayoutComponent(BorderLayout.EAST) != null) return;        // EAST ocupado — não intromete
+
+        scroll.putClientProperty(ATTACHED, Boolean.TRUE);
+        parent.add(buildBar(scroll.getVerticalScrollBar()), BorderLayout.EAST);
+        parent.revalidate();
+        parent.repaint();
     }
 
     // ─── Acções de scroll (puras, testáveis sem display) ─────────────────────
@@ -87,6 +106,21 @@ public final class TableNavigator {
 
     // ─── UI ──────────────────────────────────────────────────────────────────
 
+    /** Coluna EAST: cluster de 4 botões num cartão arredondado, centrado na vertical, com folga à esquerda. */
+    private static JComponent buildBar(JScrollBar bar) {
+        Strip cluster = new Strip();
+        cluster.add(navButton("fas-angle-double-up", "Ir para o topo", () -> top(bar)));
+        cluster.add(navButton("fas-angle-up", "Página acima", () -> pageUp(bar)));
+        cluster.add(navButton("fas-angle-down", "Página abaixo", () -> pageDown(bar)));
+        cluster.add(navButton("fas-angle-double-down", "Ir para o fundo", () -> bottom(bar)));
+
+        JPanel column = new JPanel(new GridBagLayout());
+        column.setOpaque(false);
+        column.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0)); // separa da tabela
+        column.add(cluster, new GridBagConstraints()); // default: centrado
+        return column;
+    }
+
     private static JButton navButton(String iconCode, String tooltip, Runnable action) {
         JButton b = new JButton(UIHelper.icon(iconCode, 13, UIHelper.TEXT_LIGHT));
         b.setRolloverIcon(UIHelper.icon(iconCode, 13, UIHelper.ACCENT));
@@ -100,12 +134,12 @@ public final class TableNavigator {
         return b;
     }
 
-    /** Cartão arredondado que alberga os 4 botões, para se ler como controlo flutuante. */
+    /** Cartão arredondado que alberga os 4 botões. */
     private static final class Strip extends JPanel {
         Strip() {
             setOpaque(false);
             setLayout(new GridLayout(4, 1, 0, 3));
-            setBorder(BorderFactory.createEmptyBorder(5, 4, 5, 4));
+            setBorder(BorderFactory.createEmptyBorder(6, 4, 6, 4));
         }
 
         @Override
@@ -118,43 +152,6 @@ public final class TableNavigator {
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
             g2.dispose();
             super.paintComponent(g);
-        }
-    }
-
-    /**
-     * {@link ScrollPaneLayout} que mantém o comportamento normal do scroll e posiciona a barra
-     * flutuante encostada à direita, centrada na vertical — sem ser gerida pelas ranhuras do scroll.
-     */
-    private static final class NavLayout extends ScrollPaneLayout {
-        private final Component strip;
-
-        NavLayout(Component strip) {
-            this.strip = strip;
-        }
-
-        @Override
-        public void addLayoutComponent(String name, Component comp) {
-            if (name == null) return; // a barra é posicionada à mão em layoutContainer
-            super.addLayoutComponent(name, comp);
-        }
-
-        @Override
-        public void removeLayoutComponent(Component comp) {
-            if (comp == strip) return;
-            super.removeLayoutComponent(comp);
-        }
-
-        @Override
-        public void layoutContainer(Container parent) {
-            super.layoutContainer(parent);
-            if (strip == null || !strip.isVisible()) return;
-            Insets in = parent.getInsets();
-            Dimension ps = strip.getPreferredSize();
-            int availH = parent.getHeight() - in.top - in.bottom;
-            int h = Math.min(ps.height, availH);
-            int x = parent.getWidth() - in.right - ps.width - 4;
-            int y = in.top + Math.max(0, (availH - h) / 2);
-            strip.setBounds(x, y, ps.width, h);
         }
     }
 }

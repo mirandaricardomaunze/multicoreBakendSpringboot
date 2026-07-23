@@ -39,11 +39,17 @@ Opera sobre a `JScrollBar` vertical do próprio scroll (independente do modelo d
 
 Não altera a selecção nem o filtro — é pura navegação visual. Não interfere com `TableFilter`.
 
-## 4. Posicionamento
+## 4. Posicionamento — **fora da tabela**, ao lado (não sobrepõe)
 
-Barra vertical flutuante encostada à direita do scroll, centrada na vertical, sobre um cartão
-arredondado (`BG_CARD` + `BORDER`) para se ler como controlo sobreposto. Implementado com uma
-`ScrollPaneLayout` estendida que posiciona a barra sem quebrar o viewport/scrollbars.
+A barra fica **fora** da tabela, na região **EAST do contentor** que aloja o scroll (à direita da
+moldura da tabela) — **nunca por cima das células**. É o mesmo padrão que o rodapé de listagem já
+usa (`UIHelper.maybeAddListingFooter` adiciona ao SOUTH); aqui adiciona-se ao EAST.
+
+- Anexada só quando o scroll está num contentor `BorderLayout` com o scroll no **CENTER** e o **EAST
+  livre** (adiada via `HierarchyListener` até o contentor existir). Se o EAST estiver ocupado, não se
+  intromete.
+- Cluster de 4 botões num cartão arredondado (`BG_CARD` + `BORDER`), centrado na vertical, com folga
+  à esquerda a separar da tabela.
 
 ## 5. Estética (CONVENTIONS)
 

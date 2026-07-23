@@ -15,8 +15,9 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 - **Pedido do utilizador:** botões laterais nas tabelas para navegar (topo/cima/baixo/fundo), como
   noutros sistemas. Spec+harness.
 - **Feito (só UI, sem backend):** novo componente `com.phcpro.gui.components.TableNavigator` — barra
-  vertical flutuante (Topo `fas-angle-double-up`, Página acima `fas-angle-up`, Página abaixo
-  `fas-angle-down`, Fundo `fas-angle-double-down`), encostada à direita da tabela. **DRY:** ligada
+  vertical (Topo `fas-angle-double-up`, Página acima `fas-angle-up`, Página abaixo `fas-angle-down`,
+  Fundo `fas-angle-double-down`) **fora da tabela, no EAST do contentor** do scroll (mesmo padrão do
+  rodapé `maybeAddListingFooter`, que vai ao SOUTH) — não sobrepõe células. **DRY:** ligada
   **num só ponto** — `UIHelper.styleScrollPane(...)` instala-a quando o conteúdo é uma `JTable`, pelo
   que **cobre transversalmente todas as ~60 tabelas** sem tocar nos ~80 sítios. Opera sobre a
   `JScrollBar` vertical (independente do modelo/filtro), idempotente, ícones vectoriais (sem emojis).
