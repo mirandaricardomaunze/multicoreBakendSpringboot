@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.gui.components.DocumentEditorHost;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
@@ -104,8 +105,10 @@ public class ComercialPanel extends JPanel {
 
     private JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
     private com.phcpro.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
-    private JPanel orderFormContent;                // conteúdo do modal de nova encomenda
+    private JPanel orderFormContent;                // conteúdo do editor de nova encomenda
     private OrderDTO lastCreatedOrder;
+    private CardLayout encomendasCards;             // alterna lista <-> editor na aba Encomendas
+    private JPanel encomendasHost;
     private DefaultTableModel movimentosModel;
     private JTable movimentosTable;
     private JTextField movimentosSearch;
@@ -1079,7 +1082,7 @@ public class ComercialPanel extends JPanel {
         headerActions.setOpaque(false);
         ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
         newOrderBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
-        newOrderBtn.addActionListener(e -> openOrderFormDialog());
+        newOrderBtn.addActionListener(e -> openOrderEditor());
         headerActions.add(newOrderBtn);
         headerBar.add(headerActions, BorderLayout.EAST);
         panel.add(headerBar, BorderLayout.NORTH);
@@ -1163,7 +1166,56 @@ public class ComercialPanel extends JPanel {
         printOrderBtn.addActionListener(e -> printSelectedOrder());
         exportOrdersBtn.addActionListener(e -> exportOrdersTable());
 
-        return panel;
+        // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
+        DocumentEditorHost orderEditor = new DocumentEditorHost(
+                "Nova Encomenda", orderFormContent,
+                this::saveOrderFromEditor,
+                this::backToOrdersList,
+                () -> !draftOrderLines.isEmpty());
+        encomendasCards = new CardLayout();
+        encomendasHost = new JPanel(encomendasCards);
+        encomendasHost.setOpaque(false);
+        encomendasHost.add(panel, "list");
+        encomendasHost.add(orderEditor, "editor");
+        return encomendasHost;
+    }
+
+    /** Abre o editor de nova encomenda (painel completo, substitui o modal). */
+    private void openOrderEditor() {
+        if (warehousesList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        resetOrderDraft();
+        lastCreatedOrder = null;
+        if (encomendasCards != null && encomendasHost != null) {
+            encomendasCards.show(encomendasHost, "editor");
+        }
+    }
+
+    private void backToOrdersList() {
+        if (encomendasCards != null && encomendasHost != null) {
+            encomendasCards.show(encomendasHost, "list");
+        }
+    }
+
+    /** Guardar a partir do editor: valida+cria, informa, recarrega a lista e volta. Erro mantém o editor. */
+    private void saveOrderFromEditor() {
+        try {
+            issueOrderOrThrow();
+            OrderDTO created = lastCreatedOrder;
+            String estadoMsg = "PENDING_APPROVAL".equals(created.status())
+                    ? "Submetida para aprovação (valor: " + created.totalAmount() + " MT)."
+                    : "Estado: " + created.status() + " (valor: " + created.totalAmount() + " MT).";
+            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " criada!\n" + estadoMsg,
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            loadOrdersTable();
+            backToOrdersList();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage() == null ? "Falha ao criar encomenda." : ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel createDeliveryGuidesTab() {
@@ -1394,29 +1446,7 @@ public class ComercialPanel extends JPanel {
     }
 
     /** Abre o formulário de nova encomenda num modal (mesmo padrão de {@link #openInvoiceFormDialog()}). */
-    private void openOrderFormDialog() {
-        if (warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        resetOrderDraft();
-        lastCreatedOrder = null;
-        Window parent = SwingUtilities.getWindowAncestor(this);
-        ModernFormDialog dlg = new ModernFormDialog(parent, "Emitir Nova Encomenda", orderFormContent);
-        dlg.setSize(880, 680);
-        dlg.setOnSave(this::issueOrderOrThrow);
-        if (dlg.showDialog() && lastCreatedOrder != null) {
-            OrderDTO created = lastCreatedOrder;
-            String estadoMsg = "PENDING_APPROVAL".equals(created.status())
-                    ? "Submetida para aprovação (valor: " + created.totalAmount() + " MT)."
-                    : "Estado: " + created.status() + " (valor: " + created.totalAmount() + " MT).";
-            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " criada!\n" + estadoMsg,
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadOrdersTable();
-        }
-    }
-
-    /** Validação + emissão da encomenda. Lança {@link RuntimeException} em erro para manter o modal aberto. */
+    /** Validação + emissão da encomenda. Lança {@link RuntimeException} em erro para manter o editor aberto. */
     private void issueOrderOrThrow() {
         if (warehousesList.isEmpty()) {
             throw new RuntimeException("Nenhum armazém disponível para a empresa atual.");
