@@ -109,6 +109,8 @@ public class ComercialPanel extends JPanel {
     private OrderDTO lastCreatedOrder;
     private CardLayout encomendasCards;             // alterna lista <-> editor na aba Encomendas
     private JPanel encomendasHost;
+    private CardLayout faturacaoCards;              // alterna lista <-> editor na aba Faturação
+    private JPanel faturacaoHost;
     private DefaultTableModel movimentosModel;
     private JTable movimentosTable;
     private JTextField movimentosSearch;
@@ -366,7 +368,7 @@ public class ComercialPanel extends JPanel {
         headerActions.setOpaque(false);
         ModernButton newInvoiceBtn = UIHelper.createPrimaryButton("Nova Fatura…");
         newInvoiceBtn.setIcon(UIHelper.icon("fas-file-invoice", 14));
-        newInvoiceBtn.addActionListener(e -> openInvoiceFormDialog());
+        newInvoiceBtn.addActionListener(e -> openInvoiceEditor());
         headerActions.add(billFromOrderBtn);
         headerActions.add(newInvoiceBtn);
         headerBar.add(headerActions, BorderLayout.EAST);
@@ -439,7 +441,63 @@ public class ComercialPanel extends JPanel {
         printGuideBtn.addActionListener(e -> printSelectedGuide());
         exportTableBtn.addActionListener(e -> exportInvoicesTable());
 
-        return panel;
+        // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
+        DocumentEditorHost invoiceEditor = new DocumentEditorHost(
+                "Nova Fatura", invoiceFormContent,
+                this::saveInvoiceFromEditor,
+                this::backToInvoicesList,
+                () -> !draftLines.isEmpty());
+        faturacaoCards = new CardLayout();
+        faturacaoHost = new JPanel(faturacaoCards);
+        faturacaoHost.setOpaque(false);
+        faturacaoHost.add(panel, "list");
+        faturacaoHost.add(invoiceEditor, "editor");
+        return faturacaoHost;
+    }
+
+    /** Abre o editor de nova fatura (painel completo, substitui o modal). */
+    private void openInvoiceEditor() {
+        if (clientsList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nenhum cliente disponível.", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (warehousesList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        resetInvoiceDraft();
+        lastCreatedInvoice = null;
+        if (faturacaoCards != null && faturacaoHost != null) {
+            faturacaoCards.show(faturacaoHost, "editor");
+        }
+    }
+
+    private void backToInvoicesList() {
+        if (faturacaoCards != null && faturacaoHost != null) {
+            faturacaoCards.show(faturacaoHost, "list");
+        }
+    }
+
+    /** Guardar a partir do editor: valida+cria, informa, recarrega a lista e volta. Erro mantém o editor. */
+    private void saveInvoiceFromEditor() {
+        try {
+            submitInvoiceOrThrow();
+            InvoiceDTO created = lastCreatedInvoice;
+            if (created.status() == InvoiceStatus.PENDING_DISCOUNT_APPROVAL) {
+                JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida!\n"
+                        + "Bloqueada para Aprovação de Desconto (superior a 10%).\n"
+                        + "Valor: " + created.totalAmount() + " MT.", "Bloqueio de Desconto", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida com sucesso!\n"
+                        + "Valor: " + created.totalAmount() + " MT.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            }
+            loadInvoicesTable();
+            backToInvoicesList();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage() == null ? "Falha ao emitir fatura." : ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel createRecibosTab() {
@@ -674,36 +732,7 @@ public class ComercialPanel extends JPanel {
     }
 
     /** Abre o formulário de nova fatura num modal responsivo (com scroll). */
-    private void openInvoiceFormDialog() {
-        if (clientsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum cliente disponível.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        resetInvoiceDraft();
-        lastCreatedInvoice = null;
-        Window parent = SwingUtilities.getWindowAncestor(this);
-        ModernFormDialog dlg = new ModernFormDialog(parent, "Emitir Nova Fatura", invoiceFormContent);
-        dlg.setSize(880, 680);
-        dlg.setOnSave(this::submitInvoiceOrThrow);
-        if (dlg.showDialog() && lastCreatedInvoice != null) {
-            InvoiceDTO created = lastCreatedInvoice;
-            if (created.status() == InvoiceStatus.PENDING_DISCOUNT_APPROVAL) {
-                JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida!\n" +
-                        "Bloqueada para Aprovação de Desconto (superior a 10%).\n" +
-                        "Valor: " + created.totalAmount() + " MT.", "Bloqueio de Desconto", JOptionPane.WARNING_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida com sucesso!\n" +
-                        "Valor: " + created.totalAmount() + " MT.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            }
-            loadInvoicesTable();
-        }
-    }
-
-    /** Validação + emissão. Lança {@link RuntimeException} em erro para manter o modal aberto. */
+    /** Validação + emissão. Lança {@link RuntimeException} em erro para manter o editor aberto. */
     private void submitInvoiceOrThrow() {
         if (draftLines.isEmpty()) {
             throw new RuntimeException("Adicione pelo menos um item à fatura.");
@@ -1445,7 +1474,6 @@ public class ComercialPanel extends JPanel {
         }
     }
 
-    /** Abre o formulário de nova encomenda num modal (mesmo padrão de {@link #openInvoiceFormDialog()}). */
     /** Validação + emissão da encomenda. Lança {@link RuntimeException} em erro para manter o editor aberto. */
     private void issueOrderOrThrow() {
         if (warehousesList.isEmpty()) {

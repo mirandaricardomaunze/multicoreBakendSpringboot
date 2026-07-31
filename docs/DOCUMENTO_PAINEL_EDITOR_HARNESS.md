@@ -21,6 +21,10 @@ Complementa [DOCUMENTO_PAINEL_EDITOR_SPEC.md](DOCUMENTO_PAINEL_EDITOR_SPEC.md). 
 | DE-53 | Sem linhas, clicar **Voltar** | Volta à lista sem perguntar |
 | DE-54 | Erro de validação ao **Guardar** (sem armazém/linhas) | Mostra o erro e **mantém** o editor aberto |
 | DE-55 | Empresa activa | Barra de topo + `StatusBar` visíveis durante a edição (contexto não se perde) |
+| DE-56 | Aba Faturação → **Nova Fatura** | Troca para o editor a ecrã inteiro (não abre modal) |
+| DE-57 | Adicionar linhas e **Guardar** (fatura) | Cria a fatura, mostra mensagem (ou bloqueio de desconto >10%), recarrega e volta |
+| DE-58 | **Voltar à lista** com rascunho (fatura) | Pede confirmação para descartar |
+| DE-59 | Editor com formulário alto (fatura/encomenda) | **Scroll vertical** revela os botões de baixo; barra Voltar/Guardar fica fixa |
 
 ## Definition of done
 

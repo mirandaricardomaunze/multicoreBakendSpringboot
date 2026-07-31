@@ -45,10 +45,12 @@ guarda de alterações → `list`.
   só muda o **hospedeiro** (modal → painel). O `openOrderFormDialog` (modal) é **removido**.
 - Regras de negócio continuam no backend; a UI só chama HTTP.
 
-## 5. Fora de âmbito (piloto)
+## 5. Alastramento
 
-- Edição de encomenda existente (o piloto cobre **criação**; editar reutiliza o mesmo host depois).
-- Alastrar a Fatura/Compras — só depois de validado o piloto.
+- **Encomenda** (piloto) e **Fatura** — feitos: ambas as abas alternam lista ⇄ editor com o mesmo
+  `DocumentEditorHost` (reutiliza `invoiceFormContent`/`orderFormContent` + `submitInvoiceOrThrow`/
+  `issueOrderOrThrow`); os modais `openInvoiceFormDialog`/`openOrderFormDialog` foram removidos.
+- **A seguir:** Compras (encomenda a fornecedor); e suportar **editar** documento existente no host.
 
 ## 6. Ficheiros
 
