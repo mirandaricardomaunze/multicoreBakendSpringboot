@@ -6,6 +6,7 @@ import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneLayout;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 
 import java.awt.Component;
 import java.awt.Container;
@@ -50,16 +51,28 @@ public final class TableEmptyState {
         Runnable refresh = () -> {
             boolean empty = table.getRowCount() == 0;
             if (empty) label.setText(resolveText(table));
-            if (label.isVisible() != empty) {
-                label.setVisible(empty);
-                scroll.revalidate();
-                scroll.repaint();
-            }
+            // Aplicar sempre o estado calculado. Evita que um overlay visível de um estado
+            // anterior sobreviva a actualizações consecutivas do modelo/sorter.
+            label.setVisible(empty);
+            scroll.revalidate();
+            scroll.repaint();
         };
-        table.getModel().addTableModelListener(e -> refresh.run());
-        table.addPropertyChangeListener("model", e -> {
-            table.getModel().addTableModelListener(ev -> refresh.run());
+        Runnable refreshAfterSwingUpdate = () -> {
             refresh.run();
+            // JTable/TableRowSorter também escutam o modelo. A segunda passagem ocorre depois
+            // desses listeners e confirma a contagem que está efectivamente visível.
+            SwingUtilities.invokeLater(refresh);
+        };
+        table.getModel().addTableModelListener(e -> refreshAfterSwingUpdate.run());
+        table.addPropertyChangeListener("model", e -> {
+            table.getModel().addTableModelListener(ev -> refreshAfterSwingUpdate.run());
+            refreshAfterSwingUpdate.run();
+        });
+        table.addPropertyChangeListener("rowSorter", e -> {
+            if (table.getRowSorter() != null) {
+                table.getRowSorter().addRowSorterListener(ev -> refreshAfterSwingUpdate.run());
+            }
+            refreshAfterSwingUpdate.run();
         });
         refresh.run();
     }
@@ -96,6 +109,13 @@ public final class TableEmptyState {
             if (overlay == null || !overlay.isVisible()) return;
             JViewport vp = getViewport();
             if (vp == null) return;
+            // Última barreira defensiva: nunca deixar o overlay ocupar a área de uma tabela
+            // que já tem linhas, mesmo que uma notificação Swing chegue fora de ordem.
+            if (vp.getView() instanceof JTable table && table.getRowCount() > 0) {
+                overlay.setVisible(false);
+                overlay.setBounds(0, 0, 0, 0);
+                return;
+            }
             Rectangle vb = vp.getBounds();
             Dimension ps = overlay.getPreferredSize();
             int w = Math.min(ps.width, vb.width);

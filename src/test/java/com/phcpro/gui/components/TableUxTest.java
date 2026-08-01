@@ -3,6 +3,10 @@ package com.phcpro.gui.components;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JTable;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
+import java.awt.Component;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,6 +34,30 @@ class TableUxTest {
         JTable table = new JTable();
         table.putClientProperty("emptyText", "   ");
         assertEquals("Sem registos.", TableEmptyState.resolveText(table));
+    }
+
+    @Test // regressão: o estado vazio nunca pode ficar sobre linhas existentes
+    void emptyState_desapareceQuandoTabelaRecebeRegistos() throws Exception {
+        DefaultTableModel model = new DefaultTableModel(new Object[]{"Nome"}, 0);
+        JTable table = new JTable(model);
+        JScrollPane scroll = new JScrollPane(table);
+
+        SwingUtilities.invokeAndWait(() -> TableEmptyState.install(scroll));
+        assertTrue(emptyStateLabel(scroll).isVisible());
+
+        SwingUtilities.invokeAndWait(() -> model.addRow(new Object[]{"Registo existente"}));
+        SwingUtilities.invokeAndWait(() -> { }); // processa a confirmação diferida do estado
+
+        assertEquals(1, table.getRowCount());
+        assertFalse(emptyStateLabel(scroll).isVisible());
+    }
+
+    private static javax.swing.JLabel emptyStateLabel(JScrollPane scroll) {
+        for (Component component : scroll.getComponents()) {
+            if (component instanceof javax.swing.JLabel label) return label;
+        }
+        fail("Overlay do estado vazio não instalado.");
+        return null;
     }
 
     @Test // UX-05
