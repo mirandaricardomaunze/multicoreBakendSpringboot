@@ -2,13 +2,69 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-23
+**Última actualização:** 2026-08-01
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
 (falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
 multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-08-01 (notificações: marcar como lida — sino **e** página)
+
+- **Porquê estado no cliente:** as notificações são **derivadas** (agregam aprovações, stock,
+  validades e assinatura em tempo real), não entidades com id — não há "read flag" no servidor. Novo
+  `NotificationReadStore`: chave estável `type|title|detail|when` + conjunto de lidas nas
+  **Preferences** do utilizador (sobrevive ao reinício; sem Preferences funciona em memória, com
+  tecto de 200 chaves).
+- **Sino:** badge passa a contar **não-lidas**; cada notificação do popup é um submenu com **Abrir
+  módulo** e **Marcar como lida**; entrada **Marcar todas como lidas** (desactivada se não houver).
+- **Página `NotificationsPanel` alinhada** (fechou o limite v1 da spec): coluna **Leitura**
+  (`Por ler`/`Lida`), dropdown de filtro por leitura, botões **Marcar como lida** / **Marcar todas
+  como lidas** e resumo "N por ler de M". Sino e página partilham a **mesma instância** do store; a
+  página avisa o `MainFrame` por `IntConsumer` e o **badge actualiza sem novo pedido HTTP**.
+- **Também aqui:** correcção do estado vazio das tabelas (`TableEmptyState`) — o overlay "Sem
+  registos." podia sobreviver a actualizações consecutivas do modelo/sorter e ficar por cima de
+  linhas reais; passou a confirmar-se após os listeners do Swing/`RowSorter`, com barreira defensiva
+  no layout. Regressão coberta em `TableUxTest`.
+- **Verificação:** `mvn -o clean compile` limpo; `NotificationReadStoreTest` (5, NL-01..05) +
+  `NotificationsPanelTest` (2, NL-06/07) + `NotificationFeedTest` (2) + `TableUxTest` (6) verdes.
+  Spec/harness: [docs/NOTIFICACOES_LIDAS_SPEC.md](../docs/NOTIFICACOES_LIDAS_SPEC.md) +
+  [docs/NOTIFICACOES_LIDAS_HARNESS.md](../docs/NOTIFICACOES_LIDAS_HARNESS.md).
+- **Pendente manual:** NL-50..59 (UI ao vivo, com backend de pé).
+
+### Progresso — 2026-07-27 (piloto UX: documento em painel completo, não modal — Encomenda)
+
+- **Decisão de UX (2026-07-27):** híbrido — listagem como ecrã principal, **painel completo** para
+  documentos com linhas, **modais só para acções curtas**. Piloto aplicado à **criação de Encomenda**.
+- **Feito (só UI):** novo componente reutilizável `com.phcpro.gui.components.DocumentEditorHost`
+  (barra: **← Voltar à lista** com guarda de alterações + título + **Guardar**). A aba **Encomendas**
+  passou a `CardLayout` (lista ⇄ editor): **Nova Encomenda** mostra o editor a ecrã inteiro
+  (reutiliza o mesmo `orderFormContent` + `issueOrderOrThrow`) em vez do modal; **Guardar** cria,
+  informa, recarrega e volta à lista; **Voltar** confirma descarte se houver rascunho. O modal
+  `openOrderFormDialog` foi **removido**.
+- **Verificação:** `DocumentEditorHostTest` (2, DE-01/02); build limpo. Spec/harness:
+  [docs/DOCUMENTO_PAINEL_EDITOR_SPEC.md](../docs/DOCUMENTO_PAINEL_EDITOR_SPEC.md) +
+  [docs/DOCUMENTO_PAINEL_EDITOR_HARNESS.md](../docs/DOCUMENTO_PAINEL_EDITOR_HARNESS.md).
+- **Alastrado à Fatura (2026-07-31):** a aba Faturação passou ao mesmo padrão (CardLayout lista⇄editor,
+  reutiliza `invoiceFormContent` + `submitInvoiceOrThrow`, modal `openInvoiceFormDialog` removido). O
+  `DocumentEditorHost` ganhou **scroll vertical** (formulários altos deixam de cortar os botões de baixo).
+- **A seguir:** Compras (encomenda a fornecedor); suportar **editar** documento existente no host.
+
+### Progresso — 2026-07-23 (central de notificações + bell)
+
+- **Nova página `NotificationsPanel`:** tabela pesquisável/filtrável por tipo com alertas reais de
+  aprovações pendentes, stock abaixo do mínimo, lotes vencidos/a vencer em 30 dias e assinatura em
+  risco. Ações **Atualizar** e **Abrir módulo** encaminham para Aprovações, Stock ou Configurações.
+- **Bell na barra superior:** contador de alertas + dropdown com as 5 primeiras notificações. O item
+  **Ver todas** navega para a página completa. Recarrega ao trocar de empresa.
+- **Cliente-fino e EDT:** `NotificationFeed` agrega apenas clientes HTTP; bell/página carregam via
+  `SwingWorker`. O `companyId` é capturado no EDT e passado explicitamente à thread de fundo, evitando
+  perder o tenant por causa do `CurrentUserContext` ser `ThreadLocal`; respostas antigas são ignoradas
+  quando a empresa muda durante o carregamento.
+- **Testes:** `NotificationFeedTest` cobre agregação das quatro fontes + estado vazio;
+  `DesktopThinContextTest` confirma que o desktop continua sem DataSource/Services backend.
+  `mvn test` → **321 testes, 0 falhas/erros/ignorados** (51 suites).
 
 ### Progresso — 2026-07-23 (lote de UX das tabelas: auto-hide, estados vazios, menu de contexto, loading)
 
