@@ -181,6 +181,57 @@ class ComercialServiceTest {
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
     }
 
+    // ─────────────────── IVA: a taxa é do artigo, não do pedido ───────────────────
+    // Regressão do bug fiscal: o painel enviava 16% fixo e o serviço aceitava, pelo que o mesmo
+    // artigo isento saía a 0% no POS e a 16% na fatura. Ver docs/IVA_TAXA_CANONICA_SPEC.md.
+
+    @Test // IV-01
+    void createInvoice_artigoIsento_ignoraTaxaDoPedido_eNaoCobraIva() {
+        product.setTaxRate(taxRateOf("0.00"));
+        stubInvoiceLookups();
+
+        // O pedido insiste em 16% (era o que o painel enviava) — o serviço tem de ignorar.
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        assertEquals(0, dto.taxAmount().compareTo(BigDecimal.ZERO), "artigo isento não pode levar IVA");
+        assertEquals(0, dto.totalBeforeTax().compareTo(new BigDecimal("200")));
+        assertEquals(0, dto.totalAmount().compareTo(new BigDecimal("200")), "total = líquido quando isento");
+    }
+
+    @Test // IV-02
+    void createInvoice_artigoComTaxaReduzida_usaAdoCadastro() {
+        product.setTaxRate(taxRateOf("0.05"));
+        stubInvoiceLookups();
+
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        // 200 líquido a 5% = 10,00 de IVA (e não os 32,00 que os 16% do pedido dariam).
+        assertEquals(0, dto.taxAmount().compareTo(new BigDecimal("10.00")));
+        assertEquals(0, dto.totalAmount().compareTo(new BigDecimal("210.00")));
+    }
+
+    @Test // IV-03
+    void createOrder_artigoIsento_ignoraTaxaDoPedido() {
+        product.setTaxRate(taxRateOf("0.00"));
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(documentNumberService.next(DocumentSeries.ORDER)).thenReturn("EC-2026/1");
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderDTO dto = service.createOrder(invoiceRequest(new BigDecimal("2"), null));
+
+        // Importa porque a fatura herda esta linha em billOrder — divergir aqui contaminava a fatura.
+        assertEquals(0, dto.taxAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    private static com.phcpro.modules.fiscal.model.TaxRate taxRateOf(String rate) {
+        com.phcpro.modules.fiscal.model.TaxRate taxRate = new com.phcpro.modules.fiscal.model.TaxRate();
+        taxRate.setRate(new BigDecimal(rate));
+        return taxRate;
+    }
+
     // ────────────────────────── billOrder ──────────────────────────
 
     @Test

@@ -1,6 +1,5 @@
 package com.phcpro.gui;
 
-import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.DocumentEditorHost;
 import com.phcpro.gui.components.ModernButton;
@@ -679,7 +678,9 @@ public class ComercialPanel extends JPanel {
         String serial = serialField.getText().trim();
         if (serial.isEmpty()) serial = null;
 
-        BigDecimal taxRate = TaxRates.STANDARD_VAT;
+        // A taxa é a do artigo (o backend resolve-a na mesma; isto só mantém a pré-visualização
+        // do rascunho igual ao que vai ser cobrado).
+        BigDecimal taxRate = product.effectiveTaxRate();
 
         CreateInvoiceLineRequest lineRequest = new CreateInvoiceLineRequest(
                 product.id(),
@@ -1381,7 +1382,9 @@ public class ComercialPanel extends JPanel {
         String serial = orderSerialField.getText().trim();
         if (serial.isEmpty()) serial = null;
 
-        BigDecimal taxRate = TaxRates.STANDARD_VAT;
+        // A taxa é a do artigo (o backend resolve-a na mesma; isto só mantém a pré-visualização
+        // do rascunho igual ao que vai ser cobrado).
+        BigDecimal taxRate = product.effectiveTaxRate();
 
         CreateInvoiceLineRequest lineRequest = new CreateInvoiceLineRequest(
                 product.id(),

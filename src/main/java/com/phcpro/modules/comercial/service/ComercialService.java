@@ -179,11 +179,15 @@ public class ComercialService {
             // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso.
             BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
 
+            // IVA: a taxa é do ARTIGO, nunca a que o cliente HTTP envia — senão o mesmo produto
+            // saía isento no POS e a 16% na fatura. Ver docs/IVA_TAXA_CANONICA_SPEC.md.
+            BigDecimal taxRate = product.effectiveTaxRate();
+
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(unitPrice);
-            line.setTaxRate(lineReq.taxRate());
+            line.setTaxRate(taxRate);
 
             BigDecimal discountPct = lineReq.discountPercentage();
             if (discountPct == null) {
@@ -198,7 +202,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, taxRate);
 
             line.setLineTotal(amounts.total());
             invoice.addLine(line);
@@ -831,11 +835,15 @@ public class ComercialService {
 
             BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
 
+            // Mesma regra da fatura: a taxa vem do artigo (a encomenda é faturada mais tarde e a
+            // fatura herda esta linha, por isso divergir aqui contaminava também a fatura).
+            BigDecimal taxRate = product.effectiveTaxRate();
+
             OrderLine line = new OrderLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(unitPrice);
-            line.setTaxRate(lineReq.taxRate());
+            line.setTaxRate(taxRate);
 
             BigDecimal discountPct = lineReq.discountPercentage();
             if (discountPct == null) {
@@ -847,7 +855,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, taxRate);
 
             line.setLineTotal(amounts.total());
             order.addLine(line);

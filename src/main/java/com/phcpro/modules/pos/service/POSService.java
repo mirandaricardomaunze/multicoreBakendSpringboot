@@ -4,7 +4,6 @@ import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.architecture.pricing.LineCalculator;
-import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.modules.comercial.model.*;
 import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.comercial.dto.CreateCreditNoteRequest;
@@ -342,11 +341,9 @@ public class POSService {
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(unitPrice);
 
-            // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a
-            // padrão. Não depende do NUIT do cliente.
-            BigDecimal taxRate = product.getTaxRate() != null
-                    ? product.getTaxRate().getRate()
-                    : TaxRates.STANDARD_VAT;
+            // IVA dinâmico: taxa do artigo (padrão quando não tem). Regra partilhada com a fatura e
+            // a encomenda em Product.effectiveTaxRate — não duplicar aqui.
+            BigDecimal taxRate = product.effectiveTaxRate();
             line.setTaxRate(taxRate);
 
             if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.ZERO) > 0) {

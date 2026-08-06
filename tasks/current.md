@@ -2,13 +2,58 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-08-01
+**Última actualização:** 2026-08-06
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
 (falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
 multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-08-05 (POS: operação rápida e acabamento profissional)
+
+- Cabeçalho simplificado: Cliente e Código de barras sempre visíveis; Armazém e Conta ficam em
+  **Mais opções**, sem perder a selecção usada no checkout.
+- Atalhos reais: **F2** produto, **F4** cliente, **F6** quantidade, **F9** finalizar e **Delete** só
+  com foco no carrinho. Duplo clique reutiliza o editor de quantidade, inclusive decimal.
+- Numerário ganhou recebimento rápido Exacto/100/200/500/1000 MT, ligado ao cálculo de troco existente.
+- Spec/harness: `docs/POS_OPERACAO_RAPIDA_SPEC.md` e `docs/POS_OPERACAO_RAPIDA_HARNESS.md`.
+- Verificação: `mvn clean compile`, testes focados do POS e `mvn test` completos verdes.
+
+### Correcção — 2026-08-05 (IVA visível no POS e recibo térmico)
+
+- Corrigido o fallback visual de produtos sem taxa explícita: o carrinho usa a mesma taxa padrão do
+  checkout, em vez de os apresentar incorrectamente como isentos.
+- Recibo térmico passa a identificar a taxa em cada artigo (`IVA: 16%`, `IVA: 5%` ou `IVA: Isento`),
+  mantendo Subtotal, IVA agregado e Total no resumo.
+- `POSKeyboardShortcutTest`, `ReceiptPrintServiceTest` e `POSServiceTest` verdes; compilação limpa.
+- Layout térmico ajustado para 80 mm: duas colunas (Artigo 65% / Total 35%), com quantidade × preço
+  e IVA empilhados sob a descrição para evitar texto e valores apertados.
+
+### Progresso — 2026-08-06 (IVA: a taxa é do artigo, não do ecrã — bug fiscal fechado)
+
+- **Bug encontrado a auditar o IVA a pedido do utilizador** ("o IVA está incluso no POS e noutros
+  lugares?"): o **mesmo artigo** era tributado de forma diferente conforme a porta. Provado ao vivo:
+  Farinha de Trigo, cadastrada **IVA Isento** — fatura `80,00 + 12,80 = 92,80`, POS `80,00 + 0,00`.
+- **Causa:** `ComercialService` usava a taxa **enviada no pedido HTTP** e o `ComercialPanel` gravava
+  lá `TaxRates.STANDARD_VAT` fixo (16%). O POS, esse, já lia a taxa do artigo. Contaminava a fatura,
+  a encomenda, a fatura gerada da encomenda, a guia e a NC (que herdam a linha), a **declaração
+  mensal de IVA** e o **SAF-T** — ambos lêem `invoice.taxAmount`.
+- **Correcção:** `Product.effectiveTaxRate()` passa a ser a **fonte única** (mesmo padrão do
+  `effectiveUnitPrice`): taxa do cadastro, senão a padrão. Chamada por `POSService.checkout`,
+  `createInvoice` e `createOrder`; o POS deixou de repetir a regra. `ProductDTO.effectiveTaxRate()`
+  espelha-a só para a pré-visualização do rascunho nos painéis. O campo `taxRate` do pedido
+  mantém-se por compatibilidade mas é **ignorado** — era a porta que permitia a qualquer integração
+  faturar à taxa que quisesse.
+- **Verificação:** `ProductTest` (4, IV-04..07) + `ComercialServiceTest` (+3, IV-01..03) —
+  **confirmado que IV-01/02 falham contra o código antigo**. `mvn -o clean test` → **343 testes, 0
+  falhas**. Ao vivo: fatura de artigo isento com pedido a insistir em 16% → **IVA 0,00**, igual ao
+  POS; artigo a 5% → 7,00 sobre 140 (e não 22,40).
+- **Fora do âmbito, por decidir:** **Compras** continuam a aplicar 16% fixo a tudo, o que infla o
+  IVA dedutível em bens isentos. A taxa correcta numa compra é a da factura do fornecedor, não a do
+  artigo — é decisão de negócio (campo por linha, com a do artigo por omissão).
+- Spec/harness: [docs/IVA_TAXA_CANONICA_SPEC.md](../docs/IVA_TAXA_CANONICA_SPEC.md) +
+  [docs/IVA_TAXA_CANONICA_HARNESS.md](../docs/IVA_TAXA_CANONICA_HARNESS.md).
 
 ### Progresso — 2026-08-01 (notificações: marcar como lida — sino **e** página)
 

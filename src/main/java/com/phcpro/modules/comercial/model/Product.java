@@ -106,4 +106,16 @@ public class Product extends BaseEntity {
         }
         return unitPrice;
     }
+
+    /**
+     * Taxa de IVA efectiva do artigo: a do cadastro ({@link #taxRate}) e, na ausência dela, a
+     * taxa-padrão do sistema. <b>Fonte única</b> para todos os documentos de venda — a taxa é uma
+     * propriedade do artigo, não do ecrã que o vende, pelo que POS, fatura e encomenda têm de
+     * chegar sempre ao mesmo valor. Regra pura de domínio (sem IO).
+     */
+    public BigDecimal effectiveTaxRate() {
+        return taxRate != null && taxRate.getRate() != null
+                ? taxRate.getRate()
+                : com.phcpro.architecture.pricing.TaxRates.STANDARD_VAT;
+    }
 }
