@@ -14,10 +14,13 @@ Complementa [IVA_TAXA_CANONICA_SPEC.md](IVA_TAXA_CANONICA_SPEC.md). `IV-01..07` 
 | IV-05 | `ProductTest` | artigo isento | 0% — **não** cai no fallback |
 | IV-06 | `ProductTest` | artigo a 5% / 16% | a do cadastro |
 | IV-07 | `ProductTest` | `TaxRate` configurada sem valor | taxa-padrão, sem rebentar |
+| IV-11 | `PurchaseOrderServiceTest` | **compra** de artigo isento sem taxa indicada | IVA 0,00 — não gera dedutível fantasma |
+| IV-12 | `PurchaseOrderServiceTest` | compra com taxa da factura (5%) | 12,50 sobre 250 — a factura manda |
 | — | `POSServiceTest` | `checkout_produtoIsento_naoAplicaIva` (já existia) | continua verde após o refactor |
 
-**Verificado que IV-01 e IV-02 falham contra o código antigo** (repondo `lineReq.taxRate()`:
-`expected: <0> but was: <1>`), como manda o processo de regressão do projecto.
+**Verificado que os testes falham contra o código antigo**, como manda o processo de regressão do
+projecto: IV-01/IV-02 repondo `lineReq.taxRate()` na venda e IV-11/IV-12 repondo a constante de 16%
+na compra — todos com `expected: <0> but was: <1>`.
 
 ## Ao vivo (backend de pé, dados demo)
 
@@ -36,6 +39,9 @@ Complementa [IVA_TAXA_CANONICA_SPEC.md](IVA_TAXA_CANONICA_SPEC.md). `IV-01..07` 
 | IV-60 | Faturação → juntar artigo isento ao rascunho | "Total Rascunho" sem IVA; bate certo com a fatura emitida |
 | IV-61 | Faturação → juntar artigo a 16% | rascunho com IVA a 16% |
 | IV-62 | Encomenda → mesmos dois casos | idem |
+| IV-63 | Compras → linha com **IVA da factura** vazio | coluna IVA mostra a taxa do artigo com "(artigo)" |
+| IV-64 | Compras → escrever `16` no campo | coluna IVA mostra "16%", sem "(artigo)" |
+| IV-65 | Compras → escrever `abc` ou `120` | aviso claro; a linha não entra |
 
 ## Definition of done
 

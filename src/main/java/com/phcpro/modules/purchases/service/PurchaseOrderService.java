@@ -2,7 +2,6 @@ package com.phcpro.modules.purchases.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.pricing.LineCalculator;
-import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.modules.audit.service.AuditLogService;
@@ -107,7 +106,10 @@ public class PurchaseOrderService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
-            BigDecimal taxRate = TaxRates.STANDARD_VAT;
+            // Mesma regra da compra: taxa acordada com o fornecedor; sem ela, a do artigo.
+            BigDecimal taxRate = lineReq.taxRate() != null
+                    ? lineReq.taxRate()
+                    : product.effectiveTaxRate();
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
                     lineReq.unitPrice(), lineReq.quantity(), BigDecimal.ZERO, taxRate);
 

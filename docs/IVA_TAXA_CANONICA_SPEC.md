@@ -38,12 +38,22 @@ crédito herda a linha da fatura e propaga o erro.
 cliente. **O valor passou a ser ignorado**: o servidor resolve sempre pelo artigo. Era precisamente
 a porta que permitia a qualquer integração faturar à taxa que lhe apetecesse.
 
-## 4. Fora deste âmbito (decisão pendente do utilizador)
+## 4. Compras: manda a factura do fornecedor
 
-**Compras** (`PurchaseService`, `PurchaseOrderService`) continuam a aplicar 16% fixo a tudo,
-ignorando o cadastro — o que infla o **IVA dedutível** em bens isentos. Não foi alterado porque a
-taxa correcta numa compra é a da **factura do fornecedor**, não a do artigo: é decisão de negócio
-(campo por linha na entrada da compra, com a taxa do artigo por omissão).
+Numa **venda** a taxa é do artigo. Numa **compra** não: quem manda é o documento que o fornecedor
+emitiu — o mesmo artigo pode chegar com taxas diferentes de fornecedores diferentes, e o que se
+deduz é o que lá está escrito. Aplicava-se 16% cego a tudo, o que inflava o **IVA dedutível** em
+bens isentos.
+
+Regra (`PurchaseService`, `PurchaseOrderService`):
+
+1. Taxa indicada na linha (campo **"IVA da factura (%)"** no `ComprasPanel`) → usa-se essa.
+2. Campo vazio → `Product.effectiveTaxRate()`, a taxa do artigo.
+3. Nunca uma constante cega.
+
+O campo é opcional em `CreatePurchaseLineRequest` e `CreatePurchaseOrderLineRequest`, ambos com
+construtor retrocompatível — nenhuma chamada existente quebra. A UI aceita a **percentagem**
+(`16`, `5,5`) e converte para fracção em `ComprasPanel.parsePercentageOrNull`.
 
 ## 5. Ficheiros
 
@@ -54,3 +64,6 @@ taxa correcta numa compra é a da **factura do fornecedor**, não a do artigo: �
 | `POSService` | deixa de repetir a regra; delega |
 | `ProductDTO.effectiveTaxRate()` | espelho para a pré-visualização nos painéis |
 | `ComercialPanel` | deixa de gravar 16% fixo nas linhas de fatura e encomenda |
+| `PurchaseService`, `PurchaseOrderService` | taxa da factura do fornecedor; sem ela, a do artigo |
+| `CreatePurchase(Order)LineRequest` | campo `taxRate` opcional, com construtor retrocompatível |
+| `ComprasPanel` | campo "IVA da factura (%)" + coluna IVA no rascunho |

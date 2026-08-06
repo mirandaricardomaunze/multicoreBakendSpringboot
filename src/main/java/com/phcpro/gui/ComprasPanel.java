@@ -84,6 +84,8 @@ public class ComprasPanel extends JPanel {
     private JTextField batchField;
     private JTextField expirationField;
     private JTextField serialField;
+    /** IVA da linha como vem na factura do fornecedor; vazio ⇒ taxa do artigo (resolvida no backend). */
+    private JTextField purchaseVatField;
     
     private DefaultTableModel draftLinesModel;
     private JTable draftLinesTable;
@@ -255,18 +257,32 @@ public class ComprasPanel extends JPanel {
         UIHelper.styleTextField(serialField);
         formCard.add(serialField, gbc);
 
-        // Row 3b: Validade do Lote (Full Width)
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2;
+        // Row 3b: Validade do Lote + IVA da factura do fornecedor (lado a lado)
+        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 1;
         gbc.insets = new Insets(8, 8, 2, 8);
         JLabel expLbl = new JLabel("Validade do Lote (yyyy-MM-dd):");
         expLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(expLbl, gbc);
 
-        gbc.gridy = 9;
+        gbc.gridx = 1;
+        JLabel vatLbl = new JLabel("IVA da factura (%):");
+        vatLbl.setForeground(UIHelper.TEXT_MUTED);
+        formCard.add(vatLbl, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 9;
         gbc.insets = new Insets(2, 8, 12, 8);
         expirationField = new JTextField();
         UIHelper.styleTextField(expirationField);
         formCard.add(expirationField, gbc);
+
+        // Numa compra quem manda é a factura do fornecedor; vazio ⇒ taxa do artigo.
+        gbc.gridx = 1;
+        purchaseVatField = new JTextField();
+        UIHelper.styleTextField(purchaseVatField);
+        purchaseVatField.setToolTipText("Como vem na factura do fornecedor (ex.: 16). Vazio = taxa do artigo.");
+        formCard.add(purchaseVatField, gbc);
+
+        gbc.gridwidth = 2; // repor para as linhas seguintes
 
         // Row 4: line action
         gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 2; gbc.weightx = 1.0;
@@ -279,7 +295,7 @@ public class ComprasPanel extends JPanel {
 
         // Row 5: Draft Table (Full Width)
         gbc.gridy = 11; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
-        String[] cols = {"Produto", "Qtd", "Preço Custo", "Lote/Série", "Subtotal"};
+        String[] cols = {"Produto", "Qtd", "Preço Custo", "Lote/Série", "Subtotal", "IVA"};
         draftLinesModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -1207,13 +1223,25 @@ public class ComprasPanel extends JPanel {
             return;
         }
 
+        // IVA da factura do fornecedor (percentagem). Vazio ⇒ null ⇒ o backend usa a taxa do artigo.
+        BigDecimal invoiceTaxRate;
+        try {
+            invoiceTaxRate = parsePercentageOrNull(purchaseVatField.getText());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this,
+                    "IVA da factura inválido. Indique a percentagem (ex.: 16) ou deixe vazio para usar a taxa do artigo.",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         CreatePurchaseLineRequest line = new CreatePurchaseLineRequest(
                 product.id(),
                 qty,
                 price,
                 batch,
                 expirationDate,
-                serial
+                serial,
+                invoiceTaxRate
         );
         draftLines.add(line);
 
@@ -1225,12 +1253,14 @@ public class ComprasPanel extends JPanel {
         lotSer += "V: " + expirationDate + " ";
         if (serial != null) lotSer += "S: " + serial;
 
+        BigDecimal shownRate = invoiceTaxRate != null ? invoiceTaxRate : product.effectiveTaxRate();
         draftLinesModel.addRow(new Object[]{
                 product.name(),
                 qty,
                 price + " MT",
                 lotSer.trim(),
-                subtotal + " MT"
+                subtotal + " MT",
+                formatRate(shownRate) + (invoiceTaxRate == null ? " (artigo)" : "")
         });
 
         totalLabel.setText(String.format("Total Compra: %,.2f MT (excl. IVA)", draftTotal));
@@ -1240,7 +1270,29 @@ public class ComprasPanel extends JPanel {
         batchField.setText("");
         expirationField.setText("");
         serialField.setText("");
+        purchaseVatField.setText("");
         updateDefaultPrice();
+    }
+
+    /**
+     * Percentagem escrita pelo operador (ex.: "16", "5,5") convertida na fracção que o backend usa
+     * (0.16, 0.055). Vazio devolve {@code null} — o backend cai então na taxa do artigo. Pura e
+     * testável (cenários IV-08..IV-10).
+     */
+    static BigDecimal parsePercentageOrNull(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return null;
+        BigDecimal percent = new BigDecimal(raw.trim().replace(',', '.'));
+        if (percent.signum() < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new NumberFormatException("Percentagem de IVA fora do intervalo 0–100.");
+        }
+        return percent.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+    }
+
+    /** Fracção (0.16) apresentada como percentagem legível ("16%"). */
+    static String formatRate(BigDecimal rate) {
+        if (rate == null) return "—";
+        return rate.multiply(BigDecimal.valueOf(100))
+                .stripTrailingZeros().toPlainString() + "%";
     }
 
     /** Validação + registo da compra. Lança RuntimeException em erro (mantém o modal aberto). */

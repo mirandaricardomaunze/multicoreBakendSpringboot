@@ -49,9 +49,13 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
   **confirmado que IV-01/02 falham contra o código antigo**. `mvn -o clean test` → **343 testes, 0
   falhas**. Ao vivo: fatura de artigo isento com pedido a insistir em 16% → **IVA 0,00**, igual ao
   POS; artigo a 5% → 7,00 sobre 140 (e não 22,40).
-- **Fora do âmbito, por decidir:** **Compras** continuam a aplicar 16% fixo a tudo, o que infla o
-  IVA dedutível em bens isentos. A taxa correcta numa compra é a da factura do fornecedor, não a do
-  artigo — é decisão de negócio (campo por linha, com a do artigo por omissão).
+- **Compras (fechado a seguir, 2026-08-06):** numa compra manda a **factura do fornecedor**, não o
+  cadastro — o mesmo artigo chega com taxas diferentes de fornecedores diferentes. `PurchaseService`
+  e `PurchaseOrderService` passaram a usar a taxa indicada na linha e, sem ela, `effectiveTaxRate()`
+  do artigo; nunca a constante. Campo **"IVA da factura (%)"** no `ComprasPanel` (aceita `16`/`5,5`,
+  vazio = taxa do artigo) + coluna IVA no rascunho. DTOs com campo opcional e construtor
+  retrocompatível. `PurchaseOrderServiceTest` +2 (IV-11/12), **verificados a falhar contra os 16%
+  cegos**. `mvn -o clean test` → **345 testes, 0 falhas**.
 - Spec/harness: [docs/IVA_TAXA_CANONICA_SPEC.md](../docs/IVA_TAXA_CANONICA_SPEC.md) +
   [docs/IVA_TAXA_CANONICA_HARNESS.md](../docs/IVA_TAXA_CANONICA_HARNESS.md).
 
