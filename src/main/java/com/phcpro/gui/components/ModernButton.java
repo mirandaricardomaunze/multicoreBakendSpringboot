@@ -60,6 +60,8 @@ public class ModernButton extends JButton {
         this.hoverColor = hover;
         this.clickColor = baseColor.darker();
         setBackground(normalColor);
+        this.textColor = UIHelper.readableTextOn(baseColor);
+        setForeground(this.textColor);
     }
 
     /** Redefine as cores do botão em runtime (ex.: alternar estado activo/inactivo num segmented control). */
@@ -69,6 +71,10 @@ public class ModernButton extends JButton {
         this.clickColor = base.darker();
         this.isGradient = false;
         setBackground(base);
+        // O texto acompanha o fundo: um botão que passa a inactivo ganha fundo claro e
+        // precisa de texto escuro, senão fica branco sobre branco no tema claro.
+        this.textColor = UIHelper.readableTextOn(base);
+        setForeground(this.textColor);
         repaint();
     }
 

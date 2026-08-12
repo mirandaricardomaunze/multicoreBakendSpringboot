@@ -10,6 +10,7 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -47,6 +48,25 @@ public class UIHelper {
     public static final Color REJECTED_RED = new Color(239, 68, 68);    // Red-500 (#EF4444)
     public static final Color REJECTED_RED_HOVER = new Color(220, 38, 38); // Red-600 (#DC2626)
     public static final Color PENDING_YELLOW = new Color(245, 158, 11);  // Amber-500 (#F59E0B)
+    public static final Color KPI_INFO_SOFT = new Color(224, 242, 254);
+    public static final Color KPI_PURPLE_SOFT = new Color(243, 232, 255);
+    public static final Color KPI_WARNING_SOFT = new Color(254, 243, 199);
+    public static final Color KPI_NEUTRAL_SOFT = new Color(209, 213, 219);
+    public static final Color KPI_SUCCESS_SOFT = new Color(204, 251, 241);
+    public static final Color KPI_DANGER_SOFT = new Color(254, 226, 226);
+    public static final Color KPI_ORANGE_SOFT = new Color(255, 237, 213);
+    public static final Color KPI_INFO_DARK = new Color(9, 79, 172);
+    public static final Color KPI_INFO_END = new Color(13, 148, 136);
+    public static final Color KPI_PURPLE_DARK = new Color(109, 40, 217);
+    public static final Color KPI_PURPLE_END = new Color(147, 51, 234);
+    public static final Color KPI_WARNING_DARK = new Color(180, 83, 9);
+    public static final Color KPI_WARNING_END = new Color(217, 119, 6);
+    public static final Color KPI_NEUTRAL_DARK = new Color(15, 23, 42);
+    public static final Color KPI_NEUTRAL_END = new Color(30, 41, 59);
+    public static final Color KPI_DANGER_DARK = new Color(220, 38, 38);
+    public static final Color KPI_DANGER_END = new Color(185, 28, 28);
+    public static final Color KPI_ORANGE_DARK = new Color(194, 65, 12);
+    public static final Color KPI_ORANGE_END = new Color(234, 88, 12);
     private static final Color SECONDARY = new Color(75, 85, 99);       // Gray-600 (#4B5563)
     private static final Color SECONDARY_HOVER = new Color(107, 114, 128); // Gray-500 (#6B7280)
 
@@ -244,6 +264,42 @@ public class UIHelper {
         }
     }
 
+    /**
+     * Cor de texto legível sobre {@code background} — branco ou cinzento-escuro, o que
+     * tiver melhor razão de contraste (WCAG 2.1).
+     *
+     * <p>Existe por causa dos botões que trocam de fundo em runtime (segmented controls como
+     * <i>Venda POS | Histórico</i>): o estado inactivo usa {@link #BG_CARD}, que no tema
+     * <b>claro</b> é branco puro. Com o texto fixo a branco, o botão ficava invisível até o
+     * rato lhe passar por cima. No tema escuro o problema não aparece (card é cinzento).
+     */
+    public static Color readableTextOn(Color background) {
+        if (background == null) return Color.WHITE;
+        // Limiar, não "máximo contraste": sobre o azul das acções o preto até contrastaria
+        // mais, mas o sistema quer branco. Só fundos claros é que trocam para texto escuro.
+        return relativeLuminance(background) > 0.5 ? new Color(17, 24, 39) : Color.WHITE;
+    }
+
+    /** Razão de contraste WCAG entre duas cores (1:1 a 21:1). */
+    static double contrastRatio(Color a, Color b) {
+        double la = relativeLuminance(a);
+        double lb = relativeLuminance(b);
+        double hi = Math.max(la, lb);
+        double lo = Math.min(la, lb);
+        return (hi + 0.05) / (lo + 0.05);
+    }
+
+    private static double relativeLuminance(Color c) {
+        return 0.2126 * toLinear(c.getRed())
+             + 0.7152 * toLinear(c.getGreen())
+             + 0.0722 * toLinear(c.getBlue());
+    }
+
+    private static double toLinear(int channel) {
+        double s = channel / 255.0;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    }
+
     private static void restyleTree(Component c, Color[] oldP, Color[] newP) {
         Color bg = mapColor(c.getBackground(), oldP, newP);
         if (bg != null) c.setBackground(bg);
@@ -285,6 +341,20 @@ public class UIHelper {
 
     public static ModernButton createSecondaryButton(String text) {
         return new ModernButton(text, SECONDARY, SECONDARY_HOVER);
+    }
+
+    /** Botão apenas com ícone, sempre com tooltip e nome acessível. */
+    public static ModernButton createIconButton(String accessibleName, String iconCode) {
+        if (accessibleName == null || accessibleName.isBlank()) {
+            throw new IllegalArgumentException("O botão com ícone deve ter um nome acessível.");
+        }
+        ModernButton button = createSecondaryButton("");
+        button.setIcon(icon(iconCode, 14));
+        button.setToolTipText(accessibleName);
+        button.getAccessibleContext().setAccessibleName(accessibleName);
+        button.setPreferredSize(new Dimension(FORM_CONTROL_HEIGHT, FORM_CONTROL_HEIGHT));
+        button.setMinimumSize(new Dimension(FORM_CONTROL_HEIGHT, FORM_CONTROL_HEIGHT));
+        return button;
     }
 
     public static ModernButton createAddLineButton() {
@@ -992,28 +1062,129 @@ public class UIHelper {
      * resultado no EDT quando chega, com cursor de espera na janela. {@code fetch} corre em segundo
      * plano; {@code onDone} corre no EDT. Ver UI_TABELAS_UX_SPEC §4.
      */
-    public static <T> void loadAsync(JComponent scope, java.util.concurrent.Callable<T> fetch,
-                                     java.util.function.Consumer<T> onDone) {
+    public static <T> SwingWorker<T, Void> loadAsync(JComponent scope,
+                                                      java.util.concurrent.Callable<T> fetch,
+                                                      java.util.function.Consumer<T> onDone) {
+        return loadAsync(scope, fetch, onDone, error -> {
+            if (scope != null) {
+                String message = error == null || error.getMessage() == null
+                        ? "Não foi possível carregar os dados." : error.getMessage();
+                scope.putClientProperty("loadError", message);
+                scope.getAccessibleContext().setAccessibleDescription(message);
+            }
+        });
+    }
+
+    /**
+     * Carregamentos em curso por janela. O cursor de espera é <b>contado</b>, não guardado:
+     * guardar o cursor anterior falha quando dois carregamentos se sobrepõem (um painel que
+     * carrega várias tabelas), porque o segundo guarda o cursor de espera do primeiro e
+     * "repõe-no" no fim — a janela ficava com o cursor de loading preso para sempre.
+     *
+     * <p>Só tocado no EDT (o {@code loadAsync} arranca no EDT e o {@code done()} corre no EDT),
+     * por isso não precisa de sincronização. {@link java.util.WeakHashMap} para não segurar
+     * janelas fechadas.
+     */
+    private static final java.util.Map<java.awt.Window, Integer> ACTIVE_LOADS = new java.util.WeakHashMap<>();
+
+    /** Marca mais um carregamento em curso; põe o cursor de espera no primeiro. */
+    static void beginLoading(java.awt.Window window) {
+        if (window == null) return;
+        int active = ACTIVE_LOADS.merge(window, 1, Integer::sum);
+        if (active == 1) {
+            window.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR));
+        }
+    }
+
+    /** Fecha um carregamento; devolve o cursor normal só quando o último termina. */
+    static void endLoading(java.awt.Window window) {
+        if (window == null) return;
+        Integer active = ACTIVE_LOADS.get(window);
+        if (active == null) return;
+        if (active <= 1) {
+            ACTIVE_LOADS.remove(window);
+            window.setCursor(java.awt.Cursor.getDefaultCursor());
+        } else {
+            ACTIVE_LOADS.put(window, active - 1);
+        }
+    }
+
+    /** Quantos carregamentos estão em curso nesta janela (para testes). */
+    static int activeLoads(java.awt.Window window) {
+        return window == null ? 0 : ACTIVE_LOADS.getOrDefault(window, 0);
+    }
+
+    /**
+     * Variante completa de loading assíncrono: propaga contexto, entrega erro no EDT e ignora
+     * resposta de um tenant que deixou de estar activo enquanto o pedido estava em curso.
+     */
+    public static <T> SwingWorker<T, Void> loadAsync(JComponent scope,
+                                                      java.util.concurrent.Callable<T> fetch,
+                                                      java.util.function.Consumer<T> onDone,
+                                                      java.util.function.Consumer<Throwable> onError) {
         java.awt.Window window = scope == null ? null : SwingUtilities.getWindowAncestor(scope);
-        java.awt.Cursor previous = window == null ? null : window.getCursor();
-        if (window != null) window.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR));
-        new javax.swing.SwingWorker<T, Void>() {
+        beginLoading(window);
+        if (scope != null) {
+            scope.putClientProperty("loading", Boolean.TRUE);
+            scope.putClientProperty("loadError", null);
+        }
+        com.phcpro.architecture.security.CurrentUserContext.UserSession capturedUser =
+                com.phcpro.architecture.security.CurrentUserContext.findCurrentUser();
+        Long capturedCompany = com.phcpro.architecture.security.CurrentUserContext.findCurrentCompanyId();
+
+        SwingWorker<T, Void> worker = new javax.swing.SwingWorker<>() {
             @Override protected T doInBackground() throws Exception {
-                return fetch.call();
+                if (capturedUser != null) {
+                    com.phcpro.architecture.security.CurrentUserContext.setCurrentUser(
+                            capturedUser.username(), capturedUser.role());
+                }
+                if (capturedCompany != null) {
+                    com.phcpro.architecture.security.CurrentUserContext.setCurrentCompanyId(capturedCompany);
+                }
+                try {
+                    return fetch.call();
+                } finally {
+                    com.phcpro.architecture.security.CurrentUserContext.clear();
+                }
             }
 
             @Override protected void done() {
                 try {
-                    onDone.accept(get());
-                } catch (Exception ignore) {
-                    // Falha de carregamento não deve rebentar a UI; o painel mostra o seu próprio erro.
-                } finally {
-                    if (window != null) {
-                        window.setCursor(previous != null ? previous : java.awt.Cursor.getDefaultCursor());
+                    T result = get();
+                    Long activeCompany = com.phcpro.architecture.security.CurrentUserContext.findCurrentCompanyId();
+                    if (java.util.Objects.equals(capturedCompany, activeCompany) && onDone != null) {
+                        onDone.accept(result);
                     }
+                } catch (Exception ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    if (onError != null) onError.accept(cause);
+                } finally {
+                    if (scope != null) scope.putClientProperty("loading", Boolean.FALSE);
+                    endLoading(window);
                 }
             }
-        }.execute();
+        };
+        worker.execute();
+        return worker;
+    }
+
+    /** Submissão remota protegida contra duplo clique; reabilita o botão em sucesso ou erro. */
+    public static <T> SwingWorker<T, Void> submitAsync(AbstractButton button,
+                                                        java.util.concurrent.Callable<T> task,
+                                                        java.util.function.Consumer<T> onDone,
+                                                        java.util.function.Consumer<Throwable> onError) {
+        if (Boolean.TRUE.equals(button.getClientProperty("submitting"))) return null;
+        button.putClientProperty("submitting", Boolean.TRUE);
+        button.setEnabled(false);
+        return loadAsync(button, task, result -> {
+            button.putClientProperty("submitting", Boolean.FALSE);
+            button.setEnabled(true);
+            if (onDone != null) onDone.accept(result);
+        }, error -> {
+            button.putClientProperty("submitting", Boolean.FALSE);
+            button.setEnabled(true);
+            if (onError != null) onError.accept(error);
+        });
     }
 
     /**
@@ -1173,6 +1344,29 @@ public class UIHelper {
         applyFormControlHeight(field);
     }
 
+    /** Marca um controlo inválido sem abrir modal; a mensagem fica disponível à acessibilidade. */
+    public static void markFieldInvalid(JComponent component, String message) {
+        component.putClientProperty("validationError", message);
+        component.setBorder(fieldBorder(REJECTED_RED, 2));
+        component.getAccessibleContext().setAccessibleDescription(message);
+    }
+
+    /** Remove o estado inválido e repõe a borda canónica do controlo. */
+    public static void clearFieldInvalid(JComponent component) {
+        component.putClientProperty("validationError", null);
+        component.setBorder(fieldBorder(BORDER, 1));
+        component.getAccessibleContext().setAccessibleDescription(null);
+    }
+
+    /** Aplica o estado visual e semântico de campo somente leitura. */
+    public static void setReadOnly(JTextComponent component, boolean readOnly) {
+        component.setEditable(!readOnly);
+        component.putClientProperty("readOnly", readOnly);
+        component.setBackground(readOnly ? BG_CARD : FIELD_BG);
+        component.setForeground(readOnly ? TEXT_MUTED : TEXT_LIGHT);
+        component.setFocusable(!readOnly);
+    }
+
     /** Borda arredondada de campo com a cor de linha indicada + padding interno uniforme. */
     private static Border fieldBorder(Color line, int thickness) {
         return BorderFactory.createCompoundBorder(
@@ -1292,6 +1486,7 @@ public class UIHelper {
     }
 
     public static void styleComboBox(JComboBox<?> combo) {
+        ListCellRenderer<?> originalRenderer = combo.getRenderer();
         combo.setBackground(FIELD_BG);
         combo.setForeground(TEXT_LIGHT);
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
@@ -1300,16 +1495,46 @@ public class UIHelper {
         flattenComboArrow(combo);
         // O fundo da lista do popup segue o tema (SELECTION_BG/FIELD_BG), senão em tema claro
         // a opção destacada ficava com fundo escuro e texto escuro = ilegível.
-        combo.setRenderer(new DefaultListCellRenderer() {
+        combo.setRenderer(new ListCellRenderer<Object>() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? SELECTION_BG : FIELD_BG);
-                setForeground(TEXT_LIGHT);
-                setBorder(new EmptyBorder(5, 8, 5, 8));
-                return this;
+                @SuppressWarnings("unchecked")
+                ListCellRenderer<Object> delegate = (ListCellRenderer<Object>) originalRenderer;
+                Component rendered = delegate == null
+                        ? new DefaultListCellRenderer().getListCellRendererComponent(
+                                (JList<Object>) list, value, index, isSelected, cellHasFocus)
+                        : delegate.getListCellRendererComponent(
+                                (JList<Object>) list, value, index, isSelected, cellHasFocus);
+                rendered.setBackground(isSelected ? SELECTION_BG : FIELD_BG);
+                rendered.setForeground(TEXT_LIGHT);
+                if (rendered instanceof JComponent component) {
+                    component.setBorder(new EmptyBorder(5, 8, 5, 8));
+                    component.setOpaque(true);
+                }
+                return rendered;
             }
         });
+    }
+
+    /** Tradução central de estados frequentes; valores desconhecidos ficam legíveis. */
+    public static String humanStatus(String status) {
+        if (status == null || status.isBlank()) return "—";
+        return switch (status.trim().toUpperCase()) {
+            case "ACTIVE" -> "Activo";
+            case "INACTIVE" -> "Inactivo";
+            case "ACTIVA" -> "Activa";
+            case "INACTIVA" -> "Inactiva";
+            case "OPEN" -> "Aberto";
+            case "CLOSED" -> "Fechado";
+            case "PENDING", "PENDING_APPROVAL" -> "Pendente";
+            case "APPROVED" -> "Aprovado";
+            case "REJECTED" -> "Rejeitado";
+            case "CANCELLED" -> "Anulado";
+            case "PAID" -> "Paga";
+            case "PARTIALLY_PAID" -> "Parcialmente paga";
+            case "OVERDUE" -> "Em atraso";
+            default -> status.trim().replace('_', ' ');
+        };
     }
 
     /** Achata o botão de seta do combo (sem bevel 3D do Metal) para o combo parecer uma peça só. */
@@ -1377,16 +1602,21 @@ public class UIHelper {
 
         // O CurrentUserContext é ThreadLocal — captura no EDT e repõe na thread de fundo, senão
         // os Services veem empresa/utilizador vazios ("o documento pertence a outra empresa").
+        // Usa as variantes find* (nullable): o superadmin não tem empresa e a captura não pode lançar.
         com.phcpro.architecture.security.CurrentUserContext.UserSession capturedUser =
-                com.phcpro.architecture.security.CurrentUserContext.getCurrentUser();
+                com.phcpro.architecture.security.CurrentUserContext.findCurrentUser();
         Long capturedCompany =
-                com.phcpro.architecture.security.CurrentUserContext.getCurrentCompanyId();
+                com.phcpro.architecture.security.CurrentUserContext.findCurrentCompanyId();
 
         SwingWorker<T, Void> worker = new SwingWorker<>() {
             @Override protected T doInBackground() throws Exception {
-                com.phcpro.architecture.security.CurrentUserContext.setCurrentUser(
-                        capturedUser.username(), capturedUser.role());
-                com.phcpro.architecture.security.CurrentUserContext.setCurrentCompanyId(capturedCompany);
+                if (capturedUser != null) {
+                    com.phcpro.architecture.security.CurrentUserContext.setCurrentUser(
+                            capturedUser.username(), capturedUser.role());
+                }
+                if (capturedCompany != null) {
+                    com.phcpro.architecture.security.CurrentUserContext.setCurrentCompanyId(capturedCompany);
+                }
                 try {
                     return task.call();
                 } finally {

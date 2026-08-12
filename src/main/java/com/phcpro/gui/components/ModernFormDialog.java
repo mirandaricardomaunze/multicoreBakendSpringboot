@@ -28,6 +28,7 @@ public class ModernFormDialog {
     private final ModernButton cancelBtn;
     private final JPanel buttonRow;
     private Runnable onSave;
+    private java.util.function.Supplier<java.util.concurrent.Callable<?>> asyncSaveFactory;
     private boolean saved = false;
     private static final int MIN_WIDTH = UIHelper.DIALOG_FORM_MIN_WIDTH + 70;
     private static final int MIN_HEIGHT = 320;
@@ -112,6 +113,18 @@ public class ModernFormDialog {
 
     public ModernFormDialog setOnSave(Runnable onSave) {
         this.onSave = onSave;
+        this.asyncSaveFactory = null;
+        return this;
+    }
+
+    /**
+     * Grava fora do EDT. A fábrica corre no EDT para validar/capturar os campos; a tarefa devolvida
+     * faz apenas a chamada remota. Em erro o modal permanece aberto e os botões são reactivados.
+     */
+    public ModernFormDialog setOnSaveAsync(
+            java.util.function.Supplier<java.util.concurrent.Callable<?>> asyncSaveFactory) {
+        this.asyncSaveFactory = asyncSaveFactory;
+        this.onSave = null;
         return this;
     }
 
@@ -172,6 +185,25 @@ public class ModernFormDialog {
     }
 
     private void attemptSave() {
+        if (asyncSaveFactory != null) {
+            try {
+                java.util.concurrent.Callable<?> task = asyncSaveFactory.get();
+                cancelBtn.setEnabled(false);
+                UIHelper.submitAsync(saveBtn, task, ignored -> {
+                    cancelBtn.setEnabled(true);
+                    saved = true;
+                    dialog.dispose();
+                }, error -> {
+                    cancelBtn.setEnabled(true);
+                    JOptionPane.showMessageDialog(dialog, error.getMessage(),
+                            "Erro", JOptionPane.ERROR_MESSAGE);
+                });
+            } catch (RuntimeException ex) {
+                JOptionPane.showMessageDialog(dialog, ex.getMessage(),
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+            return;
+        }
         if (onSave == null) {
             saved = true;
             dialog.dispose();
