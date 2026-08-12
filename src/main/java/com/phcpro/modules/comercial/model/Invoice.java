@@ -76,4 +76,36 @@ public class Invoice extends BaseEntity {
         lines.add(line);
         line.setInvoice(this);
     }
+
+    /**
+     * Saldo por liquidar (total − recebido), nunca negativo.
+     * É este o valor que o cliente ainda deve — não o total da fatura.
+     */
+    public BigDecimal outstandingAmount() {
+        BigDecimal remaining = safeTotal().subtract(safePaid());
+        return remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining : BigDecimal.ZERO;
+    }
+
+    /**
+     * <b>Fonte única</b> do estado de pagamento de uma fatura já emitida — a mesma regra no
+     * POS, na emissão de recibo e na tesouraria (mesmo padrão de
+     * {@code Product.effectiveTaxRate()}).
+     *
+     * <p>Chamar só depois de actualizar {@code amountPaid}, e só sobre faturas emitidas:
+     * um documento anulado, rejeitado ou à espera de aprovação mantém o seu estado.
+     */
+    public InvoiceStatus deriveStatusFromPayments() {
+        BigDecimal paid = safePaid();
+        if (paid.compareTo(safeTotal()) >= 0)    return InvoiceStatus.PAID;
+        if (paid.compareTo(BigDecimal.ZERO) > 0) return InvoiceStatus.PARTIALLY_PAID;
+        return InvoiceStatus.APPROVED; // fiado — emitida e por receber
+    }
+
+    private BigDecimal safeTotal() {
+        return totalAmount == null ? BigDecimal.ZERO : totalAmount;
+    }
+
+    private BigDecimal safePaid() {
+        return amountPaid == null ? BigDecimal.ZERO : amountPaid;
+    }
 }

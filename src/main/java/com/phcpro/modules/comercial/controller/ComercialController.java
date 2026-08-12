@@ -173,14 +173,13 @@ public class ComercialController {
     // ─── Recibos ─────────────────────────────────────────────────────────────
     @GetMapping("/receipts")
     public ResponseEntity<List<ReceiptDTO>> getReceipts(@RequestParam Long companyId) {
-        return ResponseEntity.ok(comercialService.getReceiptsByCompany(companyId)
-                .stream().map(comercialService::toDTO).toList());
+        return ResponseEntity.ok(comercialService.getReceiptsByCompany(companyId));
     }
 
     @PostMapping("/receipts")
     public ResponseEntity<ReceiptDTO> createReceipt(@RequestBody @Valid CreateReceiptRequest request) {
-        return ResponseEntity.ok(comercialService.toDTO(comercialService.createReceipt(
-                request.invoiceId(), request.treasuryAccountId(), request.paymentMethod(), request.amountPaid())));
+        return ResponseEntity.ok(comercialService.createReceipt(
+                request.invoiceId(), request.treasuryAccountId(), request.paymentMethod(), request.amountPaid()));
     }
 
     @PostMapping("/receipts/{id}/cancel")

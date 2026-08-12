@@ -258,14 +258,29 @@ public class ComercialService {
         });
     }
 
+    /**
+     * Emite recibo de recebimento. Devolve o <b>DTO</b>, não a entidade: a conversão tem de
+     * acontecer dentro da transacção, senão o proxy lazy do cliente rebenta na fronteira HTTP
+     * ({@code open-in-view=false}) — o recibo ficava gravado e o utilizador via um erro.
+     */
     @Transactional
-    public Receipt createReceipt(Long invoiceId, Long treasuryAccountId, String paymentMethod, BigDecimal amountPaid) {
+    public ReceiptDTO createReceipt(Long invoiceId, Long treasuryAccountId, String paymentMethod, BigDecimal amountPaid) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
-        if (invoice.getStatus() != InvoiceStatus.APPROVED) {
-            throw new BusinessRuleException("Apenas faturas no estado APROVADA podem ter recibo. Estado atual: " + invoice.getStatus());
+        if (!invoice.getStatus().isCollectable()) {
+            throw new BusinessRuleException("Apenas faturas por cobrar podem ter recibo. Estado atual: " + invoice.getStatus());
+        }
+        if (amountPaid == null || amountPaid.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("O valor do recibo tem de ser positivo.");
+        }
+        // O recibo nunca pode exceder o que falta receber — senão entrava dinheiro a mais na
+        // tesouraria e a fatura ficava com um "pago" superior ao total.
+        BigDecimal outstanding = invoice.outstandingAmount();
+        if (amountPaid.compareTo(outstanding) > 0) {
+            throw new BusinessRuleException("Valor do recibo (" + amountPaid
+                    + ") excede o saldo em dívida (" + outstanding + ").");
         }
 
         TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(
@@ -287,14 +302,17 @@ public class ComercialService {
 
         receipt = receiptRepository.save(receipt);
 
-        invoice.setStatus(InvoiceStatus.PAID);
+        // Acumula o recebido e deriva o estado pela regra única: um recibo parcial deixa a
+        // fatura PARTIALLY_PAID (o saldo continua a aparecer nas contas correntes), não PAID.
+        invoice.setAmountPaid(invoice.getAmountPaid().add(amountPaid).setScale(2, RoundingMode.HALF_UP));
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoiceRepository.save(invoice);
 
         // Record financial cash inflow (DEBIT)
         String description = "Recebimento Fatura " + invoice.getInvoiceNumber() + " via " + paymentMethod + " (Recibo " + receiptNum + ")";
         financeService.registerTransaction(treasuryAccountId, "DEBIT", amountPaid, description);
 
-        return receipt;
+        return toDTO(receipt);
     }
 
     @Transactional
@@ -316,8 +334,13 @@ public class ComercialService {
         receipt.setCancellationReason(reason);
         receiptRepository.save(receipt);
 
+        // Devolve só o valor deste recibo. Com vários recibos na mesma fatura, anular um não
+        // pode apagar os outros — o estado volta a derivar do que continua pago.
         Invoice invoice = receipt.getInvoice();
-        invoice.setStatus(InvoiceStatus.APPROVED); // Revert invoice status to approved so it can be paid or cancelled
+        BigDecimal remaining = invoice.getAmountPaid().subtract(receipt.getAmountPaid());
+        invoice.setAmountPaid(remaining.compareTo(BigDecimal.ZERO) > 0
+                ? remaining.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoiceRepository.save(invoice);
 
         // Refund cash (CREDIT)
@@ -446,9 +469,10 @@ public class ComercialService {
     }
 
     @Transactional(readOnly = true)
-    public List<Receipt> getReceiptsByCompany(Long companyId) {
+    public List<ReceiptDTO> getReceiptsByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return receiptRepository.findByCompanyId(companyId);
+        // Converter aqui dentro, pela mesma razão de createReceipt.
+        return receiptRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
     /** Recibo → DTO (achata fatura/cliente) para a fronteira HTTP. */

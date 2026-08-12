@@ -14,6 +14,7 @@ import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.model.OrderLine;
 import com.phcpro.modules.comercial.model.Product;
+import com.phcpro.modules.comercial.model.Receipt;
 import com.phcpro.modules.comercial.repository.ClientRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.OrderLineRepository;
@@ -33,6 +34,7 @@ import com.phcpro.modules.numbering.service.DocumentSeries;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -78,6 +80,7 @@ class ComercialServiceTest {
     private static final Long CLIENT_ID = 5L;
     private static final Long WAREHOUSE_ID = 10L;
     private static final Long PRODUCT_ID = 100L;
+    private static final Long TREASURY_ID = 20L;
 
     @BeforeEach
     void setUp() {
@@ -352,6 +355,112 @@ class ComercialServiceTest {
     @Test
     void cancelInvoice_semMotivo_bloqueia() {
         assertThrows(BusinessRuleException.class, () -> service.cancelInvoice(1L, "  "));
+    }
+
+    // ─────────────── Recibo: pagamento parcial não pode liquidar a fatura ───────────────
+    // Regressão do bug de recebimentos: createReceipt marcava PAID por qualquer valor e nunca
+    // acumulava amountPaid, pelo que o saldo em dívida desaparecia das contas correntes. O POS
+    // já fazia certo (settleCredit) — a mesma regra em duas portas, como no bug do IVA.
+    // Ver docs/RECEBIMENTOS_SALDO_SPEC.md.
+
+    @Test // RP-01
+    void createReceipt_pagamentoParcial_ficaParcialmentePaga_eAcumulaOValor() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("100"));
+
+        assertEquals(InvoiceStatus.PARTIALLY_PAID, invoice.getStatus(),
+                "pagar 100 de 232 não pode dar a fatura por liquidada");
+        assertEquals(0, invoice.getAmountPaid().compareTo(new BigDecimal("100.00")),
+                "o valor recebido tem de ficar na fatura, não só no recibo");
+    }
+
+    @Test // RP-02
+    void createReceipt_segundoRecibo_liquidaOSaldo_eFicaPaga() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("100"));
+        // Antes do fix a fatura já estava PAID e este 2.º recibo era recusado — o cliente
+        // ficava sem forma de pagar o resto.
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("132"));
+
+        assertEquals(InvoiceStatus.PAID, invoice.getStatus());
+        assertEquals(0, invoice.getAmountPaid().compareTo(new BigDecimal("232.00")));
+    }
+
+    @Test // RP-03
+    void createReceipt_valorAcimaDoSaldoEmDivida_bloqueia() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("500")));
+        // Não pode entrar dinheiro a mais na tesouraria por causa de um recibo mal preenchido.
+        verify(financeService, never()).registerTransaction(any(), any(), any(), any());
+    }
+
+    @Test // RP-04
+    void createReceipt_valorNaoPositivo_bloqueia() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2"));
+        stubReceiptLookups(invoice);
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.createReceipt(1L, TREASURY_ID, "CASH", BigDecimal.ZERO));
+        verify(receiptRepository, never()).save(any());
+    }
+
+    @Test // RP-05
+    void createReceipt_pagamentoTotal_liquidaAFatura() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2"));
+        stubReceiptLookups(invoice);
+
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("232"));
+
+        assertEquals(InvoiceStatus.PAID, invoice.getStatus());
+        verify(financeService).registerTransaction(eq(TREASURY_ID), eq("DEBIT"),
+                eq(new BigDecimal("232")), any());
+    }
+
+    @Test // RP-06
+    void cancelReceipt_deReciboParcial_devolveOValor_eVoltaAoEstadoCerto() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+        // Dois recibos: 100 + 132 → fatura paga. O service devolve DTO, por isso apanha-se a
+        // entidade gravada para poder anulá-la.
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("100"));
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("132"));
+        ArgumentCaptor<Receipt> saved = ArgumentCaptor.forClass(Receipt.class);
+        verify(receiptRepository, times(2)).save(saved.capture());
+        Receipt primeiro = saved.getAllValues().get(0);
+        primeiro.setId(50L);
+        when(receiptRepository.findById(50L)).thenReturn(Optional.of(primeiro));
+
+        service.cancelReceipt(50L, "Cheque devolvido");
+
+        // Anular o 1.º recibo devolve 100 → sobram 132 pagos de 232.
+        assertEquals(0, invoice.getAmountPaid().compareTo(new BigDecimal("132.00")));
+        assertEquals(InvoiceStatus.PARTIALLY_PAID, invoice.getStatus(),
+                "ainda há 132 pagos — não pode voltar a APPROVED como se nada tivesse sido pago");
+    }
+
+    private void stubReceiptLookups(Invoice invoice) {
+        when(invoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(treasuryAccountRepository.findByIdAndCompanyId(TREASURY_ID, COMPANY_ID))
+                .thenReturn(Optional.of(treasuryAccount()));
+        when(documentNumberService.next(DocumentSeries.RECEIPT)).thenReturn("RC-2026/1");
+        when(receiptRepository.save(any(Receipt.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    private com.phcpro.modules.financeira.model.TreasuryAccount treasuryAccount() {
+        com.phcpro.modules.financeira.model.TreasuryAccount account =
+                new com.phcpro.modules.financeira.model.TreasuryAccount();
+        account.setId(TREASURY_ID);
+        account.setName("Caixa Geral");
+        account.setCompany(company);
+        return account;
     }
 
     // ────────────────────────── searchInvoices ──────────────────────────

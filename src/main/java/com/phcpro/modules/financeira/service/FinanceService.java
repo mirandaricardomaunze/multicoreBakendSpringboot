@@ -2,6 +2,7 @@ package com.phcpro.modules.financeira.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.modules.comercial.model.Invoice;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
@@ -85,19 +86,25 @@ public class FinanceService {
 
     @Transactional
     public void payInvoice(Long invoiceId, Long accountId) {
+        // Liquidar uma fatura é movimento de dinheiro: exige gerente, como anular recibo.
+        PermissionGuard.requireManagerOrAdmin("liquidar fatura");
+
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
-        if (invoice.getStatus() != InvoiceStatus.APPROVED) {
-            throw new BusinessRuleException("Apenas faturas no estado APROVADA podem ser pagas. Estado atual: " + invoice.getStatus());
+        if (!invoice.getStatus().isCollectable()) {
+            throw new BusinessRuleException("Apenas faturas por cobrar podem ser liquidadas. Estado atual: " + invoice.getStatus());
         }
 
-        // Settling sales invoice represents an inflow of money (DEBIT)
+        // Só entra o que falta receber — o total incluiria outra vez o que já foi pago
+        // por recibo ou no POS, contando esse valor duas vezes na tesouraria.
+        BigDecimal outstanding = invoice.outstandingAmount();
         String description = "Recebimento Fatura " + invoice.getInvoiceNumber() + " - " + invoice.getClient().getName();
-        registerTransaction(accountId, "DEBIT", invoice.getTotalAmount(), description);
+        registerTransaction(accountId, "DEBIT", outstanding, description);
 
-        invoice.setStatus(InvoiceStatus.PAID);
+        invoice.setAmountPaid(invoice.getTotalAmount());
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoiceRepository.save(invoice);
     }
 

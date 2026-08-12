@@ -403,7 +403,7 @@ public class POSService {
         }
 
         invoice.setAmountPaid(totalPaid);
-        invoice.setStatus(deriveStatus(totalPaid, totalAmount));
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoice = invoiceRepository.save(invoice);
 
         // Persist PaymentEntry rows + apply each to the right treasury/till
@@ -505,12 +505,6 @@ public class POSService {
         }
     }
 
-    private InvoiceStatus deriveStatus(BigDecimal paid, BigDecimal total) {
-        if (paid.compareTo(total) >= 0)      return InvoiceStatus.PAID;
-        if (paid.compareTo(BigDecimal.ZERO) > 0) return InvoiceStatus.PARTIALLY_PAID;
-        return InvoiceStatus.APPROVED;  // credit-only — awaiting payment
-    }
-
     private void applyPayment(Invoice invoice, PosPaymentRequest req, TillSession session, Client client) {
         PaymentMethod method;
         try {
@@ -599,7 +593,7 @@ public class POSService {
         BigDecimal newPaid = (invoice.getAmountPaid() == null ? BigDecimal.ZERO : invoice.getAmountPaid())
                 .add(req.amount()).setScale(2, RoundingMode.HALF_UP);
         invoice.setAmountPaid(newPaid);
-        invoice.setStatus(deriveStatus(newPaid, invoice.getTotalAmount()));
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         return invoiceRepository.save(invoice);
     }
 

@@ -81,7 +81,7 @@ public class ReportService {
         List<Invoice> sales = invoices.stream()
                 .filter(inv -> inv.getCreatedAt() != null)
                 .filter(inv -> !inv.getCreatedAt().isBefore(from) && inv.getCreatedAt().isBefore(to))
-                .filter(inv -> inv.getStatus() != InvoiceStatus.CANCELLED && inv.getStatus() != InvoiceStatus.REJECTED)
+                .filter(inv -> inv.getStatus().isRealisedSale())
                 .toList();
 
         return new DailyStoreReportDTO(
@@ -96,9 +96,14 @@ public class ReportService {
         );
     }
 
+    /**
+     * Vendas do dia — a mesma definição do relatório diário ({@code isRealisedSale}).
+     * Contava só {@code PAID}, pelo que uma venda a fiado não aparecia no dashboard mas
+     * aparecia no relatório diário: dois números para a mesma pergunta.
+     */
     private List<Invoice> filterSalesToday(List<Invoice> invoices, LocalDate today) {
         return invoices.stream()
-                .filter(inv -> inv.getStatus() == InvoiceStatus.PAID)
+                .filter(inv -> inv.getStatus().isRealisedSale())
                 .filter(inv -> inv.getCreatedAt() != null && inv.getCreatedAt().toLocalDate().equals(today))
                 .toList();
     }
@@ -167,22 +172,22 @@ public class ReportService {
         return approvalRequestRepository.findByCompanyIdAndStatus(companyId, ApprovalStatus.PENDING).size();
     }
 
+    /**
+     * Por cobrar — mesma regra das Contas Correntes
+     * ({@code ComercialService.getOutstandingInvoicesByCompany}): faturas cobráveis, contando
+     * apenas o <b>saldo em dívida</b>. Contava o total das {@code APPROVED} e ignorava por
+     * completo as {@code PARTIALLY_PAID}, pelo que quem pagasse metade desaparecia da dívida.
+     */
     private BigDecimal unpaidInvoicesTotal(List<Invoice> invoices) {
         return invoices.stream()
-                .filter(inv -> inv.getStatus() == InvoiceStatus.APPROVED)
-                .map(Invoice::getTotalAmount)
-                .filter(v -> v != null)
+                .filter(inv -> inv.getStatus().isCollectable())
+                .map(Invoice::outstandingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal outstandingCreditFor(List<Invoice> invoices) {
         return invoices.stream()
-                .map(inv -> {
-                    BigDecimal total = inv.getTotalAmount() == null ? BigDecimal.ZERO : inv.getTotalAmount();
-                    BigDecimal paid = inv.getAmountPaid() == null ? BigDecimal.ZERO : inv.getAmountPaid();
-                    BigDecimal remaining = total.subtract(paid);
-                    return remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining : BigDecimal.ZERO;
-                })
+                .map(Invoice::outstandingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
