@@ -2,13 +2,127 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-08-06
+**Última actualização:** 2026-08-09
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
 (falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
 multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+
+### Progresso — 2026-08-09 (consistência profissional da UI — fundação e adopção inicial)
+
+- Criadas spec e harness: `UI_CONSISTENCIA_PROFISSIONAL_SPEC.md` e
+  `UI_CONSISTENCIA_PROFISSIONAL_HARNESS.md` (UI-01..26 automáticos/estáticos; UI-50..62 manuais).
+- Componentes canónicos: `FormField`, `MoneyField`, `QuantityField`, `DateField`; erro inline,
+  obrigatoriedade, acessibilidade e estado read-only centralizados em `UIHelper`.
+- Selects preservam renderers existentes; estados têm tradução central; botão icon-only exige nome
+  acessível; tabelas ganharam renderers canónicos de dinheiro, quantidade e estado.
+- `loadAsync` passou a propagar contexto, entregar erros no EDT e ignorar resposta de tenant antigo;
+  `submitAsync` bloqueia duplo envio; `ModernFormDialog.setOnSaveAsync` impede HTTP no EDT.
+- Adopção: Dashboard, Clientes, CRM e Tesouraria carregam assincronamente; cliente usa validação
+  inline + submissão assíncrona; CRM/Tesouraria usam renderers tipados. Dashboard ficou com zero
+  `new Color` e zero `setPreferredSize` (tokens semânticos no tema).
+- Segunda vaga: Aprovações, Promoções e Fiscal migrados para loading/submissão assíncronos.
+  Relatórios/PDF/SAF-T saem do EDT; taxas, retenções e promoções usam inputs tipados e validação
+  inline. Os três painéis ficaram com zero cores ad-hoc; Promoções também com zero tamanhos fixos.
+- Verificação: **389 testes, 0 falhas/erros/ignorados**. Próxima fase: alastrar loading/submissão aos
+  restantes painéis e migrar formulários/documentos longos.
+
+### Progresso — 2026-08-09 (recibo parcial deixa de apagar a dívida — 3 furos de dinheiro)
+
+- **Encontrado a auditar o sistema a pedido do utilizador** ("está preparado para gestão?"). Três
+  implementações do mesmo conceito — *quanto o cliente ainda deve* — a divergir em silêncio. Mesma
+  forma do bug do IVA de 06/08: **a mesma regra em duas portas**.
+- **(1) Recibo parcial dava a fatura por paga.** `ComercialService.createReceipt` marcava `PAID`
+  por qualquer valor e nunca acumulava `amountPaid`. Pagar 100 de 232 → fatura *Paga*, os 132
+  desapareciam das contas correntes e de qualquer cobrança. O **POS já fazia certo**
+  (`deriveStatus`/`settleCredit`); só a porta comercial é que não.
+- **(2) Dashboard e Contas Correntes discordavam.** `ReportService.unpaidInvoicesTotal` contava só
+  `APPROVED` pelo **total**; as Contas Correntes contavam `APPROVED`+`PARTIALLY_PAID` pelo **saldo**.
+  Idem em "vendas de hoje": o dashboard contava só `PAID`, o relatório diário tudo o que não fosse
+  anulado — dois números para a mesma pergunta.
+- **(3) `/api/finance/pay-invoice` sem guarda de papel.** `financeira` era o **único módulo de
+  dinheiro sem `PermissionGuard`** — qualquer EMPLOYEE liquidava faturas. E registava sempre o
+  total, contando em duplicado o que já tinha sido recebido.
+- **Correcção — fonte única no domínio** (padrão do `Product.effectiveTaxRate()`):
+  `Invoice.outstandingAmount()` + `Invoice.deriveStatusFromPayments()`, e
+  `InvoiceStatus.isRealisedSale()`/`isCollectable()`. O `POSService.deriveStatus` privado foi
+  **eliminado** — POS, faturação, tesouraria e relatórios passam pela mesma regra. `createReceipt`
+  aceita vários recibos até o saldo zerar e recusa valor ≤ 0 ou acima do saldo; `cancelReceipt`
+  devolve só o valor daquele recibo; `payInvoice` exige MANAGER/ADMIN e move só o saldo.
+- **Desktop:** coluna **Em Dívida** na tabela de faturas, 2.º recibo permitido sobre
+  `PARTIALLY_PAID`, valor sugerido = saldo (não o total) e mensagem que distingue recibo parcial
+  de liquidação.
+- **Verificação:** 15 testes novos (`ReportServiceTest` e `FinanceServiceTest` novos), **12
+  confirmados a falhar contra o código antigo**. `POSServiceTest` (19) verde após a extracção da
+  regra. `mvn -o clean test` → **371 testes, 0 falhas/erros/ignorados** (eram 356).
+- Spec/harness: [docs/RECEBIMENTOS_SALDO_SPEC.md](../docs/RECEBIMENTOS_SALDO_SPEC.md) +
+  [docs/RECEBIMENTOS_SALDO_HARNESS.md](../docs/RECEBIMENTOS_SALDO_HARNESS.md) (RP-01..23 auto,
+  RP-50..56 manuais).
+- **VALIDADO AO VIVO (RP-50..57):** backend de pé (H2, dados de demo), percurso HTTP completo com
+  ADMIN e EMPLOYEE. Fatura de 950,00: recibo de 400 → `PARTIALLY_PAID`; recibo de 700 sobre saldo
+  de 550 → **recusado** com a mensagem exacta; recibo de 550 → `PAID` (tesouraria 18.464,50 →
+  19.414,50); anular o recibo de 400 → volta a **`PARTIALLY_PAID`** com 550 (não a `APPROVED`) e
+  estorna 400; dashboard, relatório diário e contas correntes **de acordo** (`1 / 950.00`,
+  400,00 por cobrar); EMPLOYEE recusado no `pay-invoice`; `payInvoice` moveu **400** (o saldo) e
+  não 950.
+- **Bug adicional encontrado durante a validação:** `POST /api/comercial/receipts` devolvia **500**
+  apesar de gravar — `LazyInitializationException` no `toDTO` chamado **fora** da transacção pelo
+  controller (`open-in-view=false`). Pré-existente e independente dos fixes de saldo, mas
+  **agravado** por eles: antes a fatura ficava logo `PAID` e a repetição era recusada; agora
+  continua cobrável, pelo que repetir criaria um 2.º recibo e duplicaria a caixa. Corrigido pela
+  regra do próprio projecto (CLAUDE.md #3/#4): `createReceipt` e `getReceiptsByCompany` devolvem
+  `ReceiptDTO` convertido **dentro** da transacção. O `GET /receipts` tinha o mesmo defeito latente.
+- **Dados existentes:** faturas marcadas `PAID` por recibo parcial antes deste fix ficam como
+  estão — query de diagnóstico na §5 da spec.
+- **Por validar na UI Swing:** coluna Em Dívida, aviso de recibo parcial e valor sugerido no
+  diálogo (o backend está validado; a UI chama exactamente estes endpoints).
+- **Lacunas de gestão levantadas na mesma auditoria, por fazer:** sem `dueDate`/aging (não se sabe o
+  que está **em atraso**), sem limite de crédito do cliente, margem calculada com o preço de compra
+  **actual** (não o do acto da venda), **zero paginação** em todo o sistema (o dashboard carrega
+  todas as faturas da empresa), e **sem contabilidade** (nem plano de contas, nem razão, nem
+  balancete). Esta última é a maior ausência para um ERP de gestão.
+
+### Progresso — 2026-08-08 (contexto de utilizador/empresa passa a fail-closed)
+
+- **Encontrado a auditar a arquitectura a pedido do utilizador:** o `CurrentUserContext` inventava
+  uma sessão quando não havia nenhuma — papel **`ADMIN`** e empresa **`1`**. Como o `PermissionGuard`
+  (única guarda de papel do sistema) lê `getRole()`, **todas** as chamadas a `requireAdmin`/
+  `requireManagerOrAdmin` eram no-ops em qualquer thread sem contexto, contra o tenant errado.
+- **O fallback era load-bearing:** o `DataLoader` semeia tickets/despesas **através dos Services**
+  (`crmService.createTicket`, `hrService.submitExpense`) sem contexto — só funcionava porque a empresa
+  em falta virava `1`, que **por acaso** é a `ptCompany` (a primeira gravada). Mudar a ordem do seed
+  aterrava os dados no tenant errado, sem erro. Agora declara
+  `CurrentUserContext.runAsSystem(ptCompany.getId(), …)`.
+- **Correcção:** `getRole()` sem contexto → `""` (o guard recusa); `getCurrentCompanyId()` → lança
+  em vez de assumir a empresa 1; variantes **nullable** `findCurrentUser`/`findCurrentCompanyId` para
+  infra que corre sem tenant (`UIHelper.loadAsync`, superadmin); `runAsSystem(...)` torna a elevação
+  de privilégio **explícita e greppável**. O sino de notificações deixou de mostrar alertas da
+  empresa 1 ao superadmin.
+- **Nota de rigor:** o backup nocturno *parecia* o suspeito, mas **não** dependia do fallback — o
+  `DatabaseBackupService` já separa `executePhysicalBackup()` (com guarda) de `runPhysicalBackup()`
+  (núcleo, para o agendador). Não foi alterado.
+- **Verificação:** CF-01/03/07/08 **confirmados a falhar contra o código antigo**. Ligar o fail-closed
+  fez cair **8 testes em 2 classes** que dependiam dos fallbacks sem o declarar (`MulticoreServicesTest`,
+  `ReceiptPrintServiceTest`) — passaram a declarar o contexto, sem mudar asserções.
+  `mvn -o clean test` → **356 testes, 0 falhas/erros/ignorados**.
+- Spec/harness: [docs/CONTEXTO_FAIL_CLOSED_SPEC.md](../docs/CONTEXTO_FAIL_CLOSED_SPEC.md) +
+  [docs/CONTEXTO_FAIL_CLOSED_HARNESS.md](../docs/CONTEXTO_FAIL_CLOSED_HARNESS.md) (CF-01..08 auto,
+  CF-50..54 manuais).
+- **Pendente manual:** CF-50..54 (com o backend de pé), em especial **CF-53** — login do superadmin no
+  desktop.
+
+### Progresso — 2026-08-07 (redução incremental de dependências entre domínios)
+
+- Centralizada em `CompanyService.getCurrentCompanyReference` a resolução de empresa usada para
+  associações entre agregados, com validação obrigatória da empresa activa antes da consulta.
+- `ProductCategoryService`, `TaxRateService` e `WithholdingService` deixaram de importar e chamar
+  directamente `CompanyRepository`; passam agora pela API pública do domínio `company`.
+- Novo `CompanyServiceTest` cobre empresa activa e recusa cross-tenant antes do Repository.
+- Verificação: compilação limpa; `mvn -q test` → **347 testes, 0 falhas/erros/ignorados**.
+- Próxima fatia: separar o acesso do POS a entidades comerciais/inventário por contratos próprios,
+  numa alteração isolada devido à atomicidade checkout → stock → pagamentos.
 
 ### Progresso — 2026-08-05 (POS: operação rápida e acabamento profissional)
 
@@ -1143,3 +1257,29 @@ mvn clean test      → BUILD SUCCESS, 193 testes, 0 falhas (2026-07-01)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.
+
+### Consistência profissional da UI Swing — 2026-08-09
+
+- Criadas a especificação `docs/UI_CONSISTENCIA_PROFISSIONAL_SPEC.md` e o harness
+  `docs/UI_CONSISTENCIA_PROFISSIONAL_HARNESS.md`.
+- Uniformizados inputs tipados, selects, botões, tabelas, estados vazios/loading, acessibilidade e
+  submissões assíncronas com protecção contra duplo clique e respostas de empresa obsoletas.
+- Removidas chamadas remotas síncronas identificadas nos fluxos prioritários de POS, Stock,
+  Comercial, Compras, RH, CRM, Financeiro e Configuração.
+- Decompostos os seis painéis prioritários, todos agora abaixo de 1.000 linhas; o limite está
+  protegido por `UiPanelDecompositionTest`.
+- `mvn dependency:analyze` revisto: starters Spring Boot e drivers runtime reportados como unused
+  são necessários por boot/autoconfiguração; nenhuma dependência declarada pôde ser removida com
+  segurança. A redução efectuada foi de acoplamento interno da UI.
+- Verificação: harness focado verde; `mvn clean test` verde com **391 testes, 0 falhas, 0 erros e
+  0 ignorados**.
+- Pendente apenas a evidência manual UI-50..62 em Windows real (escalas, temas, API lenta e
+  periféricos POS), conforme o harness; não é substituída por testes headless.
+
+### Layout responsivo do POS — 2026-08-11
+
+- Catálogo/carrinho passam a iniciar em 36/64, com mínimos operacionais de 380/650 px.
+- A tabela preserva as larguras das oito colunas com scroll horizontal abaixo de 900 px e volta a
+  preencher o viewport quando existe largura confortável.
+- Totais e acções de checkout permanecem fixos; apenas as linhas da tabela fazem scroll.
+- Spec e harness: `docs/POS_LAYOUT_RESPONSIVO_SPEC.md` e `docs/POS_LAYOUT_RESPONSIVO_HARNESS.md`.
