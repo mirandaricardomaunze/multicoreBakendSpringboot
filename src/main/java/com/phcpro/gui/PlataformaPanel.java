@@ -144,8 +144,8 @@ public class PlataformaPanel extends JPanel {
     }
 
     private void loadCompanies() {
-        try {
-            companies = platformApiClient.listCompanies();
+        UIHelper.loadAsync(this, platformApiClient::listCompanies, loaded -> {
+            companies = loaded;
             companiesModel.setRowCount(0);
             for (PlatformCompanyDTO c : companies) {
                 companiesModel.addRow(new Object[]{
@@ -153,9 +153,7 @@ public class PlataformaPanel extends JPanel {
                         c.userCount(), c.active() ? "ACTIVA" : "SUSPENSA"
                 });
             }
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Empresas", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> showPlatformError("empresas", error));
     }
 
     private PlatformCompanyDTO selectedCompany() {
@@ -193,16 +191,19 @@ public class PlataformaPanel extends JPanel {
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Nova Empresa",
                 "fas-building", "Registar uma empresa na plataforma", form)
                 .setConfirmButton("Criar", "fas-plus");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             if (nameField.getText().trim().isEmpty() || taxIdField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("Nome e NUIT são obrigatórios.");
             }
-            PlatformCompanyDTO created = platformApiClient.createCompany(new CreateCompanyRequest(
+            CreateCompanyRequest request = new CreateCompanyRequest(
                     nameField.getText().trim(), taxIdField.getText().trim(),
-                    emailField.getText().trim(), addressField.getText().trim(), phoneField.getText().trim()));
-            if (logoHolder[0] != null) {
-                platformApiClient.updateCompanyLogo(created.id(), logoHolder[0]);
-            }
+                    emailField.getText().trim(), addressField.getText().trim(), phoneField.getText().trim());
+            byte[] logo = logoHolder[0];
+            return () -> {
+                PlatformCompanyDTO created = platformApiClient.createCompany(request);
+                if (logo != null) platformApiClient.updateCompanyLogo(created.id(), logo);
+                return created;
+            };
         });
 
         if (dlg.showDialog()) {
@@ -236,16 +237,19 @@ public class PlataformaPanel extends JPanel {
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Empresa",
                 "fas-pen", "NUIT: " + company.taxId(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             if (nameField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
-            platformApiClient.updateCompany(company.id(), new UpdateCompanyRequest(
+            UpdateCompanyRequest request = new UpdateCompanyRequest(
                     nameField.getText().trim(), emailField.getText().trim(),
-                    addressField.getText().trim(), phoneField.getText().trim()));
-            if (logoHolder[0] != null) {
-                platformApiClient.updateCompanyLogo(company.id(), logoHolder[0]);
-            }
+                    addressField.getText().trim(), phoneField.getText().trim());
+            byte[] logo = logoHolder[0];
+            return () -> {
+                PlatformCompanyDTO updated = platformApiClient.updateCompany(company.id(), request);
+                if (logo != null) platformApiClient.updateCompanyLogo(company.id(), logo);
+                return updated;
+            };
         });
 
         if (dlg.showDialog()) {
@@ -292,12 +296,9 @@ public class PlataformaPanel extends JPanel {
                 "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        try {
-            platformApiClient.setCompanyActive(company.id(), newState);
-            loadCompanies();
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Empresas", JOptionPane.ERROR_MESSAGE);
-        }
+        UIHelper.runWithProgress(this, "A actualizar estado da empresa…",
+                () -> platformApiClient.setCompanyActive(company.id(), newState), ignored -> loadCompanies(),
+                error -> showPlatformError("estado da empresa", error));
     }
 
     // ---------------------------------------------------------------- Assinaturas & Pagamentos
@@ -379,8 +380,8 @@ public class PlataformaPanel extends JPanel {
     }
 
     private void loadSubscriptions() {
-        try {
-            subscriptions = platformApiClient.listOverview();
+        UIHelper.loadAsync(this, platformApiClient::listOverview, loaded -> {
+            subscriptions = loaded;
             subsModel.setRowCount(0);
             for (SubscriptionDTO s : subscriptions) {
                 subsModel.addRow(new Object[]{
@@ -392,9 +393,7 @@ public class PlataformaPanel extends JPanel {
                         s.paymentCount()
                 });
             }
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Assinaturas", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> showPlatformError("assinaturas", error));
     }
 
     /** -1 = expirada/suspensa; 0 = a expirar em ≤7 dias; 1 = ok/sem assinatura. */
@@ -422,7 +421,7 @@ public class PlataformaPanel extends JPanel {
         SubscriptionDTO sub = selectedSubscription();
         if (sub == null) return;
 
-        JComboBox<String> planCombo = new JComboBox<>(platformApiClient.planOptions().toArray(new String[0]));
+        JComboBox<String> planCombo = new JComboBox<>(new String[]{"TRIAL", "BASIC", "PRO", "ENTERPRISE"});
         UIHelper.styleComboBox(planCombo);
         if (sub.plan() != null) planCombo.setSelectedItem(sub.plan());
         JTextField priceField = new JTextField(sub.monthlyPrice() == null ? "" : sub.monthlyPrice().toPlainString());
@@ -438,10 +437,11 @@ public class PlataformaPanel extends JPanel {
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Definir Assinatura",
                 "fas-sliders-h", sub.companyName(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> platformApiClient.saveSubscription(sub.companyId(), new SaveSubscriptionRequest(
-                (String) planCombo.getSelectedItem(),
-                parseAmount(priceField.getText(), "preço mensal"),
-                parseDate(validField.getText()))));
+        dlg.setOnSaveAsync(() -> {
+            SaveSubscriptionRequest request = new SaveSubscriptionRequest((String) planCombo.getSelectedItem(),
+                    parseAmount(priceField.getText(), "preço mensal"), parseDate(validField.getText()));
+            return () -> platformApiClient.saveSubscription(sub.companyId(), request);
+        });
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Assinatura actualizada.", "Sucesso",
@@ -455,7 +455,7 @@ public class PlataformaPanel extends JPanel {
         if (sub == null) return;
 
         JTextField amountField = new JTextField();
-        JComboBox<String> methodCombo = new JComboBox<>(platformApiClient.methodOptions().toArray(new String[0]));
+        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"DINHEIRO", "MPESA", "EMOLA", "TRANSFERENCIA", "OUTRO"});
         UIHelper.styleComboBox(methodCombo);
         JTextField paidAtField = new JTextField(LocalDate.now().toString());
         JTextField startField = new JTextField();
@@ -479,13 +479,12 @@ public class PlataformaPanel extends JPanel {
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Registar Pagamento",
                 "fas-money-bill-wave", sub.companyName() + " — o período até estende a validade", form)
                 .setConfirmButton("Registar", "fas-check");
-        dlg.setOnSave(() -> platformApiClient.recordPayment(sub.companyId(), new RecordPaymentRequest(
-                parseAmount(amountField.getText(), "valor"),
-                (String) methodCombo.getSelectedItem(),
-                parseDate(paidAtField.getText()),
-                parseDate(startField.getText()),
-                parseDate(endField.getText()),
-                noteField.getText().trim())));
+        dlg.setOnSaveAsync(() -> {
+            RecordPaymentRequest request = new RecordPaymentRequest(parseAmount(amountField.getText(), "valor"),
+                    (String) methodCombo.getSelectedItem(), parseDate(paidAtField.getText()),
+                    parseDate(startField.getText()), parseDate(endField.getText()), noteField.getText().trim());
+            return () -> platformApiClient.recordPayment(sub.companyId(), request);
+        });
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Pagamento registado.", "Sucesso",
@@ -498,7 +497,11 @@ public class PlataformaPanel extends JPanel {
         SubscriptionDTO sub = selectedSubscription();
         if (sub == null) return;
 
-        List<SubscriptionPaymentDTO> payments = platformApiClient.listPayments(sub.companyId());
+        UIHelper.loadAsync(this, () -> platformApiClient.listPayments(sub.companyId()),
+                payments -> showPaymentsDialog(sub, payments), error -> showPlatformError("pagamentos", error));
+    }
+
+    private void showPaymentsDialog(SubscriptionDTO sub, List<SubscriptionPaymentDTO> payments) {
         String[] cols = {"Pago em", "Valor", "Método", "Período", "Nota"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
@@ -509,15 +512,16 @@ public class PlataformaPanel extends JPanel {
                     + " a " + (p.periodEnd() == null ? "—" : p.periodEnd().toString());
             model.addRow(new Object[]{
                     p.paidAt() == null ? "" : p.paidAt().toString(),
-                    p.amount() == null ? "" : p.amount().toPlainString(),
+                    p.amount(),
                     p.methodLabel(), period, p.note() == null ? "" : p.note()
             });
         }
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
+        table.getColumnModel().getColumn(1).setCellRenderer(com.phcpro.gui.components.TableCellRenderers.money());
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        scroll.setPreferredSize(new Dimension(680, 320));
+        scroll.setMinimumSize(new Dimension(560, 260));
 
         JOptionPane.showMessageDialog(this, scroll, "Pagamentos — " + sub.companyName(),
                 JOptionPane.PLAIN_MESSAGE);
@@ -541,12 +545,9 @@ public class PlataformaPanel extends JPanel {
                 "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        try {
-            platformApiClient.changeSubscriptionStatus(sub.companyId(), target);
-            loadSubscriptions();
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Assinaturas", JOptionPane.ERROR_MESSAGE);
-        }
+        UIHelper.runWithProgress(this, "A actualizar assinatura…",
+                () -> platformApiClient.changeSubscriptionStatus(sub.companyId(), target),
+                ignored -> loadSubscriptions(), error -> showPlatformError("assinatura", error));
     }
 
     private BigDecimal parseAmount(String text, String field) {
@@ -647,8 +648,8 @@ public class PlataformaPanel extends JPanel {
     }
 
     private void loadUsers() {
-        try {
-            users = platformApiClient.listUsers();
+        UIHelper.loadAsync(this, platformApiClient::listUsers, loaded -> {
+            users = loaded;
             usersModel.setRowCount(0);
             for (PlatformUserDTO u : users) {
                 usersModel.addRow(new Object[]{
@@ -656,9 +657,7 @@ public class PlataformaPanel extends JPanel {
                         u.platformAdmin() ? "SUPERADMIN" : (u.active() ? "ACTIVO" : "INATIVO")
                 });
             }
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Utilizadores", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> showPlatformError("utilizadores", error));
     }
 
     private String describeAccesses(PlatformUserDTO u) {
@@ -690,11 +689,12 @@ public class PlataformaPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Nome completo:", nameField);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Utilizador",
                 "fas-pen", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             if (nameField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
-            platformApiClient.updateUser(user.username(), nameField.getText().trim());
+            String name = nameField.getText().trim();
+            return () -> platformApiClient.updateUser(user.username(), name);
         });
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Utilizador actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -729,16 +729,17 @@ public class PlataformaPanel extends JPanel {
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Novo Utilizador",
                 "fas-user-plus", "Conta ligada a uma empresa", form).setConfirmButton("Criar", "fas-check");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             if (usernameField.getText().trim().isEmpty() || nameField.getText().trim().isEmpty()
                     || passwordField.getPassword().length == 0) {
                 throw new IllegalArgumentException("Utilizador, nome e senha são obrigatórios.");
             }
-            platformApiClient.createUser(new CreatePlatformUserRequest(
+            CreatePlatformUserRequest request = new CreatePlatformUserRequest(
                     usernameField.getText().trim(), nameField.getText().trim(),
                     new String(passwordField.getPassword()),
                     ((CompanyItem) companyCombo.getSelectedItem()).id(),
-                    (String) roleCombo.getSelectedItem()));
+                    (String) roleCombo.getSelectedItem());
+            return () -> platformApiClient.createUser(request);
         });
 
         if (dlg.showDialog()) {
@@ -762,8 +763,11 @@ public class PlataformaPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Empresa:", companyCombo, "Papel:", roleCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Conceder/Alterar Acesso",
                 "fas-user-shield", "Utilizador: " + user.username(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> platformApiClient.grantAccess(user.username(), new GrantAccessRequest(
-                ((CompanyItem) companyCombo.getSelectedItem()).id(), (String) roleCombo.getSelectedItem())));
+        dlg.setOnSaveAsync(() -> {
+            GrantAccessRequest request = new GrantAccessRequest(((CompanyItem) companyCombo.getSelectedItem()).id(),
+                    (String) roleCombo.getSelectedItem());
+            return () -> platformApiClient.grantAccess(user.username(), request);
+        });
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Acesso actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -788,8 +792,13 @@ public class PlataformaPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Empresa:", combo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Revogar Acesso",
                 "fas-user-slash", "Utilizador: " + user.username(), form).setConfirmButton("Revogar", "fas-check");
-        dlg.setOnSave(() -> platformApiClient.revokeAccess(user.username(),
-                ((CompanyItem) combo.getSelectedItem()).id()));
+        dlg.setOnSaveAsync(() -> {
+            Long companyId = ((CompanyItem) combo.getSelectedItem()).id();
+            return () -> {
+                platformApiClient.revokeAccess(user.username(), companyId);
+                return null;
+            };
+        });
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Acesso revogado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -805,11 +814,15 @@ public class PlataformaPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Nova senha:", passwordField);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Repor Senha",
                 "fas-key", "Utilizador: " + user.username(), form).setConfirmButton("Repor", "fas-check");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             if (passwordField.getPassword().length == 0) {
                 throw new IllegalArgumentException("Indique a nova senha.");
             }
-            platformApiClient.resetPassword(user.username(), new String(passwordField.getPassword()));
+            String password = new String(passwordField.getPassword());
+            return () -> {
+                platformApiClient.resetPassword(user.username(), password);
+                return null;
+            };
         });
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Senha reposta.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -820,12 +833,9 @@ public class PlataformaPanel extends JPanel {
         PlatformUserDTO user = selectedUser();
         if (user == null) return;
         boolean newState = !user.active();
-        try {
-            platformApiClient.setUserActive(user.username(), newState);
-            loadUsers();
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Utilizadores", JOptionPane.ERROR_MESSAGE);
-        }
+        UIHelper.runWithProgress(this, "A actualizar utilizador…",
+                () -> platformApiClient.setUserActive(user.username(), newState), ignored -> loadUsers(),
+                error -> showPlatformError("utilizador", error));
     }
 
     private JComboBox<CompanyItem> companyCombo() {
@@ -905,8 +915,8 @@ public class PlataformaPanel extends JPanel {
     }
 
     private void loadTickets() {
-        try {
-            tickets = platformApiClient.listAllTickets();
+        UIHelper.loadAsync(this, platformApiClient::listAllTickets, loaded -> {
+            tickets = loaded;
             ticketsModel.setRowCount(0);
             for (SupportTicketDTO t : tickets) {
                 ticketsModel.addRow(new Object[]{
@@ -914,9 +924,7 @@ public class PlataformaPanel extends JPanel {
                         t.assignee() == null ? "—" : t.assignee(), t.messageCount()
                 });
             }
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Assistência", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> showPlatformError("pedidos de assistência", error));
     }
 
     private SupportTicketDTO selectedTicket() {
@@ -932,13 +940,18 @@ public class PlataformaPanel extends JPanel {
     private void openTicketConversation() {
         SupportTicketDTO ticket = selectedTicket();
         if (ticket == null) return;
+        UIHelper.loadAsync(this, () -> platformApiClient.listPlatformMessages(ticket.id()),
+                messages -> showTicketConversation(ticket, renderThread(messages)),
+                error -> showPlatformError("conversa de assistência", error));
+    }
 
-        JTextArea thread = new JTextArea(renderThread(platformApiClient.listPlatformMessages(ticket.id())));
+    private void showTicketConversation(SupportTicketDTO ticket, String renderedThread) {
+        JTextArea thread = new JTextArea(renderedThread);
         thread.setEditable(false);
         thread.setLineWrap(true);
         thread.setWrapStyleWord(true);
         JScrollPane threadScroll = new JScrollPane(thread);
-        threadScroll.setPreferredSize(new Dimension(560, 260));
+        threadScroll.setMinimumSize(new Dimension(460, 200));
 
         JTextArea reply = new JTextArea(3, 40);
         reply.setLineWrap(true);
@@ -958,25 +971,26 @@ public class PlataformaPanel extends JPanel {
                 "Pedido #" + ticket.id() + " — " + ticket.subject(),
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
-            try {
-                platformApiClient.addSuperAdminReply(ticket.id(), reply.getText().trim());
-                loadTickets();
-            } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Assistência", JOptionPane.ERROR_MESSAGE);
-            }
+            String message = reply.getText().trim();
+            UIHelper.runWithProgress(this, "A enviar resposta…",
+                    () -> platformApiClient.addSuperAdminReply(ticket.id(), message), ignored -> loadTickets(),
+                    error -> showPlatformError("resposta de assistência", error));
         }
     }
 
     private void changeTicketStatus() {
         SupportTicketDTO ticket = selectedTicket();
         if (ticket == null) return;
-        JComboBox<String> statusCombo = new JComboBox<>(platformApiClient.statusOptions().toArray(new String[0]));
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"});
         UIHelper.styleComboBox(statusCombo);
         statusCombo.setSelectedItem(ticket.status());
         JPanel form = UIHelper.createDialogForm("Estado:", statusCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Mudar Estado",
                 "fas-tasks", "Pedido #" + ticket.id(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> platformApiClient.changeTicketStatus(ticket.id(), (String) statusCombo.getSelectedItem()));
+        dlg.setOnSaveAsync(() -> {
+            String status = (String) statusCombo.getSelectedItem();
+            return () -> platformApiClient.changeTicketStatus(ticket.id(), status);
+        });
         if (dlg.showDialog()) {
             loadTickets();
         }
@@ -991,5 +1005,10 @@ public class PlataformaPanel extends JPanel {
             sb.append(m.body()).append("\n\n");
         }
         return sb.toString().trim();
+    }
+
+    private void showPlatformError(String area, Throwable error) {
+        JOptionPane.showMessageDialog(this, "Não foi possível processar " + area + ": " + error.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
     }
 }

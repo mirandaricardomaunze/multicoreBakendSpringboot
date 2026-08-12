@@ -4,6 +4,7 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
+import com.phcpro.gui.components.TableCellRenderers;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ApprovalApiClient;
 import com.phcpro.modules.approvals.dto.ApprovalRequestDTO;
@@ -80,12 +81,12 @@ public class ApprovalsPanel extends JPanel {
     }
 
     public void refreshData() {
-        loadPendingTable();
-        loadHistoryTable();
-        if (openBtn != null) {
-            openBtn.setEnabled(false);
-            pendingTable.clearSelection();
-        }
+        UIHelper.loadAsync(this,
+                () -> new ApprovalData(approvalApiClient.getPendingRequests(), approvalApiClient.getAllRequests()),
+                this::applyData,
+                error -> JOptionPane.showMessageDialog(this,
+                        "Não foi possível carregar as aprovações: " + error.getMessage(),
+                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
     }
 
     /** Aba dos pedidos pendentes (cabeçalho com acção + tabela a ocupar toda a aba). */
@@ -118,6 +119,7 @@ public class ApprovalsPanel extends JPanel {
         };
         pendingTable = new JTable(pendingModel);
         UIHelper.styleTable(pendingTable);
+        pendingTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         // Duplo-clique abre o modal de decisão (não o inspector genérico do styleTable).
         pendingTable.putClientProperty("noRowInspector", Boolean.TRUE);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
@@ -151,6 +153,8 @@ public class ApprovalsPanel extends JPanel {
         };
         historyTable = new JTable(historyModel);
         UIHelper.styleTable(historyTable);
+        historyTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
+        historyTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
         JScrollPane historyScroll = new JScrollPane(historyTable);
         UIHelper.styleScrollPane(historyScroll);
         JTextField hSearch = TableFilter.searchField("Documento ou submissor…");
@@ -179,23 +183,20 @@ public class ApprovalsPanel extends JPanel {
         };
     }
 
-    private void loadPendingTable() {
+    private void applyData(ApprovalData data) {
         pendingModel.setRowCount(0);
-        pendingList = approvalApiClient.getPendingRequests();
+        pendingList = data.pending();
         for (ApprovalRequestDTO req : pendingList) {
             pendingModel.addRow(new Object[]{
                     req.id(),
                     humanType(req.documentType()) + " #" + req.documentId(),
                     req.submitter(),
-                    String.format("%,.2f MT", req.amount()),
+                    req.amount(),
                     req.requiredRole()
             });
         }
-    }
-
-    private void loadHistoryTable() {
         historyModel.setRowCount(0);
-        historyList = approvalApiClient.getAllRequests();
+        historyList = data.history();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (ApprovalRequestDTO req : historyList) {
             if (req.status() != ApprovalStatus.PENDING) {
@@ -203,13 +204,19 @@ public class ApprovalsPanel extends JPanel {
                         req.createdAt().format(formatter),
                         humanType(req.documentType()) + " #" + req.documentId(),
                         req.submitter(),
-                        String.format("%,.2f MT", req.amount()),
+                        req.amount(),
                         req.status().name(),
                         req.status() == ApprovalStatus.REJECTED ? req.rejectionReason() : "Validado administrativo"
                 });
             }
         }
+        if (openBtn != null) {
+            openBtn.setEnabled(false);
+            pendingTable.clearSelection();
+        }
     }
+
+    private record ApprovalData(List<ApprovalRequestDTO> pending, List<ApprovalRequestDTO> history) {}
 
     private void openDecisionForSelected() {
         int row = TableFilter.selectedModelRow(pendingTable);
@@ -252,27 +259,25 @@ public class ApprovalsPanel extends JPanel {
         ModernButton rejectBtn = UIHelper.createDangerButton("Rejeitar");
         rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
         rejectBtn.addActionListener(e -> {
-            String reason = JOptionPane.showInputDialog(this,
-                    "Introduza o motivo de rejeição (obrigatório):", "Rejeitar Documento",
-                    JOptionPane.WARNING_MESSAGE);
+            String reason = UIHelper.promptRequiredText("Rejeitar Documento", "fas-times",
+                    humanType(req.documentType()) + " #" + req.documentId(), "Motivo da rejeição");
             if (reason == null) return;
-            if (reason.trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "É obrigatório indicar um motivo para a rejeição.",
-                        "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            try {
-                approvalApiClient.rejectRequest(req.id(), reason.trim());
+            UIHelper.submitAsync(rejectBtn, () -> {
+                approvalApiClient.rejectRequest(req.id(), reason);
+                return null;
+            }, ignored -> {
                 dlg.close();
-                JOptionPane.showMessageDialog(this, "Documento rejeitado com sucesso.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-                refreshData();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage(), "Erro de Autorização", JOptionPane.ERROR_MESSAGE);
-            }
+                JOptionPane.showMessageDialog(this, "Documento rejeitado com sucesso.",
+                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            }, error -> JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + error.getMessage(),
+                    "Erro de autorização", JOptionPane.ERROR_MESSAGE));
         });
         dlg.addActionButton(rejectBtn);
         dlg.setConfirmButton("Aprovar", "fas-check");
-        dlg.setOnSave(() -> approvalApiClient.approveRequest(req.id(), "Aprovado via interface Swing."));
+        dlg.setOnSaveAsync(() -> () -> {
+            approvalApiClient.approveRequest(req.id(), "Aprovado via interface Swing.");
+            return null;
+        });
 
         boolean approved = dlg.showDialog();
         if (approved) {
@@ -283,8 +288,8 @@ public class ApprovalsPanel extends JPanel {
 
     private static JTextField readOnly(String value) {
         JTextField f = new JTextField(value == null ? "" : value);
-        f.setEditable(false);
         UIHelper.styleTextField(f);
+        UIHelper.setReadOnly(f, true);
         return f;
     }
 

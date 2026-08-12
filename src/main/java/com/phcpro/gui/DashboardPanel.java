@@ -91,64 +91,62 @@ public class DashboardPanel extends JPanel {
         // (7 cartões → 3 linhas), dentro do scroll.
         JPanel gridPanel = new JPanel(new GridLayout(0, 3, 12, 12));
         gridPanel.setOpaque(false);
-        gridPanel.setPreferredSize(new Dimension(0, 330));
 
         balanceValLabel = newValueLabel("0.00 MT", 20);
         gridPanel.add(buildKpiCard(
-                "SALDO DE TESOURARIA", "fas-piggy-bank", new Color(224, 242, 254),
+                "SALDO DE TESOURARIA", "fas-piggy-bank", UIHelper.KPI_INFO_SOFT,
                 balanceValLabel, null,
-                new Color(9, 79, 172), new Color(13, 148, 136)));
+                UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
 
         salesValLabel = newValueLabel("0.00 MT", 20);
         gridPanel.add(buildKpiCard(
-                "TOTAL FATURADO (VENDAS)", "fas-file-invoice-dollar", new Color(243, 232, 255),
+                "TOTAL FATURADO (VENDAS)", "fas-file-invoice-dollar", UIHelper.KPI_PURPLE_SOFT,
                 salesValLabel, null,
-                new Color(109, 40, 217), new Color(147, 51, 234)));
+                UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END));
 
         approvalsValLabel = newValueLabel("0 Pedidos", 20);
         gridPanel.add(buildKpiCard(
-                "APROVAÇÕES PENDENTES", "fas-clipboard-check", new Color(254, 243, 199),
+                "APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,
                 approvalsValLabel, null,
-                new Color(180, 83, 9), new Color(217, 119, 6)));
+                UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END));
 
         ticketsValLabel = newValueLabel("0 Tickets", 20);
         gridPanel.add(buildKpiCard(
-                "SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", new Color(209, 213, 219),
+                "SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", UIHelper.KPI_NEUTRAL_SOFT,
                 ticketsValLabel, null,
-                new Color(15, 23, 42), new Color(30, 41, 59)));
+                UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END));
 
         taxSummaryLabel = newValueLabel("IVA Líquido: 0.00 MT", 18);
         taxDetailLabel = new JLabel("Liquidado: 0.00 MT | Deduzido: 0.00 MT");
         taxDetailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        taxDetailLabel.setForeground(new Color(204, 251, 241));
+        taxDetailLabel.setForeground(UIHelper.KPI_SUCCESS_SOFT);
         gridPanel.add(buildKpiCard(
-                "RESUMO FISCAL DO IVA", "fas-percentage", new Color(204, 251, 241),
+                "RESUMO FISCAL DO IVA", "fas-percentage", UIHelper.KPI_SUCCESS_SOFT,
                 taxSummaryLabel, taxDetailLabel,
-                new Color(13, 148, 136), new Color(20, 184, 166)));
+                UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN));
 
         stockAlertsLabel = newValueLabel("0 Artigos", 20);
         JLabel stockAlertsSub = new JLabel("Quantidade inferior a 5 unidades no armazém");
         stockAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        stockAlertsSub.setForeground(new Color(254, 226, 226));
+        stockAlertsSub.setForeground(UIHelper.KPI_DANGER_SOFT);
         gridPanel.add(buildKpiCard(
-                "ALERTAS DE STOCK BAIXO", "fas-exclamation-triangle", new Color(254, 226, 226),
+                "ALERTAS DE STOCK BAIXO", "fas-exclamation-triangle", UIHelper.KPI_DANGER_SOFT,
                 stockAlertsLabel, stockAlertsSub,
-                new Color(220, 38, 38), new Color(185, 28, 28)));
+                UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END));
 
         expiryAlertsLabel = newValueLabel("0 Lotes", 20);
         expiryAlertsSub = new JLabel("Vencidos ou a vencer em ≤ " + EXPIRY_ALERT_DAYS + " dias");
         expiryAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        expiryAlertsSub.setForeground(new Color(255, 237, 213));
+        expiryAlertsSub.setForeground(UIHelper.KPI_ORANGE_SOFT);
         gridPanel.add(buildKpiCard(
-                "ALERTAS DE VALIDADE", "fas-calendar-times", new Color(255, 237, 213),
+                "ALERTAS DE VALIDADE", "fas-calendar-times", UIHelper.KPI_ORANGE_SOFT,
                 expiryAlertsLabel, expiryAlertsSub,
-                new Color(194, 65, 12), new Color(234, 88, 12)));
+                UIHelper.KPI_ORANGE_DARK, UIHelper.KPI_ORANGE_END));
 
         dashboardContent.add(gridPanel, BorderLayout.NORTH);
 
         JPanel chartsPanel = new JPanel(new GridLayout(1, 2, 16, 0));
         chartsPanel.setOpaque(false);
-        chartsPanel.setPreferredSize(new Dimension(0, 280));
         financialChart = new SimpleBarChart("Vendas, Compras e IVA");
         operationsChart = new SimpleBarChart("Operacoes");
         chartsPanel.add(createChartCard(financialChart));
@@ -167,11 +165,7 @@ public class DashboardPanel extends JPanel {
 
         // Popula ao arrancar; se o backend falhar, não bloquear o login — o painel é repovoado ao
         // navegar (MainFrame.navigate("dashboard") chama refreshData()).
-        try {
-            refreshData();
-        } catch (Exception ignored) {
-            // arranque resiliente
-        }
+        refreshData();
     }
 
     // Aspecto dos KPIs/gráficos partilhado com os outros painéis de visão geral (DRY): ver
@@ -203,13 +197,19 @@ public class DashboardPanel extends JPanel {
             return;
         }
 
+        UIHelper.loadAsync(this, this::fetchDashboardData, this::applyDashboardData, error -> {
+            putClientProperty("loadError", error.getMessage());
+            setToolTipText("Não foi possível actualizar o dashboard: " + error.getMessage());
+        });
+    }
+
+    private DashboardData fetchDashboardData() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         // 1. Treasury balance sum
         BigDecimal totalBal = financeApiClient.getAllAccounts().stream()
                 .map(TreasuryAccountDTO::balance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        balanceValLabel.setText(String.format("%,.2f MT", totalBal));
 
         // 2. Sales sum
         List<InvoiceDTO> companyInvoices = comercialApiClient.getAllInvoices();
@@ -217,17 +217,14 @@ public class DashboardPanel extends JPanel {
                 .filter(i -> i.status() == InvoiceStatus.APPROVED || i.status() == InvoiceStatus.PAID)
                 .map(InvoiceDTO::totalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        salesValLabel.setText(String.format("%,.2f MT", totalSales));
 
         // 3. Pending approvals count
         int appCount = approvalApiClient.getPendingRequests().size();
-        approvalsValLabel.setText(appCount + " Pedidos");
 
         // 4. CRM unresolved tickets count
         long ticketCount = crmApiClient.getAllTickets().stream()
                 .filter(t -> "OPEN".equals(t.status()))
                 .count();
-        ticketsValLabel.setText(ticketCount + " Tickets Abertos");
 
         // 5. IVA Summary
         BigDecimal ivaLiquidado = companyInvoices.stream()
@@ -246,16 +243,12 @@ public class DashboardPanel extends JPanel {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal ivaLiquido = ivaLiquidado.subtract(ivaDeduzido);
-        String labelPrefix = ivaLiquido.compareTo(BigDecimal.ZERO) >= 0 ? "IVA a Pagar: " : "IVA a Recuperar: ";
-        taxSummaryLabel.setText(labelPrefix + String.format("%,.2f MT", ivaLiquido.abs()));
-        taxDetailLabel.setText(String.format("Liquidado: %,.2f MT | Deduzido: %,.2f MT", ivaLiquidado, ivaDeduzido));
 
         // 6. Stock Alerts (stocks where quantity < 5)
         List<StockDTO> companyStocks = inventoryApiClient.getStocksByCompany(companyId);
         long lowStocksCount = companyStocks.stream()
                 .filter(s -> s.quantity().compareTo(BigDecimal.valueOf(5)) < 0)
                 .count();
-        stockAlertsLabel.setText(lowStocksCount + " Artigo" + (lowStocksCount == 1 ? "" : "s"));
 
         // 7. Alertas de validade — lotes vencidos ou a vencer no horizonte definido
         java.time.LocalDate today = java.time.LocalDate.now();
@@ -265,24 +258,42 @@ public class DashboardPanel extends JPanel {
                 .filter(b -> b.expirationDate() != null && b.expirationDate().isBefore(today))
                 .count();
         long soonCount = expiring.size() - expiredCount;
-        expiryAlertsLabel.setText(expiring.size() + " Lote" + (expiring.size() == 1 ? "" : "s"));
-        expiryAlertsSub.setText(String.format("%d vencido%s · %d a vencer (≤ %d dias)",
-                expiredCount, expiredCount == 1 ? "" : "s", soonCount, EXPIRY_ALERT_DAYS));
+        return new DashboardData(totalBal, totalSales, appCount, ticketCount, ivaLiquidado, ivaDeduzido,
+                ivaLiquido, totalPurchases, lowStocksCount, expiring.size(), expiredCount, soonCount);
+    }
 
+    private void applyDashboardData(DashboardData data) {
+        balanceValLabel.setText(String.format("%,.2f MT", data.totalBalance()));
+        salesValLabel.setText(String.format("%,.2f MT", data.totalSales()));
+        approvalsValLabel.setText(data.approvalCount() + " Pedidos");
+        ticketsValLabel.setText(data.ticketCount() + " Tickets Abertos");
+        String labelPrefix = data.netVat().compareTo(BigDecimal.ZERO) >= 0 ? "IVA a Pagar: " : "IVA a Recuperar: ";
+        taxSummaryLabel.setText(labelPrefix + String.format("%,.2f MT", data.netVat().abs()));
+        taxDetailLabel.setText(String.format("Liquidado: %,.2f MT | Deduzido: %,.2f MT",
+                data.outputVat(), data.inputVat()));
+        stockAlertsLabel.setText(data.lowStockCount() + " Artigo" + (data.lowStockCount() == 1 ? "" : "s"));
+        expiryAlertsLabel.setText(data.expiringCount() + " Lote" + (data.expiringCount() == 1 ? "" : "s"));
+        expiryAlertsSub.setText(String.format("%d vencido%s · %d a vencer (≤ %d dias)",
+                data.expiredCount(), data.expiredCount() == 1 ? "" : "s", data.soonCount(), EXPIRY_ALERT_DAYS));
         financialChart.setData(
                 new String[]{"Vendas", "Compras", "IVA"},
-                new BigDecimal[]{totalSales, totalPurchases, ivaLiquido.abs()},
+                new BigDecimal[]{data.totalSales(), data.totalPurchases(), data.netVat().abs()},
                 new Color[]{UIHelper.ACCENT_BLUE, UIHelper.APPROVED_GREEN, UIHelper.PENDING_YELLOW}
         );
         operationsChart.setData(
                 new String[]{"Aprov.", "Tickets", "Stock"},
                 new BigDecimal[]{
-                        BigDecimal.valueOf(appCount),
-                        BigDecimal.valueOf(ticketCount),
-                        BigDecimal.valueOf(lowStocksCount)
+                        BigDecimal.valueOf(data.approvalCount()),
+                        BigDecimal.valueOf(data.ticketCount()),
+                        BigDecimal.valueOf(data.lowStockCount())
                 },
                 new Color[]{UIHelper.PENDING_YELLOW, UIHelper.ACCENT, UIHelper.REJECTED_RED}
         );
     }
+
+    private record DashboardData(BigDecimal totalBalance, BigDecimal totalSales, int approvalCount,
+                                 long ticketCount, BigDecimal outputVat, BigDecimal inputVat,
+                                 BigDecimal netVat, BigDecimal totalPurchases, long lowStockCount,
+                                 int expiringCount, long expiredCount, long soonCount) {}
 
 }

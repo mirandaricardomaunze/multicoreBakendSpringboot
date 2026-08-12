@@ -28,22 +28,7 @@ import com.phcpro.desktop.client.StockTransferApiClient;
 import com.phcpro.gui.components.Theme;
 import com.phcpro.gui.components.TopNavBar;
 import com.phcpro.gui.components.UIHelper;
-import com.phcpro.modules.comercial.service.ComercialService;
-import com.phcpro.modules.company.service.CompanyService;
-import com.phcpro.modules.financeira.service.FinanceService;
 import com.phcpro.desktop.client.HRApiClient;
-import com.phcpro.modules.inventory.service.InventoryService;
-import com.phcpro.modules.inventory.service.StockTransferService;
-import com.phcpro.modules.pos.service.POSService;
-import com.phcpro.modules.printing.InvoicePrintService;
-import com.phcpro.modules.comercial.service.CreditNoteService;
-import com.phcpro.modules.comercial.service.DebitNoteService;
-import com.phcpro.modules.printing.CreditNotePrintService;
-import com.phcpro.modules.printing.DebitNotePrintService;
-import com.phcpro.modules.printing.InventoryReportPrintService;
-import com.phcpro.modules.printing.OrderPrintService;
-import com.phcpro.modules.printing.ReceiptPrintService;
-import com.phcpro.modules.printing.StockTransferPrintService;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -334,7 +319,8 @@ public class MainFrame extends JFrame {
     }
 
     private void showNotificationPreview(javax.swing.JComponent anchor) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Long companyId = CurrentUserContext.findCurrentCompanyId();
+        if (companyId == null) return; // superadmin: sem empresa activa, sem notificações de tenant
         javax.swing.JPopupMenu popup = new javax.swing.JPopupMenu();
         popup.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UIHelper.BORDER),
@@ -412,7 +398,10 @@ public class MainFrame extends JFrame {
 
     private void refreshNotificationBadgeAsync() {
         if (notificationFeed == null) return;
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        // Sem empresa activa (superadmin) não há notificações de tenant para contar. Antes o contexto
+        // assumia a empresa 1 e o sino mostrava alertas de uma empresa que não é a do utilizador.
+        Long companyId = CurrentUserContext.findCurrentCompanyId();
+        if (companyId == null) return;
         int version = ++notificationBadgeLoadVersion;
         new javax.swing.SwingWorker<Integer, Void>() {
             @Override protected Integer doInBackground() {

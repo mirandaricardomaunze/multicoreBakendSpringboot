@@ -38,13 +38,14 @@ public class ConfigPanel extends JPanel {
     private final AuditApiClient auditApiClient;
     private final BackupApiClient backupApiClient;
     private final DocumentConfigApiClient documentConfigApiClient;
-    private final SupportApiClient supportApiClient;
+    final SupportApiClient supportApiClient;
+    private final ConfigSupportPanel supportPanel;
     private final MySubscriptionApiClient mySubscriptionApiClient;
 
     // TAB 5: SUPORTE À PLATAFORMA
-    private DefaultTableModel supportModel;
-    private JTable supportTable;
-    private java.util.List<SupportTicketDTO> supportTickets = new java.util.ArrayList<>();
+    DefaultTableModel supportModel;
+    JTable supportTable;
+    java.util.List<SupportTicketDTO> supportTickets = new java.util.ArrayList<>();
 
     // TAB 6: A MINHA ASSINATURA
     private JPanel subscriptionCard;
@@ -84,6 +85,7 @@ public class ConfigPanel extends JPanel {
         this.backupApiClient = backupApiClient;
         this.documentConfigApiClient = documentConfigApiClient;
         this.supportApiClient = supportApiClient;
+        this.supportPanel = new ConfigSupportPanel(this);
         this.mySubscriptionApiClient = mySubscriptionApiClient;
 
         setLayout(new BorderLayout());
@@ -225,8 +227,8 @@ public class ConfigPanel extends JPanel {
         consoleCard.add(northInfo, BorderLayout.NORTH);
 
         backupLogArea = new JTextArea();
-        backupLogArea.setBackground(new Color(15, 23, 42)); // darker console bg
-        backupLogArea.setForeground(new Color(34, 197, 94)); // green code style
+        backupLogArea.setBackground(UIHelper.BG_DARK);
+        backupLogArea.setForeground(UIHelper.APPROVED_GREEN);
         backupLogArea.setFont(new Font("Consolas", Font.PLAIN, 12));
         backupLogArea.setEditable(false);
         backupLogArea.setMargin(new Insets(10, 10, 10, 10));
@@ -377,11 +379,15 @@ public class ConfigPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Nome completo:", nameField);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Utilizador",
                 "fas-pen", "Utilizador: " + username, form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             if (nameField.getText().trim().isEmpty()) {
                 throw new IllegalArgumentException("O nome é obrigatório.");
             }
-            userApiClient.updateUserName(username, nameField.getText().trim());
+            String updatedName = nameField.getText().trim();
+            return () -> {
+                userApiClient.updateUserName(username, updatedName);
+                return null;
+            };
         });
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Utilizador atualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
@@ -484,8 +490,13 @@ public class ConfigPanel extends JPanel {
         if (documentConfigApiClient == null || colBarcode == null) {
             return;
         }
-        DocumentColumnsDTO cols = documentConfigApiClient.getColumns(
-                CurrentUserContext.getCurrentCompanyId(), selectedDocType());
+        var documentType = selectedDocType();
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        UIHelper.loadAsync(this, () -> documentConfigApiClient.getColumns(companyId, documentType), this::applyDocumentColumns,
+                error -> showConfigError("configuração das colunas", error));
+    }
+
+    private void applyDocumentColumns(DocumentColumnsDTO cols) {
         colBarcode.setSelected(cols.barcode());
         colReference.setSelected(cols.reference());
         colDescription.setSelected(cols.description());
@@ -509,14 +520,16 @@ public class ConfigPanel extends JPanel {
                 colSubtotal.isSelected(),
                 footerField.getText().trim().isEmpty() ? null : footerField.getText().trim()
         );
-        try {
-            documentConfigApiClient.save(CurrentUserContext.getCurrentCompanyId(), selectedDocType(), dto);
+        var documentType = selectedDocType();
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        UIHelper.runWithProgress(this, "A guardar configuração do documento…", () -> {
+            documentConfigApiClient.save(companyId, documentType, dto);
+            return null;
+        }, ignored -> {
             JOptionPane.showMessageDialog(this, "Configuração de " + selectedDocType().label() + " guardada com sucesso.",
                     "Configuração Guardada", JOptionPane.INFORMATION_MESSAGE);
             loadAuditLogs();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> showConfigError("configuração do documento", error));
     }
 
     public void onPanelSelected() {
@@ -532,7 +545,11 @@ public class ConfigPanel extends JPanel {
     /** Estado do backup físico automático (activo/última execução) para visibilidade + alerta. */
     private void refreshAutoBackupStatus() {
         if (backupAutoStatus == null) return;
-        BackupStatusDTO st = backupApiClient.status();
+        UIHelper.loadAsync(this, backupApiClient::status, this::applyAutoBackupStatus,
+                error -> showConfigError("estado do backup", error));
+    }
+
+    private void applyAutoBackupStatus(BackupStatusDTO st) {
         String base = st.autoEnabled()
                 ? "Backup automático: ACTIVO (diário)"
                 : "Backup automático: desativado";
@@ -566,9 +583,13 @@ public class ConfigPanel extends JPanel {
     }
 
     private void loadAuditLogs() {
-        auditTableModel.setRowCount(0);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        List<AuditLogDTO> logs = auditApiClient.getLogsByCompany(companyId);
+        UIHelper.loadAsync(this, () -> auditApiClient.getLogsByCompany(companyId), this::applyAuditLogs,
+                error -> showConfigError("registo de auditoria", error));
+    }
+
+    private void applyAuditLogs(List<AuditLogDTO> logs) {
+        auditTableModel.setRowCount(0);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
         for (AuditLogDTO l : logs) {
@@ -591,18 +612,17 @@ public class ConfigPanel extends JPanel {
         }
 
         backupLogArea.append(">> A iniciar cópia de segurança manual (" + activeUser + ")...\n");
-        try {
-            String path = backupApiClient.executeBackup();
+        UIHelper.runWithProgress(this, "A efectuar cópia de segurança…", backupApiClient::executeBackup, path -> {
             backupLogArea.append(">> Backup efetuado com sucesso!\n");
             backupLogArea.append(">> Destino: " + path + "\n");
             // A auditoria (BACKUP_MANUAL) é registada pelo servidor.
             JOptionPane.showMessageDialog(this, "Cópia de segurança gravada com sucesso em:\n" + path, "Backup Concluído", JOptionPane.INFORMATION_MESSAGE);
             loadBackupFilesList();
             loadAuditLogs();
-        } catch (Exception ex) {
-            backupLogArea.append(">> ERRO: " + ex.getMessage() + "\n");
-            JOptionPane.showMessageDialog(this, "Erro ao efetuar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> {
+            backupLogArea.append(">> ERRO: " + error.getMessage() + "\n");
+            showConfigError("backup", error);
+        });
     }
 
     private void runPhysicalBackup() {
@@ -643,8 +663,7 @@ public class ConfigPanel extends JPanel {
 
         String fileName = String.valueOf(backupFilesModel.getValueAt(selectedRow, 0));
         backupLogArea.append(">> A verificar backup: " + fileName + "\n");
-        try {
-            BackupVerificationDTO verification = backupApiClient.verify(fileName);
+        UIHelper.runWithProgress(this, "A verificar cópia de segurança…", () -> backupApiClient.verify(fileName), verification -> {
             backupLogArea.append(">> Backup válido para a empresa " + verification.companyId() + "\n");
             backupLogArea.append(">> Gerado em: " + verification.generatedAt() + "\n");
             backupLogArea.append(">> Secções verificadas: " + verification.totalSections() + "\n");
@@ -654,24 +673,22 @@ public class ConfigPanel extends JPanel {
                     "Backup Válido",
                     JOptionPane.INFORMATION_MESSAGE);
             loadAuditLogs();
-        } catch (Exception ex) {
-            backupLogArea.append(">> ERRO DE VERIFICAÇÃO: " + ex.getMessage() + "\n");
-            JOptionPane.showMessageDialog(this, "Erro ao verificar backup: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> {
+            backupLogArea.append(">> ERRO DE VERIFICAÇÃO: " + error.getMessage() + "\n");
+            showConfigError("verificação do backup", error);
+        });
     }
 
     private void loadBackupFilesList() {
-        backupFilesModel.setRowCount(0);
         String prefix = "company_" + CurrentUserContext.getCurrentCompanyId() + "_backup_";
-        try {
-            for (String name : backupApiClient.files()) {
+        UIHelper.loadAsync(this, backupApiClient::files, files -> {
+            backupFilesModel.setRowCount(0);
+            for (String name : files) {
                 if (name.startsWith(prefix) && name.toLowerCase().endsWith(".json")) {
                     backupFilesModel.addRow(new Object[]{name, "—"});
                 }
             }
-        } catch (Exception ignored) {
-            // Servidor indisponível → lista vazia (não bloqueia o painel).
-        }
+        }, error -> showConfigError("arquivo de backups", error));
     }
 
     private void loadUsersList() {
@@ -682,7 +699,12 @@ public class ConfigPanel extends JPanel {
             });
             return;
         }
-        List<AppUserDTO> users = userApiClient.getAllUsers();
+        UIHelper.loadAsync(this, userApiClient::getAllUsers, this::applyUsers,
+                error -> showConfigError("utilizadores", error));
+    }
+
+    private void applyUsers(List<AppUserDTO> users) {
+        usersTableModel.setRowCount(0);
         for (AppUserDTO u : users) {
             usersTableModel.addRow(new Object[]{
                     u.username(),
@@ -710,7 +732,7 @@ public class ConfigPanel extends JPanel {
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Criar Novo Utilizador",
                 "fas-user-plus", "Conta de acesso ao sistema", form).setConfirmButton("Registar", "fas-user-plus");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             String username = usernameField.getText().trim();
             String fullName = fullNameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
@@ -718,7 +740,7 @@ public class ConfigPanel extends JPanel {
             if (username.isEmpty() || fullName.isEmpty() || password.isEmpty()) {
                 throw new IllegalArgumentException("Todos os campos são obrigatórios.");
             }
-            userApiClient.createUser(username, fullName, password, role);
+            return () -> userApiClient.createUser(username, fullName, password, role);
         });
 
         if (dlg.showDialog()) {
@@ -743,7 +765,10 @@ public class ConfigPanel extends JPanel {
         JPanel form = UIHelper.createDialogForm("Novo Perfil:", roleCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Alterar Perfil",
                 "fas-user-shield", "Utilizador: " + username, form).setConfirmButton("Alterar", "fas-check");
-        dlg.setOnSave(() -> userApiClient.updateCompanyRole(username, (String) roleCombo.getSelectedItem()));
+        dlg.setOnSaveAsync(() -> {
+            String role = (String) roleCombo.getSelectedItem();
+            return () -> userApiClient.updateCompanyRole(username, role);
+        });
 
         if (dlg.showDialog()) {
             JOptionPane.showMessageDialog(this, "Perfil de '" + username + "' atualizado nesta empresa.",
@@ -756,160 +781,9 @@ public class ConfigPanel extends JPanel {
 
     private static final String[] TICKET_PRIORITIES = {"LOW", "NORMAL", "HIGH", "URGENT"};
 
-    private JPanel createSupportTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 12));
-        panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+    private JPanel createSupportTab() { return supportPanel.buildPanel(); }
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Pedidos de Assistência à Plataforma"), BorderLayout.WEST);
-
-        ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
-        newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton viewBtn = UIHelper.createPrimaryButton("Ver / Responder");
-        viewBtn.setIcon(UIHelper.icon("fas-comments", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(viewBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
-
-        ModernPanel listCard = new ModernPanel(16);
-        listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-
-        String[] cols = {"#", "Assunto", "Prioridade", "Estado", "Mensagens"};
-        supportModel = new DefaultTableModel(cols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-        supportTable = new JTable(supportModel);
-        UIHelper.styleTable(supportTable);
-        supportTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) viewSupportTicket();
-            }
-        });
-        JScrollPane scroll = new JScrollPane(supportTable);
-        UIHelper.styleScrollPane(scroll);
-
-        JTextField supSearch = TableFilter.searchField("Assunto, prioridade ou estado…");
-        TableFilter.install(supportTable, supSearch);
-        JPanel supBar = TableFilter.bar(supSearch);
-        supBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(supBar, BorderLayout.NORTH);
-        listCard.add(scroll, BorderLayout.CENTER);
-        panel.add(listCard, BorderLayout.CENTER);
-
-        newBtn.addActionListener(e -> newSupportTicket());
-        viewBtn.addActionListener(e -> viewSupportTicket());
-        refreshBtn.addActionListener(e -> loadSupportTickets());
-
-        return panel;
-    }
-
-    private void loadSupportTickets() {
-        supportModel.setRowCount(0);
-        if (!PermissionGuard.isManagerOrAdmin()) {
-            supportModel.addRow(new Object[]{"", "Apenas gestor/administrador pode gerir pedidos.", "", "", ""});
-            return;
-        }
-        try {
-            supportTickets = supportApiClient.listCompanyTickets();
-            for (SupportTicketDTO t : supportTickets) {
-                supportModel.addRow(new Object[]{
-                        t.id(), t.subject(), t.priorityLabel(), t.statusLabel(), t.messageCount()
-                });
-            }
-        } catch (RuntimeException ex) {
-            supportModel.addRow(new Object[]{"", ex.getMessage(), "", "", ""});
-        }
-    }
-
-    private void newSupportTicket() {
-        JTextField subjectField = new JTextField();
-        JComboBox<String> priorityCombo = new JComboBox<>(TICKET_PRIORITIES);
-        priorityCombo.setSelectedItem("NORMAL");
-        JTextArea descArea = new JTextArea(4, 30);
-        descArea.setLineWrap(true);
-        descArea.setWrapStyleWord(true);
-        UIHelper.styleTextField(subjectField);
-        UIHelper.styleComboBox(priorityCombo);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Assunto:", subjectField,
-                "Prioridade:", priorityCombo,
-                "Descrição:", new JScrollPane(descArea)
-        );
-
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Novo Pedido de Assistência",
-                "fas-headset", "Contactar o suporte da plataforma", form).setConfirmButton("Enviar", "fas-paper-plane");
-        dlg.setOnSave(() -> {
-            if (subjectField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O assunto é obrigatório.");
-            }
-            supportApiClient.openTicket(new CreateTicketRequest(
-                    subjectField.getText().trim(), descArea.getText().trim(),
-                    (String) priorityCombo.getSelectedItem()));
-        });
-
-        if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Pedido enviado ao suporte.", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
-            loadSupportTickets();
-        }
-    }
-
-    private void viewSupportTicket() {
-        int row = TableFilter.selectedModelRow(supportTable);
-        if (row < 0 || row >= supportTickets.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione um pedido.", "Suporte", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        SupportTicketDTO ticket = supportTickets.get(row);
-
-        JTextArea thread = new JTextArea(PlataformaPanel.renderThread(supportApiClient.listCompanyMessages(ticket.id())));
-        thread.setEditable(false);
-        thread.setLineWrap(true);
-        thread.setWrapStyleWord(true);
-        JScrollPane threadScroll = new JScrollPane(thread);
-        threadScroll.setPreferredSize(new Dimension(520, 240));
-
-        JTextArea reply = new JTextArea(3, 40);
-        reply.setLineWrap(true);
-        reply.setWrapStyleWord(true);
-        JPanel form = new JPanel(new BorderLayout(0, 8));
-        form.setOpaque(false);
-        form.add(threadScroll, BorderLayout.CENTER);
-        JPanel replyBox = new JPanel(new BorderLayout(0, 4));
-        replyBox.setOpaque(false);
-        JLabel lbl = new JLabel("Responder (deixe vazio para só consultar):");
-        lbl.setForeground(UIHelper.TEXT_MUTED);
-        replyBox.add(lbl, BorderLayout.NORTH);
-        replyBox.add(new JScrollPane(reply), BorderLayout.CENTER);
-        form.add(replyBox, BorderLayout.SOUTH);
-
-        int result = JOptionPane.showConfirmDialog(this, form,
-                "Pedido #" + ticket.id() + " — " + ticket.subject(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
-            try {
-                supportApiClient.addCompanyMessage(ticket.id(), reply.getText().trim());
-                loadSupportTickets();
-            } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Suporte", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    // ------------------------------------------------------------- TAB 6: A Minha Assinatura
+    private void loadSupportTickets() { supportPanel.refresh(); }
 
     private JPanel createSubscriptionTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
@@ -941,9 +815,12 @@ public class ConfigPanel extends JPanel {
 
     private void loadMySubscription() {
         if (subscriptionCard == null) return;
+        UIHelper.loadAsync(this, mySubscriptionApiClient::getMySubscription, this::applyMySubscription,
+                error -> showSubscriptionError(error.getMessage()));
+    }
+
+    private void applyMySubscription(MySubscriptionDTO sub) {
         subscriptionCard.removeAll();
-        try {
-            MySubscriptionDTO sub = mySubscriptionApiClient.getMySubscription();
             if (!sub.hasSubscription()) {
                 subscriptionCard.add(bigInfo("Sem assinatura definida",
                         "A sua empresa ainda não tem um plano associado. Contacte o suporte da plataforma.",
@@ -960,13 +837,21 @@ public class ConfigPanel extends JPanel {
                 subscriptionCard.add(field("Mensalidade",
                         sub.monthlyPrice() == null ? "—" : sub.monthlyPrice().toPlainString() + " MT"));
             }
-        } catch (RuntimeException ex) {
-            subscriptionCard.setLayout(new GridBagLayout());
-            subscriptionCard.add(bigInfo("Não foi possível carregar a assinatura", ex.getMessage(),
-                    UIHelper.REJECTED_RED));
-        }
         subscriptionCard.revalidate();
         subscriptionCard.repaint();
+    }
+
+    private void showSubscriptionError(String message) {
+        subscriptionCard.removeAll();
+        subscriptionCard.setLayout(new GridBagLayout());
+        subscriptionCard.add(bigInfo("Não foi possível carregar a assinatura", message, UIHelper.REJECTED_RED));
+        subscriptionCard.revalidate();
+        subscriptionCard.repaint();
+    }
+
+    void showConfigError(String area, Throwable error) {
+        JOptionPane.showMessageDialog(this, "Não foi possível processar " + area + ": " + error.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
     }
 
     private String daysText(Long days) {
