@@ -2,7 +2,7 @@ package com.phcpro.modules.fiscal.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
-import com.phcpro.modules.company.repository.CompanyRepository;
+import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.fiscal.dto.CreateTaxRateRequest;
 import com.phcpro.modules.fiscal.dto.TaxRateDTO;
 import com.phcpro.modules.fiscal.model.TaxRate;
@@ -17,11 +17,11 @@ import java.util.List;
 public class TaxRateService {
 
     private final TaxRateRepository repository;
-    private final CompanyRepository companyRepository;
+    private final CompanyService companyService;
 
-    public TaxRateService(TaxRateRepository repository, CompanyRepository companyRepository) {
+    public TaxRateService(TaxRateRepository repository, CompanyService companyService) {
         this.repository = repository;
-        this.companyRepository = companyRepository;
+        this.companyService = companyService;
     }
 
     @Transactional
@@ -32,7 +32,7 @@ public class TaxRateService {
         }
         TaxRate shared = repository.findByCode(request.code()).orElse(null);
         if (shared != null) {
-            shared.getCompanies().add(companyRepository.getReferenceById(companyId));
+            shared.getCompanies().add(companyService.getCurrentCompanyReference(companyId));
             return toDTO(repository.save(shared));
         }
         TaxType type;
@@ -49,7 +49,7 @@ public class TaxRateService {
         t.setLegalBasis(request.legalBasis());
         t.setActive(true);
         t.setCreatedBy("SYSTEM");
-        t.getCompanies().add(companyRepository.getReferenceById(companyId));
+        t.getCompanies().add(companyService.getCurrentCompanyReference(companyId));
         return toDTO(repository.save(t));
     }
 

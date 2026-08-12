@@ -33,6 +33,17 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
     }
 
+    /**
+     * Resolve a empresa do tenant activo para associações entre agregados.
+     * Mantém o acesso ao Repository dentro do domínio company.
+     */
+    @Transactional(readOnly = true)
+    public Company getCurrentCompanyReference(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        return companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+    }
+
     public void selectCompany(Long id) {
         tenantAccessService.selectCompany(id);
     }

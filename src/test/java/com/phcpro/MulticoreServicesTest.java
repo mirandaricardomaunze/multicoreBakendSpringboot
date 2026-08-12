@@ -1,6 +1,7 @@
 package com.phcpro;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateInvoiceLineRequest;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
@@ -27,7 +28,9 @@ import com.phcpro.modules.pos.service.POSService;
 import com.phcpro.modules.purchases.model.Supplier;
 import com.phcpro.modules.purchases.service.PurchaseService;
 import com.phcpro.modules.backup.service.BackupService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -82,6 +85,23 @@ public class MulticoreServicesTest {
 
     @Autowired
     private StockRepository stockRepository;
+
+    /**
+     * Estes testes chamam os Services directamente (não são pedidos HTTP), por isso não há
+     * {@code SecurityInterceptor} a popular o contexto — têm de o declarar. Antes funcionavam por
+     * acidente: o {@code CurrentUserContext} inventava ADMIN e a empresa 1. Ver
+     * {@code docs/CONTEXTO_FAIL_CLOSED_SPEC.md}.
+     */
+    @BeforeEach
+    public void bindContext() {
+        CurrentUserContext.setCurrentUser("admin-teste", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(1L);
+    }
+
+    @AfterEach
+    public void clearContext() {
+        CurrentUserContext.clear();
+    }
 
     @Test
     public void testTaxIdValidation() {
