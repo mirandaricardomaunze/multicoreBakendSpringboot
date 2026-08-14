@@ -6,6 +6,7 @@ import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateInvoiceLineRequest;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
+import com.phcpro.modules.comercial.dto.SaveClientRequest;
 import com.phcpro.modules.comercial.model.Client;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.comercial.model.Product;
@@ -107,24 +108,22 @@ public class MulticoreServicesTest {
     public void testTaxIdValidation() {
         // Valid NUIT / NIF: exactly 9 digits
         assertDoesNotThrow(() -> {
-            ClientDTO c = comercialService.createClient("Test Client Valid", "999888777", "valid@email.com", "Test Addr");
+            ClientDTO c = comercialService.createClient(
+                    new SaveClientRequest("Test Client Valid", "999888777", "valid@email.com", "Test Addr"));
             assertNotNull(c);
         });
 
         // Invalid NUIT: non-digit
-        assertThrows(BusinessRuleException.class, () -> {
-            comercialService.createClient("Test Client Invalid 1", "12345678a", "invalid@email.com", "Test Addr");
-        });
+        assertThrows(BusinessRuleException.class, () -> comercialService.createClient(
+                new SaveClientRequest("Test Client Invalid 1", "12345678a", "invalid@email.com", "Test Addr")));
 
         // Invalid NUIT: too short
-        assertThrows(BusinessRuleException.class, () -> {
-            comercialService.createClient("Test Client Invalid 2", "12345678", "invalid@email.com", "Test Addr");
-        });
+        assertThrows(BusinessRuleException.class, () -> comercialService.createClient(
+                new SaveClientRequest("Test Client Invalid 2", "12345678", "invalid@email.com", "Test Addr")));
 
         // Invalid NUIT: too long
-        assertThrows(BusinessRuleException.class, () -> {
-            comercialService.createClient("Test Client Invalid 3", "1234567890", "invalid@email.com", "Test Addr");
-        });
+        assertThrows(BusinessRuleException.class, () -> comercialService.createClient(
+                new SaveClientRequest("Test Client Invalid 3", "1234567890", "invalid@email.com", "Test Addr")));
     }
 
     @Test

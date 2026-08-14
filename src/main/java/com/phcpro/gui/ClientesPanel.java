@@ -4,6 +4,7 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.FormField;
+import com.phcpro.gui.components.IntegerField;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ComercialApiClient;
@@ -69,7 +70,7 @@ public class ClientesPanel extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço"};
+        String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço", "Prazo (dias)"};
         model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -127,7 +128,8 @@ public class ClientesPanel extends JPanel {
                     c.name(),
                     c.taxId(),
                     c.email(),
-                    c.address() == null ? "" : c.address()
+                    c.address() == null ? "" : c.address(),
+                    c.paymentTermsDays() == 0 ? "Pronto pagamento" : c.paymentTermsDays()
             });
         }
     }
@@ -147,6 +149,8 @@ public class ClientesPanel extends JPanel {
         JTextField taxIdField = new JTextField(existing == null ? "" : existing.taxId());
         JTextField emailField = new JTextField(existing == null ? "" : existing.email());
         JTextField addressField = new JTextField(existing == null || existing.address() == null ? "" : existing.address());
+        IntegerField termsField = new IntegerField(
+                String.valueOf(existing == null ? 0 : existing.paymentTermsDays()), 0, 365, "O prazo de pagamento");
         UIHelper.styleTextField(nameField);
         UIHelper.styleTextField(taxIdField);
         UIHelper.styleTextField(emailField);
@@ -156,8 +160,10 @@ public class ClientesPanel extends JPanel {
         FormField taxForm = new FormField("NUIT / NIF", taxIdField, true, null);
         FormField emailForm = new FormField("Email", emailField, true, null);
         FormField addressForm = new FormField("Endereço", addressField, false, null);
+        FormField termsForm = new FormField("Prazo de pagamento (dias)", termsField, false,
+                "0 = pronto pagamento. Define o vencimento das faturas futuras deste cliente.");
         JPanel form = UIHelper.createDialogForm(
-                "", nameForm, "", taxForm, "", emailForm, "", addressForm);
+                "", nameForm, "", taxForm, "", emailForm, "", addressForm, "", termsForm);
 
         String title = existing == null ? "Novo Cliente" : "Editar Cliente — " + existing.name();
         ModernFormDialog dialog = new ModernFormDialog(
@@ -169,9 +175,10 @@ public class ClientesPanel extends JPanel {
             String taxId = taxIdField.getText().trim();
             String email = emailField.getText().trim();
             String address = addressField.getText().trim();
+            int terms = termsField.value();
             return () -> {
-                if (existing == null) comercialApiClient.createClient(name, taxId, email, address);
-                else comercialApiClient.updateClient(existing.id(), name, taxId, email, address);
+                if (existing == null) comercialApiClient.createClient(name, taxId, email, address, terms);
+                else comercialApiClient.updateClient(existing.id(), name, taxId, email, address, terms);
                 return null;
             };
         });

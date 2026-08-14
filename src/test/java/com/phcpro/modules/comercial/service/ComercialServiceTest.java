@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -161,6 +162,58 @@ class ComercialServiceTest {
                 () -> service.createInvoice(invoiceRequest(new BigDecimal("1"), null)));
         verify(invoiceRepository, never()).save(any());
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test // VA-11
+    void createInvoice_semVencimentoNoPedido_usaOPrazoDoCliente() {
+        stubInvoiceLookups();
+        client.setPaymentTermsDays(30);
+
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        assertEquals(LocalDate.now().plusDays(30), dto.dueDate());
+        assertEquals(0, dto.daysOverdue(), "acabada de emitir não pode nascer em atraso");
+    }
+
+    @Test // VA-12
+    void createInvoice_comVencimentoNoPedido_respeitaADataEscolhida() {
+        stubInvoiceLookups();
+        client.setPaymentTermsDays(30);
+        LocalDate escolhido = LocalDate.now().plusDays(7);
+
+        InvoiceDTO dto = service.createInvoice(new CreateInvoiceRequest(CLIENT_ID, COMPANY_ID, WAREHOUSE_ID,
+                List.of(new CreateInvoiceLineRequest(PRODUCT_ID, BigDecimal.ONE, new BigDecimal("0.16"),
+                        null, null, null)), escolhido));
+
+        assertEquals(escolhido, dto.dueDate());
+    }
+
+    @Test // VA-13
+    void getOutstandingInvoices_soTrazSaldoPorCobrar_eOrdenaPeloMaiorAtraso() {
+        Invoice recente = invoiceDoc("FT-2026/10", client);
+        recente.setStatus(InvoiceStatus.APPROVED);
+        recente.setTotalAmount(new BigDecimal("100.00"));
+        recente.setAmountPaid(BigDecimal.ZERO);
+        recente.setDueDate(LocalDate.now().minusDays(2));
+
+        Invoice antiga = invoiceDoc("FT-2026/1", client);
+        antiga.setStatus(InvoiceStatus.PARTIALLY_PAID);
+        antiga.setTotalAmount(new BigDecimal("500.00"));
+        antiga.setAmountPaid(new BigDecimal("200.00"));
+        antiga.setDueDate(LocalDate.now().minusDays(100));
+
+        Invoice paga = invoiceDoc("FT-2026/5", client);
+        paga.setStatus(InvoiceStatus.PAID);
+        paga.setTotalAmount(new BigDecimal("300.00"));
+        paga.setAmountPaid(new BigDecimal("300.00"));
+
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(recente, antiga, paga));
+
+        List<InvoiceDTO> outstanding = service.getOutstandingInvoicesByCompany(COMPANY_ID);
+
+        assertEquals(2, outstanding.size(), "a fatura paga não é conta corrente");
+        assertEquals("FT-2026/1", outstanding.get(0).invoiceNumber(), "a mais atrasada vem primeiro");
+        assertEquals(new BigDecimal("300.00"), outstanding.get(0).outstandingAmount());
     }
 
     // ────────────────────────── createOrder ──────────────────────────

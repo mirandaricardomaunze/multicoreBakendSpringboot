@@ -319,6 +319,9 @@ public class POSService {
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
         invoice.setStatus(InvoiceStatus.PAID); // Immediate payment for POS sales
+        // Vencimento: pronto pagamento por omissão, prazo do cliente quando a venda fica a fiado.
+        // Mesma regra do domínio que a faturação usa — não uma segunda cópia aqui.
+        invoice.assignDueDate(java.time.LocalDate.now(), null);
         invoice.setSalesChannel(SalesChannel.POS);
         // Venda POS é uma fatura real → número fiscal sequencial na série FT.
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));

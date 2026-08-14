@@ -31,6 +31,13 @@ public class Client extends BaseEntity {
     @Column(name = "address")
     private String address;
 
+    /**
+     * Prazo de pagamento acordado, em dias. Zero (o default) é pronto pagamento — o
+     * comportamento de toda a base anterior à V35, pelo que nada muda para quem não o definir.
+     */
+    @Column(name = "payment_terms_days", nullable = false)
+    private Integer paymentTermsDays = 0;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "client_companies",
@@ -42,5 +49,10 @@ public class Client extends BaseEntity {
 
     public boolean belongsToCompany(Long companyId) {
         return companyId != null && companies.stream().anyMatch(company -> companyId.equals(company.getId()));
+    }
+
+    /** Prazo de pagamento em dias, nunca nulo nem negativo (mesmo padrão de {@code effectiveTaxRate}). */
+    public int effectivePaymentTermsDays() {
+        return paymentTermsDays == null || paymentTermsDays < 0 ? 0 : paymentTermsDays;
     }
 }

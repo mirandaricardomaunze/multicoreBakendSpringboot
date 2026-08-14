@@ -28,14 +28,12 @@ public class ComercialController {
 
     @PostMapping("/clients")
     public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid SaveClientRequest request) {
-        return ResponseEntity.ok(comercialService.createClient(
-                request.name(), request.taxId(), request.email(), request.address()));
+        return ResponseEntity.ok(comercialService.createClient(request));
     }
 
     @PutMapping("/clients/{id}")
     public ResponseEntity<ClientDTO> updateClient(@PathVariable Long id, @RequestBody @Valid SaveClientRequest request) {
-        return ResponseEntity.ok(comercialService.updateClient(
-                id, request.name(), request.taxId(), request.email(), request.address()));
+        return ResponseEntity.ok(comercialService.updateClient(id, request));
     }
 
     @DeleteMapping("/clients/{id}")

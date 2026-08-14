@@ -5,7 +5,10 @@ import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.desktop.client.POSApiClient;
 import com.phcpro.gui.components.*;
+import com.phcpro.modules.comercial.dto.AgingBucketTotalDTO;
+import com.phcpro.modules.comercial.dto.AgingSummaryDTO;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
+import com.phcpro.modules.comercial.model.AgingBucket;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
 import com.phcpro.modules.pos.dto.PosPaymentRequest;
 
@@ -22,11 +25,13 @@ import java.util.List;
 public final class OutstandingAccountsPanel extends JPanel {
 
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final ComercialApiClient comercialApiClient;
     private final FinanceApiClient financeApiClient;
     private final POSApiClient posApiClient;
     private final DefaultTableModel model;
     private final JTable table;
+    private final JLabel agingSummary;
     private List<InvoiceDTO> invoices = new ArrayList<>();
 
     public OutstandingAccountsPanel(ComercialApiClient comercialApiClient,
@@ -59,32 +64,54 @@ public final class OutstandingAccountsPanel extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         model = new DefaultTableModel(
-                new String[]{"Nº Fatura", "Data", "Cliente", "NUIT", "Total", "Pago", "Em Dívida", "Estado"}, 0) {
+                new String[]{"Nº Fatura", "Data", "Cliente", "NUIT", "Total", "Pago", "Em Dívida",
+                        "Vencimento", "Dias em Atraso", "Antiguidade", "Estado"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
         for (int column : new int[]{4, 5, 6}) table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
-        table.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
+        table.getColumnModel().getColumn(10).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         JTextField search = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
         JComboBox<String> status = TableFilter.combo("Todos os estados", "APPROVED", "PARTIALLY_PAID");
+        JComboBox<String> aging = TableFilter.combo(agingLabels());
         JComboBox<String> period = TableFilter.periodCombo();
-        TableFilter.install(table, search, List.of(new TableFilter.ColumnFilter(status, 7)),
+        TableFilter.install(table, search,
+                List.of(new TableFilter.ColumnFilter(status, 10), new TableFilter.ColumnFilter(aging, 9)),
                 List.of(new TableFilter.PeriodFilter(period, 1)));
         JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status,
+                TableFilter.label("Antiguidade:", "fas-hourglass-half"), aging,
                 TableFilter.label("Data:", "fas-calendar-alt"), period);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         card.add(filters, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+
+        agingSummary = new JLabel(" ");
+        agingSummary.setForeground(UIHelper.TEXT_LIGHT);
+        agingSummary.setBorder(new EmptyBorder(10, 2, 0, 2));
+        card.add(agingSummary, BorderLayout.SOUTH);
         add(card, BorderLayout.CENTER);
+    }
+
+    /** Opções do dropdown: índice 0 é "sem filtro" (contrato do {@link TableFilter.ColumnFilter}). */
+    private static String[] agingLabels() {
+        AgingBucket[] values = AgingBucket.values();
+        String[] labels = new String[values.length + 1];
+        labels[0] = "Toda a antiguidade";
+        for (int i = 0; i < values.length; i++) labels[i + 1] = values[i].label();
+        return labels;
     }
 
     public void refresh() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.loadAsync(this, () -> comercialApiClient.getOutstandingInvoicesByCompany(companyId), this::apply,
                 error -> showError("carregar contas correntes", error));
+        // O resumo por escalão vem do servidor (mesma regra, uma só porta) e é acessório: se
+        // falhar, a tabela continua utilizável — só fica sem a linha de totais.
+        UIHelper.loadAsync(this, comercialApiClient::getReceivablesAging, this::applyAging,
+                error -> agingSummary.setText(" "));
     }
 
     private void apply(List<InvoiceDTO> loaded) {
@@ -95,8 +122,25 @@ public final class OutstandingAccountsPanel extends JPanel {
             model.addRow(new Object[]{invoice.invoiceNumber(),
                     invoice.createdAt() == null ? "-" : invoice.createdAt().format(DATE_TIME),
                     invoice.clientName(), invoice.clientTaxId(), invoice.totalAmount(), paid,
-                    invoice.totalAmount().subtract(paid), invoice.status().name()});
+                    invoice.outstandingAmount(),
+                    invoice.dueDate() == null ? "-" : invoice.dueDate().format(DATE),
+                    invoice.daysOverdue() == 0 ? "—" : invoice.daysOverdue(),
+                    invoice.agingBucket() == null ? "-" : invoice.agingBucket().label(),
+                    invoice.status().name()});
         }
+    }
+
+    private void applyAging(AgingSummaryDTO summary) {
+        if (summary == null) { agingSummary.setText(" "); return; }
+        StringBuilder text = new StringBuilder("<html><b>Antiguidade a ")
+                .append(summary.referenceDate().format(DATE)).append(":</b> ");
+        for (AgingBucketTotalDTO bucket : summary.buckets()) {
+            text.append(String.format("&nbsp;%s: <b>%,.2f MT</b> (%d)&nbsp;·", bucket.label(),
+                    bucket.amount(), bucket.invoiceCount()));
+        }
+        text.append(String.format("&nbsp;&nbsp;<b>Em atraso: %,.2f MT</b> de %,.2f MT",
+                summary.overdueTotal(), summary.total()));
+        agingSummary.setText(text.append("</html>").toString());
     }
 
     private InvoiceDTO selected() {

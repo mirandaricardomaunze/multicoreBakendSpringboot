@@ -27,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -92,7 +94,8 @@ public class ComercialService {
 
 
     @Transactional
-    public ClientDTO createClient(String name, String taxId, String email, String address) {
+    public ClientDTO createClient(SaveClientRequest request) {
+        String taxId = request.taxId();
         TaxIdValidator.validate(taxId);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         if (clientRepository.findByTaxIdAndCompaniesId(taxId, companyId).isPresent()) {
@@ -102,36 +105,46 @@ public class ComercialService {
         if (sharedClient != null) {
             sharedClient.getCompanies().add(companyRepository.getReferenceById(companyId));
             sharedClient = clientRepository.save(sharedClient);
-            return new ClientDTO(sharedClient.getId(), sharedClient.getName(), sharedClient.getTaxId(),
-                    sharedClient.getEmail(), sharedClient.getAddress());
+            return toDTO(sharedClient);
         }
         Client client = new Client();
-        client.setName(name);
+        client.setName(request.name());
         client.setTaxId(taxId);
-        client.setEmail(email);
-        client.setAddress(address);
+        client.setEmail(request.email());
+        client.setAddress(request.address());
+        client.setPaymentTermsDays(request.effectivePaymentTermsDays());
         client.setCreatedBy("SYSTEM");
         client.getCompanies().add(companyRepository.getReferenceById(companyId));
         client = clientRepository.save(client);
-        return new ClientDTO(client.getId(), client.getName(), client.getTaxId(), client.getEmail(), client.getAddress());
+        return toDTO(client);
     }
 
     @Transactional
-    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
+    public ClientDTO updateClient(Long id, SaveClientRequest request) {
         Client client = clientRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        String taxId = request.taxId();
         TaxIdValidator.validate(taxId);
         if (!client.getTaxId().equals(taxId)) {
             clientRepository.findByTaxIdAndCompaniesId(taxId, CurrentUserContext.getCurrentCompanyId()).ifPresent(existing -> {
                 throw new BusinessRuleException("Já existe outro cliente registado com este NUIT/NIF.");
             });
         }
-        client.setName(name);
+        client.setName(request.name());
         client.setTaxId(taxId);
-        client.setEmail(email);
-        client.setAddress(address);
+        client.setEmail(request.email());
+        client.setAddress(request.address());
+        // Alterar o prazo só afecta faturas FUTURAS: o vencimento das já emitidas está gravado
+        // no documento, e uma dívida não muda de data por o acordo ter mudado hoje.
+        client.setPaymentTermsDays(request.effectivePaymentTermsDays());
         client = clientRepository.save(client);
-        return new ClientDTO(client.getId(), client.getName(), client.getTaxId(), client.getEmail(), client.getAddress());
+        return toDTO(client);
+    }
+
+    /** Conversão única de cliente para DTO — evita cinco cópias da mesma lista de campos. */
+    private ClientDTO toDTO(Client client) {
+        return new ClientDTO(client.getId(), client.getName(), client.getTaxId(),
+                client.getEmail(), client.getAddress(), client.effectivePaymentTermsDays());
     }
 
     @Transactional
@@ -166,6 +179,9 @@ public class ComercialService {
         invoice.setClient(client);
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
+        // Vencimento: o do pedido, ou o prazo acordado com o cliente. A regra vive no domínio
+        // (Invoice.assignDueDate) — as três portas que emitem fatura chamam a mesma.
+        invoice.assignDueDate(LocalDate.now(), request.dueDate());
         // Estado definido no fim: APPROVED (directa) ou PENDING_DISCOUNT_APPROVAL (desconto >10%).
 
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -450,21 +466,20 @@ public class ComercialService {
     }
 
     /**
-     * Faturas com saldo em dívida — fiados ou pagamentos parciais.
-     * Inclui status APPROVED (cobrável) ou PARTIALLY_PAID, onde amountPaid < totalAmount.
+     * Faturas com saldo em dívida — fiados ou pagamentos parciais, das mais atrasadas para as
+     * mais recentes (é por aí que se começa a cobrar).
+     *
+     * <p>Usa os predicados canónicos ({@code isCollectable} + {@code outstandingAmount}) em vez de
+     * repetir a comparação de estados e de valores, que era a terceira cópia da mesma regra.
      */
     @Transactional(readOnly = true)
     public List<InvoiceDTO> getOutstandingInvoicesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         return invoiceRepository.findByCompanyId(companyId).stream()
-                .filter(i -> i.getStatus() == InvoiceStatus.APPROVED
-                          || i.getStatus() == InvoiceStatus.PARTIALLY_PAID)
-                .filter(i -> {
-                    BigDecimal paid = i.getAmountPaid() == null ? BigDecimal.ZERO : i.getAmountPaid();
-                    BigDecimal total = i.getTotalAmount() == null ? BigDecimal.ZERO : i.getTotalAmount();
-                    return paid.compareTo(total) < 0;
-                })
+                .filter(i -> i.getStatus().isCollectable())
+                .filter(i -> i.outstandingAmount().signum() > 0)
                 .map(this::toDTO)
+                .sorted(Comparator.comparingInt(InvoiceDTO::daysOverdue).reversed())
                 .collect(Collectors.toList());
     }
 
@@ -493,7 +508,7 @@ public class ComercialService {
     public List<ClientDTO> getAllClients() {
         return clientRepository.findDistinctByCompaniesIdOrderByName(CurrentUserContext.getCurrentCompanyId())
                 .stream()
-                .map(c -> new ClientDTO(c.getId(), c.getName(), c.getTaxId(), c.getEmail(), c.getAddress()))
+                .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -811,7 +826,10 @@ public class ComercialService {
                 invoice.getRejectionReason(),
                 lines,
                 invoice.getCreatedAt() != null ? invoice.getCreatedAt() : LocalDateTime.now(),
-                invoice.getCreatedBy()
+                invoice.getCreatedBy(),
+                invoice.effectiveDueDate(),
+                invoice.daysOverdue(LocalDate.now()),
+                invoice.agingBucket(LocalDate.now())
         );
     }
 
@@ -921,6 +939,8 @@ public class ComercialService {
         invoice.setClient(order.getClient());
         invoice.setCompany(order.getCompany());
         invoice.setWarehouse(order.getWarehouse());
+        // A encomenda facturada segue o prazo do cliente, tal como uma fatura emitida à mão.
+        invoice.assignDueDate(LocalDate.now(), null);
         invoice.setStatus(InvoiceStatus.APPROVED);
         invoice.setSalesChannel(SalesChannel.ORDER);
         invoice.setTotalBeforeTax(order.getTotalBeforeTax());

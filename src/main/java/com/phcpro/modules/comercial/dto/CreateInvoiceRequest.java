@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public record CreateInvoiceRequest(
@@ -18,5 +19,15 @@ public record CreateInvoiceRequest(
 
     @NotEmpty(message = "A fatura deve conter pelo menos uma linha.")
     @Valid
-    List<CreateInvoiceLineRequest> lines
-) {}
+    List<CreateInvoiceLineRequest> lines,
+
+    /** Vencimento escolhido pelo operador. Vazio = prazo de pagamento do cliente. */
+    LocalDate dueDate
+) {
+
+    /** Retrocompatível: sem vencimento explícito, manda o prazo acordado com o cliente. */
+    public CreateInvoiceRequest(Long clientId, Long companyId, Long warehouseId,
+                                List<CreateInvoiceLineRequest> lines) {
+        this(clientId, companyId, warehouseId, lines, null);
+    }
+}

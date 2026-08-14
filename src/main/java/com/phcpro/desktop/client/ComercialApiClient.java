@@ -1,5 +1,6 @@
 package com.phcpro.desktop.client;
 
+import com.phcpro.modules.comercial.dto.AgingSummaryDTO;
 import com.phcpro.modules.comercial.dto.CancelReasonRequest;
 import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
@@ -37,13 +38,27 @@ public class ComercialApiClient {
     }
 
     public ClientDTO createClient(String name, String taxId, String email, String address) {
-        return clientFactory.authenticatedClient().post(
-                "/api/comercial/clients", new SaveClientRequest(name, taxId, email, address), ClientDTO.class);
+        return createClient(name, taxId, email, address, 0);
+    }
+
+    public ClientDTO createClient(String name, String taxId, String email, String address, int paymentTermsDays) {
+        return clientFactory.authenticatedClient().post("/api/comercial/clients",
+                new SaveClientRequest(name, taxId, email, address, paymentTermsDays), ClientDTO.class);
     }
 
     public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
-        return clientFactory.authenticatedClient().put(
-                "/api/comercial/clients/" + id, new SaveClientRequest(name, taxId, email, address), ClientDTO.class);
+        return updateClient(id, name, taxId, email, address, 0);
+    }
+
+    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address, int paymentTermsDays) {
+        return clientFactory.authenticatedClient().put("/api/comercial/clients/" + id,
+                new SaveClientRequest(name, taxId, email, address, paymentTermsDays), ClientDTO.class);
+    }
+
+    /** Mapa de antiguidade de saldos (contas a receber) à data de hoje no servidor. */
+    public AgingSummaryDTO getReceivablesAging() {
+        return clientFactory.authenticatedClient()
+                .get("/api/comercial/receivables/aging", AgingSummaryDTO.class);
     }
 
     public void deleteClient(Long id) {
@@ -251,7 +266,8 @@ public class ComercialApiClient {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
-    record SaveClientRequest(String name, String taxId, String email, String address) {}
+    /** Espelha o corpo esperado pelo controller; {@code paymentTermsDays} = prazo acordado, em dias. */
+    record SaveClientRequest(String name, String taxId, String email, String address, int paymentTermsDays) {}
 
     /** Corpo do reject da guia — chave "rejectionReason" espelha o esperado pelo controller. */
     record RejectGuideRequest(String rejectionReason) {}
