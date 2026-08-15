@@ -68,6 +68,7 @@ class POSServiceTest {
     private AuditLogService auditLogService;
     private CreditNoteService creditNoteService;
     private ReceivablesService receivablesService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private POSService service;
 
     private Company company;
@@ -99,12 +100,13 @@ class POSServiceTest {
         auditLogService = mock(AuditLogService.class);
         creditNoteService = mock(CreditNoteService.class);
         receivablesService = mock(ReceivablesService.class);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new POSService(tillSessionRepository, tillMovementRepository, invoiceRepository,
                 clientRepository, productRepository, warehouseRepository, companyRepository,
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
-                receivablesService);
+                receivablesService, eventPublisher);
 
         company = company(COMPANY_ID);
         warehouse = warehouse(WAREHOUSE_ID, company);

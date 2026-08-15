@@ -56,6 +56,7 @@ public class ComercialService {
     private final AuditLogService auditLogService;
     private final com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
     private final ReceivablesService receivablesService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -75,7 +76,8 @@ public class ComercialService {
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository,
-            ReceivablesService receivablesService
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -95,6 +97,29 @@ public class ComercialService {
         this.auditLogService = auditLogService;
         this.taxRateRepository = taxRateRepository;
         this.receivablesService = receivablesService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Anuncia uma venda realizada para quem a queira contabilizar. O comercial não conhece a
+     * contabilidade — só publica o facto, com números e nunca entidades.
+     * Ver docs/CONTABILIDADE_SPEC.md.
+     */
+    private void publishSale(Invoice invoice, BigDecimal amountPaidNow, boolean cashPayment) {
+        BigDecimal cost = invoice.getLines().stream()
+                .map(InvoiceLine::lineCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        eventPublisher.publishEvent(new com.phcpro.architecture.events.SaleRegisteredEvent(
+                invoice.getCompany().getId(),
+                invoice.getId(),
+                invoice.getInvoiceNumber(),
+                invoice.issueDate() == null ? LocalDate.now() : invoice.issueDate(),
+                invoice.getTotalBeforeTax(),
+                invoice.getTaxAmount(),
+                invoice.getTotalAmount(),
+                cost,
+                amountPaidNow,
+                cashPayment));
     }
 
 
@@ -267,6 +292,9 @@ public class ComercialService {
             auditLogService.logCurrent("INVOICE_ISSUE",
                     "Fatura " + invoice.getInvoiceNumber() + " emitida e aprovada para "
                             + client.getName() + ". Total: " + invoice.getTotalAmount() + " MT.");
+            // Só aqui: uma fatura à espera de aprovação de desconto ainda não é venda (o stock
+            // não se moveu) e não pode entrar na contabilidade.
+            publishSale(invoice, BigDecimal.ZERO, false);
         }
 
         return toDTO(invoice);
@@ -342,6 +370,16 @@ public class ComercialService {
         // Record financial cash inflow (DEBIT)
         String description = "Recebimento Fatura " + invoice.getInvoiceNumber() + " via " + paymentMethod + " (Recibo " + receiptNum + ")";
         financeService.registerTransaction(treasuryAccountId, "DEBIT", amountPaid, description);
+
+        // Contabilidade: só o movimento de saldo (Caixa/Banco ↔ Clientes). O proveito já foi
+        // lançado quando a fatura foi emitida — lançá-lo aqui contaria a venda duas vezes.
+        eventPublisher.publishEvent(new com.phcpro.architecture.events.PaymentReceivedEvent(
+                invoice.getCompany().getId(),
+                receipt.getId(),
+                receiptNum,
+                LocalDate.now(),
+                amountPaid,
+                "CASH".equalsIgnoreCase(paymentMethod)));
 
         return toDTO(receipt);
     }
@@ -1024,6 +1062,7 @@ public class ComercialService {
         }
 
         invoice = invoiceRepository.save(invoice);
+        publishSale(invoice, BigDecimal.ZERO, false);
 
         order.setStatus("BILLED");
         order.setInvoiceId(invoice.getId());

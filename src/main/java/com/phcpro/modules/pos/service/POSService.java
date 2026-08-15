@@ -68,6 +68,7 @@ public class POSService {
     private final AuditLogService auditLogService;
     private final CreditNoteService creditNoteService;
     private final ReceivablesService receivablesService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public POSService(
             TillSessionRepository tillSessionRepository,
@@ -85,7 +86,8 @@ public class POSService {
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             CreditNoteService creditNoteService,
-            ReceivablesService receivablesService
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.tillSessionRepository = tillSessionRepository;
         this.tillMovementRepository = tillMovementRepository;
@@ -103,6 +105,7 @@ public class POSService {
         this.auditLogService = auditLogService;
         this.creditNoteService = creditNoteService;
         this.receivablesService = receivablesService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -422,6 +425,25 @@ public class POSService {
             // a dupla contagem que existia ao registar também uma transação de tesouraria.
             registerTillMovement(session, totalAmount, invoice.getInvoiceNumber());
         }
+
+        // Contabilidade: a venda de balcão é uma fatura real e lança como tal. Numerário
+        // (gaveta ou método CASH) entra em Caixa; o resto em Banco. Ver CONTABILIDADE_SPEC §5.
+        boolean cashPayment = !hasMultiPayments || payments.stream()
+                .anyMatch(p -> "CASH".equalsIgnoreCase(p.method()));
+        BigDecimal costOfGoods = invoice.getLines().stream()
+                .map(InvoiceLine::lineCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        eventPublisher.publishEvent(new com.phcpro.architecture.events.SaleRegisteredEvent(
+                invoice.getCompany().getId(),
+                invoice.getId(),
+                invoice.getInvoiceNumber(),
+                java.time.LocalDate.now(),
+                invoice.getTotalBeforeTax(),
+                invoice.getTaxAmount(),
+                invoice.getTotalAmount(),
+                costOfGoods,
+                totalPaid,
+                cashPayment));
 
         return invoice;
     }

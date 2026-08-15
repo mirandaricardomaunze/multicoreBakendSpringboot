@@ -71,6 +71,7 @@ class ComercialServiceTest {
     private AuditLogService auditLogService;
     private com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
     private ReceivablesService receivablesService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private ComercialService service;
 
     private Company company;
@@ -104,12 +105,13 @@ class ComercialServiceTest {
         auditLogService = mock(AuditLogService.class);
         taxRateRepository = mock(com.phcpro.modules.fiscal.repository.TaxRateRepository.class);
         receivablesService = mock(ReceivablesService.class);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new ComercialService(clientRepository, productRepository, productCategoryRepository,
                 invoiceRepository, approvalService, companyRepository, warehouseRepository, inventoryService,
                 receiptRepository, financeService, treasuryAccountRepository, orderRepository, orderLineRepository,
                 walkInClientProvider, documentNumberService, auditLogService, taxRateRepository,
-                receivablesService);
+                receivablesService, eventPublisher);
 
         company = company(COMPANY_ID);
         client = client(CLIENT_ID, "Cliente Loja");

@@ -82,6 +82,7 @@ public class UIHelper {
     public static final Color MODULE_CRM        = ACCENT_BLUE;
     public static final Color MODULE_CLIENTES   = new Color(14, 165, 233); // Sky-500
     public static final Color MODULE_FISCAL     = new Color(202, 138, 4);  // Yellow-600
+    public static final Color MODULE_ACCOUNTING = new Color(124, 58, 237); // Violet-600
     public static final Color MODULE_APPROVALS  = PENDING_YELLOW;
     public static final Color MODULE_CONFIG     = new Color(107, 114, 128); // Gray-500
 

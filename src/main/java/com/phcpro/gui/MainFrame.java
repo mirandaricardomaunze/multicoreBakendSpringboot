@@ -63,6 +63,7 @@ public class MainFrame extends JFrame {
     private final CRMPanel crmPanel;
     private final ClientesPanel clientesPanel;
     private final FiscalPanel fiscalPanel;
+    private final com.phcpro.gui.accounting.AccountingPanel accountingPanel;
     private final ApprovalsPanel approvalsPanel;
     private final POSPanel posPanel;
     private final StockPanel stockPanel;
@@ -114,7 +115,8 @@ public class MainFrame extends JFrame {
             DesktopSessionStore desktopSessionStore,
             FiscalApiClient fiscalApiClient,
             PlatformApiClient platformApiClient,
-            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
+            com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
+            com.phcpro.desktop.client.AccountingApiClient accountingApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.mySubscriptionApiClient = mySubscriptionApiClient;
@@ -135,6 +137,7 @@ public class MainFrame extends JFrame {
             // empresa activa — que o superadmin não tem.
             dashboardPanel = null; comercialPanel = null; financeiroPanel = null; hrPanel = null;
             crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null;
+            accountingPanel = null;
             posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
             notificationFeed = null; notificationsPanel = null; notificationReadStore = null;
             plataformaPanel = new PlataformaPanel(platformApiClient);
@@ -147,6 +150,7 @@ public class MainFrame extends JFrame {
             crmPanel        = new CRMPanel(crmApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(fiscalApiClient);
+            accountingPanel = new com.phcpro.gui.accounting.AccountingPanel(accountingApiClient);
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
             stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient);
@@ -168,6 +172,7 @@ public class MainFrame extends JFrame {
             contentPanel.add(crmPanel,        "crm");
             contentPanel.add(clientesPanel,   "clientes");
             contentPanel.add(fiscalPanel,     "fiscal");
+            contentPanel.add(accountingPanel, "contabilidade");
             contentPanel.add(approvalsPanel,  "approvals");
             contentPanel.add(configPanel,     "config");
             contentPanel.add(notificationsPanel, "notifications");
@@ -232,6 +237,7 @@ public class MainFrame extends JFrame {
         bar.addItem(navIcon("fas-headset"),             "CRM & Assistência",  UIHelper.MODULE_CRM,        () -> navigate("crm"));
         bar.addItem(navIcon("fas-address-book"),        "Clientes",           UIHelper.MODULE_CLIENTES,   () -> navigate("clientes"));
         bar.addItem(navIcon("fas-percent"),             "Área Fiscal",        UIHelper.MODULE_FISCAL,     () -> navigate("fiscal"));
+        bar.addItem(navIcon("fas-book"),                "Contabilidade",      UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"));
         bar.addItem(navIcon("fas-check-double"),        "Aprovações",         UIHelper.MODULE_APPROVALS,  () -> navigate("approvals"));
         bar.addItem(navIcon("fas-cog"),                 "Configurações",      UIHelper.MODULE_CONFIG,     () -> navigate("config"));
 
@@ -616,6 +622,7 @@ public class MainFrame extends JFrame {
                 case "crm"        -> "CRM & Assist\u00eancia";
                 case "clientes"   -> "Clientes";
                 case "fiscal"     -> "\u00c1rea Fiscal";
+                case "contabilidade" -> "Contabilidade";
                 case "approvals"  -> "Aprova\u00e7\u00f5es";
                 case "config"     -> "Configura\u00e7\u00f5es";
                 case "notifications" -> "Notifica\u00e7\u00f5es";
@@ -636,6 +643,7 @@ public class MainFrame extends JFrame {
             case "crm"        -> crmPanel.onPanelSelected();
             case "clientes"   -> clientesPanel.onPanelSelected();
             case "fiscal"     -> fiscalPanel.onPanelSelected();
+            case "contabilidade" -> accountingPanel.onPanelSelected();
             case "approvals"  -> approvalsPanel.onPanelSelected();
             case "pos"        -> posPanel.onPanelSelected();
             case "stock"      -> stockPanel.onPanelSelected();
@@ -667,6 +675,7 @@ public class MainFrame extends JFrame {
             else if (comp instanceof CRMPanel p)        p.onPanelSelected();
             else if (comp instanceof ClientesPanel p)   p.onPanelSelected();
             else if (comp instanceof FiscalPanel p)     p.onPanelSelected();
+            else if (comp instanceof com.phcpro.gui.accounting.AccountingPanel p) p.onPanelSelected();
             else if (comp instanceof ApprovalsPanel p)  p.onPanelSelected();
             else if (comp instanceof POSPanel p)        p.onPanelSelected();
             else if (comp instanceof StockPanel p)      p.onPanelSelected();

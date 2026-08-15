@@ -27,6 +27,8 @@ public final class DocumentSeries {
     public static final String PURCHASE_ORDER = "EC-F";
     /** Recibo de vencimento (folha salarial). */
     public static final String PAYSLIP = "REC";
+    /** Lançamento contabilístico (diário). */
+    public static final String JOURNAL_ENTRY = "LC";
 
     private DocumentSeries() {}
 }
