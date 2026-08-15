@@ -232,6 +232,11 @@ public class ReportService {
                 .toList();
     }
 
+    /**
+     * Margem bruta por produto. O custo vem do <b>acto da venda</b> ({@code line.lineCost()}),
+     * não do preço de compra actual do produto: uma alteração de preço do fornecedor não pode
+     * reescrever a margem de vendas já feitas. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+     */
     private List<ProductMarginDTO> marginByProduct(List<Invoice> sales) {
         Map<Long, ProductMarginAccumulator> acc = new java.util.HashMap<>();
         for (Invoice invoice : sales) {
@@ -241,11 +246,8 @@ public class ReportService {
                         line.getProduct().getSku(),
                         line.getProduct().getName()));
                 BigDecimal revenue = line.getLineTotal() == null ? BigDecimal.ZERO : line.getLineTotal();
-                BigDecimal purchasePrice = line.getProduct().getPurchasePrice() == null
-                        ? BigDecimal.ZERO : line.getProduct().getPurchasePrice();
-                BigDecimal quantity = line.getQuantity() == null ? BigDecimal.ZERO : line.getQuantity();
                 current.revenue = current.revenue.add(revenue);
-                current.estimatedCost = current.estimatedCost.add(purchasePrice.multiply(quantity));
+                current.estimatedCost = current.estimatedCost.add(line.lineCost());
             }
         }
         return acc.entrySet().stream()

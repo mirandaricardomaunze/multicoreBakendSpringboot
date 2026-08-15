@@ -363,6 +363,9 @@ public class POSService {
             line.setLineTotal(amounts.total());
             line.setBatchNumber(lineReq.batchNumber());
             line.setSerialNumber(lineReq.serialNumber());
+            // Fotografia do custo no acto da venda — a margem de hoje não pode mudar quando o
+            // preço de compra mudar. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+            line.setUnitCost(product.getPurchasePrice());
             invoice.addLine(line);
 
             subtotal = subtotal.add(amounts.net());

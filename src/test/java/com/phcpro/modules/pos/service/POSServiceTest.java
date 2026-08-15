@@ -160,6 +160,17 @@ class POSServiceTest {
                 () -> service.checkout(checkout(/*payments*/ null, /*treasuryAccountId*/ null)));
     }
 
+    @Test // MC-06
+    void checkout_gravaOCustoDoActoDaVendaNaLinha() {
+        stubHappyPath();
+        product.setPurchasePrice(new BigDecimal("72.25"));
+
+        Invoice invoice = service.checkout(checkout(null, ACCOUNT_ID));
+
+        assertEquals(new BigDecimal("72.25"), invoice.getLines().get(0).getUnitCost(),
+                "a margem desta venda não pode mudar quando o preço de compra mudar");
+    }
+
     @Test // LC-30
     void checkout_fiado_verificaOLimiteComOQueFicaPorPagar() {
         stubHappyPath();

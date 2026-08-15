@@ -222,6 +222,9 @@ public class ComercialService {
 
             line.setBatchNumber(lineReq.batchNumber());
             line.setSerialNumber(lineReq.serialNumber());
+            // Fotografia do custo: a margem desta venda não pode mudar quando o fornecedor
+            // mudar de preço amanhã. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+            line.setUnitCost(product.getPurchasePrice());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
                     unitPrice, lineReq.quantity(), discountPct, taxRate);
@@ -974,6 +977,9 @@ public class ComercialService {
             invoiceLine.setLineTotal(orderLine.getLineTotal());
             invoiceLine.setBatchNumber(orderLine.getBatchNumber());
             invoiceLine.setSerialNumber(orderLine.getSerialNumber());
+            // Fotografia do custo à data da FATURA (é aqui que a venda se realiza e o stock sai),
+            // não à data da encomenda. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+            invoiceLine.setUnitCost(orderLine.getProduct().getPurchasePrice());
             invoice.addLine(invoiceLine);
 
             // Deduct stock for each line in the warehouse

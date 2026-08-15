@@ -5,13 +5,16 @@ import com.phcpro.modules.approvals.model.ApprovalStatus;
 import com.phcpro.modules.approvals.repository.ApprovalRequestRepository;
 import com.phcpro.modules.comercial.model.Client;
 import com.phcpro.modules.comercial.model.Invoice;
+import com.phcpro.modules.comercial.model.InvoiceLine;
 import com.phcpro.modules.comercial.model.InvoiceStatus;
+import com.phcpro.modules.comercial.model.Product;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.inventory.repository.StockRepository;
 import com.phcpro.modules.pos.repository.PaymentEntryRepository;
 import com.phcpro.modules.pos.repository.TillMovementRepository;
 import com.phcpro.modules.pos.repository.TillSessionRepository;
 import com.phcpro.modules.reports.dto.DailyStoreReportDTO;
+import com.phcpro.modules.reports.dto.ProductMarginDTO;
 import com.phcpro.modules.reports.dto.StoreDashboardDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -153,6 +156,71 @@ class ReportServiceTest {
     }
 
     // ────────────────────────── helpers ──────────────────────────
+
+    // ────────────────────────── margem: custo do acto da venda ──────────────────────────
+
+    @Test // MC-01
+    void margem_usaOCustoGravadoNaLinha_naoOPrecoDeCompraActual() {
+        Product produto = produto(1L, "ARROZ", "Arroz 5kg", "80.00");
+        // Vendido a 100 quando custava 60. Hoje o fornecedor cobra 80 (o preço no cadastro).
+        Invoice venda = vendaComLinha(produto, "2", "200.00", "60.00");
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(venda));
+
+        DailyStoreReportDTO report = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
+        ProductMarginDTO margem = report.grossMarginByProduct().get(0);
+
+        // Antes do fix: custo = 80 × 2 = 160 → margem 40. A subida do fornecedor reescrevia
+        // a margem de uma venda já feita.
+        assertEquals(0, margem.estimatedCost().compareTo(new BigDecimal("120.00")),
+                "custo = 60 × 2, o que custou na altura");
+        assertEquals(0, margem.grossMargin().compareTo(new BigDecimal("80.00")));
+    }
+
+    @Test // MC-02
+    void margem_semCustoGravado_recorreAoPrecoActual() {
+        Product produto = produto(1L, "ARROZ", "Arroz 5kg", "80.00");
+        Invoice legado = vendaComLinha(produto, "2", "200.00", /*unitCost*/ null);
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(legado));
+
+        DailyStoreReportDTO report = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
+
+        assertEquals(0, report.grossMarginByProduct().get(0).estimatedCost().compareTo(new BigDecimal("160.00")),
+                "linha anterior à V37: estimativa pelo preço actual");
+    }
+
+    @Test // MC-03
+    void margem_semCustoNenhum_naoRebenta() {
+        Product semPreco = produto(1L, "SERV", "Serviço", null);
+        Invoice venda = vendaComLinha(semPreco, "1", "500.00", null);
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(venda));
+
+        DailyStoreReportDTO report = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
+
+        assertEquals(0, report.grossMarginByProduct().get(0).estimatedCost().compareTo(BigDecimal.ZERO));
+        assertEquals(0, report.grossMarginByProduct().get(0).grossMargin().compareTo(new BigDecimal("500.00")));
+    }
+
+    private Product produto(Long id, String sku, String name, String purchasePrice) {
+        Product product = new Product();
+        product.setId(id);
+        product.setSku(sku);
+        product.setName(name);
+        if (purchasePrice != null) product.setPurchasePrice(new BigDecimal(purchasePrice));
+        return product;
+    }
+
+    private Invoice vendaComLinha(Product product, String qty, String lineTotal, String unitCost) {
+        Invoice invoice = invoice(InvoiceStatus.PAID, lineTotal, lineTotal);
+        InvoiceLine line = new InvoiceLine();
+        line.setProduct(product);
+        line.setQuantity(new BigDecimal(qty));
+        line.setUnitPrice(new BigDecimal(lineTotal).divide(new BigDecimal(qty)));
+        line.setTaxRate(BigDecimal.ZERO);
+        line.setLineTotal(new BigDecimal(lineTotal));
+        if (unitCost != null) line.setUnitCost(new BigDecimal(unitCost));
+        invoice.addLine(line);
+        return invoice;
+    }
 
     private Invoice invoice(InvoiceStatus status, String total, String paid) {
         Invoice invoice = new Invoice();

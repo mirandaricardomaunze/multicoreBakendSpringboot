@@ -191,6 +191,34 @@ class ComercialServiceTest {
         assertEquals(escolhido, dto.dueDate());
     }
 
+    @Test // MC-04
+    void createInvoice_gravaOCustoDoActoDaVendaNaLinha() {
+        stubInvoiceLookups();
+        product.setPurchasePrice(new BigDecimal("60.00"));
+        ArgumentCaptor<Invoice> saved = ArgumentCaptor.forClass(Invoice.class);
+
+        service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        verify(invoiceRepository).save(saved.capture());
+        assertEquals(new BigDecimal("60.00"), saved.getValue().getLines().get(0).getUnitCost(),
+                "o custo tem de ficar fotografado na linha, não ser lido do produto mais tarde");
+    }
+
+    @Test // MC-05
+    void billOrder_gravaOCustoNaDataDaFatura() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        product.setPurchasePrice(new BigDecimal("45.50"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(documentNumberService.next(DocumentSeries.INVOICE)).thenReturn("FT-2026/9");
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        ArgumentCaptor<Invoice> saved = ArgumentCaptor.forClass(Invoice.class);
+
+        service.billOrder(1L);
+
+        verify(invoiceRepository).save(saved.capture());
+        assertEquals(new BigDecimal("45.50"), saved.getValue().getLines().get(0).getUnitCost());
+    }
+
     @Test // LC-20
     void createInvoice_acimaDoLimiteDeCredito_recusaEnaoConsomeNumeroFiscal() {
         stubInvoiceLookups();
