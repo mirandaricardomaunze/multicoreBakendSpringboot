@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -38,6 +39,13 @@ public class Client extends BaseEntity {
     @Column(name = "payment_terms_days", nullable = false)
     private Integer paymentTermsDays = 0;
 
+    /**
+     * Tecto de dívida em aberto. <b>Nulo = sem limite</b> (crédito livre, o comportamento de
+     * toda a base anterior à V36). Zero é diferente de nulo: significa "não vende fiado".
+     */
+    @Column(name = "credit_limit", precision = 14, scale = 2)
+    private BigDecimal creditLimit;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "client_companies",
@@ -54,5 +62,35 @@ public class Client extends BaseEntity {
     /** Prazo de pagamento em dias, nunca nulo nem negativo (mesmo padrão de {@code effectiveTaxRate}). */
     public int effectivePaymentTermsDays() {
         return paymentTermsDays == null || paymentTermsDays < 0 ? 0 : paymentTermsDays;
+    }
+
+    /** Tem tecto de dívida definido. Sem tecto, o crédito é livre — não é o mesmo que tecto zero. */
+    public boolean hasCreditLimit() {
+        return creditLimit != null;
+    }
+
+    /**
+     * Quanto ainda pode levar fiado, dada a dívida actual. {@code null} quando não há limite
+     * definido (crédito livre). Nunca negativo: quem já estourou o limite tem zero disponível.
+     */
+    public BigDecimal creditAvailable(BigDecimal currentDebt) {
+        if (!hasCreditLimit()) return null;
+        BigDecimal debt = currentDebt == null ? BigDecimal.ZERO : currentDebt;
+        BigDecimal available = creditLimit.subtract(debt);
+        return available.signum() >= 0 ? available : BigDecimal.ZERO;
+    }
+
+    /**
+     * <b>Fonte única</b> da decisão "esta venda a fiado cabe no limite?".
+     *
+     * @param currentDebt dívida já em aberto do cliente
+     * @param newDebt     valor que esta venda vai acrescentar à dívida
+     */
+    public boolean exceedsCreditLimit(BigDecimal currentDebt, BigDecimal newDebt) {
+        if (!hasCreditLimit()) return false;
+        BigDecimal debt = currentDebt == null ? BigDecimal.ZERO : currentDebt;
+        BigDecimal addition = newDebt == null ? BigDecimal.ZERO : newDebt;
+        if (addition.signum() <= 0) return false; // venda paga na hora não consome crédito
+        return debt.add(addition).compareTo(creditLimit) > 0;
     }
 }

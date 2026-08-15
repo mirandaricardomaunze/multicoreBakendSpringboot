@@ -53,6 +53,7 @@ public class ComercialService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
+    private final ReceivablesService receivablesService;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -71,7 +72,8 @@ public class ComercialService {
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository
+            com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository,
+            ReceivablesService receivablesService
     ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -90,6 +92,7 @@ public class ComercialService {
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
         this.taxRateRepository = taxRateRepository;
+        this.receivablesService = receivablesService;
     }
 
 
@@ -113,6 +116,7 @@ public class ComercialService {
         client.setEmail(request.email());
         client.setAddress(request.address());
         client.setPaymentTermsDays(request.effectivePaymentTermsDays());
+        client.setCreditLimit(request.creditLimit());
         client.setCreatedBy("SYSTEM");
         client.getCompanies().add(companyRepository.getReferenceById(companyId));
         client = clientRepository.save(client);
@@ -137,6 +141,7 @@ public class ComercialService {
         // Alterar o prazo só afecta faturas FUTURAS: o vencimento das já emitidas está gravado
         // no documento, e uma dívida não muda de data por o acordo ter mudado hoje.
         client.setPaymentTermsDays(request.effectivePaymentTermsDays());
+        client.setCreditLimit(request.creditLimit());
         client = clientRepository.save(client);
         return toDTO(client);
     }
@@ -144,7 +149,8 @@ public class ComercialService {
     /** Conversão única de cliente para DTO — evita cinco cópias da mesma lista de campos. */
     private ClientDTO toDTO(Client client) {
         return new ClientDTO(client.getId(), client.getName(), client.getTaxId(),
-                client.getEmail(), client.getAddress(), client.effectivePaymentTermsDays());
+                client.getEmail(), client.getAddress(), client.effectivePaymentTermsDays(),
+                client.getCreditLimit());
     }
 
     @Transactional
@@ -230,6 +236,10 @@ public class ComercialService {
         invoice.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
         invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+
+        // Uma fatura nasce por receber: o total inteiro é dívida nova. Verificar ANTES de
+        // consumir o número fiscal — uma recusa não pode abrir um buraco na série FT.
+        receivablesService.assertCreditAvailable(client, invoice.getTotalAmount());
 
         // Número fiscal sequencial e sem saltos (série FT).
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
@@ -934,6 +944,8 @@ public class ComercialService {
         if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException("Apenas encomendas no estado PENDENTE podem ser faturadas.");
         }
+        // Facturar a encomenda cria dívida como qualquer outra fatura — mesma trava de crédito.
+        receivablesService.assertCreditAvailable(order.getClient(), order.getTotalAmount());
 
         Invoice invoice = new Invoice();
         invoice.setClient(order.getClient());

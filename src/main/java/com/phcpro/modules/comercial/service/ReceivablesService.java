@@ -1,5 +1,6 @@
 package com.phcpro.modules.comercial.service;
 
+import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.dto.AgingBucketTotalDTO;
 import com.phcpro.modules.comercial.dto.AgingSummaryDTO;
@@ -43,6 +44,52 @@ public class ReceivablesService {
     @Transactional(readOnly = true)
     public AgingSummaryDTO getAging() {
         return getAging(LocalDate.now());
+    }
+
+    /**
+     * Dívida em aberto de um cliente na empresa activa — soma dos saldos das faturas cobráveis.
+     * É a exposição a que o limite de crédito se aplica.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal outstandingTotalFor(Long clientId) {
+        if (clientId == null) return BigDecimal.ZERO;
+        return invoiceRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId()).stream()
+                .filter(invoice -> invoice.getClient() != null && clientId.equals(invoice.getClient().getId()))
+                .filter(invoice -> invoice.getStatus().isCollectable())
+                .map(Invoice::outstandingAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Trava do limite de crédito, chamada pelas portas que criam dívida (fatura, encomenda
+     * facturada e venda POS a fiado). A aritmética é do domínio ({@code Client}); aqui só se
+     * junta a dívida actual e se recusa com uma mensagem que diz os números ao operador.
+     *
+     * <p>Cliente sem limite definido passa sempre — crédito livre era o comportamento de toda a
+     * base anterior à V36 e não se muda regra a ninguém sem o gestor a definir.
+     *
+     * @param client  cliente a quem se vai vender
+     * @param newDebt valor que esta venda acrescenta à dívida (zero numa venda paga na hora)
+     */
+    @Transactional(readOnly = true)
+    public void assertCreditAvailable(Client client, BigDecimal newDebt) {
+        if (client == null || !client.hasCreditLimit()) return;
+        if (newDebt == null || newDebt.signum() <= 0) return;
+
+        BigDecimal currentDebt = outstandingTotalFor(client.getId());
+        if (!client.exceedsCreditLimit(currentDebt, newDebt)) return;
+
+        BigDecimal available = client.creditAvailable(currentDebt);
+        throw new BusinessRuleException(String.format(
+                "Limite de crédito excedido para %s. Limite: %s MT · Em dívida: %s MT · "
+                        + "Disponível: %s MT · Esta venda a crédito: %s MT.",
+                client.getName(), money(client.getCreditLimit()), money(currentDebt),
+                money(available), money(newDebt)));
+    }
+
+    private static String money(BigDecimal value) {
+        BigDecimal safe = value == null ? BigDecimal.ZERO : value;
+        return safe.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
     }
 
     /**

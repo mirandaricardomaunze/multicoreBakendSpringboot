@@ -70,6 +70,7 @@ class ComercialServiceTest {
     private DocumentNumberService documentNumberService;
     private AuditLogService auditLogService;
     private com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
+    private ReceivablesService receivablesService;
     private ComercialService service;
 
     private Company company;
@@ -102,11 +103,13 @@ class ComercialServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
         taxRateRepository = mock(com.phcpro.modules.fiscal.repository.TaxRateRepository.class);
+        receivablesService = mock(ReceivablesService.class);
 
         service = new ComercialService(clientRepository, productRepository, productCategoryRepository,
                 invoiceRepository, approvalService, companyRepository, warehouseRepository, inventoryService,
                 receiptRepository, financeService, treasuryAccountRepository, orderRepository, orderLineRepository,
-                walkInClientProvider, documentNumberService, auditLogService, taxRateRepository);
+                walkInClientProvider, documentNumberService, auditLogService, taxRateRepository,
+                receivablesService);
 
         company = company(COMPANY_ID);
         client = client(CLIENT_ID, "Cliente Loja");
@@ -186,6 +189,31 @@ class ComercialServiceTest {
                         null, null, null)), escolhido));
 
         assertEquals(escolhido, dto.dueDate());
+    }
+
+    @Test // LC-20
+    void createInvoice_acimaDoLimiteDeCredito_recusaEnaoConsomeNumeroFiscal() {
+        stubInvoiceLookups();
+        doThrow(new BusinessRuleException("Limite de crédito excedido para Cliente Loja."))
+                .when(receivablesService).assertCreditAvailable(eq(client), any());
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.createInvoice(invoiceRequest(new BigDecimal("2"), null)));
+
+        assertTrue(error.getMessage().contains("Limite de crédito excedido"));
+        verify(documentNumberService, never()).next(DocumentSeries.INVOICE);
+        verify(invoiceRepository, never()).save(any());
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test // LC-21
+    void createInvoice_verificaOLimiteComOTotalCompletoDaFatura() {
+        stubInvoiceLookups();
+
+        service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        // 2 × 100 + 16% = 232,00 — uma fatura nasce por receber, logo a dívida nova é o total.
+        verify(receivablesService).assertCreditAvailable(client, new BigDecimal("232.00"));
     }
 
     @Test // VA-13

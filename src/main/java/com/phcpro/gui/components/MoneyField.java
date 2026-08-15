@@ -28,6 +28,20 @@ public class MoneyField extends JTextField {
         }
     }
 
+    /**
+     * Valor de um campo monetário <b>opcional</b>: vazio devolve {@code null} em vez de erro.
+     * Para casos em que "em branco" tem significado próprio — ex.: limite de crédito por
+     * definir, que não é o mesmo que limite zero.
+     */
+    public BigDecimal optionalValue() {
+        String text = getText() == null ? "" : getText().trim();
+        if (text.isEmpty()) {
+            UIHelper.clearFieldInvalid(this);
+            return null;
+        }
+        return value();
+    }
+
     static String normalize(String text) {
         String value = text == null ? "" : text.trim().replace("\u00A0", "").replace(" ", "");
         if (value.isEmpty()) throw new NumberFormatException("empty");

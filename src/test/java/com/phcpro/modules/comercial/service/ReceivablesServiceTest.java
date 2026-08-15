@@ -1,5 +1,6 @@
 package com.phcpro.modules.comercial.service;
 
+import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.comercial.dto.AgingSummaryDTO;
 import com.phcpro.modules.comercial.dto.ClientAgingDTO;
@@ -163,6 +164,86 @@ class ReceivablesServiceTest {
         assertEquals(new BigDecimal("100.00"),
                 amountOf(service.getAging(HOJE.plusDays(40)), AgingBucket.DE_31_A_60),
                 "a mesma fatura envelhece de escalão com o passar do tempo");
+    }
+
+    // ────────────────────────── limite de crédito ──────────────────────────
+
+    @Test // LC-10
+    void dividaEmAbertoDoClienteSomaSoOQueECobravel() {
+        Client cliente = client(5L, "Loja Central");
+        Client outro = client(9L, "Outra Loja");
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "1000.00", "400.00", InvoiceStatus.PARTIALLY_PAID, HOJE),
+                invoice(cliente, "300.00", "0", InvoiceStatus.APPROVED, HOJE),
+                invoice(cliente, "500.00", "500.00", InvoiceStatus.PAID, HOJE),
+                invoice(cliente, "900.00", "0", InvoiceStatus.CANCELLED, HOJE),
+                invoice(outro, "700.00", "0", InvoiceStatus.APPROVED, HOJE)));
+
+        assertEquals(new BigDecimal("900.00"), service.outstandingTotalFor(5L),
+                "600 do saldo parcial + 300 do fiado; a paga, a anulada e a de outro cliente ficam de fora");
+    }
+
+    @Test // LC-11
+    void semLimiteDefinido_aVendaPassaSempre() {
+        Client cliente = client(5L, "Loja Central");
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "50000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+
+        assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, new BigDecimal("90000.00")));
+    }
+
+    @Test // LC-12
+    void dentroDoLimite_aVendaPassa() {
+        Client cliente = client(5L, "Loja Central");
+        cliente.setCreditLimit(new BigDecimal("10000.00"));
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "3000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+
+        assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, new BigDecimal("7000.00")));
+    }
+
+    @Test // LC-13
+    void acimaDoLimite_recusaEDizOsNumeros() {
+        Client cliente = client(5L, "Loja Central");
+        cliente.setCreditLimit(new BigDecimal("10000.00"));
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "8000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.assertCreditAvailable(cliente, new BigDecimal("3000.00")));
+
+        assertTrue(error.getMessage().contains("Limite de crédito excedido"));
+        assertTrue(error.getMessage().contains("10000.00"), "diz o limite");
+        assertTrue(error.getMessage().contains("8000.00"), "diz a dívida actual");
+        assertTrue(error.getMessage().contains("2000.00"), "diz o disponível");
+        assertTrue(error.getMessage().contains("Loja Central"), "diz de quem se trata");
+    }
+
+    @Test // LC-14
+    void vendaPagaNaHoraNaoConsomeCredito_mesmoComOLimiteEstourado() {
+        Client cliente = client(5L, "Loja Central");
+        cliente.setCreditLimit(new BigDecimal("1000.00"));
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "5000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+
+        assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, BigDecimal.ZERO));
+        assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, null));
+    }
+
+    @Test // LC-15
+    void receberDinheiroLibertaCredito() {
+        Client cliente = client(5L, "Loja Central");
+        cliente.setCreditLimit(new BigDecimal("10000.00"));
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "9000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+        assertThrows(BusinessRuleException.class,
+                () -> service.assertCreditAvailable(cliente, new BigDecimal("2000.00")));
+
+        // O cliente paga 5000 daquela fatura.
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+                invoice(cliente, "9000.00", "5000.00", InvoiceStatus.PARTIALLY_PAID, HOJE)));
+
+        assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, new BigDecimal("2000.00")));
     }
 
     private BigDecimal amountOf(AgingSummaryDTO summary, AgingBucket bucket) {

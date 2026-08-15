@@ -12,6 +12,7 @@ import com.phcpro.modules.comercial.repository.ClientRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.ProductRepository;
 import com.phcpro.modules.comercial.service.CreditNoteService;
+import com.phcpro.modules.comercial.service.ReceivablesService;
 import com.phcpro.modules.comercial.service.WalkInClientProvider;
 import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
@@ -66,6 +67,7 @@ public class POSService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final CreditNoteService creditNoteService;
+    private final ReceivablesService receivablesService;
 
     public POSService(
             TillSessionRepository tillSessionRepository,
@@ -82,7 +84,8 @@ public class POSService {
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            CreditNoteService creditNoteService
+            CreditNoteService creditNoteService,
+            ReceivablesService receivablesService
     ) {
         this.tillSessionRepository = tillSessionRepository;
         this.tillMovementRepository = tillMovementRepository;
@@ -99,6 +102,7 @@ public class POSService {
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
         this.creditNoteService = creditNoteService;
+        this.receivablesService = receivablesService;
     }
 
     @Transactional(readOnly = true)
@@ -363,21 +367,6 @@ public class POSService {
 
             subtotal = subtotal.add(amounts.net());
             totalTax = totalTax.add(amounts.tax());
-
-            // Register negative stock movement (exit)
-            String clientLabel = walkInLabel != null
-                    ? client.getName() + " — " + walkInLabel
-                    : client.getName();
-            String desc = String.format("Venda POS %s - Cliente %s", invoice.getInvoiceNumber(), clientLabel);
-            inventoryService.registerMovement(
-                    product,
-                    warehouse,
-                    lineReq.quantity().negate(),
-                    "SALE",
-                    lineReq.batchNumber(),
-                    lineReq.serialNumber(),
-                    desc
-            );
         }
 
         invoice.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
@@ -404,6 +393,16 @@ public class POSService {
         } else {
             throw new BusinessRuleException("Indique pelo menos um método de pagamento.");
         }
+
+        // Fiado no balcão: o que não é pago agora vira dívida e tem de caber no limite de
+        // crédito do cliente. Venda paga na totalidade não consome crédito nenhum.
+        //
+        // A verificação vem ANTES da saída de stock: uma venda recusada não pode deixar
+        // mercadoria já descontada do armazém. (A transacção reverteria, mas depender do
+        // rollback para não fazer estragos é frágil — a ordem é que tem de estar certa.)
+        receivablesService.assertCreditAvailable(client, totalAmount.subtract(totalPaid));
+
+        deductStockForSale(invoice, warehouse, client, walkInLabel);
 
         invoice.setAmountPaid(totalPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
@@ -557,6 +556,27 @@ public class POSService {
                 financeService.registerTransaction(req.treasuryAccountId(), "DEBIT", amount, desc);
             }
             case CREDIT -> { /* fiado — sem movimento financeiro até pagamento */ }
+        }
+    }
+
+    /**
+     * Saída de stock (SALE) de todas as linhas da venda, no armazém do posto. Espelha o
+     * {@code deductStockForInvoice} da faturação: o stock só se move depois de a venda estar
+     * autorizada (sessão aberta, pagamentos válidos e limite de crédito respeitado).
+     */
+    private void deductStockForSale(Invoice invoice, Warehouse warehouse, Client client, String walkInLabel) {
+        String clientLabel = walkInLabel != null ? client.getName() + " — " + walkInLabel : client.getName();
+        String desc = String.format("Venda POS %s - Cliente %s", invoice.getInvoiceNumber(), clientLabel);
+        for (InvoiceLine line : invoice.getLines()) {
+            inventoryService.registerMovement(
+                    line.getProduct(),
+                    warehouse,
+                    line.getQuantity().negate(),
+                    "SALE",
+                    line.getBatchNumber(),
+                    line.getSerialNumber(),
+                    desc
+            );
         }
     }
 

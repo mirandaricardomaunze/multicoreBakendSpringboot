@@ -38,21 +38,23 @@ public class ComercialApiClient {
     }
 
     public ClientDTO createClient(String name, String taxId, String email, String address) {
-        return createClient(name, taxId, email, address, 0);
+        return createClient(name, taxId, email, address, 0, null);
     }
 
-    public ClientDTO createClient(String name, String taxId, String email, String address, int paymentTermsDays) {
+    public ClientDTO createClient(String name, String taxId, String email, String address,
+                                  int paymentTermsDays, BigDecimal creditLimit) {
         return clientFactory.authenticatedClient().post("/api/comercial/clients",
-                new SaveClientRequest(name, taxId, email, address, paymentTermsDays), ClientDTO.class);
+                new SaveClientRequest(name, taxId, email, address, paymentTermsDays, creditLimit), ClientDTO.class);
     }
 
     public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
-        return updateClient(id, name, taxId, email, address, 0);
+        return updateClient(id, name, taxId, email, address, 0, null);
     }
 
-    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address, int paymentTermsDays) {
+    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address,
+                                  int paymentTermsDays, BigDecimal creditLimit) {
         return clientFactory.authenticatedClient().put("/api/comercial/clients/" + id,
-                new SaveClientRequest(name, taxId, email, address, paymentTermsDays), ClientDTO.class);
+                new SaveClientRequest(name, taxId, email, address, paymentTermsDays, creditLimit), ClientDTO.class);
     }
 
     /** Mapa de antiguidade de saldos (contas a receber) à data de hoje no servidor. */
@@ -266,8 +268,12 @@ public class ComercialApiClient {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
-    /** Espelha o corpo esperado pelo controller; {@code paymentTermsDays} = prazo acordado, em dias. */
-    record SaveClientRequest(String name, String taxId, String email, String address, int paymentTermsDays) {}
+    /**
+     * Espelha o corpo esperado pelo controller. {@code paymentTermsDays} = prazo acordado, em
+     * dias; {@code creditLimit} nulo = sem limite de crédito.
+     */
+    record SaveClientRequest(String name, String taxId, String email, String address,
+                             int paymentTermsDays, BigDecimal creditLimit) {}
 
     /** Corpo do reject da guia — chave "rejectionReason" espelha o esperado pelo controller. */
     record RejectGuideRequest(String rejectionReason) {}
