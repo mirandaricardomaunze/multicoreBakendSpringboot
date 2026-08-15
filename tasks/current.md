@@ -2,13 +2,52 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-08-09
+**Última actualização:** 2026-08-15
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
+As **cinco lacunas de gestão** levantadas na auditoria de 09/08 estão **fechadas** (ver abaixo) —
+incluindo a contabilidade, que era a maior ausência.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
 (falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
 multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+**Por integrar:** o ramo `feat/guia-remessa-navegacao-suite-local` está **23 commits à frente da
+`main`** e por enviar para o remoto.
+
+### Progresso — 2026-08-15 (fecho das lacunas de gestão + contabilidade)
+
+- **Suite volta a ser verde de forma determinística.** `LoadingCursorTest` rebentava com
+  `HeadlessException` conforme a **ordem das classes**: o surefire arranca `headless=true` e o AWT
+  decide a headlessness uma só vez, pelo que quem decidia era a primeira classe a tocar em AWT.
+  `java.awt.headless=false` passou a ser declarado no `pom.xml` (a CI já corre com `xvfb-run`).
+- **Vencimento e antiguidade** (V35): `Client.paymentTermsDays` + `Invoice.dueDate` **gravada no
+  documento**; `assignDueDate` chamada pelas três portas que emitem fatura; `AgingBucket` como fonte
+  única dos cortes 30/60/90; `ReceivablesService` + `/api/comercial/receivables/aging`. Contas
+  Correntes ganharam Vencimento/Dias em Atraso/Antiguidade e ordenam pelo maior atraso.
+  Spec/harness: `VENCIMENTO_ANTIGUIDADE_*` (VA-01..25).
+- **Limite de crédito** (V36): três estados (nulo = sem limite, zero = não vende fiado, >0 = tecto);
+  aritmética no domínio; trava nas três portas que criam dívida. **Encontrado ao testar:** no POS o
+  stock saía *antes* da venda estar autorizada — extraído `deductStockForSale()` e movido para
+  depois da trava. Spec/harness: `LIMITE_CREDITO_*` (LC-01..32).
+- **Margem com o custo do acto da venda** (V37): `InvoiceLine.unitCost` fotografado na emissão; o
+  relatório lia o preço de compra **actual**, pelo que a margem de vendas antigas mudava sozinha
+  quando o fornecedor subia o preço. **MC-01 confirmado a falhar contra o código antigo.**
+  Spec/harness: `MARGEM_CUSTO_HISTORICO_*` (MC-01..06).
+- **Paginação**: `PageQuery`/`PageResponse` + `TablePager`; faturas e histórico do POS paginados. O
+  mais grave não era a listagem — o **dashboard** lia todas as faturas da empresa a cada abertura
+  para responder sobre *hoje*; as perguntas passaram a ir na consulta. Spec/harness: `PAGINACAO_*`
+  (PG-01..11).
+- **Contabilidade (PGC-NIRF)** (V38) — decisões do utilizador: plano moçambicano + lançamentos
+  automáticos **e** manuais. Plano por empresa (natureza gravada **na conta**, não derivada da
+  classe), partida dobrada validada numa só porta, série `LC` por empresa, razão com saldo de
+  abertura e balancete que diz **"NÃO FECHA"** quando não fecha. Os lançamentos automáticos entram
+  por **eventos** (`SaleRegisteredEvent`/`PaymentReceivedEvent`), pelo que o comercial não passou a
+  conhecer a contabilidade. Painel novo com 4 abas. Spec/harness: `CONTABILIDADE_*` (CT-01..46).
+  **Por fazer (declarado na spec §7):** salários e compras ainda não lançam automaticamente.
+- `NotificationsPanel` migrado para `loadAsync` (mantendo o contador de versão, que protege contra
+  respostas fora de ordem da **mesma** empresa — coisa que o `loadAsync` não cobre).
+- **Verificação:** `mvn -o clean test` → **482 testes, 0 falhas, 0 erros, 0 ignorados** (eram 401).
+- **Por validar ao vivo:** VA-50..57, LC-50..56, MC-50..53, PG-50..56, CT-50..60.
 
 ### Progresso — 2026-08-09 (consistência profissional da UI — fundação e adopção inicial)
 

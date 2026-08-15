@@ -14,7 +14,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
-import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
@@ -137,30 +136,35 @@ public class NotificationsPanel extends JPanel {
         refreshData();
     }
 
+    /**
+     * Carregamento pelo caminho canónico ({@code UIHelper.loadAsync}): cursor de espera,
+     * propagação do contexto de utilizador/empresa e entrega do erro no EDT, tudo num só sítio
+     * em vez de um {@code SwingWorker} escrito à mão aqui.
+     *
+     * <p>O contador de versão mantém-se: o {@code loadAsync} descarta respostas de um tenant que
+     * deixou de estar activo, mas não respostas fora de ordem <b>da mesma empresa</b> — é o que
+     * acontece a carregar "Atualizar" duas vezes seguidas.
+     */
     private void refreshData() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         int version = ++refreshVersion;
         refreshButton.setEnabled(false);
         summaryLabel.setText("A carregar notificações…");
-        new SwingWorker<List<NotificationItem>, Void>() {
-            @Override protected List<NotificationItem> doInBackground() {
-                return feed.load(companyId);
-            }
-
-            @Override protected void done() {
-                if (version != refreshVersion) return;
-                try {
-                    setItems(get());
-                } catch (Exception ex) {
+        UIHelper.loadAsync(this,
+                () -> feed.load(companyId),
+                loaded -> {
+                    refreshButton.setEnabled(true);
+                    if (version != refreshVersion) return;
+                    setItems(loaded);
+                },
+                error -> {
+                    refreshButton.setEnabled(true);
+                    if (version != refreshVersion) return;
                     summaryLabel.setText("Não foi possível carregar as notificações.");
                     JOptionPane.showMessageDialog(NotificationsPanel.this,
-                            "Erro ao carregar notificações: " + rootMessage(ex),
+                            "Erro ao carregar notificações: " + rootMessage(error),
                             "Erro", JOptionPane.ERROR_MESSAGE);
-                } finally {
-                    refreshButton.setEnabled(true);
-                }
-            }
-        }.execute();
+                });
     }
 
     void setItems(List<NotificationItem> loaded) {
@@ -220,7 +224,7 @@ public class NotificationsPanel extends JPanel {
         navigator.accept(items.get(row).moduleCard());
     }
 
-    private static String rootMessage(Exception ex) {
+    private static String rootMessage(Throwable ex) {
         Throwable cause = ex;
         while (cause.getCause() != null) cause = cause.getCause();
         return cause.getMessage() == null ? "Falha inesperada." : cause.getMessage();

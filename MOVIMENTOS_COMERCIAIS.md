@@ -42,9 +42,9 @@ pela série central [`DocumentSeries`](src/main/java/com/phcpro/modules/numberin
 
 ---
 
-## 3. Os três livros de movimentos (não confundir)
+## 3. Os quatro livros de movimentos (não confundir)
 
-O sistema **não tem um livro único de "movimentos comerciais"**. Tem três ledgers
+O sistema **não tem um livro único de "movimentos comerciais"**. Tem quatro ledgers
 independentes, cada um na sua fronteira. Um mesmo documento pode tocar vários.
 
 | Ledger                | Entidade / Enum                              | Módulo        | O que regista                                  |
@@ -52,6 +52,12 @@ independentes, cada um na sua fronteira. Um mesmo documento pode tocar vários.
 | **Stock**             | `StockMovement` / `StockMovementType`        | `inventory`   | `PURCHASE, ENTRY, SALE, TRANSFER, ADJUSTMENT, RETURN, REVERSAL` |
 | **Caixa (gaveta)**    | `TillMovement` / `TillMovementType`          | `pos`         | `SALE, SUPRIMENTO, SANGRIA`                    |
 | **Tesouraria**        | `TreasuryTransaction` / `TransactionType`    | `financeira`  | `DEBIT` (entrada) / `CREDIT` (saída)           |
+| **Contabilidade**     | `JournalEntry` + `JournalLine` / `JournalSource` | `accounting` | Partidas dobradas (PGC-NIRF), série `LC`   |
+
+O ledger contabilístico (desde 2026-08-15) **não substitui** os outros três: é a leitura
+contabilística dos mesmos factos. Alimenta-se por **eventos** (`SaleRegisteredEvent`,
+`PaymentReceivedEvent`), pelo que o módulo `comercial` não conhece o `accounting`. Ver
+[docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
 
 Princípio em vigor (ver [POSService](src/main/java/com/phcpro/modules/pos/service/POSService.java)):
 numerário de venda entra **só na gaveta** durante a sessão; só chega à **tesouraria** no fecho
@@ -171,3 +177,11 @@ Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
    no `ComercialPanel`. Spec/harness em [docs/MOVIMENTOS_UNIFICADOS_SPEC.md](docs/MOVIMENTOS_UNIFICADOS_SPEC.md)
    / [docs/MOVIMENTOS_UNIFICADOS_HARNESS.md](docs/MOVIMENTOS_UNIFICADOS_HARNESS.md). Testado por
    `MovimentosServiceTest` (7: MU-01..MU-07).
+4. ~~**Sem contabilidade**~~ — **resolvido (2026-08-15)**: módulo `accounting` com plano PGC-NIRF,
+   diário de partidas dobradas, razão e balancete. Venda e recebimento lançam automaticamente por
+   evento. Ver [docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
+5. **Compras e salários ainda não lançam na contabilidade** (v1 declarada). O plano já tem as contas
+   (2201 Fornecedores, 2432 IVA dedutível, 6301 Pessoal, 2601 Remunerações a pagar); falta publicar
+   os eventos em `PurchaseService` e no processamento salarial. Ver CONTABILIDADE_SPEC §7.
+6. **Notas de crédito/débito não geram estorno contabilístico.** Uma devolução repõe stock e caixa
+   mas não desfaz o lançamento da venda.
