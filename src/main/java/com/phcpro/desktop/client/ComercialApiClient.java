@@ -1,5 +1,6 @@
 package com.phcpro.desktop.client;
 
+import com.phcpro.architecture.paging.PageResponse;
 import com.phcpro.modules.comercial.dto.AgingSummaryDTO;
 import com.phcpro.modules.comercial.dto.CancelReasonRequest;
 import com.phcpro.modules.comercial.dto.ClientDTO;
@@ -69,6 +70,22 @@ public class ComercialApiClient {
 
     public List<InvoiceDTO> getAllInvoices() {
         return clientFactory.authenticatedClient().getList("/api/comercial/invoices", InvoiceDTO.class);
+    }
+
+    /** Página de faturas (a listagem completa fica para os ecrãs ainda não migrados). */
+    @SuppressWarnings("unchecked")
+    public PageResponse<InvoiceDTO> getInvoicePage(Long companyId, int page, int size) {
+        return clientFactory.authenticatedClient().getGeneric(
+                "/api/comercial/invoices/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
+                PageResponse.class, InvoiceDTO.class);
+    }
+
+    /** Página do histórico de vendas do POS. */
+    @SuppressWarnings("unchecked")
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size) {
+        return clientFactory.authenticatedClient().getGeneric(
+                "/api/comercial/pos-sales/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
+                PageResponse.class, InvoiceDTO.class);
     }
 
     public List<ProductDTO> getAllProducts() {

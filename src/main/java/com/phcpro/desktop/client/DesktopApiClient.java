@@ -47,6 +47,21 @@ public class DesktopApiClient {
         }
     }
 
+    /**
+     * GET de uma resposta genérica com um parâmetro de tipo — o caso da
+     * {@code PageResponse<XxxDTO>}, que o {@code Class<T>} não consegue exprimir (apagamento
+     * de tipos: o Jackson desserializaria os elementos para {@code LinkedHashMap}).
+     */
+    public <T> T getGeneric(String path, Class<?> rawType, Class<?> elementType) {
+        try {
+            HttpResponse<String> response = sendRaw(request(path).GET().build());
+            return objectMapper.readValue(response.body(),
+                    objectMapper.getTypeFactory().constructParametricType(rawType, elementType));
+        } catch (IOException ex) {
+            throw new ApiClientException("O servidor devolveu dados num formato inválido.", ex);
+        }
+    }
+
     public <T> T post(String path, Object body, Class<T> responseType) {
         return send(request(path)
                 .header("Content-Type", "application/json")

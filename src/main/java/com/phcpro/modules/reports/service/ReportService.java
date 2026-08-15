@@ -53,12 +53,23 @@ public class ReportService {
         this.tillMovementRepository = tillMovementRepository;
     }
 
+    /**
+     * Dashboard da loja.
+     *
+     * <p>Carregava <b>todas</b> as faturas da empresa para depois filtrar em memória o dia de
+     * hoje e o que está por cobrar. Numa loja com anos de histórico isso é a tabela inteira em
+     * RAM a cada abertura do ecrã. As duas perguntas passaram a ir na consulta: intervalo de
+     * datas para as vendas de hoje, lista de estados para o que é cobrável.
+     */
     @Transactional(readOnly = true)
     public StoreDashboardDTO buildStoreDashboard(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         LocalDate today = LocalDate.now();
-        List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId);
-        List<Invoice> salesToday = filterSalesToday(invoices, today);
+        List<Invoice> salesToday = filterRealisedSales(
+                invoiceRepository.findByCompanyIdAndCreatedAtBetween(
+                        companyId, today.atStartOfDay(), today.plusDays(1).atStartOfDay()));
+        List<Invoice> collectable = invoiceRepository.findByCompanyIdAndStatusIn(
+                companyId, InvoiceStatus.collectableStatuses());
 
         return new StoreDashboardDTO(
                 today,
@@ -66,7 +77,7 @@ public class ReportService {
                 topProductsFrom(salesToday),
                 lowStockAlertsForCompany(companyId),
                 countPendingApprovals(companyId),
-                unpaidInvoicesTotal(invoices),
+                unpaidInvoicesTotal(collectable),
                 openTillSessionsForCompany(companyId)
         );
     }
@@ -77,12 +88,9 @@ public class ReportService {
         LocalDate reportDate = date == null ? LocalDate.now() : date;
         LocalDateTime from = reportDate.atStartOfDay();
         LocalDateTime to = reportDate.plusDays(1).atStartOfDay();
-        List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId);
-        List<Invoice> sales = invoices.stream()
-                .filter(inv -> inv.getCreatedAt() != null)
-                .filter(inv -> !inv.getCreatedAt().isBefore(from) && inv.getCreatedAt().isBefore(to))
-                .filter(inv -> inv.getStatus().isRealisedSale())
-                .toList();
+        // O intervalo vai na consulta: o relatório de um dia não tem de ler o histórico todo.
+        List<Invoice> sales = filterRealisedSales(
+                invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, from, to));
 
         return new DailyStoreReportDTO(
                 reportDate,
@@ -97,14 +105,15 @@ public class ReportService {
     }
 
     /**
-     * Vendas do dia — a mesma definição do relatório diário ({@code isRealisedSale}).
-     * Contava só {@code PAID}, pelo que uma venda a fiado não aparecia no dashboard mas
-     * aparecia no relatório diário: dois números para a mesma pergunta.
+     * "Isto conta como venda" — a mesma definição no dashboard e no relatório diário
+     * ({@code isRealisedSale}). O dashboard contava só {@code PAID}, pelo que uma venda a fiado
+     * não aparecia num sítio e aparecia no outro: dois números para a mesma pergunta.
+     *
+     * <p>O recorte por data já vem da consulta; aqui só resta o filtro de estado.
      */
-    private List<Invoice> filterSalesToday(List<Invoice> invoices, LocalDate today) {
+    private List<Invoice> filterRealisedSales(List<Invoice> invoices) {
         return invoices.stream()
                 .filter(inv -> inv.getStatus().isRealisedSale())
-                .filter(inv -> inv.getCreatedAt() != null && inv.getCreatedAt().toLocalDate().equals(today))
                 .toList();
     }
 

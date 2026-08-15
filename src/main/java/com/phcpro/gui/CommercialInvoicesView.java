@@ -252,7 +252,14 @@ final class CommercialInvoicesView {
         btnPanel.add(cancelInvoiceBtn);
         btnPanel.add(payInvoiceBtn);
         btnPanel.add(refreshBtn);
-        listCard.add(btnPanel, BorderLayout.SOUTH);
+
+        // A tabela vem paginada do servidor: a barra de paginação fica entre a tabela e as acções.
+        owner.invoicesPager = new TablePager(owner::loadInvoicesPage);
+        JPanel listSouth = new JPanel(new BorderLayout());
+        listSouth.setOpaque(false);
+        listSouth.add(owner.invoicesPager, BorderLayout.NORTH);
+        listSouth.add(btnPanel, BorderLayout.SOUTH);
+        listCard.add(listSouth, BorderLayout.SOUTH);
 
         // Lista de faturas ocupa a tab inteira; o formulário vive no modal.
         panel.add(listCard, BorderLayout.CENTER);

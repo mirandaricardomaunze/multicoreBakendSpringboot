@@ -1,6 +1,8 @@
 package com.phcpro.modules.comercial.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.paging.PageQuery;
+import com.phcpro.architecture.paging.PageResponse;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.architecture.pricing.LineCalculator;
@@ -443,6 +445,31 @@ public class ComercialService {
     @Transactional(readOnly = true)
     public List<Receipt> getAllReceipts() {
         return receiptRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId());
+    }
+
+    /**
+     * Página de faturas da empresa, da mais recente para a mais antiga.
+     *
+     * <p>A listagem sem paginação ({@link #getInvoicesByCompany}) trazia a tabela inteira para
+     * memória e para o cliente HTTP. Mantém-se para os ecrãs ainda não migrados (adopção
+     * incremental, como se fez com o {@code loadAsync}), mas os novos usam esta.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<InvoiceDTO> getInvoicePage(Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return PageResponse.of(
+                invoiceRepository.findByCompanyIdOrderByCreatedAtDesc(companyId, PageQuery.of(page, size)),
+                this::toDTO);
+    }
+
+    /** Página do histórico de vendas do POS — a listagem que mais cresce numa loja. */
+    @Transactional(readOnly = true)
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return PageResponse.of(
+                invoiceRepository.findByCompanyIdAndSalesChannelOrderByCreatedAtDesc(
+                        companyId, SalesChannel.POS, PageQuery.of(page, size)),
+                this::toDTO);
     }
 
     @Transactional(readOnly = true)

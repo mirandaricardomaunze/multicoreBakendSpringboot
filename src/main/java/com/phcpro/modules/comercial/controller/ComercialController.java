@@ -1,6 +1,7 @@
 package com.phcpro.modules.comercial.controller;
 
 import com.phcpro.architecture.concurrency.ConcurrencyRetry;
+import com.phcpro.architecture.paging.PageResponse;
 import com.phcpro.modules.comercial.dto.*;
 import com.phcpro.modules.comercial.service.ComercialService;
 import jakarta.validation.Valid;
@@ -91,6 +92,27 @@ public class ComercialController {
         return ResponseEntity.ok(companyId != null
                 ? comercialService.getInvoicesByCompany(companyId)
                 : comercialService.getAllInvoices());
+    }
+
+    /**
+     * Página de faturas. Preferir a esta listagem sobre {@code /invoices}, que traz a tabela
+     * toda. {@code page} começa em 0; {@code size} tem tecto no servidor (ver {@code PageQuery}).
+     */
+    @GetMapping("/invoices/page")
+    public ResponseEntity<PageResponse<InvoiceDTO>> getInvoicePage(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(comercialService.getInvoicePage(companyId, page, size));
+    }
+
+    /** Página do histórico de vendas do POS. */
+    @GetMapping("/pos-sales/page")
+    public ResponseEntity<PageResponse<InvoiceDTO>> getPOSSalesPage(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(comercialService.getPOSSalesPage(companyId, page, size));
     }
 
     @GetMapping("/invoices/search")

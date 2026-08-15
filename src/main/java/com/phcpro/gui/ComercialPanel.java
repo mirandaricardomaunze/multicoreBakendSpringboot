@@ -62,6 +62,7 @@ public class ComercialPanel extends JPanel {
     JLabel totalLabel;
 
     DefaultTableModel invoicesTableModel;
+    com.phcpro.gui.components.TablePager invoicesPager;
     JTable invoicesTable;
 
     // TAB 2: RECIBOS ELEMENTS
@@ -498,9 +499,19 @@ public class ComercialPanel extends JPanel {
                 error -> showCommercialLoadError("contas de tesouraria", error));
     }
 
+    /** Recarrega a listagem de faturas na primeira página (a tabela vem paginada do servidor). */
     public void loadInvoicesTable() {
+        if (invoicesPager != null) invoicesPager.reload();
+    }
+
+    /** Carrega uma página de faturas. Ligado ao {@link TablePager} da aba de Faturação. */
+    void loadInvoicesPage(int page, int size) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.loadAsync(this, () -> comercialApiClient.getInvoicesByCompany(companyId), this::applyInvoices,
+        UIHelper.loadAsync(this, () -> comercialApiClient.getInvoicePage(companyId, page, size),
+                response -> {
+                    invoicesPager.apply(response);
+                    applyInvoices(response.items());
+                },
                 error -> showCommercialLoadError("faturas", error));
     }
 
@@ -512,17 +523,9 @@ public class ComercialPanel extends JPanel {
                     invoice.invoiceNumber(),
                     invoice.clientName(),
                     invoice.status().name(),
-                    invoice.totalAmount(), outstandingOf(invoice)
+                    invoice.totalAmount(), invoice.outstandingAmount()
             });
         }
-    }
-
-    /** Saldo por liquidar da fatura — espelha {@code Invoice.outstandingAmount()} do backend. */
-    private static BigDecimal outstandingOf(InvoiceDTO invoice) {
-        BigDecimal total = invoice.totalAmount() == null ? BigDecimal.ZERO : invoice.totalAmount();
-        BigDecimal paid = invoice.amountPaid() == null ? BigDecimal.ZERO : invoice.amountPaid();
-        BigDecimal remaining = total.subtract(paid);
-        return remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining : BigDecimal.ZERO;
     }
 
     private JPanel createEncomendasTab() {

@@ -16,6 +16,7 @@ import java.util.List;
 final class PosSalesHistoryPanel {
     private final POSPanel owner;
     private JLabel salesHistorySummary;
+    private TablePager pager;
     PosSalesHistoryPanel(POSPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
@@ -102,24 +103,39 @@ final class PosSalesHistoryPanel {
         north.add(salesHistorySummary, BorderLayout.NORTH);
         north.add(shBar, BorderLayout.SOUTH);
 
+        // O histórico do POS é a listagem que mais cresce numa loja: vem paginado do servidor.
+        pager = new TablePager(this::loadPage);
+
+        JPanel south = new JPanel(new BorderLayout());
+        south.setOpaque(false);
+        south.add(pager, BorderLayout.NORTH);
+        south.add(buttons, BorderLayout.SOUTH);
+
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(15, 5, 5, 5));
         content.add(north, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
-        content.add(buttons, BorderLayout.SOUTH);
+        content.add(south, BorderLayout.SOUTH);
         return content;
     }
 
     public void refresh() {
         if (owner.salesHistoryModel == null || salesHistorySummary == null) return;
-
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.loadAsync(owner, () -> owner.comercialApiClient.getPOSSalesByCompany(companyId),
-                this::applySalesHistory, error -> owner.showPosLoadError("histórico de vendas", error));
+        pager.reload();
     }
 
-    private void applySalesHistory(java.util.List<InvoiceDTO> loaded) {
+    private void loadPage(int page, int size) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        UIHelper.loadAsync(owner, () -> owner.comercialApiClient.getPOSSalesPage(companyId, page, size),
+                response -> {
+                    pager.apply(response);
+                    applySalesHistory(response.items(), response.totalElements());
+                },
+                error -> owner.showPosLoadError("histórico de vendas", error));
+    }
+
+    private void applySalesHistory(java.util.List<InvoiceDTO> loaded, long totalOnServer) {
         owner.salesHistoryList = loaded;
         java.time.format.DateTimeFormatter dtf =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -138,9 +154,10 @@ final class PosSalesHistoryPanel {
         BigDecimal total = owner.salesHistoryList.stream()
                 .map(InvoiceDTO::totalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // O total é o DESTA PÁGINA — dizê-lo evita que se leia como o total da loja.
         salesHistorySummary.setText(String.format(
-                "<html><b>%d</b> vendas POS — total <b>%,.2f MT</b></html>",
-                owner.salesHistoryList.size(), total));
+                "<html><b>%d</b> vendas POS nesta página (de %d) — total da página <b>%,.2f MT</b></html>",
+                owner.salesHistoryList.size(), totalOnServer, total));
     }
 
 }

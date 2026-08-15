@@ -81,7 +81,7 @@ class ReportServiceTest {
     @Test // RP-10
     void dashboard_porCobrar_incluiFaturasParcialmentePagas_eContaSoOSaldo() {
         // Fatura de 1000 com 400 já recebidos: em dívida estão 600.
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        stubInvoices(List.of(
                 invoice(InvoiceStatus.PARTIALLY_PAID, "1000", "400")));
 
         StoreDashboardDTO dto = service.buildStoreDashboard(COMPANY_ID);
@@ -94,7 +94,7 @@ class ReportServiceTest {
 
     @Test // RP-11
     void dashboard_porCobrar_desconta_oQueJaFoiRecebido() {
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        stubInvoices(List.of(
                 invoice(InvoiceStatus.APPROVED, "500", "0"),
                 invoice(InvoiceStatus.PARTIALLY_PAID, "300", "100"),
                 invoice(InvoiceStatus.PAID, "900", "900"),
@@ -108,7 +108,7 @@ class ReportServiceTest {
 
     @Test // RP-12
     void dashboard_vendasDeHoje_incluiFiado_naoSoAsPagas() {
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        stubInvoices(List.of(
                 invoice(InvoiceStatus.PAID, "100", "100"),
                 invoice(InvoiceStatus.APPROVED, "250", "0")));
 
@@ -122,7 +122,7 @@ class ReportServiceTest {
 
     @Test // RP-13
     void dashboard_vendasDeHoje_excluiPorAprovarEAnuladas() {
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        stubInvoices(List.of(
                 invoice(InvoiceStatus.PAID, "100", "100"),
                 invoice(InvoiceStatus.PENDING_DISCOUNT_APPROVAL, "800", "0"),
                 invoice(InvoiceStatus.CANCELLED, "400", "0"),
@@ -142,7 +142,7 @@ class ReportServiceTest {
                 invoice(InvoiceStatus.APPROVED, "250", "0"),
                 invoice(InvoiceStatus.PENDING_DISCOUNT_APPROVAL, "800", "0"),
                 invoice(InvoiceStatus.CANCELLED, "400", "0"));
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(hoje);
+        stubInvoices(hoje);
 
         StoreDashboardDTO dashboard = service.buildStoreDashboard(COMPANY_ID);
         DailyStoreReportDTO diario = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
@@ -157,6 +157,62 @@ class ReportServiceTest {
 
     // ────────────────────────── helpers ──────────────────────────
 
+    /**
+     * Faz o mock responder <b>como a base de dados responderia</b> a cada uma das consultas,
+     * em vez de fixar a consulta que o serviço usa hoje. Assim os testes de regra (RP-*, MC-*)
+     * continuam a falar de faturas e não de queries — foi por fixarem
+     * {@code findByCompanyId} que quase todos partiram quando o dashboard deixou de varrer a
+     * tabela inteira.
+     */
+    private void stubInvoices(List<Invoice> all) {
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(all);
+        when(invoiceRepository.findByCompanyIdAndCreatedAtBetween(eq(COMPANY_ID), any(), any()))
+                .thenAnswer(call -> {
+                    LocalDateTime from = call.getArgument(1);
+                    LocalDateTime to = call.getArgument(2);
+                    return all.stream()
+                            .filter(inv -> inv.getCreatedAt() != null)
+                            .filter(inv -> !inv.getCreatedAt().isBefore(from) && inv.getCreatedAt().isBefore(to))
+                            .toList();
+                });
+        when(invoiceRepository.findByCompanyIdAndStatusIn(eq(COMPANY_ID), any()))
+                .thenAnswer(call -> {
+                    java.util.Collection<InvoiceStatus> statuses = call.getArgument(1);
+                    return all.stream().filter(inv -> statuses.contains(inv.getStatus())).toList();
+                });
+    }
+
+    @Test // PG-10
+    void dashboard_naoCarregaOHistoricoTodo_perguntaPelaDataEPeloEstado() {
+        LocalDate hoje = LocalDate.now();
+        when(invoiceRepository.findByCompanyIdAndCreatedAtBetween(
+                COMPANY_ID, hoje.atStartOfDay(), hoje.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(invoice(InvoiceStatus.PAID, "100", "100")));
+        when(invoiceRepository.findByCompanyIdAndStatusIn(COMPANY_ID, InvoiceStatus.collectableStatuses()))
+                .thenReturn(List.of(invoice(InvoiceStatus.APPROVED, "500", "0")));
+
+        StoreDashboardDTO dto = service.buildStoreDashboard(COMPANY_ID);
+
+        assertEquals(0, dto.salesToday().totalAmount().compareTo(new BigDecimal("100")));
+        assertEquals(0, dto.unpaidInvoicesAmount().compareTo(new BigDecimal("500")));
+        // O que interessa: a varredura à tabela inteira deixou de acontecer.
+        verify(invoiceRepository, never()).findByCompanyId(COMPANY_ID);
+    }
+
+    @Test // PG-11
+    void relatorioDiario_pedeSoOIntervaloDoDia() {
+        LocalDate dia = LocalDate.of(2026, 8, 10);
+        when(invoiceRepository.findByCompanyIdAndCreatedAtBetween(
+                COMPANY_ID, dia.atStartOfDay(), dia.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of());
+
+        service.buildDailyStoreReport(COMPANY_ID, dia);
+
+        verify(invoiceRepository).findByCompanyIdAndCreatedAtBetween(
+                COMPANY_ID, dia.atStartOfDay(), dia.plusDays(1).atStartOfDay());
+        verify(invoiceRepository, never()).findByCompanyId(COMPANY_ID);
+    }
+
     // ────────────────────────── margem: custo do acto da venda ──────────────────────────
 
     @Test // MC-01
@@ -164,7 +220,7 @@ class ReportServiceTest {
         Product produto = produto(1L, "ARROZ", "Arroz 5kg", "80.00");
         // Vendido a 100 quando custava 60. Hoje o fornecedor cobra 80 (o preço no cadastro).
         Invoice venda = vendaComLinha(produto, "2", "200.00", "60.00");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(venda));
+        stubInvoices(List.of(venda));
 
         DailyStoreReportDTO report = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
         ProductMarginDTO margem = report.grossMarginByProduct().get(0);
@@ -180,7 +236,7 @@ class ReportServiceTest {
     void margem_semCustoGravado_recorreAoPrecoActual() {
         Product produto = produto(1L, "ARROZ", "Arroz 5kg", "80.00");
         Invoice legado = vendaComLinha(produto, "2", "200.00", /*unitCost*/ null);
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(legado));
+        stubInvoices(List.of(legado));
 
         DailyStoreReportDTO report = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
 
@@ -192,7 +248,7 @@ class ReportServiceTest {
     void margem_semCustoNenhum_naoRebenta() {
         Product semPreco = produto(1L, "SERV", "Serviço", null);
         Invoice venda = vendaComLinha(semPreco, "1", "500.00", null);
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(venda));
+        stubInvoices(List.of(venda));
 
         DailyStoreReportDTO report = service.buildDailyStoreReport(COMPANY_ID, LocalDate.now());
 

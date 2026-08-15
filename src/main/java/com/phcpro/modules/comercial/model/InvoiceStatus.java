@@ -30,4 +30,18 @@ public enum InvoiceStatus {
     public boolean isCollectable() {
         return this == APPROVED || this == PARTIALLY_PAID;
     }
+
+    /**
+     * Os mesmos estados de {@link #isCollectable()}, em forma de colecção — para a pergunta ir
+     * na consulta à base de dados em vez de se filtrar tudo em memória. Deriva do predicado,
+     * para não haver duas listas a divergir.
+     */
+    public static java.util.List<InvoiceStatus> collectableStatuses() {
+        return java.util.Arrays.stream(values()).filter(InvoiceStatus::isCollectable).toList();
+    }
+
+    /** Idem para {@link #isRealisedSale()}. */
+    public static java.util.List<InvoiceStatus> realisedSaleStatuses() {
+        return java.util.Arrays.stream(values()).filter(InvoiceStatus::isRealisedSale).toList();
+    }
 }
