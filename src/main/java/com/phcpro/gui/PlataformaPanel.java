@@ -52,6 +52,10 @@ public class PlataformaPanel extends JPanel {
     private JTable ticketsTable;
     private List<SupportTicketDTO> tickets = new ArrayList<>();
 
+    private DefaultTableModel versionsModel;
+    private JTable versionsTable;
+    private JLabel versionsSummary;
+
     public PlataformaPanel(PlatformApiClient platformApiClient) {
         this.platformApiClient = platformApiClient;
 
@@ -66,6 +70,8 @@ public class PlataformaPanel extends JPanel {
                 createSubscriptionsTab());
         tabbedPane.addTab("Utilizadores", UIHelper.icon("fas-users-cog", 16, UIHelper.TEXT_LIGHT), createUsersTab());
         tabbedPane.addTab("Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), createSupportTab());
+        tabbedPane.addTab("Versões dos Clientes", UIHelper.icon("fas-code-branch", 16, UIHelper.TEXT_LIGHT),
+                createVersionsTab());
         add(tabbedPane, BorderLayout.CENTER);
 
         // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate no arranque do
@@ -78,6 +84,85 @@ public class PlataformaPanel extends JPanel {
         loadSubscriptions();
         loadUsers();
         loadTickets();
+        loadClientVersions();
+    }
+
+    /**
+     * Que versão do programa cada empresa está a usar.
+     *
+     * <p>É a lista que se consulta <b>antes</b> de subir a versão mínima no servidor: sem ela,
+     * decidir bloquear era às cegas. Ver docs/ACTUALIZACOES_CLIENTE_SPEC.md §8/§9.
+     */
+    private JPanel createVersionsTab() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBackground(UIHelper.BG_DARK);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.add(UIHelper.createSubheading("Versões dos Clientes — quem está em quê"), BorderLayout.WEST);
+        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
+        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refresh.addActionListener(e -> loadClientVersions());
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(refresh);
+        header.add(actions, BorderLayout.EAST);
+        panel.add(header, BorderLayout.NORTH);
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout());
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        String[] cols = {"Empresa", "Versão", "Último acesso", "Utilizador", "Visto pela 1.ª vez"};
+        versionsModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        versionsTable = new JTable(versionsModel);
+        UIHelper.styleTable(versionsTable);
+        JScrollPane scroll = new JScrollPane(versionsTable);
+        UIHelper.styleScrollPane(scroll);
+
+        JTextField search = TableFilter.searchField("Empresa, versão ou utilizador…");
+        TableFilter.install(versionsTable, search);
+        JPanel bar = TableFilter.bar(search);
+        bar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(bar, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+
+        versionsSummary = new JLabel(" ");
+        versionsSummary.setForeground(UIHelper.TEXT_LIGHT);
+        versionsSummary.setBorder(new EmptyBorder(10, 2, 0, 2));
+        card.add(versionsSummary, BorderLayout.SOUTH);
+
+        panel.add(card, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void loadClientVersions() {
+        if (versionsModel == null) return;
+        UIHelper.loadAsync(this, platformApiClient::listClientVersions, loaded -> {
+            java.time.format.DateTimeFormatter fmt =
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            versionsModel.setRowCount(0);
+            java.util.Set<String> distinctVersions = new java.util.TreeSet<>();
+            for (var usage : loaded) {
+                distinctVersions.add(usage.clientVersion());
+                versionsModel.addRow(new Object[]{
+                        usage.companyName(),
+                        usage.clientVersion(),
+                        usage.lastSeenAt() == null ? "—" : usage.lastSeenAt().format(fmt),
+                        usage.lastUsername() == null ? "—" : usage.lastUsername(),
+                        usage.firstSeenAt() == null ? "—" : usage.firstSeenAt().format(fmt)
+                });
+            }
+            // O número de versões distintas é a informação que decide: com uma só, subir a
+            // mínima é seguro; com várias, alguém vai ficar de fora.
+            versionsSummary.setText(loaded.isEmpty()
+                    ? "Ainda não foi registada nenhuma versão. Os clientes identificam-se ao usar o sistema."
+                    : String.format("<html><b>%d</b> registo(s) · <b>%d</b> versão(ões) diferente(s) em uso: %s</html>",
+                            loaded.size(), distinctVersions.size(), String.join(", ", distinctVersions)));
+        }, error -> showPlatformError("versões dos clientes", error));
     }
 
     private JPanel createCompaniesTab() {

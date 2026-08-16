@@ -119,11 +119,26 @@ class ClientVersionRegistryTest {
         sighting.setLastSeenAt(LocalDateTime.of(2026, 3, 1, 8, 0));
         when(repository.findAllByOrderByLastSeenAtDesc()).thenReturn(List.of(sighting));
 
-        List<ClientVersionUsageDTO> usage = registry.listUsage();
+        List<ClientVersionUsageDTO> usage = registry.listUsage(java.util.Map.of(7L, "Mercearia Beira"));
 
         assertEquals(1, usage.size());
         assertEquals(7L, usage.get(0).companyId());
+        assertEquals("Mercearia Beira", usage.get(0).companyName());
         assertEquals("1.4.0", usage.get(0).clientVersion());
         assertEquals("ana", usage.get(0).lastUsername());
+    }
+
+    @Test // AC-38
+    void empresaSemNomeConhecidoAparecePeloId() {
+        // Uma empresa apagada continua a ter avistamentos. A lista não pode ficar com uma célula
+        // vazia — quem a lê tem de perceber que aquilo existiu.
+        ClientVersionSighting sighting = new ClientVersionSighting();
+        sighting.setCompanyId(99L);
+        sighting.setClientVersion("1.0.0");
+        sighting.setFirstSeenAt(LocalDateTime.now());
+        sighting.setLastSeenAt(LocalDateTime.now());
+        when(repository.findAllByOrderByLastSeenAtDesc()).thenReturn(List.of(sighting));
+
+        assertEquals("Empresa 99", registry.listUsage(java.util.Map.of()).get(0).companyName());
     }
 }

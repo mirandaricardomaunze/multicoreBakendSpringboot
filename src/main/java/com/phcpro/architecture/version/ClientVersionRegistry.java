@@ -82,12 +82,20 @@ public class ClientVersionRegistry {
         repository.save(sighting);
     }
 
-    /** Quem está em que versão, do visto mais recentemente para o mais antigo. */
+    /**
+     * Quem está em que versão, do visto mais recentemente para o mais antigo.
+     *
+     * @param companyNames nomes por id, para o DTO sair completo do servidor. Recebido de fora
+     *                     porque este serviço vive em {@code architecture} e não deve passar a
+     *                     conhecer o módulo das empresas só para escrever um nome.
+     */
     @Transactional(readOnly = true)
-    public List<ClientVersionUsageDTO> listUsage() {
+    public List<ClientVersionUsageDTO> listUsage(Map<Long, String> companyNames) {
+        Map<Long, String> names = companyNames == null ? Map.of() : companyNames;
         return repository.findAllByOrderByLastSeenAtDesc().stream()
                 .map(s -> new ClientVersionUsageDTO(
                         s.getCompanyId(),
+                        names.getOrDefault(s.getCompanyId(), "Empresa " + s.getCompanyId()),
                         s.getClientVersion(),
                         s.getLastUsername(),
                         s.getFirstSeenAt(),

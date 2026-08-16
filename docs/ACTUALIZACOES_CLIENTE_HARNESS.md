@@ -80,7 +80,8 @@ chamada ao `sendError` — que era o que os deixava passar com o defeito present
 | AC-34 | Sem empresa ou sem versão | não grava nada |
 | AC-35 | Base de dados a falhar | **não rebenta** o pedido |
 | AC-36 | Depois de uma falha | volta a tentar no pedido seguinte |
-| AC-37 | Lista de utilização | diz empresa, versão e último utilizador |
+| AC-37 | Lista de utilização | diz empresa, **nome**, versão e último utilizador |
+| AC-38 | Empresa apagada (id sem nome) | aparece como `Empresa <id>`, nunca célula vazia |
 
 **Execução:** `mvn -o test -Dtest=SemanticVersionTest,ClientVersionInterceptorTest,ClientVersionRegistryTest`
 → 23 testes, 0 falhas (2026-08-16).
@@ -94,7 +95,9 @@ chamada ao `sendError` — que era o que os deixava passar com o defeito present
 | AC-50 | Desktop antigo contra servidor com mínima acima | mensagem "Actualize o programa", com a versão instalada |
 | AC-51 | Desktop actual | funciona sem aviso |
 | AC-52 | Servidor com versão mais recente que o desktop | rodapé mostra "Versão X disponível" e **não** bloqueia |
-| AC-53 | `GET /api/platform/client-versions` com superadmin | lista das empresas e respectivas versões |
-| AC-54 | O mesmo com utilizador normal | recusado |
+| AC-53 | Consola da Plataforma → aba "Versões dos Clientes" | tabela com empresa, versão, último acesso e utilizador |
+| AC-54 | O mesmo endpoint com utilizador normal (não superadmin) | recusado |
+| AC-57 | Duas lojas em versões diferentes | o rodapé diz "2 versões diferentes em uso: 1.4.0, 1.5.0" |
+| AC-58 | Sistema sem avistamentos ainda | "Ainda não foi registada nenhuma versão." |
 | AC-55 | Instalador `jpackage` + Inno Setup por utilizador | **não implementado** — ver spec §6 |
 | AC-56 | Actualização preserva `desktop.api.base-url` | **não implementado** |

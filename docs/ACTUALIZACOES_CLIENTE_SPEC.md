@@ -142,7 +142,17 @@ sabia que existiam nessa versão.
 
 `ClientVersionRegistry` guarda **uma linha por (empresa, versão)**: primeira vez vista, última
 vez vista e o último utilizador (para se saber a quem telefonar).
-`GET /api/platform/client-versions` (superadmin) mostra a lista.
+`GET /api/platform/client-versions` (superadmin) mostra a lista, e a consola da plataforma tem a
+aba **"Versões dos Clientes"**.
+
+O nome da empresa é resolvido **no servidor** (o controller compõe o registo com o
+`PlatformCompanyService`), para o desktop não andar a cruzar ids com outra listagem só para
+escrever um nome numa tabela — foi esse o incómodo que já existiu no painel de Compras com o
+armazém. Uma empresa entretanto apagada aparece como `Empresa <id>`, e não com a célula vazia:
+quem lê tem de perceber que aquilo existiu.
+
+O rodapé da aba diz **quantas versões diferentes estão em uso** — é essa a informação que decide:
+com uma só, subir a mínima é seguro; com várias, alguém vai ficar de fora.
 
 Duas regras que este registo não pode quebrar:
 
@@ -180,5 +190,8 @@ isso a barra é alta.
 
 - Não há descarga nem instalação automática — o aviso diz que há versão nova, mas actualizar
   ainda é manual.
-- A lista de §8 é servida por API; **não há ecrã** no desktop do superadmin a mostrá-la.
 - A versão mínima é global; não há política por loja nem período de tolerância automático.
+- A lista de §8 mostra as versões **vistas**, não as instaladas: uma loja que não abra o programa
+  há um mês aparece com a versão de há um mês. A coluna "Último acesso" existe precisamente para
+  isso ser visível.
+- Não há alerta activo (email/notificação) quando aparece uma versão antiga — é preciso ir ver.

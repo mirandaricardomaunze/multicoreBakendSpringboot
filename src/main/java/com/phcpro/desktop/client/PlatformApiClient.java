@@ -38,6 +38,12 @@ public class PlatformApiClient {
         return clientFactory.authenticatedClient().getList("/api/platform/companies", PlatformCompanyDTO.class);
     }
 
+    /** Que versão do programa cada empresa está a usar — a lista a olhar antes de subir a mínima. */
+    public List<com.phcpro.architecture.version.ClientVersionUsageDTO> listClientVersions() {
+        return clientFactory.authenticatedClient().getList("/api/platform/client-versions",
+                com.phcpro.architecture.version.ClientVersionUsageDTO.class);
+    }
+
     public PlatformCompanyDTO createCompany(CreateCompanyRequest request) {
         return clientFactory.authenticatedClient().post("/api/platform/companies", request, PlatformCompanyDTO.class);
     }
