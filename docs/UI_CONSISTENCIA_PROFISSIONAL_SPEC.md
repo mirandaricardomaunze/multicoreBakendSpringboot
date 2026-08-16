@@ -1,7 +1,7 @@
 # SPEC — Consistência profissional da UI Swing
 
 **Criado em:** 2026-08-09  
-**Camada:** cliente desktop Swing (`com.phcpro.gui`, `com.phcpro.gui.components`)  
+**Camada:** cliente desktop Swing (`mz.multicore.erp.gui`, `mz.multicore.erp.gui.components`)
 **Backend:** contratos e regras de negócio permanecem inalterados.
 
 ## 1. Objectivo
@@ -106,4 +106,3 @@ Não duplicar cálculo fiscal, comercial ou de stock nestes componentes.
 - Sem novas cores ad-hoc ou tamanhos mágicos em painéis.
 - `mvn clean compile` e `mvn test` verdes.
 - `tasks/current.md` actualizado a cada fase encerrada.
-

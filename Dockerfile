@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Imagem do BACKEND Multicore (com.phcpro.MulticoreApplication, headless).
+# Imagem do BACKEND Multicore (mz.multicore.erp.MulticoreApplication, headless).
 # Multi-stage: compila com Maven, corre num JRE 21 magro.
 #
 # O runtime inclui o postgresql-client porque o backup físico (ScheduledBackupService)

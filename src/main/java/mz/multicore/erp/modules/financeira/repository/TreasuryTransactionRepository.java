@@ -1,0 +1,13 @@
+package mz.multicore.erp.modules.financeira.repository;
+
+import mz.multicore.erp.modules.financeira.model.TreasuryTransaction;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface TreasuryTransactionRepository extends JpaRepository<TreasuryTransaction, Long> {
+    List<TreasuryTransaction> findAllByOrderByTransactionDateDesc();
+    List<TreasuryTransaction> findByTreasuryAccountCompanyIdOrderByTransactionDateDesc(Long companyId);
+}

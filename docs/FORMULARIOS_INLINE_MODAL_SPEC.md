@@ -1,7 +1,7 @@
 # Spec — Formulários inline → modal profissional (CRM, Financeiro, Config)
 
 > Converte os 3 formulários **sempre presentes no ecrã** (inline) que faltavam para o modal canónico
-> [ModernFormDialog](../src/main/java/com/phcpro/gui/components/ModernFormDialog.java). **Só
+> [ModernFormDialog](../src/main/java/mz/multicore/erp/gui/components/ModernFormDialog.java). **Só
 > apresentação/UX** — serviços e regras (`CRMService`, `FinanceService`, `AppUserService`) intactos.
 
 **Última actualização:** 2026-06-30

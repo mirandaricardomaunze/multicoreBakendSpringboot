@@ -12,7 +12,7 @@ nem validação que mantenha o diálogo aberto — destoava dos `ModernFormDialo
 
 ## Decisões
 
-- **Dois helpers reutilizáveis** no [UIHelper](../src/main/java/com/phcpro/gui/components/UIHelper.java)
+- **Dois helpers reutilizáveis** no [UIHelper](../src/main/java/mz/multicore/erp/gui/components/UIHelper.java)
   (DRY), ambos sobre `ModernFormDialog` (cabeçalho premium, contido na janela, validação no
   `setOnSave` → erro mantém aberto):
   - `promptRequiredText(title, icon, subtitle, label)` → texto obrigatório (área com *wrap*);

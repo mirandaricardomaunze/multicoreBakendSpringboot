@@ -1,6 +1,6 @@
 # Deploy — Backend separado (VPS + Docker + PostgreSQL privado)
 
-**Objetivo:** correr o backend Spring Boot (`com.phcpro.MulticoreApplication`) num VPS, com PostgreSQL
+**Objetivo:** correr o backend Spring Boot (`mz.multicore.erp.MulticoreApplication`) num VPS, com PostgreSQL
 **privado** (nunca exposto à internet) e HTTPS automático, rumo ao desktop **cliente-fino** (só HTTPS).
 
 **Modelo escolhido:** VPS + Docker; desktop **HTTPS-only primeiro** (a BD só abre aos balcões depois de
@@ -99,10 +99,10 @@ O deploy acima corre já, mas o desktop **ainda liga diretamente ao PostgreSQL**
 ecrãs (só auth + parte do comercial passam por HTTP). Enquanto isso, a BD não pode fechar-se por
 completo. A migração restante:
 
-**Base já existente (reutilizar):** [DesktopApiClient](../src/main/java/com/phcpro/desktop/client/DesktopApiClient.java)
+**Base já existente (reutilizar):** [DesktopApiClient](../src/main/java/mz/multicore/erp/desktop/client/DesktopApiClient.java)
 (get/post/put/delete com Bearer + `X-Company-Id`, tratamento de erro) e o padrão de
-[ComercialApiClient](../src/main/java/com/phcpro/desktop/client/ComercialApiClient.java) /
-[AuthApiClient](../src/main/java/com/phcpro/desktop/client/AuthApiClient.java).
+[ComercialApiClient](../src/main/java/mz/multicore/erp/desktop/client/ComercialApiClient.java) /
+[AuthApiClient](../src/main/java/mz/multicore/erp/desktop/client/AuthApiClient.java).
 
 **Falta migrar ~24 domínios** (um `@RestController` cada): inventory, inventory/counts,
 inventory/transfers, pos, purchases, hr, finance, fiscal, crm, approvals, credit-notes, debit-notes,
@@ -111,7 +111,7 @@ platform/{companies,users,subscriptions,support}.
 
 **Receita por domínio (iteração fechável):**
 1. **Gap de endpoints:** confirmar que o controller expõe tudo o que o painel chama no Service
-   (muitos métodos de Service ainda não têm endpoint) → skill `phc-new-endpoint`.
+   (muitos métodos de Service ainda não têm endpoint) → skill `multicore-new-endpoint`.
 2. **Cliente typed** `XxxApiClient` sobre o `DesktopApiClient` (espelha o `ComercialApiClient`).
 3. **Painel** deixa de receber `XxxService` e passa a receber `XxxApiClient`; cada `service.m(...)`
    vira `apiClient.m(...)`. Os DTOs já são os mesmos (a API devolve os mesmos records).

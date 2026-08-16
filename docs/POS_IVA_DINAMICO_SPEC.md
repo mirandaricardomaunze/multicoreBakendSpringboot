@@ -2,7 +2,7 @@
 
 > O POS passa a calcular e mostrar o **IVA por linha** usando a **taxa de cada produto** (não a
 > constante 0.16). Alinhado com [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md), [CONVENTIONS.md](../CONVENTIONS.md)
-> e a engine existente [LineCalculator](../src/main/java/com/phcpro/architecture/pricing/LineCalculator.java).
+> e a engine existente [LineCalculator](../src/main/java/mz/multicore/erp/architecture/pricing/LineCalculator.java).
 
 **Última actualização:** 2026-08-05
 

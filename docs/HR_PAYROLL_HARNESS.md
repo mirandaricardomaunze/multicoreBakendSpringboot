@@ -1,6 +1,6 @@
 # Harness — Validação de RH & Folha Salarial
 
-Mede o progresso do módulo `com.phcpro.modules.hr` contra [HR_PAYROLL_SPEC.md](HR_PAYROLL_SPEC.md).
+Mede o progresso do módulo `mz.multicore.erp.modules.hr` contra [HR_PAYROLL_SPEC.md](HR_PAYROLL_SPEC.md).
 Cada cenário corre com **empresa activa, utilizador identificado e dados controlados**.
 Legenda de estado: ✅ feito · 🟡 parcial · ❌ em falta.
 

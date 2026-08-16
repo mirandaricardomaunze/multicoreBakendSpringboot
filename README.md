@@ -2,8 +2,8 @@
 
 Multicore é um ERP modular (vendas, compras, stock, POS, fiscal, RH, CRM, financeira, aprovações, auditoria) com **um único codebase** que arranca em dois modos:
 
-- **Backend HTTP/API** — `com.phcpro.MulticoreApplication` (Spring Boot puro, sem janelas).
-- **Cliente desktop Swing** — `com.phcpro.desktop.DesktopApplication` (arranca Spring Boot com perfil `desktop` e abre a janela de login).
+- **Backend HTTP/API** — `mz.multicore.erp.MulticoreApplication` (Spring Boot puro, sem janelas).
+- **Cliente desktop Swing** — `mz.multicore.erp.desktop.DesktopApplication` (arranca Spring Boot com perfil `desktop` e abre a janela de login).
 
 A meta de migração é o desktop falar **só HTTPS** com o backend; ver [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -27,7 +27,7 @@ A meta de migração é o desktop falar **só HTTPS** com o backend; ver [ARCHIT
 ## Estrutura
 
 ```
-src/main/java/com/phcpro/
+src/main/java/mz/multicore/erp/
 ├── MulticoreApplication.java        # entrypoint backend (sem Swing)
 ├── architecture/                     # base classes: BaseEntity, exceções, security context
 ├── desktop/
@@ -67,7 +67,7 @@ modules/<nome>/
 
 ### Desktop (uso diário)
 
-O `pom.xml` fixa `<mainClass>com.phcpro.MulticoreApplication</mainClass>`, pelo que
+O `pom.xml` fixa `<mainClass>mz.multicore.erp.MulticoreApplication</mainClass>`, pelo que
 `mvn spring-boot:run` arranca **sempre o backend puro** (sem janela) — o
 `-Dspring-boot.run.main-class` da linha de comando **não** sobrepõe um valor literal
 da configuração. Para arrancar o cliente desktop, correr o `DesktopApplication` directamente:
@@ -76,7 +76,7 @@ da configuração. Para arrancar o cliente desktop, correr o `DesktopApplication
 mvn -q compile
 mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
 $cp = "target/classes;" + (Get-Content target/cp.txt -Raw)
-java -cp $cp com.phcpro.desktop.DesktopApplication
+java -cp $cp mz.multicore.erp.desktop.DesktopApplication
 ```
 
 > 🗄️ **Base de dados:** o perfil `desktop` usa **PostgreSQL local** (`jdbc:postgresql://localhost:5432/multicore`),
@@ -95,7 +95,7 @@ um backend remoto:
 
 ```powershell
 $env:DESKTOP_API_BASE_URL="https://erp.exemplo.co.mz"
-mvn spring-boot:run "-Dspring-boot.run.main-class=com.phcpro.desktop.DesktopApplication"
+mvn spring-boot:run "-Dspring-boot.run.main-class=mz.multicore.erp.desktop.DesktopApplication"
 ```
 
 O token de autenticação fica apenas em memória durante a sessão do desktop.
@@ -133,7 +133,7 @@ directo para `main`).
 
 ## Deploy em produção (VPS)
 
-O backend (`com.phcpro.MulticoreApplication`, headless) é hospedável à parte com **Docker + PostgreSQL
+O backend (`mz.multicore.erp.MulticoreApplication`, headless) é hospedável à parte com **Docker + PostgreSQL
 privado + Caddy (HTTPS automático)**:
 
 ```bash

@@ -1,7 +1,7 @@
 # SPEC — Barra lateral de navegação nas tabelas
 
 **Criado em:** 2026-07-23
-**Camada:** UI Swing (`com.phcpro.gui.components`)
+**Camada:** UI Swing (`mz.multicore.erp.gui.components`)
 **Sem backend, sem migração** — apresentação apenas.
 
 ---

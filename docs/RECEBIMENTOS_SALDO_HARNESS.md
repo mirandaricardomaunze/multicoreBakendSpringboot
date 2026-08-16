@@ -80,7 +80,7 @@ RP-51 e RP-52 devolviam **HTTP 500** apesar de gravarem o recibo e actualizarem 
 
 ```
 org.hibernate.LazyInitializationException: could not initialize proxy
-  [com.phcpro.modules.comercial.model.Client#1] - no Session
+  [mz.multicore.erp.modules.comercial.model.Client#1] - no Session
   at ComercialService.toDTO(ComercialService.java:479)
 ```
 

@@ -1,7 +1,7 @@
 # SPEC — Notificações: marcar como lida / todas lidas (no sino)
 
 **Criado em:** 2026-07-24
-**Camada:** UI Swing (`com.phcpro.gui`)
+**Camada:** UI Swing (`mz.multicore.erp.gui`)
 **Sem backend, sem migração.**
 
 > Estende a feature de **notificações** (sino + página) — `NotificationFeed`/`NotificationsPanel`,

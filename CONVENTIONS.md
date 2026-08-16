@@ -29,7 +29,7 @@ throw new BusinessRuleException("Invalid qty: must be > 0 (NPE downstream)");
 | Método                  | `camelCase`, verbo no infinitivo | `findNextFEFO`, `consumeFEFO`              |
 | Constante               | `UPPER_SNAKE`                    | `LEGACY_EXPIRATION`                        |
 | Variável local / campo  | `camelCase`                      | `expirationDate`                           |
-| Pacote                  | `lowercase.singular`             | `com.phcpro.modules.inventory`             |
+| Pacote                  | `lowercase.singular`             | `mz.multicore.erp.modules.inventory`             |
 | Tabela JPA              | `snake_case`, **plural**         | `@Table(name = "product_batches")`         |
 | DTO de input            | `Create<Entidade>Request`        | `CreateProductRequest`                     |
 | DTO de output           | `<Entidade>DTO`                  | `ProductBatchDTO`                          |
@@ -196,7 +196,7 @@ try {
 
 ## 11. UI Swing
 
-- **Painéis** ficam em `com.phcpro.gui/<Modulo>Panel.java` e injectam Services no construtor.
+- **Painéis** ficam em `mz.multicore.erp.gui/<Modulo>Panel.java` e injectam Services no construtor.
 - **Estilos** via `UIHelper.style…(comp)`, `ModernButton`, `ModernPanel`. Não criar `new Color(...)` ad-hoc — usar as paletas de `UIHelper` (`ACCENT_BLUE`, `BG_DARK`, `TEXT_MUTED`, …).
 - **Ícones**: `UIHelper.icon("fas-<nome>", 14)` (FontAwesome 5 Solid via Ikonli). **Nunca emojis em labels** de botões / tabuladores.
 - **Diálogos**: `UIHelper.createDialogForm(...)` para criar forms label-campo; `UIHelper.makeDialogScrollable(...)` para diálogos altos.
@@ -262,6 +262,6 @@ total = total.add(amount);
 
 ## 17. Ficheiros novos
 
-- Antes de criar um ficheiro, ver se há skill que o faça (`.claude/skills/phc-new-*`).
+- Antes de criar um ficheiro, ver se há skill que o faça (`.claude/skills/multicore-new-*`).
 - Não criar `README.md`, `NOTES.md`, `TODO.md` dentro de módulos — usar [tasks/current.md](tasks/current.md).
 - Não criar pacote novo dentro de um módulo sem que haja >2 classes a viver lá.

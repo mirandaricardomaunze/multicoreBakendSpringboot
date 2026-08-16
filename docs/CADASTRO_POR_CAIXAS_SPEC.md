@@ -2,7 +2,7 @@
 
 > Permitir dar entrada de mercadoria **por nº de caixas** (mais unidades soltas), convertendo para
 > unidades, sem alterar a unidade interna de stock nem as camadas de faturação/POS/guia/reserva.
-> Toca apenas o [StockPanel](../src/main/java/com/phcpro/gui/StockPanel.java) (apresentação/entrada).
+> Toca apenas o [StockPanel](../src/main/java/mz/multicore/erp/gui/StockPanel.java) (apresentação/entrada).
 
 **Última actualização:** 2026-07-01
 

@@ -1,7 +1,7 @@
 # Spec — Colunas de Linha dos Documentos Comerciais
 
 Define o conjunto **canónico e profissional** de colunas que cada linha de produto deve mostrar nos
-documentos comerciais imprimíveis (PDF). Complementa [phc-pdf-document](../.claude/skills/),
+documentos comerciais imprimíveis (PDF). Complementa [multicore-pdf-document](../.claude/skills/),
 [MOVIMENTOS_COMERCIAIS.md](../MOVIMENTOS_COMERCIAIS.md) e [CONVENTIONS.md](../CONVENTIONS.md).
 
 ## Objectivo

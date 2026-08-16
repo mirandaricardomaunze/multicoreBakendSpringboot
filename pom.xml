@@ -11,7 +11,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-    <groupId>com.phcpro</groupId>
+    <groupId>mz.multicore.erp</groupId>
     <artifactId>manager</artifactId>
     <version>1.0.0</version>
     <name>Multicore</name>
@@ -122,7 +122,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.phcpro.MulticoreApplication</mainClass>
+                    <mainClass>mz.multicore.erp.MulticoreApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

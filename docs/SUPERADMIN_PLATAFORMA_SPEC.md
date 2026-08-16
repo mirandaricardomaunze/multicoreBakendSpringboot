@@ -10,7 +10,7 @@ assistência). Funcionalidade fechada.
 ## Problema
 
 O sistema é multi-tenant mas o papel mais alto que existe é o **ADMIN de uma empresa**
-([UserRole](../src/main/java/com/phcpro/modules/users/model/UserRole.java): EMPLOYEE/MANAGER/ADMIN).
+([UserRole](../src/main/java/mz/multicore/erp/modules/users/model/UserRole.java): EMPLOYEE/MANAGER/ADMIN).
 Não há forma de o **dono da plataforma** (quem vende o ERP) ver o conjunto de empresas, suspender
 quem não paga, ou dar assistência transversal. `Company` não tinha sequer estado (activa/inactiva).
 
@@ -24,7 +24,7 @@ quem não paga, ou dar assistência transversal. `Company` não tinha sequer est
 
 ## Autorização (backend)
 
-O [SecurityInterceptor](../src/main/java/com/phcpro/architecture/security/SecurityInterceptor.java)
+O [SecurityInterceptor](../src/main/java/mz/multicore/erp/architecture/security/SecurityInterceptor.java)
 normal exige token **e** `X-Company-Id` e valida acesso do utilizador àquela empresa — inadequado
 para um papel de plataforma. Por isso:
 

@@ -287,7 +287,7 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 
 - **Decisão de UX (2026-07-27):** híbrido — listagem como ecrã principal, **painel completo** para
   documentos com linhas, **modais só para acções curtas**. Piloto aplicado à **criação de Encomenda**.
-- **Feito (só UI):** novo componente reutilizável `com.phcpro.gui.components.DocumentEditorHost`
+- **Feito (só UI):** novo componente reutilizável `mz.multicore.erp.gui.components.DocumentEditorHost`
   (barra: **← Voltar à lista** com guarda de alterações + título + **Guardar**). A aba **Encomendas**
   passou a `CardLayout` (lista ⇄ editor): **Nova Encomenda** mostra o editor a ecrã inteiro
   (reutiliza o mesmo `orderFormContent` + `issueOrderOrThrow`) em vez do modal; **Guardar** cria,
@@ -334,7 +334,7 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 
 - **Pedido do utilizador:** botões laterais nas tabelas para navegar (topo/cima/baixo/fundo), como
   noutros sistemas. Spec+harness.
-- **Feito (só UI, sem backend):** novo componente `com.phcpro.gui.components.TableNavigator` — barra
+- **Feito (só UI, sem backend):** novo componente `mz.multicore.erp.gui.components.TableNavigator` — barra
   vertical (Topo `fas-angle-double-up`, Página acima `fas-angle-up`, Página abaixo `fas-angle-down`,
   Fundo `fas-angle-double-down`) **fora da tabela, no EAST do contentor** do scroll (mesmo padrão do
   rodapé `maybeAddListingFooter`, que vai ao SOUTH) — não sobrepõe células. **DRY:** ligada
@@ -458,8 +458,8 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 - **Os 4 gigantes migraram para HTTP:** Stock (`884d67c`), POS (`da3596b`), Comercial (`d85febd`,
   "4.º/último gigante — fecha Track B"). Cada painel deixou de chamar o Service em processo.
 - **Runtime cliente-fino (`a1af165`) — fecha o objetivo:** `DesktopApplication` passou a um contexto
-  **não-web** (`WebApplicationType.NONE`), sem `DataSource`/JPA/Flyway; scan só de `com.phcpro.desktop`
-  + `com.phcpro.gui` + `com.phcpro.modules.pos.scale`. `application-desktop.properties` reduzido a
+  **não-web** (`WebApplicationType.NONE`), sem `DataSource`/JPA/Flyway; scan só de `mz.multicore.erp.desktop`
+  + `mz.multicore.erp.gui` + `mz.multicore.erp.modules.pos.scale`. `application-desktop.properties` reduzido a
   `desktop.api.base-url`. **O desktop arranca SEM base de dados.** `MainFrame` já não depende de nenhum
   `@Service`/`@Repository` (últimos 2 removidos: `companyService` morto, `subscriptionService` →
   `MySubscriptionApiClient`).
@@ -528,19 +528,19 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 - **Verificação:** `mvn -o compile` limpo; `DesktopApiClientTest` (5) verde. Ida-e-volta HTTP real de
   cada painel valida-se ao vivo (manual) quando o backend estiver de pé.
 
-### Progresso — 2026-07-11 (Polish Visual PHC — aspecto ERP profissional)
+### Progresso — 2026-07-11 (Polish Visual Multicore — aspecto ERP profissional)
 
 - **`SlimScrollBarUI`** (novo): scroll bars finas (6 px), thumb violeta arredondado, sem setas — aplicado via `UIHelper.styleScrollPane()` em todos os JScrollPane do sistema.
 - **`StatusBar`** (novo): rodapé de 24 px com módulo activo · nº registos · empresa · utilizador · hora. Timer interno (60 s) actualiza a hora. `MainFrame.navigate()` actualiza o módulo; `applyAuthenticatedUser` inicializa empresa e utilizador.
 - **`SectionHeader`** (novo): cabeçalho de secção reutilizável — ícone opcional + título + separador 1 px.
 - **`ModernPanel`** (melhorado): borda usa `UIHelper.BORDER` em painéis normais (adapta ao tema claro/escuro); painéis com gradiente mantêm branco translúcido subtil.
-- **`styleTabbedPanePHC`** (novo em `UIHelper`): tabs PHC com linha de acento 3 px na base (sem fundo cheio). Migrado em **10 painéis**: ApprovalsPanel, ComercialPanel, ComprasPanel, ConfigPanel, CRMPanel, FinanceiroPanel, FiscalPanel, HRPanel, PlataformaPanel, StockPanel.
+- **`styleTabbedPaneMulticore`** (novo em `UIHelper`): tabs Multicore com linha de acento 3 px na base (sem fundo cheio). Migrado em **10 painéis**: ApprovalsPanel, ComercialPanel, ComprasPanel, ConfigPanel, CRMPanel, FinanceiroPanel, FiscalPanel, HRPanel, PlataformaPanel, StockPanel.
 - **Tooltips premium** em `UIHelper.initGlobalTheme()`: fundo `BG_CARD`, borda `BORDER`, fonte 12 px, delay 600 ms.
-- Spec: [docs/PHC_UI_POLISH_SPEC.md](../docs/PHC_UI_POLISH_SPEC.md) | Harness: [docs/PHC_UI_POLISH_HARNESS.md](../docs/PHC_UI_POLISH_HARNESS.md).
+- Spec: [docs/MULTICORE_UI_POLISH_SPEC.md](../docs/MULTICORE_UI_POLISH_SPEC.md) | Harness: [docs/MULTICORE_UI_POLISH_HARNESS.md](../docs/MULTICORE_UI_POLISH_HARNESS.md).
 - **Verificação:** `mvn -o compile` → BUILD SUCCESS.
 
 
-- **Filtros de tabela transversais:** o componente `com.phcpro.gui.components.TableFilter` (pesquisa
+- **Filtros de tabela transversais:** o componente `mz.multicore.erp.gui.components.TableFilter` (pesquisa
   com lupa + funil + dropdowns tipo/estado + período por data, colunas ordenáveis) foi estendido a
   **todas** as tabelas de listagem que ainda não tinham: Comercial (NC/ND/Recibos/Encomendas/Contas
   Correntes), Compras (Faturas/Fornecedores/Reposição/Contas a Pagar/Encomendas), Clientes, Stock →
@@ -667,8 +667,8 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 
 - **Pedido do utilizador:** poder definir **quais colunas** aparecem nos documentos comerciais
   (Fatura/Encomenda/NC/Guia, que partilham o `LineItemsTableRenderer`). Só mostrar/ocultar.
-- **Processo:** spec+harness → skill `phc-new-module` → **implementação delegada a um agent** →
-  revisão `phc-solid-review` (sem apontamentos bloqueantes) → verificação e commit.
+- **Processo:** spec+harness → skill `multicore-new-module` → **implementação delegada a um agent** →
+  revisão `multicore-solid-review` (sem apontamentos bloqueantes) → verificação e commit.
 - **Módulo `documents`** (`DocumentColumnConfig` por empresa, 8 flags, migração `V22`;
   `DocumentConfigService.getColumns/save` com MANAGER/ADMIN + auditoria `DOCUMENT_COLUMNS_UPDATE` +
   regra "pelo menos uma coluna"; `DocumentColumnsDTO` record; controller `GET/PUT /api/documents/columns`).
@@ -867,7 +867,7 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 
 Várias iterações **só de apresentação** (sem tocar em Services/DTOs/regras), cada uma com spec+harness:
 
-- **Grelha estilo PHC** (`UIHelper.styleTable`): números alinhados à direita (qtd/preço/IVA/total) +
+- **Grelha estilo Multicore** (`UIHelper.styleTable`): números alinhados à direita (qtd/preço/IVA/total) +
   cabeçalho com separadores; **calha de selecção** ▸ na margem esquerda (rowHeader, sem mexer no
   modelo de colunas). [POS_*]/grelha.
 - **Cabeçalho POS compacto:** código de barras subiu para a linha dos selects; catálogo ganhou
@@ -924,7 +924,7 @@ Várias iterações **só de apresentação** (sem tocar em Services/DTOs/regras
   fixo). `createDialogForm` passou a **grelha de 2 colunas**. Lupa de pesquisa do POS **dentro** do input.
   Spec/harness: [docs/MODAIS_ICONES_SPEC.md](../docs/MODAIS_ICONES_SPEC.md) (MI-01..16).
 
-### Progresso — 2026-06-28 (desktop em PostgreSQL real + ícones nos modais + grelha PHC)
+### Progresso — 2026-06-28 (desktop em PostgreSQL real + ícones nos modais + grelha Multicore)
 
 - **Base de dados real no desktop:** o perfil `desktop` deixou de usar H2 em memória e passou a usar
   **PostgreSQL local persistente** (BD `multicore`, role dedicada `multicore`). Credenciais fora do git:
@@ -941,10 +941,10 @@ Várias iterações **só de apresentação** (sem tocar em Services/DTOs/regras
   [docs/BD_POSTGRES_DESKTOP_HARNESS.md](../docs/BD_POSTGRES_DESKTOP_HARNESS.md) (DB-01..06).
 - **Ícones nos modais de formulário:** `ModernFormDialog` ganhou ícone contextual no título (deduzido do
   título via `iconForTitle`, domínio>verbo) + `setIconImage`, e `fas-times` no Cancelar. Cobre todos os
-  `ModernFormDialog` sem tocar nos call sites. Vocabulário `phc-icons` += Fornecedor/Categoria. Spec/harness:
+  `ModernFormDialog` sem tocar nos call sites. Vocabulário `multicore-icons` += Fornecedor/Categoria. Spec/harness:
   [docs/MODAIS_ICONES_SPEC.md](../docs/MODAIS_ICONES_SPEC.md) +
   [docs/MODAIS_ICONES_HARNESS.md](../docs/MODAIS_ICONES_HARNESS.md) (MI-01..08).
-- **Tabelas em grelha estilo PHC:** `UIHelper.styleTable` passou a desenhar linhas verticais + horizontais
+- **Tabelas em grelha estilo Multicore:** `UIHelper.styleTable` passou a desenhar linhas verticais + horizontais
   (grelha completa, `setIntercellSpacing(1,1)`, contorno na cor da grelha).
 - **Pendente (legado):** modais baseados em `JOptionPane.showConfirmDialog` (Cadastrar Produto, Armazém,
   Ajuste) ainda sem iconografia própria — migrar para `ModernFormDialog` numa próxima iteração.
@@ -1129,7 +1129,7 @@ Várias iterações **só de apresentação** (sem tocar em Services/DTOs/regras
   "login, tenant e roles testados por API" do harness.
 - Verificação: `mvn clean test` → **BUILD SUCCESS, 86 testes, 0 falhas**.
 
-### Progresso — 2026-06-21 (localizar documento de origem por pesquisa, estilo PHC)
+### Progresso — 2026-06-21 (localizar documento de origem por pesquisa, estilo Multicore)
 
 - **Faturar a partir de encomenda** e **NC/ND a partir da fatura** passaram a permitir **pesquisar o
   documento de origem por nº ou cliente** (BUSINESS_FLOWS passo 1 "documento origem é localizado").
@@ -1218,7 +1218,7 @@ Prioridade imediata: executar o harness RS-01 a RS-22 com dados reais de loja, v
 
 ### Backlog — RH/Folha (avaliação 2026-06-22)
 
-Módulo `com.phcpro.modules.hr` está avançado (motor fiscal IRPS/INSS, recibos, despesas, férias,
+Módulo `mz.multicore.erp.modules.hr` está avançado (motor fiscal IRPS/INSS, recibos, despesas, férias,
 faltas, UI + PDF) mas **não pronto para produção**. Spec-alvo e harness criados:
 - Spec: [docs/HR_PAYROLL_SPEC.md](../docs/HR_PAYROLL_SPEC.md)
 - Harness: [docs/HR_PAYROLL_HARNESS.md](../docs/HR_PAYROLL_HARNESS.md) (cenários RH-01..RH-25 + punch list)
@@ -1291,9 +1291,9 @@ fiscal e config de impostos sem endpoint/PDF; (5) férias sem saldo e `decideVac
 ### Funcionalidade — Validades & FEFO
 - Backend: `ProductBatchService.findNextFEFO(productId, warehouseId)` exposto via `InventoryService`.
 - UI:
-  - [StockPanel](src/main/java/com/phcpro/gui/StockPanel.java) — botão "Adicionar Lote/Validade" + diálogo dedicado; chain após "Cadastrar Produto".
-  - [POSPanel](src/main/java/com/phcpro/gui/POSPanel.java) — campos Lote+Validade FEFO read-only auto-preenchidos.
-  - [ComercialPanel](src/main/java/com/phcpro/gui/ComercialPanel.java) — Faturas e Encomendas com Lote/Validade FEFO read-only.
+  - [StockPanel](src/main/java/mz/multicore/erp/gui/StockPanel.java) — botão "Adicionar Lote/Validade" + diálogo dedicado; chain após "Cadastrar Produto".
+  - [POSPanel](src/main/java/mz/multicore/erp/gui/POSPanel.java) — campos Lote+Validade FEFO read-only auto-preenchidos.
+  - [ComercialPanel](src/main/java/mz/multicore/erp/gui/ComercialPanel.java) — Faturas e Encomendas com Lote/Validade FEFO read-only.
   - Diálogo de transferência ganhou colunas Lote+Validade FEFO recalculadas.
 
 ### Documentação (spec-driven harness)
@@ -1302,12 +1302,12 @@ fiscal e config de impostos sem endpoint/PDF; (5) férias sem saldo e `decideVac
 
 ### Infra "production-ready"
 - **Lombok**: [lombok.config](lombok.config) — `stopBubbling`, marca métodos gerados, proíbe `@Data`/`@AllArgsConstructor`/`@Builder`. Setup IDE documentado em [CONVENTIONS.md §3](CONVENTIONS.md#3-lombok).
-- **Handler global**: confirmado [GlobalExceptionHandler](src/main/java/com/phcpro/architecture/exception/GlobalExceptionHandler.java) já existia (BusinessRule → 400, Validation → 400 com mapa, fallback → 500).
+- **Handler global**: confirmado [GlobalExceptionHandler](src/main/java/mz/multicore/erp/architecture/exception/GlobalExceptionHandler.java) já existia (BusinessRule → 400, Validation → 400 com mapa, fallback → 500).
 - **Flyway + PostgreSQL**: dependências em [pom.xml](pom.xml); [application-prod.properties](src/main/resources/application-prod.properties) com `ddl-auto=validate`, Flyway ON, vars `DB_URL/DB_USER/DB_PASSWORD`. Pasta [db/migration/](src/main/resources/db/migration/) com README explicando como gerar `V1__init.sql` a partir das entidades JPA.
-- **Spring Security scaffold**: [SecurityConfig](src/main/java/com/phcpro/architecture/security/SecurityConfig.java) — BCryptPasswordEncoder + filter chain permissiva (não quebra desktop). [AppUserService](src/main/java/com/phcpro/modules/users/service/AppUserService.java) migrado para BCrypt com fallback de migração suave (passwords em texto-plano legadas continuam a autenticar e são re-encriptadas na próxima autenticação).
+- **Spring Security scaffold**: [SecurityConfig](src/main/java/mz/multicore/erp/architecture/security/SecurityConfig.java) — BCryptPasswordEncoder + filter chain permissiva (não quebra desktop). [AppUserService](src/main/java/mz/multicore/erp/modules/users/service/AppUserService.java) migrado para BCrypt com fallback de migração suave (passwords em texto-plano legadas continuam a autenticar e são re-encriptadas na próxima autenticação).
 - **OpenAPI / Swagger**: dependência `springdoc-openapi-starter-webmvc-ui` adicionada. Em dev: `http://localhost:8080/swagger-ui.html`. Desactivado em prod até haver autenticação para a UI.
 - **CI**: [.github/workflows/build.yml](.github/workflows/build.yml) — `mvn clean compile`, `mvn test`, `mvn package` em cada push/PR para `main`.
-- **Testes unitários**: [ProductBatchServiceTest](src/test/java/com/phcpro/modules/inventory/service/ProductBatchServiceTest.java) — 9 testes com Mockito a cobrir `findNextFEFO`, `consumeFEFO` (single batch / multi-batch / stock insuficiente / qty inválida) e `addToBatch` (novo / acumular / qty inválida). **9/9 verde.**
+- **Testes unitários**: [ProductBatchServiceTest](src/test/java/mz/multicore/erp/modules/inventory/service/ProductBatchServiceTest.java) — 9 testes com Mockito a cobrir `findNextFEFO`, `consumeFEFO` (single batch / multi-batch / stock insuficiente / qty inválida) e `addToBatch` (novo / acumular / qty inválida). **9/9 verde.**
 
 ## Por validar manualmente (não posso fazer como agente)
 
@@ -1414,3 +1414,17 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
 - Paginação: controlos separados por 8 px e margem vertical de 10 px antes das acções inferiores.
 - Backup automático: deixa de tentar `pg_dump` no backend H2; a execução interactiva usa backup
   lógico JSON, enquanto PostgreSQL mantém o `.dump` físico restaurável.
+# Fluxo de atendimento e separacao (2026-08-16)
+
+- Especificacao: `docs/CUSTOMER_ORDER_FULFILLMENT_SPEC.md`.
+- Implementados estados controlados, reserva logica, idempotencia por empresa, guia termica,
+  dupla autorizacao de reimpressao, conclusao da separacao, faturacao unica e diario operacional.
+- Harness cobre o grafo de estados e a separacao de funcoes na reimpressao.
+- Conversao bidireccional entre caixas, unidades soltas e total implementada nos pedidos; guias
+  apresentam a decomposicao no ecrã e no PDF (`docs/PACKAGE_QUANTITY_SPEC.md`).
+- Cadastro logístico com peso líquido/bruto unitário; pedidos e guias calculam peso total,
+  percentagem de quantidade e percentagem de peso (`docs/LOGISTICS_WEIGHT_SPEC.md`).
+- Catálogo POS compactado com thumbnails `96x60` e espaçamento reduzido, preservando nome, preço,
+  estado de stock, tooltip e superfície clicável (`docs/POS_CATALOGO_CARDS_SPEC.md`).
+- Identidade técnica migrada integralmente para `mz.multicore.erp`; caminhos, scripts, preferências,
+  documentação e auxiliares usam apenas Multicore, protegidos por `ProductIdentityHarnessTest`.

@@ -1,6 +1,6 @@
 # Spec — Recursos Humanos & Processamento Salarial
 
-Este documento define o escopo mínimo para o módulo de **RH/Folha (`com.phcpro.modules.hr`)**
+Este documento define o escopo mínimo para o módulo de **RH/Folha (`mz.multicore.erp.modules.hr`)**
 ser considerado **completo e profissional** para uma empresa em Moçambique. Complementa
 [BUSINESS_FLOWS.md](BUSINESS_FLOWS.md), [SECURITY_AND_AUDIT.md](SECURITY_AND_AUDIT.md),
 [DATABASE.md](DATABASE.md) e [TESTING_STRATEGY.md](TESTING_STRATEGY.md).

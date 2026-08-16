@@ -3,7 +3,7 @@
 > Validação da [spec](POS_CATALOGO_CARDS_SPEC.md). UX/Swing — verificação manual. Critério técnico:
 > `mvn clean compile` + app arranca; `mvn test` sem regressões; migração `V18` aplica em PostgreSQL.
 
-**Última actualização:** 2026-06-28
+**Última actualização:** 2026-08-16
 
 | ID    | Passos                                                                     | Esperado                                                                                  |
 |-------|----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
@@ -18,6 +18,8 @@
 | PC-09 | Selects Cliente/Armazém/Conta                                              | Aparecem numa **barra superior compacta** (em linha), não na coluna esquerda.             |
 | PC-10 | Finalizar venda                                                            | Checkout funciona como antes (sem regressão de cálculo/IVA/promoções).                     |
 | PC-11 | Leitor de código de barras                                                 | Continua a adicionar via o mesmo caminho (merge de quantidade).                            |
+| PC-12 | Comparar o catálogo antes/depois em 1366×768                               | Os cards estão mais baixos e aparecem mais produtos, sem cortar nome, preço ou estado.     |
+| PC-13 | Clicar nas extremidades de um card compacto                               | Toda a superfície continua clicável e adiciona exactamente um artigo por clique.           |
 
 ## Verificação técnica
 

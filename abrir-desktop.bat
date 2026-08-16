@@ -28,7 +28,7 @@ echo  [3/3] A arrancar o Multicore ERP...
 echo        Aguarde por "Started MulticoreApplication" — a janela de login abre a seguir (~15s).
 echo.
 
-call mvn spring-boot:run "-Dspring-boot.run.main-class=com.phcpro.desktop.DesktopApplication"
+call mvn spring-boot:run "-Dspring-boot.run.main-class=mz.multicore.erp.desktop.DesktopApplication"
 
 echo.
 echo  ============================================================

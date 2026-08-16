@@ -15,9 +15,9 @@ iteração migra os painéis, **um domínio de cada vez**, de chamadas ao Servic
 ## Como funciona (o padrão, por domínio)
 
 1. **Cobertura de endpoints:** confirmar que o `@RestController` do domínio expõe tudo o que o painel
-   invoca no Service. Onde faltar, adicionar endpoint (skill `phc-new-endpoint`).
+   invoca no Service. Onde faltar, adicionar endpoint (skill `multicore-new-endpoint`).
 2. **Cliente tipado** `XxxApiClient` (`@Component @Profile("desktop")`) sobre o `DesktopClientFactory`,
-   espelhando o [ComercialApiClient](../src/main/java/com/phcpro/desktop/client/ComercialApiClient.java).
+   espelhando o [ComercialApiClient](../src/main/java/mz/multicore/erp/desktop/client/ComercialApiClient.java).
    Métodos devolvem os **mesmos DTOs** que o Service (a API serializa-os tal e qual).
 3. **Painel** deixa de receber `XxxService` e passa a receber `XxxApiClient`; cada `service.m(...)`
    vira `apiClient.m(...)`.
@@ -29,7 +29,7 @@ iteração migra os painéis, **um domínio de cada vez**, de chamadas ao Servic
    `DashboardPanel` agrega vários Services).
 
 Toda a canalização partilhada vive no
-[DesktopApiClient](../src/main/java/com/phcpro/desktop/client/DesktopApiClient.java): anexa
+[DesktopApiClient](../src/main/java/mz/multicore/erp/desktop/client/DesktopApiClient.java): anexa
 `Authorization: Bearer <token>` e `X-Company-Id` da sessão, serializa/deserializa JSON e traduz
 respostas não-2xx em `ApiClientException` com a mensagem do servidor. Ganhou `getList`/`post`/`put`/
 `delete` +, para o RH, **`postForList`** (POST → array) e **`getBytes`** (GET → PDF). Como os endpoints
@@ -122,12 +122,12 @@ as impressões de todos os painéis por migrar (Fiscal, Comercial, POS, Stock, C
   depende de nenhum `@Service`/`@Repository`**.
 - **Runtime cliente-fino (fecha o objectivo):** o `DesktopApplication` deixou de arrancar o
   `MulticoreApplication`. É agora um contexto próprio, **não-web** (`WebApplicationType.NONE`), que
-  **exclui** `DataSource`/JPA/Flyway e faz scan só de `com.phcpro.desktop` + `com.phcpro.gui` +
-  `com.phcpro.modules.pos.scale`. O `application-desktop.properties` perdeu toda a configuração de BD —
+  **exclui** `DataSource`/JPA/Flyway e faz scan só de `mz.multicore.erp.desktop` + `mz.multicore.erp.gui` +
+  `mz.multicore.erp.modules.pos.scale`. O `application-desktop.properties` perdeu toda a configuração de BD —
   fica só `desktop.api.base-url`. É `@Configuration @Profile("desktop") @EnableAutoConfiguration` (e **não**
   `@SpringBootApplication`) de propósito: assim não é um `@SpringBootConfiguration` que polua a descoberta
   de contexto dos testes, e o `@Profile` impede que as exclusões vazem para o contexto do backend quando
-  este faz scan de `com.phcpro`. **Prova automática:** `DesktopThinContextTest` — o contexto arranca **sem
+  este faz scan de `mz.multicore.erp`. **Prova automática:** `DesktopThinContextTest` — o contexto arranca **sem
   nenhum `DataSource`** e sem `@Service`/`@Repository` de backend, só com os clientes HTTP.
   Consequência: **o PostgreSQL pode agora ser fechado ao exterior** (só o backend lhe acede).
 - `DesktopApiClientTest` — teste de contrato da camada partilhada (headers, token, empresa, parse de

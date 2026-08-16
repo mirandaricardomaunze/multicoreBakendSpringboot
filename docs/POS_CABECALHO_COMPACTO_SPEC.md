@@ -1,6 +1,6 @@
 # Spec — Cabeçalho compacto do POS (barcode na linha dos selects)
 
-> Melhoria de layout do [POSPanel](../src/main/java/com/phcpro/gui/POSPanel.java), alinhada com
+> Melhoria de layout do [POSPanel](../src/main/java/mz/multicore/erp/gui/POSPanel.java), alinhada com
 > [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md) e [CONVENTIONS.md §11](../CONVENTIONS.md). **Só
 > apresentação** — sem mexer em `POSService`, DTOs nem cálculos.
 

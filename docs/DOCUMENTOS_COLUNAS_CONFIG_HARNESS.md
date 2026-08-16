@@ -42,4 +42,4 @@
 ## Verificação
 
 - `mvn clean compile` e `mvn clean test` verdes (inclui DC-01..DC-06). Flyway aplica `V22`.
-- Revisão `phc-solid-review` do diff sem apontamentos bloqueantes.
+- Revisão `multicore-solid-review` do diff sem apontamentos bloqueantes.

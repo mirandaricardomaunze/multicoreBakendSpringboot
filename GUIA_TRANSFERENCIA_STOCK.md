@@ -20,7 +20,7 @@ criar guia  →  PENDING_APPROVAL  ──aprovar──▶ APPROVED  (stock movid
                       └──cancelar──▶ CANCELLED  (stock NÃO movido)
 ```
 
-1. **Criar** ([StockTransferService.create()](src/main/java/com/phcpro/modules/inventory/service/StockTransferService.java)):
+1. **Criar** ([StockTransferService.create()](src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java)):
    persiste a guia como `PENDING_APPROVAL`, regista as linhas (produto + quantidade), **não move
    stock**. Faz uma verificação rápida de disponibilidade para não criar guias impossíveis de aprovar.
 2. **Aprovar** (`approve()`, só perfil **MANAGER/ADMIN**): aí sim, **numa transacção atómica**:
@@ -33,7 +33,7 @@ criar guia  →  PENDING_APPROVAL  ──aprovar──▶ APPROVED  (stock movid
 3. **Rejeitar / Cancelar**: encerram a guia sem qualquer efeito no stock.
 
 A lógica do movimento está em
-[StockTransferService.moveProduct()](src/main/java/com/phcpro/modules/inventory/service/StockTransferService.java),
+[StockTransferService.moveProduct()](src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java),
 chamada **apenas** a partir de `approve()`.
 
 ---
@@ -45,16 +45,16 @@ Respeita a regra do projecto: Controller → Service → Repository, DTO na fron
 
 | Camada       | Ficheiro                                                                                                       | Papel |
 |--------------|----------------------------------------------------------------------------------------------------------------|-------|
-| Model        | [StockTransfer](src/main/java/com/phcpro/modules/inventory/model/StockTransfer.java) + [StockTransferLine](src/main/java/com/phcpro/modules/inventory/model/StockTransferLine.java) | Cabeçalho (origem, destino, responsável, viatura) + linhas |
-| DTO entrada  | [CreateStockTransferRequest](src/main/java/com/phcpro/modules/inventory/dto/CreateStockTransferRequest.java) + [CreateStockTransferLineRequest](src/main/java/com/phcpro/modules/inventory/dto/CreateStockTransferLineRequest.java) | `@NotNull`, `@NotEmpty`, `@Positive` |
-| DTO saída    | [StockTransferDTO](src/main/java/com/phcpro/modules/inventory/dto/StockTransferDTO.java) | O que o UI/REST recebe |
-| Service      | [StockTransferService](src/main/java/com/phcpro/modules/inventory/service/StockTransferService.java) | `@Transactional create(...)` — orquestra o movimento |
-| FEFO/lotes   | [ProductBatchService.consumeFEFO()](src/main/java/com/phcpro/modules/inventory/service/ProductBatchService.java#L64) + `addToBatch(...)` | Baixa lotes na origem, cria no destino |
+| Model        | [StockTransfer](src/main/java/mz/multicore/erp/modules/inventory/model/StockTransfer.java) + [StockTransferLine](src/main/java/mz/multicore/erp/modules/inventory/model/StockTransferLine.java) | Cabeçalho (origem, destino, responsável, viatura) + linhas |
+| DTO entrada  | [CreateStockTransferRequest](src/main/java/mz/multicore/erp/modules/inventory/dto/CreateStockTransferRequest.java) + [CreateStockTransferLineRequest](src/main/java/mz/multicore/erp/modules/inventory/dto/CreateStockTransferLineRequest.java) | `@NotNull`, `@NotEmpty`, `@Positive` |
+| DTO saída    | [StockTransferDTO](src/main/java/mz/multicore/erp/modules/inventory/dto/StockTransferDTO.java) | O que o UI/REST recebe |
+| Service      | [StockTransferService](src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java) | `@Transactional create(...)` — orquestra o movimento |
+| FEFO/lotes   | [ProductBatchService.consumeFEFO()](src/main/java/mz/multicore/erp/modules/inventory/service/ProductBatchService.java#L64) + `addToBatch(...)` | Baixa lotes na origem, cria no destino |
 | Repository   | StockTransferRepository · StockRepository · StockMovementRepository · ProductBatchRepository | Persistência |
-| Numeração    | [DocumentSeries.STOCK_TRANSFER](src/main/java/com/phcpro/modules/numbering/service/DocumentSeries.java) = `TRF` | Nº de guia sequencial sem saltos |
-| Controller   | [StockTransferController](src/main/java/com/phcpro/modules/inventory/controller/StockTransferController.java) | `POST/GET /api/inventory/transfers` |
-| GUI (Swing)  | [StockPanel](src/main/java/com/phcpro/gui/StockPanel.java) — aba "Transferências entre Armazéns" | Botão "Nova Transferência" + "Imprimir Guia" |
-| PDF          | [StockTransferPrintService](src/main/java/com/phcpro/modules/printing/StockTransferPrintService.java) | Imprime a "Guia de Transferência" |
+| Numeração    | [DocumentSeries.STOCK_TRANSFER](src/main/java/mz/multicore/erp/modules/numbering/service/DocumentSeries.java) = `TRF` | Nº de guia sequencial sem saltos |
+| Controller   | [StockTransferController](src/main/java/mz/multicore/erp/modules/inventory/controller/StockTransferController.java) | `POST/GET /api/inventory/transfers` |
+| GUI (Swing)  | [StockPanel](src/main/java/mz/multicore/erp/gui/StockPanel.java) — aba "Transferências entre Armazéns" | Botão "Nova Transferência" + "Imprimir Guia" |
+| PDF          | [StockTransferPrintService](src/main/java/mz/multicore/erp/modules/printing/StockTransferPrintService.java) | Imprime a "Guia de Transferência" |
 
 ### Fluxo do movimento
 
@@ -86,7 +86,7 @@ MANAGER/ADMIN → "Aprovar" (StockPanel)
 
 ## 2. Pré-condições para funcionar
 
-- [ ] Existem **≥ 2 armazéns** na mesma empresa ([Warehouse](src/main/java/com/phcpro/modules/inventory/model/Warehouse.java)).
+- [ ] Existem **≥ 2 armazéns** na mesma empresa ([Warehouse](src/main/java/mz/multicore/erp/modules/inventory/model/Warehouse.java)).
 - [ ] O produto tem **stock em lotes na origem** (`ProductBatch` com `quantity > 0`). ⚠️ Ver §4 — stock só agregado sem lote **não** transfere.
 - [ ] Empresa activa no `CurrentUserContext` (sessão multi-empresa).
 
@@ -167,12 +167,12 @@ Executa por ordem. Em cada passo está o critério de sucesso.
 
 | Sintoma | Causa provável | Onde olhar |
 |---------|----------------|------------|
-| Erro "Stock insuficiente" mesmo havendo stock | Produto tem stock **agregado** (`Stock`) mas **sem lote** (`ProductBatch`) — FEFO não vê o que não está em lote | `consumeFEFO` em [ProductBatchService](src/main/java/com/phcpro/modules/inventory/service/ProductBatchService.java#L64); migrar via `ensureLegacyBatch(...)` |
+| Erro "Stock insuficiente" mesmo havendo stock | Produto tem stock **agregado** (`Stock`) mas **sem lote** (`ProductBatch`) — FEFO não vê o que não está em lote | `consumeFEFO` em [ProductBatchService](src/main/java/mz/multicore/erp/modules/inventory/service/ProductBatchService.java#L64); migrar via `ensureLegacyBatch(...)` |
 | Stock não sai depois de criar a guia | É **esperado** — só sai na aprovação. Aprovar a guia | botão "Aprovar" / `POST …/{id}/approve` |
 | "Apenas perfis MANAGER ou ADMIN podem aprovar…" | Sessão com perfil insuficiente | `CurrentUserContext.getRole()` / login do operador |
 | Stock baixa na origem mas não sobe no destino (ou vice-versa) | Transacção não está a fazer commit / exceção engolida | `@Transactional` em `approve()`; ver logs do `GlobalExceptionHandler` |
 | Níveis no UI não mudam mas a BD sim | UI não refrescou | recarregar aba "Níveis" / `loadStockLevels()` em StockPanel |
-| Nº de guia repetido/erro de unicidade | `DocumentNumberService` / série `TRF` | [DocumentSeries](src/main/java/com/phcpro/modules/numbering/service/DocumentSeries.java) |
+| Nº de guia repetido/erro de unicidade | `DocumentNumberService` / série `TRF` | [DocumentSeries](src/main/java/mz/multicore/erp/modules/numbering/service/DocumentSeries.java) |
 | 400 no POST | Validação do DTO (origem=destino, qty ≤ 0, linhas vazias) | mensagem do `BusinessRuleException` |
 
 ---
@@ -183,12 +183,12 @@ Prioriza só se o negócio pedir; nenhuma é bloqueante para funcionar.
 
 1. **Stock legado sem lote** — antes do `consumeFEFO`, chamar `ensureLegacyBatch` para produtos
    migrados sem rastreio de lote, evitando o falso "stock insuficiente". *(maior risco real)*
-2. ✅ **Teste unitário** [StockTransferServiceTest](src/test/java/com/phcpro/modules/inventory/service/StockTransferServiceTest.java)
+2. ✅ **Teste unitário** [StockTransferServiceTest](src/test/java/mz/multicore/erp/modules/inventory/service/StockTransferServiceTest.java)
    (Mockito, **9/9 verde**): `create()` fica pendente sem mover stock; `approve()` move stock e
    grava 2 movimentos; `approve()` com perfil sem permissão rejeita e não move stock; guia já
    aprovada não re-aprova; `reject()`/`cancel()` não movem stock.
 3. ✅ **`TransferStatus` enum** — o estado é o enum
-   [TransferStatus](src/main/java/com/phcpro/modules/inventory/model/TransferStatus.java)
+   [TransferStatus](src/main/java/mz/multicore/erp/modules/inventory/model/TransferStatus.java)
    (`PENDING_APPROVAL/APPROVED/REJECTED/CANCELLED`), com rótulo PT para UI/PDF — consistente com
    `InvoiceStatus`/`NoteStatus`.
 4. **Reversão de guia aprovada** — `cancel()` só cobre guias pendentes; uma guia **aprovada** por

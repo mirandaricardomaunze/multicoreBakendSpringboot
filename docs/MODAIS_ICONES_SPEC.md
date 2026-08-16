@@ -2,7 +2,7 @@
 
 > Todos os modais de formulário (`ModernFormDialog`) mostram um **ícone vetorial contextual**
 > no título e ícones nos botões de ação, em vez de só texto. Alinhado com a skill
-> [`.claude/skills/phc-icons`](../.claude/skills/phc-icons/SKILL.md) e com
+> [`.claude/skills/multicore-icons`](../.claude/skills/multicore-icons/SKILL.md) e com
 > [MODAIS_CONTIDOS_SPEC.md](MODAIS_CONTIDOS_SPEC.md).
 
 **Última actualização:** 2026-06-28
@@ -11,7 +11,7 @@
 
 Os modais de criação/edição abriam só com texto no cabeçalho ("Novo Fornecedor", "Emitir Nova
 Fatura"…). Sem um glifo de domínio o aspeto era menos profissional e menos legível de relance —
-ao contrário do PHC, onde cada documento/ficha tem um ícone identificador.
+ao contrário do Multicore, onde cada documento/ficha tem um ícone identificador.
 
 ## Decisão
 
@@ -22,7 +22,7 @@ ao contrário do PHC, onde cada documento/ficha tem um ícone identificador.
   `iconTextGap = 12`. O mesmo glifo é usado como `setIconImage(...)` da janela (barra de título do SO).
 - **Ícone deduzido do título.** Novo construtor `ModernFormDialog(parent, title, iconCode, content)`
   permite ícone explícito; o construtor de 3 argumentos chama `iconForTitle(title)`, uma heurística
-  que mapeia palavras do título para o vocabulário canónico da skill `phc-icons`:
+  que mapeia palavras do título para o vocabulário canónico da skill `multicore-icons`:
   - domínio ganha sobre verbo (ex.: "Editar Fornecedor" → `fas-truck`, não `fas-edit`);
   - fatura→`fas-file-invoice`, fornecedor→`fas-truck`, encomenda→`fas-file-signature`,
     compra/entrada→`fas-download`, categoria→`fas-tags`, cliente→`fas-address-book`,

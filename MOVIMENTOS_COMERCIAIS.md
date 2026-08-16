@@ -29,7 +29,7 @@
 ## 2. Documentos comerciais existentes
 
 Todos vivem em `modules/comercial/` (excepto o ciclo de caixa, em `modules/pos/`) e numeram
-pela série central [`DocumentSeries`](src/main/java/com/phcpro/modules/numbering/service/DocumentSeries.java).
+pela série central [`DocumentSeries`](src/main/java/mz/multicore/erp/modules/numbering/service/DocumentSeries.java).
 
 | Documento        | Entidade      | Série  | Tabela            | Estado / ciclo                                              |
 |------------------|---------------|--------|-------------------|------------------------------------------------------------|
@@ -59,7 +59,7 @@ contabilística dos mesmos factos. Alimenta-se por **eventos** (`SaleRegisteredE
 `PaymentReceivedEvent`), pelo que o módulo `comercial` não conhece o `accounting`. Ver
 [docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
 
-Princípio em vigor (ver [POSService](src/main/java/com/phcpro/modules/pos/service/POSService.java)):
+Princípio em vigor (ver [POSService](src/main/java/mz/multicore/erp/modules/pos/service/POSService.java)):
 numerário de venda entra **só na gaveta** durante a sessão; só chega à **tesouraria** no fecho
 de caixa (depósito do líquido), evitando dupla contagem.
 
@@ -110,7 +110,7 @@ NOTA DE CRÉDITO (outros motivos) / NOTA DE DÉBITO
 **Nota importante sobre o timing do stock:** a fatura **POS**, a **de encomenda** e a **manual
 sem desconto >10%** baixam stock **no acto** (`createInvoice` chama `registerMovement` via
 `deductStockForInvoice`). Só a fatura manual **com desconto >10%** adia a baixa para a **aprovação**
-(em [InvoiceApprovalCallback](src/main/java/com/phcpro/modules/comercial/service/InvoiceApprovalCallback.java)).
+(em [InvoiceApprovalCallback](src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceApprovalCallback.java)).
 Decisão de 2026-06-20: emitir fatura é operação directa de quem tem perfil autorizado (atribuído pelo
 admin), não passa pela Engine de Aprovações — só o desconto sensível continua a exigir gerente.
 
@@ -125,8 +125,8 @@ A **Guia de Transferência** documenta a movimentação de stock **entre armazé
 - Entidade `StockTransfer` + linhas, série `TRF` em `DocumentSeries`.
 - Ciclo `PENDING_APPROVAL → APPROVED / REJECTED / CANCELLED`; o stock só sai da origem e entra no
   destino **na aprovação** (FEFO por lote), com permissão MANAGER/ADMIN.
-- Lógica em [StockTransferService](src/main/java/com/phcpro/modules/inventory/service/StockTransferService.java),
-  PDF em [StockTransferPrintService](src/main/java/com/phcpro/modules/printing/StockTransferPrintService.java).
+- Lógica em [StockTransferService](src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java),
+  PDF em [StockTransferPrintService](src/main/java/mz/multicore/erp/modules/printing/StockTransferPrintService.java).
 - Testada por `StockTransferServiceTest` (9 cenários: estados, stock só na aprovação, permissão).
 
 ### 5.1 Guia de Remessa ao cliente — expedição a partir da encomenda
@@ -138,8 +138,8 @@ Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
 - **Caminhos separados:** gerar a guia tira a encomenda de `PENDING` (→ `GUIDE_PENDING` → `GUIDED`),
   logo `billOrder` deixa de a aceitar. Para faturar mercadoria expedida por guia, cria-se **nova
   encomenda**. `billOrder` **não** foi alterado.
-- Lógica em [DeliveryGuideService](src/main/java/com/phcpro/modules/comercial/service/DeliveryGuideService.java),
-  PDF em [DeliveryGuidePrintService](src/main/java/com/phcpro/modules/printing/DeliveryGuidePrintService.java),
+- Lógica em [DeliveryGuideService](src/main/java/mz/multicore/erp/modules/comercial/service/DeliveryGuideService.java),
+  PDF em [DeliveryGuidePrintService](src/main/java/mz/multicore/erp/modules/printing/DeliveryGuidePrintService.java),
   migração `V34`. Testada por `DeliveryGuideServiceTest` (9). Spec/harness:
   [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md).
 
@@ -149,15 +149,15 @@ Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
 
 | Quero…                                  | Ficheiro                                                                                  |
 |-----------------------------------------|-------------------------------------------------------------------------------------------|
-| Lógica de venda POS                     | [POSService](src/main/java/com/phcpro/modules/pos/service/POSService.java)                |
-| Faturação / encomenda / anulação        | [ComercialService](src/main/java/com/phcpro/modules/comercial/service/ComercialService.java) |
-| Baixa de stock da fatura manual         | [InvoiceApprovalCallback](src/main/java/com/phcpro/modules/comercial/service/InvoiceApprovalCallback.java) |
-| Nota de crédito / devolução de stock    | [CreditNoteService](src/main/java/com/phcpro/modules/comercial/service/CreditNoteService.java) |
-| Nota de débito                          | [DebitNoteService](src/main/java/com/phcpro/modules/comercial/service/DebitNoteService.java) |
-| Tipos de séries de documentos           | [DocumentSeries](src/main/java/com/phcpro/modules/numbering/service/DocumentSeries.java)  |
-| Ledger de stock                         | [StockMovementType](src/main/java/com/phcpro/modules/inventory/model/StockMovementType.java) |
-| Ledger de caixa                         | [TillMovementType](src/main/java/com/phcpro/modules/pos/model/TillMovementType.java)      |
-| Ledger de tesouraria                    | [TransactionType](src/main/java/com/phcpro/modules/financeira/model/TransactionType.java) |
+| Lógica de venda POS                     | [POSService](src/main/java/mz/multicore/erp/modules/pos/service/POSService.java)                |
+| Faturação / encomenda / anulação        | [ComercialService](src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java) |
+| Baixa de stock da fatura manual         | [InvoiceApprovalCallback](src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceApprovalCallback.java) |
+| Nota de crédito / devolução de stock    | [CreditNoteService](src/main/java/mz/multicore/erp/modules/comercial/service/CreditNoteService.java) |
+| Nota de débito                          | [DebitNoteService](src/main/java/mz/multicore/erp/modules/comercial/service/DebitNoteService.java) |
+| Tipos de séries de documentos           | [DocumentSeries](src/main/java/mz/multicore/erp/modules/numbering/service/DocumentSeries.java)  |
+| Ledger de stock                         | [StockMovementType](src/main/java/mz/multicore/erp/modules/inventory/model/StockMovementType.java) |
+| Ledger de caixa                         | [TillMovementType](src/main/java/mz/multicore/erp/modules/pos/model/TillMovementType.java)      |
+| Ledger de tesouraria                    | [TransactionType](src/main/java/mz/multicore/erp/modules/financeira/model/TransactionType.java) |
 
 ---
 

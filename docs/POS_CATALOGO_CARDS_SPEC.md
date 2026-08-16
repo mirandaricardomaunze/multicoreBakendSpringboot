@@ -4,7 +4,7 @@
 > adiciona o artigo ao carrinho. Os selects de documento ficam num **topo compacto** (estilo web),
 > libertando espaço para o catálogo.
 
-**Última actualização:** 2026-06-28
+**Última actualização:** 2026-08-16
 
 ## Problema
 
@@ -50,3 +50,10 @@ moderno (web/retalho) é um **grid de cards** clicáveis.
 - `addProductToCart(product)` centraliza a adição (merge + promoção) usada por card e barcode.
 - Imagens são thumbnails (~320px) — `getAllProducts()` carrega os bytes em memória; aceitável para o
   catálogo de uma loja.
+
+## Densidade operacional
+
+- A imagem do card usa `96 × 60 px`, suficiente para reconhecer o artigo sem dominar o catálogo.
+- O card usa margem interna de `7 px`, intervalo interno de `4 px` e cantos de `10 px`.
+- O grid mantém duas colunas e intervalo de `8 px`, permitindo visualizar mais produtos por ecrã.
+- Nome, preço, estado de stock, tooltip e toda a superfície clicável permanecem disponíveis.

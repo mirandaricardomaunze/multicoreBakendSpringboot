@@ -1,6 +1,6 @@
 # Spec — Polish profissional do ecrã POS
 
-> Melhoria de UX/visual do [POSPanel](../src/main/java/com/phcpro/gui/POSPanel.java), alinhada com
+> Melhoria de UX/visual do [POSPanel](../src/main/java/mz/multicore/erp/gui/POSPanel.java), alinhada com
 > [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md) e [CONVENTIONS.md §11/§12](../CONVENTIONS.md). Sem mexer em
 > regras de negócio nem na camada de serviço — só apresentação.
 

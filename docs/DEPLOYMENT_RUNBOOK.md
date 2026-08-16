@@ -18,20 +18,20 @@ mvn spring-boot:run
 Entrypoint:
 
 ```text
-com.phcpro.MulticoreApplication
+mz.multicore.erp.MulticoreApplication
 ```
 
 ## Correr desktop
 
 ```powershell
-mvn spring-boot:run "-Dspring-boot.run.main-class=com.phcpro.desktop.DesktopApplication"
+mvn spring-boot:run "-Dspring-boot.run.main-class=mz.multicore.erp.desktop.DesktopApplication"
 ```
 
 Para apontar para backend remoto:
 
 ```powershell
 $env:DESKTOP_API_BASE_URL="https://erp.exemplo.co.mz"
-mvn spring-boot:run "-Dspring-boot.run.main-class=com.phcpro.desktop.DesktopApplication"
+mvn spring-boot:run "-Dspring-boot.run.main-class=mz.multicore.erp.desktop.DesktopApplication"
 ```
 
 ## Build e testes

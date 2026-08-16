@@ -33,7 +33,7 @@ Ou seja, **todas** as chamadas a `requireAdmin`/`requireManagerOrAdmin`/`isManag
 no-ops em qualquer thread sem contexto.
 
 E o fallback era **load-bearing** — havia funcionalidade a depender dele. O
-[`DataLoader`](../src/main/java/com/phcpro/architecture/DataLoader.java), que corre no arranque como
+[`DataLoader`](../src/main/java/mz/multicore/erp/architecture/DataLoader.java), que corre no arranque como
 `CommandLineRunner` (sem contexto), semeia tickets e despesas **através dos Services**
 (`crmService.createTicket`, `hrService.submitExpense`), e esses resolvem a empresa por
 `getCurrentCompanyId()`. Funcionava só porque:

@@ -1,7 +1,7 @@
 # Spec — Inputs e selects profissionais (estilo único)
 
 > Elevação visual de **todos** os campos de formulário (text fields, password, text area, combos) via
-> os estilizadores centrais em [UIHelper](../src/main/java/com/phcpro/gui/components/UIHelper.java).
+> os estilizadores centrais em [UIHelper](../src/main/java/mz/multicore/erp/gui/components/UIHelper.java).
 > **Só apresentação** — uma fonte de verdade, sem tocar nos ~centenas de call sites.
 
 **Última actualização:** 2026-06-29
@@ -20,7 +20,7 @@ Os campos eram funcionais mas com aspecto amador:
 
 ## Decisões
 
-- **Cores pelo tema.** Fundo = `FIELD_BG`, borda = `BORDER` (slots de [Theme](../src/main/java/com/phcpro/gui/components/Theme.java)),
+- **Cores pelo tema.** Fundo = `FIELD_BG`, borda = `BORDER` (slots de [Theme](../src/main/java/mz/multicore/erp/gui/components/Theme.java)),
   em vez de constantes fixas. Funciona em claro e escuro e acompanha a troca de tema (os
   estilizadores são reaplicados na re-skin).
 - **Realce de foco a acento.** Borda normal `BORDER`; ao ganhar foco passa a `ACCENT` (2px),

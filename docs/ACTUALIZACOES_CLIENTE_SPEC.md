@@ -66,7 +66,7 @@ recente, senão contornar a política era só mandar lixo no cabeçalho.
 `<version>` do `pom`. Nunca escrito à mão — um número à mão fica a mentir na primeira release.
 
 `ClientVersion` lê-o **sem Spring** (utilitário estático), porque tem de funcionar nos dois
-entrypoints: o desktop é um contexto não-web que só faz scan de `com.phcpro.desktop`/`gui` e não
+entrypoints: o desktop é um contexto não-web que só faz scan de `mz.multicore.erp.desktop`/`gui` e não
 veria um bean de `architecture`. Cai para o manifesto do jar e, em último caso, para
 `0.0.0-dev`.
 

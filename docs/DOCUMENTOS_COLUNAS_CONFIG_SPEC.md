@@ -16,7 +16,7 @@ quer mostrar código de barras nem validade na fatura ao cliente). Não havia fo
 
 - **Âmbito:** documentos **comerciais** que usam `LineItemsTableRenderer` (Fatura, Encomenda, NC,
   Guia). **Só mostrar/ocultar** colunas (sem reordenar nesta iteração).
-- **Novo módulo `documents`** (SOLID, scaffold `phc-new-module`):
+- **Novo módulo `documents`** (SOLID, scaffold `multicore-new-module`):
   - `DocumentColumnConfig` (entidade, extends `BaseEntity`) — **uma linha por empresa**, 8 flags
     booleanas (`show_barcode`, `show_reference`, `show_description`, `show_expiry`, `show_quantity`,
     `show_unit_price`, `show_tax`, `show_subtotal`), todas default `true`. Migração `V22`.

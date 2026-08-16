@@ -15,7 +15,7 @@ O gestor deve **ver num só sítio** os problemas de stock: produtos **esgotados
   (saldo 0). Serviços (`stockTracked = false`) nunca entram.
 - **Validade:** lotes **com stock** (`quantity > 0`) cuja validade **já passou** (expirado) ou ocorre
   **dentro de 30 dias** (a expirar). Reutiliza a regra existente de
-  [InventoryService.findExpiringBatches](../src/main/java/com/phcpro/modules/inventory/service/InventoryService.java).
+  [InventoryService.findExpiringBatches](../src/main/java/mz/multicore/erp/modules/inventory/service/InventoryService.java).
 
 ## Implementação
 

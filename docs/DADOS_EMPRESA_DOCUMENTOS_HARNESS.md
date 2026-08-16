@@ -28,7 +28,7 @@ do projeto). Cobertura = compilação + testes tocados verdes + verificação **
 - **DE-50:** superadmin definiu telefone `+258 84 123 4567` + logótipo na empresa MZ → `hasLogo=true`.
 - **DE-51 (fatura A4):** extração de texto do PDF confirma o cabeçalho completo —
   `Multicore Moçambique Lda / NUIT: 400123456 / Avenida 24 de Julho 1500, Maputo /
-  Tel: +258 84 123 4567 / contacto@phcpro.co.mz` **+ imagem embutida** (`/Image` presente).
+  Tel: +258 84 123 4567 / contacto@multicore.co.mz` **+ imagem embutida** (`/Image` presente).
 - **DE-52 (recibo POS):** mesmo conjunto no cabeçalho térmico + logótipo embutido.
 - **DE-54:** empresa sem logo/telefone (PT) → PDF gera na mesma (sem imagem, sem linha de telefone, sem crash).
 - **DE-55:** logótipo com bytes inválidos → PDF gera na mesma, **sem exceção** (try/catch no renderer).

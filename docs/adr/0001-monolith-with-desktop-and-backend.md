@@ -12,8 +12,8 @@ O Multicore ERP tem backend Spring Boot e cliente desktop Swing. Durante a migra
 
 Manter um monolito modular com dois entrypoints:
 
-- Backend: `com.phcpro.MulticoreApplication`.
-- Desktop: `com.phcpro.desktop.DesktopApplication`.
+- Backend: `mz.multicore.erp.MulticoreApplication`.
+- Desktop: `mz.multicore.erp.desktop.DesktopApplication`.
 
 A regra de negocio fica nos Services dos modulos. O Swing pode chamar Services durante a fase actual, mas a meta e substituir por clients HTTP.
 

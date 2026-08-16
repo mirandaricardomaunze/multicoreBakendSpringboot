@@ -9,15 +9,15 @@ Documento único e canónico das **regras de arquitectura**. Consolida o antigo 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │           CLIENTE DESKTOP (Swing)                                │
-│  com.phcpro.desktop.DesktopApplication                          │
-│  + com.phcpro.gui.*  (Painéis, UIHelper, componentes)           │
+│  mz.multicore.erp.desktop.DesktopApplication                          │
+│  + mz.multicore.erp.gui.*  (Painéis, UIHelper, componentes)           │
 └────────────────────────┬────────────────────────────────────────┘
                          │  hoje: chamadas directas a @Service
                          │  meta: HTTPS contra backend
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │           BACKEND (Spring Boot)                                  │
-│  com.phcpro.MulticoreApplication                                │
+│  mz.multicore.erp.MulticoreApplication                                │
 │  └── modules/<dominio>/                                          │
 │       controller → service → repository → model                 │
 └────────────────────────┬────────────────────────────────────────┘
@@ -32,14 +32,14 @@ Dois entrypoints, **uma única árvore Java**:
 
 | Entrypoint                                       | Quando usar                                       |
 |--------------------------------------------------|---------------------------------------------------|
-| `com.phcpro.MulticoreApplication`                | Backend puro (API online, sem Swing)              |
-| `com.phcpro.desktop.DesktopApplication`          | Cliente desktop — perfil `desktop`, abre Swing    |
+| `mz.multicore.erp.MulticoreApplication`                | Backend puro (API online, sem Swing)              |
+| `mz.multicore.erp.desktop.DesktopApplication`          | Cliente desktop — perfil `desktop`, abre Swing    |
 
 ---
 
 ## 2. Camadas obrigatórias por módulo
 
-Para cada domínio em `com.phcpro.modules.<dom>/`:
+Para cada domínio em `mz.multicore.erp.modules.<dom>/`:
 
 ```
 controller/   ← @RestController         só HTTP
@@ -183,19 +183,19 @@ Mensagens são **vistas pelo utilizador final** — sempre em português de Moç
 
 ## 7. Migração desktop ⇄ backend
 
-Hoje os painéis Swing (`com.phcpro.gui.*`) **injectam Services directamente** (`@Autowired` via construtor) — comodidade do monolito durante a migração. Meta:
+Hoje os painéis Swing (`mz.multicore.erp.gui.*`) **injectam Services directamente** (`@Autowired` via construtor) — comodidade do monolito durante a migração. Meta:
 
 ```text
 Swing instalado
-  └─ HTTP client (`com.phcpro.desktop.client.*`)
+  └─ HTTP client (`mz.multicore.erp.desktop.client.*`)
        └─ HTTPS → backend online (Spring Boot)
             └─ PostgreSQL gerido
 ```
 
 ### Passos sequenciais
 
-1. Criar `com.phcpro.desktop.client.ApiConfig` com base URL configurável.
-2. Camada `com.phcpro.desktop.client.<dominio>Client` (um por módulo) que chama o backend via `RestClient` ou `WebClient`.
+1. Criar `mz.multicore.erp.desktop.client.ApiConfig` com base URL configurável.
+2. Camada `mz.multicore.erp.desktop.client.<dominio>Client` (um por módulo) que chama o backend via `RestClient` ou `WebClient`.
 3. Substituir injecções directas de Service nos painéis pelos Clients.
 4. Ordem de migração sugerida: **auth → produtos → stock → POS → vendas → compras → restantes**.
 5. Quando todos os painéis usarem Clients, separar o desktop em módulo Maven independente.
@@ -209,7 +209,7 @@ Enquanto a migração está em curso:
 ## 8. Auditoria, segurança, contexto de utilizador
 
 - `BaseEntity` traz `createdAt`, `updatedAt`, `createdBy` automaticamente.
-- Identidade do operador propagada via `com.phcpro.architecture.security.CurrentUserContext` (`getCurrentCompanyId()`, …).
+- Identidade do operador propagada via `mz.multicore.erp.architecture.security.CurrentUserContext` (`getCurrentCompanyId()`, …).
 - Logs sensíveis (login, aprovações, anulações de fatura) escritos no módulo `audit/`.
 - Permissões: módulo `users/` + `approvals/`. Controllers que mexam em dinheiro/fiscal devem ser guardados por permissão antes de delegar à Service.
 

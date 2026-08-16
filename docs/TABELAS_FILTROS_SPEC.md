@@ -8,7 +8,7 @@
 As tabelas de listagem devem ter **filtros**: uma **pesquisa livre** (em todas as colunas) e, conforme
 a tabela, **dropdowns por tipo/estado**, para encontrar depressa o registo certo.
 
-## Componente reutilizável — `com.phcpro.gui.components.TableFilter`
+## Componente reutilizável — `mz.multicore.erp.gui.components.TableFilter`
 
 - **`install(table, search, ColumnFilter...)`** e **`install(table, search, List<ColumnFilter>,
   List<PeriodFilter>)`** — instalam um `TableRowSorter` e ligam pesquisa + dropdowns de tipo/estado +

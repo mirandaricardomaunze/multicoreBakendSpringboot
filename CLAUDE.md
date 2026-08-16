@@ -27,12 +27,12 @@ Quando o pedido encaixa numa skill, invocar a skill em vez de inventar:
 
 | Skill                  | Quando usar                                                          |
 |------------------------|----------------------------------------------------------------------|
-| `phc-new-module`       | "cria um módulo de X", "novo domínio Y" — gera pasta completa        |
-| `phc-new-endpoint`     | Adicionar endpoint REST a um módulo existente                         |
-| `phc-pdf-document`     | Novo documento imprimível (factura, recibo, ordem, relatório)        |
-| `phc-icons`            | Alterar/adicionar ícones em botões/tabs (`UIHelper.icon`)            |
-| `phc-solid-review`     | Rever classe ou diff contra SOLID/SRP/DRY do projecto                |
-| `phc-store-status`     | Relatório operacional rápido (vendas hoje, stock baixo, …)           |
+| `multicore-new-module`       | "cria um módulo de X", "novo domínio Y" — gera pasta completa        |
+| `multicore-new-endpoint`     | Adicionar endpoint REST a um módulo existente                         |
+| `multicore-pdf-document`     | Novo documento imprimível (factura, recibo, ordem, relatório)        |
+| `multicore-icons`            | Alterar/adicionar ícones em botões/tabs (`UIHelper.icon`)            |
+| `multicore-solid-review`     | Rever classe ou diff contra SOLID/SRP/DRY do projecto                |
+| `multicore-store-status`     | Relatório operacional rápido (vendas hoje, stock baixo, …)           |
 
 ---
 
@@ -54,8 +54,8 @@ Quando o pedido encaixa numa skill, invocar a skill em vez de inventar:
 Java 21 · Spring Boot 3.2.5 · JPA/Hibernate · H2 (dev) / PostgreSQL (alvo) · Swing · Lombok · OpenPDF · Ikonli FontAwesome 5 · Maven.
 
 Dois entrypoints num só codebase:
-- Backend: `com.phcpro.MulticoreApplication`
-- Desktop:  `com.phcpro.desktop.DesktopApplication` (perfil `desktop`)
+- Backend: `mz.multicore.erp.MulticoreApplication`
+- Desktop:  `mz.multicore.erp.desktop.DesktopApplication` (perfil `desktop`)
 
 ---
 

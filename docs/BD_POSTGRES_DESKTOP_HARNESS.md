@@ -12,7 +12,7 @@
 
 | ID    | Passos                                                                                  | Esperado                                                                                  |
 |-------|-----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| DB-01 | Arrancar o desktop (`java -cp … com.phcpro.desktop.DesktopApplication`)                  | Log mostra `jdbc:postgresql://…/multicore`; **não** aparece `jdbc:h2:mem`.                 |
+| DB-01 | Arrancar o desktop (`java -cp … mz.multicore.erp.desktop.DesktopApplication`)                  | Log mostra `jdbc:postgresql://…/multicore`; **não** aparece `jdbc:h2:mem`.                 |
 | DB-02 | Observar o arranque                                                                      | Flyway: `Successfully applied 17 migrations … now at version v17`; sem erro de validação.  |
 | DB-03 | Hibernate validate                                                                       | `Started DesktopApplication`; **sem** `Schema-validation: missing column …`.              |
 | DB-04 | Criar um registo (ex.: cadastrar um produto) e **fechar** a app                          | Operação grava sem erro.                                                                   |

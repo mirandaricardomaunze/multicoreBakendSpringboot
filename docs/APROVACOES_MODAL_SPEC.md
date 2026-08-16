@@ -1,7 +1,7 @@
 # Spec — Decisão de aprovações em modal profissional
 
-> Substitui o inspector **inline** da área de Aprovações ([ApprovalsPanel](../src/main/java/com/phcpro/gui/ApprovalsPanel.java))
-> por um modal de decisão ([ModernFormDialog](../src/main/java/com/phcpro/gui/components/ModernFormDialog.java)).
+> Substitui o inspector **inline** da área de Aprovações ([ApprovalsPanel](../src/main/java/mz/multicore/erp/gui/ApprovalsPanel.java))
+> por um modal de decisão ([ModernFormDialog](../src/main/java/mz/multicore/erp/gui/components/ModernFormDialog.java)).
 > **Só apresentação/UX** — a lógica de aprovar/rejeitar e o `ApprovalService` não mudam.
 
 **Última actualização:** 2026-06-30

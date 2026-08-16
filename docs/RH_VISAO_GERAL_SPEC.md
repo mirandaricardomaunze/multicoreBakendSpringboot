@@ -1,7 +1,7 @@
 # Spec — Visão Geral do RH (cards de KPI + gráficos)
 
-> Nova aba **"Visão Geral"** no [HRPanel](../src/main/java/com/phcpro/gui/HRPanel.java), com o mesmo
-> aspecto profissional do [DashboardPanel](../src/main/java/com/phcpro/gui/DashboardPanel.java).
+> Nova aba **"Visão Geral"** no [HRPanel](../src/main/java/mz/multicore/erp/gui/HRPanel.java), com o mesmo
+> aspecto profissional do [DashboardPanel](../src/main/java/mz/multicore/erp/gui/DashboardPanel.java).
 > **Só apresentação** — sem mexer em `HRService`, DTOs ou regras. Alimentada por getters já
 > existentes.
 

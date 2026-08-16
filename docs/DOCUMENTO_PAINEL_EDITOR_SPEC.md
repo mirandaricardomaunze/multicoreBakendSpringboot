@@ -1,7 +1,7 @@
 # SPEC — Documento em painel completo (não modal)
 
 **Criado em:** 2026-07-27
-**Camada:** UI Swing (`com.phcpro.gui`)
+**Camada:** UI Swing (`mz.multicore.erp.gui`)
 **Sem backend, sem migração.**
 **Piloto:** criação de **Encomenda**.
 

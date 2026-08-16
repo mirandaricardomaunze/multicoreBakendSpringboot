@@ -1,7 +1,7 @@
 # Spec — Inspetor de detalhes como modal profissional
 
 > Converte o diálogo de detalhes de linha (`UIHelper.showRowDetailsDialog`, aberto por **duplo-clique**
-> numa tabela) para o modal canónico [ModernFormDialog](../src/main/java/com/phcpro/gui/components/ModernFormDialog.java).
+> numa tabela) para o modal canónico [ModernFormDialog](../src/main/java/mz/multicore/erp/gui/components/ModernFormDialog.java).
 > **Só apresentação.**
 
 **Última actualização:** 2026-06-30

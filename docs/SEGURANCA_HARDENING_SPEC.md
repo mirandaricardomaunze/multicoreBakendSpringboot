@@ -13,11 +13,11 @@ para o container.
 
 ## Como funciona
 
-1. **[TokenAuthenticationFilter](../src/main/java/com/phcpro/architecture/security/TokenAuthenticationFilter.java)**
+1. **[TokenAuthenticationFilter](../src/main/java/mz/multicore/erp/architecture/security/TokenAuthenticationFilter.java)**
    — lê o `Authorization: Bearer <token>`, valida contra o `AuthSessionService` e, se válido, popula o
    `SecurityContext`. **Lenient**: token ausente/inválido → não autentica (não lança), deixando o
    `authorizeHttpRequests` recusar. Nunca curto-circuita o login.
-2. **[SecurityConfig](../src/main/java/com/phcpro/architecture/security/SecurityConfig.java)** — deixou
+2. **[SecurityConfig](../src/main/java/mz/multicore/erp/architecture/security/SecurityConfig.java)** — deixou
    de ser `permitAll()`. Agora:
    - `permitAll`: `/api/auth/login`, `/api/auth/logout`, `/actuator/health`.
    - `authenticated`: `/api/**` (recusa 401 sem token válido).

@@ -8,7 +8,7 @@
 ## Problema
 
 O perfil `desktop` herdava de [application.properties](../src/main/resources/application.properties) o
-datasource `jdbc:h2:mem:phcprodb`. Resultado: **todos os dados desapareciam ao fechar a app**, tornando
+datasource `jdbc:h2:mem:multicoredb`. Resultado: **todos os dados desapareciam ao fechar a app**, tornando
 impossível usar o ERP no dia-a-dia da loja.
 
 ## Decisão
