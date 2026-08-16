@@ -1,12 +1,16 @@
 package com.phcpro.gui;
 
 import com.phcpro.gui.components.KpiCard;
+import com.phcpro.gui.components.ActionMenuButton;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.SimpleBarChart;
 import com.phcpro.gui.components.TableFilter;
+import com.phcpro.gui.components.TableCellRenderers;
 import com.phcpro.gui.components.UIHelper;
+import com.phcpro.gui.components.DateField;
+import com.phcpro.gui.components.MoneyField;
 import com.phcpro.modules.hr.model.ExpenseStatus;
 import com.phcpro.modules.hr.dto.AbsenceDTO;
 import com.phcpro.modules.hr.dto.CreateAbsenceRequest;
@@ -41,12 +45,14 @@ public class HRPanel extends JPanel {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String[] ABSENCE_TYPES = {"JUSTIFIED", "UNJUSTIFIED", "SICK", "MATERNITY", "OTHER"};
 
-    private final HRApiClient hrApiClient;
+    final HRApiClient hrApiClient;
+    private final HRExpensesPanel expensesPanel;
 
-    private List<EmployeeDTO> employeesList = new ArrayList<>();
+    List<EmployeeDTO> employeesList = new ArrayList<>();
     private List<PayslipDTO> payslipsList = new ArrayList<>();
     private List<AbsenceDTO> absencesList = new ArrayList<>();
     private List<VacationDTO> vacationsList = new ArrayList<>();
+    List<ExpenseClaimDTO> expensesList = new ArrayList<>();
 
     // Overview ("Visão Geral") tab — KPIs + gráficos
     private JLabel ovActiveEmployees, ovActiveEmployeesSub;
@@ -74,11 +80,12 @@ public class HRPanel extends JPanel {
     private JTable vacationsTable;
 
     // Expenses tab
-    private DefaultTableModel expensesModel;
-    private JTable expensesTable;
+    DefaultTableModel expensesModel;
+    JTable expensesTable;
 
     public HRPanel(HRApiClient hrApiClient) {
         this.hrApiClient = hrApiClient;
+        this.expensesPanel = new HRExpensesPanel(this);
 
         setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
@@ -112,7 +119,6 @@ public class HRPanel extends JPanel {
         loadAbsences();
         loadVacations();
         loadExpenses();
-        refreshOverview();
     }
 
     // ─── Overview ("Visão Geral") tab — cards de KPI + gráficos ────────────────
@@ -124,47 +130,45 @@ public class HRPanel extends JPanel {
 
         JPanel grid = new JPanel(new GridLayout(0, 3, 12, 12));
         grid.setOpaque(false);
-        grid.setPreferredSize(new Dimension(0, 240));
 
         ovActiveEmployees = KpiCard.valueLabel("0", 20);
-        ovActiveEmployeesSub = overviewSub("");
-        grid.add(KpiCard.create("COLABORADORES ATIVOS", "fas-users", new Color(224, 242, 254),
-                ovActiveEmployees, ovActiveEmployeesSub, new Color(9, 79, 172), new Color(13, 148, 136)));
+        ovActiveEmployeesSub = HROverviewUi.subtitle("");
+        grid.add(KpiCard.create("COLABORADORES ATIVOS", "fas-users", UIHelper.KPI_INFO_SOFT,
+                ovActiveEmployees, ovActiveEmployeesSub, UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
 
         ovPayrollNet = KpiCard.valueLabel("0,00 MT", 20);
-        ovPayrollGrossSub = overviewSub("");
-        grid.add(KpiCard.create("MASSA SALARIAL (MÊS)", "fas-money-check-alt", new Color(243, 232, 255),
-                ovPayrollNet, ovPayrollGrossSub, new Color(109, 40, 217), new Color(147, 51, 234)));
+        ovPayrollGrossSub = HROverviewUi.subtitle("");
+        grid.add(KpiCard.create("MASSA SALARIAL (MÊS)", "fas-money-check-alt", UIHelper.KPI_PURPLE_SOFT,
+                ovPayrollNet, ovPayrollGrossSub, UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END));
 
         ovEmployerInss = KpiCard.valueLabel("0,00 MT", 20);
-        ovEmployerInssSub = overviewSub("");
-        grid.add(KpiCard.create("INSS PATRONAL (MÊS)", "fas-hand-holding-usd", new Color(204, 251, 241),
-                ovEmployerInss, ovEmployerInssSub, new Color(13, 148, 136), new Color(20, 184, 166)));
+        ovEmployerInssSub = HROverviewUi.subtitle("");
+        grid.add(KpiCard.create("INSS PATRONAL (MÊS)", "fas-hand-holding-usd", UIHelper.KPI_SUCCESS_SOFT,
+                ovEmployerInss, ovEmployerInssSub, UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN));
 
         ovPendingVacations = KpiCard.valueLabel("0", 20);
-        ovPendingVacationsSub = overviewSub("");
-        grid.add(KpiCard.create("FÉRIAS PENDENTES", "fas-umbrella-beach", new Color(254, 243, 199),
-                ovPendingVacations, ovPendingVacationsSub, new Color(180, 83, 9), new Color(217, 119, 6)));
+        ovPendingVacationsSub = HROverviewUi.subtitle("");
+        grid.add(KpiCard.create("FÉRIAS PENDENTES", "fas-umbrella-beach", UIHelper.KPI_WARNING_SOFT,
+                ovPendingVacations, ovPendingVacationsSub, UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END));
 
         ovMonthAbsences = KpiCard.valueLabel("0", 20);
-        ovMonthAbsencesSub = overviewSub("");
-        grid.add(KpiCard.create("FALTAS (MÊS)", "fas-user-times", new Color(254, 226, 226),
-                ovMonthAbsences, ovMonthAbsencesSub, new Color(220, 38, 38), new Color(185, 28, 28)));
+        ovMonthAbsencesSub = HROverviewUi.subtitle("");
+        grid.add(KpiCard.create("FALTAS (MÊS)", "fas-user-times", UIHelper.KPI_DANGER_SOFT,
+                ovMonthAbsences, ovMonthAbsencesSub, UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END));
 
         ovPendingExpenses = KpiCard.valueLabel("0", 20);
-        ovPendingExpensesSub = overviewSub("");
-        grid.add(KpiCard.create("DESPESAS PENDENTES", "fas-receipt", new Color(209, 213, 219),
-                ovPendingExpenses, ovPendingExpensesSub, new Color(15, 23, 42), new Color(30, 41, 59)));
+        ovPendingExpensesSub = HROverviewUi.subtitle("");
+        grid.add(KpiCard.create("DESPESAS PENDENTES", "fas-receipt", UIHelper.KPI_NEUTRAL_SOFT,
+                ovPendingExpenses, ovPendingExpensesSub, UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END));
 
         content.add(grid, BorderLayout.NORTH);
 
         JPanel charts = new JPanel(new GridLayout(1, 2, 16, 0));
         charts.setOpaque(false);
-        charts.setPreferredSize(new Dimension(0, 280));
         ovPayrollChart = new SimpleBarChart("Massa salarial líquida (6 meses)");
         ovDeptChart = new SimpleBarChart("Colaboradores por departamento");
-        charts.add(overviewChartCard(ovPayrollChart));
-        charts.add(overviewChartCard(ovDeptChart));
+        charts.add(HROverviewUi.chartCard(ovPayrollChart));
+        charts.add(HROverviewUi.chartCard(ovDeptChart));
         content.add(charts, BorderLayout.CENTER);
 
         JScrollPane scroll = new JScrollPane(content);
@@ -181,22 +185,7 @@ public class HRPanel extends JPanel {
         return tab;
     }
 
-    private static JLabel overviewSub(String text) {
-        JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        l.setForeground(new Color(229, 231, 235));
-        return l;
-    }
-
-    private ModernPanel overviewChartCard(SimpleBarChart chart) {
-        ModernPanel card = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
-        card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(4, 4, 4, 4));
-        card.add(chart, BorderLayout.CENTER);
-        return card;
-    }
-
-    private void refreshOverview() {
+    void refreshOverview() {
         if (ovActiveEmployees == null) return; // aba ainda não construída
 
         LocalDate today = LocalDate.now();
@@ -243,8 +232,7 @@ public class HRPanel extends JPanel {
         ovMonthAbsencesSub.setText(unjustifiedDays + " dia(s) não justificados");
 
         // 6. Despesas pendentes de aprovação
-        List<ExpenseClaimDTO> claims = hrApiClient.getAllExpenses();
-        List<ExpenseClaimDTO> pendingExp = claims.stream()
+        List<ExpenseClaimDTO> pendingExp = expensesList.stream()
                 .filter(c -> c.status() == ExpenseStatus.PENDING_APPROVAL).toList();
         BigDecimal pendingExpSum = pendingExp.stream().map(ExpenseClaimDTO::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
         ovPendingExpenses.setText(String.valueOf(pendingExp.size()));
@@ -303,22 +291,19 @@ public class HRPanel extends JPanel {
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Quadro de Colaboradores"), BorderLayout.WEST);
 
-        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
-        exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        exportBtn.addActionListener(e -> exportTable("colaboradores", "Colaboradores", employeesTable));
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Colaborador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         newBtn.addActionListener(e -> openEmployeeDialog(null));
         ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
         editBtn.addActionListener(e -> editSelectedEmployee());
-        ModernButton statusBtn = UIHelper.createSecondaryButton("Alterar Estado");
-        statusBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
-        statusBtn.addActionListener(e -> changeSelectedEmployeeStatus());
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Alterar Estado", UIHelper.icon("fas-user-shield", 14), this::changeSelectedEmployeeStatus)
+                .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
+                        () -> exportTable("colaboradores", "Colaboradores", employeesTable));
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(statusBtn);
+        actions.add(moreBtn);
         actions.add(editBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
@@ -334,6 +319,9 @@ public class HRPanel extends JPanel {
         };
         employeesTable = new JTable(employeesModel);
         UIHelper.styleTable(employeesTable);
+        employeesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.role());
+        employeesTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
+        employeesTable.getColumnModel().getColumn(8).setCellRenderer(TableCellRenderers.money());
         JScrollPane scroll = new JScrollPane(employeesTable);
         UIHelper.styleScrollPane(scroll);
 
@@ -351,7 +339,12 @@ public class HRPanel extends JPanel {
     }
 
     private void loadEmployees() {
-        employeesList = hrApiClient.getAllEmployees();
+        UIHelper.loadAsync(this, hrApiClient::getAllEmployees, this::applyEmployees,
+                error -> showLoadError("colaboradores", error));
+    }
+
+    private void applyEmployees(List<EmployeeDTO> loaded) {
+        employeesList = loaded;
         employeesModel.setRowCount(0);
         for (EmployeeDTO e : employeesList) {
             employeesModel.addRow(new Object[]{
@@ -359,9 +352,10 @@ public class HRPanel extends JPanel {
                     e.department(), e.role(),
                     e.hireDate() == null ? "-" : e.hireDate().format(DATE_FMT),
                     e.status(),
-                    String.format("%,.2f MT", e.baseSalary())
+                    e.baseSalary()
             });
         }
+        refreshOverview();
     }
 
     private void editSelectedEmployee() {
@@ -380,17 +374,18 @@ public class HRPanel extends JPanel {
         JTextField departmentField = new JTextField(existing == null ? "" : existing.department());
         JComboBox<String> roleCombo = new JComboBox<>(new String[]{"EMPLOYEE", "MANAGER", "ADMIN"});
         roleCombo.setSelectedItem(existing == null ? "EMPLOYEE" : existing.role());
-        JTextField salaryField = new JTextField(existing == null ? "0" : existing.baseSalary().toPlainString());
-        JTextField hireDateField = new JTextField(existing == null || existing.hireDate() == null
-                ? LocalDate.now().toString() : existing.hireDate().toString());
+        MoneyField salaryField = new MoneyField(existing == null ? "0" : existing.baseSalary().toPlainString());
+        DateField hireDateField = new DateField(existing == null || existing.hireDate() == null
+                ? LocalDate.now() : existing.hireDate());
         JTextField contractEndField = new JTextField(existing == null || existing.contractEndDate() == null
                 ? "" : existing.contractEndDate().toString());
 
         for (JTextField field : new JTextField[]{numberField, nameField, emailField, phoneField, taxIdField,
-                inssField, departmentField, salaryField, hireDateField, contractEndField}) {
+                inssField, departmentField, contractEndField}) {
             UIHelper.styleTextField(field);
         }
         UIHelper.styleComboBox(roleCombo);
+        UIHelper.humanizeRoleCombo(roleCombo);
 
         JPanel form = UIHelper.createDialogForm(
                 "Número Interno:", numberField,
@@ -422,19 +417,18 @@ public class HRPanel extends JPanel {
                     (Integer) dependentsSpinner.getValue(),
                     departmentField.getText().trim(),
                     String.valueOf(roleCombo.getSelectedItem()),
-                    new BigDecimal(salaryField.getText().trim()),
-                    LocalDate.parse(hireDateField.getText().trim()),
+                    salaryField.value(),
+                    hireDateField.value(),
                     contractEndField.getText().isBlank() ? null : LocalDate.parse(contractEndField.getText().trim())
             );
-            if (existing == null) {
-                hrApiClient.createEmployee(request);
-            } else {
-                hrApiClient.updateEmployee(existing.id(), request);
-            }
-            loadEmployees();
-            loadExpenses();
-            JOptionPane.showMessageDialog(this, "Dados do colaborador guardados.", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
+            UIHelper.runWithProgress(this, "A guardar colaborador…",
+                    () -> existing == null ? hrApiClient.createEmployee(request)
+                            : hrApiClient.updateEmployee(existing.id(), request), ignored -> {
+                        loadEmployees();
+                        loadExpenses();
+                        JOptionPane.showMessageDialog(this, "Dados do colaborador guardados.", "Sucesso",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    }, this::showActionError);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
@@ -449,12 +443,10 @@ public class HRPanel extends JPanel {
         int option = JOptionPane.showConfirmDialog(this, statusCombo,
                 "Alterar Estado Laboral", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option != JOptionPane.OK_OPTION) return;
-        try {
-            hrApiClient.changeEmployeeStatus(employee.id(), String.valueOf(statusCombo.getSelectedItem()));
-            loadEmployees();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        String status = String.valueOf(statusCombo.getSelectedItem());
+        UIHelper.runWithProgress(this, "A actualizar estado laboral…",
+                () -> hrApiClient.changeEmployeeStatus(employee.id(), status), ignored -> loadEmployees(),
+                this::showActionError);
     }
 
     private EmployeeDTO selectedEmployee() {
@@ -482,22 +474,19 @@ public class HRPanel extends JPanel {
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton payBtn = UIHelper.createSuccessButton("Marcar Pago");
         payBtn.setIcon(UIHelper.icon("fas-check", 14));
-        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir PDF");
-        printBtn.setIcon(UIHelper.icon("fas-print", 14));
-        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar Lista");
-        exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
+        ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos")
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printSelectedPayslip)
+                .addAction("Exportar Lista", UIHelper.icon("fas-file-pdf", 14),
+                        () -> exportTable("recibos-salario", "Recibos de Salário", payslipsTable));
         ModernButton processBtn = UIHelper.createPrimaryButton("Processar Mês");
         processBtn.setIcon(UIHelper.icon("fas-calculator", 14));
         newBtn.addActionListener(e -> openCreatePayslipDialog());
         payBtn.addActionListener(e -> markSelectedPayslipPaid());
-        printBtn.addActionListener(e -> printSelectedPayslip());
-        exportBtn.addActionListener(e -> exportTable("recibos-salario", "Recibos de Salário", payslipsTable));
         processBtn.addActionListener(e -> processMonthlyPayroll());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(exportBtn);
+        actions.add(documentsBtn);
         actions.add(processBtn);
-        actions.add(printBtn);
         actions.add(payBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
@@ -513,6 +502,10 @@ public class HRPanel extends JPanel {
         };
         payslipsTable = new JTable(payslipsModel);
         UIHelper.styleTable(payslipsTable);
+        for (int column : new int[]{3, 4, 5}) {
+            payslipsTable.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
+        }
+        payslipsTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(payslipsTable);
         UIHelper.styleScrollPane(scroll);
 
@@ -533,20 +526,26 @@ public class HRPanel extends JPanel {
     }
 
     private void loadPayslips() {
-        payslipsList = hrApiClient.getAllPayslips();
+        UIHelper.loadAsync(this, hrApiClient::getAllPayslips, this::applyPayslips,
+                error -> showLoadError("recibos de salário", error));
+    }
+
+    private void applyPayslips(List<PayslipDTO> loaded) {
+        payslipsList = loaded;
         payslipsModel.setRowCount(0);
         for (PayslipDTO p : payslipsList) {
             payslipsModel.addRow(new Object[]{
                     p.payslipNumber(),
                     p.employeeName(),
                     String.format("%02d/%d", p.month(), p.year()),
-                    String.format("%,.2f MT", p.grossPay()),
-                    String.format("%,.2f MT", p.totalDeductions()),
-                    String.format("%,.2f MT", p.netPay()),
+                    p.grossPay(),
+                    p.totalDeductions(),
+                    p.netPay(),
                     p.status(),
                     p.paymentDate() != null ? p.paymentDate().format(DATE_FMT) : "-"
             });
         }
+        refreshOverview();
     }
 
     private void openCreatePayslipDialog() {
@@ -562,13 +561,10 @@ public class HRPanel extends JPanel {
         JSpinner yearSpinner = new JSpinner(new SpinnerNumberModel(today.getYear(), 2000, 2100, 1));
         JSpinner monthSpinner = new JSpinner(new SpinnerNumberModel(today.getMonthValue(), 1, 12, 1));
 
-        JTextField allowancesField = new JTextField("0");
-        JTextField overtimeField = new JTextField("0");
-        JTextField otherField = new JTextField("0");
+        MoneyField allowancesField = new MoneyField("0");
+        MoneyField overtimeField = new MoneyField("0");
+        MoneyField otherField = new MoneyField("0");
         JTextField notesField = new JTextField();
-        UIHelper.styleTextField(allowancesField);
-        UIHelper.styleTextField(overtimeField);
-        UIHelper.styleTextField(otherField);
         UIHelper.styleTextField(notesField);
 
         JPanel form = UIHelper.createDialogForm(
@@ -591,23 +587,23 @@ public class HRPanel extends JPanel {
                     emp.id(),
                     (Integer) yearSpinner.getValue(),
                     (Integer) monthSpinner.getValue(),
-                    new BigDecimal(allowancesField.getText().trim()),
-                    new BigDecimal(overtimeField.getText().trim()),
+                    allowancesField.value(),
+                    overtimeField.value(),
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
-                    new BigDecimal(otherField.getText().trim()),
+                    otherField.value(),
                     notesField.getText().trim().isEmpty() ? null : notesField.getText().trim()
             );
-            PayslipDTO created = hrApiClient.createPayslip(req);
-            loadPayslips();
-            int print = JOptionPane.showConfirmDialog(this,
-                    "Recibo " + created.payslipNumber() + " gerado. Deseja imprimir agora?",
-                    "Sucesso", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
-            if (print == JOptionPane.YES_OPTION) {
-                printPayslip(created.id(), created.payslipNumber());
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Valores numéricos inválidos.", "Erro", JOptionPane.ERROR_MESSAGE);
+            UIHelper.runWithProgress(this, "A gerar recibo de salário…", () -> hrApiClient.createPayslip(req),
+                    created -> {
+                        loadPayslips();
+                        int print = JOptionPane.showConfirmDialog(this,
+                                "Recibo " + created.payslipNumber() + " gerado. Deseja imprimir agora?",
+                                "Sucesso", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+                        if (print == JOptionPane.YES_OPTION) printPayslip(created.id(), created.payslipNumber());
+                    }, this::showActionError);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
@@ -621,26 +617,26 @@ public class HRPanel extends JPanel {
         int option = JOptionPane.showConfirmDialog(this, form, "Processar Folha Salarial",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option != JOptionPane.OK_OPTION) return;
-        try {
-            List<PayslipDTO> created = hrApiClient.processMonthlyPayroll((Integer) year.getValue(), (Integer) month.getValue());
-            loadPayslips();
-            JOptionPane.showMessageDialog(this, created.size() + " recibos processados automaticamente.",
-                    "Folha Salarial", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        int selectedYear = (Integer) year.getValue();
+        int selectedMonth = (Integer) month.getValue();
+        UIHelper.runWithProgress(this, "A processar folha salarial…",
+                () -> hrApiClient.processMonthlyPayroll(selectedYear, selectedMonth), created -> {
+                    loadPayslips();
+                    JOptionPane.showMessageDialog(this, created.size() + " recibos processados automaticamente.",
+                            "Folha Salarial", JOptionPane.INFORMATION_MESSAGE);
+                }, this::showActionError);
     }
 
     private void markSelectedPayslipPaid() {
         PayslipDTO sel = selectedPayslip();
         if (sel == null) return;
-        try {
+        UIHelper.runWithProgress(this, "A actualizar recibo…", () -> {
             hrApiClient.markPayslipPaid(sel.id());
+            return null;
+        }, ignored -> {
             JOptionPane.showMessageDialog(this, "Recibo marcado como pago.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             loadPayslips();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        }, this::showActionError);
     }
 
     private void printSelectedPayslip() {
@@ -650,12 +646,10 @@ public class HRPanel extends JPanel {
     }
 
     private void printPayslip(Long id, String number) {
-        try {
-            byte[] pdf = hrApiClient.renderPayslip(id);
-            PdfFileSaver.saveAndOpen(pdf, "recibo-salario-" + number);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        UIHelper.runWithProgress(this, "A gerar recibo em PDF…", () -> hrApiClient.renderPayslip(id),
+                pdf -> PdfFileSaver.saveAndOpen(pdf, "recibo-salario-" + number),
+                error -> JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + error.getMessage(),
+                        "Erro", JOptionPane.ERROR_MESSAGE));
     }
 
     private PayslipDTO selectedPayslip() {
@@ -726,7 +720,12 @@ public class HRPanel extends JPanel {
     }
 
     private void loadAbsences() {
-        absencesList = hrApiClient.getAllAbsences();
+        UIHelper.loadAsync(this, hrApiClient::getAllAbsences, this::applyAbsences,
+                error -> showLoadError("faltas", error));
+    }
+
+    private void applyAbsences(List<AbsenceDTO> loaded) {
+        absencesList = loaded;
         absencesModel.setRowCount(0);
         for (AbsenceDTO a : absencesList) {
             absencesModel.addRow(new Object[]{
@@ -737,6 +736,7 @@ public class HRPanel extends JPanel {
                     a.reason() == null ? "" : a.reason()
             });
         }
+        refreshOverview();
     }
 
     private void openCreateAbsenceDialog() {
@@ -751,14 +751,12 @@ public class HRPanel extends JPanel {
         JComboBox<String> typeCombo = new JComboBox<>(ABSENCE_TYPES);
         UIHelper.styleComboBox(typeCombo);
 
-        JTextField startField = new JTextField(LocalDate.now().toString());
-        JTextField endField = new JTextField(LocalDate.now().toString());
+        DateField startField = new DateField(LocalDate.now());
+        DateField endField = new DateField(LocalDate.now());
         JTextField reasonField = new JTextField();
         JCheckBox docCheck = new JCheckBox("Possui documento de justificação");
         docCheck.setForeground(UIHelper.TEXT_LIGHT);
         docCheck.setOpaque(false);
-        UIHelper.styleTextField(startField);
-        UIHelper.styleTextField(endField);
         UIHelper.styleTextField(reasonField);
 
         JPanel form = UIHelper.createDialogForm(
@@ -778,14 +776,15 @@ public class HRPanel extends JPanel {
             CreateAbsenceRequest req = new CreateAbsenceRequest(
                     emp.id(),
                     (String) typeCombo.getSelectedItem(),
-                    LocalDate.parse(startField.getText().trim()),
-                    LocalDate.parse(endField.getText().trim()),
+                    startField.value(),
+                    endField.value(),
                     reasonField.getText().trim().isEmpty() ? null : reasonField.getText().trim(),
                     docCheck.isSelected()
             );
-            hrApiClient.recordAbsence(req);
-            JOptionPane.showMessageDialog(this, "Falta registada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadAbsences();
+            UIHelper.runWithProgress(this, "A registar falta…", () -> hrApiClient.recordAbsence(req), ignored -> {
+                JOptionPane.showMessageDialog(this, "Falta registada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                loadAbsences();
+            }, this::showActionError);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
@@ -801,12 +800,10 @@ public class HRPanel extends JPanel {
         int ok = JOptionPane.showConfirmDialog(this, "Eliminar a falta selecionada?", "Confirmar",
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (ok != JOptionPane.YES_OPTION) return;
-        try {
+        UIHelper.runWithProgress(this, "A eliminar falta…", () -> {
             hrApiClient.deleteAbsence(sel.id());
-            loadAbsences();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+            return null;
+        }, ignored -> loadAbsences(), this::showActionError);
     }
 
     // ─── Vacations tab ────────────────────────────────────────────────────────
@@ -851,6 +848,7 @@ public class HRPanel extends JPanel {
         };
         vacationsTable = new JTable(vacationsModel);
         UIHelper.styleTable(vacationsTable);
+        vacationsTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(vacationsTable);
         UIHelper.styleScrollPane(scroll);
 
@@ -872,7 +870,12 @@ public class HRPanel extends JPanel {
     }
 
     private void loadVacations() {
-        vacationsList = hrApiClient.getAllVacations();
+        UIHelper.loadAsync(this, hrApiClient::getAllVacations, this::applyVacations,
+                error -> showLoadError("férias", error));
+    }
+
+    private void applyVacations(List<VacationDTO> loaded) {
+        vacationsList = loaded;
         vacationsModel.setRowCount(0);
         for (VacationDTO v : vacationsList) {
             vacationsModel.addRow(new Object[]{
@@ -882,6 +885,7 @@ public class HRPanel extends JPanel {
                     v.decisionBy() == null ? "-" : v.decisionBy()
             });
         }
+        refreshOverview();
     }
 
     private void openCreateVacationDialog() {
@@ -893,12 +897,10 @@ public class HRPanel extends JPanel {
         UIHelper.styleComboBox(empCombo);
         for (EmployeeDTO e : employeesList) empCombo.addItem(e.name() + " — " + e.department());
 
-        JTextField startField = new JTextField(LocalDate.now().toString());
-        JTextField endField = new JTextField(LocalDate.now().plusDays(15).toString());
+        DateField startField = new DateField(LocalDate.now());
+        DateField endField = new DateField(LocalDate.now().plusDays(15));
         JSpinner yearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
         JTextField notesField = new JTextField();
-        UIHelper.styleTextField(startField);
-        UIHelper.styleTextField(endField);
         UIHelper.styleTextField(notesField);
 
         JPanel form = UIHelper.createDialogForm(
@@ -916,14 +918,15 @@ public class HRPanel extends JPanel {
             EmployeeDTO emp = employeesList.get(empCombo.getSelectedIndex());
             CreateVacationRequest req = new CreateVacationRequest(
                     emp.id(),
-                    LocalDate.parse(startField.getText().trim()),
-                    LocalDate.parse(endField.getText().trim()),
+                    startField.value(),
+                    endField.value(),
                     (Integer) yearSpinner.getValue(),
                     notesField.getText().trim().isEmpty() ? null : notesField.getText().trim()
             );
-            hrApiClient.submitVacation(req);
-            JOptionPane.showMessageDialog(this, "Pedido de férias submetido.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadVacations();
+            UIHelper.runWithProgress(this, "A submeter pedido de férias…", () -> hrApiClient.submitVacation(req), ignored -> {
+                JOptionPane.showMessageDialog(this, "Pedido de férias submetido.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                loadVacations();
+            }, this::showActionError);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
@@ -942,132 +945,31 @@ public class HRPanel extends JPanel {
                     "Colaborador: " + sel.employeeName(), "Motivo da rejeição:");
             if (reason == null) return;
         }
-        try {
-            hrApiClient.decideVacation(sel.id(), approve, reason);
-            loadVacations();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        String decisionReason = reason;
+        UIHelper.runWithProgress(this, approve ? "A aprovar férias…" : "A rejeitar férias…", () -> {
+            hrApiClient.decideVacation(sel.id(), approve, decisionReason);
+            return null;
+        }, ignored -> loadVacations(), this::showActionError);
     }
 
     // ─── Expenses tab ─────────────────────────────────────────────────────────
 
-    private JPanel buildExpensesTab() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
-        tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+    private JPanel buildExpensesTab() { return expensesPanel.buildPanel(); }
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Notas de Despesas"), BorderLayout.WEST);
+    private void loadExpenses() { expensesPanel.refresh(); }
 
-        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
-        exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        exportBtn.addActionListener(e -> exportTable("despesas", "Notas de Despesas", expensesTable));
-        ModernButton submitBtn = UIHelper.createPrimaryButton("Submeter Despesa");
-        submitBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
-        submitBtn.addActionListener(e -> submitExpense());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(submitBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
-
-        ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        String[] cols = {"Colaborador", "Valor", "Categoria", "Estado", "Motivo Rejeição"};
-        expensesModel = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        expensesTable = new JTable(expensesModel);
-        UIHelper.styleTable(expensesTable);
-        JScrollPane scroll = new JScrollPane(expensesTable);
-        UIHelper.styleScrollPane(scroll);
-
-        JTextField expSearch = TableFilter.searchField("Colaborador, categoria ou motivo…");
-        JComboBox<String> expEstado = TableFilter.combo("Todos os estados",
-                "PENDING_APPROVAL", "APPROVED", "REJECTED");
-        TableFilter.install(expensesTable, expSearch,
-                new TableFilter.ColumnFilter(expEstado, 3));
-        JPanel expBar = TableFilter.bar(expSearch, TableFilter.label("Estado:"), expEstado);
-        expBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(expBar, BorderLayout.NORTH);
-        card.add(scroll, BorderLayout.CENTER);
-        tab.add(card, BorderLayout.CENTER);
-        return tab;
+    void showLoadError(String area, Throwable error) {
+        JOptionPane.showMessageDialog(this, "Não foi possível carregar " + area + ": " + error.getMessage(),
+                "Erro de ligação", JOptionPane.ERROR_MESSAGE);
     }
 
-    private void loadExpenses() {
-        expensesModel.setRowCount(0);
-        List<ExpenseClaimDTO> claims = hrApiClient.getAllExpenses();
-        for (ExpenseClaimDTO c : claims) {
-            expensesModel.addRow(new Object[]{
-                    c.employeeName(),
-                    String.format("%,.2f MT", c.amount()),
-                    c.category(),
-                    c.status().name(),
-                    c.rejectionReason() == null ? "" : c.rejectionReason()
-            });
-        }
-    }
-
-    private void submitExpense() {
-        if (employeesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Cadastre colaboradores primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        JComboBox<String> empCombo = new JComboBox<>();
-        UIHelper.styleComboBox(empCombo);
-        for (EmployeeDTO e : employeesList) empCombo.addItem(e.name() + " — " + e.department());
-
-        JComboBox<String> categoryCombo = new JComboBox<>(new String[]{
-                "MEALS (Alimentação)", "TRAVEL (Deslocações)", "LODGING (Alojamento)", "OTHER (Outros)"
-        });
-        UIHelper.styleComboBox(categoryCombo);
-        JTextField amountField = new JTextField();
-        JTextField descField = new JTextField();
-        UIHelper.styleTextField(amountField);
-        UIHelper.styleTextField(descField);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Colaborador:", empCombo,
-                "Categoria:", categoryCombo,
-                "Valor (MT):", amountField,
-                "Descrição:", descField
-        );
-
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Submeter Despesa", "fas-receipt",
-                "Nota de despesa do colaborador", form)
-                .setConfirmButton("Submeter", "fas-paper-plane").showDialog();
-        if (!confirmed) return;
-
-        try {
-            BigDecimal amount = new BigDecimal(amountField.getText().trim());
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
-            String desc = descField.getText().trim();
-            if (desc.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Indique uma descrição.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            EmployeeDTO emp = employeesList.get(empCombo.getSelectedIndex());
-            String cat = categoryCombo.getSelectedItem().toString().split(" ")[0];
-            hrApiClient.submitExpense(new CreateExpenseClaimRequest(emp.id(), amount, cat, desc));
-            JOptionPane.showMessageDialog(this, "Despesa submetida.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadExpenses();
-            refreshOverview();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Valor inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+    void showActionError(Throwable error) {
+        JOptionPane.showMessageDialog(this, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
     }
 
     // ─── Shared export helper ─────────────────────────────────────────────────
 
-    private void exportTable(String baseName, String title, JTable table) {
+    void exportTable(String baseName, String title, JTable table) {
         if (table.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "Nada para exportar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;

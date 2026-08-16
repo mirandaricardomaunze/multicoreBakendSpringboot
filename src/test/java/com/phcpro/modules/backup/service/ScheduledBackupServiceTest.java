@@ -1,6 +1,13 @@
 package com.phcpro.modules.backup.service;
 
+import com.phcpro.architecture.security.CurrentUserContext;
+import com.phcpro.modules.audit.service.AuditLogService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,5 +59,29 @@ class ScheduledBackupServiceTest {
     void extensaoCaseInsensitive() {
         assertTrue(ScheduledBackupService.isExpiredBackup(
                 "BACKUP_20260101.DUMP", NOW - 40 * DAY, NOW, 30));
+    }
+
+    @AfterEach
+    void clearContext() {
+        CurrentUserContext.clear();
+    }
+
+    @Test
+    void usaBackupLogicoQuandoBaseNaoEPostgresql() {
+        DatabaseBackupService physical = mock(DatabaseBackupService.class);
+        BackupService logical = mock(BackupService.class);
+        AuditLogService audit = mock(AuditLogService.class);
+        when(physical.supportsPhysicalBackup()).thenReturn(false);
+        when(logical.executeBackup()).thenReturn("backups/backup_empresa_1.json");
+        CurrentUserContext.setCurrentUser("ana", "ADMIN");
+        CurrentUserContext.setCurrentCompanyId(1L);
+        ScheduledBackupService service = new ScheduledBackupService(
+                physical, logical, audit, false, 30, "backups");
+
+        ScheduledBackupService.LastRun result = service.runAndRecord();
+
+        assertTrue(result.success());
+        assertTrue(result.message().contains("lógico"));
+        verify(logical).executeBackup();
     }
 }

@@ -1,11 +1,15 @@
 package com.phcpro.desktop.client;
 
+import com.phcpro.architecture.paging.PageResponse;
+import com.phcpro.modules.comercial.dto.AgingSummaryDTO;
 import com.phcpro.modules.comercial.dto.CancelReasonRequest;
 import com.phcpro.modules.comercial.dto.ClientDTO;
 import com.phcpro.modules.comercial.dto.CreateInvoiceRequest;
 import com.phcpro.modules.comercial.dto.CreateOrderRequest;
+import com.phcpro.modules.comercial.dto.CreateDeliveryGuideRequest;
 import com.phcpro.modules.comercial.dto.CreateProductRequest;
 import com.phcpro.modules.comercial.dto.CreateReceiptRequest;
+import com.phcpro.modules.comercial.dto.DeliveryGuideDTO;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
 import com.phcpro.modules.comercial.dto.OrderDTO;
 import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
@@ -35,13 +39,29 @@ public class ComercialApiClient {
     }
 
     public ClientDTO createClient(String name, String taxId, String email, String address) {
-        return clientFactory.authenticatedClient().post(
-                "/api/comercial/clients", new SaveClientRequest(name, taxId, email, address), ClientDTO.class);
+        return createClient(name, taxId, email, address, 0, null);
+    }
+
+    public ClientDTO createClient(String name, String taxId, String email, String address,
+                                  int paymentTermsDays, BigDecimal creditLimit) {
+        return clientFactory.authenticatedClient().post("/api/comercial/clients",
+                new SaveClientRequest(name, taxId, email, address, paymentTermsDays, creditLimit), ClientDTO.class);
     }
 
     public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
-        return clientFactory.authenticatedClient().put(
-                "/api/comercial/clients/" + id, new SaveClientRequest(name, taxId, email, address), ClientDTO.class);
+        return updateClient(id, name, taxId, email, address, 0, null);
+    }
+
+    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address,
+                                  int paymentTermsDays, BigDecimal creditLimit) {
+        return clientFactory.authenticatedClient().put("/api/comercial/clients/" + id,
+                new SaveClientRequest(name, taxId, email, address, paymentTermsDays, creditLimit), ClientDTO.class);
+    }
+
+    /** Mapa de antiguidade de saldos (contas a receber) à data de hoje no servidor. */
+    public AgingSummaryDTO getReceivablesAging() {
+        return clientFactory.authenticatedClient()
+                .get("/api/comercial/receivables/aging", AgingSummaryDTO.class);
     }
 
     public void deleteClient(Long id) {
@@ -50,6 +70,22 @@ public class ComercialApiClient {
 
     public List<InvoiceDTO> getAllInvoices() {
         return clientFactory.authenticatedClient().getList("/api/comercial/invoices", InvoiceDTO.class);
+    }
+
+    /** Página de faturas (a listagem completa fica para os ecrãs ainda não migrados). */
+    @SuppressWarnings("unchecked")
+    public PageResponse<InvoiceDTO> getInvoicePage(Long companyId, int page, int size) {
+        return clientFactory.authenticatedClient().getGeneric(
+                "/api/comercial/invoices/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
+                PageResponse.class, InvoiceDTO.class);
+    }
+
+    /** Página do histórico de vendas do POS. */
+    @SuppressWarnings("unchecked")
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size) {
+        return clientFactory.authenticatedClient().getGeneric(
+                "/api/comercial/pos-sales/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
+                PageResponse.class, InvoiceDTO.class);
     }
 
     public List<ProductDTO> getAllProducts() {
@@ -63,6 +99,22 @@ public class ComercialApiClient {
     /** Produtos vendáveis no POS (stock rastreado + activos). */
     public List<ProductDTO> getSellableProducts() {
         return clientFactory.authenticatedClient().getList("/api/comercial/products/sellable", ProductDTO.class);
+    }
+
+    public PageResponse<com.phcpro.modules.comercial.dto.POSCatalogItemDTO> getPOSCatalogPage(
+            String query, boolean availableOnly, int page, int size) {
+        String encoded = URLEncoder.encode(query == null ? "" : query, StandardCharsets.UTF_8);
+        String path = "/api/comercial/products/pos-catalog/page?query=" + encoded
+                + "&availableOnly=" + availableOnly + "&page=" + page + "&size=" + size;
+        return clientFactory.authenticatedClient().getGeneric(path, PageResponse.class,
+                com.phcpro.modules.comercial.dto.POSCatalogItemDTO.class);
+    }
+
+    public com.phcpro.modules.comercial.dto.POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
+        String encoded = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);
+        return clientFactory.authenticatedClient().get(
+                "/api/comercial/products/pos-catalog/by-barcode?barcode=" + encoded,
+                com.phcpro.modules.comercial.dto.POSCatalogItemDTO.class);
     }
 
     /** Produto pelo código de barras (leitor do POS); {@code null} se não existir. */
@@ -180,6 +232,41 @@ public class ComercialApiClient {
                 "/api/comercial/orders/" + orderId + "/print?operator=" + enc(operator), null, OrderDTO.class);
     }
 
+    // ─── Guias de Remessa (GR) ───────────────────────────────────────────────
+    public List<DeliveryGuideDTO> getDeliveryGuidesByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/comercial/delivery-guides?companyId=" + companyId, DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO getDeliveryGuideById(Long id) {
+        return clientFactory.authenticatedClient()
+                .get("/api/comercial/delivery-guides/" + id, DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO createDeliveryGuide(Long orderId, String responsible, String vehicle, String notes) {
+        return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides",
+                new CreateDeliveryGuideRequest(orderId, responsible, vehicle, notes), DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO approveDeliveryGuide(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/delivery-guides/" + id + "/approve", null, DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO rejectDeliveryGuide(Long id, String reason) {
+        return clientFactory.authenticatedClient().post(
+                "/api/comercial/delivery-guides/" + id + "/reject", new RejectGuideRequest(reason), DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO cancelDeliveryGuide(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/delivery-guides/" + id + "/cancel", null, DeliveryGuideDTO.class);
+    }
+
+    public byte[] renderDeliveryGuide(Long id) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/delivery-guide/" + id);
+    }
+
     // ─── Recibos ─────────────────────────────────────────────────────────────
     public List<ReceiptDTO> getReceiptsByCompany(Long companyId) {
         return clientFactory.authenticatedClient()
@@ -214,5 +301,13 @@ public class ComercialApiClient {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
-    record SaveClientRequest(String name, String taxId, String email, String address) {}
+    /**
+     * Espelha o corpo esperado pelo controller. {@code paymentTermsDays} = prazo acordado, em
+     * dias; {@code creditLimit} nulo = sem limite de crédito.
+     */
+    record SaveClientRequest(String name, String taxId, String email, String address,
+                             int paymentTermsDays, BigDecimal creditLimit) {}
+
+    /** Corpo do reject da guia — chave "rejectionReason" espelha o esperado pelo controller. */
+    record RejectGuideRequest(String rejectionReason) {}
 }

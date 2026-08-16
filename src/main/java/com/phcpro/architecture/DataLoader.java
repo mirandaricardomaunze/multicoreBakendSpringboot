@@ -1,5 +1,6 @@
 package com.phcpro.architecture;
 
+import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.modules.approvals.service.ApprovalService;
 import com.phcpro.modules.comercial.model.Client;
 import com.phcpro.modules.comercial.model.Product;
@@ -479,6 +480,14 @@ public class DataLoader implements CommandLineRunner {
         bcp.setCompany(mzCompany);
         accountRepository.save(bcp);
 
+        // 5 e 6. Tickets/folhas de obra e despesas passam pelos Services, que resolvem a empresa pelo
+        // CurrentUserContext. O povoamento não é um pedido HTTP, logo não há contexto — declara-se aqui,
+        // ligado à empresa a que estes dados pertencem. Antes dependia do contexto assumir a empresa 1
+        // por omissão, o que só calhava certo porque a ptCompany é a primeira a ser gravada.
+        CurrentUserContext.runAsSystem(ptCompany.getId(), () -> seedTicketsAndExpenses(padaria, techSol, maria, joao));
+    }
+
+    private void seedTicketsAndExpenses(Client padaria, Client techSol, Employee maria, Employee joao) {
         // 5. Seed Support Tickets & WorkSheets
         SupportTicketDTO ticket1 = crmService.createTicket(new CreateTicketRequest(
                 padaria.getId(),

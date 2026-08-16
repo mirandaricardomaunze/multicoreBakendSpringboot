@@ -1,6 +1,7 @@
 package com.phcpro.modules.comercial.controller;
 
 import com.phcpro.architecture.concurrency.ConcurrencyRetry;
+import com.phcpro.architecture.paging.PageResponse;
 import com.phcpro.modules.comercial.dto.*;
 import com.phcpro.modules.comercial.service.ComercialService;
 import jakarta.validation.Valid;
@@ -28,14 +29,12 @@ public class ComercialController {
 
     @PostMapping("/clients")
     public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid SaveClientRequest request) {
-        return ResponseEntity.ok(comercialService.createClient(
-                request.name(), request.taxId(), request.email(), request.address()));
+        return ResponseEntity.ok(comercialService.createClient(request));
     }
 
     @PutMapping("/clients/{id}")
     public ResponseEntity<ClientDTO> updateClient(@PathVariable Long id, @RequestBody @Valid SaveClientRequest request) {
-        return ResponseEntity.ok(comercialService.updateClient(
-                id, request.name(), request.taxId(), request.email(), request.address()));
+        return ResponseEntity.ok(comercialService.updateClient(id, request));
     }
 
     @DeleteMapping("/clients/{id}")
@@ -55,10 +54,24 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getSellableProducts());
     }
 
+    @GetMapping("/products/pos-catalog/page")
+    public ResponseEntity<PageResponse<POSCatalogItemDTO>> getPOSCatalogPage(
+            @RequestParam(defaultValue = "") String query,
+            @RequestParam(defaultValue = "false") boolean availableOnly,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "36") Integer size) {
+        return ResponseEntity.ok(comercialService.getPOSCatalogPage(query, availableOnly, page, size));
+    }
+
     /** Localiza um produto pelo código de barras (leitor do POS). Corpo {@code null} se não existir. */
     @GetMapping("/products/by-barcode")
     public ResponseEntity<ProductDTO> findProductByBarcode(@RequestParam String barcode) {
         return ResponseEntity.ok(comercialService.findProductByBarcode(barcode));
+    }
+
+    @GetMapping("/products/pos-catalog/by-barcode")
+    public ResponseEntity<POSCatalogItemDTO> findPOSCatalogItemByBarcode(@RequestParam String barcode) {
+        return ResponseEntity.ok(comercialService.findPOSCatalogItemByBarcode(barcode));
     }
 
     @PostMapping("/products")
@@ -93,6 +106,27 @@ public class ComercialController {
         return ResponseEntity.ok(companyId != null
                 ? comercialService.getInvoicesByCompany(companyId)
                 : comercialService.getAllInvoices());
+    }
+
+    /**
+     * Página de faturas. Preferir a esta listagem sobre {@code /invoices}, que traz a tabela
+     * toda. {@code page} começa em 0; {@code size} tem tecto no servidor (ver {@code PageQuery}).
+     */
+    @GetMapping("/invoices/page")
+    public ResponseEntity<PageResponse<InvoiceDTO>> getInvoicePage(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(comercialService.getInvoicePage(companyId, page, size));
+    }
+
+    /** Página do histórico de vendas do POS. */
+    @GetMapping("/pos-sales/page")
+    public ResponseEntity<PageResponse<InvoiceDTO>> getPOSSalesPage(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(comercialService.getPOSSalesPage(companyId, page, size));
     }
 
     @GetMapping("/invoices/search")
@@ -173,14 +207,13 @@ public class ComercialController {
     // ─── Recibos ─────────────────────────────────────────────────────────────
     @GetMapping("/receipts")
     public ResponseEntity<List<ReceiptDTO>> getReceipts(@RequestParam Long companyId) {
-        return ResponseEntity.ok(comercialService.getReceiptsByCompany(companyId)
-                .stream().map(comercialService::toDTO).toList());
+        return ResponseEntity.ok(comercialService.getReceiptsByCompany(companyId));
     }
 
     @PostMapping("/receipts")
     public ResponseEntity<ReceiptDTO> createReceipt(@RequestBody @Valid CreateReceiptRequest request) {
-        return ResponseEntity.ok(comercialService.toDTO(comercialService.createReceipt(
-                request.invoiceId(), request.treasuryAccountId(), request.paymentMethod(), request.amountPaid())));
+        return ResponseEntity.ok(comercialService.createReceipt(
+                request.invoiceId(), request.treasuryAccountId(), request.paymentMethod(), request.amountPaid()));
     }
 
     @PostMapping("/receipts/{id}/cancel")

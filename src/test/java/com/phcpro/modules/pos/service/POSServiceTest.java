@@ -11,6 +11,7 @@ import com.phcpro.modules.comercial.repository.ClientRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.ProductRepository;
 import com.phcpro.modules.comercial.service.CreditNoteService;
+import com.phcpro.modules.comercial.service.ReceivablesService;
 import com.phcpro.modules.comercial.service.WalkInClientProvider;
 import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
@@ -66,6 +67,8 @@ class POSServiceTest {
     private DocumentNumberService documentNumberService;
     private AuditLogService auditLogService;
     private CreditNoteService creditNoteService;
+    private ReceivablesService receivablesService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private POSService service;
 
     private Company company;
@@ -96,11 +99,14 @@ class POSServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
         creditNoteService = mock(CreditNoteService.class);
+        receivablesService = mock(ReceivablesService.class);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new POSService(tillSessionRepository, tillMovementRepository, invoiceRepository,
                 clientRepository, productRepository, warehouseRepository, companyRepository,
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
-                walkInClientProvider, documentNumberService, auditLogService, creditNoteService);
+                walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
+                receivablesService, eventPublisher);
 
         company = company(COMPANY_ID);
         warehouse = warehouse(WAREHOUSE_ID, company);
@@ -154,6 +160,52 @@ class POSServiceTest {
 
         assertThrows(BusinessRuleException.class,
                 () -> service.checkout(checkout(/*payments*/ null, /*treasuryAccountId*/ null)));
+    }
+
+    @Test // MC-06
+    void checkout_gravaOCustoDoActoDaVendaNaLinha() {
+        stubHappyPath();
+        product.setPurchasePrice(new BigDecimal("72.25"));
+
+        Invoice invoice = service.checkout(checkout(null, ACCOUNT_ID));
+
+        assertEquals(new BigDecimal("72.25"), invoice.getLines().get(0).getUnitCost(),
+                "a margem desta venda não pode mudar quando o preço de compra mudar");
+    }
+
+    @Test // LC-30
+    void checkout_fiado_verificaOLimiteComOQueFicaPorPagar() {
+        stubHappyPath();
+
+        // Venda de 116,00 (1 × 100 + 16%) com apenas 40,00 em numerário → 76,00 ficam a fiado.
+        PosPaymentRequest parcial = new PosPaymentRequest("CASH", new BigDecimal("40.00"), new BigDecimal("40.00"), null, null);
+        service.checkout(checkout(List.of(parcial), null));
+
+        verify(receivablesService).assertCreditAvailable(any(), eq(new BigDecimal("76.00")));
+    }
+
+    @Test // LC-31
+    void checkout_pagaNaTotalidade_naoConsomeCredito() {
+        stubHappyPath();
+
+        service.checkout(checkout(/*payments*/ null, ACCOUNT_ID));
+
+        verify(receivablesService).assertCreditAvailable(any(), eq(new BigDecimal("0.00")));
+    }
+
+    @Test // LC-32
+    void checkout_fiadoAcimaDoLimite_bloqueiaAVenda_semStockNemFatura() {
+        stubHappyPath();
+        doThrow(new BusinessRuleException("Limite de crédito excedido para Consumidor Final."))
+                .when(receivablesService).assertCreditAvailable(any(), any());
+
+        PosPaymentRequest parcial = new PosPaymentRequest("CASH", new BigDecimal("10.00"), new BigDecimal("10.00"), null, null);
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.checkout(checkout(List.of(parcial), null)));
+
+        assertTrue(error.getMessage().contains("Limite de crédito excedido"));
+        verify(invoiceRepository, never()).save(any());
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test

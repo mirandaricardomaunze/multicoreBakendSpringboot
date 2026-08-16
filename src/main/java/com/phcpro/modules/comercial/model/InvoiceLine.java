@@ -44,4 +44,33 @@ public class InvoiceLine {
 
     @Column(name = "serial_number")
     private String serialNumber; // Série
+
+    /**
+     * Custo unitário <b>no acto da venda</b> — fotografia, não referência.
+     *
+     * <p>A margem lia o preço de compra <i>actual</i> do produto: bastava o fornecedor mudar de
+     * preço para a margem de vendas antigas mudar sozinha, e o histórico deixava de bater certo
+     * com o que aconteceu. Nulo nas linhas anteriores à V37 — ver {@link #effectiveUnitCost()}.
+     */
+    @Column(name = "unit_cost", precision = 14, scale = 2)
+    private BigDecimal unitCost;
+
+    /**
+     * Custo unitário a usar no cálculo de margem: o gravado na linha, senão o preço de compra
+     * actual do produto (mesmo padrão de {@code Product.effectiveTaxRate()}).
+     *
+     * <p>O recurso ao preço actual existe só para as linhas anteriores à V37, que não têm
+     * fotografia. Para essas, a margem continua a ser uma <b>estimativa</b>.
+     */
+    public BigDecimal effectiveUnitCost() {
+        if (unitCost != null) return unitCost;
+        if (product == null || product.getPurchasePrice() == null) return BigDecimal.ZERO;
+        return product.getPurchasePrice();
+    }
+
+    /** Custo total da linha (custo unitário × quantidade), nunca nulo. */
+    public BigDecimal lineCost() {
+        BigDecimal qty = quantity == null ? BigDecimal.ZERO : quantity;
+        return effectiveUnitCost().multiply(qty);
+    }
 }

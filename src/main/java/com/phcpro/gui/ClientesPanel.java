@@ -3,6 +3,9 @@ package com.phcpro.gui;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
+import com.phcpro.gui.components.FormField;
+import com.phcpro.gui.components.IntegerField;
+import com.phcpro.gui.components.MoneyField;
 import com.phcpro.gui.components.TableFilter;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ComercialApiClient;
@@ -45,7 +48,7 @@ public class ClientesPanel extends JPanel {
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
         ModernButton deleteBtn = UIHelper.createDangerButton("Eliminar");
         deleteBtn.setIcon(UIHelper.icon("fas-trash", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
@@ -68,7 +71,7 @@ public class ClientesPanel extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço"};
+        String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço", "Prazo (dias)", "Limite de Crédito"};
         model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -108,8 +111,12 @@ public class ClientesPanel extends JPanel {
     }
 
     public void onPanelSelected() {
-        allClients = comercialApiClient.getClients();
-        refilter();
+        UIHelper.loadAsync(this, comercialApiClient::getClients, clients -> {
+            allClients = clients;
+            refilter();
+        }, error -> JOptionPane.showMessageDialog(this,
+                "Não foi possível carregar os clientes: " + error.getMessage(),
+                "Erro de ligação", JOptionPane.ERROR_MESSAGE));
     }
 
     private void refilter() {
@@ -122,7 +129,9 @@ public class ClientesPanel extends JPanel {
                     c.name(),
                     c.taxId(),
                     c.email(),
-                    c.address() == null ? "" : c.address()
+                    c.address() == null ? "" : c.address(),
+                    c.paymentTermsDays() == 0 ? "Pronto pagamento" : c.paymentTermsDays(),
+                    c.creditLimit() == null ? "Sem limite" : String.format("%,.2f MT", c.creditLimit())
             });
         }
     }
@@ -142,47 +151,52 @@ public class ClientesPanel extends JPanel {
         JTextField taxIdField = new JTextField(existing == null ? "" : existing.taxId());
         JTextField emailField = new JTextField(existing == null ? "" : existing.email());
         JTextField addressField = new JTextField(existing == null || existing.address() == null ? "" : existing.address());
+        IntegerField termsField = new IntegerField(
+                String.valueOf(existing == null ? 0 : existing.paymentTermsDays()), 0, 365, "O prazo de pagamento");
+        MoneyField creditField = new MoneyField(existing == null || existing.creditLimit() == null
+                ? "" : existing.creditLimit().toPlainString());
         UIHelper.styleTextField(nameField);
         UIHelper.styleTextField(taxIdField);
         UIHelper.styleTextField(emailField);
         UIHelper.styleTextField(addressField);
 
+        FormField nameForm = new FormField("Nome", nameField, true, "Nome completo ou denominação social");
+        FormField taxForm = new FormField("NUIT / NIF", taxIdField, true, null);
+        FormField emailForm = new FormField("Email", emailField, true, null);
+        FormField addressForm = new FormField("Endereço", addressField, false, null);
+        FormField termsForm = new FormField("Prazo de pagamento (dias)", termsField, false,
+                "0 = pronto pagamento. Define o vencimento das faturas futuras deste cliente.");
+        FormField creditForm = new FormField("Limite de crédito (MT)", creditField, false,
+                "Em branco = sem limite. Zero = não vende a crédito.");
         JPanel form = UIHelper.createDialogForm(
-                "Nome:", nameField,
-                "NUIT / NIF:", taxIdField,
-                "Email:", emailField,
-                "Endereço:", addressField
-        );
+                "", nameForm, "", taxForm, "", emailForm, "", addressForm, "", termsForm, "", creditForm);
 
         String title = existing == null ? "Novo Cliente" : "Editar Cliente — " + existing.name();
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, title, null, "Dados de cadastro do cliente", form).showDialog();
+        ModernFormDialog dialog = new ModernFormDialog(
+                UIHelper.mainWindow, title, null, "Dados de cadastro do cliente", form);
+        dialog.setOnSaveAsync(() -> {
+            boolean valid = nameForm.validateRequired() & taxForm.validateRequired() & emailForm.validateRequired();
+            if (!valid) throw new IllegalArgumentException("Corrija os campos assinalados.");
+            String name = nameField.getText().trim();
+            String taxId = taxIdField.getText().trim();
+            String email = emailField.getText().trim();
+            String address = addressField.getText().trim();
+            int terms = termsField.value();
+            java.math.BigDecimal creditLimit = creditField.optionalValue();
+            return () -> {
+                if (existing == null) {
+                    comercialApiClient.createClient(name, taxId, email, address, terms, creditLimit);
+                } else {
+                    comercialApiClient.updateClient(existing.id(), name, taxId, email, address, terms, creditLimit);
+                }
+                return null;
+            };
+        });
+        boolean confirmed = dialog.showDialog();
         if (!confirmed) return;
-
-        String name = nameField.getText().trim();
-        String taxId = taxIdField.getText().trim();
-        String email = emailField.getText().trim();
-        String address = addressField.getText().trim();
-
-        if (name.isEmpty() || taxId.isEmpty() || email.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nome, NUIT e Email são obrigatórios.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            if (existing == null) {
-                comercialApiClient.createClient(name, taxId, email, address);
-                JOptionPane.showMessageDialog(this, "Cliente '" + name + "' criado.",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                comercialApiClient.updateClient(existing.id(), name, taxId, email, address);
-                JOptionPane.showMessageDialog(this, "Cliente atualizado.",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            }
-            onPanelSelected();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        JOptionPane.showMessageDialog(this, existing == null ? "Cliente criado." : "Cliente atualizado.",
+                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        onPanelSelected();
     }
 
     private void deleteSelected() {

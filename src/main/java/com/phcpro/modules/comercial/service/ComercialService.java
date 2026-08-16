@@ -1,6 +1,8 @@
 package com.phcpro.modules.comercial.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
+import com.phcpro.architecture.paging.PageQuery;
+import com.phcpro.architecture.paging.PageResponse;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.architecture.pricing.LineCalculator;
@@ -27,7 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,6 +55,8 @@ public class ComercialService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
+    private final ReceivablesService receivablesService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -69,7 +75,9 @@ public class ComercialService {
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository
+            com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository,
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -88,11 +96,36 @@ public class ComercialService {
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
         this.taxRateRepository = taxRateRepository;
+        this.receivablesService = receivablesService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Anuncia uma venda realizada para quem a queira contabilizar. O comercial não conhece a
+     * contabilidade — só publica o facto, com números e nunca entidades.
+     * Ver docs/CONTABILIDADE_SPEC.md.
+     */
+    private void publishSale(Invoice invoice, BigDecimal amountPaidNow, boolean cashPayment) {
+        BigDecimal cost = invoice.getLines().stream()
+                .map(InvoiceLine::lineCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        eventPublisher.publishEvent(new com.phcpro.architecture.events.SaleRegisteredEvent(
+                invoice.getCompany().getId(),
+                invoice.getId(),
+                invoice.getInvoiceNumber(),
+                invoice.issueDate() == null ? LocalDate.now() : invoice.issueDate(),
+                invoice.getTotalBeforeTax(),
+                invoice.getTaxAmount(),
+                invoice.getTotalAmount(),
+                cost,
+                amountPaidNow,
+                cashPayment));
     }
 
 
     @Transactional
-    public ClientDTO createClient(String name, String taxId, String email, String address) {
+    public ClientDTO createClient(SaveClientRequest request) {
+        String taxId = request.taxId();
         TaxIdValidator.validate(taxId);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         if (clientRepository.findByTaxIdAndCompaniesId(taxId, companyId).isPresent()) {
@@ -102,36 +135,49 @@ public class ComercialService {
         if (sharedClient != null) {
             sharedClient.getCompanies().add(companyRepository.getReferenceById(companyId));
             sharedClient = clientRepository.save(sharedClient);
-            return new ClientDTO(sharedClient.getId(), sharedClient.getName(), sharedClient.getTaxId(),
-                    sharedClient.getEmail(), sharedClient.getAddress());
+            return toDTO(sharedClient);
         }
         Client client = new Client();
-        client.setName(name);
+        client.setName(request.name());
         client.setTaxId(taxId);
-        client.setEmail(email);
-        client.setAddress(address);
+        client.setEmail(request.email());
+        client.setAddress(request.address());
+        client.setPaymentTermsDays(request.effectivePaymentTermsDays());
+        client.setCreditLimit(request.creditLimit());
         client.setCreatedBy("SYSTEM");
         client.getCompanies().add(companyRepository.getReferenceById(companyId));
         client = clientRepository.save(client);
-        return new ClientDTO(client.getId(), client.getName(), client.getTaxId(), client.getEmail(), client.getAddress());
+        return toDTO(client);
     }
 
     @Transactional
-    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
+    public ClientDTO updateClient(Long id, SaveClientRequest request) {
         Client client = clientRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        String taxId = request.taxId();
         TaxIdValidator.validate(taxId);
         if (!client.getTaxId().equals(taxId)) {
             clientRepository.findByTaxIdAndCompaniesId(taxId, CurrentUserContext.getCurrentCompanyId()).ifPresent(existing -> {
                 throw new BusinessRuleException("Já existe outro cliente registado com este NUIT/NIF.");
             });
         }
-        client.setName(name);
+        client.setName(request.name());
         client.setTaxId(taxId);
-        client.setEmail(email);
-        client.setAddress(address);
+        client.setEmail(request.email());
+        client.setAddress(request.address());
+        // Alterar o prazo só afecta faturas FUTURAS: o vencimento das já emitidas está gravado
+        // no documento, e uma dívida não muda de data por o acordo ter mudado hoje.
+        client.setPaymentTermsDays(request.effectivePaymentTermsDays());
+        client.setCreditLimit(request.creditLimit());
         client = clientRepository.save(client);
-        return new ClientDTO(client.getId(), client.getName(), client.getTaxId(), client.getEmail(), client.getAddress());
+        return toDTO(client);
+    }
+
+    /** Conversão única de cliente para DTO — evita cinco cópias da mesma lista de campos. */
+    private ClientDTO toDTO(Client client) {
+        return new ClientDTO(client.getId(), client.getName(), client.getTaxId(),
+                client.getEmail(), client.getAddress(), client.effectivePaymentTermsDays(),
+                client.getCreditLimit());
     }
 
     @Transactional
@@ -166,6 +212,9 @@ public class ComercialService {
         invoice.setClient(client);
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
+        // Vencimento: o do pedido, ou o prazo acordado com o cliente. A regra vive no domínio
+        // (Invoice.assignDueDate) — as três portas que emitem fatura chamam a mesma.
+        invoice.assignDueDate(LocalDate.now(), request.dueDate());
         // Estado definido no fim: APPROVED (directa) ou PENDING_DISCOUNT_APPROVAL (desconto >10%).
 
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -179,11 +228,15 @@ public class ComercialService {
             // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso.
             BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
 
+            // IVA: a taxa é do ARTIGO, nunca a que o cliente HTTP envia — senão o mesmo produto
+            // saía isento no POS e a 16% na fatura. Ver docs/IVA_TAXA_CANONICA_SPEC.md.
+            BigDecimal taxRate = product.effectiveTaxRate();
+
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(unitPrice);
-            line.setTaxRate(lineReq.taxRate());
+            line.setTaxRate(taxRate);
 
             BigDecimal discountPct = lineReq.discountPercentage();
             if (discountPct == null) {
@@ -196,9 +249,12 @@ public class ComercialService {
 
             line.setBatchNumber(lineReq.batchNumber());
             line.setSerialNumber(lineReq.serialNumber());
+            // Fotografia do custo: a margem desta venda não pode mudar quando o fornecedor
+            // mudar de preço amanhã. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+            line.setUnitCost(product.getPurchasePrice());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, taxRate);
 
             line.setLineTotal(amounts.total());
             invoice.addLine(line);
@@ -210,6 +266,10 @@ public class ComercialService {
         invoice.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
         invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+
+        // Uma fatura nasce por receber: o total inteiro é dívida nova. Verificar ANTES de
+        // consumir o número fiscal — uma recusa não pode abrir um buraco na série FT.
+        receivablesService.assertCreditAvailable(client, invoice.getTotalAmount());
 
         // Número fiscal sequencial e sem saltos (série FT).
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
@@ -232,6 +292,9 @@ public class ComercialService {
             auditLogService.logCurrent("INVOICE_ISSUE",
                     "Fatura " + invoice.getInvoiceNumber() + " emitida e aprovada para "
                             + client.getName() + ". Total: " + invoice.getTotalAmount() + " MT.");
+            // Só aqui: uma fatura à espera de aprovação de desconto ainda não é venda (o stock
+            // não se moveu) e não pode entrar na contabilidade.
+            publishSale(invoice, BigDecimal.ZERO, false);
         }
 
         return toDTO(invoice);
@@ -254,14 +317,29 @@ public class ComercialService {
         });
     }
 
+    /**
+     * Emite recibo de recebimento. Devolve o <b>DTO</b>, não a entidade: a conversão tem de
+     * acontecer dentro da transacção, senão o proxy lazy do cliente rebenta na fronteira HTTP
+     * ({@code open-in-view=false}) — o recibo ficava gravado e o utilizador via um erro.
+     */
     @Transactional
-    public Receipt createReceipt(Long invoiceId, Long treasuryAccountId, String paymentMethod, BigDecimal amountPaid) {
+    public ReceiptDTO createReceipt(Long invoiceId, Long treasuryAccountId, String paymentMethod, BigDecimal amountPaid) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
-        if (invoice.getStatus() != InvoiceStatus.APPROVED) {
-            throw new BusinessRuleException("Apenas faturas no estado APROVADA podem ter recibo. Estado atual: " + invoice.getStatus());
+        if (!invoice.getStatus().isCollectable()) {
+            throw new BusinessRuleException("Apenas faturas por cobrar podem ter recibo. Estado atual: " + invoice.getStatus());
+        }
+        if (amountPaid == null || amountPaid.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("O valor do recibo tem de ser positivo.");
+        }
+        // O recibo nunca pode exceder o que falta receber — senão entrava dinheiro a mais na
+        // tesouraria e a fatura ficava com um "pago" superior ao total.
+        BigDecimal outstanding = invoice.outstandingAmount();
+        if (amountPaid.compareTo(outstanding) > 0) {
+            throw new BusinessRuleException("Valor do recibo (" + amountPaid
+                    + ") excede o saldo em dívida (" + outstanding + ").");
         }
 
         TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(
@@ -283,14 +361,27 @@ public class ComercialService {
 
         receipt = receiptRepository.save(receipt);
 
-        invoice.setStatus(InvoiceStatus.PAID);
+        // Acumula o recebido e deriva o estado pela regra única: um recibo parcial deixa a
+        // fatura PARTIALLY_PAID (o saldo continua a aparecer nas contas correntes), não PAID.
+        invoice.setAmountPaid(invoice.getAmountPaid().add(amountPaid).setScale(2, RoundingMode.HALF_UP));
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoiceRepository.save(invoice);
 
         // Record financial cash inflow (DEBIT)
         String description = "Recebimento Fatura " + invoice.getInvoiceNumber() + " via " + paymentMethod + " (Recibo " + receiptNum + ")";
         financeService.registerTransaction(treasuryAccountId, "DEBIT", amountPaid, description);
 
-        return receipt;
+        // Contabilidade: só o movimento de saldo (Caixa/Banco ↔ Clientes). O proveito já foi
+        // lançado quando a fatura foi emitida — lançá-lo aqui contaria a venda duas vezes.
+        eventPublisher.publishEvent(new com.phcpro.architecture.events.PaymentReceivedEvent(
+                invoice.getCompany().getId(),
+                receipt.getId(),
+                receiptNum,
+                LocalDate.now(),
+                amountPaid,
+                "CASH".equalsIgnoreCase(paymentMethod)));
+
+        return toDTO(receipt);
     }
 
     @Transactional
@@ -312,8 +403,13 @@ public class ComercialService {
         receipt.setCancellationReason(reason);
         receiptRepository.save(receipt);
 
+        // Devolve só o valor deste recibo. Com vários recibos na mesma fatura, anular um não
+        // pode apagar os outros — o estado volta a derivar do que continua pago.
         Invoice invoice = receipt.getInvoice();
-        invoice.setStatus(InvoiceStatus.APPROVED); // Revert invoice status to approved so it can be paid or cancelled
+        BigDecimal remaining = invoice.getAmountPaid().subtract(receipt.getAmountPaid());
+        invoice.setAmountPaid(remaining.compareTo(BigDecimal.ZERO) > 0
+                ? remaining.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoiceRepository.save(invoice);
 
         // Refund cash (CREDIT)
@@ -389,6 +485,31 @@ public class ComercialService {
         return receiptRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId());
     }
 
+    /**
+     * Página de faturas da empresa, da mais recente para a mais antiga.
+     *
+     * <p>A listagem sem paginação ({@link #getInvoicesByCompany}) trazia a tabela inteira para
+     * memória e para o cliente HTTP. Mantém-se para os ecrãs ainda não migrados (adopção
+     * incremental, como se fez com o {@code loadAsync}), mas os novos usam esta.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<InvoiceDTO> getInvoicePage(Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return PageResponse.of(
+                invoiceRepository.findByCompanyIdOrderByCreatedAtDesc(companyId, PageQuery.of(page, size)),
+                this::toDTO);
+    }
+
+    /** Página do histórico de vendas do POS — a listagem que mais cresce numa loja. */
+    @Transactional(readOnly = true)
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return PageResponse.of(
+                invoiceRepository.findByCompanyIdAndSalesChannelOrderByCreatedAtDesc(
+                        companyId, SalesChannel.POS, PageQuery.of(page, size)),
+                this::toDTO);
+    }
+
     @Transactional(readOnly = true)
     public List<InvoiceDTO> getInvoicesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
@@ -423,28 +544,28 @@ public class ComercialService {
     }
 
     /**
-     * Faturas com saldo em dívida — fiados ou pagamentos parciais.
-     * Inclui status APPROVED (cobrável) ou PARTIALLY_PAID, onde amountPaid < totalAmount.
+     * Faturas com saldo em dívida — fiados ou pagamentos parciais, das mais atrasadas para as
+     * mais recentes (é por aí que se começa a cobrar).
+     *
+     * <p>Usa os predicados canónicos ({@code isCollectable} + {@code outstandingAmount}) em vez de
+     * repetir a comparação de estados e de valores, que era a terceira cópia da mesma regra.
      */
     @Transactional(readOnly = true)
     public List<InvoiceDTO> getOutstandingInvoicesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         return invoiceRepository.findByCompanyId(companyId).stream()
-                .filter(i -> i.getStatus() == InvoiceStatus.APPROVED
-                          || i.getStatus() == InvoiceStatus.PARTIALLY_PAID)
-                .filter(i -> {
-                    BigDecimal paid = i.getAmountPaid() == null ? BigDecimal.ZERO : i.getAmountPaid();
-                    BigDecimal total = i.getTotalAmount() == null ? BigDecimal.ZERO : i.getTotalAmount();
-                    return paid.compareTo(total) < 0;
-                })
+                .filter(i -> i.getStatus().isCollectable())
+                .filter(i -> i.outstandingAmount().signum() > 0)
                 .map(this::toDTO)
+                .sorted(Comparator.comparingInt(InvoiceDTO::daysOverdue).reversed())
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<Receipt> getReceiptsByCompany(Long companyId) {
+    public List<ReceiptDTO> getReceiptsByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return receiptRepository.findByCompanyId(companyId);
+        // Converter aqui dentro, pela mesma razão de createReceipt.
+        return receiptRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
     /** Recibo → DTO (achata fatura/cliente) para a fronteira HTTP. */
@@ -465,7 +586,7 @@ public class ComercialService {
     public List<ClientDTO> getAllClients() {
         return clientRepository.findDistinctByCompaniesIdOrderByName(CurrentUserContext.getCurrentCompanyId())
                 .stream()
-                .map(c -> new ClientDTO(c.getId(), c.getName(), c.getTaxId(), c.getEmail(), c.getAddress()))
+                .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -491,6 +612,29 @@ public class ComercialService {
                 .map(this::toDTO)
                 .filter(p -> !p.stockTracked() || inStock.contains(p.id()))
                 .collect(Collectors.toList());
+    }
+
+    /** Página do catálogo POS; pesquisa e disponibilidade são aplicadas antes da paginação. */
+    @Transactional(readOnly = true)
+    public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(
+            String query, boolean availableOnly, Integer page, Integer size) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        java.util.Set<Long> sellableIds = inventoryService.getInStockProductIdsForSale(companyId);
+        java.util.Set<Long> queryIds = sellableIds.isEmpty() ? java.util.Set.of(-1L) : sellableIds;
+        String normalizedQuery = query == null ? "" : query.trim();
+        var result = productRepository.findPOSCatalogPage(companyId, normalizedQuery, availableOnly,
+                queryIds, PageQuery.of(page, size));
+        return PageResponse.of(result, product -> new POSCatalogItemDTO(
+                toDTO(product), !product.isStockTracked() || sellableIds.contains(product.getId())));
+    }
+
+    @Transactional(readOnly = true)
+    public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
+        ProductDTO product = findProductByBarcode(barcode);
+        if (product == null) return null;
+        boolean sellable = !product.stockTracked() || inventoryService
+                .getInStockProductIdsForSale(CurrentUserContext.getCurrentCompanyId()).contains(product.id());
+        return new POSCatalogItemDTO(product, sellable);
     }
 
     @Transactional
@@ -783,7 +927,10 @@ public class ComercialService {
                 invoice.getRejectionReason(),
                 lines,
                 invoice.getCreatedAt() != null ? invoice.getCreatedAt() : LocalDateTime.now(),
-                invoice.getCreatedBy()
+                invoice.getCreatedBy(),
+                invoice.effectiveDueDate(),
+                invoice.daysOverdue(LocalDate.now()),
+                invoice.agingBucket(LocalDate.now())
         );
     }
 
@@ -831,11 +978,15 @@ public class ComercialService {
 
             BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
 
+            // Mesma regra da fatura: a taxa vem do artigo (a encomenda é faturada mais tarde e a
+            // fatura herda esta linha, por isso divergir aqui contaminava também a fatura).
+            BigDecimal taxRate = product.effectiveTaxRate();
+
             OrderLine line = new OrderLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(unitPrice);
-            line.setTaxRate(lineReq.taxRate());
+            line.setTaxRate(taxRate);
 
             BigDecimal discountPct = lineReq.discountPercentage();
             if (discountPct == null) {
@@ -847,7 +998,7 @@ public class ComercialService {
             line.setSerialNumber(lineReq.serialNumber());
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    unitPrice, lineReq.quantity(), discountPct, lineReq.taxRate());
+                    unitPrice, lineReq.quantity(), discountPct, taxRate);
 
             line.setLineTotal(amounts.total());
             order.addLine(line);
@@ -884,11 +1035,15 @@ public class ComercialService {
         if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException("Apenas encomendas no estado PENDENTE podem ser faturadas.");
         }
+        // Facturar a encomenda cria dívida como qualquer outra fatura — mesma trava de crédito.
+        receivablesService.assertCreditAvailable(order.getClient(), order.getTotalAmount());
 
         Invoice invoice = new Invoice();
         invoice.setClient(order.getClient());
         invoice.setCompany(order.getCompany());
         invoice.setWarehouse(order.getWarehouse());
+        // A encomenda facturada segue o prazo do cliente, tal como uma fatura emitida à mão.
+        invoice.assignDueDate(LocalDate.now(), null);
         invoice.setStatus(InvoiceStatus.APPROVED);
         invoice.setSalesChannel(SalesChannel.ORDER);
         invoice.setTotalBeforeTax(order.getTotalBeforeTax());
@@ -910,6 +1065,9 @@ public class ComercialService {
             invoiceLine.setLineTotal(orderLine.getLineTotal());
             invoiceLine.setBatchNumber(orderLine.getBatchNumber());
             invoiceLine.setSerialNumber(orderLine.getSerialNumber());
+            // Fotografia do custo à data da FATURA (é aqui que a venda se realiza e o stock sai),
+            // não à data da encomenda. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+            invoiceLine.setUnitCost(orderLine.getProduct().getPurchasePrice());
             invoice.addLine(invoiceLine);
 
             // Deduct stock for each line in the warehouse
@@ -927,6 +1085,7 @@ public class ComercialService {
         }
 
         invoice = invoiceRepository.save(invoice);
+        publishSale(invoice, BigDecimal.ZERO, false);
 
         order.setStatus("BILLED");
         order.setInvoiceId(invoice.getId());

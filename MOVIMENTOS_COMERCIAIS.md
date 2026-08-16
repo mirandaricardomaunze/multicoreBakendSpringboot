@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-06-21
+**Última actualização:** 2026-07-23
 
 ---
 
@@ -16,11 +16,13 @@
 | **Fatura**              | ✅      | `Invoice` (canais `MANUAL`, `POS`, `ORDER`), série **FT**.                          |
 | **Nota de Crédito**     | ✅      | `CreditNote`, série **NC**. Devolve stock na aprovação se motivo = `RETURN`.        |
 | **Guia (transferência entre armazéns)** | ✅ | `StockTransfer`, série **TRF**. Create/approve/reject/cancel com stock a sair só na aprovação; PDF via `StockTransferPrintService`. |
+| **Guia de Remessa ao cliente** | ✅ | `DeliveryGuide`, série **GR**. Gerada a partir de uma encomenda; stock (SALE) sai só na aprovação; PDF via `DeliveryGuidePrintService`. |
 
-> ✅ **Decisão (2026-06-21):** o "guia" que o negócio usa é a **Guia de Transferência** entre
-> armazéns — e essa já existe e está testada (`StockTransferServiceTest`, 9 testes). A **Guia de
-> Remessa/Entrega ao cliente NÃO é requisito** e não será implementada. Os movimentos de venda
-> (POS, fatura, NC) estão completos.
+> ✅ **Decisão (2026-07-23) — reverte a de 2026-06-21:** a **Guia de Remessa ao cliente passa a ser
+> requisito** e está implementada (`DeliveryGuide`, série `GR`) — ver §5.1 e
+> [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md). A Guia de
+> Transferência entre armazéns (`StockTransfer`, `TRF`) continua a existir para o movimento
+> **entre armazéns**. São documentos distintos.
 
 ---
 
@@ -36,12 +38,13 @@ pela série central [`DocumentSeries`](src/main/java/com/phcpro/modules/numberin
 | Recibo           | `Receipt`     | `RC`   | —                 | `COMPLETED` / anulado                                      |
 | Nota de Crédito  | `CreditNote`  | `NC`   | —                 | `PENDING_APPROVAL → APPROVED` / `REJECTED` / `CANCELLED`   |
 | Nota de Débito   | `DebitNote`   | `ND`   | —                 | Puramente financeira (sem stock). Numeração sequencial gapless via `DocumentSeries.DEBIT_NOTE`. |
+| Guia de Remessa  | `DeliveryGuide` | `GR` | `delivery_guides` | `PENDING_APPROVAL → APPROVED` / `REJECTED` / `CANCELLED`. Gerada da encomenda; stock SALE sai na aprovação. |
 
 ---
 
-## 3. Os três livros de movimentos (não confundir)
+## 3. Os quatro livros de movimentos (não confundir)
 
-O sistema **não tem um livro único de "movimentos comerciais"**. Tem três ledgers
+O sistema **não tem um livro único de "movimentos comerciais"**. Tem quatro ledgers
 independentes, cada um na sua fronteira. Um mesmo documento pode tocar vários.
 
 | Ledger                | Entidade / Enum                              | Módulo        | O que regista                                  |
@@ -49,6 +52,12 @@ independentes, cada um na sua fronteira. Um mesmo documento pode tocar vários.
 | **Stock**             | `StockMovement` / `StockMovementType`        | `inventory`   | `PURCHASE, ENTRY, SALE, TRANSFER, ADJUSTMENT, RETURN, REVERSAL` |
 | **Caixa (gaveta)**    | `TillMovement` / `TillMovementType`          | `pos`         | `SALE, SUPRIMENTO, SANGRIA`                    |
 | **Tesouraria**        | `TreasuryTransaction` / `TransactionType`    | `financeira`  | `DEBIT` (entrada) / `CREDIT` (saída)           |
+| **Contabilidade**     | `JournalEntry` + `JournalLine` / `JournalSource` | `accounting` | Partidas dobradas (PGC-NIRF), série `LC`   |
+
+O ledger contabilístico (desde 2026-08-15) **não substitui** os outros três: é a leitura
+contabilística dos mesmos factos. Alimenta-se por **eventos** (`SaleRegisteredEvent`,
+`PaymentReceivedEvent`), pelo que o módulo `comercial` não conhece o `accounting`. Ver
+[docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
 
 Princípio em vigor (ver [POSService](src/main/java/com/phcpro/modules/pos/service/POSService.java)):
 numerário de venda entra **só na gaveta** durante a sessão; só chega à **tesouraria** no fecho
@@ -82,6 +91,12 @@ FATURA DE ENCOMENDA  (Invoice, SalesChannel.ORDER)  ComercialService.billOrder()
   └─ Só faturável quando a encomenda está PENDING (aprovada).
   └─ StockMovement SALE (saída, por linha)
 
+GUIA DE REMESSA  (DeliveryGuide, série GR)          DeliveryGuideService.createFromOrder()
+  └─ Gerada de uma encomenda PENDING → encomenda passa a GUIDE_PENDING (deixa de ser faturável).
+  └─ approve() → StockMovement SALE (saída, por linha) → encomenda GUIDED (terminal).
+     reject()/cancel() → sem stock → encomenda volta a PENDING (faturável).
+  Caminhos separados: uma encomenda vira guia OU fatura, nunca as duas (billOrder inalterado).
+
 ANULAÇÃO DE FATURA   ComercialService.cancelInvoice()
   └─ StockMovement REVERSAL (reposição de stock)
 
@@ -114,6 +129,20 @@ A **Guia de Transferência** documenta a movimentação de stock **entre armazé
   PDF em [StockTransferPrintService](src/main/java/com/phcpro/modules/printing/StockTransferPrintService.java).
 - Testada por `StockTransferServiceTest` (9 cenários: estados, stock só na aprovação, permissão).
 
+### 5.1 Guia de Remessa ao cliente — expedição a partir da encomenda
+
+Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
+- Entidade `DeliveryGuide` + linhas, série `GR` em `DocumentSeries` (número único **por empresa**).
+- Ciclo `PENDING_APPROVAL → APPROVED / REJECTED / CANCELLED`; o stock **sai (SALE) só na aprovação**
+  (FEFO, via `inventoryService.registerMovement` — o mesmo caminho da faturação), MANAGER/ADMIN.
+- **Caminhos separados:** gerar a guia tira a encomenda de `PENDING` (→ `GUIDE_PENDING` → `GUIDED`),
+  logo `billOrder` deixa de a aceitar. Para faturar mercadoria expedida por guia, cria-se **nova
+  encomenda**. `billOrder` **não** foi alterado.
+- Lógica em [DeliveryGuideService](src/main/java/com/phcpro/modules/comercial/service/DeliveryGuideService.java),
+  PDF em [DeliveryGuidePrintService](src/main/java/com/phcpro/modules/printing/DeliveryGuidePrintService.java),
+  migração `V34`. Testada por `DeliveryGuideServiceTest` (9). Spec/harness:
+  [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md).
+
 ---
 
 ## 6. Onde mexer (mapa rápido de ficheiros)
@@ -134,8 +163,11 @@ A **Guia de Transferência** documenta a movimentação de stock **entre armazé
 
 ## 7. Pontos abertos / dívida técnica
 
-1. ~~**Guia de Remessa ao cliente**~~ — **decidido (2026-06-21): não é requisito.** O "guia" do
-   negócio é a Guia de Transferência entre armazéns, que já existe e está testada (§5).
+1. ~~**Guia de Remessa ao cliente**~~ — **implementado (2026-07-23)**, revertendo a decisão de
+   2026-06-21. `DeliveryGuide` (série `GR`), gerada da encomenda, stock SALE só na aprovação;
+   `DeliveryGuideServiceTest` (9). Spec/harness em
+   [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md). **Falta:** UI Swing +
+   cliente HTTP desktop (harness GR-60+).
 2. ~~**Nota de Débito** numera fora de `DocumentSeries`~~ — **resolvido (2026-06-20)**: passou a
    usar `DocumentNumberService.next(DocumentSeries.DEBIT_NOTE)`, série `ND` sequencial e gapless,
    coberto por `DocumentNumberServiceTest`.
@@ -145,3 +177,11 @@ A **Guia de Transferência** documenta a movimentação de stock **entre armazé
    no `ComercialPanel`. Spec/harness em [docs/MOVIMENTOS_UNIFICADOS_SPEC.md](docs/MOVIMENTOS_UNIFICADOS_SPEC.md)
    / [docs/MOVIMENTOS_UNIFICADOS_HARNESS.md](docs/MOVIMENTOS_UNIFICADOS_HARNESS.md). Testado por
    `MovimentosServiceTest` (7: MU-01..MU-07).
+4. ~~**Sem contabilidade**~~ — **resolvido (2026-08-15)**: módulo `accounting` com plano PGC-NIRF,
+   diário de partidas dobradas, razão e balancete. Venda e recebimento lançam automaticamente por
+   evento. Ver [docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
+5. **Compras e salários ainda não lançam na contabilidade** (v1 declarada). O plano já tem as contas
+   (2201 Fornecedores, 2432 IVA dedutível, 6301 Pessoal, 2601 Remunerações a pagar); falta publicar
+   os eventos em `PurchaseService` e no processamento salarial. Ver CONTABILIDADE_SPEC §7.
+6. **Notas de crédito/débito não geram estorno contabilístico.** Uma devolução repõe stock e caixa
+   mas não desfaz o lançamento da venda.

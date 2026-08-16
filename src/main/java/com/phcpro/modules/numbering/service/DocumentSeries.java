@@ -19,12 +19,16 @@ public final class DocumentSeries {
     public static final String DEBIT_NOTE = "ND";
     /** Transferência de stock entre armazéns. */
     public static final String STOCK_TRANSFER = "TRF";
+    /** Guia de remessa ao cliente (mercadoria expedida a partir de uma encomenda). */
+    public static final String DELIVERY_GUIDE = "GR";
     /** Documento interno de compra a fornecedor. */
     public static final String PURCHASE = "V/FT";
     /** Encomenda a fornecedor (purchase order). */
     public static final String PURCHASE_ORDER = "EC-F";
     /** Recibo de vencimento (folha salarial). */
     public static final String PAYSLIP = "REC";
+    /** Lançamento contabilístico (diário). */
+    public static final String JOURNAL_ENTRY = "LC";
 
     private DocumentSeries() {}
 }

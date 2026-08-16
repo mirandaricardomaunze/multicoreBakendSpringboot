@@ -8,6 +8,7 @@ public enum MovimentoTipo {
 
     FATURA("Fatura"),
     ENCOMENDA("Encomenda"),
+    GUIA_REMESSA("Guia de Remessa"),
     NOTA_CREDITO("Nota de Crédito"),
     NOTA_DEBITO("Nota de Débito");
 

@@ -58,7 +58,7 @@ public final class TableFilter {
                 }
             }
             java.time.LocalDate today = java.time.LocalDate.now();
-            sorter.setRowFilter(new RowFilter<TableModel, Integer>() {
+            ClientTablePagination.setBaseFilter(table, new RowFilter<TableModel, Integer>() {
                 @Override
                 public boolean include(Entry<? extends TableModel, ? extends Integer> e) {
                     List<String> cells = new ArrayList<>();

@@ -93,31 +93,18 @@ public class ReceiptPrintService {
     }
 
     private void renderLines(Document doc, Invoice invoice, DocumentColumnsDTO cols) {
-        boolean showQty = cols.quantity();
-        boolean showPrice = cols.unitPrice();
-
-        java.util.List<Float> widths = new java.util.ArrayList<>();
-        widths.add((showQty || showPrice) ? 46f : 70f); // Descrição
-        if (showQty) widths.add(14f);
-        if (showPrice) widths.add(22f);
-        widths.add(26f); // Total
-        float[] w = new float[widths.size()];
-        for (int i = 0; i < w.length; i++) w[i] = widths.get(i);
-
-        PdfPTable table = new PdfPTable(w);
+        // Em 80 mm, quatro colunas apertavam descrição e preços. O recibo usa duas colunas:
+        // artigo largo + total; quantidade/preço/IVA ficam numa segunda linha da descrição.
+        PdfPTable table = new PdfPTable(new float[]{65f, 35f});
         table.setWidthPercentage(100);
         table.setSpacingBefore(2f);
 
-        addCell(table, "Descrição", PdfTheme.tableHeaderFont(), Element.ALIGN_LEFT, true);
-        if (showQty) addCell(table, "Qtd", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
-        if (showPrice) addCell(table, "Preço", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
+        addCell(table, "Artigo", PdfTheme.tableHeaderFont(), Element.ALIGN_LEFT, true);
         addCell(table, "Total", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
 
         for (InvoiceLine line : invoice.getLines()) {
             addDescriptionCell(table, line, cols);
-            if (showQty) addCell(table, String.valueOf(line.getQuantity()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
-            if (showPrice) addCell(table, MoneyFormat.formatPlain(line.getUnitPrice()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
-            addCell(table, MoneyFormat.formatPlain(line.getLineTotal()), PdfTheme.bodyFont(), Element.ALIGN_RIGHT, false);
+            addCell(table, MoneyFormat.formatPlain(line.getLineTotal()), PdfTheme.boldFont(), Element.ALIGN_RIGHT, false);
         }
         doc.add(table);
     }
@@ -135,6 +122,9 @@ public class ReceiptPrintService {
             sub = barcode;
         }
         if (sub != null) phrase.add(new Chunk("\n" + sub, PdfTheme.smallFont()));
+        String details = lineDetailsLabel(line, cols);
+        if (!details.isBlank()) phrase.add(new Chunk("\n" + details, PdfTheme.smallFont()));
+        phrase.add(new Chunk("\n" + vatRateLabel(line.getTaxRate()), PdfTheme.smallFont()));
         PdfPCell cell = new PdfPCell(phrase);
         cell.setHorizontalAlignment(Element.ALIGN_LEFT);
         cell.setBorder(Rectangle.NO_BORDER);
@@ -148,6 +138,26 @@ public class ReceiptPrintService {
         addRight(doc, "Subtotal: " + MoneyFormat.format(invoice.getTotalBeforeTax()), PdfTheme.bodyFont());
         addRight(doc, "IVA:      " + MoneyFormat.format(invoice.getTaxAmount()), PdfTheme.bodyFont());
         addRight(doc, "TOTAL:    " + MoneyFormat.format(invoice.getTotalAmount()), PdfTheme.boldFont());
+    }
+
+    /** Taxa fiscal explícita em cada artigo, legível mesmo num recibo térmico estreito. */
+    static String vatRateLabel(BigDecimal rate) {
+        BigDecimal effective = rate == null ? BigDecimal.ZERO : rate;
+        if (effective.signum() == 0) return "IVA: Isento";
+        String percent = effective.multiply(BigDecimal.valueOf(100))
+                .stripTrailingZeros().toPlainString();
+        return "IVA: " + percent + "%";
+    }
+
+    static String lineDetailsLabel(InvoiceLine line, DocumentColumnsDTO cols) {
+        if (!cols.quantity() && !cols.unitPrice()) return "";
+        String quantity = line.getQuantity() == null ? "0"
+                : line.getQuantity().stripTrailingZeros().toPlainString();
+        if (cols.quantity() && cols.unitPrice()) {
+            return quantity + " x " + MoneyFormat.formatPlain(line.getUnitPrice()) + " MT";
+        }
+        if (cols.quantity()) return "Qtd: " + quantity;
+        return "Preço: " + MoneyFormat.formatPlain(line.getUnitPrice()) + " MT";
     }
 
     /**

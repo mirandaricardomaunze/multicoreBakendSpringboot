@@ -4,6 +4,7 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
+import com.phcpro.gui.components.TableCellRenderers;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.CRMApiClient;
 import com.phcpro.modules.crm.dto.*;
@@ -72,6 +73,7 @@ public class CRMPanel extends JPanel {
         };
         ticketsTable = new JTable(ticketsModel);
         UIHelper.styleTable(ticketsTable);
+        ticketsTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.status());
         JScrollPane tScroll = new JScrollPane(ticketsTable);
         UIHelper.styleScrollPane(tScroll);
         JTextField tSearch = TableFilter.searchField("Cliente, assunto ou descrição…");
@@ -120,6 +122,7 @@ public class CRMPanel extends JPanel {
         };
         worksheetsTable = new JTable(worksheetsModel);
         UIHelper.styleTable(worksheetsTable);
+        worksheetsTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
         JScrollPane wsScroll = new JScrollPane(worksheetsTable);
         UIHelper.styleScrollPane(wsScroll);
         JTextField wsSearch = TableFilter.searchField("Cliente ou técnico…");
@@ -137,16 +140,18 @@ public class CRMPanel extends JPanel {
     }
 
     public void refreshData() {
-        loadTicketsTable();
-        loadWorkSheetsTable();
-        loadOpenTickets();
+        UIHelper.loadAsync(this,
+                () -> new CRMData(crmApiClient.getAllTickets(), crmApiClient.getAllWorkSheets()),
+                this::applyData,
+                error -> JOptionPane.showMessageDialog(this,
+                        "Não foi possível carregar CRM e assistência: " + error.getMessage(),
+                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
     }
 
-    private void loadTicketsTable() {
+    private void applyData(CRMData data) {
         ticketsModel.setRowCount(0);
-        List<SupportTicketDTO> tickets = crmApiClient.getAllTickets();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (SupportTicketDTO ticket : tickets) {
+        for (SupportTicketDTO ticket : data.tickets()) {
             ticketsModel.addRow(new Object[]{
                     ticket.id(),
                     ticket.createdAt().format(dtf),
@@ -156,31 +161,27 @@ public class CRMPanel extends JPanel {
                     ticket.status()
             });
         }
-    }
-
-    private void loadWorkSheetsTable() {
         worksheetsModel.setRowCount(0);
-        worksheetsList = crmApiClient.getAllWorkSheets();
+        worksheetsList = data.worksheets();
         for (WorkSheetDTO ws : worksheetsList) {
             worksheetsModel.addRow(new Object[]{
                     ws.id(),
                     ws.clientName(),
                     ws.technicianName(),
                     ws.hoursWorked() + " h",
-                    ws.totalValue() + " MT",
+                    ws.totalValue(),
                     ws.isBilled() ? "SIM" : "NÃO"
             });
         }
-    }
-
-    private void loadOpenTickets() {
         ticketsList.clear();
-        for (SupportTicketDTO ticket : crmApiClient.getAllTickets()) {
+        for (SupportTicketDTO ticket : data.tickets()) {
             if ("OPEN".equalsIgnoreCase(ticket.status())) {
                 ticketsList.add(ticket);
             }
         }
     }
+
+    private record CRMData(List<SupportTicketDTO> tickets, List<WorkSheetDTO> worksheets) {}
 
     /** Registo de folha de obra em modal profissional (fecho de ticket). */
     private void registerWorkSheet() {
@@ -211,7 +212,7 @@ public class CRMPanel extends JPanel {
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Registar Folha de Obra",
                 "fas-tools", "Fecho de ticket de assistência", form).setConfirmButton("Gravar", "fas-save");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             SupportTicketDTO ticket = ticketsList.get(Math.max(0, ticketCombo.getSelectedIndex()));
             String tech = technicianField.getText().trim();
             if (tech.isEmpty()) throw new IllegalArgumentException("O nome do técnico é obrigatório.");
@@ -238,8 +239,12 @@ public class CRMPanel extends JPanel {
                 }
             }
 
-            crmApiClient.createWorkSheet(new CreateWorkSheetRequest(
-                    ticket.id(), tech, hours, desc, partsField.getText().trim(), partsCost));
+            CreateWorkSheetRequest request = new CreateWorkSheetRequest(
+                    ticket.id(), tech, hours, desc, partsField.getText().trim(), partsCost);
+            return () -> {
+                crmApiClient.createWorkSheet(request);
+                return null;
+            };
         });
 
         if (dlg.showDialog()) {
@@ -262,14 +267,15 @@ public class CRMPanel extends JPanel {
             return;
         }
 
-        try {
+        UIHelper.runWithProgress(this, "A faturar folha de obra…", () -> {
             crmApiClient.billWorkSheet(ws.id());
+            return null;
+        }, ignored -> {
             JOptionPane.showMessageDialog(this, "Folha de obra faturada com sucesso!\n" +
                     "Uma fatura comercial foi gerada e submetida para aprovação.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             refreshData();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao faturar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        }, error -> JOptionPane.showMessageDialog(this, "Erro ao faturar: " + error.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE));
     }
 
     public void onPanelSelected() {

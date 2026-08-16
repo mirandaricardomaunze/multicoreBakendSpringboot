@@ -131,6 +131,32 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--
+              Testes: um único JVM reutilizado (forkCount=1/reuseForks=true, os defaults, tornados
+              explícitos) para que a cache de contextos do Spring (limitada a 1 em spring.properties)
+              seja eficaz. -Xmx1536m dá folga a um contexto ERP completo sem, num PC de RAM curta,
+              o JVM tentar crescer até ao default (~1/4 da RAM física) e falhar a alocação.
+
+              java.awt.headless=false é DECLARADO AQUI, não num bloco estático de um teste: o
+              surefire arranca headless=true por omissão e o AWT decide a headlessness UMA vez, na
+              primeira consulta a GraphicsEnvironment. Com um só JVM para toda a suite, quem
+              decidia era a primeira classe a tocar em AWT — os testes de Swing passavam ou
+              rebentavam com HeadlessException consoante a ORDEM das classes. A CI já corre com
+              xvfb-run (display virtual), pelo que headless=false é o contrato do projecto.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <argLine>-Xmx1536m</argLine>
+                    <systemPropertyVariables>
+                        <java.awt.headless>false</java.awt.headless>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

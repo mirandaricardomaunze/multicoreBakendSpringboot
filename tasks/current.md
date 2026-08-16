@@ -2,13 +2,396 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-07-21
+**Última actualização:** 2026-08-15
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
+As **cinco lacunas de gestão** levantadas na auditoria de 09/08 estão **fechadas** (ver abaixo) —
+incluindo a contabilidade, que era a maior ausência.
 **Passo de profissionalização em curso** (rumo a produção): #1 teste de regressão ✅, #2 CI+gate ✅
 (falta ligar a proteção de branch no GitHub), #6 sem dados/segredos de demo em prod ✅, #7 numeração
 multi-empresa dos payslips ✅. **Falta:** ligar a proteção de branch; 1.º `docker compose up` real numa
 VPS + smoke; backup restaurável verificado; validação em loja + hardware. A fonte de verdade operacional
 é [tasks/retail_store_readiness.md](retail_store_readiness.md).
+**Por integrar:** o ramo `feat/guia-remessa-navegacao-suite-local` está **23 commits à frente da
+`main`** e por enviar para o remoto.
+
+### Progresso — 2026-08-15 (navegação visual mais limpa)
+
+- A barra superior mantém os módulos operacionais visíveis e agrupa Área Fiscal, Contabilidade,
+  Aprovações e Configurações num menu textual “Mais”, reduzindo a densidade sem remover acessos.
+- Os itens da navegação passaram a aceitar Enter/Espaço, expor nome acessível e mostrar foco visual.
+- Verificação: `mvn -q -DskipTests compile` verde; teste focado de navegação adicionado.
+
+### Progresso — 2026-08-15 (hierarquia visual de RH e Configurações)
+
+- Spec/harness: `docs/HR_CONFIG_UI_HIERARCHY_SPEC.md` e
+  `docs/HR_CONFIG_UI_HIERARCHY_HARNESS.md` (HCUI-01..24).
+- Novo `ActionMenuButton` canónico limita menus a cinco entradas, mantém altura/ícones/acessibilidade
+  e agrupa apenas acções secundárias.
+- RH: Colaboradores ganhou “Mais acções”; Recibos ganhou “Documentos”. Configuração: Utilizadores
+  ganhou “Mais acções”; as modalidades de backup passaram para “Criar backup”.
+- Acções críticas continuam explícitas: Aprovar, Rejeitar, Eliminar, Marcar Pago e Processar Mês.
+- Verificação: `mvn clean compile` e harness focado verdes; suite completa verde com **487 testes,
+  0 falhas, 0 erros e 0 ignorados**. HCUI-20..24 requerem validação manual em Windows real.
+
+### Progresso — 2026-08-15 (fecho visual de Stock e Comercial)
+
+- Spec/harness: `docs/STOCK_COMERCIAL_UI_FINISH_SPEC.md` e
+  `docs/STOCK_COMERCIAL_UI_FINISH_HARNESS.md` (SCUI-01..24).
+- Faturas, encomendas, notas e guias agrupam impressão/exportação/actualização; Liquidar, Anular,
+  Faturar, Converter, Cancelar, Aprovar e Rejeitar continuam visíveis.
+- Stock global, categorias e armazéns ganharam hierarquia de acções; filtros passaram de altura 35
+  para `UIHelper.FORM_CONTROL_HEIGHT`.
+- `DocumentEditorHost` e `ModernFormDialog` ganharam `Ctrl+S` e `Esc`; atalhos POS preservados.
+- Validação real a 1382×736 no tema claro: Comercial, RH e Stock sem cortes/sobreposições.
+- Verificação: build limpo, harness focado e suite completa verdes com **492 testes, 0 falhas,
+  0 erros e 0 ignorados**. Escalas 100/125/150%, tema escuro e acções com dados reais continuam
+  como evidência manual obrigatória; a automação Windows falhou sob DPI elevado.
+
+### Progresso — 2026-08-15 (uniformização final do design)
+
+- Spec/harness: `docs/UI_UNIFORMIZACAO_FINAL_SPEC.md` e
+  `docs/UI_UNIFORMIZACAO_FINAL_HARNESS.md` (FU-01..23).
+- Perfis técnicos permanecem códigos internos, mas tabelas/selects de RH, Configuração, Aprovações
+  e Plataforma apresentam Administrador/Gestor/Funcionário.
+- Plataforma (empresas, assinaturas, utilizadores) e Fiscal/IVA adoptaram menus canónicos; acções
+  principais e críticas continuam visíveis.
+- `createDialogForm` passou a construir `FormField` canónico, preservando inputs e marcando labels
+  com `*` como obrigatórias.
+- Painéis de negócio ficaram sem cores locais; idioma uniformizado para “Actualizar” e “Registar”.
+- Verificação: build limpo e suite completa verdes com **496 testes, 0 falhas, 0 erros e
+  0 ignorados**; auditoria final sem `new Color`, “Atualizar”, “Cadastrar” ou `MANAGER/ADMIN` nos
+  painéis. Certificação visual FU-20..23 continua manual.
+
+### Progresso — 2026-08-15 (fecho das lacunas de gestão + contabilidade)
+
+- **Suite volta a ser verde de forma determinística.** `LoadingCursorTest` rebentava com
+  `HeadlessException` conforme a **ordem das classes**: o surefire arranca `headless=true` e o AWT
+  decide a headlessness uma só vez, pelo que quem decidia era a primeira classe a tocar em AWT.
+  `java.awt.headless=false` passou a ser declarado no `pom.xml` (a CI já corre com `xvfb-run`).
+- **Vencimento e antiguidade** (V35): `Client.paymentTermsDays` + `Invoice.dueDate` **gravada no
+  documento**; `assignDueDate` chamada pelas três portas que emitem fatura; `AgingBucket` como fonte
+  única dos cortes 30/60/90; `ReceivablesService` + `/api/comercial/receivables/aging`. Contas
+  Correntes ganharam Vencimento/Dias em Atraso/Antiguidade e ordenam pelo maior atraso.
+  Spec/harness: `VENCIMENTO_ANTIGUIDADE_*` (VA-01..25).
+- **Limite de crédito** (V36): três estados (nulo = sem limite, zero = não vende fiado, >0 = tecto);
+  aritmética no domínio; trava nas três portas que criam dívida. **Encontrado ao testar:** no POS o
+  stock saía *antes* da venda estar autorizada — extraído `deductStockForSale()` e movido para
+  depois da trava. Spec/harness: `LIMITE_CREDITO_*` (LC-01..32).
+- **Margem com o custo do acto da venda** (V37): `InvoiceLine.unitCost` fotografado na emissão; o
+  relatório lia o preço de compra **actual**, pelo que a margem de vendas antigas mudava sozinha
+  quando o fornecedor subia o preço. **MC-01 confirmado a falhar contra o código antigo.**
+  Spec/harness: `MARGEM_CUSTO_HISTORICO_*` (MC-01..06).
+- **Paginação**: `PageQuery`/`PageResponse` + `TablePager`; faturas e histórico do POS paginados. O
+  mais grave não era a listagem — o **dashboard** lia todas as faturas da empresa a cada abertura
+  para responder sobre *hoje*; as perguntas passaram a ir na consulta. Spec/harness: `PAGINACAO_*`
+  (PG-01..11).
+- **Contabilidade (PGC-NIRF)** (V38) — decisões do utilizador: plano moçambicano + lançamentos
+  automáticos **e** manuais. Plano por empresa (natureza gravada **na conta**, não derivada da
+  classe), partida dobrada validada numa só porta, série `LC` por empresa, razão com saldo de
+  abertura e balancete que diz **"NÃO FECHA"** quando não fecha. Os lançamentos automáticos entram
+  por **eventos** (`SaleRegisteredEvent`/`PaymentReceivedEvent`), pelo que o comercial não passou a
+  conhecer a contabilidade. Painel novo com 4 abas. Spec/harness: `CONTABILIDADE_*` (CT-01..46).
+  **Por fazer (declarado na spec §7):** salários e compras ainda não lançam automaticamente.
+- `NotificationsPanel` migrado para `loadAsync` (mantendo o contador de versão, que protege contra
+  respostas fora de ordem da **mesma** empresa — coisa que o `loadAsync` não cobre).
+- **Verificação:** `mvn -o clean test` → **482 testes, 0 falhas, 0 erros, 0 ignorados** (eram 401).
+- **Por validar ao vivo:** VA-50..57, LC-50..56, MC-50..53, PG-50..56, CT-50..60.
+
+### Progresso — 2026-08-09 (consistência profissional da UI — fundação e adopção inicial)
+
+- Criadas spec e harness: `UI_CONSISTENCIA_PROFISSIONAL_SPEC.md` e
+  `UI_CONSISTENCIA_PROFISSIONAL_HARNESS.md` (UI-01..26 automáticos/estáticos; UI-50..62 manuais).
+- Componentes canónicos: `FormField`, `MoneyField`, `QuantityField`, `DateField`; erro inline,
+  obrigatoriedade, acessibilidade e estado read-only centralizados em `UIHelper`.
+- Selects preservam renderers existentes; estados têm tradução central; botão icon-only exige nome
+  acessível; tabelas ganharam renderers canónicos de dinheiro, quantidade e estado.
+- `loadAsync` passou a propagar contexto, entregar erros no EDT e ignorar resposta de tenant antigo;
+  `submitAsync` bloqueia duplo envio; `ModernFormDialog.setOnSaveAsync` impede HTTP no EDT.
+- Adopção: Dashboard, Clientes, CRM e Tesouraria carregam assincronamente; cliente usa validação
+  inline + submissão assíncrona; CRM/Tesouraria usam renderers tipados. Dashboard ficou com zero
+  `new Color` e zero `setPreferredSize` (tokens semânticos no tema).
+- Segunda vaga: Aprovações, Promoções e Fiscal migrados para loading/submissão assíncronos.
+  Relatórios/PDF/SAF-T saem do EDT; taxas, retenções e promoções usam inputs tipados e validação
+  inline. Os três painéis ficaram com zero cores ad-hoc; Promoções também com zero tamanhos fixos.
+- Verificação: **389 testes, 0 falhas/erros/ignorados**. Próxima fase: alastrar loading/submissão aos
+  restantes painéis e migrar formulários/documentos longos.
+
+### Progresso — 2026-08-09 (recibo parcial deixa de apagar a dívida — 3 furos de dinheiro)
+
+- **Encontrado a auditar o sistema a pedido do utilizador** ("está preparado para gestão?"). Três
+  implementações do mesmo conceito — *quanto o cliente ainda deve* — a divergir em silêncio. Mesma
+  forma do bug do IVA de 06/08: **a mesma regra em duas portas**.
+- **(1) Recibo parcial dava a fatura por paga.** `ComercialService.createReceipt` marcava `PAID`
+  por qualquer valor e nunca acumulava `amountPaid`. Pagar 100 de 232 → fatura *Paga*, os 132
+  desapareciam das contas correntes e de qualquer cobrança. O **POS já fazia certo**
+  (`deriveStatus`/`settleCredit`); só a porta comercial é que não.
+- **(2) Dashboard e Contas Correntes discordavam.** `ReportService.unpaidInvoicesTotal` contava só
+  `APPROVED` pelo **total**; as Contas Correntes contavam `APPROVED`+`PARTIALLY_PAID` pelo **saldo**.
+  Idem em "vendas de hoje": o dashboard contava só `PAID`, o relatório diário tudo o que não fosse
+  anulado — dois números para a mesma pergunta.
+- **(3) `/api/finance/pay-invoice` sem guarda de papel.** `financeira` era o **único módulo de
+  dinheiro sem `PermissionGuard`** — qualquer EMPLOYEE liquidava faturas. E registava sempre o
+  total, contando em duplicado o que já tinha sido recebido.
+- **Correcção — fonte única no domínio** (padrão do `Product.effectiveTaxRate()`):
+  `Invoice.outstandingAmount()` + `Invoice.deriveStatusFromPayments()`, e
+  `InvoiceStatus.isRealisedSale()`/`isCollectable()`. O `POSService.deriveStatus` privado foi
+  **eliminado** — POS, faturação, tesouraria e relatórios passam pela mesma regra. `createReceipt`
+  aceita vários recibos até o saldo zerar e recusa valor ≤ 0 ou acima do saldo; `cancelReceipt`
+  devolve só o valor daquele recibo; `payInvoice` exige MANAGER/ADMIN e move só o saldo.
+- **Desktop:** coluna **Em Dívida** na tabela de faturas, 2.º recibo permitido sobre
+  `PARTIALLY_PAID`, valor sugerido = saldo (não o total) e mensagem que distingue recibo parcial
+  de liquidação.
+- **Verificação:** 15 testes novos (`ReportServiceTest` e `FinanceServiceTest` novos), **12
+  confirmados a falhar contra o código antigo**. `POSServiceTest` (19) verde após a extracção da
+  regra. `mvn -o clean test` → **371 testes, 0 falhas/erros/ignorados** (eram 356).
+- Spec/harness: [docs/RECEBIMENTOS_SALDO_SPEC.md](../docs/RECEBIMENTOS_SALDO_SPEC.md) +
+  [docs/RECEBIMENTOS_SALDO_HARNESS.md](../docs/RECEBIMENTOS_SALDO_HARNESS.md) (RP-01..23 auto,
+  RP-50..56 manuais).
+- **VALIDADO AO VIVO (RP-50..57):** backend de pé (H2, dados de demo), percurso HTTP completo com
+  ADMIN e EMPLOYEE. Fatura de 950,00: recibo de 400 → `PARTIALLY_PAID`; recibo de 700 sobre saldo
+  de 550 → **recusado** com a mensagem exacta; recibo de 550 → `PAID` (tesouraria 18.464,50 →
+  19.414,50); anular o recibo de 400 → volta a **`PARTIALLY_PAID`** com 550 (não a `APPROVED`) e
+  estorna 400; dashboard, relatório diário e contas correntes **de acordo** (`1 / 950.00`,
+  400,00 por cobrar); EMPLOYEE recusado no `pay-invoice`; `payInvoice` moveu **400** (o saldo) e
+  não 950.
+- **Bug adicional encontrado durante a validação:** `POST /api/comercial/receipts` devolvia **500**
+  apesar de gravar — `LazyInitializationException` no `toDTO` chamado **fora** da transacção pelo
+  controller (`open-in-view=false`). Pré-existente e independente dos fixes de saldo, mas
+  **agravado** por eles: antes a fatura ficava logo `PAID` e a repetição era recusada; agora
+  continua cobrável, pelo que repetir criaria um 2.º recibo e duplicaria a caixa. Corrigido pela
+  regra do próprio projecto (CLAUDE.md #3/#4): `createReceipt` e `getReceiptsByCompany` devolvem
+  `ReceiptDTO` convertido **dentro** da transacção. O `GET /receipts` tinha o mesmo defeito latente.
+- **Dados existentes:** faturas marcadas `PAID` por recibo parcial antes deste fix ficam como
+  estão — query de diagnóstico na §5 da spec.
+- **Por validar na UI Swing:** coluna Em Dívida, aviso de recibo parcial e valor sugerido no
+  diálogo (o backend está validado; a UI chama exactamente estes endpoints).
+- **Lacunas de gestão levantadas na mesma auditoria, por fazer:** sem `dueDate`/aging (não se sabe o
+  que está **em atraso**), sem limite de crédito do cliente, margem calculada com o preço de compra
+  **actual** (não o do acto da venda), **zero paginação** em todo o sistema (o dashboard carrega
+  todas as faturas da empresa), e **sem contabilidade** (nem plano de contas, nem razão, nem
+  balancete). Esta última é a maior ausência para um ERP de gestão.
+
+### Progresso — 2026-08-08 (contexto de utilizador/empresa passa a fail-closed)
+
+- **Encontrado a auditar a arquitectura a pedido do utilizador:** o `CurrentUserContext` inventava
+  uma sessão quando não havia nenhuma — papel **`ADMIN`** e empresa **`1`**. Como o `PermissionGuard`
+  (única guarda de papel do sistema) lê `getRole()`, **todas** as chamadas a `requireAdmin`/
+  `requireManagerOrAdmin` eram no-ops em qualquer thread sem contexto, contra o tenant errado.
+- **O fallback era load-bearing:** o `DataLoader` semeia tickets/despesas **através dos Services**
+  (`crmService.createTicket`, `hrService.submitExpense`) sem contexto — só funcionava porque a empresa
+  em falta virava `1`, que **por acaso** é a `ptCompany` (a primeira gravada). Mudar a ordem do seed
+  aterrava os dados no tenant errado, sem erro. Agora declara
+  `CurrentUserContext.runAsSystem(ptCompany.getId(), …)`.
+- **Correcção:** `getRole()` sem contexto → `""` (o guard recusa); `getCurrentCompanyId()` → lança
+  em vez de assumir a empresa 1; variantes **nullable** `findCurrentUser`/`findCurrentCompanyId` para
+  infra que corre sem tenant (`UIHelper.loadAsync`, superadmin); `runAsSystem(...)` torna a elevação
+  de privilégio **explícita e greppável**. O sino de notificações deixou de mostrar alertas da
+  empresa 1 ao superadmin.
+- **Nota de rigor:** o backup nocturno *parecia* o suspeito, mas **não** dependia do fallback — o
+  `DatabaseBackupService` já separa `executePhysicalBackup()` (com guarda) de `runPhysicalBackup()`
+  (núcleo, para o agendador). Não foi alterado.
+- **Verificação:** CF-01/03/07/08 **confirmados a falhar contra o código antigo**. Ligar o fail-closed
+  fez cair **8 testes em 2 classes** que dependiam dos fallbacks sem o declarar (`MulticoreServicesTest`,
+  `ReceiptPrintServiceTest`) — passaram a declarar o contexto, sem mudar asserções.
+  `mvn -o clean test` → **356 testes, 0 falhas/erros/ignorados**.
+- Spec/harness: [docs/CONTEXTO_FAIL_CLOSED_SPEC.md](../docs/CONTEXTO_FAIL_CLOSED_SPEC.md) +
+  [docs/CONTEXTO_FAIL_CLOSED_HARNESS.md](../docs/CONTEXTO_FAIL_CLOSED_HARNESS.md) (CF-01..08 auto,
+  CF-50..54 manuais).
+- **Pendente manual:** CF-50..54 (com o backend de pé), em especial **CF-53** — login do superadmin no
+  desktop.
+
+### Progresso — 2026-08-07 (redução incremental de dependências entre domínios)
+
+- Centralizada em `CompanyService.getCurrentCompanyReference` a resolução de empresa usada para
+  associações entre agregados, com validação obrigatória da empresa activa antes da consulta.
+- `ProductCategoryService`, `TaxRateService` e `WithholdingService` deixaram de importar e chamar
+  directamente `CompanyRepository`; passam agora pela API pública do domínio `company`.
+- Novo `CompanyServiceTest` cobre empresa activa e recusa cross-tenant antes do Repository.
+- Verificação: compilação limpa; `mvn -q test` → **347 testes, 0 falhas/erros/ignorados**.
+- Próxima fatia: separar o acesso do POS a entidades comerciais/inventário por contratos próprios,
+  numa alteração isolada devido à atomicidade checkout → stock → pagamentos.
+
+### Progresso — 2026-08-05 (POS: operação rápida e acabamento profissional)
+
+- Cabeçalho simplificado: Cliente e Código de barras sempre visíveis; Armazém e Conta ficam em
+  **Mais opções**, sem perder a selecção usada no checkout.
+- Atalhos reais: **F2** produto, **F4** cliente, **F6** quantidade, **F9** finalizar e **Delete** só
+  com foco no carrinho. Duplo clique reutiliza o editor de quantidade, inclusive decimal.
+- Numerário ganhou recebimento rápido Exacto/100/200/500/1000 MT, ligado ao cálculo de troco existente.
+- Spec/harness: `docs/POS_OPERACAO_RAPIDA_SPEC.md` e `docs/POS_OPERACAO_RAPIDA_HARNESS.md`.
+- Verificação: `mvn clean compile`, testes focados do POS e `mvn test` completos verdes.
+
+### Correcção — 2026-08-05 (IVA visível no POS e recibo térmico)
+
+- Corrigido o fallback visual de produtos sem taxa explícita: o carrinho usa a mesma taxa padrão do
+  checkout, em vez de os apresentar incorrectamente como isentos.
+- Recibo térmico passa a identificar a taxa em cada artigo (`IVA: 16%`, `IVA: 5%` ou `IVA: Isento`),
+  mantendo Subtotal, IVA agregado e Total no resumo.
+- `POSKeyboardShortcutTest`, `ReceiptPrintServiceTest` e `POSServiceTest` verdes; compilação limpa.
+- Layout térmico ajustado para 80 mm: duas colunas (Artigo 65% / Total 35%), com quantidade × preço
+  e IVA empilhados sob a descrição para evitar texto e valores apertados.
+
+### Progresso — 2026-08-06 (IVA: a taxa é do artigo, não do ecrã — bug fiscal fechado)
+
+- **Bug encontrado a auditar o IVA a pedido do utilizador** ("o IVA está incluso no POS e noutros
+  lugares?"): o **mesmo artigo** era tributado de forma diferente conforme a porta. Provado ao vivo:
+  Farinha de Trigo, cadastrada **IVA Isento** — fatura `80,00 + 12,80 = 92,80`, POS `80,00 + 0,00`.
+- **Causa:** `ComercialService` usava a taxa **enviada no pedido HTTP** e o `ComercialPanel` gravava
+  lá `TaxRates.STANDARD_VAT` fixo (16%). O POS, esse, já lia a taxa do artigo. Contaminava a fatura,
+  a encomenda, a fatura gerada da encomenda, a guia e a NC (que herdam a linha), a **declaração
+  mensal de IVA** e o **SAF-T** — ambos lêem `invoice.taxAmount`.
+- **Correcção:** `Product.effectiveTaxRate()` passa a ser a **fonte única** (mesmo padrão do
+  `effectiveUnitPrice`): taxa do cadastro, senão a padrão. Chamada por `POSService.checkout`,
+  `createInvoice` e `createOrder`; o POS deixou de repetir a regra. `ProductDTO.effectiveTaxRate()`
+  espelha-a só para a pré-visualização do rascunho nos painéis. O campo `taxRate` do pedido
+  mantém-se por compatibilidade mas é **ignorado** — era a porta que permitia a qualquer integração
+  faturar à taxa que quisesse.
+- **Verificação:** `ProductTest` (4, IV-04..07) + `ComercialServiceTest` (+3, IV-01..03) —
+  **confirmado que IV-01/02 falham contra o código antigo**. `mvn -o clean test` → **343 testes, 0
+  falhas**. Ao vivo: fatura de artigo isento com pedido a insistir em 16% → **IVA 0,00**, igual ao
+  POS; artigo a 5% → 7,00 sobre 140 (e não 22,40).
+- **Compras (fechado a seguir, 2026-08-06):** numa compra manda a **factura do fornecedor**, não o
+  cadastro — o mesmo artigo chega com taxas diferentes de fornecedores diferentes. `PurchaseService`
+  e `PurchaseOrderService` passaram a usar a taxa indicada na linha e, sem ela, `effectiveTaxRate()`
+  do artigo; nunca a constante. Campo **"IVA da factura (%)"** no `ComprasPanel` (aceita `16`/`5,5`,
+  vazio = taxa do artigo) + coluna IVA no rascunho. DTOs com campo opcional e construtor
+  retrocompatível. `PurchaseOrderServiceTest` +2 (IV-11/12), **verificados a falhar contra os 16%
+  cegos**. `mvn -o clean test` → **345 testes, 0 falhas**.
+- Spec/harness: [docs/IVA_TAXA_CANONICA_SPEC.md](../docs/IVA_TAXA_CANONICA_SPEC.md) +
+  [docs/IVA_TAXA_CANONICA_HARNESS.md](../docs/IVA_TAXA_CANONICA_HARNESS.md).
+
+### Progresso — 2026-08-01 (notificações: marcar como lida — sino **e** página)
+
+- **Porquê estado no cliente:** as notificações são **derivadas** (agregam aprovações, stock,
+  validades e assinatura em tempo real), não entidades com id — não há "read flag" no servidor. Novo
+  `NotificationReadStore`: chave estável `type|title|detail|when` + conjunto de lidas nas
+  **Preferences** do utilizador (sobrevive ao reinício; sem Preferences funciona em memória, com
+  tecto de 200 chaves).
+- **Sino:** badge passa a contar **não-lidas**; cada notificação do popup é um submenu com **Abrir
+  módulo** e **Marcar como lida**; entrada **Marcar todas como lidas** (desactivada se não houver).
+- **Página `NotificationsPanel` alinhada** (fechou o limite v1 da spec): coluna **Leitura**
+  (`Por ler`/`Lida`), dropdown de filtro por leitura, botões **Marcar como lida** / **Marcar todas
+  como lidas** e resumo "N por ler de M". Sino e página partilham a **mesma instância** do store; a
+  página avisa o `MainFrame` por `IntConsumer` e o **badge actualiza sem novo pedido HTTP**.
+- **Também aqui:** correcção do estado vazio das tabelas (`TableEmptyState`) — o overlay "Sem
+  registos." podia sobreviver a actualizações consecutivas do modelo/sorter e ficar por cima de
+  linhas reais; passou a confirmar-se após os listeners do Swing/`RowSorter`, com barreira defensiva
+  no layout. Regressão coberta em `TableUxTest`.
+- **Verificação:** `mvn -o clean compile` limpo; `NotificationReadStoreTest` (5, NL-01..05) +
+  `NotificationsPanelTest` (2, NL-06/07) + `NotificationFeedTest` (2) + `TableUxTest` (6) verdes.
+  Spec/harness: [docs/NOTIFICACOES_LIDAS_SPEC.md](../docs/NOTIFICACOES_LIDAS_SPEC.md) +
+  [docs/NOTIFICACOES_LIDAS_HARNESS.md](../docs/NOTIFICACOES_LIDAS_HARNESS.md).
+- **Pendente manual:** NL-50..59 (UI ao vivo, com backend de pé).
+
+### Progresso — 2026-07-27 (piloto UX: documento em painel completo, não modal — Encomenda)
+
+- **Decisão de UX (2026-07-27):** híbrido — listagem como ecrã principal, **painel completo** para
+  documentos com linhas, **modais só para acções curtas**. Piloto aplicado à **criação de Encomenda**.
+- **Feito (só UI):** novo componente reutilizável `com.phcpro.gui.components.DocumentEditorHost`
+  (barra: **← Voltar à lista** com guarda de alterações + título + **Guardar**). A aba **Encomendas**
+  passou a `CardLayout` (lista ⇄ editor): **Nova Encomenda** mostra o editor a ecrã inteiro
+  (reutiliza o mesmo `orderFormContent` + `issueOrderOrThrow`) em vez do modal; **Guardar** cria,
+  informa, recarrega e volta à lista; **Voltar** confirma descarte se houver rascunho. O modal
+  `openOrderFormDialog` foi **removido**.
+- **Verificação:** `DocumentEditorHostTest` (2, DE-01/02); build limpo. Spec/harness:
+  [docs/DOCUMENTO_PAINEL_EDITOR_SPEC.md](../docs/DOCUMENTO_PAINEL_EDITOR_SPEC.md) +
+  [docs/DOCUMENTO_PAINEL_EDITOR_HARNESS.md](../docs/DOCUMENTO_PAINEL_EDITOR_HARNESS.md).
+- **Alastrado à Fatura (2026-07-31):** a aba Faturação passou ao mesmo padrão (CardLayout lista⇄editor,
+  reutiliza `invoiceFormContent` + `submitInvoiceOrThrow`, modal `openInvoiceFormDialog` removido). O
+  `DocumentEditorHost` ganhou **scroll vertical** (formulários altos deixam de cortar os botões de baixo).
+- **A seguir:** Compras (encomenda a fornecedor); suportar **editar** documento existente no host.
+
+### Progresso — 2026-07-23 (central de notificações + bell)
+
+- **Nova página `NotificationsPanel`:** tabela pesquisável/filtrável por tipo com alertas reais de
+  aprovações pendentes, stock abaixo do mínimo, lotes vencidos/a vencer em 30 dias e assinatura em
+  risco. Ações **Atualizar** e **Abrir módulo** encaminham para Aprovações, Stock ou Configurações.
+- **Bell na barra superior:** contador de alertas + dropdown com as 5 primeiras notificações. O item
+  **Ver todas** navega para a página completa. Recarrega ao trocar de empresa.
+- **Cliente-fino e EDT:** `NotificationFeed` agrega apenas clientes HTTP; bell/página carregam via
+  `SwingWorker`. O `companyId` é capturado no EDT e passado explicitamente à thread de fundo, evitando
+  perder o tenant por causa do `CurrentUserContext` ser `ThreadLocal`; respostas antigas são ignoradas
+  quando a empresa muda durante o carregamento.
+- **Testes:** `NotificationFeedTest` cobre agregação das quatro fontes + estado vazio;
+  `DesktopThinContextTest` confirma que o desktop continua sem DataSource/Services backend.
+  `mvn test` → **321 testes, 0 falhas/erros/ignorados** (51 suites).
+
+### Progresso — 2026-07-23 (lote de UX das tabelas: auto-hide, estados vazios, menu de contexto, loading)
+
+- **Pedido do utilizador (4 melhoras de UI, todas):** ligadas centralmente em `styleScrollPane`.
+  1. **Barra de navegação auto-esconde** (só quando a tabela transborda) + **atalhos** Home/End/
+     PgUp/PgDn na tabela (`TableNavigator`).
+  2. **Estados vazios** (`TableEmptyState`, novo): tabela sem linhas mostra "Sem registos." (texto
+     personalizável por `putClientProperty("emptyText", …)`), overlay centrado que não tapa dados.
+  3. **Menu de contexto** (`TableContextMenu`, novo): botão direito selecciona a linha e abre
+     Copiar linha/célula · Ir topo/fundo (genérico; acções de domínio ficam nos botões).
+  4. **Feedback de carregamento** (`UIHelper.loadAsync`): busca fora do EDT + cursor de espera;
+     adoptado na aba **Guias de Remessa** (referência; restantes painéis adoptam incrementalmente).
+- **Verificação:** `TableNavigatorTest` (9, +UX-01/02) + `TableUxTest` (5, UX-03..06). Spec/harness:
+  [docs/UI_TABELAS_UX_SPEC.md](../docs/UI_TABELAS_UX_SPEC.md) + [docs/UI_TABELAS_UX_HARNESS.md](../docs/UI_TABELAS_UX_HARNESS.md).
+
+### Progresso — 2026-07-23 (barra lateral de navegação em todas as tabelas)
+
+- **Pedido do utilizador:** botões laterais nas tabelas para navegar (topo/cima/baixo/fundo), como
+  noutros sistemas. Spec+harness.
+- **Feito (só UI, sem backend):** novo componente `com.phcpro.gui.components.TableNavigator` — barra
+  vertical (Topo `fas-angle-double-up`, Página acima `fas-angle-up`, Página abaixo `fas-angle-down`,
+  Fundo `fas-angle-double-down`) **fora da tabela, no EAST do contentor** do scroll (mesmo padrão do
+  rodapé `maybeAddListingFooter`, que vai ao SOUTH) — não sobrepõe células. **DRY:** ligada
+  **num só ponto** — `UIHelper.styleScrollPane(...)` instala-a quando o conteúdo é uma `JTable`, pelo
+  que **cobre transversalmente todas as ~60 tabelas** sem tocar nos ~80 sítios. Opera sobre a
+  `JScrollBar` vertical (independente do modelo/filtro), idempotente, ícones vectoriais (sem emojis).
+- **Verificação:** `TableNavigatorTest` (7, JUnit puro — TN-01..07). Spec/harness:
+  [docs/TABELAS_NAVEGACAO_SPEC.md](../docs/TABELAS_NAVEGACAO_SPEC.md) +
+  [docs/TABELAS_NAVEGACAO_HARNESS.md](../docs/TABELAS_NAVEGACAO_HARNESS.md).
+
+### Progresso — 2026-07-23 (Guia de Remessa ao cliente a partir da encomenda — backend + desktop)
+
+- **Pedido do utilizador:** converter encomenda em guia, à maneira profissional (spec+harness).
+  **Reverte** a decisão de 2026-06-21 (MOVIMENTOS_COMERCIAIS §7.1 dizia "não é requisito").
+- **Regra central (decidida com o utilizador): caminhos separados.** Uma encomenda vira **guia OU
+  fatura**, nunca as duas; para faturar mercadoria expedida por guia, faz-se **nova encomenda**.
+  Consequência: **`billOrder` NÃO foi alterado** (continua a exigir `PENDING` e a baixar stock).
+- **Feito (backend):** novo documento `DeliveryGuide` + linhas no módulo `comercial`, série **`GR`**
+  numerada por empresa (migração **V34**, `UNIQUE(company_id, guide_number)` — respeita a V31).
+  `DeliveryGuideService` no molde do `StockTransfer`: nasce `PENDING_APPROVAL` e o **stock (SALE) sai
+  só na aprovação** (FEFO, via `inventoryService.registerMovement` — mesmo caminho da faturação),
+  MANAGER/ADMIN + auditoria. Gerar a guia trava a encomenda (`PENDING → GUIDE_PENDING → GUIDED`);
+  rejeitar/cancelar liberta-a (`→ PENDING`). Controller `/api/comercial/delivery-guides`
+  (create/approve/reject/cancel/list/get) + PDF `DeliveryGuidePrintService`
+  (`GET /api/print/delivery-guide/{id}`, reutiliza cabeçalho/linhas partilhados + transporte/assinaturas).
+- **Verificação:** `mvn clean compile` → **BUILD SUCCESS** (461 fontes);
+  `DeliveryGuideServiceTest` (9, Mockito puro — GR-01..GR-10); `mvn test` → **305 testes,
+  0 falhas/erros/ignorados** (48 suites; contexto Spring arranca com os novos beans).
+- Spec/harness: [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](../docs/GUIA_REMESSA_ENCOMENDA_SPEC.md) +
+  [docs/GUIA_REMESSA_ENCOMENDA_HARNESS.md](../docs/GUIA_REMESSA_ENCOMENDA_HARNESS.md) (§9 UI, GR-60..69).
+  Canónico [MOVIMENTOS_COMERCIAIS.md](../MOVIMENTOS_COMERCIAIS.md) actualizado (§1, §2, §4, §5.1, §7.1).
+- **Fase 2 (feita) — UI cliente-fino + Movimentos:** `ComercialApiClient` ganhou list/get/create/
+  approve/reject/cancel/print da guia (só HTTP/DTO). `ComercialPanel`: botão **"Converter em Guia"** na
+  aba Encomendas (modal de transporte) + aba **"Guias de Remessa (GR)"** (aprovar/rejeitar/cancelar/
+  imprimir/atualizar, com aviso de saída de stock na aprovação). **A conversão aparece nos Movimentos:**
+  `MovimentoTipo.GUIA_REMESSA` + `MovimentosService` agrega `delivery_guides` (`MovimentosServiceTest`
+  ajustado ao novo repositório). Harness GR-60..69 actualizado com o percurso desktop completo.
+- **Pendente manual:** validação ao vivo (GR-50..55 backend, GR-61..69 desktop) com o backend de pé; regra de
+  stock/guardas ficam no backend (a UI só chama HTTP).
+
+### Progresso — 2026-07-22 (suite completa a correr localmente — fim da limitação de RAM)
+
+- **Lacuna fechada:** a suite `@SpringBootTest` **só corria na CI** — localmente rebentava por RAM
+  (visto em várias iterações). Causa raiz: cada teste de integração define um `spring.datasource.url`
+  próprio → **contexto Spring distinto** por classe; a cache não os reutiliza mas mantinha **8 contextos
+  ERP completos vivos ao mesmo tempo**.
+- **Fix (só código de teste/build, nada no runtime de produção):**
+  - `src/test/resources/spring.properties` → `spring.test.context.cache.maxSize=1` (evicta o contexto
+    anterior antes de construir o próximo; pico de RAM ~8× menor, **sem** perda de reutilização — cada
+    contexto já era usado por uma só classe).
+  - `src/test/resources/application-test.properties` (perfil `test`): pool Hikari mínimo, springdoc +
+    consola H2 desligados, logging silencioso. **Não** mexe em `headless` — os testes de contexto
+    completo carregam beans Swing e exigem `headless=false` (ver `MulticoreServicesTest`).
+  - `pom.xml`: `maven-surefire-plugin` com `forkCount=1`/`reuseForks=true` (um só JVM, para a cache ser
+    eficaz) + `-Xmx1536m`.
+- **Verificado localmente:** `mvn -o clean test` → **296 testes, 0 falhas, 0 erros, 0 ignorados** (47
+  classes). Log confirma a eviction (pool do contexto anterior fecha ao arrancar o seguinte).
 
 ### Progresso — 2026-07-21 (dados completos da empresa em TODOS os documentos)
 
@@ -961,3 +1344,73 @@ mvn clean test      → BUILD SUCCESS, 193 testes, 0 falhas (2026-07-01)
 ```
 
 Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Critério único: `mvn compile`.
+
+### Consistência profissional da UI Swing — 2026-08-09
+
+- Criadas a especificação `docs/UI_CONSISTENCIA_PROFISSIONAL_SPEC.md` e o harness
+  `docs/UI_CONSISTENCIA_PROFISSIONAL_HARNESS.md`.
+- Uniformizados inputs tipados, selects, botões, tabelas, estados vazios/loading, acessibilidade e
+  submissões assíncronas com protecção contra duplo clique e respostas de empresa obsoletas.
+- Removidas chamadas remotas síncronas identificadas nos fluxos prioritários de POS, Stock,
+  Comercial, Compras, RH, CRM, Financeiro e Configuração.
+- Decompostos os seis painéis prioritários, todos agora abaixo de 1.000 linhas; o limite está
+  protegido por `UiPanelDecompositionTest`.
+- `mvn dependency:analyze` revisto: starters Spring Boot e drivers runtime reportados como unused
+  são necessários por boot/autoconfiguração; nenhuma dependência declarada pôde ser removida com
+  segurança. A redução efectuada foi de acoplamento interno da UI.
+- Verificação: harness focado verde; `mvn clean test` verde com **391 testes, 0 falhas, 0 erros e
+  0 ignorados**.
+- Pendente apenas a evidência manual UI-50..62 em Windows real (escalas, temas, API lenta e
+  periféricos POS), conforme o harness; não é substituída por testes headless.
+
+### Layout responsivo do POS — 2026-08-11
+
+- Catálogo/carrinho passam a iniciar em 36/64, com mínimos operacionais de 380/650 px.
+- A tabela preserva as larguras das oito colunas com scroll horizontal abaixo de 900 px e volta a
+  preencher o viewport quando existe largura confortável.
+- Totais e acções de checkout permanecem fixos; apenas as linhas da tabela fazem scroll.
+- Spec e harness: `docs/POS_LAYOUT_RESPONSIVO_SPEC.md` e `docs/POS_LAYOUT_RESPONSIVO_HARNESS.md`.
+# Carrinho operacional do POS
+
+- O carrinho foi compactado para seis colunas essenciais, eliminando a rolagem horizontal no
+  viewport operacional de 620 px.
+- Produtos adicionados ou incrementados ficam seleccionados e visíveis automaticamente.
+- Nova barra de quantidade oferece diminuir, editar (F6) e aumentar, mantendo totais e checkout fixos.
+- Promoção, lote e série permanecem acessíveis no tooltip da linha.
+- Correcção visual: a tabela permanece auto-ajustável abaixo de 620 px e reserva altura para pelo
+  menos três linhas; "Mais opções" abre um diálogo sem comprimir o workspace.
+- Correcção de altura: pesquisa/selecção de cliente ficam na mesma linha; subtotal, IVA e total
+  foram unidos numa faixa; Fiado passou para a linha de acções, libertando o corpo da tabela.
+- Ritmo vertical compactado no POS: margem externa 14 px, secções 6 px e cartão 8 px; inputs sobem
+  para junto das acções de caixa e o espaço recuperado aumenta o viewport do carrinho.
+- Cabeçalho POS final em linha única: Pesquisa, Cliente, Armazém, Conta e Código de barras usam
+  larguras responsivas de 20/22/16/18/24%; removido o fluxo "Mais opções".
+- Catálogo POS paginado no servidor em blocos de 36, com pesquisa/disponibilidade antes da
+  transferência, debounce de 300 ms e navegação Anterior/Próximo. Scanner consulta endpoint directo
+  para continuar independente da página actual.
+- Corrigida activação operacional: uma instância antiga do backend ficou temporariamente na porta
+  8080 durante o reinício. Endpoint verificado ao vivo e coberto por novo teste HTTP autenticado.
+- Spec e harness: `docs/POS_CARRINHO_OPERACIONAL_SPEC.md` e
+  `docs/POS_CARRINHO_OPERACIONAL_HARNESS.md`.
+- Catálogo POS passa a abrir em **Todos**: produtos esgotados aparecem atenuados, etiquetados e sem
+  clique; filtro **Disponíveis** preserva a vista rápida. O estado continua vindo do endpoint
+  canónico de vendáveis e scanner/balança também bloqueiam esgotados.
+- Spec/harness: `docs/POS_CATALOGO_ESTADO_STOCK_SPEC.md` e
+  `docs/POS_CATALOGO_ESTADO_STOCK_HARNESS.md`.
+
+### Paginação uniforme das tabelas — 2026-08-16
+
+- Listagens Swing carregadas integralmente passam a receber paginação local central (25/50/100/200),
+  aplicada depois dos filtros e recalculada com alterações do modelo.
+- Listagens de crescimento elevado mantêm paginação no servidor via `TablePager`/`PageResponse`;
+  tabelas transaccionais (carrinho, linhas e diálogos) permanecem contínuas.
+- Spec/harness: `docs/TABELAS_PAGINACAO_UNIFORME_SPEC.md` e
+  `docs/TABELAS_PAGINACAO_UNIFORME_HARNESS.md`.
+- Navegação lateral externa refinada: início/Page Up/Page Down/fim com nomes acessíveis, tooltips
+  claros e desactivação automática nos limites da lista.
+- Categorias: removida a lupa externa duplicada; o `SearchField` mantém uma única lupa integrada.
+- POS: hierarquia cromática semântica aplicada aos botões (verde, azul, âmbar, vermelho e grafite),
+  substituindo acções operacionais que pareciam pretas.
+- Paginação: controlos separados por 8 px e margem vertical de 10 px antes das acções inferiores.
+- Backup automático: deixa de tentar `pg_dump` no backend H2; a execução interactiva usa backup
+  lógico JSON, enquanto PostgreSQL mantém o `.dump` físico restaurável.

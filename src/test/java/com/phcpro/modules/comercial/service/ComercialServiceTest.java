@@ -14,6 +14,7 @@ import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.comercial.model.Order;
 import com.phcpro.modules.comercial.model.OrderLine;
 import com.phcpro.modules.comercial.model.Product;
+import com.phcpro.modules.comercial.model.Receipt;
 import com.phcpro.modules.comercial.repository.ClientRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.OrderLineRepository;
@@ -33,8 +34,12 @@ import com.phcpro.modules.numbering.service.DocumentSeries;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,6 +72,8 @@ class ComercialServiceTest {
     private DocumentNumberService documentNumberService;
     private AuditLogService auditLogService;
     private com.phcpro.modules.fiscal.repository.TaxRateRepository taxRateRepository;
+    private ReceivablesService receivablesService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private ComercialService service;
 
     private Company company;
@@ -78,6 +85,7 @@ class ComercialServiceTest {
     private static final Long CLIENT_ID = 5L;
     private static final Long WAREHOUSE_ID = 10L;
     private static final Long PRODUCT_ID = 100L;
+    private static final Long TREASURY_ID = 20L;
 
     @BeforeEach
     void setUp() {
@@ -98,11 +106,14 @@ class ComercialServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
         taxRateRepository = mock(com.phcpro.modules.fiscal.repository.TaxRateRepository.class);
+        receivablesService = mock(ReceivablesService.class);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new ComercialService(clientRepository, productRepository, productCategoryRepository,
                 invoiceRepository, approvalService, companyRepository, warehouseRepository, inventoryService,
                 receiptRepository, financeService, treasuryAccountRepository, orderRepository, orderLineRepository,
-                walkInClientProvider, documentNumberService, auditLogService, taxRateRepository);
+                walkInClientProvider, documentNumberService, auditLogService, taxRateRepository,
+                receivablesService, eventPublisher);
 
         company = company(COMPANY_ID);
         client = client(CLIENT_ID, "Cliente Loja");
@@ -116,6 +127,20 @@ class ComercialServiceTest {
     @AfterEach
     void tearDown() {
         CurrentUserContext.clear();
+    }
+
+    @Test
+    void posCatalogPageAppliesSearchAvailabilityAndServerPageSize() {
+        when(inventoryService.getInStockProductIdsForSale(COMPANY_ID)).thenReturn(java.util.Set.of(PRODUCT_ID));
+        when(productRepository.findPOSCatalogPage(eq(COMPANY_ID), eq("arroz"), eq(true),
+                eq(java.util.Set.of(PRODUCT_ID)), any()))
+                .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 36), 1));
+
+        var page = service.getPOSCatalogPage("  arroz  ", true, 0, 36);
+
+        assertEquals(1, page.items().size());
+        assertTrue(page.items().getFirst().sellable());
+        assertEquals(36, page.size());
     }
 
     // ────────────────────────── createInvoice ──────────────────────────
@@ -160,6 +185,111 @@ class ComercialServiceTest {
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
     }
 
+    @Test // VA-11
+    void createInvoice_semVencimentoNoPedido_usaOPrazoDoCliente() {
+        stubInvoiceLookups();
+        client.setPaymentTermsDays(30);
+
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        assertEquals(LocalDate.now().plusDays(30), dto.dueDate());
+        assertEquals(0, dto.daysOverdue(), "acabada de emitir não pode nascer em atraso");
+    }
+
+    @Test // VA-12
+    void createInvoice_comVencimentoNoPedido_respeitaADataEscolhida() {
+        stubInvoiceLookups();
+        client.setPaymentTermsDays(30);
+        LocalDate escolhido = LocalDate.now().plusDays(7);
+
+        InvoiceDTO dto = service.createInvoice(new CreateInvoiceRequest(CLIENT_ID, COMPANY_ID, WAREHOUSE_ID,
+                List.of(new CreateInvoiceLineRequest(PRODUCT_ID, BigDecimal.ONE, new BigDecimal("0.16"),
+                        null, null, null)), escolhido));
+
+        assertEquals(escolhido, dto.dueDate());
+    }
+
+    @Test // MC-04
+    void createInvoice_gravaOCustoDoActoDaVendaNaLinha() {
+        stubInvoiceLookups();
+        product.setPurchasePrice(new BigDecimal("60.00"));
+        ArgumentCaptor<Invoice> saved = ArgumentCaptor.forClass(Invoice.class);
+
+        service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        verify(invoiceRepository).save(saved.capture());
+        assertEquals(new BigDecimal("60.00"), saved.getValue().getLines().get(0).getUnitCost(),
+                "o custo tem de ficar fotografado na linha, não ser lido do produto mais tarde");
+    }
+
+    @Test // MC-05
+    void billOrder_gravaOCustoNaDataDaFatura() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        product.setPurchasePrice(new BigDecimal("45.50"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(documentNumberService.next(DocumentSeries.INVOICE)).thenReturn("FT-2026/9");
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        ArgumentCaptor<Invoice> saved = ArgumentCaptor.forClass(Invoice.class);
+
+        service.billOrder(1L);
+
+        verify(invoiceRepository).save(saved.capture());
+        assertEquals(new BigDecimal("45.50"), saved.getValue().getLines().get(0).getUnitCost());
+    }
+
+    @Test // LC-20
+    void createInvoice_acimaDoLimiteDeCredito_recusaEnaoConsomeNumeroFiscal() {
+        stubInvoiceLookups();
+        doThrow(new BusinessRuleException("Limite de crédito excedido para Cliente Loja."))
+                .when(receivablesService).assertCreditAvailable(eq(client), any());
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.createInvoice(invoiceRequest(new BigDecimal("2"), null)));
+
+        assertTrue(error.getMessage().contains("Limite de crédito excedido"));
+        verify(documentNumberService, never()).next(DocumentSeries.INVOICE);
+        verify(invoiceRepository, never()).save(any());
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test // LC-21
+    void createInvoice_verificaOLimiteComOTotalCompletoDaFatura() {
+        stubInvoiceLookups();
+
+        service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        // 2 × 100 + 16% = 232,00 — uma fatura nasce por receber, logo a dívida nova é o total.
+        verify(receivablesService).assertCreditAvailable(client, new BigDecimal("232.00"));
+    }
+
+    @Test // VA-13
+    void getOutstandingInvoices_soTrazSaldoPorCobrar_eOrdenaPeloMaiorAtraso() {
+        Invoice recente = invoiceDoc("FT-2026/10", client);
+        recente.setStatus(InvoiceStatus.APPROVED);
+        recente.setTotalAmount(new BigDecimal("100.00"));
+        recente.setAmountPaid(BigDecimal.ZERO);
+        recente.setDueDate(LocalDate.now().minusDays(2));
+
+        Invoice antiga = invoiceDoc("FT-2026/1", client);
+        antiga.setStatus(InvoiceStatus.PARTIALLY_PAID);
+        antiga.setTotalAmount(new BigDecimal("500.00"));
+        antiga.setAmountPaid(new BigDecimal("200.00"));
+        antiga.setDueDate(LocalDate.now().minusDays(100));
+
+        Invoice paga = invoiceDoc("FT-2026/5", client);
+        paga.setStatus(InvoiceStatus.PAID);
+        paga.setTotalAmount(new BigDecimal("300.00"));
+        paga.setAmountPaid(new BigDecimal("300.00"));
+
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(recente, antiga, paga));
+
+        List<InvoiceDTO> outstanding = service.getOutstandingInvoicesByCompany(COMPANY_ID);
+
+        assertEquals(2, outstanding.size(), "a fatura paga não é conta corrente");
+        assertEquals("FT-2026/1", outstanding.get(0).invoiceNumber(), "a mais atrasada vem primeiro");
+        assertEquals(new BigDecimal("300.00"), outstanding.get(0).outstandingAmount());
+    }
+
     // ────────────────────────── createOrder ──────────────────────────
 
     @Test
@@ -179,6 +309,57 @@ class ComercialServiceTest {
         verify(approvalService).submitRequest(eq("ORDER"), any(), any(), any());
         // Criar encomenda não baixa stock.
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    // ─────────────────── IVA: a taxa é do artigo, não do pedido ───────────────────
+    // Regressão do bug fiscal: o painel enviava 16% fixo e o serviço aceitava, pelo que o mesmo
+    // artigo isento saía a 0% no POS e a 16% na fatura. Ver docs/IVA_TAXA_CANONICA_SPEC.md.
+
+    @Test // IV-01
+    void createInvoice_artigoIsento_ignoraTaxaDoPedido_eNaoCobraIva() {
+        product.setTaxRate(taxRateOf("0.00"));
+        stubInvoiceLookups();
+
+        // O pedido insiste em 16% (era o que o painel enviava) — o serviço tem de ignorar.
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        assertEquals(0, dto.taxAmount().compareTo(BigDecimal.ZERO), "artigo isento não pode levar IVA");
+        assertEquals(0, dto.totalBeforeTax().compareTo(new BigDecimal("200")));
+        assertEquals(0, dto.totalAmount().compareTo(new BigDecimal("200")), "total = líquido quando isento");
+    }
+
+    @Test // IV-02
+    void createInvoice_artigoComTaxaReduzida_usaAdoCadastro() {
+        product.setTaxRate(taxRateOf("0.05"));
+        stubInvoiceLookups();
+
+        InvoiceDTO dto = service.createInvoice(invoiceRequest(new BigDecimal("2"), null));
+
+        // 200 líquido a 5% = 10,00 de IVA (e não os 32,00 que os 16% do pedido dariam).
+        assertEquals(0, dto.taxAmount().compareTo(new BigDecimal("10.00")));
+        assertEquals(0, dto.totalAmount().compareTo(new BigDecimal("210.00")));
+    }
+
+    @Test // IV-03
+    void createOrder_artigoIsento_ignoraTaxaDoPedido() {
+        product.setTaxRate(taxRateOf("0.00"));
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(documentNumberService.next(DocumentSeries.ORDER)).thenReturn("EC-2026/1");
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderDTO dto = service.createOrder(invoiceRequest(new BigDecimal("2"), null));
+
+        // Importa porque a fatura herda esta linha em billOrder — divergir aqui contaminava a fatura.
+        assertEquals(0, dto.taxAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    private static com.phcpro.modules.fiscal.model.TaxRate taxRateOf(String rate) {
+        com.phcpro.modules.fiscal.model.TaxRate taxRate = new com.phcpro.modules.fiscal.model.TaxRate();
+        taxRate.setRate(new BigDecimal(rate));
+        return taxRate;
     }
 
     // ────────────────────────── billOrder ──────────────────────────
@@ -301,6 +482,112 @@ class ComercialServiceTest {
     @Test
     void cancelInvoice_semMotivo_bloqueia() {
         assertThrows(BusinessRuleException.class, () -> service.cancelInvoice(1L, "  "));
+    }
+
+    // ─────────────── Recibo: pagamento parcial não pode liquidar a fatura ───────────────
+    // Regressão do bug de recebimentos: createReceipt marcava PAID por qualquer valor e nunca
+    // acumulava amountPaid, pelo que o saldo em dívida desaparecia das contas correntes. O POS
+    // já fazia certo (settleCredit) — a mesma regra em duas portas, como no bug do IVA.
+    // Ver docs/RECEBIMENTOS_SALDO_SPEC.md.
+
+    @Test // RP-01
+    void createReceipt_pagamentoParcial_ficaParcialmentePaga_eAcumulaOValor() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("100"));
+
+        assertEquals(InvoiceStatus.PARTIALLY_PAID, invoice.getStatus(),
+                "pagar 100 de 232 não pode dar a fatura por liquidada");
+        assertEquals(0, invoice.getAmountPaid().compareTo(new BigDecimal("100.00")),
+                "o valor recebido tem de ficar na fatura, não só no recibo");
+    }
+
+    @Test // RP-02
+    void createReceipt_segundoRecibo_liquidaOSaldo_eFicaPaga() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("100"));
+        // Antes do fix a fatura já estava PAID e este 2.º recibo era recusado — o cliente
+        // ficava sem forma de pagar o resto.
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("132"));
+
+        assertEquals(InvoiceStatus.PAID, invoice.getStatus());
+        assertEquals(0, invoice.getAmountPaid().compareTo(new BigDecimal("232.00")));
+    }
+
+    @Test // RP-03
+    void createReceipt_valorAcimaDoSaldoEmDivida_bloqueia() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("500")));
+        // Não pode entrar dinheiro a mais na tesouraria por causa de um recibo mal preenchido.
+        verify(financeService, never()).registerTransaction(any(), any(), any(), any());
+    }
+
+    @Test // RP-04
+    void createReceipt_valorNaoPositivo_bloqueia() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2"));
+        stubReceiptLookups(invoice);
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.createReceipt(1L, TREASURY_ID, "CASH", BigDecimal.ZERO));
+        verify(receiptRepository, never()).save(any());
+    }
+
+    @Test // RP-05
+    void createReceipt_pagamentoTotal_liquidaAFatura() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2"));
+        stubReceiptLookups(invoice);
+
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("232"));
+
+        assertEquals(InvoiceStatus.PAID, invoice.getStatus());
+        verify(financeService).registerTransaction(eq(TREASURY_ID), eq("DEBIT"),
+                eq(new BigDecimal("232")), any());
+    }
+
+    @Test // RP-06
+    void cancelReceipt_deReciboParcial_devolveOValor_eVoltaAoEstadoCerto() {
+        Invoice invoice = approvedInvoice(new BigDecimal("2")); // total 232
+        stubReceiptLookups(invoice);
+        // Dois recibos: 100 + 132 → fatura paga. O service devolve DTO, por isso apanha-se a
+        // entidade gravada para poder anulá-la.
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("100"));
+        service.createReceipt(1L, TREASURY_ID, "CASH", new BigDecimal("132"));
+        ArgumentCaptor<Receipt> saved = ArgumentCaptor.forClass(Receipt.class);
+        verify(receiptRepository, times(2)).save(saved.capture());
+        Receipt primeiro = saved.getAllValues().get(0);
+        primeiro.setId(50L);
+        when(receiptRepository.findById(50L)).thenReturn(Optional.of(primeiro));
+
+        service.cancelReceipt(50L, "Cheque devolvido");
+
+        // Anular o 1.º recibo devolve 100 → sobram 132 pagos de 232.
+        assertEquals(0, invoice.getAmountPaid().compareTo(new BigDecimal("132.00")));
+        assertEquals(InvoiceStatus.PARTIALLY_PAID, invoice.getStatus(),
+                "ainda há 132 pagos — não pode voltar a APPROVED como se nada tivesse sido pago");
+    }
+
+    private void stubReceiptLookups(Invoice invoice) {
+        when(invoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(treasuryAccountRepository.findByIdAndCompanyId(TREASURY_ID, COMPANY_ID))
+                .thenReturn(Optional.of(treasuryAccount()));
+        when(documentNumberService.next(DocumentSeries.RECEIPT)).thenReturn("RC-2026/1");
+        when(receiptRepository.save(any(Receipt.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    private com.phcpro.modules.financeira.model.TreasuryAccount treasuryAccount() {
+        com.phcpro.modules.financeira.model.TreasuryAccount account =
+                new com.phcpro.modules.financeira.model.TreasuryAccount();
+        account.setId(TREASURY_ID);
+        account.setName("Caixa Geral");
+        account.setCompany(company);
+        return account;
     }
 
     // ────────────────────────── searchInvoices ──────────────────────────

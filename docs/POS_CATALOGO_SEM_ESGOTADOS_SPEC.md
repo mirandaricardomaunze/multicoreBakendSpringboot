@@ -1,7 +1,10 @@
 # POS — Catálogo sem produtos esgotados
 
 **Última actualização:** 2026-07-05
-**Estado:** feito.
+**Estado:** substituído por `POS_CATALOGO_ESTADO_STOCK_SPEC.md`.
+
+> Esta decisão foi revista: os produtos esgotados agora aparecem atenuados no filtro **Todos** e
+> continuam bloqueados para venda. O endpoint vendável permanece como fonte canónica do estado.
 
 ## Objectivo
 

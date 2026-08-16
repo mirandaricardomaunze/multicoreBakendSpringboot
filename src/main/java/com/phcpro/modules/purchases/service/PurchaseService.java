@@ -5,7 +5,6 @@ import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.architecture.pricing.LineCalculator;
-import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.architecture.validation.TaxIdValidator;
 import com.phcpro.modules.comercial.model.Product;
 import com.phcpro.modules.comercial.repository.ProductRepository;
@@ -141,8 +140,12 @@ public class PurchaseService {
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(lineReq.unitPrice());
             
-            // IVA à taxa-padrão (não depende do NUIT do fornecedor).
-            BigDecimal taxRate = TaxRates.STANDARD_VAT;
+            // IVA da COMPRA: manda a factura do fornecedor. Quando o operador não a indica,
+            // aplica-se a taxa do artigo (e nunca 16% cego, que inflava o IVA dedutível em bens
+            // isentos). Ver docs/IVA_TAXA_CANONICA_SPEC.md §4.
+            BigDecimal taxRate = lineReq.taxRate() != null
+                    ? lineReq.taxRate()
+                    : product.effectiveTaxRate();
             line.setTaxRate(taxRate);
 
             LineCalculator.LineAmounts amounts = LineCalculator.compute(

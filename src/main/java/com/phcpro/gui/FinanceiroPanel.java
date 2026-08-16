@@ -4,11 +4,11 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
+import com.phcpro.gui.components.TableCellRenderers;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.desktop.client.FinanceApiClient;
 import com.phcpro.modules.comercial.dto.InvoiceDTO;
-import com.phcpro.modules.comercial.model.InvoiceStatus;
 import com.phcpro.modules.financeira.dto.TreasuryAccountDTO;
 import com.phcpro.modules.financeira.dto.TreasuryTransactionDTO;
 
@@ -76,6 +76,7 @@ public class FinanceiroPanel extends JPanel {
         };
         accountsTable = new JTable(accountsModel);
         UIHelper.styleTable(accountsTable);
+        accountsTable.getColumnModel().getColumn(2).setCellRenderer(TableCellRenderers.money());
         JScrollPane accScroll = new JScrollPane(accountsTable);
         UIHelper.styleScrollPane(accScroll);
         JTextField aSearch = TableFilter.searchField("Conta ou IBAN…");
@@ -117,6 +118,8 @@ public class FinanceiroPanel extends JPanel {
         };
         movementsTable = new JTable(movementsModel);
         UIHelper.styleTable(movementsTable);
+        movementsTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
+        movementsTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
         JTextField mSearch = TableFilter.searchField("Conta ou descrição…");
@@ -135,46 +138,47 @@ public class FinanceiroPanel extends JPanel {
     }
 
     public void refreshData() {
-        loadAccountsTable();
-        loadMovementsTable();
-        loadApprovedInvoices();
+        UIHelper.loadAsync(this,
+                () -> new FinanceData(financeApiClient.getAllAccounts(), financeApiClient.getAllTransactions(),
+                        comercialApiClient.getAllInvoices()),
+                this::applyData,
+                error -> JOptionPane.showMessageDialog(this,
+                        "Não foi possível carregar a tesouraria: " + error.getMessage(),
+                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
     }
 
-    private void loadAccountsTable() {
+    private void applyData(FinanceData data) {
         accountsModel.setRowCount(0);
-        accountsList = financeApiClient.getAllAccounts();
+        accountsList = data.accounts();
         for (TreasuryAccountDTO acc : accountsList) {
             accountsModel.addRow(new Object[]{
                     acc.name(),
                     acc.accountNumber(),
-                    String.format("%,.2f MT", acc.balance())
+                    acc.balance()
             });
         }
-    }
-
-    private void loadMovementsTable() {
         movementsModel.setRowCount(0);
-        List<TreasuryTransactionDTO> txs = financeApiClient.getAllTransactions();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (TreasuryTransactionDTO tx : txs) {
+        for (TreasuryTransactionDTO tx : data.transactions()) {
             movementsModel.addRow(new Object[]{
                     tx.transactionDate().format(dtf),
                     tx.accountName(),
                     tx.description(),
                     tx.transactionType(),
-                    (tx.transactionType().equalsIgnoreCase("DEBIT") ? "+" : "-") + String.format(" %,.2f MT", tx.amount())
+                    tx.transactionType().equalsIgnoreCase("DEBIT") ? tx.amount() : tx.amount().negate()
             });
         }
-    }
-
-    private void loadApprovedInvoices() {
         approvedInvoicesList.clear();
-        for (InvoiceDTO invoice : comercialApiClient.getAllInvoices()) {
-            if (invoice.status() == InvoiceStatus.APPROVED) {
+        for (InvoiceDTO invoice : data.invoices()) {
+            if (invoice.status().isCollectable()) {
                 approvedInvoicesList.add(invoice);
             }
         }
     }
+
+    private record FinanceData(List<TreasuryAccountDTO> accounts,
+                               List<TreasuryTransactionDTO> transactions,
+                               List<InvoiceDTO> invoices) {}
 
     /** Registo de recebimento (liquidação de fatura aprovada) em modal profissional. */
     private void registerReceipt() {
@@ -206,10 +210,13 @@ public class FinanceiroPanel extends JPanel {
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Registar Recebimento",
                 "fas-money-bill-wave", "Liquidação de fatura aprovada", form)
                 .setConfirmButton("Receber", "fas-check");
-        dlg.setOnSave(() -> {
+        dlg.setOnSaveAsync(() -> {
             InvoiceDTO invoice = approvedInvoicesList.get(Math.max(0, invoiceCombo.getSelectedIndex()));
             TreasuryAccountDTO account = accountsList.get(Math.max(0, accountCombo.getSelectedIndex()));
-            financeApiClient.payInvoice(invoice.id(), account.id());
+            return () -> {
+                financeApiClient.payInvoice(invoice.id(), account.id());
+                return null;
+            };
         });
 
         if (dlg.showDialog()) {

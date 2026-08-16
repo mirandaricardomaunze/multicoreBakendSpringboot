@@ -2,7 +2,7 @@ package com.phcpro.modules.comercial.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
-import com.phcpro.modules.company.repository.CompanyRepository;
+import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.comercial.dto.CreateProductCategoryRequest;
 import com.phcpro.modules.comercial.dto.ProductCategoryDTO;
 import com.phcpro.modules.comercial.model.ProductCategory;
@@ -16,11 +16,11 @@ import java.util.List;
 public class ProductCategoryService {
 
     private final ProductCategoryRepository repository;
-    private final CompanyRepository companyRepository;
+    private final CompanyService companyService;
 
-    public ProductCategoryService(ProductCategoryRepository repository, CompanyRepository companyRepository) {
+    public ProductCategoryService(ProductCategoryRepository repository, CompanyService companyService) {
         this.repository = repository;
-        this.companyRepository = companyRepository;
+        this.companyService = companyService;
     }
 
     @Transactional
@@ -31,7 +31,7 @@ public class ProductCategoryService {
         }
         ProductCategory shared = repository.findByCode(req.code()).orElse(null);
         if (shared != null) {
-            shared.getCompanies().add(companyRepository.getReferenceById(companyId));
+            shared.getCompanies().add(companyService.getCurrentCompanyReference(companyId));
             return toDTO(repository.save(shared));
         }
         ProductCategory c = new ProductCategory();
@@ -40,7 +40,7 @@ public class ProductCategoryService {
         c.setColorHex(req.colorHex());
         c.setActive(true);
         c.setCreatedBy("SYSTEM");
-        c.getCompanies().add(companyRepository.getReferenceById(companyId));
+        c.getCompanies().add(companyService.getCurrentCompanyReference(companyId));
         return toDTO(repository.save(c));
     }
 

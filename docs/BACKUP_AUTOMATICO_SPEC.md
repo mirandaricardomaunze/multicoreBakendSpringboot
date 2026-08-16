@@ -12,6 +12,9 @@ automático diário**, com **retenção** (apaga cópias antigas) e **alerta** q
 ## Comportamento
 
 - **Agendado:** `@Scheduled(cron = "${backup.schedule.cron:0 0 23 * * *}")` — por omissão **23:00 diário**.
+- **Estratégia por base:** PostgreSQL gera `.dump` físico restaurável; no ambiente H2 de
+  desenvolvimento, a execução interactiva “Backup automático agora” usa o backup lógico JSON da
+  empresa activa, evitando tentar executar `pg_dump` numa base incompatível.
   Só actua quando `backup.schedule.enabled=true` (perfis **desktop/prod**, PostgreSQL). Em dev/backend
   H2 fica desligado (o backup físico só suporta PostgreSQL).
 - **Contexto de sistema:** corre sem utilizador autenticado, por isso chama

@@ -30,6 +30,7 @@ public class ScheduledBackupService {
     private static final long DAY_MS = 24L * 60 * 60 * 1000;
 
     private final DatabaseBackupService databaseBackupService;
+    private final BackupService backupService;
     private final AuditLogService auditLogService;
     private final boolean enabled;
     private final int retentionDays;
@@ -39,11 +40,13 @@ public class ScheduledBackupService {
 
     public ScheduledBackupService(
             DatabaseBackupService databaseBackupService,
+            BackupService backupService,
             AuditLogService auditLogService,
             @Value("${backup.schedule.enabled:false}") boolean enabled,
             @Value("${backup.retention-days:30}") int retentionDays,
             @Value("${backup.dir:backups}") String backupDir) {
         this.databaseBackupService = databaseBackupService;
+        this.backupService = backupService;
         this.auditLogService = auditLogService;
         this.enabled = enabled;
         this.retentionDays = retentionDays;
@@ -63,6 +66,15 @@ public class ScheduledBackupService {
      */
     public LastRun runAndRecord() {
         try {
+            if (!databaseBackupService.supportsPhysicalBackup()) {
+                String path = backupService.executeBackup();
+                String msg = "Backup automático lógico concluído: " + path
+                        + " (ambiente sem PostgreSQL)";
+                lastRun = new LastRun(LocalDateTime.now(), true, msg);
+                auditLogService.logEvent(null, null, "BACKUP_AUTO_OK", msg);
+                log.info(msg);
+                return lastRun;
+            }
             PhysicalBackupResultDTO result = databaseBackupService.runPhysicalBackup();
             int removed = applyRetention();
             String msg = "Backup automático concluído: " + result.filePath()

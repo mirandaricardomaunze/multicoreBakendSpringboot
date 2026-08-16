@@ -5,6 +5,11 @@ import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
+import com.phcpro.gui.components.TableCellRenderers;
+import com.phcpro.gui.components.DateField;
+import com.phcpro.gui.components.FormField;
+import com.phcpro.gui.components.MoneyField;
+import com.phcpro.gui.components.QuantityField;
 import com.phcpro.gui.components.UIHelper;
 import com.phcpro.desktop.client.ComercialApiClient;
 import com.phcpro.desktop.client.PromotionApiClient;
@@ -38,6 +43,7 @@ public class PromotionsPanel extends JPanel {
 
     private final DefaultTableModel model;
     private final JTable table;
+    private final ModernButton toggleBtn;
     private List<PromotionDTO> promotions = new ArrayList<>();
 
     public PromotionsPanel(PromotionApiClient promotionApiClient, ComercialApiClient comercialApiClient) {
@@ -55,10 +61,10 @@ public class PromotionsPanel extends JPanel {
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Promoção");
         newBtn.setIcon(UIHelper.icon("fas-tags", 14));
         newBtn.addActionListener(e -> createPromotionDialog());
-        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar / Desactivar");
+        toggleBtn = UIHelper.createSecondaryButton("Activar / Desactivar");
         toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         toggleBtn.addActionListener(e -> toggleSelected());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> reload());
 
@@ -76,6 +82,7 @@ public class PromotionsPanel extends JPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        table.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -102,11 +109,14 @@ public class PromotionsPanel extends JPanel {
 
     private void reload() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        try {
-            promotions = promotionApiClient.findByCompany(companyId);
-        } catch (Exception ex) {
-            promotions = new ArrayList<>();
-        }
+        UIHelper.loadAsync(this, () -> promotionApiClient.findByCompany(companyId), this::applyPromotions,
+                error -> JOptionPane.showMessageDialog(this,
+                        "Não foi possível carregar as promoções: " + error.getMessage(),
+                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void applyPromotions(List<PromotionDTO> loaded) {
+        promotions = loaded;
         model.setRowCount(0);
         for (PromotionDTO p : promotions) {
             model.addRow(new Object[]{
@@ -136,17 +146,26 @@ public class PromotionsPanel extends JPanel {
             return;
         }
         PromotionDTO selected = promotions.get(row);
-        try {
+        UIHelper.submitAsync(toggleBtn, () -> {
             promotionApiClient.setActive(selected.id(), !selected.active());
-            reload();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+            return null;
+        }, ignored -> reload(), error -> JOptionPane.showMessageDialog(this,
+                error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
     }
 
     private void createPromotionDialog() {
-        List<ProductDTO> products = comercialApiClient.getAllProducts();
-        List<ProductCategoryDTO> categories = comercialApiClient.getActiveCategories();
+        UIHelper.loadAsync(this,
+                () -> new PromotionOptions(comercialApiClient.getAllProducts(),
+                        comercialApiClient.getActiveCategories()),
+                this::openPromotionDialog,
+                error -> JOptionPane.showMessageDialog(this,
+                        "Não foi possível carregar produtos e categorias: " + error.getMessage(),
+                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void openPromotionDialog(PromotionOptions options) {
+        List<ProductDTO> products = options.products();
+        List<ProductCategoryDTO> categories = options.categories();
 
         JTextField nameField = new JTextField();
         JComboBox<String> typeCombo = new JComboBox<>(new String[]{"Percentagem", "Leve X, pague Y"});
@@ -156,24 +175,17 @@ public class PromotionsPanel extends JPanel {
         for (ProductDTO p : products) productCombo.addItem(p.sku() + " — " + p.name());
         for (ProductCategoryDTO c : categories) categoryCombo.addItem(c.name());
 
-        JTextField percentField = new JTextField();
-        JTextField buyField = new JTextField();
-        JTextField payField = new JTextField();
-        JTextField startField = new JTextField(LocalDate.now().toString());
-        JTextField endField = new JTextField(LocalDate.now().plusMonths(1).toString());
+        MoneyField percentField = new MoneyField();
+        QuantityField buyField = new QuantityField("", true);
+        QuantityField payField = new QuantityField("", true);
+        DateField startField = new DateField(LocalDate.now());
+        DateField endField = new DateField(LocalDate.now().plusMonths(1));
 
         UIHelper.styleTextField(nameField);
         UIHelper.styleComboBox(typeCombo);
         UIHelper.styleComboBox(scopeCombo);
         UIHelper.styleComboBox(productCombo);
         UIHelper.styleComboBox(categoryCombo);
-        UIHelper.styleTextField(percentField);
-        UIHelper.styleTextField(buyField);
-        UIHelper.styleTextField(payField);
-        UIHelper.styleTextField(startField);
-        UIHelper.styleTextField(endField);
-        startField.putClientProperty("JTextField.placeholderText", "yyyy-MM-dd");
-        endField.putClientProperty("JTextField.placeholderText", "yyyy-MM-dd");
 
         // "Leve X, pague Y" só faz sentido por produto → força e bloqueia o alcance.
         Runnable syncEnabled = () -> {
@@ -193,8 +205,9 @@ public class PromotionsPanel extends JPanel {
         scopeCombo.addActionListener(e -> syncEnabled.run());
         syncEnabled.run();
 
+        FormField nameForm = new FormField("Nome", nameField, true, null);
         JPanel form = UIHelper.createDialogForm(
-                "Nome:", nameField,
+                "", nameForm,
                 "Tipo:", typeCombo,
                 "Alcance:", scopeCombo,
                 "Produto:", productCombo,
@@ -206,78 +219,36 @@ public class PromotionsPanel extends JPanel {
                 "Fim (yyyy-MM-dd):", endField
         );
 
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Nova Promoção", "fas-percent", "Campanha de desconto na loja", form).showDialog();
-        if (!confirmed) return;
-
-        boolean percent = typeCombo.getSelectedIndex() == 0;
-        boolean byProduct = scopeCombo.getSelectedIndex() == 0;
-
-        String name = nameField.getText().trim();
-        if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O nome é obrigatório.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        Long productId = null;
-        Long categoryId = null;
-        if (byProduct) {
-            int idx = productCombo.getSelectedIndex();
-            if (idx < 0 || idx >= products.size()) {
-                JOptionPane.showMessageDialog(this, "Selecione um produto.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            productId = products.get(idx).id();
-        } else {
-            int idx = categoryCombo.getSelectedIndex();
-            if (idx < 0 || idx >= categories.size()) {
-                JOptionPane.showMessageDialog(this, "Selecione uma categoria.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            categoryId = categories.get(idx).id();
-        }
-
-        BigDecimal percentValue = null;
-        Integer buy = null;
-        Integer pay = null;
-        try {
-            if (percent) {
-                percentValue = new BigDecimal(percentField.getText().trim().replace(",", "."));
-            } else {
-                buy = Integer.parseInt(buyField.getText().trim());
-                pay = Integer.parseInt(payField.getText().trim());
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Valores numéricos inválidos.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        LocalDate start;
-        LocalDate end;
-        try {
-            start = LocalDate.parse(startField.getText().trim());
-            end = LocalDate.parse(endField.getText().trim());
-        } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "Datas inválidas. Use o formato yyyy-MM-dd.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            promotionApiClient.createPromotion(new CreatePromotionRequest(
-                    CurrentUserContext.getCurrentCompanyId(),
-                    name,
+        ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Nova Promoção",
+                "fas-percent", "Campanha de desconto na loja", form);
+        dialog.setOnSaveAsync(() -> {
+            if (!nameForm.validateRequired()) throw new IllegalArgumentException("Indique o nome da promoção.");
+            boolean percent = typeCombo.getSelectedIndex() == 0;
+            boolean byProduct = scopeCombo.getSelectedIndex() == 0;
+            int productIndex = productCombo.getSelectedIndex();
+            int categoryIndex = categoryCombo.getSelectedIndex();
+            if (byProduct && (productIndex < 0 || productIndex >= products.size()))
+                throw new IllegalArgumentException("Selecione um produto.");
+            if (!byProduct && (categoryIndex < 0 || categoryIndex >= categories.size()))
+                throw new IllegalArgumentException("Selecione uma categoria.");
+            BigDecimal percentValue = percent ? percentField.value() : null;
+            Integer buy = percent ? null : buyField.value().intValueExact();
+            Integer pay = percent ? null : payField.value().intValueExact();
+            LocalDate start = startField.value();
+            LocalDate end = endField.value();
+            CreatePromotionRequest request = new CreatePromotionRequest(
+                    CurrentUserContext.getCurrentCompanyId(), nameField.getText().trim(),
                     percent ? "PERCENT" : "BUY_X_GET_Y",
-                    productId,
-                    categoryId,
-                    percentValue,
-                    buy,
-                    pay,
-                    start,
-                    end
-            ));
+                    byProduct ? products.get(productIndex).id() : null,
+                    byProduct ? null : categories.get(categoryIndex).id(),
+                    percentValue, buy, pay, start, end);
+            return () -> { promotionApiClient.createPromotion(request); return null; };
+        });
+        if (dialog.showDialog()) {
             reload();
-            JOptionPane.showMessageDialog(this, "Promoção '" + name + "' criada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Promoção criada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
         }
     }
+
+    private record PromotionOptions(List<ProductDTO> products, List<ProductCategoryDTO> categories) {}
 }

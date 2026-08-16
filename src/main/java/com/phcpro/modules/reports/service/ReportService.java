@@ -53,12 +53,23 @@ public class ReportService {
         this.tillMovementRepository = tillMovementRepository;
     }
 
+    /**
+     * Dashboard da loja.
+     *
+     * <p>Carregava <b>todas</b> as faturas da empresa para depois filtrar em memória o dia de
+     * hoje e o que está por cobrar. Numa loja com anos de histórico isso é a tabela inteira em
+     * RAM a cada abertura do ecrã. As duas perguntas passaram a ir na consulta: intervalo de
+     * datas para as vendas de hoje, lista de estados para o que é cobrável.
+     */
     @Transactional(readOnly = true)
     public StoreDashboardDTO buildStoreDashboard(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         LocalDate today = LocalDate.now();
-        List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId);
-        List<Invoice> salesToday = filterSalesToday(invoices, today);
+        List<Invoice> salesToday = filterRealisedSales(
+                invoiceRepository.findByCompanyIdAndCreatedAtBetween(
+                        companyId, today.atStartOfDay(), today.plusDays(1).atStartOfDay()));
+        List<Invoice> collectable = invoiceRepository.findByCompanyIdAndStatusIn(
+                companyId, InvoiceStatus.collectableStatuses());
 
         return new StoreDashboardDTO(
                 today,
@@ -66,7 +77,7 @@ public class ReportService {
                 topProductsFrom(salesToday),
                 lowStockAlertsForCompany(companyId),
                 countPendingApprovals(companyId),
-                unpaidInvoicesTotal(invoices),
+                unpaidInvoicesTotal(collectable),
                 openTillSessionsForCompany(companyId)
         );
     }
@@ -77,12 +88,9 @@ public class ReportService {
         LocalDate reportDate = date == null ? LocalDate.now() : date;
         LocalDateTime from = reportDate.atStartOfDay();
         LocalDateTime to = reportDate.plusDays(1).atStartOfDay();
-        List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId);
-        List<Invoice> sales = invoices.stream()
-                .filter(inv -> inv.getCreatedAt() != null)
-                .filter(inv -> !inv.getCreatedAt().isBefore(from) && inv.getCreatedAt().isBefore(to))
-                .filter(inv -> inv.getStatus() != InvoiceStatus.CANCELLED && inv.getStatus() != InvoiceStatus.REJECTED)
-                .toList();
+        // O intervalo vai na consulta: o relatório de um dia não tem de ler o histórico todo.
+        List<Invoice> sales = filterRealisedSales(
+                invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, from, to));
 
         return new DailyStoreReportDTO(
                 reportDate,
@@ -96,10 +104,16 @@ public class ReportService {
         );
     }
 
-    private List<Invoice> filterSalesToday(List<Invoice> invoices, LocalDate today) {
+    /**
+     * "Isto conta como venda" — a mesma definição no dashboard e no relatório diário
+     * ({@code isRealisedSale}). O dashboard contava só {@code PAID}, pelo que uma venda a fiado
+     * não aparecia num sítio e aparecia no outro: dois números para a mesma pergunta.
+     *
+     * <p>O recorte por data já vem da consulta; aqui só resta o filtro de estado.
+     */
+    private List<Invoice> filterRealisedSales(List<Invoice> invoices) {
         return invoices.stream()
-                .filter(inv -> inv.getStatus() == InvoiceStatus.PAID)
-                .filter(inv -> inv.getCreatedAt() != null && inv.getCreatedAt().toLocalDate().equals(today))
+                .filter(inv -> inv.getStatus().isRealisedSale())
                 .toList();
     }
 
@@ -167,22 +181,22 @@ public class ReportService {
         return approvalRequestRepository.findByCompanyIdAndStatus(companyId, ApprovalStatus.PENDING).size();
     }
 
+    /**
+     * Por cobrar — mesma regra das Contas Correntes
+     * ({@code ComercialService.getOutstandingInvoicesByCompany}): faturas cobráveis, contando
+     * apenas o <b>saldo em dívida</b>. Contava o total das {@code APPROVED} e ignorava por
+     * completo as {@code PARTIALLY_PAID}, pelo que quem pagasse metade desaparecia da dívida.
+     */
     private BigDecimal unpaidInvoicesTotal(List<Invoice> invoices) {
         return invoices.stream()
-                .filter(inv -> inv.getStatus() == InvoiceStatus.APPROVED)
-                .map(Invoice::getTotalAmount)
-                .filter(v -> v != null)
+                .filter(inv -> inv.getStatus().isCollectable())
+                .map(Invoice::outstandingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal outstandingCreditFor(List<Invoice> invoices) {
         return invoices.stream()
-                .map(inv -> {
-                    BigDecimal total = inv.getTotalAmount() == null ? BigDecimal.ZERO : inv.getTotalAmount();
-                    BigDecimal paid = inv.getAmountPaid() == null ? BigDecimal.ZERO : inv.getAmountPaid();
-                    BigDecimal remaining = total.subtract(paid);
-                    return remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining : BigDecimal.ZERO;
-                })
+                .map(Invoice::outstandingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -227,6 +241,11 @@ public class ReportService {
                 .toList();
     }
 
+    /**
+     * Margem bruta por produto. O custo vem do <b>acto da venda</b> ({@code line.lineCost()}),
+     * não do preço de compra actual do produto: uma alteração de preço do fornecedor não pode
+     * reescrever a margem de vendas já feitas. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+     */
     private List<ProductMarginDTO> marginByProduct(List<Invoice> sales) {
         Map<Long, ProductMarginAccumulator> acc = new java.util.HashMap<>();
         for (Invoice invoice : sales) {
@@ -236,11 +255,8 @@ public class ReportService {
                         line.getProduct().getSku(),
                         line.getProduct().getName()));
                 BigDecimal revenue = line.getLineTotal() == null ? BigDecimal.ZERO : line.getLineTotal();
-                BigDecimal purchasePrice = line.getProduct().getPurchasePrice() == null
-                        ? BigDecimal.ZERO : line.getProduct().getPurchasePrice();
-                BigDecimal quantity = line.getQuantity() == null ? BigDecimal.ZERO : line.getQuantity();
                 current.revenue = current.revenue.add(revenue);
-                current.estimatedCost = current.estimatedCost.add(purchasePrice.multiply(quantity));
+                current.estimatedCost = current.estimatedCost.add(line.lineCost());
             }
         }
         return acc.entrySet().stream()

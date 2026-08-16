@@ -1,0 +1,11 @@
+-- Custo unitário no acto da venda, gravado na linha da fatura.
+--
+-- Porquê: a margem bruta por produto lia products.purchase_price — o preço de compra ACTUAL.
+-- Bastava o fornecedor mudar de preço para a margem de vendas do mês passado mudar sozinha.
+-- O custo de uma venda é o que ela custou na altura, não o que custaria hoje.
+-- Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+--
+-- Sem backfill: as linhas antigas ficam NULL e o cálculo recorre ao preço actual do produto
+-- (InvoiceLine.effectiveUnitCost). Inventar um custo histórico que não se sabe seria pior do
+-- que assumir a estimativa — a spec diz que para essas linhas a margem é aproximada.
+alter table invoice_lines add column if not exists unit_cost numeric(14, 2);

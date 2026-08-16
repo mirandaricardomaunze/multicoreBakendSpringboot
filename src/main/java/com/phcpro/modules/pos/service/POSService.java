@@ -4,7 +4,6 @@ import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.architecture.pricing.LineCalculator;
-import com.phcpro.architecture.pricing.TaxRates;
 import com.phcpro.modules.comercial.model.*;
 import com.phcpro.modules.audit.service.AuditLogService;
 import com.phcpro.modules.comercial.dto.CreateCreditNoteRequest;
@@ -13,6 +12,7 @@ import com.phcpro.modules.comercial.repository.ClientRepository;
 import com.phcpro.modules.comercial.repository.InvoiceRepository;
 import com.phcpro.modules.comercial.repository.ProductRepository;
 import com.phcpro.modules.comercial.service.CreditNoteService;
+import com.phcpro.modules.comercial.service.ReceivablesService;
 import com.phcpro.modules.comercial.service.WalkInClientProvider;
 import com.phcpro.modules.company.model.Company;
 import com.phcpro.modules.company.repository.CompanyRepository;
@@ -67,6 +67,8 @@ public class POSService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final CreditNoteService creditNoteService;
+    private final ReceivablesService receivablesService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public POSService(
             TillSessionRepository tillSessionRepository,
@@ -83,7 +85,9 @@ public class POSService {
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            CreditNoteService creditNoteService
+            CreditNoteService creditNoteService,
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.tillSessionRepository = tillSessionRepository;
         this.tillMovementRepository = tillMovementRepository;
@@ -100,6 +104,8 @@ public class POSService {
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
         this.creditNoteService = creditNoteService;
+        this.receivablesService = receivablesService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -320,6 +326,9 @@ public class POSService {
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
         invoice.setStatus(InvoiceStatus.PAID); // Immediate payment for POS sales
+        // Vencimento: pronto pagamento por omissão, prazo do cliente quando a venda fica a fiado.
+        // Mesma regra do domínio que a faturação usa — não uma segunda cópia aqui.
+        invoice.assignDueDate(java.time.LocalDate.now(), null);
         invoice.setSalesChannel(SalesChannel.POS);
         // Venda POS é uma fatura real → número fiscal sequencial na série FT.
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
@@ -342,11 +351,9 @@ public class POSService {
             line.setQuantity(lineReq.quantity());
             line.setUnitPrice(unitPrice);
 
-            // IVA dinâmico: usa a taxa configurada no produto; sem taxa explícita aplica-se a
-            // padrão. Não depende do NUIT do cliente.
-            BigDecimal taxRate = product.getTaxRate() != null
-                    ? product.getTaxRate().getRate()
-                    : TaxRates.STANDARD_VAT;
+            // IVA dinâmico: taxa do artigo (padrão quando não tem). Regra partilhada com a fatura e
+            // a encomenda em Product.effectiveTaxRate — não duplicar aqui.
+            BigDecimal taxRate = product.effectiveTaxRate();
             line.setTaxRate(taxRate);
 
             if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.ZERO) > 0) {
@@ -359,25 +366,13 @@ public class POSService {
             line.setLineTotal(amounts.total());
             line.setBatchNumber(lineReq.batchNumber());
             line.setSerialNumber(lineReq.serialNumber());
+            // Fotografia do custo no acto da venda — a margem de hoje não pode mudar quando o
+            // preço de compra mudar. Ver docs/MARGEM_CUSTO_HISTORICO_SPEC.md.
+            line.setUnitCost(product.getPurchasePrice());
             invoice.addLine(line);
 
             subtotal = subtotal.add(amounts.net());
             totalTax = totalTax.add(amounts.tax());
-
-            // Register negative stock movement (exit)
-            String clientLabel = walkInLabel != null
-                    ? client.getName() + " — " + walkInLabel
-                    : client.getName();
-            String desc = String.format("Venda POS %s - Cliente %s", invoice.getInvoiceNumber(), clientLabel);
-            inventoryService.registerMovement(
-                    product,
-                    warehouse,
-                    lineReq.quantity().negate(),
-                    "SALE",
-                    lineReq.batchNumber(),
-                    lineReq.serialNumber(),
-                    desc
-            );
         }
 
         invoice.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
@@ -405,8 +400,18 @@ public class POSService {
             throw new BusinessRuleException("Indique pelo menos um método de pagamento.");
         }
 
+        // Fiado no balcão: o que não é pago agora vira dívida e tem de caber no limite de
+        // crédito do cliente. Venda paga na totalidade não consome crédito nenhum.
+        //
+        // A verificação vem ANTES da saída de stock: uma venda recusada não pode deixar
+        // mercadoria já descontada do armazém. (A transacção reverteria, mas depender do
+        // rollback para não fazer estragos é frágil — a ordem é que tem de estar certa.)
+        receivablesService.assertCreditAvailable(client, totalAmount.subtract(totalPaid));
+
+        deductStockForSale(invoice, warehouse, client, walkInLabel);
+
         invoice.setAmountPaid(totalPaid);
-        invoice.setStatus(deriveStatus(totalPaid, totalAmount));
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         invoice = invoiceRepository.save(invoice);
 
         // Persist PaymentEntry rows + apply each to the right treasury/till
@@ -420,6 +425,25 @@ public class POSService {
             // a dupla contagem que existia ao registar também uma transação de tesouraria.
             registerTillMovement(session, totalAmount, invoice.getInvoiceNumber());
         }
+
+        // Contabilidade: a venda de balcão é uma fatura real e lança como tal. Numerário
+        // (gaveta ou método CASH) entra em Caixa; o resto em Banco. Ver CONTABILIDADE_SPEC §5.
+        boolean cashPayment = !hasMultiPayments || payments.stream()
+                .anyMatch(p -> "CASH".equalsIgnoreCase(p.method()));
+        BigDecimal costOfGoods = invoice.getLines().stream()
+                .map(InvoiceLine::lineCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        eventPublisher.publishEvent(new com.phcpro.architecture.events.SaleRegisteredEvent(
+                invoice.getCompany().getId(),
+                invoice.getId(),
+                invoice.getInvoiceNumber(),
+                java.time.LocalDate.now(),
+                invoice.getTotalBeforeTax(),
+                invoice.getTaxAmount(),
+                invoice.getTotalAmount(),
+                costOfGoods,
+                totalPaid,
+                cashPayment));
 
         return invoice;
     }
@@ -508,12 +532,6 @@ public class POSService {
         }
     }
 
-    private InvoiceStatus deriveStatus(BigDecimal paid, BigDecimal total) {
-        if (paid.compareTo(total) >= 0)      return InvoiceStatus.PAID;
-        if (paid.compareTo(BigDecimal.ZERO) > 0) return InvoiceStatus.PARTIALLY_PAID;
-        return InvoiceStatus.APPROVED;  // credit-only — awaiting payment
-    }
-
     private void applyPayment(Invoice invoice, PosPaymentRequest req, TillSession session, Client client) {
         PaymentMethod method;
         try {
@@ -566,6 +584,27 @@ public class POSService {
         }
     }
 
+    /**
+     * Saída de stock (SALE) de todas as linhas da venda, no armazém do posto. Espelha o
+     * {@code deductStockForInvoice} da faturação: o stock só se move depois de a venda estar
+     * autorizada (sessão aberta, pagamentos válidos e limite de crédito respeitado).
+     */
+    private void deductStockForSale(Invoice invoice, Warehouse warehouse, Client client, String walkInLabel) {
+        String clientLabel = walkInLabel != null ? client.getName() + " — " + walkInLabel : client.getName();
+        String desc = String.format("Venda POS %s - Cliente %s", invoice.getInvoiceNumber(), clientLabel);
+        for (InvoiceLine line : invoice.getLines()) {
+            inventoryService.registerMovement(
+                    line.getProduct(),
+                    warehouse,
+                    line.getQuantity().negate(),
+                    "SALE",
+                    line.getBatchNumber(),
+                    line.getSerialNumber(),
+                    desc
+            );
+        }
+    }
+
     private void registerTillMovement(TillSession session, BigDecimal amount, String invoiceNumber) {
         TillMovement movement = new TillMovement();
         movement.setTillSession(session);
@@ -602,7 +641,7 @@ public class POSService {
         BigDecimal newPaid = (invoice.getAmountPaid() == null ? BigDecimal.ZERO : invoice.getAmountPaid())
                 .add(req.amount()).setScale(2, RoundingMode.HALF_UP);
         invoice.setAmountPaid(newPaid);
-        invoice.setStatus(deriveStatus(newPaid, invoice.getTotalAmount()));
+        invoice.setStatus(invoice.deriveStatusFromPayments());
         return invoiceRepository.save(invoice);
     }
 

@@ -133,6 +133,44 @@ class PurchaseOrderServiceTest {
         assertThrows(BusinessRuleException.class, () -> service.createOrder(request()));
     }
 
+    // ── IVA da compra: manda a factura do fornecedor; sem ela, a taxa do artigo ──
+    // Regressão: aplicava-se 16% cego a tudo, o que inflava o IVA dedutível em bens isentos.
+
+    @Test // IV-11
+    void createOrder_semTaxaIndicada_usaAdoArtigo_eNaoOsDezasseisPorCento() {
+        Product isento = product();
+        isento.setTaxRate(taxRateOf("0.00"));
+        when(supplierRepository.findById(7L)).thenReturn(Optional.of(supplier(true)));
+        when(warehouseRepository.findById(3L)).thenReturn(Optional.of(warehouse()));
+        when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company()));
+        when(productRepository.findByIdAndCompaniesId(11L, COMPANY_ID)).thenReturn(Optional.of(isento));
+
+        PurchaseOrderDTO dto = service.createOrder(request()); // linha sem taxa
+
+        assertEquals(0, dto.taxAmount().compareTo(BigDecimal.ZERO),
+                "comprar bem isento não pode gerar IVA dedutível");
+    }
+
+    @Test // IV-12
+    void createOrder_comTaxaDaFactura_usaEssa() {
+        stubRefs(true);
+        CreatePurchaseOrderRequest comIva = new CreatePurchaseOrderRequest(7L, 3L, COMPANY_ID,
+                LocalDate.now().plusDays(7), "urgente",
+                List.of(new CreatePurchaseOrderLineRequest(11L, new BigDecimal("10"), new BigDecimal("25"),
+                        "L1", LocalDate.now().plusMonths(6), null, new BigDecimal("0.05"))));
+
+        PurchaseOrderDTO dto = service.createOrder(comIva);
+
+        // 250 líquido a 5% = 12,50 (a factura do fornecedor manda, mesmo que o artigo diga outra coisa).
+        assertEquals(0, dto.taxAmount().compareTo(new BigDecimal("12.50")));
+    }
+
+    private static com.phcpro.modules.fiscal.model.TaxRate taxRateOf(String rate) {
+        com.phcpro.modules.fiscal.model.TaxRate taxRate = new com.phcpro.modules.fiscal.model.TaxRate();
+        taxRate.setRate(new BigDecimal(rate));
+        return taxRate;
+    }
+
     @Test // PO-03
     void receiveOrder_geraEntradaPorLinha() {
         PurchaseOrder o = ordered();

@@ -4,7 +4,17 @@
 > constante 0.16). Alinhado com [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md), [CONVENTIONS.md](../CONVENTIONS.md)
 > e a engine existente [LineCalculator](../src/main/java/com/phcpro/architecture/pricing/LineCalculator.java).
 
-**Última actualização:** 2026-06-27
+**Última actualização:** 2026-08-05
+
+## Correcção de apresentação — 2026-08-05
+
+- O fallback visual do carrinho passa a usar a mesma taxa padrão do checkout quando o DTO legado
+  chega sem taxa; deixa de apresentar incorrectamente a linha como isenta.
+- O recibo térmico identifica a taxa em cada artigo (`IVA: 16%`, `IVA: 5%` ou `IVA: Isento`) e
+  mantém a linha de IVA total no resumo.
+- Para preservar legibilidade nos 80 mm, a grelha do recibo usa duas colunas: **Artigo** (65%) e
+  **Total** (35%). Quantidade × preço e IVA aparecem em linhas secundárias sob a descrição; a coluna
+  monetária acomoda valores formatados sem partir os cêntimos.
 
 ## Problema
 

@@ -2,7 +2,7 @@ package com.phcpro.modules.fiscal.service;
 
 import com.phcpro.architecture.exception.BusinessRuleException;
 import com.phcpro.architecture.security.CurrentUserContext;
-import com.phcpro.modules.company.repository.CompanyRepository;
+import com.phcpro.modules.company.service.CompanyService;
 import com.phcpro.modules.fiscal.dto.CreateWithholdingRequest;
 import com.phcpro.modules.fiscal.dto.WithholdingRecordDTO;
 import com.phcpro.modules.fiscal.model.WithholdingRecord;
@@ -19,18 +19,17 @@ import java.util.List;
 public class WithholdingService {
 
     private final WithholdingRecordRepository repository;
-    private final CompanyRepository companyRepository;
+    private final CompanyService companyService;
 
-    public WithholdingService(WithholdingRecordRepository repository, CompanyRepository companyRepository) {
+    public WithholdingService(WithholdingRecordRepository repository, CompanyService companyService) {
         this.repository = repository;
-        this.companyRepository = companyRepository;
+        this.companyService = companyService;
     }
 
     @Transactional
     public WithholdingRecordDTO create(CreateWithholdingRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
-        var company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        var company = companyService.getCurrentCompanyReference(request.companyId());
 
         WithholdingRecord r = new WithholdingRecord();
         r.setCompany(company);
