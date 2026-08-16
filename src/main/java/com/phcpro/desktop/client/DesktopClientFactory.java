@@ -21,4 +21,13 @@ public class DesktopClientFactory {
     public DesktopApiClient authenticatedClient() {
         return new DesktopApiClient(config, sessionStore.requireSession());
     }
+
+    /**
+     * Cliente sem sessão, para os poucos caminhos públicos ({@code /api/version}).
+     * Existe para se poder perguntar a versão <b>antes</b> do login — e sem rebentar com o
+     * {@code requireSession()}, que lança quando ainda não há sessão nenhuma.
+     */
+    public DesktopApiClient anonymousClient() {
+        return new DesktopApiClient(config, null);
+    }
 }

@@ -29,12 +29,35 @@ public class ClientVersionInterceptor implements HandlerInterceptor {
 
     private final String minClientVersion;
     private final boolean requireVersion;
+    private final ClientVersionRegistry registry;
 
     public ClientVersionInterceptor(
             @Value("${app.client.min-version:0.0.0}") String minClientVersion,
-            @Value("${app.client.require-version:false}") boolean requireVersion) {
+            @Value("${app.client.require-version:false}") boolean requireVersion,
+            ClientVersionRegistry registry) {
         this.minClientVersion = minClientVersion;
         this.requireVersion = requireVersion;
+        this.registry = registry;
+    }
+
+    /**
+     * Regista a versão vista <b>depois</b> do pedido, e não no {@code preHandle}.
+     *
+     * <p>A razão é de segurança: no {@code preHandle} ainda não houve autenticação, pelo que
+     * qualquer um poderia encher a tabela com versões inventadas. Aqui já se sabe quem é e a que
+     * empresa pertence — e só se regista o que passou pela porta.
+     */
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+                           org.springframework.web.servlet.ModelAndView modelAndView) {
+        if (registry == null) return;
+        String clientVersion = request.getHeader(HEADER);
+        if (clientVersion == null || clientVersion.isBlank()) return;
+        Long companyId = com.phcpro.architecture.security.CurrentUserContext.findCurrentCompanyId();
+        if (companyId == null) return;
+        registry.record(companyId, clientVersion,
+                com.phcpro.architecture.security.CurrentUserContext.findCurrentUser() == null
+                        ? null : com.phcpro.architecture.security.CurrentUserContext.getUsername());
     }
 
     @Override

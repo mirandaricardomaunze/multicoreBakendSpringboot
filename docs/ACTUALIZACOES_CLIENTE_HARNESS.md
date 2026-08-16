@@ -69,12 +69,32 @@ chamada ao `sendError` — que era o que os deixava passar com o defeito present
 
 ---
 
-## Por fazer (precisam do desktop e do instalador)
+### `ClientVersionRegistryTest` — saber quem está em quê
 
 | ID | Cenário | Esperado |
 |---|---|---|
-| AC-50 | Desktop antigo contra servidor com mínima acima | diálogo "Actualize o programa", com a versão instalada |
+| AC-30 | Primeira vez que uma empresa aparece numa versão | grava empresa, versão, utilizador e as duas datas |
+| AC-31 | 50 pedidos seguidos da mesma loja | **uma** gravação — não se escreve a cada pedido |
+| AC-32 | Empresas e versões diferentes | linhas diferentes |
+| AC-33 | Versão já conhecida | actualiza a última vez vista; **não** reescreve a primeira |
+| AC-34 | Sem empresa ou sem versão | não grava nada |
+| AC-35 | Base de dados a falhar | **não rebenta** o pedido |
+| AC-36 | Depois de uma falha | volta a tentar no pedido seguinte |
+| AC-37 | Lista de utilização | diz empresa, versão e último utilizador |
+
+**Execução:** `mvn -o test -Dtest=SemanticVersionTest,ClientVersionInterceptorTest,ClientVersionRegistryTest`
+→ 23 testes, 0 falhas (2026-08-16).
+
+---
+
+## Por fazer (precisam do desktop a correr e do instalador)
+
+| ID | Cenário | Esperado |
+|---|---|---|
+| AC-50 | Desktop antigo contra servidor com mínima acima | mensagem "Actualize o programa", com a versão instalada |
 | AC-51 | Desktop actual | funciona sem aviso |
-| AC-52 | Aviso discreto de "há versão nova" (dentro do mínimo) | **não implementado** — ver spec §7 |
-| AC-53 | Instalador `jpackage` + Inno Setup por utilizador | **não implementado** — ver spec §6 |
-| AC-54 | Actualização preserva `desktop.api.base-url` | **não implementado** |
+| AC-52 | Servidor com versão mais recente que o desktop | rodapé mostra "Versão X disponível" e **não** bloqueia |
+| AC-53 | `GET /api/platform/client-versions` com superadmin | lista das empresas e respectivas versões |
+| AC-54 | O mesmo com utilizador normal | recusado |
+| AC-55 | Instalador `jpackage` + Inno Setup por utilizador | **não implementado** — ver spec §6 |
+| AC-56 | Actualização preserva `desktop.api.base-url` | **não implementado** |

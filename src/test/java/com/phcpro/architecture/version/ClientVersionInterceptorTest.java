@@ -23,7 +23,8 @@ class ClientVersionInterceptorTest {
     private boolean preHandle(String clientVersion, String minVersion, boolean require) throws Exception {
         when(request.getHeader(ClientVersionInterceptor.HEADER)).thenReturn(clientVersion);
         when(response.getWriter()).thenReturn(new java.io.PrintWriter(body));
-        return new ClientVersionInterceptor(minVersion, require).preHandle(request, response, new Object());
+        return new ClientVersionInterceptor(minVersion, require, mock(ClientVersionRegistry.class))
+                .preHandle(request, response, new Object());
     }
 
     /**

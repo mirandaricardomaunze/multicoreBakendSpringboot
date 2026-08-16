@@ -75,6 +75,7 @@ public class MainFrame extends JFrame {
     private final NotificationReadStore notificationReadStore;
 
     private final DesktopSessionStore desktopSessionStore;
+    private final com.phcpro.desktop.client.VersionApiClient versionApiClient;
     private final MySubscriptionApiClient mySubscriptionApiClient;
     private final boolean superAdmin;
     private TopNavBar topBar;
@@ -116,9 +117,11 @@ public class MainFrame extends JFrame {
             FiscalApiClient fiscalApiClient,
             PlatformApiClient platformApiClient,
             com.phcpro.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
-            com.phcpro.desktop.client.AccountingApiClient accountingApiClient
+            com.phcpro.desktop.client.AccountingApiClient accountingApiClient,
+            com.phcpro.desktop.client.VersionApiClient versionApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
+        this.versionApiClient = versionApiClient;
         this.mySubscriptionApiClient = mySubscriptionApiClient;
         this.superAdmin = desktopSessionStore.requireSession().superAdmin();
 
@@ -207,7 +210,31 @@ public class MainFrame extends JFrame {
             DesktopSession s = desktopSessionStore.requireSession();
             String company = s.companies().isEmpty() ? "" : s.companies().get(0).name();
             statusBar.setContext("Painel Inicial", -1, company, displayName);
+            checkForNewerVersion();
         }
+    }
+
+    /**
+     * Aviso discreto no rodapé quando o servidor já tem versão mais recente.
+     *
+     * <p>Fora do EDT (a chamada é HTTP) e <b>à prova de falha</b>: se o servidor não responder,
+     * não há aviso nenhum e a loja continua a trabalhar. Um problema a verificar a versão nunca
+     * pode impedir alguém de vender.
+     */
+    private void checkForNewerVersion() {
+        if (versionApiClient == null) return;
+        new javax.swing.SwingWorker<String, Void>() {
+            @Override protected String doInBackground() {
+                return versionApiClient.newerVersionAvailable();
+            }
+            @Override protected void done() {
+                try {
+                    statusBar.setUpdateAvailable(get());
+                } catch (Exception ignored) {
+                    // Sem aviso. Nunca incomodar o operador por causa disto.
+                }
+            }
+        }.execute();
     }
 
     private javax.swing.Icon navIcon(String code) {

@@ -121,9 +121,64 @@ Nada disto está implementado. Fica o desenho decidido:
 
 ---
 
-## 7. Limites conhecidos (v1)
+## 7. Aviso discreto (o que faz as lojas actualizarem)
 
-- O desktop **bloqueia** quando é recusado, mas ainda **não avisa** quando existe versão nova
-  estando dentro do mínimo (o endpoint já dá a informação; falta o aviso na barra de topo).
-- Não há descarga nem instalação automática — só a mensagem a dizer que é preciso actualizar.
-- A versão mínima é global; não há política por loja.
+O desktop pergunta a versão ao servidor no arranque e, se houver uma mais recente, mostra no
+**rodapé**: *"Versão 1.5.0 disponível"*.
+
+Não é um diálogo de propósito. Um diálogo a meio de uma venda é fechado sem ler; um aviso
+permanente no rodapé é visto no fecho do dia — que é quando dá jeito actualizar. **É este aviso
+que faz as lojas actualizarem, não o bloqueio.**
+
+À prova de falha: se o servidor não responder, não há aviso e a loja trabalha na mesma. Um
+problema a verificar a versão nunca pode impedir alguém de vender.
+
+---
+
+## 8. Saber quem está em quê (antes de decidir bloquear)
+
+Sem isto, subir a versão mínima é decidir às cegas — podem ficar bloqueadas lojas que nem se
+sabia que existiam nessa versão.
+
+`ClientVersionRegistry` guarda **uma linha por (empresa, versão)**: primeira vez vista, última
+vez vista e o último utilizador (para se saber a quem telefonar).
+`GET /api/platform/client-versions` (superadmin) mostra a lista.
+
+Duas regras que este registo não pode quebrar:
+
+1. **Não escrever a cada pedido.** Uma loja faz milhares de pedidos por dia e muda de versão uma
+   vez por mês. Só grava de 15 em 15 minutos por chave; o resto decide-se em memória.
+2. **Nunca partir um pedido.** É informação de gestão, não parte da venda: se a gravação falhar,
+   engole-se o erro (e tenta-se no pedido seguinte).
+
+Regista-se no `postHandle`, **depois** da autenticação: no `preHandle` qualquer um poderia encher
+a tabela com versões inventadas.
+
+---
+
+## 9. Política recomendada para o travão
+
+| Fase | Versão mínima |
+|---|---|
+| Hoje (sem instalador nem actualização automática) | **0.0.0** — não bloquear ninguém |
+| Com instalador e aviso a funcionar | 0.0.0 na mesma; o aviso trata de 95% dos casos |
+| Alteração que faça a versão antiga **errar em dinheiro ou imposto** | subir, depois de olhar para a lista de §8 e avisar as lojas |
+
+O critério **não** é "são incompatíveis?". É: *"o que a versão antiga faz está errado em dinheiro
+ou em imposto?"*
+
+- Falta-lhe uma funcionalidade → **não bloquear**. O que faz está certo; a loja continua a vender.
+- Calcularia **IVA errado**, totais errados ou contabilidade errada → **bloquear**. Uma factura
+  errada já foi entregue ao cliente e comunicada à AT; não se corrige depois.
+
+Bloquear uma loja é pará-la de vender. O prejuízo é dela, a culpa é de quem fez o software — por
+isso a barra é alta.
+
+---
+
+## 10. Limites conhecidos (v1)
+
+- Não há descarga nem instalação automática — o aviso diz que há versão nova, mas actualizar
+  ainda é manual.
+- A lista de §8 é servida por API; **não há ecrã** no desktop do superadmin a mostrá-la.
+- A versão mínima é global; não há política por loja nem período de tolerância automático.

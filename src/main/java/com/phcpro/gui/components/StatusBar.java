@@ -28,6 +28,9 @@ public class StatusBar extends JPanel {
     private final JLabel companyLabel  = slimLabel("");
     private final JLabel userLabel     = slimLabel("");
     private final JLabel clockLabel    = slimLabel(LocalTime.now().format(TIME_FMT));
+    /** Aviso de versão nova. Fica invisível enquanto não houver nada a dizer. */
+    private final JLabel updateLabel   = slimLabel("");
+    private final JLabel updateIcon    = iconLabel("fas-arrow-circle-up", UIHelper.ACCENT);
 
     public StatusBar() {
         setLayout(new BorderLayout(0, 0));
@@ -45,9 +48,14 @@ public class StatusBar extends JPanel {
         left.add(recordsLabel);
         add(left, BorderLayout.WEST);
 
-        // Lado direito — empresa, utilizador, hora
+        // Lado direito — aviso de versão (quando houver), empresa, utilizador, hora
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
+        updateIcon.setVisible(false);
+        updateLabel.setVisible(false);
+        updateLabel.setForeground(UIHelper.ACCENT);
+        right.add(updateIcon);
+        right.add(updateLabel);
         right.add(iconLabel("fas-building", UIHelper.TEXT_MUTED));
         right.add(companyLabel);
         right.add(separator());
@@ -89,6 +97,28 @@ public class StatusBar extends JPanel {
     /** Actualiza apenas o módulo activo. */
     public void setModule(String module) {
         moduleLabel.setText(module == null ? "" : module);
+    }
+
+    /**
+     * Aviso discreto de que existe versão nova no servidor.
+     *
+     * <p>Fica no rodapé e <b>não interrompe ninguém</b>: é isto que faz as lojas actualizarem,
+     * não o bloqueio. Um diálogo a meio de uma venda seria fechado sem ler; um aviso permanente
+     * é visto no fecho do dia, que é quando dá jeito actualizar.
+     *
+     * @param newVersion versão disponível no servidor; {@code null} esconde o aviso
+     */
+    public void setUpdateAvailable(String newVersion) {
+        boolean show = newVersion != null && !newVersion.isBlank();
+        updateLabel.setText(show ? "Versão " + newVersion + " disponível" : "");
+        updateLabel.setToolTipText(show
+                ? "Há uma versão mais recente no servidor. Actualize quando for conveniente — "
+                  + "o programa continua a funcionar."
+                : null);
+        updateIcon.setVisible(show);
+        updateLabel.setVisible(show);
+        revalidate();
+        repaint();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────────────────────
