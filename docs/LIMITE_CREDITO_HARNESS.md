@@ -65,4 +65,16 @@ Cenários de verificação da [LIMITE_CREDITO_SPEC.md](LIMITE_CREDITO_SPEC.md).
 | LC-55 | POS: venda paga a dinheiro a cliente estourado | passa |
 | LC-56 | POS: venda a fiado a cliente estourado | recusa; stock **não** baixa |
 
-**Estado:** por executar (exigem backend de pé + desktop).
+### Executados ao vivo — 2026-08-15 (via HTTP)
+
+| ID | Resultado |
+|---|---|
+| LC-50 | ✅ cliente criado com `creditLimit: 5000.00` (coluna Swing por verificar) |
+| LC-52 | ✅ 1.ª fatura de 2200,00 passou |
+| LC-53 | ✅ 2.ª fatura de 4400,00 **recusada**: *"Limite de crédito excedido para Mercearia Ponto Final. Limite: 5000.00 MT · Em dívida: 2200.00 MT · Disponível: 2800.00 MT · Esta venda a crédito: 4400.00 MT."* |
+
+**Confirmado o ponto mais delicado do desenho:** a fatura seguinte saiu **`FT-2026/2`**, não
+`FT-2026/3` — a recusa aconteceu **antes** de consumir o número fiscal, pelo que a série FT não
+ficou com um salto (que a AT não admite).
+
+**Estado:** LC-51, LC-54..56 por executar.

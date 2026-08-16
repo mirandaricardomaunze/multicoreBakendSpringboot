@@ -59,4 +59,11 @@ Cenários de verificação da [VENCIMENTO_ANTIGUIDADE_SPEC.md](VENCIMENTO_ANTIGU
 | VA-56 | Receber parcialmente uma fatura vencida | mantém-se na lista, com o **saldo** e o mesmo atraso |
 | VA-57 | Liquidar a fatura por completo | sai das Contas Correntes e do mapa de antiguidade |
 
-**Estado:** por executar (exigem backend de pé + desktop).
+### Executados ao vivo — 2026-08-15 (via HTTP)
+
+| ID | Resultado |
+|---|---|
+| VA-50 | ✅ cliente criado com `paymentTermsDays: 30` e devolvido pela API com esse valor (a **coluna na tabela Swing** continua por verificar) |
+| VA-52 | ✅ `FT-2026/1` emitida a 15/08 → `dueDate 2026-09-14` (emissão + 30), `daysOverdue 0`, `CORRENTE` |
+
+**Estado:** restantes por executar (VA-51, VA-53..57 e a verificação visual no desktop).

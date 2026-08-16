@@ -75,4 +75,20 @@ Cenários de verificação da [CONTABILIDADE_SPEC.md](CONTABILIDADE_SPEC.md).
 | CT-59 | Repetir o POST da mesma fatura | **não** cria segundo lançamento |
 | CT-60 | Empresa nova, sem plano, a vender | venda passa; nada é lançado; sem erro ao operador |
 
-**Estado:** por executar (exigem backend de pé + desktop).
+### Executados ao vivo — 2026-08-15 (via HTTP, backend em H2 com dados de demo)
+
+| ID | Resultado |
+|---|---|
+| CT-50 | ✅ **37 contas** criadas na empresa 2 (`{"created":37}`) |
+| CT-51 | ✅ segunda sementeira → `{"created":0}`, nada alterado |
+| CT-52 | ✅ `FT-2026/1` (2200,00) gerou `LC-2026/1`, origem **Fatura**: D 2101 Clientes 2200 / C 7101 Vendas 2200 · D 6101 CMVMC **1720** / C 3201 Mercadorias 1720 — o custo veio da fotografia da linha (430 × 4), não do cadastro |
+| CT-53 | ✅ razão de 2101: abertura 0 → 2200 → 3300 → **1100** após o recibo |
+| CT-54 | ✅ recibo `RC-2026/1` (2200, numerário) gerou `LC-2026/3`: D 1101 Caixa / C 2101 Clientes — **sem tocar em Vendas** |
+| CT-55 | ✅ balancete de Agosto: **8080,00 = 8080,00**, "Balancete fecha" |
+
+**Observação com valor:** a conta **3201 Mercadorias ficou com saldo −2580,00**, porque só recebe
+créditos (saídas). É a consequência visível do limite declarado na spec §7 — as **compras ainda
+não lançam**, logo nada debita 3201. Não é um defeito do lançamento de venda; é a metade do
+circuito que falta ligar.
+
+**Estado:** CT-56..CT-60 e todos os passos de UI (Swing) por executar.
