@@ -21,6 +21,7 @@
 | BA-50 | Arrancar o desktop (perfil desktop, `backup.schedule.enabled=true`). | Arranca sem erros; agendamento activo (sem exceções no log). |
 | BA-51 | Config → Cópias de Segurança: ver o banner de estado. | "Backup automático: ACTIVO (diário)". |
 | BA-52 | Como **ADMIN**, clicar "Backup Automático Agora". | Gera um `.dump` em `backups/`; banner fica **✓ OK** (verde) com data/hora; consola mostra `[OK] …`. |
+| BA-52H | Backend local em H2, clicar "Backup Automático Agora". | Gera backup lógico `.json`; não tenta `pg_dump`; estado fica OK. |
 | BA-53 | Como não-ADMIN, clicar o botão. | Recusado ("Apenas administradores…"). |
 | BA-54 | Ter `.dump` antigos (> retenção) na pasta e correr o backup. | Os antigos são apagados; a mensagem indica quantos removidos. |
 | BA-55 | Simular falha (ex.: `backup.pg-bin-dir` inválido) e correr. | Banner fica **✗ FALHOU** (vermelho); auditoria regista `BACKUP_AUTO_FAILED`; app não rebenta. |

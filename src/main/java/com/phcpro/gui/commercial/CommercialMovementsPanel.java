@@ -41,7 +41,7 @@ public final class CommercialMovementsPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Movimentos — Todos os Documentos Comerciais"), BorderLayout.WEST);
-        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> refresh());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

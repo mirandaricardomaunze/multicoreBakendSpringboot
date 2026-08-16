@@ -35,6 +35,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -125,6 +127,20 @@ class ComercialServiceTest {
     @AfterEach
     void tearDown() {
         CurrentUserContext.clear();
+    }
+
+    @Test
+    void posCatalogPageAppliesSearchAvailabilityAndServerPageSize() {
+        when(inventoryService.getInStockProductIdsForSale(COMPANY_ID)).thenReturn(java.util.Set.of(PRODUCT_ID));
+        when(productRepository.findPOSCatalogPage(eq(COMPANY_ID), eq("arroz"), eq(true),
+                eq(java.util.Set.of(PRODUCT_ID)), any()))
+                .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 36), 1));
+
+        var page = service.getPOSCatalogPage("  arroz  ", true, 0, 36);
+
+        assertEquals(1, page.items().size());
+        assertTrue(page.items().getFirst().sellable());
+        assertEquals(36, page.size());
     }
 
     // ────────────────────────── createInvoice ──────────────────────────

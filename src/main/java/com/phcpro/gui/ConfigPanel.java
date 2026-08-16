@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.architecture.security.PermissionGuard;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ActionMenuButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.TableFilter;
@@ -185,7 +186,7 @@ public class ConfigPanel extends JPanel {
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnPanel.setOpaque(false);
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar Registos");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar Registos");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnPanel.add(refreshBtn);
         card.add(btnPanel, BorderLayout.SOUTH);
@@ -236,18 +237,13 @@ public class ConfigPanel extends JPanel {
         UIHelper.styleScrollPane(scrollConsole);
         consoleCard.add(scrollConsole, BorderLayout.CENTER);
 
-        ModernButton runBackupBtn = UIHelper.createSuccessButton("Backup Lógico (.json)");
-        runBackupBtn.setIcon(UIHelper.icon("fas-file-code", 14));
-        ModernButton runPhysicalBtn = UIHelper.createPrimaryButton("Backup Físico (BD)");
-        runPhysicalBtn.setIcon(UIHelper.icon("fas-database", 14));
-        ModernButton runAutoNowBtn = UIHelper.createSecondaryButton("Backup Automático Agora");
-        runAutoNowBtn.setIcon(UIHelper.icon("fas-clock", 14));
-        runAutoNowBtn.addActionListener(e -> runAutoBackupNow());
+        ActionMenuButton createBackupBtn = UIHelper.createActionMenuButton("Criar backup")
+                .addAction("Backup lógico (.json)", UIHelper.icon("fas-file-code", 14), this::runManualBackup)
+                .addAction("Backup físico (BD)", UIHelper.icon("fas-database", 14), this::runPhysicalBackup)
+                .addAction("Backup automático agora", UIHelper.icon("fas-clock", 14), this::runAutoBackupNow);
         JPanel backupActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         backupActions.setOpaque(false);
-        backupActions.add(runAutoNowBtn);
-        backupActions.add(runBackupBtn);
-        backupActions.add(runPhysicalBtn);
+        backupActions.add(createBackupBtn);
         consoleCard.add(backupActions, BorderLayout.SOUTH);
 
         leftPanel.add(consoleCard, BorderLayout.CENTER);
@@ -277,7 +273,7 @@ public class ConfigPanel extends JPanel {
         actionRow.setOpaque(false);
         ModernButton verifyBackupBtn = UIHelper.createPrimaryButton("Verificar Backup");
         verifyBackupBtn.setIcon(UIHelper.icon("fas-shield-alt", 14));
-        ModernButton refreshArchiveBtn = UIHelper.createSecondaryButton("Atualizar Arquivo");
+        ModernButton refreshArchiveBtn = UIHelper.createSecondaryButton("Actualizar Arquivo");
         refreshArchiveBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         actionRow.add(verifyBackupBtn);
         actionRow.add(refreshArchiveBtn);
@@ -287,8 +283,6 @@ public class ConfigPanel extends JPanel {
         panel.add(rightPanel);
 
         // LISTENERS
-        runBackupBtn.addActionListener(e -> runManualBackup());
-        runPhysicalBtn.addActionListener(e -> runPhysicalBackup());
         verifyBackupBtn.addActionListener(e -> verifySelectedBackup());
         refreshArchiveBtn.addActionListener(e -> loadBackupFilesList());
 
@@ -308,14 +302,12 @@ public class ConfigPanel extends JPanel {
         newUserBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         ModernButton editUserBtn = UIHelper.createPrimaryButton("Editar");
         editUserBtn.setIcon(UIHelper.icon("fas-pen", 14));
-        ModernButton updateRoleBtn = UIHelper.createPrimaryButton("Alterar Perfil");
-        updateRoleBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
-        ModernButton refreshUsersBtn = UIHelper.createSecondaryButton("Atualizar Lista");
-        refreshUsersBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Alterar Perfil", UIHelper.icon("fas-user-shield", 14), this::updateSelectedUserRole)
+                .addAction("Actualizar Lista", UIHelper.icon("fas-sync-alt", 14), this::loadUsersList);
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(refreshUsersBtn);
-        actions.add(updateRoleBtn);
+        actions.add(moreBtn);
         actions.add(editUserBtn);
         actions.add(newUserBtn);
         header.add(actions, BorderLayout.EAST);
@@ -332,6 +324,7 @@ public class ConfigPanel extends JPanel {
         };
         usersTable = new JTable(usersTableModel);
         UIHelper.styleTable(usersTable);
+        usersTable.getColumnModel().getColumn(2).setCellRenderer(com.phcpro.gui.components.TableCellRenderers.role());
         usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -358,8 +351,6 @@ public class ConfigPanel extends JPanel {
         // LISTENERS
         newUserBtn.addActionListener(e -> registerUser());
         editUserBtn.addActionListener(e -> editSelectedUserName());
-        updateRoleBtn.addActionListener(e -> updateSelectedUserRole());
-        refreshUsersBtn.addActionListener(e -> loadUsersList());
 
         return panel;
     }
@@ -722,6 +713,7 @@ public class ConfigPanel extends JPanel {
         JPasswordField passwordField = new JPasswordField();
         JComboBox<String> roleCombo = new JComboBox<>(USER_ROLES);
         UIHelper.styleComboBox(roleCombo);
+        UIHelper.humanizeRoleCombo(roleCombo);
 
         JPanel form = UIHelper.createDialogForm(
                 "Username:", usernameField,
@@ -760,6 +752,7 @@ public class ConfigPanel extends JPanel {
         String username = String.valueOf(usersTableModel.getValueAt(selectedRow, 0));
         JComboBox<String> roleCombo = new JComboBox<>(USER_ROLES);
         UIHelper.styleComboBox(roleCombo);
+        UIHelper.humanizeRoleCombo(roleCombo);
         roleCombo.setSelectedItem(String.valueOf(usersTableModel.getValueAt(selectedRow, 2)));
 
         JPanel form = UIHelper.createDialogForm("Novo Perfil:", roleCombo);
@@ -793,7 +786,7 @@ public class ConfigPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
         header.add(UIHelper.createHeading("Estado da Assinatura"), BorderLayout.WEST);
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> loadMySubscription());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

@@ -83,7 +83,7 @@ public final class AccountingPanel extends JPanel {
         ModernButton create = UIHelper.createSuccessButton("Nova Conta");
         create.setIcon(UIHelper.icon("fas-plus", 14));
         create.addActionListener(e -> openAccountDialog());
-        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> loadAccounts());
 
@@ -151,6 +151,7 @@ public final class AccountingPanel extends JPanel {
 
     private JPanel buildJournalTab() {
         JTable table = styledTable(journalModel);
+        table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         money(table, 5, 6);
         JPanel card = card(table);
 
@@ -315,6 +316,7 @@ public final class AccountingPanel extends JPanel {
     private JTable styledTable(DefaultTableModel model) {
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
+        table.setAutoCreateRowSorter(true);
         return table;
     }
 

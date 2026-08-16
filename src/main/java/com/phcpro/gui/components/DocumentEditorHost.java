@@ -6,12 +6,17 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.Scrollable;
+import javax.swing.AbstractAction;
+import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -50,6 +55,19 @@ public class DocumentEditorHost extends JPanel {
         card.setBorder(new EmptyBorder(16, 16, 16, 16));
         card.add(verticalScroll(content), BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
+
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "saveDocument");
+        getActionMap().put("saveDocument", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) {
+                if (onSave != null) onSave.run();
+            }
+        });
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "backToList");
+        getActionMap().put("backToList", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { requestBack(); }
+        });
     }
 
     private JPanel buildToolbar(String title, Runnable onSave) {

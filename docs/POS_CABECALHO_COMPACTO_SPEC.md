@@ -4,7 +4,10 @@
 > [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md) e [CONVENTIONS.md §11](../CONVENTIONS.md). **Só
 > apresentação** — sem mexer em `POSService`, DTOs nem cálculos.
 
-**Última actualização:** 2026-06-29
+**Última actualização:** 2026-08-16
+
+> Revisão final: pesquisa do cliente, cliente, armazém, conta e código de barras ficam todos numa
+> única linha. O antigo botão "Mais opções" e o diálogo associado foram removidos.
 
 ## Problema
 
@@ -20,6 +23,11 @@ Cliente é largo de mais. As duas linhas roubam altura ao **catálogo de produto
 (`leftPanel`/`productGridScroll`), que é a área onde o operador selecciona e adiciona ao carrinho.
 
 ## Decisões
+
+- **Cinco campos sempre visíveis:** Pesquisar cliente (20%), Cliente (22%), Armazém (16%), Conta
+  (18%) e Código de barras (24%). Os pesos totalizam 100% e adaptam-se à largura disponível.
+- **Uma única altura canónica:** inputs, combos e botão Novo usam 38 px e partilham a mesma base.
+- **Sem Mais opções:** armazém e conta deixam de ficar escondidos; não existe expansão vertical.
 
 - **Código de barras sobe para a linha dos selects.** O campo deixa de ter uma `scannerBar`
   própria e passa a ser a **4.ª coluna** de `topSelectsBar`, alinhado (mesma linha) com o combo

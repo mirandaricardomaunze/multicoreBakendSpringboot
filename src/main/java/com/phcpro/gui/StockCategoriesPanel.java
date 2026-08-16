@@ -33,23 +33,18 @@ final class StockCategoriesPanel {
             var sel = selectedCategory();
             if (sel != null) openCategoryDialog(sel);
         });
-        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
-        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
-        toggleBtn.addActionListener(e -> toggleSelectedCategory());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> refresh());
-        actions.add(newBtn); actions.add(editBtn); actions.add(toggleBtn); actions.add(refreshBtn);
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCategory)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::refresh);
+        actions.add(moreBtn); actions.add(editBtn); actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
 
         // Pesquisa por código/nome
         owner.categorySearchField = new SearchField("Pesquisar categoria por código ou nome…");
         UIHelper.onTextChange(owner.categorySearchField, () -> filterCategories(owner.categorySearchField.getText()));
-        JPanel searchRow = new JPanel(new BorderLayout(8, 0));
+        JPanel searchRow = new JPanel(new BorderLayout());
         searchRow.setOpaque(false);
         searchRow.setBorder(new EmptyBorder(10, 0, 0, 0));
-        JLabel sIcon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
-        searchRow.add(sIcon, BorderLayout.WEST);
         searchRow.add(owner.categorySearchField, BorderLayout.CENTER);
 
         JPanel headerWrap = new JPanel(new BorderLayout());
@@ -67,6 +62,7 @@ final class StockCategoriesPanel {
         };
         owner.categoriesTable = new JTable(owner.categoriesModel);
         UIHelper.styleTable(owner.categoriesTable);
+        owner.categoriesTable.setAutoCreateRowSorter(true);
         owner.categoriesTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
         // Coluna "Cor" com amostra visível da cor da categoria
         owner.categoriesTable.getColumnModel().getColumn(2).setCellRenderer(new ColorCellRenderer());
@@ -74,7 +70,7 @@ final class StockCategoriesPanel {
         JScrollPane scroll = new JScrollPane(owner.categoriesTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
-        card.add(com.phcpro.gui.components.TableFooter.install(owner.categoriesTable), BorderLayout.SOUTH);
+        card.add(com.phcpro.gui.components.ClientTablePagination.install(owner.categoriesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -159,7 +155,7 @@ final class StockCategoriesPanel {
                     g2.setColor(fill);
                     g2.fillRoundRect(x, y, size, size, 4, 4);
                 } else {
-                    g2.setColor(new Color(107, 114, 128));
+                    g2.setColor(UIHelper.TEXT_MUTED);
                     g2.drawRoundRect(x, y, size - 1, size - 1, 4, 4);
                 }
                 g2.dispose();
@@ -188,7 +184,7 @@ final class StockCategoriesPanel {
         JLabel swatch = new JLabel();
         swatch.setOpaque(true);
         swatch.setPreferredSize(new Dimension(40, UIHelper.FORM_CONTROL_HEIGHT));
-        swatch.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1, true));
+        swatch.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1, true));
         Runnable applySwatch = () -> {
             Color c = null;
             try { if (colorHolder[0].startsWith("#")) c = Color.decode(colorHolder[0]); } catch (NumberFormatException ignored) { }

@@ -30,13 +30,10 @@ final class StockWarehousesPanel {
         ModernButton editBtn = UIHelper.createSecondaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
         editBtn.addActionListener(e -> { WarehouseDTO w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); });
-        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
-        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
-        toggleBtn.addActionListener(e -> toggleSelectedWarehouse());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> refresh());
-        actions.add(refreshBtn); actions.add(toggleBtn); actions.add(editBtn); actions.add(newBtn);
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedWarehouse)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::refresh);
+        actions.add(moreBtn); actions.add(editBtn); actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
         tab.add(header, BorderLayout.NORTH);
 

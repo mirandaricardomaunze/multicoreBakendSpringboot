@@ -60,7 +60,7 @@ public final class ReceiptsPanel extends JPanel {
         ModernButton cancel = UIHelper.createDangerButton("Anular Recibo");
         cancel.setIcon(UIHelper.icon("fas-ban", 14));
         cancel.addActionListener(e -> cancelSelected());
-        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> refresh());
         actions.add(cancel); actions.add(refresh);

@@ -108,6 +108,13 @@ public class ModernFormDialog {
         dialog.setSize(w, h);
         dialog.setMinimumSize(new Dimension(Math.min(MIN_WIDTH, maxW), Math.min(MIN_HEIGHT, maxH)));
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.getRootPane().registerKeyboardAction(e -> {
+                    if (saveBtn.getParent() != null && saveBtn.isEnabled()) attemptSave();
+                }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S,
+                        java.awt.event.InputEvent.CTRL_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        dialog.getRootPane().registerKeyboardAction(e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
         UIHelper.containWithinMain(dialog);
     }
 

@@ -82,4 +82,12 @@ class TableNavigatorTest {
         assertFalse(TableNavigator.overflowed(0, 20, 20)); // extent >= amplitude
         assertFalse(TableNavigator.overflowed(0, 15, 20));
     }
+
+    @Test // TN-08
+    void limites_controlamEstadoDosBotoes() {
+        assertTrue(TableNavigator.atTop(0, 0));
+        assertFalse(TableNavigator.atTop(1, 0));
+        assertTrue(TableNavigator.atBottom(180, 200, 20));
+        assertFalse(TableNavigator.atBottom(179, 200, 20));
+    }
 }

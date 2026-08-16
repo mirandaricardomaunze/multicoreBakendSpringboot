@@ -48,7 +48,7 @@ final class StockBatchesPanel {
 
         owner.batchWarehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.batchWarehouseCombo);
-        owner.batchWarehouseCombo.setPreferredSize(new Dimension(220, 35));
+        owner.batchWarehouseCombo.setPreferredSize(new Dimension(220, UIHelper.FORM_CONTROL_HEIGHT));
         owner.batchWarehouseCombo.addActionListener(e -> filterBatches());
 
         owner.batchExpirationCombo = new JComboBox<>(new String[]{
@@ -59,7 +59,7 @@ final class StockBatchesPanel {
                 "Válidos (> 90 dias)"
         });
         UIHelper.styleComboBox(owner.batchExpirationCombo);
-        owner.batchExpirationCombo.setPreferredSize(new Dimension(200, 35));
+        owner.batchExpirationCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         owner.batchExpirationCombo.addActionListener(e -> filterBatches());
 
         owner.batchSearchField = new SearchField("Pesquisar por SKU, nome ou lote…");
@@ -99,10 +99,11 @@ final class StockBatchesPanel {
         };
         owner.batchesTable = new JTable(owner.batchesModel);
         UIHelper.styleTable(owner.batchesTable);
+        owner.batchesTable.setAutoCreateRowSorter(true);
         JScrollPane scroll = new JScrollPane(owner.batchesTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
-        card.add(com.phcpro.gui.components.TableFooter.install(owner.batchesTable), BorderLayout.SOUTH);
+        card.add(com.phcpro.gui.components.ClientTablePagination.install(owner.batchesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }

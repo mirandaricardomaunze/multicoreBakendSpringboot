@@ -122,7 +122,7 @@ final class PurchaseOrdersPanel {
         ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
         cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
         cancelBtn.addActionListener(e -> cancelSelectedPO());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> { owner.poSearchField.setText(""); refresh(); });
         ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");

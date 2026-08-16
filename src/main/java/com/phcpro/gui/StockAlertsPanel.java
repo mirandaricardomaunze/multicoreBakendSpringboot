@@ -25,7 +25,7 @@ final class StockAlertsPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Alertas de Stock"), BorderLayout.WEST);
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refresh());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));

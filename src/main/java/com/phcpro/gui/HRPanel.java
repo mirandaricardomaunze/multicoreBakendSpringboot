@@ -1,6 +1,7 @@
 package com.phcpro.gui;
 
 import com.phcpro.gui.components.KpiCard;
+import com.phcpro.gui.components.ActionMenuButton;
 import com.phcpro.gui.components.ModernButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
@@ -290,22 +291,19 @@ public class HRPanel extends JPanel {
         header.setOpaque(false);
         header.add(UIHelper.createSubheading("Quadro de Colaboradores"), BorderLayout.WEST);
 
-        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
-        exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        exportBtn.addActionListener(e -> exportTable("colaboradores", "Colaboradores", employeesTable));
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Colaborador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         newBtn.addActionListener(e -> openEmployeeDialog(null));
         ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
         editBtn.addActionListener(e -> editSelectedEmployee());
-        ModernButton statusBtn = UIHelper.createSecondaryButton("Alterar Estado");
-        statusBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
-        statusBtn.addActionListener(e -> changeSelectedEmployeeStatus());
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Alterar Estado", UIHelper.icon("fas-user-shield", 14), this::changeSelectedEmployeeStatus)
+                .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
+                        () -> exportTable("colaboradores", "Colaboradores", employeesTable));
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(statusBtn);
+        actions.add(moreBtn);
         actions.add(editBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
@@ -321,6 +319,7 @@ public class HRPanel extends JPanel {
         };
         employeesTable = new JTable(employeesModel);
         UIHelper.styleTable(employeesTable);
+        employeesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.role());
         employeesTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
         employeesTable.getColumnModel().getColumn(8).setCellRenderer(TableCellRenderers.money());
         JScrollPane scroll = new JScrollPane(employeesTable);
@@ -386,6 +385,7 @@ public class HRPanel extends JPanel {
             UIHelper.styleTextField(field);
         }
         UIHelper.styleComboBox(roleCombo);
+        UIHelper.humanizeRoleCombo(roleCombo);
 
         JPanel form = UIHelper.createDialogForm(
                 "Número Interno:", numberField,
@@ -474,22 +474,19 @@ public class HRPanel extends JPanel {
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton payBtn = UIHelper.createSuccessButton("Marcar Pago");
         payBtn.setIcon(UIHelper.icon("fas-check", 14));
-        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir PDF");
-        printBtn.setIcon(UIHelper.icon("fas-print", 14));
-        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar Lista");
-        exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
+        ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos")
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printSelectedPayslip)
+                .addAction("Exportar Lista", UIHelper.icon("fas-file-pdf", 14),
+                        () -> exportTable("recibos-salario", "Recibos de Salário", payslipsTable));
         ModernButton processBtn = UIHelper.createPrimaryButton("Processar Mês");
         processBtn.setIcon(UIHelper.icon("fas-calculator", 14));
         newBtn.addActionListener(e -> openCreatePayslipDialog());
         payBtn.addActionListener(e -> markSelectedPayslipPaid());
-        printBtn.addActionListener(e -> printSelectedPayslip());
-        exportBtn.addActionListener(e -> exportTable("recibos-salario", "Recibos de Salário", payslipsTable));
         processBtn.addActionListener(e -> processMonthlyPayroll());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(exportBtn);
+        actions.add(documentsBtn);
         actions.add(processBtn);
-        actions.add(printBtn);
         actions.add(payBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);

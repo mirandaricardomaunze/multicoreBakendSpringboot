@@ -26,20 +26,19 @@ final class PosBarcodeActions {
             return;
         }
 
-        ProductDTO product = findLocalProduct(code);
-        if (product == null) {
-            JOptionPane.showMessageDialog(owner,
-                    "Produto com código de barras '" + code + "' não encontrado.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-            owner.barcodeField.selectAll();
-            owner.barcodeField.requestFocusInWindow();
-            return;
-        }
-
-        // Adiciona com quantidade 1 ao carrinho (mesmo caminho do clique no card; faz merge de qtd).
-        owner.addProductToCart(product);
-        owner.barcodeField.setText("");
-        owner.barcodeField.requestFocusInWindow();
+        UIHelper.loadAsync(owner, () -> owner.comercialApiClient.findPOSCatalogItemByBarcode(code), item -> {
+            if (item == null) {
+                showProductNotFound(code);
+                return;
+            }
+            if (!item.sellable()) {
+                showOutOfStock(item.product());
+                return;
+            }
+            owner.registerSellableProduct(item.product());
+            owner.addProductToCart(item.product());
+            clearAndRefocus();
+        }, error -> owner.showPosLoadError("produto pelo código de barras", error));
     }
 
     /**
@@ -48,14 +47,22 @@ final class PosBarcodeActions {
      * embutido, ou derivada do preço total quando a balança embute o preço — e adiciona ao carrinho.
      */
     private void handleScaleScan(com.phcpro.modules.pos.scale.ScaleBarcode scale) {
-        ProductDTO product = resolveWeighedProduct(scale.itemCode());
+        UIHelper.loadAsync(owner, () -> resolveWeighedProduct(scale.itemCode()), item -> {
+            if (item == null) {
+                showWeighedProductNotFound(scale.itemCode());
+                return;
+            }
+            if (!item.sellable()) {
+                showOutOfStock(item.product());
+                return;
+            }
+            owner.registerSellableProduct(item.product());
+            processScaleScan(scale, item.product());
+        }, error -> owner.showPosLoadError("artigo pesado", error));
+    }
+
+    private void processScaleScan(com.phcpro.modules.pos.scale.ScaleBarcode scale, ProductDTO product) {
         if (product == null) {
-            JOptionPane.showMessageDialog(owner,
-                    "Artigo pesado com código (PLU) '" + scale.itemCode() + "' não encontrado.\n"
-                            + "Registe o PLU da balança no campo \"Código de barras\" do produto.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-            owner.barcodeField.selectAll();
-            owner.barcodeField.requestFocusInWindow();
             return;
         }
         if (!"WEIGHT".equalsIgnoreCase(product.saleType())) {
@@ -100,12 +107,12 @@ final class PosBarcodeActions {
     }
 
     /** Resolve o artigo pesado pelo PLU: tenta o código tal-e-qual e depois sem zeros à esquerda. */
-    private ProductDTO resolveWeighedProduct(String itemCode) {
-        ProductDTO product = findLocalProduct(itemCode);
+    private com.phcpro.modules.comercial.dto.POSCatalogItemDTO resolveWeighedProduct(String itemCode) {
+        var product = owner.comercialApiClient.findPOSCatalogItemByBarcode(itemCode);
         if (product == null) {
             String stripped = itemCode.replaceFirst("^0+", "");
             if (!stripped.isEmpty() && !stripped.equals(itemCode)) {
-                product = findLocalProduct(stripped);
+                product = owner.comercialApiClient.findPOSCatalogItemByBarcode(stripped);
             }
         }
         return product;
@@ -117,6 +124,12 @@ final class PosBarcodeActions {
      * deixa o cálculo de dinheiro à engine (preço/kg × kg, IVA por unidade), como qualquer outra linha.
      */
     private void addWeighedProductToCart(ProductDTO product, BigDecimal qtyKg) {
+        if (!owner.isProductSellable(product)) {
+            JOptionPane.showMessageDialog(owner,
+                    "O artigo '" + product.name() + "' está esgotado e não pode ser adicionado.",
+                    "Sem Stock", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (owner.activeSession == null) {
             JOptionPane.showMessageDialog(owner,
                     "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
@@ -145,14 +158,31 @@ final class PosBarcodeActions {
                         "Erro de ligação", JOptionPane.ERROR_MESSAGE));
     }
 
-    private ProductDTO findLocalProduct(String code) {
-        if (code == null) return null;
-        String normalized = code.trim();
-        return owner.productsList.stream()
-                .filter(product -> normalized.equals(product.barcode())
-                        || normalized.equals(product.reference())
-                        || normalized.equals(product.sku()))
-                .findFirst().orElse(null);
+    private void showProductNotFound(String code) {
+        JOptionPane.showMessageDialog(owner, "Produto com código de barras '" + code + "' não encontrado.",
+                "Aviso", JOptionPane.WARNING_MESSAGE);
+        owner.barcodeField.selectAll();
+        owner.barcodeField.requestFocusInWindow();
+    }
+
+    private void showWeighedProductNotFound(String code) {
+        JOptionPane.showMessageDialog(owner,
+                "Artigo pesado com código (PLU) '" + code + "' não encontrado.\n"
+                        + "Registe o PLU da balança no campo \"Código de barras\" do produto.",
+                "Aviso", JOptionPane.WARNING_MESSAGE);
+        owner.barcodeField.selectAll();
+        owner.barcodeField.requestFocusInWindow();
+    }
+
+    private void showOutOfStock(ProductDTO product) {
+        JOptionPane.showMessageDialog(owner, "O artigo '" + product.name() + "' está esgotado.",
+                "Sem Stock", JOptionPane.WARNING_MESSAGE);
+        clearAndRefocus();
+    }
+
+    private void clearAndRefocus() {
+        owner.barcodeField.setText("");
+        owner.barcodeField.requestFocusInWindow();
     }
 
     // ─── Form-layout helpers ────────────────────────────────────────────────────

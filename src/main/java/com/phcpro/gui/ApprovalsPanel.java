@@ -120,12 +120,14 @@ public class ApprovalsPanel extends JPanel {
         pendingTable = new JTable(pendingModel);
         UIHelper.styleTable(pendingTable);
         pendingTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
+        pendingTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.role());
         // Duplo-clique abre o modal de decisão (não o inspector genérico do styleTable).
         pendingTable.putClientProperty("noRowInspector", Boolean.TRUE);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
         UIHelper.styleScrollPane(pendingScroll);
         JTextField pSearch = TableFilter.searchField("Documento ou submissor…");
         JComboBox<String> pPerfil = TableFilter.combo("Todos os perfis", "ADMIN", "MANAGER");
+        UIHelper.humanizeRoleCombo(pPerfil);
         TableFilter.install(pendingTable, pSearch, new TableFilter.ColumnFilter(pPerfil, 4));
         JPanel pBar = TableFilter.bar(pSearch, TableFilter.label("Perfil:"), pPerfil);
         pBar.setBorder(new EmptyBorder(0, 0, 10, 0));

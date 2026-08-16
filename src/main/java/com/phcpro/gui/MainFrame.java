@@ -216,7 +216,7 @@ public class MainFrame extends JFrame {
 
     /** Tinta dos ícones da barra de topo — escura sobre barra clara, clara sobre barra escura. */
     private static Color topBarIconTint() {
-        return UIHelper.isLight() ? new Color(71, 85, 105) : new Color(229, 231, 235);
+        return UIHelper.TEXT_MUTED;
     }
 
     private TopNavBar buildTopBar() {
@@ -236,10 +236,12 @@ public class MainFrame extends JFrame {
         bar.addItem(navIcon("fas-users"),               "Recursos Humanos",   UIHelper.MODULE_HR,         () -> navigate("hr"));
         bar.addItem(navIcon("fas-headset"),             "CRM & Assistência",  UIHelper.MODULE_CRM,        () -> navigate("crm"));
         bar.addItem(navIcon("fas-address-book"),        "Clientes",           UIHelper.MODULE_CLIENTES,   () -> navigate("clientes"));
-        bar.addItem(navIcon("fas-percent"),             "Área Fiscal",        UIHelper.MODULE_FISCAL,     () -> navigate("fiscal"));
-        bar.addItem(navIcon("fas-book"),                "Contabilidade",      UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"));
-        bar.addItem(navIcon("fas-check-double"),        "Aprovações",         UIHelper.MODULE_APPROVALS,  () -> navigate("approvals"));
-        bar.addItem(navIcon("fas-cog"),                 "Configurações",      UIHelper.MODULE_CONFIG,     () -> navigate("config"));
+        bar.addMenu(navIcon("fas-ellipsis-h"), "Mais", UIHelper.MODULE_CONFIG, List.of(
+                new TopNavBar.MenuEntry(navIcon("fas-percent"), "Área Fiscal", () -> navigate("fiscal")),
+                new TopNavBar.MenuEntry(navIcon("fas-book"), "Contabilidade", () -> navigate("contabilidade")),
+                new TopNavBar.MenuEntry(navIcon("fas-check-double"), "Aprovações", () -> navigate("approvals")),
+                new TopNavBar.MenuEntry(navIcon("fas-cog"), "Configurações", () -> navigate("config"))
+        ));
 
         // Área direita: seletor de empresa + chip de utilizador.
         JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
@@ -470,7 +472,7 @@ public class MainFrame extends JFrame {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? new Color(55, 65, 81) : UIHelper.BG_CARD);
+                setBackground(isSelected ? UIHelper.GRID : UIHelper.BG_CARD);
                 setForeground(UIHelper.TEXT_LIGHT);
                 setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
                 if (value instanceof DesktopSession.CompanyAccess company) {
@@ -510,7 +512,7 @@ public class MainFrame extends JFrame {
         sessionUserLabel.setForeground(UIHelper.TEXT_LIGHT);
         sessionRoleLabel = new JLabel("—");
         sessionRoleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        sessionRoleLabel.setForeground(new Color(156, 163, 175));
+        sessionRoleLabel.setForeground(UIHelper.TEXT_MUTED);
         textStack.add(sessionUserLabel);
         textStack.add(sessionRoleLabel);
         chip.add(textStack, BorderLayout.CENTER);

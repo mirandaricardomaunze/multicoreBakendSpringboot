@@ -118,7 +118,7 @@ public class NotificationsPanel extends JPanel {
         markAllButton.setIcon(UIHelper.icon("fas-check-double", 14));
         markAllButton.addActionListener(e -> markAllRead());
         markAllButton.setEnabled(false);
-        refreshButton = UIHelper.createSecondaryButton("Atualizar");
+        refreshButton = UIHelper.createSecondaryButton("Actualizar");
         refreshButton.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshButton.addActionListener(e -> refreshData());
 
@@ -143,7 +143,7 @@ public class NotificationsPanel extends JPanel {
      *
      * <p>O contador de versão mantém-se: o {@code loadAsync} descarta respostas de um tenant que
      * deixou de estar activo, mas não respostas fora de ordem <b>da mesma empresa</b> — é o que
-     * acontece a carregar "Atualizar" duas vezes seguidas.
+     * acontece a carregar "Actualizar" duas vezes seguidas.
      */
     private void refreshData() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();

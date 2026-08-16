@@ -28,7 +28,7 @@ final class StockTransferActions {
         List<ProductDTO> products = new ArrayList<>(owner.catalogProducts);
         if (products.isEmpty()) {
             JOptionPane.showMessageDialog(owner,
-                    "É necessário cadastrar produtos antes de transferir.",
+                    "É necessário registar produtos antes de transferir.",
                     "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -208,7 +208,7 @@ final class StockTransferActions {
 
             int print = JOptionPane.showConfirmDialog(owner,
                     "Guia " + created.transferNumber() + " registada e PENDENTE DE APROVAÇÃO.\n"
-                            + "O stock só sai do armazém de origem após aprovação (MANAGER/ADMIN).\n\n"
+                            + "O stock só sai do armazém de origem após aprovação de um Gestor ou Administrador.\n\n"
                             + "Deseja imprimir a Guia de Transferência agora?",
                     "Sucesso", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
             if (print == JOptionPane.YES_OPTION) {

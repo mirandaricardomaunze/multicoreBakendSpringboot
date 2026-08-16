@@ -29,7 +29,7 @@ final class PurchaseReorderPanel {
         orderBtn.setIcon(UIHelper.icon("fas-clipboard-list", 14));
         orderBtn.setToolTipText("Abre a aba Encomendas a Fornecedor para encomendar os produtos em falta.");
         orderBtn.addActionListener(e -> owner.tabbedPane.setSelectedIndex(2)); // Encomendas a Fornecedor
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refresh());
         actions.add(refreshBtn); actions.add(orderBtn);

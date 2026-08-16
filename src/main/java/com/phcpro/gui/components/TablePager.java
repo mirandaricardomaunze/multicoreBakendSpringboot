@@ -25,6 +25,8 @@ import java.util.function.BiConsumer;
 public final class TablePager extends JPanel {
 
     private static final Integer[] PAGE_SIZES = {25, 50, 100, 200};
+    static final int CONTROL_GAP = 8;
+    static final int ACTION_ROW_GAP = 10;
 
     private final JLabel status = new JLabel(" ");
     private final ModernButton first = navButton("fas-angle-double-left", "Primeira página");
@@ -39,12 +41,12 @@ public final class TablePager extends JPanel {
 
     /** @param loader recebe (página começada em 0, tamanho) e carrega essa página */
     public TablePager(BiConsumer<Integer, Integer> loader) {
-        super(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        super(new FlowLayout(FlowLayout.RIGHT, CONTROL_GAP, 0));
         this.loader = loader;
         setOpaque(false);
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, UIHelper.GRID),
-                new EmptyBorder(6, 4, 0, 4)));
+                new EmptyBorder(8, 4, ACTION_ROW_GAP, 4)));
 
         status.setForeground(UIHelper.TEXT_MUTED);
         status.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));

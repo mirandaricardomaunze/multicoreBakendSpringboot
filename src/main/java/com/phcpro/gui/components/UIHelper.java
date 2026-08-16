@@ -69,6 +69,8 @@ public class UIHelper {
     public static final Color KPI_ORANGE_END = new Color(234, 88, 12);
     private static final Color SECONDARY = new Color(75, 85, 99);       // Gray-600 (#4B5563)
     private static final Color SECONDARY_HOVER = new Color(107, 114, 128); // Gray-500 (#6B7280)
+    public static final Color BUTTON_NEUTRAL = new Color(51, 65, 85);       // Slate-700
+    public static final Color BUTTON_NEUTRAL_HOVER = new Color(71, 85, 105); // Slate-600
 
     // ── Cores de acento por módulo (partilhadas entre temas). Uma só fonte de verdade — a barra de
     //    topo e os painéis referenciam estas em vez de literais Color soltos. ────────────────────
@@ -340,8 +342,19 @@ public class UIHelper {
         return new ModernButton(text, REJECTED_RED, REJECTED_RED_HOVER);
     }
 
+    /** Acção que exige atenção mas não é destrutiva (ex.: movimento manual de caixa). */
+    public static ModernButton createWarningButton(String text) {
+        return new ModernButton(text, PENDING_YELLOW, KPI_WARNING_DARK);
+    }
+
     public static ModernButton createSecondaryButton(String text) {
         return new ModernButton(text, SECONDARY, SECONDARY_HOVER);
+    }
+
+    public static ActionMenuButton createActionMenuButton(String text) {
+        ActionMenuButton button = new ActionMenuButton(text);
+        button.setColors(SECONDARY, SECONDARY_HOVER);
+        return button;
     }
 
     /** Botão apenas com ícone, sempre com tooltip e nome acessível. */
@@ -765,6 +778,7 @@ public class UIHelper {
 
     private static void maybeAddListingFooter(JTable table) {
         if (Boolean.TRUE.equals(table.getClientProperty("noTableFooter"))) return;
+        if (Boolean.TRUE.equals(table.getClientProperty(ClientTablePagination.DISABLED))) return;
         if (table.getRowSorter() == null) return; // só tabelas de listagem (com filtro)
         JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, table);
         if (sp == null || !(sp.getParent() instanceof JComponent parent)) return;
@@ -772,7 +786,7 @@ public class UIHelper {
         if (bl.getLayoutComponent(BorderLayout.SOUTH) != null) return;    // SOUTH ocupado (rodapé próprio)
         if (Boolean.TRUE.equals(parent.getClientProperty("tableFooterAdded"))) return;
         parent.putClientProperty("tableFooterAdded", Boolean.TRUE);
-        parent.add(TableFooter.install(table), BorderLayout.SOUTH);
+        parent.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         parent.revalidate();
         parent.repaint();
     }
@@ -1469,6 +1483,17 @@ public class UIHelper {
         };
     }
 
+    /** Mantém o código técnico como valor do select, apresentando apenas a etiqueta humana. */
+    public static void humanizeRoleCombo(JComboBox<String> combo) {
+        @SuppressWarnings("unchecked")
+        ListCellRenderer<? super String> original = (ListCellRenderer<? super String>) combo.getRenderer();
+        combo.setRenderer((list, value, index, selected, focus) -> {
+            Component rendered = original.getListCellRendererComponent(list, value, index, selected, focus);
+            if (rendered instanceof JLabel label) label.setText(humanRole(value));
+            return rendered;
+        });
+    }
+
     public static void stylePasswordField(JPasswordField field) {
         field.setBackground(FIELD_BG);
         field.setForeground(TEXT_LIGHT);
@@ -1678,18 +1703,6 @@ public class UIHelper {
             Object labelObj = labelsAndComponents[i];
             Object compObj = labelsAndComponents[i + 1];
 
-            JPanel cell = new JPanel(new BorderLayout(0, 4));
-            cell.setOpaque(false);
-
-            if (labelObj instanceof String) {
-                JLabel lbl = new JLabel((String) labelObj);
-                lbl.setFont(new Font(FONT, Font.BOLD, 12));
-                lbl.setForeground(ACCENT);
-                cell.add(lbl, BorderLayout.NORTH);
-            } else if (labelObj instanceof Component) {
-                cell.add((Component) labelObj, BorderLayout.NORTH);
-            }
-
             if (compObj instanceof Component) {
                 Component c = (Component) compObj;
                 if (c instanceof JTextField) {
@@ -1703,7 +1716,17 @@ public class UIHelper {
                 } else if (c instanceof JTextArea) {
                     styleTextArea((JTextArea) c);
                 }
-                cell.add(c, BorderLayout.CENTER);
+            }
+
+            JPanel cell = new JPanel(new BorderLayout(0, 4));
+            cell.setOpaque(false);
+            if (labelObj instanceof String rawLabel && compObj instanceof JComponent input) {
+                boolean required = rawLabel.contains("*");
+                String cleanLabel = rawLabel.replace("*", "").trim();
+                cell.add(new FormField(cleanLabel, input, required, null), BorderLayout.CENTER);
+            } else {
+                if (labelObj instanceof Component) cell.add((Component) labelObj, BorderLayout.NORTH);
+                if (compObj instanceof Component) cell.add((Component) compObj, BorderLayout.CENTER);
             }
 
             gbc.gridx = pair % columns;

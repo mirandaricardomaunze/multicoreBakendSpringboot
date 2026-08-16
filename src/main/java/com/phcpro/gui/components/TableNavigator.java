@@ -74,12 +74,13 @@ public final class TableNavigator {
 
         scroll.putClientProperty(ATTACHED, Boolean.TRUE);
         JScrollBar sb = scroll.getVerticalScrollBar();
-        JComponent bar = buildBar(sb);
+        NavigationBar bar = buildBar(sb);
         parent.add(bar, BorderLayout.EAST);
 
         // Auto-esconder: só visível quando a lista transborda.
         Runnable sync = () -> {
             boolean show = overflowed(sb.getMinimum(), sb.getMaximum(), sb.getVisibleAmount());
+            bar.sync(sb);
             if (bar.isVisible() != show) {
                 bar.setVisible(show);
                 parent.revalidate();
@@ -96,6 +97,14 @@ public final class TableNavigator {
     /** true quando o conteúdo é maior do que a área visível (vale a pena navegar). */
     public static boolean overflowed(int min, int max, int extent) {
         return (max - min) > extent;
+    }
+
+    static boolean atTop(int value, int min) {
+        return value <= min;
+    }
+
+    static boolean atBottom(int value, int max, int extent) {
+        return value >= max - extent;
     }
 
     // ─── Acções de scroll (puras, testáveis sem display) ─────────────────────
@@ -145,24 +154,15 @@ public final class TableNavigator {
 
     // ─── UI ──────────────────────────────────────────────────────────────────
 
-    private static JComponent buildBar(JScrollBar bar) {
-        Strip cluster = new Strip();
-        cluster.add(navButton("fas-angle-double-up", "Ir para o topo (Home)", () -> top(bar)));
-        cluster.add(navButton("fas-angle-up", "Página acima (PageUp)", () -> pageUp(bar)));
-        cluster.add(navButton("fas-angle-down", "Página abaixo (PageDown)", () -> pageDown(bar)));
-        cluster.add(navButton("fas-angle-double-down", "Ir para o fundo (End)", () -> bottom(bar)));
-
-        JPanel column = new JPanel(new GridBagLayout());
-        column.setOpaque(false);
-        column.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
-        column.add(cluster, new GridBagConstraints());
-        return column;
+    private static NavigationBar buildBar(JScrollBar bar) {
+        return new NavigationBar(bar);
     }
 
     private static JButton navButton(String iconCode, String tooltip, Runnable action) {
         JButton b = new JButton(UIHelper.icon(iconCode, 13, UIHelper.TEXT_LIGHT));
         b.setRolloverIcon(UIHelper.icon(iconCode, 13, UIHelper.ACCENT));
         b.setToolTipText(tooltip);
+        b.getAccessibleContext().setAccessibleName(tooltip);
         b.setPreferredSize(new Dimension(28, 24));
         b.setContentAreaFilled(false);
         b.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
@@ -170,6 +170,43 @@ public final class TableNavigator {
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.addActionListener(e -> action.run());
         return b;
+    }
+
+    private static final class NavigationBar extends JPanel {
+        private final JButton top;
+        private final JButton pageUp;
+        private final JButton pageDown;
+        private final JButton bottom;
+
+        NavigationBar(JScrollBar scrollBar) {
+            super(new GridBagLayout());
+            setOpaque(false);
+            setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+            top = navButton("fas-angle-double-up", "Ir para o início da lista (Home)",
+                    () -> TableNavigator.top(scrollBar));
+            pageUp = navButton("fas-angle-up", "Subir uma página (Page Up)",
+                    () -> TableNavigator.pageUp(scrollBar));
+            pageDown = navButton("fas-angle-down", "Descer uma página (Page Down)",
+                    () -> TableNavigator.pageDown(scrollBar));
+            bottom = navButton("fas-angle-double-down", "Ir para o fim da lista (End)",
+                    () -> TableNavigator.bottom(scrollBar));
+            Strip cluster = new Strip();
+            cluster.add(top);
+            cluster.add(pageUp);
+            cluster.add(pageDown);
+            cluster.add(bottom);
+            add(cluster, new GridBagConstraints());
+        }
+
+        void sync(JScrollBar scrollBar) {
+            boolean start = atTop(scrollBar.getValue(), scrollBar.getMinimum());
+            boolean end = atBottom(scrollBar.getValue(), scrollBar.getMaximum(),
+                    scrollBar.getVisibleAmount());
+            top.setEnabled(!start);
+            pageUp.setEnabled(!start);
+            pageDown.setEnabled(!end);
+            bottom.setEnabled(!end);
+        }
     }
 
     private static final class Strip extends JPanel {

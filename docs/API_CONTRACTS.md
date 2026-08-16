@@ -120,3 +120,9 @@ Como o Swing vai migrar para clients HTTP:
 - Contratos devem ser previsiveis para `RestClient` ou `WebClient`.
 - Mudancas de DTO devem preservar compatibilidade quando possivel.
 - Operacoes atomicas devem existir como endpoints de caso de uso, nao como sequencia fragil de chamadas UI.
+# Catálogo POS paginado
+
+- `GET /api/comercial/products/pos-catalog/page?query=&availableOnly=false&page=0&size=36`
+  devolve `PageResponse<POSCatalogItemDTO>`.
+- `GET /api/comercial/products/pos-catalog/by-barcode?barcode=...` devolve um item com produto e
+  disponibilidade, permitindo ao scanner operar fora da página visível.

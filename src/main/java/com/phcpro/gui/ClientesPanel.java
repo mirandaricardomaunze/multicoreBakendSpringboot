@@ -48,7 +48,7 @@ public class ClientesPanel extends JPanel {
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
         ModernButton deleteBtn = UIHelper.createDangerButton("Eliminar");
         deleteBtn.setIcon(UIHelper.icon("fas-trash", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);

@@ -60,6 +60,11 @@ public class DatabaseBackupService {
         return runPhysicalBackup();
     }
 
+    /** Indica se a ligação actual permite o backup físico por {@code pg_dump}. */
+    public boolean supportsPhysicalBackup() {
+        return jdbcUrl != null && jdbcUrl.startsWith("jdbc:postgresql://");
+    }
+
     /**
      * Núcleo do backup físico, <b>sem verificação de permissão</b> — para uso pelo agendador
      * ({@code ScheduledBackupService}), que corre num contexto de sistema (sem utilizador). Chamadas

@@ -17,6 +17,7 @@ Usam uma `JScrollBar` vertical com modelo conhecido (`value`, `extent`, `min`, `
 | TN-05 | `pageUp(bar)` já no topo                                       | `value` fica em `minimum` (clamp, sem exceção) |
 | TN-06 | `pageDown(bar)` já no fundo                                    | `value` fica em `maximum - extent` (clamp) |
 | TN-07 | helpers com `null`                                             | não lançam (no-op) |
+| TN-08 | detectar início/fim da área rolável                            | estado correcto para activar/desactivar botões |
 
 ## Manuais (UI)
 
@@ -27,6 +28,7 @@ Usam uma `JScrollBar` vertical com modelo conhecido (`value`, `extent`, `min`, `
 | TN-52 | Clicar **Página acima** / **Página abaixo**                    | Rola uma página de cada vez |
 | TN-53 | Tabela curta (cabe toda no ecrã)                               | Botões não rebentam nada; scroll fica no sítio |
 | TN-54 | Confirmar em várias abas (Comercial, Stock, RH, Compras…)      | A barra aparece transversalmente (via `styleScrollPane`) |
+| TN-55 | Chegar ao início/fim                                           | botões sem acção possível ficam desactivados |
 
 ## Definition of done
 

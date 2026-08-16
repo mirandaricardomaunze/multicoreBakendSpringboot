@@ -9,20 +9,29 @@ import java.awt.*;
 
 /** Construtores de layout puros do formulário POS. */
 final class PosLayout {
-    static final int CART_COMFORTABLE_WIDTH = 900;
+    static final int CART_COMFORTABLE_WIDTH = 620;
+    static final int ROOT_VERTICAL_MARGIN = 14;
+    static final int SECTION_VERTICAL_GAP = 6;
+    static final int CARD_VERTICAL_GAP = 8;
+    static final double[] HEADER_FIELD_WEIGHTS = {0.20, 0.22, 0.16, 0.18, 0.24};
 
     private PosLayout() {}
 
     static int cartAutoResizeMode(int viewportWidth) {
-        return viewportWidth >= CART_COMFORTABLE_WIDTH
-                ? JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS
-                : JTable.AUTO_RESIZE_OFF;
+        return JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS;
     }
 
     static void updateCartTableResizeMode(JTable table, int viewportWidth) {
         int mode = cartAutoResizeMode(viewportWidth);
         if (table.getAutoResizeMode() != mode) {
             table.setAutoResizeMode(mode);
+        }
+    }
+
+    static void configureOperationalCartColumns(JTable table) {
+        int[] widths = {250, 55, 90, 65, 105, 110};
+        for (int i = 0; i < widths.length; i++) {
+            table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
     }
 
@@ -79,7 +88,7 @@ final class PosLayout {
         JLabel section = new JLabel(text);
         section.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         section.setForeground(UIHelper.ACCENT);
-        section.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 70)));
+        section.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIHelper.GRID));
 
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
         gbc.weightx = 1.0; gbc.weighty = 0.0;

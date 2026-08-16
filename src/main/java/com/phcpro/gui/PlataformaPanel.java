@@ -93,15 +93,13 @@ public class PlataformaPanel extends JPanel {
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-pen", 14));
-        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
-        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        com.phcpro.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCompany)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadCompanies);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(toggleBtn);
+        actions.add(moreBtn);
         actions.add(editBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
@@ -137,8 +135,6 @@ public class PlataformaPanel extends JPanel {
 
         newBtn.addActionListener(e -> createCompany());
         editBtn.addActionListener(e -> editSelectedCompany());
-        toggleBtn.addActionListener(e -> toggleSelectedCompany());
-        refreshBtn.addActionListener(e -> loadCompanies());
 
         return panel;
     }
@@ -316,18 +312,14 @@ public class PlataformaPanel extends JPanel {
         planBtn.setIcon(UIHelper.icon("fas-sliders-h", 14));
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
-        ModernButton historyBtn = UIHelper.createSecondaryButton("Ver Pagamentos");
-        historyBtn.setIcon(UIHelper.icon("fas-receipt", 14));
-        ModernButton toggleBtn = UIHelper.createSecondaryButton("Suspender/Reactivar");
-        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        com.phcpro.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Ver Pagamentos", UIHelper.icon("fas-receipt", 14), this::showPayments)
+                .addAction("Suspender/Reactivar", UIHelper.icon("fas-power-off", 14), this::toggleSubscriptionStatus)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadSubscriptions);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(toggleBtn);
-        actions.add(historyBtn);
+        actions.add(moreBtn);
         actions.add(payBtn);
         actions.add(planBtn);
         header.add(actions, BorderLayout.EAST);
@@ -372,9 +364,6 @@ public class PlataformaPanel extends JPanel {
 
         planBtn.addActionListener(e -> defineSubscription());
         payBtn.addActionListener(e -> recordPayment());
-        historyBtn.addActionListener(e -> showPayments());
-        toggleBtn.addActionListener(e -> toggleSubscriptionStatus());
-        refreshBtn.addActionListener(e -> loadSubscriptions());
 
         return panel;
     }
@@ -587,21 +576,15 @@ public class PlataformaPanel extends JPanel {
         editBtn.setIcon(UIHelper.icon("fas-pen", 14));
         ModernButton grantBtn = UIHelper.createPrimaryButton("Conceder/Alterar Acesso");
         grantBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
-        ModernButton revokeBtn = UIHelper.createSecondaryButton("Revogar Acesso");
-        revokeBtn.setIcon(UIHelper.icon("fas-user-slash", 14));
-        ModernButton pwdBtn = UIHelper.createSecondaryButton("Repor Senha");
-        pwdBtn.setIcon(UIHelper.icon("fas-key", 14));
-        ModernButton toggleBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
-        toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        com.phcpro.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Revogar Acesso", UIHelper.icon("fas-user-slash", 14), this::revokeAccess)
+                .addAction("Repor Senha", UIHelper.icon("fas-key", 14), this::resetPassword)
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleUserActive)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadUsers);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(toggleBtn);
-        actions.add(pwdBtn);
-        actions.add(revokeBtn);
+        actions.add(moreBtn);
         actions.add(grantBtn);
         actions.add(editBtn);
         actions.add(newBtn);
@@ -639,10 +622,6 @@ public class PlataformaPanel extends JPanel {
         newBtn.addActionListener(e -> createPlatformUser());
         editBtn.addActionListener(e -> editUser());
         grantBtn.addActionListener(e -> grantAccess());
-        revokeBtn.addActionListener(e -> revokeAccess());
-        pwdBtn.addActionListener(e -> resetPassword());
-        toggleBtn.addActionListener(e -> toggleUserActive());
-        refreshBtn.addActionListener(e -> loadUsers());
 
         return panel;
     }
@@ -718,6 +697,7 @@ public class PlataformaPanel extends JPanel {
         UIHelper.styleTextField(passwordField);
         UIHelper.styleComboBox(companyCombo);
         UIHelper.styleComboBox(roleCombo);
+        UIHelper.humanizeRoleCombo(roleCombo);
 
         JPanel form = UIHelper.createDialogForm(
                 "Utilizador:", usernameField,
@@ -759,6 +739,7 @@ public class PlataformaPanel extends JPanel {
         JComboBox<String> roleCombo = new JComboBox<>(TENANT_ROLES);
         UIHelper.styleComboBox(companyCombo);
         UIHelper.styleComboBox(roleCombo);
+        UIHelper.humanizeRoleCombo(roleCombo);
 
         JPanel form = UIHelper.createDialogForm("Empresa:", companyCombo, "Papel:", roleCombo);
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Conceder/Alterar Acesso",
@@ -866,7 +847,7 @@ public class PlataformaPanel extends JPanel {
         openBtn.setIcon(UIHelper.icon("fas-comments", 14));
         ModernButton statusBtn = UIHelper.createSecondaryButton("Mudar Estado");
         statusBtn.setIcon(UIHelper.icon("fas-tasks", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

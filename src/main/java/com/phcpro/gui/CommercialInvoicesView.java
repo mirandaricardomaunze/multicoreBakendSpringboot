@@ -233,25 +233,18 @@ final class CommercialInvoicesView {
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
-        ModernButton printInvoiceBtn = UIHelper.createSecondaryButton("Imprimir PDF");
-        printInvoiceBtn.setIcon(UIHelper.icon("fas-print", 14));
-        ModernButton printGuideBtn = UIHelper.createSecondaryButton("Imprimir Guia");
-        printGuideBtn.setIcon(UIHelper.icon("fas-truck", 14));
-        ModernButton exportTableBtn = UIHelper.createSecondaryButton("Exportar Tabela");
-        exportTableBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedInvoice)
+                .addAction("Imprimir Guia", UIHelper.icon("fas-truck", 14), owner::printSelectedGuide)
+                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportInvoicesTable)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), owner::loadInvoicesTable);
         ModernButton cancelInvoiceBtn = UIHelper.createDangerButton("Anular Fatura");
         cancelInvoiceBtn.setIcon(UIHelper.icon("fas-ban", 14));
         ModernButton payInvoiceBtn = UIHelper.createSuccessButton("Liquidar (RC)");
         payInvoiceBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-
-        btnPanel.add(printInvoiceBtn);
-        btnPanel.add(printGuideBtn);
-        btnPanel.add(exportTableBtn);
+        btnPanel.add(moreBtn);
         btnPanel.add(cancelInvoiceBtn);
         btnPanel.add(payInvoiceBtn);
-        btnPanel.add(refreshBtn);
 
         // A tabela vem paginada do servidor: a barra de paginação fica entre a tabela e as acções.
         owner.invoicesPager = new TablePager(owner::loadInvoicesPage);
@@ -271,10 +264,6 @@ final class CommercialInvoicesView {
         UIHelper.onTextChange(owner.invoiceBoxesField, owner::applyInvoiceBoxes);
         cancelInvoiceBtn.addActionListener(e -> owner.cancelSelectedInvoice());
         payInvoiceBtn.addActionListener(e -> owner.paySelectedInvoice());
-        refreshBtn.addActionListener(e -> owner.loadInvoicesTable());
-        printInvoiceBtn.addActionListener(e -> owner.printSelectedInvoice());
-        printGuideBtn.addActionListener(e -> owner.printSelectedGuide());
-        exportTableBtn.addActionListener(e -> owner.exportInvoicesTable());
 
         // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
         DocumentEditorHost invoiceEditor = new DocumentEditorHost(

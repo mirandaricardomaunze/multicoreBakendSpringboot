@@ -101,6 +101,22 @@ public class ComercialApiClient {
         return clientFactory.authenticatedClient().getList("/api/comercial/products/sellable", ProductDTO.class);
     }
 
+    public PageResponse<com.phcpro.modules.comercial.dto.POSCatalogItemDTO> getPOSCatalogPage(
+            String query, boolean availableOnly, int page, int size) {
+        String encoded = URLEncoder.encode(query == null ? "" : query, StandardCharsets.UTF_8);
+        String path = "/api/comercial/products/pos-catalog/page?query=" + encoded
+                + "&availableOnly=" + availableOnly + "&page=" + page + "&size=" + size;
+        return clientFactory.authenticatedClient().getGeneric(path, PageResponse.class,
+                com.phcpro.modules.comercial.dto.POSCatalogItemDTO.class);
+    }
+
+    public com.phcpro.modules.comercial.dto.POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
+        String encoded = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);
+        return clientFactory.authenticatedClient().get(
+                "/api/comercial/products/pos-catalog/by-barcode?barcode=" + encoded,
+                com.phcpro.modules.comercial.dto.POSCatalogItemDTO.class);
+    }
+
     /** Produto pelo código de barras (leitor do POS); {@code null} se não existir. */
     public ProductDTO findProductByBarcode(String barcode) {
         String enc = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);

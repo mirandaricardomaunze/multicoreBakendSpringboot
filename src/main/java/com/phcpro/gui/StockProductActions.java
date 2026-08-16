@@ -249,7 +249,7 @@ final class StockProductActions {
         imagePreview.setOpaque(true);
         imagePreview.setBackground(UIHelper.BG_CARD);
         imagePreview.setForeground(UIHelper.TEXT_MUTED);
-        imagePreview.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1, true));
+        imagePreview.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1, true));
         ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem…");
         chooseImageBtn.setIcon(UIHelper.icon("fas-image", 14));
         chooseImageBtn.addActionListener(ev -> {
@@ -288,7 +288,7 @@ final class StockProductActions {
                 "Imagem (opcional):", imagePanel
         );
 
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Cadastrar Novo Produto", "fas-boxes", "Defina os dados e o IVA do artigo", dialogPanel).showDialog();
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Registar Novo Produto", "fas-boxes", "Defina os dados e o IVA do artigo", dialogPanel).showDialog();
         if (confirmed) {
             String sku = skuField.getText().trim();
             String reference = referenceField.getText().trim();
@@ -335,7 +335,7 @@ final class StockProductActions {
                 Long selectedTaxRateId = taxRateId;
                 int selectedUnitsPerBox = unitsPerBox;
                 byte[] selectedImage = imageHolder[0];
-                UIHelper.runWithProgress(owner, "A cadastrar produto…", () -> {
+                UIHelper.runWithProgress(owner, "A registar produto…", () -> {
                     ProductDTO created = owner.comercialApiClient.createProduct(
                             sku, reference.isEmpty() ? null : reference,
                             barcode.isEmpty() ? null : barcode, name, salesPrice, purchasePrice,
@@ -356,7 +356,7 @@ final class StockProductActions {
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(owner, "Os valores de preço e stock mínimo devem ser numéricos.", "Erro", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(owner, "Erro ao cadastrar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(owner, "Erro ao registar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -430,7 +430,7 @@ final class StockProductActions {
         imagePreview.setOpaque(true);
         imagePreview.setBackground(UIHelper.BG_CARD);
         imagePreview.setForeground(UIHelper.TEXT_MUTED);
-        imagePreview.setBorder(BorderFactory.createLineBorder(new Color(75, 85, 99), 1, true));
+        imagePreview.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1, true));
         ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem…");
         chooseImageBtn.setIcon(UIHelper.icon("fas-image", 14));
         chooseImageBtn.addActionListener(ev -> {

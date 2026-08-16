@@ -55,6 +55,8 @@ usa (`UIHelper.maybeAddListingFooter` adiciona ao SOUTH); aqui adiciona-se ao EA
 
 - Ícones **vectoriais** via `UIHelper.icon("fas-…")` — **nunca emojis** (regra do projecto).
 - Botões compactos, sem borda, realce ao passar o rato (`ACCENT`); acessíveis por teclado (foco + tooltip PT).
+- Cada botão possui nome acessível explícito e fica desactivado quando a lista já está no limite
+  correspondente, eliminando acções sem efeito e comunicando claramente a posição actual.
 
 ## 6. Camadas / ficheiros
 

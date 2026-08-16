@@ -614,6 +614,29 @@ public class ComercialService {
                 .collect(Collectors.toList());
     }
 
+    /** Página do catálogo POS; pesquisa e disponibilidade são aplicadas antes da paginação. */
+    @Transactional(readOnly = true)
+    public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(
+            String query, boolean availableOnly, Integer page, Integer size) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        java.util.Set<Long> sellableIds = inventoryService.getInStockProductIdsForSale(companyId);
+        java.util.Set<Long> queryIds = sellableIds.isEmpty() ? java.util.Set.of(-1L) : sellableIds;
+        String normalizedQuery = query == null ? "" : query.trim();
+        var result = productRepository.findPOSCatalogPage(companyId, normalizedQuery, availableOnly,
+                queryIds, PageQuery.of(page, size));
+        return PageResponse.of(result, product -> new POSCatalogItemDTO(
+                toDTO(product), !product.isStockTracked() || sellableIds.contains(product.getId())));
+    }
+
+    @Transactional(readOnly = true)
+    public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
+        ProductDTO product = findProductByBarcode(barcode);
+        if (product == null) return null;
+        boolean sellable = !product.stockTracked() || inventoryService
+                .getInStockProductIdsForSale(CurrentUserContext.getCurrentCompanyId()).contains(product.id());
+        return new POSCatalogItemDTO(product, sellable);
+    }
+
     @Transactional
     public ProductDTO createProduct(String sku, String name, BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, String description) {
         return createProduct(sku, null, null, name, unitPrice, purchasePrice, minStock, 1, description);

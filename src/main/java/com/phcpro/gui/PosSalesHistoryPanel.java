@@ -76,7 +76,7 @@ final class PosSalesHistoryPanel {
         returnBtn.setIcon(UIHelper.icon("fas-undo", 14));
         returnBtn.addActionListener(e -> owner.showReturnDialog());
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refresh());
 

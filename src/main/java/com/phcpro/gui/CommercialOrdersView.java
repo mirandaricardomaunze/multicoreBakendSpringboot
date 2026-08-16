@@ -246,12 +246,11 @@ final class CommercialOrdersView {
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnPanel.setOpaque(false);
-        ModernButton viewDetailsBtn = UIHelper.createSecondaryButton("Ver Detalhes");
-        viewDetailsBtn.setIcon(UIHelper.icon("fas-eye", 14));
-        ModernButton printOrderBtn = UIHelper.createSecondaryButton("Imprimir PDF");
-        printOrderBtn.setIcon(UIHelper.icon("fas-print", 14));
-        ModernButton exportOrdersBtn = UIHelper.createSecondaryButton("Exportar Tabela");
-        exportOrdersBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Ver Detalhes", UIHelper.icon("fas-eye", 14), owner::openSelectedOrderDetails)
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedOrder)
+                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportOrdersTable)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), owner::loadOrdersTable);
         ModernButton billOrderBtn = UIHelper.createSuccessButton("Faturar Encomenda");
         billOrderBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
         ModernButton convertGuideBtn = UIHelper.createPrimaryButton("Converter em Guia");
@@ -259,16 +258,10 @@ final class CommercialOrdersView {
         convertGuideBtn.setToolTipText("Criar uma Guia de Remessa a partir da encomenda aprovada selecionada.");
         ModernButton cancelOrderBtn = UIHelper.createDangerButton("Cancelar Encomenda…");
         cancelOrderBtn.setIcon(UIHelper.icon("fas-ban", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-
-        btnPanel.add(viewDetailsBtn);
-        btnPanel.add(printOrderBtn);
-        btnPanel.add(exportOrdersBtn);
+        btnPanel.add(moreBtn);
         btnPanel.add(billOrderBtn);
         btnPanel.add(convertGuideBtn);
         btnPanel.add(cancelOrderBtn);
-        btnPanel.add(refreshBtn);
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
         panel.add(listCard, BorderLayout.CENTER);
@@ -281,10 +274,6 @@ final class CommercialOrdersView {
         billOrderBtn.addActionListener(e -> owner.billSelectedOrder());
         convertGuideBtn.addActionListener(e -> owner.convertSelectedOrderToGuide());
         cancelOrderBtn.addActionListener(e -> owner.openCancelOrderDialog());
-        refreshBtn.addActionListener(e -> owner.loadOrdersTable());
-        viewDetailsBtn.addActionListener(e -> owner.openSelectedOrderDetails());
-        printOrderBtn.addActionListener(e -> owner.printSelectedOrder());
-        exportOrdersBtn.addActionListener(e -> owner.exportOrdersTable());
 
         // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
         DocumentEditorHost orderEditor = new DocumentEditorHost(

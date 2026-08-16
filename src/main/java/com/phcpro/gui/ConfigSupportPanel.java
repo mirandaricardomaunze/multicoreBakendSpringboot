@@ -30,7 +30,7 @@ final class ConfigSupportPanel {
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton viewBtn = UIHelper.createPrimaryButton("Ver / Responder");
         viewBtn.setIcon(UIHelper.icon("fas-comments", 14));
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

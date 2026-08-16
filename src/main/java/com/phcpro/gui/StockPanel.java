@@ -2,6 +2,7 @@ package com.phcpro.gui;
 
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.ModernButton;
+import com.phcpro.gui.components.ActionMenuButton;
 import com.phcpro.gui.components.ModernFormDialog;
 import com.phcpro.gui.components.ModernPanel;
 import com.phcpro.gui.components.SearchField;
@@ -123,29 +124,25 @@ public class StockPanel extends JPanel {
 
         topBar.add(UIHelper.createHeading("Controle de Stock & Armazéns"), BorderLayout.WEST);
 
-        ModernButton newProductBtn = UIHelper.createSuccessButton("Cadastrar Produto");
+        ModernButton newProductBtn = UIHelper.createSuccessButton("Registar Produto");
         newProductBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton editProductBtn = UIHelper.createSecondaryButton("Editar Produto");
-        editProductBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        ModernButton newWarehouseBtn = UIHelper.createPrimaryButton("Criar Armazém");
-        newWarehouseBtn.setIcon(UIHelper.icon("fas-warehouse", 14));
         stockLockBtn = UIHelper.createSecondaryButton("Trancar Stock");
         stockLockBtn.setIcon(UIHelper.icon("fas-lock", 14));
         stockLockBtn.setVisible(isAdmin()); // só ADMIN tranca/destranca
         ModernButton physicalInventoryBtn = UIHelper.createPrimaryButton("Inventário Físico");
         physicalInventoryBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         physicalInventoryBtn.addActionListener(e -> openPhysicalInventoryDialog());
-        ModernButton labelsBtn = UIHelper.createSecondaryButton("Etiquetas");
-        labelsBtn.setIcon(UIHelper.icon("fas-barcode", 14));
-        labelsBtn.addActionListener(e -> openLabelDialog());
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Editar Produto", UIHelper.icon("fas-edit", 14),
+                        () -> editProductDialog(selectedStockProductId()))
+                .addAction("Criar Armazém", UIHelper.icon("fas-warehouse", 14), this::createWarehouseDialogV2)
+                .addAction("Etiquetas", UIHelper.icon("fas-barcode", 14), this::openLabelDialog);
         JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         catalogueGroup.setOpaque(false);
         catalogueGroup.add(stockLockBtn);
-        catalogueGroup.add(labelsBtn);
+        catalogueGroup.add(moreBtn);
         catalogueGroup.add(physicalInventoryBtn);
         catalogueGroup.add(newProductBtn);
-        catalogueGroup.add(editProductBtn);
-        catalogueGroup.add(newWarehouseBtn);
         topBar.add(catalogueGroup, BorderLayout.EAST);
 
         stockLockBanner = new JLabel(" ");
@@ -175,8 +172,6 @@ public class StockPanel extends JPanel {
 
         // GLOBAL ACTION LISTENERS
         newProductBtn.addActionListener(e -> createProductDialog());
-        editProductBtn.addActionListener(e -> editProductDialog(selectedStockProductId()));
-        newWarehouseBtn.addActionListener(e -> createWarehouseDialogV2());
         stockLockBtn.addActionListener(e -> toggleStockLock());
 
         onPanelSelected();
@@ -240,7 +235,7 @@ public class StockPanel extends JPanel {
         // Warehouse
         warehouseFilterCombo = new JComboBox<>();
         UIHelper.styleComboBox(warehouseFilterCombo);
-        warehouseFilterCombo.setPreferredSize(new Dimension(240, 35));
+        warehouseFilterCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
         warehouseFilterCombo.addActionListener(e -> filterStocks());
         g.gridx = 0; g.weightx = 0; filters.add(filterLabel("Armazém"), g);
 
@@ -252,7 +247,7 @@ public class StockPanel extends JPanel {
                 "Sem stock"
         });
         UIHelper.styleComboBox(stockStatusCombo);
-        stockStatusCombo.setPreferredSize(new Dimension(200, 35));
+        stockStatusCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         stockStatusCombo.addActionListener(e -> filterStocks());
         g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Estado"), g);
 
@@ -260,7 +255,7 @@ public class StockPanel extends JPanel {
         stockCategoryCombo = new JComboBox<>();
         stockCategoryCombo.addItem("Todas as categorias");
         UIHelper.styleComboBox(stockCategoryCombo);
-        stockCategoryCombo.setPreferredSize(new Dimension(200, 35));
+        stockCategoryCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         stockCategoryCombo.addActionListener(e -> filterStocks());
         g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Categoria"), g);
 
@@ -295,6 +290,7 @@ public class StockPanel extends JPanel {
         };
         stockTable = new JTable(stockModel);
         UIHelper.styleTable(stockTable);
+        stockTable.setAutoCreateRowSorter(true);
         stockTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         stockTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
         // Duplo-clique numa linha → editar esse produto directamente.
@@ -309,7 +305,7 @@ public class StockPanel extends JPanel {
         JScrollPane stockScroll = new JScrollPane(stockTable);
         UIHelper.styleScrollPane(stockScroll);
         card.add(stockScroll, BorderLayout.CENTER);
-        card.add(com.phcpro.gui.components.TableFooter.install(stockTable), BorderLayout.SOUTH);
+        card.add(com.phcpro.gui.components.ClientTablePagination.install(stockTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -765,7 +761,7 @@ public class StockPanel extends JPanel {
     private void createAdjustmentDialog() {
         List<ProductDTO> products = new ArrayList<>(catalogProducts);
         if (products.isEmpty() || warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Necessário cadastrar produtos e armazéns primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "É necessário registar produtos e armazéns primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -831,7 +827,7 @@ public class StockPanel extends JPanel {
 
     /**
      * Diálogo profissional de entrada de lote com validade. Se {@code preselected} for indicado,
-     * pré-selecciona o produto (usado depois de cadastrar um produto novo).
+     * pré-selecciona o produto (usado depois de registar um produto novo).
      */
     /** Inteiro ≥ 0 a partir de texto livre; vazio/inválido → 0 (para os campos de caixas). */
     void createBatchEntryDialog(ProductDTO product) { productActions.createBatchEntryDialog(product); }

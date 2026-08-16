@@ -82,15 +82,12 @@ public final class CommercialNotesPanel {
         ModernButton reject = UIHelper.createDangerButton("Rejeitar");
         reject.setIcon(UIHelper.icon("fas-times", 14));
         reject.addActionListener(e -> rejectCredit());
-        ModernButton print = UIHelper.createSecondaryButton("Imprimir PDF");
-        print.setIcon(UIHelper.icon("fas-print", 14));
-        print.addActionListener(e -> printCredit());
-        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> loadCredits());
+        ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printCredit)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadCredits);
         return buildTab("Notas de Crédito", creditTable,
                 new String[]{"RETURN", "DISCOUNT", "ERROR", "CANCELLATION"}, 4, 7,
-                refresh, print, reject, approve, create);
+                more, reject, approve, create);
     }
 
     private JPanel buildDebitTab() {
@@ -103,15 +100,12 @@ public final class CommercialNotesPanel {
         ModernButton reject = UIHelper.createDangerButton("Rejeitar");
         reject.setIcon(UIHelper.icon("fas-times", 14));
         reject.addActionListener(e -> rejectDebit());
-        ModernButton print = UIHelper.createSecondaryButton("Imprimir PDF");
-        print.setIcon(UIHelper.icon("fas-print", 14));
-        print.addActionListener(e -> printDebit());
-        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> loadDebits());
+        ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printDebit)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadDebits);
         return buildTab("Notas de Débito", debitTable,
                 new String[]{"FREIGHT", "SURCHARGE", "CORRECTION", "OTHER"}, 4, 6,
-                refresh, print, reject, approve, create);
+                more, reject, approve, create);
     }
 
     private JPanel buildTab(String title, JTable table, String[] reasons, int reasonColumn, int statusColumn,

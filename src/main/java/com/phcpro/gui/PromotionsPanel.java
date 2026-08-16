@@ -64,7 +64,7 @@ public class PromotionsPanel extends JPanel {
         toggleBtn = UIHelper.createSecondaryButton("Activar / Desactivar");
         toggleBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         toggleBtn.addActionListener(e -> toggleSelected());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> reload());
 

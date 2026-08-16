@@ -5,7 +5,9 @@ import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -17,7 +19,9 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Horizontal top navigation bar. Holds a brand block (brand + active company),
@@ -39,6 +43,10 @@ public class TopNavBar extends JPanel {
     private final JPanel navPanel;
     private final JPanel trailingPanel;
     private final List<TopNavItem> navItems = new ArrayList<>();
+    private final Map<String, TopNavItem> groupedItems = new HashMap<>();
+
+    /** Entrada de um menu que agrupa módulos secundários da navegação. */
+    public record MenuEntry(Icon icon, String label, Runnable onClick) {}
 
     public TopNavBar(String brand, String subBrand) {
         setLayout(new BorderLayout(12, 0));
@@ -97,6 +105,35 @@ public class TopNavBar extends JPanel {
         return item;
     }
 
+    /** Adiciona um item compacto que abre módulos menos frequentes num menu textual. */
+    public TopNavItem addMenu(Icon icon, String tooltip, Color accent, List<MenuEntry> entries) {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(UIHelper.BORDER),
+                new EmptyBorder(6, 6, 6, 6)));
+
+        final TopNavItem[] holder = new TopNavItem[1];
+        TopNavItem menuItem = new TopNavItem(icon, tooltip, accent,
+                () -> popup.show(holder[0], 0, holder[0].getHeight()));
+        holder[0] = menuItem;
+        navItems.add(menuItem);
+        navPanel.add(menuItem);
+
+        for (MenuEntry entry : entries) {
+            JMenuItem option = new JMenuItem(entry.label(), entry.icon());
+            option.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+            option.setBorder(new EmptyBorder(8, 10, 8, 14));
+            option.getAccessibleContext().setAccessibleName(entry.label());
+            option.addActionListener(e -> {
+                setActive(entry.label());
+                if (entry.onClick() != null) entry.onClick().run();
+            });
+            popup.add(option);
+            groupedItems.put(entry.label(), menuItem);
+        }
+        return menuItem;
+    }
+
     /** Add a component to the trailing (right) area, e.g. company combo or user chip. */
     public void addTrailing(JComponent component) {
         trailingPanel.add(component);
@@ -104,8 +141,9 @@ public class TopNavBar extends JPanel {
 
     /** Highlight the nav item whose label matches the given key. */
     public void setActive(String activeKey) {
+        TopNavItem groupedActive = groupedItems.get(activeKey);
         for (TopNavItem item : navItems) {
-            item.setActive(item.key() != null && item.key().equals(activeKey));
+            item.setActive(item == groupedActive || (item.key() != null && item.key().equals(activeKey)));
         }
     }
 

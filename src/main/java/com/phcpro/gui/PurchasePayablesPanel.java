@@ -31,7 +31,7 @@ final class PurchasePayablesPanel {
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         payBtn.addActionListener(e -> openSupplierPaymentDialog());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refresh());
         actions.add(refreshBtn); actions.add(payBtn);
@@ -102,7 +102,7 @@ final class PurchasePayablesPanel {
         }
         var pa = owner.payablesList.get(row);
         if (owner.accountsList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Falta cadastrar contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(owner, "Falta registar contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
         JComboBox<String> accCombo = new JComboBox<>();

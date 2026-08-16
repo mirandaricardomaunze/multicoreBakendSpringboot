@@ -31,7 +31,7 @@ final class PurchaseSuppliersPanel {
         editSupBtn.setIcon(UIHelper.icon("fas-edit", 14));
         ModernButton toggleSupBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
         toggleSupBtn.setIcon(UIHelper.icon("fas-power-off", 14));
-        ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Atualizar");
+        ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         ModernButton newSupBtn = UIHelper.createSuccessButton("Novo Fornecedor");
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));

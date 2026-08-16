@@ -54,11 +54,13 @@ public final class DeliveryGuidesPanel extends JPanel {
         card.add(scroll, BorderLayout.CENTER);
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actions.setOpaque(false);
-        actions.add(button("Imprimir", "fas-print", UIHelper.createSecondaryButton("Imprimir"), this::print));
+        ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::refresh);
+        actions.add(more);
         actions.add(button("Cancelar", "fas-ban", UIHelper.createDangerButton("Cancelar"), this::cancel));
         actions.add(button("Rejeitar", "fas-times", UIHelper.createDangerButton("Rejeitar"), this::reject));
         actions.add(button("Aprovar", "fas-check", UIHelper.createSuccessButton("Aprovar"), this::approve));
-        actions.add(button("Atualizar", "fas-sync-alt", UIHelper.createSecondaryButton("Atualizar"), this::refresh));
         card.add(actions, BorderLayout.SOUTH);
         add(card, BorderLayout.CENTER);
     }

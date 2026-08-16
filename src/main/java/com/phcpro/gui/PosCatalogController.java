@@ -3,6 +3,7 @@ package com.phcpro.gui;
 import com.phcpro.architecture.security.CurrentUserContext;
 import com.phcpro.gui.components.*;
 import com.phcpro.modules.comercial.dto.*;
+import com.phcpro.architecture.paging.PageResponse;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,11 +12,24 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Pesquisa e apresentação do catálogo, e sincronização visual do carrinho. */
 final class PosCatalogController {
+    static final int PAGE_SIZE = 36;
     private final POSPanel owner;
+    private final Timer searchTimer;
+    private ModernButton previousButton;
+    private ModernButton nextButton;
+    private JLabel pageLabel;
+    private int requestSequence;
     PosCatalogController(POSPanel owner) { this.owner = owner; }
+
+    {
+        searchTimer = new Timer(300, e -> loadCatalogPage(0));
+        searchTimer.setRepeats(false);
+    }
 
     public void filterClients(String query) {
         String q = query == null ? "" : query.trim().toLowerCase();
@@ -30,16 +44,62 @@ final class PosCatalogController {
         }
     }
 
-    public void filterProducts(String query) {
-        String q = query == null ? "" : query.trim().toLowerCase();
-        owner.filteredProducts = owner.productsList.stream()
-                .filter(p -> q.isEmpty()
-                        || (p.sku() != null && p.sku().toLowerCase().contains(q))
-                        || (p.reference() != null && p.reference().toLowerCase().contains(q))
-                        || (p.barcode() != null && p.barcode().toLowerCase().contains(q))
-                        || (p.name() != null && p.name().toLowerCase().contains(q)))
-                .toList();
+    JPanel buildPaginationBar() {
+        previousButton = UIHelper.createSecondaryButton("Anterior");
+        previousButton.setIcon(UIHelper.icon("fas-chevron-left", 12));
+        nextButton = UIHelper.createSecondaryButton("Próximo");
+        nextButton.setIcon(UIHelper.icon("fas-chevron-right", 12));
+        pageLabel = new JLabel("Página 1");
+        pageLabel.setForeground(UIHelper.TEXT_MUTED);
+        pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        previousButton.addActionListener(e -> loadCatalogPage(currentPage() - 1));
+        nextButton.addActionListener(e -> loadCatalogPage(currentPage() + 1));
+        JPanel bar = new JPanel(new BorderLayout(8, 0));
+        bar.setOpaque(false);
+        bar.setBorder(new EmptyBorder(8, 0, 0, 0));
+        bar.add(previousButton, BorderLayout.WEST);
+        bar.add(pageLabel, BorderLayout.CENTER);
+        bar.add(nextButton, BorderLayout.EAST);
+        return bar;
+    }
+
+    void scheduleCatalogReload() { searchTimer.restart(); }
+
+    void loadCatalogPage(int requestedPage) {
+        int page = Math.max(0, requestedPage);
+        int sequence = ++requestSequence;
+        setNavigationEnabled(false);
+        String query = owner.productSearchField == null ? "" : owner.productSearchField.getText();
+        UIHelper.loadAsync(owner,
+                () -> owner.comercialApiClient.getPOSCatalogPage(query, !owner.showAllProducts, page, PAGE_SIZE),
+                result -> { if (sequence == requestSequence) applyCatalogPage(result); },
+                error -> { if (sequence == requestSequence) {
+                    setNavigationEnabled(true);
+                    owner.showPosLoadError("catálogo de produtos", error);
+                }});
+    }
+
+    private void applyCatalogPage(PageResponse<POSCatalogItemDTO> page) {
+        owner.productsList = page.items().stream().map(POSCatalogItemDTO::product).toList();
+        owner.filteredProducts = owner.productsList;
+        owner.sellableProductIds = page.items().stream().filter(POSCatalogItemDTO::sellable)
+                .map(item -> item.product().id()).collect(Collectors.toSet());
+        if (pageLabel != null) pageLabel.setText(page.totalPages() == 0 ? "Sem resultados"
+                : "Página " + (page.page() + 1) + " de " + page.totalPages() + " · " + page.totalElements() + " produtos");
+        if (pageLabel != null) pageLabel.putClientProperty("catalogPage", page.page());
+        if (previousButton != null) previousButton.setEnabled(page.hasPrevious());
+        if (nextButton != null) nextButton.setEnabled(page.hasNext());
         rebuildProductGrid();
+    }
+
+    private int currentPage() {
+        Object value = pageLabel == null ? null : pageLabel.getClientProperty("catalogPage");
+        return value instanceof Integer page ? page : 0;
+    }
+
+    private void setNavigationEnabled(boolean enabled) {
+        if (previousButton != null) previousButton.setEnabled(enabled);
+        if (nextButton != null) nextButton.setEnabled(enabled);
     }
 
     /** Reconstrói o grid de cards de produto a partir de {@link #owner.filteredProducts}. */
@@ -64,11 +124,12 @@ final class PosCatalogController {
 
     /** Card clicável de um produto: imagem (ou marcador) + nome + preço. Clique adiciona ao carrinho. */
     private JComponent productCard(ProductDTO p) {
+        boolean sellable = owner.isProductSellable(p);
         ModernPanel card = new ModernPanel(12);
         card.setLayout(new BorderLayout(0, 6));
-        card.setBackground(UIHelper.BG_CARD);
+        card.setBackground(sellable ? UIHelper.BG_CARD : UIHelper.ROW_ALT);
         card.setBorder(new EmptyBorder(10, 10, 10, 10));
-        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        card.setCursor(Cursor.getPredefinedCursor(sellable ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
 
         JLabel image = new JLabel("", SwingConstants.CENTER);
         image.setPreferredSize(new Dimension(120, 84));
@@ -81,20 +142,39 @@ final class PosCatalogController {
         card.add(image, BorderLayout.NORTH);
 
         JLabel name = new JLabel("<html><div style='text-align:center'>" + escapeHtml(p.name()) + "</div></html>", SwingConstants.CENTER);
-        name.setForeground(UIHelper.TEXT_LIGHT);
+        name.setForeground(sellable ? UIHelper.TEXT_LIGHT : UIHelper.TEXT_MUTED);
         name.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         card.add(name, BorderLayout.CENTER);
 
         JLabel price = new JLabel(String.format("%,.2f MT", p.unitPrice()), SwingConstants.CENTER);
-        price.setForeground(UIHelper.ACCENT_BLUE);
+        price.setForeground(sellable ? UIHelper.ACCENT_BLUE : UIHelper.TEXT_MUTED);
         price.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
-        card.add(price, BorderLayout.SOUTH);
+        JPanel footer = new JPanel();
+        footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
+        footer.setOpaque(false);
+        price.setAlignmentX(Component.CENTER_ALIGNMENT);
+        footer.add(price);
+        if (!sellable) {
+            JLabel unavailable = new JLabel("ESGOTADO");
+            unavailable.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+            unavailable.setForeground(UIHelper.REJECTED_RED);
+            unavailable.setAlignmentX(Component.CENTER_ALIGNMENT);
+            footer.add(Box.createRigidArea(new Dimension(0, 3)));
+            footer.add(unavailable);
+        }
+        card.add(footer, BorderLayout.SOUTH);
 
-        card.setToolTipText(productLabel(p));
-        card.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { addProductToCart(p); }
-        });
+        card.setToolTipText(productLabel(p) + (sellable ? "" : " — sem stock disponível para venda"));
+        if (sellable) {
+            card.addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent e) { addProductToCart(p); }
+            });
+        }
         return card;
+    }
+
+    static boolean includeByAvailability(boolean showAll, boolean sellable) {
+        return showAll || sellable;
     }
 
     private static String escapeHtml(String s) {
@@ -104,6 +184,12 @@ final class PosCatalogController {
 
     /** Legenda (esquerda) do bloco de discriminação Subtotal/IVA. */
     public void addProductToCart(ProductDTO product) {
+        if (!owner.isProductSellable(product)) {
+            JOptionPane.showMessageDialog(owner,
+                    "O artigo '" + product.name() + "' está esgotado e não pode ser adicionado.",
+                    "Sem Stock", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (owner.activeSession == null) {
             JOptionPane.showMessageDialog(owner,
                     "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
@@ -113,7 +199,7 @@ final class PosCatalogController {
         for (POSPanel.CartItem it : owner.cartItems) {
             if (it.serial == null && it.product.id().equals(product.id())) {
                 it.qty = it.qty.add(BigDecimal.ONE);
-                owner.updateCartTotal();
+                owner.updateCartTotal(owner.cartItems.indexOf(it));
                 return;
             }
         }
@@ -126,7 +212,7 @@ final class PosCatalogController {
                     POSPanel.CartItem item = new POSPanel.CartItem(product, BigDecimal.ONE, discount, null, null);
                     item.note = promo.map(p -> "Promo: " + p.name()).orElse("-");
                     owner.cartItems.add(item);
-                    owner.updateCartTotal();
+                    owner.updateCartTotal(owner.cartItems.size() - 1);
                 }, error -> JOptionPane.showMessageDialog(owner,
                         "Não foi possível consultar promoções: " + error.getMessage(),
                         "Erro de ligação", JOptionPane.ERROR_MESSAGE));
@@ -138,15 +224,41 @@ final class PosCatalogController {
         for (POSPanel.CartItem item : owner.cartItems) {
             owner.cartModel.addRow(new Object[]{
                     item.product.name(),
-                    String.format("%.2f MT", item.product.unitPrice()),
                     item.qty.stripTrailingZeros().toPlainString(),
+                    String.format("%.2f MT", item.product.unitPrice()),
                     item.discount.stripTrailingZeros().toPlainString() + "%",
-                    item.note != null ? item.note : "-",
-                    String.format("%,.2f MT", item.getSubtotal()),
                     POSPanel.ivaCellLabel(item),
                     String.format("%,.2f MT", item.getTotal())
             });
         }
+    }
+
+    void changeSelectedQuantity(BigDecimal delta) {
+        int selectedView = owner.cartTable.getSelectedRow();
+        if (selectedView < 0) {
+            JOptionPane.showMessageDialog(owner,
+                    "Seleccione uma linha do carrinho para alterar a quantidade.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int selected = owner.cartTable.convertRowIndexToModel(selectedView);
+        POSPanel.CartItem item = owner.cartItems.get(selected);
+        BigDecimal next = item.qty.add(delta);
+        if (next.signum() <= 0) {
+            owner.cartItems.remove(selected);
+            owner.updateCartTotal(Math.min(selected, owner.cartItems.size() - 1));
+            return;
+        }
+        item.qty = next;
+        owner.updateCartTotal(selected);
+    }
+
+    void selectAndRevealCartRow(int modelRow) {
+        if (modelRow < 0 || modelRow >= owner.cartModel.getRowCount()) return;
+        int viewRow = owner.cartTable.convertRowIndexToView(modelRow);
+        if (viewRow < 0) return;
+        owner.cartTable.setRowSelectionInterval(viewRow, viewRow);
+        owner.cartTable.scrollRectToVisible(owner.cartTable.getCellRect(viewRow, 0, true));
     }
 
     String productLabel(ProductDTO p) {

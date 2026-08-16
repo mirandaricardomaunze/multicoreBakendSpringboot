@@ -377,7 +377,7 @@ public class ComprasPanel extends JPanel {
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionRow.setOpaque(false);
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Atualizar Compras");
+        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar Compras");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         actionRow.add(refreshBtn);
         historyCard.add(actionRow, BorderLayout.SOUTH);
@@ -669,7 +669,7 @@ public class ComprasPanel extends JPanel {
     /** Validação + registo da compra. Lança RuntimeException em erro (mantém o modal aberto). */
     private CreatePurchaseRequest buildPurchaseRequest(boolean[] onCreditResult) {
         if (warehousesList.isEmpty()) {
-            throw new RuntimeException("Falta cadastrar armazéns.");
+            throw new RuntimeException("Falta registar armazéns.");
         }
         if (draftLines.isEmpty()) {
             throw new RuntimeException("Nenhum produto adicionado à compra.");

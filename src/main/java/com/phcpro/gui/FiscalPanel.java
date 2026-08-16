@@ -106,7 +106,7 @@ public class FiscalPanel extends JPanel {
         controls.add(filterLabel("Período:"));
         payrollMonthSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getMonthValue(), 1, 12, 1));
         payrollYearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
-        ModernButton refresh = UIHelper.createSecondaryButton("Atualizar Mapa");
+        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar Mapa");
         refresh.addActionListener(e -> loadPayrollFiscal());
         ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Mapa Fiscal");
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
@@ -194,23 +194,12 @@ public class FiscalPanel extends JPanel {
         periodPanel.add(new JLabel("/"));
         periodPanel.add(ivaYearSpinner);
 
-        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Declaração IVA");
-        printBtn.setIcon(UIHelper.icon("fas-print", 14));
-        printBtn.addActionListener(e -> printIvaDeclaration());
+        com.phcpro.gui.components.ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos")
+                .addAction("Imprimir Declaração IVA", UIHelper.icon("fas-print", 14), this::printIvaDeclaration)
+                .addAction("Exportar SAF-T (Vendas)", UIHelper.icon("fas-file-export", 14), this::exportSaft)
+                .addAction("Validar SAF-T", UIHelper.icon("fas-check-circle", 14), this::validateSaft);
         periodPanel.add(Box.createRigidArea(new Dimension(20, 0)));
-        periodPanel.add(printBtn);
-
-        ModernButton saftBtn = UIHelper.createSecondaryButton("Exportar SAF-T (Vendas)");
-        saftBtn.setIcon(UIHelper.icon("fas-file-export", 14));
-        saftBtn.addActionListener(e -> exportSaft());
-        periodPanel.add(Box.createRigidArea(new Dimension(8, 0)));
-        periodPanel.add(saftBtn);
-
-        ModernButton validateSaftBtn = UIHelper.createSecondaryButton("Validar SAF-T");
-        validateSaftBtn.setIcon(UIHelper.icon("fas-check-circle", 14));
-        validateSaftBtn.addActionListener(e -> validateSaft());
-        periodPanel.add(Box.createRigidArea(new Dimension(8, 0)));
-        periodPanel.add(validateSaftBtn);
+        periodPanel.add(documentsBtn);
 
         topRow.add(periodPanel, BorderLayout.WEST);
         tab.add(topRow, BorderLayout.NORTH);

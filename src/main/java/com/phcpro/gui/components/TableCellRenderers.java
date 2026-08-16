@@ -29,6 +29,14 @@ public final class TableCellRenderers {
         return new StatusRenderer();
     }
 
+    public static TableCellRenderer role() {
+        return new DefaultTableCellRenderer() {
+            @Override protected void setValue(Object value) {
+                setText(UIHelper.humanRole(value == null ? null : value.toString()));
+            }
+        };
+    }
+
     static String format(BigDecimal value, int scale, String suffix) {
         if (value == null) return "—";
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();

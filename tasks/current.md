@@ -14,6 +14,54 @@ VPS + smoke; backup restaurável verificado; validação em loja + hardware. A f
 **Por integrar:** o ramo `feat/guia-remessa-navegacao-suite-local` está **23 commits à frente da
 `main`** e por enviar para o remoto.
 
+### Progresso — 2026-08-15 (navegação visual mais limpa)
+
+- A barra superior mantém os módulos operacionais visíveis e agrupa Área Fiscal, Contabilidade,
+  Aprovações e Configurações num menu textual “Mais”, reduzindo a densidade sem remover acessos.
+- Os itens da navegação passaram a aceitar Enter/Espaço, expor nome acessível e mostrar foco visual.
+- Verificação: `mvn -q -DskipTests compile` verde; teste focado de navegação adicionado.
+
+### Progresso — 2026-08-15 (hierarquia visual de RH e Configurações)
+
+- Spec/harness: `docs/HR_CONFIG_UI_HIERARCHY_SPEC.md` e
+  `docs/HR_CONFIG_UI_HIERARCHY_HARNESS.md` (HCUI-01..24).
+- Novo `ActionMenuButton` canónico limita menus a cinco entradas, mantém altura/ícones/acessibilidade
+  e agrupa apenas acções secundárias.
+- RH: Colaboradores ganhou “Mais acções”; Recibos ganhou “Documentos”. Configuração: Utilizadores
+  ganhou “Mais acções”; as modalidades de backup passaram para “Criar backup”.
+- Acções críticas continuam explícitas: Aprovar, Rejeitar, Eliminar, Marcar Pago e Processar Mês.
+- Verificação: `mvn clean compile` e harness focado verdes; suite completa verde com **487 testes,
+  0 falhas, 0 erros e 0 ignorados**. HCUI-20..24 requerem validação manual em Windows real.
+
+### Progresso — 2026-08-15 (fecho visual de Stock e Comercial)
+
+- Spec/harness: `docs/STOCK_COMERCIAL_UI_FINISH_SPEC.md` e
+  `docs/STOCK_COMERCIAL_UI_FINISH_HARNESS.md` (SCUI-01..24).
+- Faturas, encomendas, notas e guias agrupam impressão/exportação/actualização; Liquidar, Anular,
+  Faturar, Converter, Cancelar, Aprovar e Rejeitar continuam visíveis.
+- Stock global, categorias e armazéns ganharam hierarquia de acções; filtros passaram de altura 35
+  para `UIHelper.FORM_CONTROL_HEIGHT`.
+- `DocumentEditorHost` e `ModernFormDialog` ganharam `Ctrl+S` e `Esc`; atalhos POS preservados.
+- Validação real a 1382×736 no tema claro: Comercial, RH e Stock sem cortes/sobreposições.
+- Verificação: build limpo, harness focado e suite completa verdes com **492 testes, 0 falhas,
+  0 erros e 0 ignorados**. Escalas 100/125/150%, tema escuro e acções com dados reais continuam
+  como evidência manual obrigatória; a automação Windows falhou sob DPI elevado.
+
+### Progresso — 2026-08-15 (uniformização final do design)
+
+- Spec/harness: `docs/UI_UNIFORMIZACAO_FINAL_SPEC.md` e
+  `docs/UI_UNIFORMIZACAO_FINAL_HARNESS.md` (FU-01..23).
+- Perfis técnicos permanecem códigos internos, mas tabelas/selects de RH, Configuração, Aprovações
+  e Plataforma apresentam Administrador/Gestor/Funcionário.
+- Plataforma (empresas, assinaturas, utilizadores) e Fiscal/IVA adoptaram menus canónicos; acções
+  principais e críticas continuam visíveis.
+- `createDialogForm` passou a construir `FormField` canónico, preservando inputs e marcando labels
+  com `*` como obrigatórias.
+- Painéis de negócio ficaram sem cores locais; idioma uniformizado para “Actualizar” e “Registar”.
+- Verificação: build limpo e suite completa verdes com **496 testes, 0 falhas, 0 erros e
+  0 ignorados**; auditoria final sem `new Color`, “Atualizar”, “Cadastrar” ou `MANAGER/ADMIN` nos
+  painéis. Certificação visual FU-20..23 continua manual.
+
 ### Progresso — 2026-08-15 (fecho das lacunas de gestão + contabilidade)
 
 - **Suite volta a ser verde de forma determinística.** `LoadingCursorTest` rebentava com
@@ -1322,3 +1370,47 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
   preencher o viewport quando existe largura confortável.
 - Totais e acções de checkout permanecem fixos; apenas as linhas da tabela fazem scroll.
 - Spec e harness: `docs/POS_LAYOUT_RESPONSIVO_SPEC.md` e `docs/POS_LAYOUT_RESPONSIVO_HARNESS.md`.
+# Carrinho operacional do POS
+
+- O carrinho foi compactado para seis colunas essenciais, eliminando a rolagem horizontal no
+  viewport operacional de 620 px.
+- Produtos adicionados ou incrementados ficam seleccionados e visíveis automaticamente.
+- Nova barra de quantidade oferece diminuir, editar (F6) e aumentar, mantendo totais e checkout fixos.
+- Promoção, lote e série permanecem acessíveis no tooltip da linha.
+- Correcção visual: a tabela permanece auto-ajustável abaixo de 620 px e reserva altura para pelo
+  menos três linhas; "Mais opções" abre um diálogo sem comprimir o workspace.
+- Correcção de altura: pesquisa/selecção de cliente ficam na mesma linha; subtotal, IVA e total
+  foram unidos numa faixa; Fiado passou para a linha de acções, libertando o corpo da tabela.
+- Ritmo vertical compactado no POS: margem externa 14 px, secções 6 px e cartão 8 px; inputs sobem
+  para junto das acções de caixa e o espaço recuperado aumenta o viewport do carrinho.
+- Cabeçalho POS final em linha única: Pesquisa, Cliente, Armazém, Conta e Código de barras usam
+  larguras responsivas de 20/22/16/18/24%; removido o fluxo "Mais opções".
+- Catálogo POS paginado no servidor em blocos de 36, com pesquisa/disponibilidade antes da
+  transferência, debounce de 300 ms e navegação Anterior/Próximo. Scanner consulta endpoint directo
+  para continuar independente da página actual.
+- Corrigida activação operacional: uma instância antiga do backend ficou temporariamente na porta
+  8080 durante o reinício. Endpoint verificado ao vivo e coberto por novo teste HTTP autenticado.
+- Spec e harness: `docs/POS_CARRINHO_OPERACIONAL_SPEC.md` e
+  `docs/POS_CARRINHO_OPERACIONAL_HARNESS.md`.
+- Catálogo POS passa a abrir em **Todos**: produtos esgotados aparecem atenuados, etiquetados e sem
+  clique; filtro **Disponíveis** preserva a vista rápida. O estado continua vindo do endpoint
+  canónico de vendáveis e scanner/balança também bloqueiam esgotados.
+- Spec/harness: `docs/POS_CATALOGO_ESTADO_STOCK_SPEC.md` e
+  `docs/POS_CATALOGO_ESTADO_STOCK_HARNESS.md`.
+
+### Paginação uniforme das tabelas — 2026-08-16
+
+- Listagens Swing carregadas integralmente passam a receber paginação local central (25/50/100/200),
+  aplicada depois dos filtros e recalculada com alterações do modelo.
+- Listagens de crescimento elevado mantêm paginação no servidor via `TablePager`/`PageResponse`;
+  tabelas transaccionais (carrinho, linhas e diálogos) permanecem contínuas.
+- Spec/harness: `docs/TABELAS_PAGINACAO_UNIFORME_SPEC.md` e
+  `docs/TABELAS_PAGINACAO_UNIFORME_HARNESS.md`.
+- Navegação lateral externa refinada: início/Page Up/Page Down/fim com nomes acessíveis, tooltips
+  claros e desactivação automática nos limites da lista.
+- Categorias: removida a lupa externa duplicada; o `SearchField` mantém uma única lupa integrada.
+- POS: hierarquia cromática semântica aplicada aos botões (verde, azul, âmbar, vermelho e grafite),
+  substituindo acções operacionais que pareciam pretas.
+- Paginação: controlos separados por 8 px e margem vertical de 10 px antes das acções inferiores.
+- Backup automático: deixa de tentar `pg_dump` no backend H2; a execução interactiva usa backup
+  lógico JSON, enquanto PostgreSQL mantém o `.dump` físico restaurável.

@@ -2,6 +2,7 @@ package com.phcpro.gui.components;
 
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.accessibility.AccessibleContext;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -10,6 +11,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.KeyEvent;
 
 /**
  * Compact icon-only navigation button for the top navbar.
@@ -41,8 +43,11 @@ public class TopNavItem extends JComponent {
         this.onClick = onClick;
 
         setOpaque(false);
+        setFocusable(true);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         setToolTipText(tooltip);
+        getAccessibleContext().setAccessibleName(tooltip);
+        getAccessibleContext().setAccessibleDescription("Abrir " + tooltip);
         Dimension d = new Dimension(WIDTH, HEIGHT);
         setPreferredSize(d);
         setMinimumSize(d);
@@ -52,6 +57,14 @@ public class TopNavItem extends JComponent {
             @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
             @Override public void mouseExited(MouseEvent e)  { hover = false; repaint(); }
             @Override public void mousePressed(MouseEvent e) {
+                if (onClick != null) onClick.run();
+            }
+        });
+
+        getInputMap(WHEN_FOCUSED).put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "activate");
+        getInputMap(WHEN_FOCUSED).put(javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "activate");
+        getActionMap().put("activate", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (onClick != null) onClick.run();
             }
         });
@@ -67,6 +80,18 @@ public class TopNavItem extends JComponent {
             this.active = active;
             repaint();
         }
+    }
+
+    @Override
+    public AccessibleContext getAccessibleContext() {
+        if (accessibleContext == null) {
+            accessibleContext = new AccessibleTopNavItem();
+        }
+        return accessibleContext;
+    }
+
+    protected class AccessibleTopNavItem extends AccessibleJComponent {
+        private static final long serialVersionUID = 1L;
     }
 
     @Override
@@ -89,6 +114,11 @@ public class TopNavItem extends JComponent {
             } else if (hover) {
                 g2.setColor(hoverOverlay());
                 g2.fillRoundRect(3, 3, rectW, rectH, CORNER, CORNER);
+            }
+
+            if (isFocusOwner()) {
+                g2.setColor(accent);
+                g2.drawRoundRect(2, 2, rectW + 1, rectH + 1, CORNER, CORNER);
             }
 
             if (icon != null) {

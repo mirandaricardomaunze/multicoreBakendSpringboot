@@ -54,10 +54,24 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getSellableProducts());
     }
 
+    @GetMapping("/products/pos-catalog/page")
+    public ResponseEntity<PageResponse<POSCatalogItemDTO>> getPOSCatalogPage(
+            @RequestParam(defaultValue = "") String query,
+            @RequestParam(defaultValue = "false") boolean availableOnly,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "36") Integer size) {
+        return ResponseEntity.ok(comercialService.getPOSCatalogPage(query, availableOnly, page, size));
+    }
+
     /** Localiza um produto pelo código de barras (leitor do POS). Corpo {@code null} se não existir. */
     @GetMapping("/products/by-barcode")
     public ResponseEntity<ProductDTO> findProductByBarcode(@RequestParam String barcode) {
         return ResponseEntity.ok(comercialService.findProductByBarcode(barcode));
+    }
+
+    @GetMapping("/products/pos-catalog/by-barcode")
+    public ResponseEntity<POSCatalogItemDTO> findPOSCatalogItemByBarcode(@RequestParam String barcode) {
+        return ResponseEntity.ok(comercialService.findPOSCatalogItemByBarcode(barcode));
     }
 
     @PostMapping("/products")

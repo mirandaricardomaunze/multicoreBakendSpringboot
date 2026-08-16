@@ -36,6 +36,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class POSPanel extends JPanel {
 
@@ -64,19 +65,13 @@ public class POSPanel extends JPanel {
     JComboBox<String> clientCombo;
     private JComboBox<String> warehouseCombo;
     private JComboBox<String> accountCombo;
-    private JComboBox<String> productCombo;
     JTextField clientSearchField;
-    private JTextField productSearchField;
+    JTextField productSearchField;
     JTextField barcodeField;
 
-    private JTextField qtyField;
-    private JTextField discountField;
-    private JTextField batchField;
-    private JTextField expirationField;
-    private JTextField serialField;
-
     DefaultTableModel cartModel;
-    private JTable cartTable;
+    JTable cartTable;
+    private JLabel cartItemCountLabel;
     private JPanel cartCenter;
     private JScrollPane formScroll;
     JPanel productGrid;
@@ -91,8 +86,6 @@ public class POSPanel extends JPanel {
     private ModernButton cashMoveBtn;
     private ModernButton checkoutBtn;
     private ModernButton addToCartBtn;
-    private ModernButton moreOptionsBtn;
-    private JPanel advancedOptionsPanel;
     private JCheckBox creditCheck;
     private JPanel viewCards;
     private ModernButton tabVendaBtn;
@@ -105,6 +98,8 @@ public class POSPanel extends JPanel {
 
     List<ProductDTO> productsList = new ArrayList<>();
     List<ProductDTO> filteredProducts = new ArrayList<>();
+    Set<Long> sellableProductIds = Set.of();
+    boolean showAllProducts = true;
     List<ClientDTO> clientsList = new ArrayList<>();
     List<ClientDTO> filteredClients = new ArrayList<>();
     List<WarehouseDTO> warehousesList = new ArrayList<>();
@@ -170,9 +165,10 @@ public class POSPanel extends JPanel {
         this.barcodeActions = new PosBarcodeActions(this);
         this.catalogController = new PosCatalogController(this);
 
-        setLayout(new BorderLayout(0, 15));
+        setLayout(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(25, 25, 25, 25));
+        setBorder(new EmptyBorder(PosLayout.ROOT_VERTICAL_MARGIN, 18,
+                PosLayout.ROOT_VERTICAL_MARGIN, 18));
 
         // 1. TOP BAR — selector de vista (Venda POS | Histórico) à esquerda, na MESMA linha que as
         //    acções de caixa (Abrir/Sangria/Fechar) à direita, para poupar espaço vertical.
@@ -194,7 +190,7 @@ public class POSPanel extends JPanel {
         openSessionBtn.setIcon(UIHelper.icon("fas-lock-open", 14));
         closeSessionBtn = UIHelper.createDangerButton("Fechar Caixa");
         closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14));
-        cashMoveBtn = UIHelper.createSecondaryButton("Sangria / Suprimento");
+        cashMoveBtn = UIHelper.createWarningButton("Sangria / Suprimento");
         cashMoveBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
 
         JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -212,7 +208,7 @@ public class POSPanel extends JPanel {
         statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         statusLabel.setForeground(UIHelper.PENDING_YELLOW);
 
-        JPanel sessionBar = new JPanel(new BorderLayout(0, 8));
+        JPanel sessionBar = new JPanel(new BorderLayout(0, 3));
         sessionBar.setOpaque(false);
         sessionBar.add(topBar, BorderLayout.NORTH);
         sessionBar.add(statusLabel, BorderLayout.SOUTH);
@@ -257,52 +253,55 @@ public class POSPanel extends JPanel {
         clientSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar cliente por nome ou NUIT…");
         productSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar produto por SKU ou nome…");
         clientSearchField.getDocument().addDocumentListener(simpleDocumentListener(() -> filterClients(clientSearchField.getText())));
-        productSearchField.getDocument().addDocumentListener(simpleDocumentListener(() -> filterProducts(productSearchField.getText())));
+        productSearchField.getDocument().addDocumentListener(simpleDocumentListener(catalogController::scheduleCatalogReload));
 
-        ModernButton newClientBtn = UIHelper.createSuccessButton("+ Novo");
+        ModernButton newClientBtn = UIHelper.createPrimaryButton("Novo");
+        newClientBtn.setIcon(UIHelper.icon("fas-user-plus", 12));
         newClientBtn.setToolTipText("Criar novo cliente");
         newClientBtn.addActionListener(e -> createClientDialog());
 
-        // Cabeçalho operacional: cliente + scanner sempre visíveis; opções de configuração da venda
-        // ficam recolhidas porque armazém/conta têm valores predefinidos na operação normal.
+        // Cabeçalho operacional numa única linha: nenhum campo fica escondido ou rouba altura ao carrinho.
         JPanel clientRow = new JPanel(new BorderLayout(6, 0));
         clientRow.setOpaque(false);
         clientRow.add(clientCombo, BorderLayout.CENTER);
         clientRow.add(newClientBtn, BorderLayout.EAST);
-        JPanel clientPicker = PosLayout.stackedPicker(PosLayout.searchRow(clientSearchField), clientRow);
 
         topSelectsBar = new JPanel(new GridBagLayout());
         topSelectsBar.setOpaque(false);
         topSelectsBar.setBorder(new EmptyBorder(4, 0, 4, 0));
         GridBagConstraints tg = new GridBagConstraints();
         tg.fill = GridBagConstraints.HORIZONTAL; tg.anchor = GridBagConstraints.NORTH; tg.gridy = 0;
-        tg.gridx = 0; tg.weightx = 0.52; tg.insets = new Insets(0, 0, 0, 12);
-        topSelectsBar.add(labeledField("Cliente", clientPicker), tg);
-        tg.gridx = 1; tg.weightx = 0.48;
+        tg.gridx = 0; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[0]; tg.insets = new Insets(0, 0, 0, 6);
+        topSelectsBar.add(labeledField("Pesquisar cliente", PosLayout.searchRow(clientSearchField)), tg);
+        tg.gridx = 1; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[1];
+        topSelectsBar.add(labeledField("Cliente", clientRow), tg);
+        tg.gridx = 2; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[2];
+        topSelectsBar.add(labeledField("Armazém", warehouseCombo), tg);
+        tg.gridx = 3; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[3];
+        topSelectsBar.add(labeledField("Conta", accountCombo), tg);
+        tg.gridx = 4; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[4]; tg.insets = new Insets(0, 0, 0, 0);
         topSelectsBar.add(labeledField("Código de barras", barcodeBox), tg);
 
-        moreOptionsBtn = UIHelper.createSecondaryButton("Mais opções");
-        moreOptionsBtn.setIcon(UIHelper.icon("fas-sliders-h", 14));
-        moreOptionsBtn.setToolTipText("Mostrar armazém e conta de tesouraria");
-        moreOptionsBtn.addActionListener(e -> toggleAdvancedOptions());
-        tg.gridx = 2; tg.weightx = 0; tg.insets = new Insets(20, 0, 0, 0);
-        topSelectsBar.add(moreOptionsBtn, tg);
-
-        advancedOptionsPanel = new JPanel(new GridLayout(1, 2, 12, 0));
-        advancedOptionsPanel.setOpaque(false);
-        advancedOptionsPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
-        advancedOptionsPanel.add(labeledField("Armazém Expedição", warehouseCombo));
-        advancedOptionsPanel.add(labeledField("Conta Tesouraria", accountCombo));
-        advancedOptionsPanel.setVisible(false);
-
         // Catálogo (esquerda do workspace): pesquisa + grid de cards clicáveis
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel leftPanel = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         leftPanel.setOpaque(false);
         leftPanel.setMinimumSize(new Dimension(CATALOG_MIN_WIDTH, 10));
-        JPanel catalogHeader = new JPanel(new BorderLayout(0, 8));
+        JPanel catalogHeader = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         catalogHeader.setOpaque(false);
         catalogHeader.add(UIHelper.createSubheading("Produtos"), BorderLayout.NORTH);
-        catalogHeader.add(PosLayout.searchRow(productSearchField), BorderLayout.SOUTH);
+        JComboBox<String> availabilityFilter = new JComboBox<>(new String[]{"Todos", "Disponíveis"});
+        UIHelper.styleComboBox(availabilityFilter);
+        availabilityFilter.setToolTipText("Mostrar todos os produtos ou apenas os disponíveis para venda");
+        availabilityFilter.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
+        availabilityFilter.addActionListener(e -> {
+            showAllProducts = availabilityFilter.getSelectedIndex() == 0;
+            catalogController.loadCatalogPage(0);
+        });
+        JPanel catalogFilters = new JPanel(new BorderLayout(8, 0));
+        catalogFilters.setOpaque(false);
+        catalogFilters.add(PosLayout.searchRow(productSearchField), BorderLayout.CENTER);
+        catalogFilters.add(availabilityFilter, BorderLayout.EAST);
+        catalogHeader.add(catalogFilters, BorderLayout.SOUTH);
         leftPanel.add(catalogHeader, BorderLayout.NORTH);
 
         productGrid = new JPanel(new GridLayout(0, 2, 12, 12));
@@ -321,49 +320,52 @@ public class POSPanel extends JPanel {
         catalogCard.setLayout(new BorderLayout());
         catalogCard.setBorder(new EmptyBorder(12, 12, 12, 12));
         catalogCard.add(productGridScroll, BorderLayout.CENTER);
+        catalogCard.add(catalogController.buildPaginationBar(), BorderLayout.SOUTH);
         leftPanel.add(catalogCard, BorderLayout.CENTER);
         workspace.setLeftComponent(leftPanel);
 
         // RIGHT: CART TABLE & CHECKOUT
-        JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
+        JPanel rightPanel = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         rightPanel.setOpaque(false);
         rightPanel.add(UIHelper.createSubheading("Carrinho de Vendas (POS)"), BorderLayout.NORTH);
 
         ModernPanel cartCard = new ModernPanel(16);
-        cartCard.setLayout(new BorderLayout(0, 15));
-        cartCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        cartCard.setLayout(new BorderLayout(0, PosLayout.CARD_VERTICAL_GAP));
+        cartCard.setBorder(new EmptyBorder(10, 12, 10, 12));
 
-        String[] cartCols = {"Artigo", "Preço Unit.", "Qtd", "Desc %", "Lote/Série", "Líquido", "IVA", "Total"};
+        String[] cartCols = {"Artigo", "Qtd", "Preço", "Desc.", "IVA", "Total"};
         cartModel = new DefaultTableModel(cartCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        cartTable = new JTable(cartModel);
+        cartTable = new JTable(cartModel) {
+            @Override public String getToolTipText(MouseEvent event) {
+                int viewRow = rowAtPoint(event.getPoint());
+                if (viewRow < 0) return null;
+                int modelRow = convertRowIndexToModel(viewRow);
+                if (modelRow < 0 || modelRow >= cartItems.size()) return null;
+                CartItem item = cartItems.get(modelRow);
+                String detail = item.note == null || item.note.isBlank() ? "Sem promoção" : item.note;
+                if (item.batch != null && !item.batch.isBlank()) detail += " | Lote: " + item.batch;
+                if (item.serial != null && !item.serial.isBlank()) detail += " | Série: " + item.serial;
+                return detail;
+            }
+        };
         UIHelper.styleTable(cartTable);
+        cartTable.putClientProperty("noRowInspector", Boolean.TRUE);
+        cartTable.setRowHeight(42);
         cartTable.setFillsViewportHeight(true);
-        cartTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        cartTable.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
         cartTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        // Larguras: "Artigo" leva o espaço; colunas numéricas/metadados ficam compactas.
-        cartTable.getColumnModel().getColumn(0).setPreferredWidth(240); // Artigo
-        cartTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Preço Unit.
-        cartTable.getColumnModel().getColumn(2).setPreferredWidth(60);  // Qtd
-        cartTable.getColumnModel().getColumn(3).setPreferredWidth(60);  // Desc %
-        cartTable.getColumnModel().getColumn(4).setPreferredWidth(140); // Lote/Série
-        cartTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Líquido
-        cartTable.getColumnModel().getColumn(6).setPreferredWidth(90);  // IVA
-        cartTable.getColumnModel().getColumn(7).setPreferredWidth(110); // Total
+        PosLayout.configureOperationalCartColumns(cartTable);
         // Altura confortável: viewport para ~12 linhas; o scroll trata do excesso de produtos.
         cartTable.setPreferredScrollableViewportSize(new Dimension(620, cartTable.getRowHeight() * 12));
         JScrollPane cartScroll = new JScrollPane(cartTable);
-        cartScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        cartScroll.setMinimumSize(new Dimension(0, 126));
+        cartScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         cartScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         cartScroll.getVerticalScrollBar().setUnitIncrement(16);
         UIHelper.styleScrollPane(cartScroll);
-        cartScroll.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override public void componentResized(java.awt.event.ComponentEvent e) {
-                PosLayout.updateCartTableResizeMode(cartTable, cartScroll.getViewport().getWidth());
-            }
-        });
         cartTable.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
@@ -397,72 +399,84 @@ public class POSPanel extends JPanel {
 
         cartCenter = new JPanel(new CardLayout());
         cartCenter.setOpaque(false);
+        cartCenter.setMinimumSize(new Dimension(0, 126));
         cartCenter.add(emptyState, "empty");
         cartCenter.add(cartScroll, "table");
+        JPanel cartToolbar = new JPanel(new BorderLayout(8, 0));
+        cartToolbar.setOpaque(false);
+        cartItemCountLabel = new JLabel("0 artigos");
+        cartItemCountLabel.setForeground(UIHelper.TEXT_MUTED);
+        cartItemCountLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        cartToolbar.add(cartItemCountLabel, BorderLayout.WEST);
+
+        ModernButton decreaseBtn = UIHelper.createPrimaryButton("−");
+        decreaseBtn.setIcon(UIHelper.icon("fas-minus", 12));
+        decreaseBtn.setToolTipText("Diminuir a quantidade seleccionada");
+        ModernButton editQtyBtn = UIHelper.createPrimaryButton("Quantidade (F6)");
+        editQtyBtn.setIcon(UIHelper.icon("fas-sort-numeric-up", 12));
+        ModernButton increaseBtn = UIHelper.createPrimaryButton("+");
+        increaseBtn.setIcon(UIHelper.icon("fas-plus", 12));
+        increaseBtn.setToolTipText("Aumentar a quantidade seleccionada");
+        JPanel quantityActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        quantityActions.setOpaque(false);
+        quantityActions.add(decreaseBtn);
+        quantityActions.add(editQtyBtn);
+        quantityActions.add(increaseBtn);
+        cartToolbar.add(quantityActions, BorderLayout.EAST);
+        cartCard.add(cartToolbar, BorderLayout.NORTH);
         cartCard.add(cartCenter, BorderLayout.CENTER);
 
-        // Cart Actions (Remove & Total & Checkout)
+        // Resumo e acções ficam compactos para preservar a altura operacional da tabela.
         JPanel cartBottom = new JPanel();
         cartBottom.setLayout(new BoxLayout(cartBottom, BoxLayout.Y_AXIS));
         cartBottom.setOpaque(false);
 
-        // Row 0: discriminação Subtotal s/ IVA + IVA — bloco sempre visível (legenda + valor por linha)
         subtotalValueLabel = new JLabel("0,00 MT");
         ivaValueLabel = new JLabel("0,00 MT");
-        JPanel breakdownRow = new JPanel(new GridBagLayout());
-        breakdownRow.setOpaque(false);
-        breakdownRow.setBorder(new EmptyBorder(2, 4, 2, 4));
-        GridBagConstraints bg = new GridBagConstraints();
-        bg.gridx = 0; bg.gridy = 0; bg.weightx = 1.0; bg.fill = GridBagConstraints.HORIZONTAL;
-        breakdownRow.add(breakdownCaption("Subtotal s/ IVA"), bg);
-        bg.gridx = 1; bg.weightx = 0; bg.fill = GridBagConstraints.NONE; bg.anchor = GridBagConstraints.EAST;
-        breakdownRow.add(breakdownValue(subtotalValueLabel), bg);
-        bg.gridx = 0; bg.gridy = 1; bg.weightx = 1.0; bg.fill = GridBagConstraints.HORIZONTAL; bg.anchor = GridBagConstraints.WEST;
-        bg.insets = new Insets(4, 0, 0, 0);
-        breakdownRow.add(breakdownCaption("IVA"), bg);
-        bg.gridx = 1; bg.weightx = 0; bg.fill = GridBagConstraints.NONE; bg.anchor = GridBagConstraints.EAST;
-        breakdownRow.add(breakdownValue(ivaValueLabel), bg);
-
-        // Row 1: Total em destaque — faixa de acento com legenda + valor grande (info nº1 do POS)
         ModernPanel totalRow = new ModernPanel(12);
         totalRow.setBackground(UIHelper.SELECTION_BG);
         totalRow.setLayout(new BorderLayout());
-        totalRow.setBorder(new EmptyBorder(10, 16, 10, 16));
+        totalRow.setBorder(new EmptyBorder(7, 12, 7, 12));
+        JPanel taxSummary = new JPanel(new GridLayout(2, 2, 12, 2));
+        taxSummary.setOpaque(false);
+        taxSummary.add(breakdownCaption("Subtotal s/ IVA"));
+        taxSummary.add(breakdownValue(subtotalValueLabel));
+        taxSummary.add(breakdownCaption("IVA"));
+        taxSummary.add(breakdownValue(ivaValueLabel));
         JLabel totalCaption = new JLabel("TOTAL A PAGAR");
         totalCaption.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         totalCaption.setForeground(UIHelper.TEXT_MUTED);
         totalLabel = new JLabel("0,00 MT");
-        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 26));
+        totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
         totalLabel.setForeground(UIHelper.TEXT_LIGHT);
-        totalRow.add(totalCaption, BorderLayout.WEST);
-        totalRow.add(totalLabel, BorderLayout.EAST);
+        JPanel payable = new JPanel(new BorderLayout(12, 0));
+        payable.setOpaque(false);
+        payable.add(totalCaption, BorderLayout.WEST);
+        payable.add(totalLabel, BorderLayout.EAST);
+        totalRow.add(taxSummary, BorderLayout.WEST);
+        totalRow.add(payable, BorderLayout.EAST);
 
-        // Row 2: Fiado checkbox (linha própria, evita ser esmagado entre botões)
         creditCheck = new JCheckBox("Fiado (cliente paga depois)");
         creditCheck.setForeground(UIHelper.TEXT_LIGHT);
         creditCheck.setOpaque(false);
         creditCheck.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        JPanel creditRow = new JPanel(new BorderLayout());
-        creditRow.setOpaque(false);
-        creditRow.add(creditCheck, BorderLayout.WEST);
 
-        // Row 3: Action Buttons
         JPanel buttonRow = new JPanel(new BorderLayout());
         buttonRow.setOpaque(false);
 
         ModernButton removeBtn = UIHelper.createDangerButton("Remover Selecionado");
         removeBtn.setIcon(UIHelper.icon("fas-trash", 14));
         buttonRow.add(removeBtn, BorderLayout.WEST);
+        JPanel creditCell = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 5));
+        creditCell.setOpaque(false);
+        creditCell.add(creditCheck);
+        buttonRow.add(creditCell, BorderLayout.CENTER);
 
         checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda (F9)");
         checkoutBtn.setIcon(UIHelper.icon("fas-check-circle", 14));
         buttonRow.add(checkoutBtn, BorderLayout.EAST);
 
-        cartBottom.add(breakdownRow);
-        cartBottom.add(Box.createRigidArea(new Dimension(0, 6)));
         cartBottom.add(totalRow);
-        cartBottom.add(Box.createRigidArea(new Dimension(0, 8)));
-        cartBottom.add(creditRow);
         cartBottom.add(Box.createRigidArea(new Dimension(0, 8)));
         cartBottom.add(buttonRow);
         cartCard.add(cartBottom, BorderLayout.SOUTH);
@@ -473,15 +487,10 @@ public class POSPanel extends JPanel {
         workspace.setRightComponent(rightPanel);
         SwingUtilities.invokeLater(() -> workspace.setDividerLocation(CATALOG_WIDTH_RATIO));
 
-        JPanel salesTop = new JPanel(new BorderLayout(0, 8));
-        salesTop.setOpaque(false);
-        salesTop.add(topSelectsBar, BorderLayout.NORTH);
-        salesTop.add(advancedOptionsPanel, BorderLayout.SOUTH);
-
-        JPanel salesTab = new JPanel(new BorderLayout(0, 12));
+        JPanel salesTab = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         salesTab.setOpaque(false);
-        salesTab.setBorder(new EmptyBorder(15, 5, 5, 5));
-        salesTab.add(salesTop, BorderLayout.NORTH);
+        salesTab.setBorder(new EmptyBorder(4, 5, 4, 5));
+        salesTab.add(topSelectsBar, BorderLayout.NORTH);
         salesTab.add(workspace, BorderLayout.CENTER);
 
         // Vistas comutadas pelos botões do topo (em vez de um JTabbedPane), para o selector ficar
@@ -498,23 +507,14 @@ public class POSPanel extends JPanel {
         closeSessionBtn.addActionListener(e -> closeSession());
         cashMoveBtn.addActionListener(e -> manageCashMovements());
         removeBtn.addActionListener(e -> removeFromCart());
+        decreaseBtn.addActionListener(e -> changeSelectedQuantity(BigDecimal.ONE.negate()));
+        editQtyBtn.addActionListener(e -> editSelectedCartQuantity());
+        increaseBtn.addActionListener(e -> changeSelectedQuantity(BigDecimal.ONE));
         checkoutBtn.addActionListener(e -> runCheckout());
 
         installKeyboardShortcuts();
 
         refreshSessionState();
-    }
-
-    private void toggleAdvancedOptions() {
-        boolean visible = !advancedOptionsPanel.isVisible();
-        advancedOptionsPanel.setVisible(visible);
-        moreOptionsBtn.setText(visible ? "Menos opções" : "Mais opções");
-        moreOptionsBtn.setIcon(UIHelper.icon(visible ? "fas-chevron-up" : "fas-sliders-h", 14));
-        moreOptionsBtn.setToolTipText(visible
-                ? "Ocultar armazém e conta de tesouraria"
-                : "Mostrar armazém e conta de tesouraria");
-        revalidate();
-        repaint();
     }
 
     /** Atalhos de caixa previsíveis; Delete fica limitado à tabela para não apagar texto digitado. */
@@ -555,8 +555,8 @@ public class POSPanel extends JPanel {
         }
         Color active = UIHelper.ACCENT_BLUE;
         Color activeHover = UIHelper.ACCENT_BLUE.brighter();
-        Color idle = UIHelper.BG_CARD;
-        Color idleHover = UIHelper.BORDER;
+        Color idle = UIHelper.BUTTON_NEUTRAL;
+        Color idleHover = UIHelper.BUTTON_NEUTRAL_HOVER;
         tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
         tabHistBtn.setColors(history ? active : idle, history ? activeHover : idleHover);
         if (history) {
@@ -623,14 +623,12 @@ public class POSPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
 
         UIHelper.loadAsync(this, () -> new PosMetadata(comercialApiClient.getAllClients(),
-                        comercialApiClient.getSellableProducts(),
                         inventoryApiClient.getSalesWarehousesByCompany(companyId), financeApiClient.getAllAccounts()),
                 this::applyMetadata, error -> showPosLoadError("dados do ponto de venda", error));
     }
 
     private void applyMetadata(PosMetadata metadata) {
         clientsList = metadata.clients();
-        productsList = metadata.products();
         warehousesList = metadata.warehouses();
         accountsList = metadata.accounts();
 
@@ -644,12 +642,10 @@ public class POSPanel extends JPanel {
         }
 
         filterClients(clientSearchField == null ? "" : clientSearchField.getText());
-        filterProducts(productSearchField == null ? "" : productSearchField.getText());
+        catalogController.loadCatalogPage(0);
     }
 
     private void filterClients(String query) { catalogController.filterClients(query); }
-
-    private void filterProducts(String query) { catalogController.filterProducts(query); }
 
     private void rebuildProductGrid() { catalogController.rebuildProductGrid(); }
 
@@ -712,8 +708,10 @@ public class POSPanel extends JPanel {
         }
         int selected = cartTable.convertRowIndexToModel(selectedView);
         cartItems.remove(selected);
-        updateCartTotal();
+        updateCartTotal(Math.min(selected, cartItems.size() - 1));
     }
+
+    private void changeSelectedQuantity(BigDecimal delta) { catalogController.changeSelectedQuantity(delta); }
 
     /** Alteração rápida e segura da quantidade; mantém produto, promoção e cálculos oficiais. */
     private void editSelectedCartQuantity() {
@@ -752,9 +750,7 @@ public class POSPanel extends JPanel {
                 })
                 .showDialog();
         if (confirmed) {
-            updateCartTotal();
-            int refreshedView = cartTable.convertRowIndexToView(selected);
-            if (refreshedView >= 0) cartTable.setRowSelectionInterval(refreshedView, refreshedView);
+            updateCartTotal(selected);
         }
     }
 
@@ -766,6 +762,12 @@ public class POSPanel extends JPanel {
     }
 
     void updateCartTotal() {
+        int selected = cartTable == null || cartTable.getSelectedRow() < 0
+                ? -1 : cartTable.convertRowIndexToModel(cartTable.getSelectedRow());
+        updateCartTotal(selected);
+    }
+
+    void updateCartTotal(int preferredModelRow) {
         BigDecimal net = BigDecimal.ZERO;
         BigDecimal tax = BigDecimal.ZERO;
         BigDecimal total = BigDecimal.ZERO;
@@ -783,6 +785,15 @@ public class POSPanel extends JPanel {
         }
         rebuildCartRows();
         refreshCartView();
+        if (cartItemCountLabel != null) {
+            BigDecimal units = cartItems.stream()
+                    .map(item -> item.qty)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            String formatted = units.stripTrailingZeros().toPlainString();
+            cartItemCountLabel.setText(formatted + (BigDecimal.ONE.compareTo(units) == 0
+                    ? " artigo" : " artigos"));
+        }
+        catalogController.selectAndRevealCartRow(preferredModelRow);
     }
 
     /** Etiqueta da célula IVA da linha: "Isento" quando taxa 0, senão "valor (taxa%)". */
@@ -817,7 +828,7 @@ public class POSPanel extends JPanel {
             return;
         }
         if (warehousesList.isEmpty() || accountsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Falta cadastrar armazéns ou contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Falta registar armazéns ou contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -951,8 +962,15 @@ public class POSPanel extends JPanel {
                 "Erro", JOptionPane.ERROR_MESSAGE);
     }
 
-    private record PosMetadata(java.util.List<ClientDTO> clients, java.util.List<ProductDTO> products,
-                               java.util.List<WarehouseDTO> warehouses,
+    boolean isProductSellable(ProductDTO product) { return product != null && sellableProductIds.contains(product.id()); }
+
+    void registerSellableProduct(ProductDTO product) {
+        java.util.Set<Long> updated = new java.util.HashSet<>(sellableProductIds);
+        updated.add(product.id());
+        sellableProductIds = updated;
+    }
+
+    private record PosMetadata(java.util.List<ClientDTO> clients, java.util.List<WarehouseDTO> warehouses,
                                java.util.List<TreasuryAccountDTO> accounts) {}
 
     void showReturnDialog() { returnDialog.show(); }
