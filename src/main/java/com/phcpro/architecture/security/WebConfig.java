@@ -9,17 +9,27 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final SecurityInterceptor securityInterceptor;
+    private final com.phcpro.architecture.version.ClientVersionInterceptor clientVersionInterceptor;
 
-    public WebConfig(SecurityInterceptor securityInterceptor) {
+    public WebConfig(SecurityInterceptor securityInterceptor,
+                     com.phcpro.architecture.version.ClientVersionInterceptor clientVersionInterceptor) {
         this.securityInterceptor = securityInterceptor;
+        this.clientVersionInterceptor = clientVersionInterceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // A verificação de versão vem PRIMEIRO e cobre também o login: o melhor momento para
+        // dizer "actualize o programa" é ao entrar, não a meio de uma venda. Exclui-se
+        // /api/version para que um cliente bloqueado ainda consiga perguntar qual é a versão boa.
+        registry.addInterceptor(clientVersionInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/version");
+
         registry.addInterceptor(securityInterceptor)
                 .addPathPatterns("/api/**")
                 // Login e logout só precisam do corpo/token; não exigem empresa (o superadmin não tem).
-                .excludePathPatterns("/api/auth/login", "/api/auth/logout");
+                .excludePathPatterns("/api/auth/login", "/api/auth/logout", "/api/version");
     }
 
     @Override

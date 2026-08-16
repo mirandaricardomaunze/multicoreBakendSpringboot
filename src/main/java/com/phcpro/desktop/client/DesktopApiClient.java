@@ -135,7 +135,11 @@ public class DesktopApiClient {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(config.baseUrl() + normalizePath(path)))
                 .timeout(Duration.ofSeconds(30))
-                .header("Accept", "application/json");
+                .header("Accept", "application/json")
+                // Identifica-se em TODOS os pedidos: é o que permite ao servidor dizer
+                // "actualize o programa" em vez de devolver um erro que ninguém explica.
+                .header(com.phcpro.architecture.version.ClientVersionInterceptor.HEADER,
+                        com.phcpro.architecture.version.ClientVersion.current());
         if (session != null && session.token() != null) {
             builder.header("Authorization", "Bearer " + session.token());
             if (session.activeCompanyId() != null) {
@@ -160,6 +164,12 @@ public class DesktopApiClient {
     private HttpResponse<String> sendRaw(HttpRequest request) {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 426) {
+                // O servidor recusou por esta versão do programa ser antiga de mais. Vale a pena
+                // ter uma mensagem própria: sem ela o operador via um erro técnico e ninguém
+                // percebia que bastava actualizar.
+                throw new ApiClientException(426, upgradeMessage(response.body()));
+            }
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new ApiClientException(response.statusCode(), errorMessage(response.body()));
             }
@@ -190,6 +200,20 @@ public class DesktopApiClient {
             // Fall back to a stable user-facing message when the server did not return JSON.
         }
         return "O servidor recusou o pedido.";
+    }
+
+    /**
+     * Mensagem de versão desactualizada. Usa o que o servidor explicou (que sabe qual é a versão
+     * mínima) e só inventa texto quando o servidor não disse nada — mas diz sempre <b>qual</b> é
+     * a versão instalada, porque é a primeira pergunta de quem for dar apoio à loja.
+     */
+    private String upgradeMessage(String body) {
+        String fromServer = errorMessage(body);
+        String detail = fromServer.isBlank() || "O servidor recusou o pedido.".equals(fromServer)
+                ? "Esta versão do programa já não é aceite pelo servidor."
+                : fromServer;
+        return detail + " (versão instalada: "
+                + com.phcpro.architecture.version.ClientVersion.current() + ")";
     }
 
     private String normalizePath(String path) {

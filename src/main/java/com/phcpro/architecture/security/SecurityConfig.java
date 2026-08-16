@@ -61,6 +61,9 @@ public class SecurityConfig {
                 // continua a resolver empresa/papel e a auditar por cima disto.
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
+                        // Versão é pública como o health: o desktop pergunta-a ANTES do login,
+                        // e um cliente bloqueado por ser antigo tem de a poder consultar.
+                        .requestMatchers("/api/version").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
