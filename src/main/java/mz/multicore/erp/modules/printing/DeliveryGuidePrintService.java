@@ -159,25 +159,18 @@ public class DeliveryGuidePrintService {
         )).toList();
     }
 
+    /**
+     * Resumo de carga. A conta vive no {@link LoadSummaryRenderer}, partilhado com a guia de
+     * transferência entre armazéns — os dois documentos movimentam mercadoria e respondem à
+     * mesma pergunta ("o que é que isto pesa?"), pelo que não podem ter duas contas diferentes.
+     */
     private Paragraph buildPackageSummary(List<DeliveryGuideLine> lines) {
-        var shares = mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.calculate(lines.stream()
-                .map(line -> new mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.Input(
-                        line.getQuantity(), line.getProduct().getGrossUnitWeightKg())).toList());
-        java.math.BigDecimal totalWeight = shares.stream().map(
-                mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.Share::lineWeightKg)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-        String summary = java.util.stream.IntStream.range(0, lines.size()).mapToObj(index -> {
-            DeliveryGuideLine line = lines.get(index);
-            var share = shares.get(index);
-            int factor = Math.max(1, line.getProduct().getUnitsPerBox());
-            return line.getProduct().getName() + ": "
-                    + mz.multicore.erp.architecture.quantity.PackageQuantity.label(line.getQuantity(), factor)
-                    + ", " + share.lineWeightKg() + " kg"
-                    + " (" + share.quantityPercentage() + "% qtd; " + share.weightPercentage() + "% peso)";
-        }).collect(java.util.stream.Collectors.joining(" | "));
-        Paragraph paragraph = new Paragraph("Carga total: " + totalWeight + " kg. Volumes: " + summary,
-                PdfTheme.smallFont());
-        paragraph.setSpacingBefore(5f);
-        return paragraph;
+        return LoadSummaryRenderer.build(lines.stream()
+                .map(line -> new LoadSummaryRenderer.Item(
+                        line.getProduct().getName(),
+                        line.getQuantity(),
+                        line.getProduct().getGrossUnitWeightKg(),
+                        line.getProduct().getUnitsPerBox()))
+                .toList());
     }
 }

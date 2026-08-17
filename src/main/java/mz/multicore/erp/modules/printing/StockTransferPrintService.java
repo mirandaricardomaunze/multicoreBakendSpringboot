@@ -41,6 +41,12 @@ public class StockTransferPrintService {
             doc.add(buildLinesTable(transfer.getLines()));
             doc.add(PdfDocumentBuilder.spacer(8f));
             doc.add(buildTotalsLine(transfer.getLines()));
+            // Peso da carga: uma transferência entre armazéns viaja numa carrinha como qualquer
+            // outra expedição. Só aparece quando há pesos no cadastro (ver LoadSummaryRenderer).
+            Paragraph load = buildLoadSummary(transfer.getLines());
+            if (load != null) {
+                doc.add(load);
+            }
             if (transfer.getNotes() != null && !transfer.getNotes().isBlank()) {
                 doc.add(PdfDocumentBuilder.spacer(8f));
                 Paragraph notes = new Paragraph("Observações: " + transfer.getNotes(), PdfTheme.bodyFont());
@@ -138,6 +144,21 @@ public class StockTransferPrintService {
         innerWrap.setBorder(PdfPCell.NO_BORDER);
         wrapper.addCell(innerWrap);
         return wrapper;
+    }
+
+    /**
+     * Carga da transferência, pela mesma conta da guia de remessa ao cliente
+     * ({@link LoadSummaryRenderer}). {@code null} quando nenhum artigo tem peso no cadastro —
+     * imprimir "0,000 kg" diria que a carrinha vai vazia.
+     */
+    private Paragraph buildLoadSummary(List<StockTransferLine> lines) {
+        return LoadSummaryRenderer.build(lines.stream()
+                .map(line -> new LoadSummaryRenderer.Item(
+                        line.getProduct().getName(),
+                        line.getQuantity(),
+                        line.getProduct().getGrossUnitWeightKg(),
+                        line.getProduct().getUnitsPerBox()))
+                .toList());
     }
 
     private PdfPTable buildSignatureBlock() {
