@@ -19,7 +19,12 @@ final class CustomerOrderFulfillmentActions {
         if ("AWAITING_SEPARATION".equals(status)) {
             UIHelper.runWithProgress(owner, "A gerar guia térmica de separação…",
                     () -> api.printPicking(id, terminalName()),
-                    pdf -> { PdfFileSaver.saveAndOpen(pdf, "separacao-" + id); owner.loadOrdersTable(); },
+                    // Actualizar a tabela ANTES de abrir o PDF. Quando o servidor responde, a
+                    // encomenda JÁ passou a "em separação"; se abrir o PDF falhar (sem leitor
+                    // instalado, ficheiro bloqueado), a tabela ficava a mostrar o estado antigo
+                    // e o passo seguinte parecia impossível — o estado real e o que se vê no
+                    // ecrã deixavam de coincidir.
+                    pdf -> { owner.loadOrdersTable(); PdfFileSaver.saveAndOpen(pdf, "separacao-" + id); },
                     error -> showError(owner, "imprimir guia de separação", error));
         } else if ("IN_SEPARATION".equals(status)) reprint(owner, api, id);
         else UIHelper.runWithProgress(owner, "A gerar encomenda em PDF…", () -> api.renderOrder(id),
