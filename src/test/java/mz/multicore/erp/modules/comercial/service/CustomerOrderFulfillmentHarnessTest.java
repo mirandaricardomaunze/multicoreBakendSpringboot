@@ -40,4 +40,85 @@ class CustomerOrderFulfillmentHarnessTest {
         assertThrows(BusinessRuleException.class, () -> service.reprint(7L,
                 new ReprintAuthorizationRequest("gerente", "senha", "papel danificado", "POS-1")));
     }
+
+    // ─── Mensagens de estado errado (SEP-10..SEP-13) ────────────────────────
+    // Ver docs/SEPARACAO_MENSAGENS_SPEC.md. O que se verifica aqui não é a recusa (essa já
+    // existia) — é a mensagem DIZER O QUE FAZER. "Estado actual invalido: PENDING" é verdade e
+    // não ajuda ninguém que esteja ao balcão com um cliente à espera.
+
+    private CustomerOrderFulfillmentService serviceFor(Order order, OrderRepository orders) {
+        CurrentUserContext.setCurrentUser("gerente", "MANAGER");
+        CurrentUserContext.setCurrentCompanyId(1L);
+        Company company = new Company(); company.setId(1L); order.setCompany(company);
+        when(orders.findById(7L)).thenReturn(Optional.of(order));
+        return new CustomerOrderFulfillmentService(
+                mock(ComercialService.class), orders, mock(OrderLineRepository.class),
+                mock(OrderEventRepository.class), mock(InventoryService.class),
+                mock(OrderPickingPrintService.class), mock(AppUserService.class),
+                mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class));
+    }
+
+    private Order order(String status) {
+        Order order = new Order();
+        order.setId(7L);
+        order.setOrderNumber("EC-2026/9");
+        order.setStatus(status);
+        return order;
+    }
+
+    @Test // SEP-10
+    void separarSemTerImpressoALista_dizQueFaltaImprimir() {
+        Order order = order("AWAITING_SEPARATION");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparation(7L,
+                        new mz.multicore.erp.modules.comercial.dto.OrderActionRequest(null, "POS-1")));
+
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("lista de separação"),
+                error.getMessage());
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("EC-2026/9"),
+                "diz de que encomenda se trata");
+    }
+
+    @Test // SEP-11
+    void separarEncomendaDoFluxoClassico_explicaQueNaoEDesteCircuito() {
+        Order order = order("PENDING");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparation(7L,
+                        new mz.multicore.erp.modules.comercial.dto.OrderActionRequest(null, "POS-1")));
+
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("fatura-se directamente"),
+                error.getMessage());
+    }
+
+    @Test // SEP-12
+    void separarOQueJaEstaSeparado_dizOEstadoEmPortugues() {
+        Order order = order("SEPARATED");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparation(7L,
+                        new mz.multicore.erp.modules.comercial.dto.OrderActionRequest(null, "POS-1")));
+
+        // Nada de códigos internos na cara do operador.
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("Separado"),
+                error.getMessage());
+        org.junit.jupiter.api.Assertions.assertFalse(error.getMessage().contains("IN_SEPARATION"),
+                error.getMessage());
+    }
+
+    @Test // SEP-13
+    void imprimirListaComEncomendaJaSeparada_tambemExplica() {
+        Order order = order("SEPARATED");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.printForPicking(7L, "POS-1"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().startsWith("Não é possível"),
+                error.getMessage());
+    }
 }

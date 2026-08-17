@@ -31,9 +31,42 @@ final class CustomerOrderFulfillmentActions {
         int row = TableFilter.selectedModelRow(owner.ordersTable);
         if (row < 0) { warn(owner); return; }
         Long id = (Long) owner.ordersTableModel.getValueAt(row, 0);
+        String status = String.valueOf(owner.ordersTableModel.getValueAt(row, 3));
+
+        // O estado já está na tabela: explicar aqui evita mandar o operador a um erro do
+        // servidor para descobrir que lhe falta um passo. A regra continua a ser do backend —
+        // isto é só cortesia, não é a guarda.
+        String impedimento = whyCannotSeparate(status);
+        if (impedimento != null) {
+            JOptionPane.showMessageDialog(owner, impedimento, "Separação", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
         UIHelper.runWithProgress(owner, "A concluir separação…", () -> api.completeSeparation(id, terminalName()),
                 ignored -> { owner.loadOrdersTable(); JOptionPane.showMessageDialog(owner, "Pedido marcado como separado."); },
                 error -> showError(owner, "concluir separação", error));
+    }
+
+    /**
+     * Porque é que esta encomenda não pode ser marcada como separada — ou {@code null} se puder.
+     *
+     * <p>Diz sempre o passo seguinte. "Estado inválido" é verdade e não ajuda ninguém que esteja
+     * ao balcão com um cliente à espera.
+     */
+    private static String whyCannotSeparate(String status) {
+        return switch (status) {
+            case "IN_SEPARATION" -> null;
+            case "AWAITING_SEPARATION" -> "Esta encomenda ainda não entrou em separação.\n\n"
+                    + "Use primeiro \"Imprimir PDF\" para emitir a lista de separação — é isso que "
+                    + "dá início ao trabalho no armazém. Depois de separada, volte aqui.";
+            case "SEPARATED" -> "Esta encomenda já está separada.\n\nO passo seguinte é "
+                    + "\"Faturar Encomenda\".";
+            case "INVOICED" -> "Esta encomenda já foi facturada.";
+            case "CANCELLED" -> "Esta encomenda foi cancelada.";
+            default -> "Esta encomenda não faz parte do circuito de separação — está em \""
+                    + status + "\" e fatura-se directamente.\n\n"
+                    + "A separação aplica-se apenas às encomendas criadas para expedição.";
+        };
     }
 
     static void showEvents(ComercialPanel owner, ComercialApiClient api) {

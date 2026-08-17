@@ -155,10 +155,53 @@ public class CustomerOrderFulfillmentService {
         return order;
     }
 
+    /**
+     * Muda o estado do pedido, recusando quando o passo anterior não foi dado.
+     *
+     * <p>A mensagem diz <b>o que fazer</b> e não só o que está errado. "Estado actual invalido:
+     * PENDING" é verdade e não serve de nada a quem está ao balcão — o operador precisa de saber
+     * que lhe falta imprimir a lista de separação, ou que aquela encomenda nem sequer faz parte
+     * deste circuito.
+     */
     private void transition(Order order, OrderFulfillmentStatus expected, OrderFulfillmentStatus target) {
-        if (!expected.name().equals(order.getStatus())) throw new BusinessRuleException("Estado actual invalido: " + order.getStatus() + ".");
+        if (!expected.name().equals(order.getStatus())) {
+            throw new BusinessRuleException(explainWrongState(order, expected, target));
+        }
         expected.requireTransitionTo(target);
         order.setStatus(target.name());
+    }
+
+    private String explainWrongState(Order order, OrderFulfillmentStatus expected, OrderFulfillmentStatus target) {
+        String current = order.getStatus();
+        String header = "Não é possível marcar como " + label(target) + ": ";
+
+        // Encomenda do fluxo clássico — nunca passou pelo circuito de separação.
+        if (!OrderFulfillmentStatus.isFulfillmentStatus(current)) {
+            return header + "esta encomenda (" + order.getOrderNumber() + ") não foi criada para "
+                    + "separação — está em \"" + current + "\" e fatura-se directamente.";
+        }
+        if (OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(current)) {
+            return header + "a encomenda " + order.getOrderNumber() + " ainda aguarda separação. "
+                    + "Imprima primeiro a lista de separação — é isso que dá início ao trabalho no armazém.";
+        }
+        return header + "a encomenda " + order.getOrderNumber() + " está em \"" + label(current)
+                + "\" e o passo esperado era \"" + label(expected) + "\".";
+    }
+
+    private String label(OrderFulfillmentStatus status) {
+        return label(status.name());
+    }
+
+    private String label(String status) {
+        if (status == null) return "—";
+        return switch (status) {
+            case "AWAITING_SEPARATION" -> "Aguarda separação";
+            case "IN_SEPARATION" -> "Em separação";
+            case "SEPARATED" -> "Separado";
+            case "INVOICED" -> "Facturado";
+            case "CANCELLED" -> "Cancelado";
+            default -> status;
+        };
     }
 
     private void registerPrint(Order order, String terminal, String type, String details) {
