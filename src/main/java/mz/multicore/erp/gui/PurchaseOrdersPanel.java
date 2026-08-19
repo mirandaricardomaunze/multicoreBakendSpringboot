@@ -21,6 +21,7 @@ import java.util.List;
 final class PurchaseOrdersPanel {
     private final ComprasPanel owner;
     private QuantityField poQtyField;
+    private PackageQuantityEditor poPackageEditor;
     private JTextField poExpectedField;
     private JTable poLinesTable;
     private DefaultTableModel poListModel;
@@ -33,6 +34,7 @@ final class PurchaseOrdersPanel {
         for (WarehouseDTO w : owner.warehousesList) owner.poWarehouseCombo.addItem(w.name());
         owner.poProductCombo.removeAllItems();
         for (ProductDTO p : owner.productsList) owner.poProductCombo.addItem(p.name() + " (" + p.sku() + ")");
+        refreshPackagingFactor();
     }
 
     // ===== Encomendas a Fornecedor =====
@@ -52,7 +54,9 @@ final class PurchaseOrdersPanel {
         owner.poSupplierCombo = new JComboBox<>(); UIHelper.styleComboBox(owner.poSupplierCombo);
         owner.poWarehouseCombo = new JComboBox<>(); UIHelper.styleComboBox(owner.poWarehouseCombo);
         owner.poProductCombo = new JComboBox<>(); UIHelper.styleComboBox(owner.poProductCombo);
-        poQtyField = new QuantityField("1", true);
+        poPackageEditor = new PackageQuantityEditor();
+        poQtyField = poPackageEditor.totalField();
+        owner.poProductCombo.addActionListener(event -> refreshPackagingFactor());
         owner.poPriceField = new MoneyField("0");
         poExpectedField = new JTextField(); UIHelper.styleTextField(poExpectedField);
         poExpectedField.setToolTipText("Data prevista de entrega (aaaa-MM-dd) — opcional");
@@ -67,7 +71,7 @@ final class PurchaseOrdersPanel {
         g.gridx = 0; g.gridy = 4; formCard.add(label("Qtd:"), g);
         g.gridx = 1; formCard.add(label("Preço unit. (compra):"), g);
         g.gridx = 2; formCard.add(label("Entrega prevista:"), g);
-        g.gridx = 0; g.gridy = 5; formCard.add(poQtyField, g);
+        g.gridx = 0; g.gridy = 5; formCard.add(poPackageEditor, g);
         g.gridx = 1; formCard.add(owner.poPriceField, g);
         g.gridx = 2; formCard.add(poExpectedField, g);
 
@@ -220,9 +224,17 @@ final class PurchaseOrdersPanel {
                     String.format("%,.2f", price), "-", "-",
                     String.format("%,.2f MT", qty.multiply(price))});
             recomputePoTotal();
-            poQtyField.setText("1"); owner.poPriceField.setText("0");
+            poPackageEditor.reset(); owner.poPriceField.setText("0");
         } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void refreshPackagingFactor() {
+        if (poPackageEditor == null) return;
+        int index = owner.poProductCombo.getSelectedIndex();
+        if (index >= 0 && index < owner.productsList.size()) {
+            poPackageEditor.setUnitsPerBox(owner.productsList.get(index).unitsPerBox());
         }
     }
 

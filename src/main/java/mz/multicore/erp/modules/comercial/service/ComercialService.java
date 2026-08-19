@@ -980,6 +980,18 @@ public class ComercialService {
 
     @Transactional
     public OrderDTO createOrder(CreateOrderRequest request) {
+        return createOrder(request, request.effectiveKind());
+    }
+
+    /**
+     * Cria a encomenda numa via explícita, ignorando a que venha no pedido HTTP.
+     *
+     * <p>Usada pelo circuito de separação, que é dono da sua via e não a pode deixar ao critério
+     * de quem chama — a mesma porta que o campo {@code taxRate} do pedido foi até 06/08, quando
+     * qualquer integração podia faturar à taxa que quisesse.
+     */
+    @Transactional
+    public OrderDTO createOrder(CreateOrderRequest request, OrderKind kind) {
         CurrentUserContext.requireCompany(request.companyId());
         Client client;
         if (request.clientId() != null) {
@@ -1000,8 +1012,11 @@ public class ComercialService {
         order.setClient(client);
         order.setCompany(company);
         order.setWarehouse(warehouse);
-        // Encomenda passa pela Engine de Aprovações antes de ser faturável (ver OrderApprovalCallback).
-        order.setStatus("PENDING_APPROVAL");
+        order.setKind(kind);
+        // A encomenda A4 passa pela Engine de Aprovações antes de ser faturável (ver
+        // OrderApprovalCallback). O pedido de separação não — é trabalho interno de armazém, e o
+        // dinheiro/stock só se move na facturação, que tem as suas próprias travas.
+        order.setStatus(kind.requiresApproval() ? "PENDING_APPROVAL" : "PENDING");
         if (request.walkInName() != null && !request.walkInName().isBlank()) {
             order.setWalkInName(request.walkInName().trim());
         }
@@ -1054,11 +1069,13 @@ public class ComercialService {
 
         order = orderRepository.save(order);
 
-        // Submete à Engine de Aprovações. O encaminhamento por valor (auto ≤50 / MANAGER / ADMIN)
-        // e a promoção a PENDING (faturável) acontecem em OrderApprovalCallback.
-        String approvalDesc = String.format("Encomenda %s para %s - Total: %s MT",
-                order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
-        approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), approvalDesc);
+        if (kind.requiresApproval()) {
+            // Submete à Engine de Aprovações. O encaminhamento por valor (auto ≤50 / MANAGER / ADMIN)
+            // e a promoção a PENDING (faturável) acontecem em OrderApprovalCallback.
+            String approvalDesc = String.format("Encomenda %s para %s - Total: %s MT",
+                    order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
+            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), approvalDesc);
+        }
 
         return toDTO(order);
     }
@@ -1265,7 +1282,9 @@ public class ComercialService {
                 order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now(),
                 order.getPrintedAt(),
                 order.getPrintCount(),
-                order.getLastPrintedBy()
+                order.getLastPrintedBy(),
+                OrderKind.orDefault(order.getKind()),
+                OrderKind.orDefault(order.getKind()).label()
         );
     }
 

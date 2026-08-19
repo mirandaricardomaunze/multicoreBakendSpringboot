@@ -7,7 +7,7 @@ public record PackageQuantity(long boxes, long looseUnits, long totalUnits, int 
     public static PackageQuantity fromPackages(long boxes, long looseUnits, int unitsPerBox) {
         requireValidFactor(unitsPerBox);
         if (boxes < 0 || looseUnits < 0 || looseUnits >= unitsPerBox) {
-            throw new BusinessRuleException("As caixas devem ser positivas e as unidades soltas inferiores a uma caixa.");
+            throw new BusinessRuleException("As caixas não podem ser negativas e as unidades soltas devem ser inferiores a uma caixa.");
         }
         return new PackageQuantity(boxes, looseUnits,
                 Math.addExact(Math.multiplyExact(boxes, unitsPerBox), looseUnits), unitsPerBox);
@@ -15,7 +15,7 @@ public record PackageQuantity(long boxes, long looseUnits, long totalUnits, int 
 
     public static PackageQuantity fromTotal(long totalUnits, int unitsPerBox) {
         requireValidFactor(unitsPerBox);
-        if (totalUnits < 0) throw new BusinessRuleException("A quantidade total nao pode ser negativa.");
+        if (totalUnits < 0) throw new BusinessRuleException("A quantidade total não pode ser negativa.");
         return new PackageQuantity(totalUnits / unitsPerBox, totalUnits % unitsPerBox, totalUnits, unitsPerBox);
     }
 

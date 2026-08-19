@@ -17,6 +17,9 @@ import java.time.format.DateTimeFormatter;
 
 @Service
 public class OrderPickingPrintService {
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
     private final OrderRepository orderRepository;
 
     public OrderPickingPrintService(OrderRepository orderRepository) {
@@ -32,51 +35,50 @@ public class OrderPickingPrintService {
     }
 
     private void render(Document document, Order order, boolean reprint) {
-        addCentered(document, order.getCompany().getName(), PdfTheme.subtitleFont());
-        addCentered(document, reprint ? "REIMPRESSAO - GUIA DE SEPARACAO" : "GUIA DE SEPARACAO", PdfTheme.boldFont());
-        addCentered(document, order.getOrderNumber(), PdfTheme.bodyFont());
+        // Mesmo cabeçalho do recibo do POS: logótipo, nome, NUIT, morada, telefone, email. Este
+        // talão sai da mesma impressora e vai para a mesma loja — não faz sentido ser outra coisa.
+        ThermalReceiptRenderer.companyHeader(document, order.getCompany());
+
+        ThermalReceiptRenderer.centered(document,
+                reprint ? "REIMPRESSAO - GUIA DE SEPARACAO" : "GUIA DE SEPARACAO", PdfTheme.boldFont());
+        ThermalReceiptRenderer.centered(document, order.getOrderNumber(), PdfTheme.bodyFont());
         if (order.getCreatedAt() != null) {
-            addCentered(document, order.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), PdfTheme.smallFont());
+            ThermalReceiptRenderer.centered(document,
+                    order.getCreatedAt().format(DATE_FMT), PdfTheme.smallFont());
         }
-        document.add(new Paragraph("Cliente: " + order.getClient().getName(), PdfTheme.bodyFont()));
-        document.add(new Paragraph("Armazem: " + order.getWarehouse().getName(), PdfTheme.bodyFont()));
-        document.add(PdfDocumentBuilder.spacer(5f));
+        ThermalReceiptRenderer.centered(document, "Cliente: " + order.getClient().getName(), PdfTheme.smallFont());
+        ThermalReceiptRenderer.centered(document, "Armazem: " + order.getWarehouse().getName(), PdfTheme.smallFont());
+        document.add(PdfDocumentBuilder.spacer(4f));
+
         PdfPTable table = new PdfPTable(new float[]{55f, 20f, 25f});
         table.setWidthPercentage(100);
-        addCell(table, "Artigo", Element.ALIGN_LEFT);
-        addCell(table, "Qtd.", Element.ALIGN_RIGHT);
-        addCell(table, "Peso", Element.ALIGN_RIGHT);
+        addCell(table, "Artigo", Element.ALIGN_LEFT, true);
+        addCell(table, "Qtd.", Element.ALIGN_RIGHT, true);
+        addCell(table, "Peso", Element.ALIGN_RIGHT, true);
         java.math.BigDecimal totalWeight = java.math.BigDecimal.ZERO;
         for (OrderLine line : order.getLines()) {
             String reference = line.getProduct().getReference();
-            addCell(table, line.getProduct().getName() + (reference == null ? "" : "\nRef: " + reference), Element.ALIGN_LEFT);
-            addCell(table, line.getQuantity().stripTrailingZeros().toPlainString(), Element.ALIGN_RIGHT);
+            addCell(table, line.getProduct().getName() + (reference == null ? "" : "\nRef: " + reference),
+                    Element.ALIGN_LEFT, false);
+            addCell(table, line.getQuantity().stripTrailingZeros().toPlainString(), Element.ALIGN_RIGHT, false);
             java.math.BigDecimal weight = line.getProduct().getGrossUnitWeightKg() == null
                     ? java.math.BigDecimal.ZERO
                     : line.getQuantity().multiply(line.getProduct().getGrossUnitWeightKg());
             totalWeight = totalWeight.add(weight);
-            addCell(table, weight.setScale(3, java.math.RoundingMode.HALF_UP) + " kg", Element.ALIGN_RIGHT);
+            addCell(table, weight.setScale(3, java.math.RoundingMode.HALF_UP) + " kg", Element.ALIGN_RIGHT, false);
         }
         document.add(table);
-        Paragraph load = new Paragraph("PESO BRUTO TOTAL: "
+
+        ThermalReceiptRenderer.dottedLine(document);
+        ThermalReceiptRenderer.right(document, "PESO BRUTO TOTAL: "
                 + totalWeight.setScale(3, java.math.RoundingMode.HALF_UP) + " kg", PdfTheme.boldFont());
-        load.setAlignment(Element.ALIGN_RIGHT);
-        document.add(load);
         document.add(PdfDocumentBuilder.spacer(8f));
         document.add(new Paragraph("Separado por: __________________", PdfTheme.smallFont()));
         document.add(new Paragraph("Conferido por: _________________", PdfTheme.smallFont()));
     }
 
-    private void addCentered(Document document, String text, com.lowagie.text.Font font) {
-        Paragraph paragraph = new Paragraph(text, font);
-        paragraph.setAlignment(Element.ALIGN_CENTER);
-        document.add(paragraph);
-    }
-
-    private void addCell(PdfPTable table, String text, int alignment) {
-        PdfPCell cell = new PdfPCell(new com.lowagie.text.Phrase(text, PdfTheme.bodyFont()));
-        cell.setHorizontalAlignment(alignment);
-        cell.setPadding(4f);
-        table.addCell(cell);
+    private void addCell(PdfPTable table, String text, int alignment, boolean header) {
+        ThermalReceiptRenderer.cell(table, text,
+                header ? PdfTheme.tableHeaderFont() : PdfTheme.bodyFont(), alignment, header);
     }
 }

@@ -56,6 +56,14 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false)
     private String status = "PENDING"; // PENDING_APPROVAL, PENDING, GUIDE_PENDING, GUIDED, BILLED, CANCELLED
 
+    /**
+     * Via da encomenda — decide aprovação, formato do documento e se entra na separação.
+     * Declarada na criação e imutável a partir daí (R6). Ver {@link OrderKind}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", nullable = false, length = 20)
+    private OrderKind kind = OrderKind.FORMAL_ORDER;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderLine> lines = new ArrayList<>();
 

@@ -56,8 +56,8 @@ public final class DeliveryGuidesPanel extends JPanel {
         actions.setOpaque(false);
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Ver caixas e unidades", UIHelper.icon("fas-boxes", 14), this::showPackages)
-                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::refresh);
+                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print);
+        actions.add(UIHelper.createRefreshButton(this::refresh));
         actions.add(more);
         actions.add(button("Cancelar", "fas-ban", UIHelper.createDangerButton("Cancelar"), this::cancel));
         actions.add(button("Rejeitar", "fas-times", UIHelper.createDangerButton("Rejeitar"), this::reject));

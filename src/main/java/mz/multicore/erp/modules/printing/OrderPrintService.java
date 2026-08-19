@@ -45,7 +45,7 @@ public class OrderPrintService {
                     "Encomenda",
                     order.getOrderNumber()
             ));
-            doc.add(buildClientBlock(order));
+            doc.add(ClientBlockRenderer.build(order.getClient(), order.getCreatedAt(), order.getWarehouse()));
             doc.add(LineItemsTableRenderer.build(toRows(order.getLines()),
                     documentConfigService.getColumns(order.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
             java.math.BigDecimal grossWeight = order.getLines().stream()
@@ -64,42 +64,6 @@ public class OrderPrintService {
             doc.add(PdfDocumentBuilder.spacer(10f));
             doc.add(new Paragraph("Estado: " + order.getStatus(), PdfTheme.boldFont()));
         });
-    }
-
-    private PdfPTable buildClientBlock(Order order) {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{60f, 40f}); } catch (Exception ignored) {}
-        table.setSpacingAfter(10f);
-
-        PdfPCell client = new PdfPCell();
-        client.setBorder(PdfPCell.NO_BORDER);
-        client.addElement(new Paragraph("Cliente", PdfTheme.subtitleFont()));
-        if (order.getClient() != null) {
-            client.addElement(new Paragraph(order.getClient().getName(), PdfTheme.bodyFont()));
-            if (order.getClient().getTaxId() != null) {
-                client.addElement(new Paragraph("NUIT: " + order.getClient().getTaxId(), PdfTheme.bodyFont()));
-            }
-            if (order.getClient().getAddress() != null) {
-                client.addElement(new Paragraph(order.getClient().getAddress(), PdfTheme.bodyFont()));
-            }
-        }
-        table.addCell(client);
-
-        PdfPCell meta = new PdfPCell();
-        meta.setBorder(PdfPCell.NO_BORDER);
-        if (order.getCreatedAt() != null) {
-            Paragraph date = new Paragraph("Data: " + order.getCreatedAt().format(DATE_FMT), PdfTheme.bodyFont());
-            date.setAlignment(Element.ALIGN_RIGHT);
-            meta.addElement(date);
-        }
-        if (order.getWarehouse() != null) {
-            Paragraph wh = new Paragraph("Armazém: " + order.getWarehouse().getName(), PdfTheme.bodyFont());
-            wh.setAlignment(Element.ALIGN_RIGHT);
-            meta.addElement(wh);
-        }
-        table.addCell(meta);
-        return table;
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<OrderLine> lines) {

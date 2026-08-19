@@ -19,6 +19,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Objects;
 
 public class UIHelper {
 
@@ -349,6 +350,17 @@ public class UIHelper {
 
     public static ModernButton createSecondaryButton(String text) {
         return new ModernButton(text, SECONDARY, SECONDARY_HOVER);
+    }
+
+    /** Acção canónica de recarga manual para vistas partilhadas entre vários utilizadores. */
+    public static ModernButton createRefreshButton(Runnable refreshAction) {
+        Objects.requireNonNull(refreshAction, "A acção de actualização é obrigatória.");
+        ModernButton button = createSecondaryButton("Actualizar");
+        button.setIcon(icon("fas-sync-alt", 14));
+        button.setToolTipText("Carregar os dados mais recentes da loja");
+        button.getAccessibleContext().setAccessibleName("Actualizar dados");
+        button.addActionListener(event -> refreshAction.run());
+        return button;
     }
 
     public static ActionMenuButton createActionMenuButton(String text) {
@@ -1509,6 +1521,24 @@ public class UIHelper {
         area.setCaretColor(TEXT_LIGHT);
         area.setFont(new Font(FONT, Font.PLAIN, 13));
         installFocusBorder(area);
+    }
+
+    /**
+     * Renderer para combos de valores tipados (enums) que se apresentam por rótulo em PT-MZ.
+     *
+     * <p>Guardar o valor e traduzir só na apresentação evita a alternativa habitual — encher o
+     * combo de strings e depois adivinhar o valor a partir do texto escolhido.
+     *
+     * <p>Aplicar <b>antes</b> de {@link #styleComboBox(JComboBox)}, que envolve o renderer
+     * existente para lhe aplicar o tema.
+     */
+    public static <T> ListCellRenderer<T> labelRenderer(java.util.function.Function<T, String> label) {
+        return (list, value, index, selected, focus) -> {
+            JLabel rendered = new JLabel(value == null ? "" : label.apply(value));
+            rendered.setFont(new Font(FONT, Font.PLAIN, 13));
+            rendered.setOpaque(true);
+            return rendered;
+        };
     }
 
     public static void styleComboBox(JComboBox<?> combo) {

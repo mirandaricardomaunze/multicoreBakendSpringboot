@@ -9,6 +9,7 @@ import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.QuantityField;
+import mz.multicore.erp.gui.components.PackageQuantityEditor;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
@@ -88,6 +89,7 @@ public class ComprasPanel extends JPanel {
     private JComboBox<String> accountCombo;
     private JComboBox<String> productCombo;
     private QuantityField quantityField;
+    private PackageQuantityEditor purchasePackageEditor;
     private MoneyField priceField;
     private JTextField batchField;
     private DateField expirationField;
@@ -220,7 +222,10 @@ public class ComprasPanel extends JPanel {
         gbc.gridx = 1;
         productCombo = new JComboBox<>();
         UIHelper.styleComboBox(productCombo);
-        productCombo.addActionListener(e -> updateDefaultPrice());
+        productCombo.addActionListener(e -> {
+            updateDefaultPrice();
+            refreshPurchasePackaging();
+        });
         formCard.add(productCombo, gbc);
 
         // Row 2: Quantidade & Preço Custo (Side by Side)
@@ -237,8 +242,9 @@ public class ComprasPanel extends JPanel {
 
         gbc.gridx = 0; gbc.gridy = 5;
         gbc.insets = new Insets(2, 8, 12, 8);
-        quantityField = new QuantityField("1", true);
-        formCard.add(quantityField, gbc);
+        purchasePackageEditor = new PackageQuantityEditor();
+        quantityField = purchasePackageEditor.totalField();
+        formCard.add(purchasePackageEditor, gbc);
 
         gbc.gridx = 1;
         priceField = new MoneyField();
@@ -534,6 +540,7 @@ public class ComprasPanel extends JPanel {
             productCombo.addItem(productLabel(p));
         }
         updateDefaultPrice();
+        refreshPurchasePackaging();
     }
 
     private String productLabel(ProductDTO p) {
@@ -552,6 +559,14 @@ public class ComprasPanel extends JPanel {
             BigDecimal sellPrice = productsList.get(idx).unitPrice();
             BigDecimal costPrice = sellPrice.multiply(new BigDecimal("0.60")).setScale(2, RoundingMode.HALF_UP);
             priceField.setText(costPrice.toString());
+        }
+    }
+
+    private void refreshPurchasePackaging() {
+        if (purchasePackageEditor == null) return;
+        int index = productCombo.getSelectedIndex();
+        if (index >= 0 && index < productsList.size()) {
+            purchasePackageEditor.setUnitsPerBox(productsList.get(index).unitsPerBox());
         }
     }
 
@@ -637,7 +652,7 @@ public class ComprasPanel extends JPanel {
         totalLabel.setText(String.format("Total Compra: %,.2f MT (excl. IVA)", draftTotal));
 
         // Reset details
-        quantityField.setText("1");
+        purchasePackageEditor.reset();
         batchField.setText("");
         expirationField.setText("");
         serialField.setText("");

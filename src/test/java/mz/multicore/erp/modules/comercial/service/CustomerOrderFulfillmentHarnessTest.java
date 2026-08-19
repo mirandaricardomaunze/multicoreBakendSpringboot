@@ -34,8 +34,7 @@ class CustomerOrderFulfillmentHarnessTest {
         CustomerOrderFulfillmentService service = new CustomerOrderFulfillmentService(
                 mock(ComercialService.class), orders, mock(OrderLineRepository.class),
                 mock(OrderEventRepository.class), mock(InventoryService.class),
-                mock(OrderPickingPrintService.class), mock(AppUserService.class),
-                mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class));
+                mock(OrderPickingPrintService.class), mock(AppUserService.class));
 
         assertThrows(BusinessRuleException.class, () -> service.reprint(7L,
                 new ReprintAuthorizationRequest("gerente", "senha", "papel danificado", "POS-1")));
@@ -54,15 +53,20 @@ class CustomerOrderFulfillmentHarnessTest {
         return new CustomerOrderFulfillmentService(
                 mock(ComercialService.class), orders, mock(OrderLineRepository.class),
                 mock(OrderEventRepository.class), mock(InventoryService.class),
-                mock(OrderPickingPrintService.class), mock(AppUserService.class),
-                mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class));
+                mock(OrderPickingPrintService.class), mock(AppUserService.class));
     }
 
+    /** Pedido do circuito de separação — é sobre estes que as mensagens de estado se aplicam. */
     private Order order(String status) {
+        return order(status, mz.multicore.erp.modules.comercial.model.OrderKind.PICKING_REQUEST);
+    }
+
+    private Order order(String status, mz.multicore.erp.modules.comercial.model.OrderKind kind) {
         Order order = new Order();
         order.setId(7L);
         order.setOrderNumber("EC-2026/9");
         order.setStatus(status);
+        order.setKind(kind);
         return order;
     }
 
@@ -119,6 +123,67 @@ class CustomerOrderFulfillmentHarnessTest {
                 () -> service.printForPicking(7L, "POS-1"));
 
         org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().startsWith("Não é possível"),
+                error.getMessage());
+    }
+
+    // ─── Circuito de separação fechado à via A4 (ED-09..13) ─────────────────
+    // Ver docs/ENCOMENDA_DUAS_VIAS_SPEC.md §4 (R4). O que se prova aqui é que a recusa vem da
+    // VIA e não do estado: uma encomenda A4 nunca esteve em separação, pelo que dizer-lhe "ainda
+    // aguarda separação" mandaria o operador imprimir uma lista que não existe.
+
+    private Order formalOrder(String status) {
+        return order(status, mz.multicore.erp.modules.comercial.model.OrderKind.FORMAL_ORDER);
+    }
+
+    @Test // ED-09
+    void imprimirListaDeSeparacaoNumaEncomendaA4_recusaPelaVia() {
+        Order order = formalOrder("PENDING");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.printForPicking(7L, "POS-1"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("EC-2026/9"),
+                "diz de que encomenda se trata: " + error.getMessage());
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("não passa pelo armazém"),
+                error.getMessage());
+    }
+
+    @Test // ED-10
+    void marcarComoSeparadoNumaEncomendaA4_recusaPelaViaEnaoPeloEstado() {
+        // Estado que, num pedido de separação, seria o estado CERTO para separar. A recusa tem de
+        // vir da via — se viesse do estado, esta encomenda passava.
+        Order order = formalOrder("IN_SEPARATION");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparation(7L,
+                        new mz.multicore.erp.modules.comercial.dto.OrderActionRequest(null, "POS-1")));
+
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("não passa pelo armazém"),
+                error.getMessage());
+    }
+
+    @Test // ED-11
+    void reimprimirNumaEncomendaA4_recusa() {
+        Order order = formalOrder("IN_SEPARATION");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        assertThrows(BusinessRuleException.class, () -> service.reprint(7L,
+                new ReprintAuthorizationRequest("outro", "senha", "papel danificado", "POS-1")));
+    }
+
+    @Test // ED-12
+    void recusaDaViaErrada_naoMostraCodigosInternos() {
+        Order order = formalOrder("PENDING");
+        CustomerOrderFulfillmentService service = serviceFor(order, mock(OrderRepository.class));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.printForPicking(7L, "POS-1"));
+
+        org.junit.jupiter.api.Assertions.assertFalse(error.getMessage().contains("FORMAL_ORDER"),
+                error.getMessage());
+        org.junit.jupiter.api.Assertions.assertFalse(error.getMessage().contains("PICKING_REQUEST"),
                 error.getMessage());
     }
 }

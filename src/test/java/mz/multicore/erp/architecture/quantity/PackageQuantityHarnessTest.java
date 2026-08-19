@@ -16,4 +16,14 @@ class PackageQuantityHarnessTest {
     @Test void rejectsLooseUnitsThatAlreadyMakeABox() {
         assertThrows(BusinessRuleException.class, () -> PackageQuantity.fromPackages(1, 12, 12));
     }
+    @Test void convertsTwoBoxesWithoutResidualLooseUnit() {
+        PackageQuantity value = PackageQuantity.fromPackages(2, 0, 12);
+        assertEquals(24, value.totalUnits());
+        assertEquals("2 cx", value.label());
+    }
+    @Test void convertsTotalBackToTwoBoxesAndLooseUnits() {
+        PackageQuantity value = PackageQuantity.fromTotal(29, 12);
+        assertEquals(2, value.boxes());
+        assertEquals(5, value.looseUnits());
+    }
 }

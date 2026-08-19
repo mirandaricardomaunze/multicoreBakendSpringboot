@@ -69,19 +69,7 @@ public class ReceiptPrintService {
     }
 
     private void renderHeader(Document doc, Invoice invoice) {
-        Company company = invoice.getCompany();
-        addCenteredLogo(doc, company);
-        Paragraph name = new Paragraph(company == null ? "Empresa" : company.getName(), PdfTheme.subtitleFont());
-        name.setAlignment(Element.ALIGN_CENTER);
-        doc.add(name);
-
-        if (company != null) {
-            if (company.getTaxId() != null) addCentered(doc, "NUIT: " + company.getTaxId(), PdfTheme.smallFont());
-            if (notBlank(company.getAddress())) addCentered(doc, company.getAddress(), PdfTheme.smallFont());
-            if (notBlank(company.getPhone())) addCentered(doc, "Tel: " + company.getPhone(), PdfTheme.smallFont());
-            if (notBlank(company.getEmail())) addCentered(doc, company.getEmail(), PdfTheme.smallFont());
-        }
-        addDottedLine(doc);
+        ThermalReceiptRenderer.companyHeader(doc, invoice.getCompany());
 
         addCentered(doc, "RECIBO POS", PdfTheme.boldFont());
         addCentered(doc, invoice.getInvoiceNumber(), PdfTheme.bodyFont());
@@ -128,7 +116,7 @@ public class ReceiptPrintService {
         PdfPCell cell = new PdfPCell(phrase);
         cell.setHorizontalAlignment(Element.ALIGN_LEFT);
         cell.setBorder(Rectangle.NO_BORDER);
-        cell.setCellEvent(DOTTED_BOTTOM);
+        cell.setCellEvent(ThermalReceiptRenderer.DOTTED_BOTTOM);
         cell.setPadding(3f);
         table.addCell(cell);
     }
@@ -220,68 +208,22 @@ public class ReceiptPrintService {
         }
     }
 
+    // O estilo térmico — cabeçalho, pontilhados, células — vive em ThermalReceiptRenderer, para
+    // este recibo e a guia de separação não poderem afastar-se um do outro.
+
     private void addCentered(Document doc, String text, com.lowagie.text.Font font) {
-        Paragraph p = new Paragraph(text, font);
-        p.setAlignment(Element.ALIGN_CENTER);
-        doc.add(p);
-    }
-
-    /** Logótipo centrado no topo do recibo, escalado à largura térmica. À prova de falha. */
-    private void addCenteredLogo(Document doc, Company company) {
-        if (company == null || company.getLogo() == null || company.getLogo().length == 0) return;
-        try {
-            com.lowagie.text.Image logo = com.lowagie.text.Image.getInstance(company.getLogo());
-            logo.scaleToFit(160f, 60f);
-            logo.setAlignment(com.lowagie.text.Image.ALIGN_CENTER);
-            doc.add(logo);
-        } catch (Exception ignored) {
-            // logótipo ilegível — o recibo sai na mesma, sem imagem.
-        }
-    }
-
-    private boolean notBlank(String value) {
-        return value != null && !value.isBlank();
+        ThermalReceiptRenderer.centered(doc, text, font);
     }
 
     private void addRight(Document doc, String text, com.lowagie.text.Font font) {
-        Paragraph p = new Paragraph(text, font);
-        p.setAlignment(Element.ALIGN_RIGHT);
-        doc.add(p);
+        ThermalReceiptRenderer.right(doc, text, font);
     }
 
     private void addCell(PdfPTable table, String text, com.lowagie.text.Font font, int align, boolean header) {
-        PdfPCell cell = new PdfPCell(new com.lowagie.text.Phrase(text, font));
-        cell.setHorizontalAlignment(align);
-        cell.setBorder(Rectangle.NO_BORDER);   // borda inferior pontilhada desenhada pelo evento
-        cell.setCellEvent(DOTTED_BOTTOM);
-        cell.setPadding(3f);
-        if (header) cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
-        table.addCell(cell);
+        ThermalReceiptRenderer.cell(table, text, font, align, header);
     }
 
-    /** Linha separadora pontilhada (estilo recibo térmico) a toda a largura. */
     private void addDottedLine(Document doc) {
-        DottedLineSeparator separator = new DottedLineSeparator();
-        separator.setGap(2.2f);
-        separator.setLineWidth(0.7f);
-        separator.setLineColor(PdfTheme.BORDER);
-        Paragraph p = new Paragraph();
-        p.setSpacingBefore(2f);
-        p.setSpacingAfter(2f);
-        p.add(new Chunk(separator));
-        doc.add(p);
+        ThermalReceiptRenderer.dottedLine(doc);
     }
-
-    /** Desenha a borda inferior de cada célula a pontilhado, para o aspecto de recibo térmico. */
-    private static final PdfPCellEvent DOTTED_BOTTOM = (cell, position, canvases) -> {
-        PdfContentByte canvas = canvases[PdfPTable.LINECANVAS];
-        canvas.saveState();
-        canvas.setLineWidth(0.6f);
-        canvas.setLineDash(1f, 2f, 0f);
-        canvas.setColorStroke(PdfTheme.BORDER);
-        canvas.moveTo(position.getLeft(), position.getBottom());
-        canvas.lineTo(position.getRight(), position.getBottom());
-        canvas.stroke();
-        canvas.restoreState();
-    };
 }

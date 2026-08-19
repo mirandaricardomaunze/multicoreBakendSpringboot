@@ -89,21 +89,11 @@ final class CommercialInvoicesView {
 
         gbc.gridx = 0; gbc.gridy = 5;
         gbc.insets = new Insets(2, 8, 12, 8);
-        // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
-        JPanel qtyRow = new JPanel(new BorderLayout(6, 0));
-        qtyRow.setOpaque(false);
-        owner.quantityField = new QuantityField("1", true);
-        JPanel boxHelper = new JPanel(new BorderLayout(4, 0));
-        boxHelper.setOpaque(false);
-        JLabel cxLbl = new JLabel("Caixas:");
-        cxLbl.setForeground(UIHelper.TEXT_MUTED);
-        owner.invoiceBoxesField = new QuantityField("", true);
-        owner.invoiceBoxesField.setToolTipText("Venda ao grosso: preenche a Qtd em unidades = caixas × unidades/caixa do produto.");
-        boxHelper.add(cxLbl, BorderLayout.WEST);
-        boxHelper.add(owner.invoiceBoxesField, BorderLayout.CENTER);
-        qtyRow.add(owner.quantityField, BorderLayout.CENTER);
-        qtyRow.add(boxHelper, BorderLayout.EAST);
-        formCard.add(qtyRow, gbc);
+        owner.invoicePackageEditor = new PackageQuantityEditor();
+        owner.quantityField = owner.invoicePackageEditor.totalField();
+        owner.invoiceBoxesField = owner.invoicePackageEditor.boxesField();
+        owner.invoiceLooseUnitsField = owner.invoicePackageEditor.looseUnitsField();
+        formCard.add(owner.invoicePackageEditor, gbc);
 
         gbc.gridx = 1;
         owner.discountField = new DecimalField("0", 2, false);
@@ -236,12 +226,13 @@ final class CommercialInvoicesView {
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedInvoice)
                 .addAction("Imprimir Guia", UIHelper.icon("fas-truck", 14), owner::printSelectedGuide)
-                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportInvoicesTable)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), owner::loadInvoicesTable);
+                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportInvoicesTable);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadInvoicesTable);
         ModernButton cancelInvoiceBtn = UIHelper.createDangerButton("Anular Fatura");
         cancelInvoiceBtn.setIcon(UIHelper.icon("fas-ban", 14));
         ModernButton payInvoiceBtn = UIHelper.createSuccessButton("Liquidar (RC)");
         payInvoiceBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
+        btnPanel.add(refreshBtn);
         btnPanel.add(moreBtn);
         btnPanel.add(cancelInvoiceBtn);
         btnPanel.add(payInvoiceBtn);
@@ -259,9 +250,8 @@ final class CommercialInvoicesView {
 
         // LISTENERS
         addLineBtn.addActionListener(e -> owner.addDraftLine());
-        owner.productCombo.addActionListener(e -> { owner.refreshInvoiceFEFOHint(); owner.applyInvoiceBoxes(); });
+        owner.productCombo.addActionListener(e -> { owner.refreshInvoiceFEFOHint(); owner.refreshInvoicePackaging(); });
         owner.warehouseCombo.addActionListener(e -> owner.refreshInvoiceFEFOHint());
-        UIHelper.onTextChange(owner.invoiceBoxesField, owner::applyInvoiceBoxes);
         cancelInvoiceBtn.addActionListener(e -> owner.cancelSelectedInvoice());
         payInvoiceBtn.addActionListener(e -> owner.paySelectedInvoice());
 

@@ -29,6 +29,21 @@ public final class TableCellRenderers {
         return new StatusRenderer();
     }
 
+    /**
+     * Via da encomenda. A célula guarda o {@code OrderKind}; aqui mostra-se o rótulo PT-MZ.
+     *
+     * <p>Guardar o enum e traduzir só na apresentação é o que permite às acções perguntarem à
+     * linha <em>que via é</em> em vez de compararem texto traduzido.
+     */
+    public static TableCellRenderer orderKind() {
+        return new DefaultTableCellRenderer() {
+            @Override protected void setValue(Object value) {
+                setText(value instanceof mz.multicore.erp.modules.comercial.model.OrderKind kind
+                        ? kind.label() : "—");
+            }
+        };
+    }
+
     public static TableCellRenderer role() {
         return new DefaultTableCellRenderer() {
             @Override protected void setValue(Object value) {

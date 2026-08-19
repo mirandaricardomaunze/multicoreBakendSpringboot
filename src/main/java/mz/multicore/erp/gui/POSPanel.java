@@ -195,6 +195,7 @@ public class POSPanel extends JPanel {
 
         JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         sessionActions.setOpaque(false);
+        sessionActions.add(UIHelper.createRefreshButton(this::refreshOperationalData));
         sessionActions.add(openSessionBtn);
         sessionActions.add(cashMoveBtn);
         sessionActions.add(closeSessionBtn);
@@ -565,15 +566,18 @@ public class POSPanel extends JPanel {
     }
 
     public void onPanelSelected() {
-        refreshSessionState();
-        loadMetadata();
-        if (historyView) {
-            refreshSalesHistory();
-        }
+        refreshOperationalData();
         // Repõe o formulário no topo para a secção DOCUMENTO (Cliente/Armazém) ficar sempre visível.
         if (formScroll != null) {
             SwingUtilities.invokeLater(() -> formScroll.getVerticalScrollBar().setValue(0));
         }
+    }
+
+    /** Recarrega caixa, catálogo, clientes, contas e histórico visível a partir do backend central. */
+    void refreshOperationalData() {
+        refreshSessionState();
+        loadMetadata();
+        if (historyView) refreshSalesHistory();
     }
 
     void refreshSessionState() {

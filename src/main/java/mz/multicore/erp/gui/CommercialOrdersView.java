@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.modules.comercial.model.OrderKind;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -10,6 +11,13 @@ import java.awt.*;
 /** Constrói a vista de listagem/editor de encomendas; o controlador permanece no painel comercial. */
 final class CommercialOrdersView {
     private CommercialOrdersView() {}
+
+    /** O que muda ao escolher cada via, dito antes de o operador escolher. */
+    private static String kindHint(OrderKind kind) {
+        return kind.isThermal()
+                ? "Reserva stock e imprime talão para o armazém separar. Não passa por aprovação."
+                : "Documento A4 igual à fatura. Passa por aprovação antes de poder ser facturada.";
+    }
 
     static JPanel create(ComercialPanel owner) {
         // Igual às Faturas: o formulário vive num modal ('Nova Encomenda'); a lista ocupa a aba inteira.
@@ -64,64 +72,72 @@ final class CommercialOrdersView {
                 "Escrever nome se a encomenda for para 'Consumidor Final' (deixar vazio caso contrário)");
         formCard.add(owner.orderClientWalkInField, gbc);
 
-        // Row 2: Product Selection (Full Width)
+        // Row: via da encomenda. É a primeira decisão do documento — decide o formato do papel, se
+        // passa por aprovação e se vai ao armazém. Ver docs/ENCOMENDA_DUAS_VIAS_SPEC.md.
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        gbc.insets = new Insets(8, 8, 2, 8);
+        JLabel kindLbl = new JLabel("Tipo de encomenda:");
+        kindLbl.setForeground(UIHelper.TEXT_MUTED);
+        formCard.add(kindLbl, gbc);
+
+        gbc.gridy = 5;
+        gbc.insets = new Insets(2, 8, 4, 8);
+        owner.orderKindCombo = new JComboBox<>(OrderKind.values());
+        // Rótulo primeiro, tema depois: styleComboBox envolve o renderer que encontrar.
+        owner.orderKindCombo.setRenderer(UIHelper.labelRenderer(OrderKind::label));
+        UIHelper.styleComboBox(owner.orderKindCombo);
+        owner.orderKindCombo.setSelectedItem(OrderKind.PICKING_REQUEST);
+        formCard.add(owner.orderKindCombo, gbc);
+
+        gbc.gridy = 6;
+        gbc.insets = new Insets(0, 8, 12, 8);
+        JLabel kindHint = new JLabel();
+        kindHint.setForeground(UIHelper.TEXT_MUTED);
+        kindHint.setFont(kindHint.getFont().deriveFont(11f));
+        formCard.add(kindHint, gbc);
+        owner.orderKindCombo.addActionListener(e -> kindHint.setText(kindHint(owner.selectedOrderKind())));
+        kindHint.setText(kindHint(OrderKind.PICKING_REQUEST));
+
+        // Row 2: Product Selection (Full Width)
+        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(8, 8, 2, 8);
         JLabel prodLbl = new JLabel("Produto / Serviço:");
         prodLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(prodLbl, gbc);
 
-        gbc.gridy = 5;
+        gbc.gridy = 8;
         gbc.insets = new Insets(2, 8, 12, 8);
         owner.orderProductCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.orderProductCombo);
         formCard.add(owner.orderProductCombo, gbc);
 
         // Row 3: Qtd & Desconto % (Side by Side)
-        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1; gbc.weightx = 0.5;
+        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 1; gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel qtyLbl = new JLabel("Qtd (unidades):");
-        qtyLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(qtyLbl, gbc);
+        owner.orderQuantityLabel = new JLabel("Qtd total (unidades):");
+        owner.orderQuantityLabel.setForeground(UIHelper.TEXT_MUTED);
+        formCard.add(owner.orderQuantityLabel, gbc);
 
         gbc.gridx = 1;
         JLabel discLbl = new JLabel("Desconto %:");
         discLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(discLbl, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 7;
+        gbc.gridx = 0; gbc.gridy = 10;
         gbc.insets = new Insets(2, 8, 12, 8);
         // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
-        JPanel orderQtyRow = new JPanel(new GridLayout(1, 3, 6, 0));
-        orderQtyRow.setOpaque(false);
-        owner.orderQuantityField = new QuantityField("1", true);
-        JPanel orderBoxHelper = new JPanel(new BorderLayout(4, 0));
-        orderBoxHelper.setOpaque(false);
-        JLabel orderCxLbl = new JLabel("Caixas:");
-        orderCxLbl.setForeground(UIHelper.TEXT_MUTED);
-        owner.orderBoxesField = new QuantityField("", true);
-        owner.orderBoxesField.setToolTipText("Número de caixas completas.");
-        orderBoxHelper.add(orderCxLbl, BorderLayout.WEST);
-        orderBoxHelper.add(owner.orderBoxesField, BorderLayout.CENTER);
-        JPanel looseHelper = new JPanel(new BorderLayout(4, 0));
-        looseHelper.setOpaque(false);
-        JLabel looseLabel = new JLabel("Soltas:");
-        looseLabel.setForeground(UIHelper.TEXT_MUTED);
-        owner.orderLooseUnitsField = new QuantityField("", true);
-        owner.orderLooseUnitsField.setToolTipText("Unidades soltas para além das caixas completas.");
-        looseHelper.add(looseLabel, BorderLayout.WEST);
-        looseHelper.add(owner.orderLooseUnitsField, BorderLayout.CENTER);
-        orderQtyRow.add(owner.orderQuantityField);
-        orderQtyRow.add(orderBoxHelper);
-        orderQtyRow.add(looseHelper);
-        formCard.add(orderQtyRow, gbc);
+        owner.orderPackageEditor = new PackageQuantityEditor();
+        owner.orderQuantityField = owner.orderPackageEditor.totalField();
+        owner.orderBoxesField = owner.orderPackageEditor.boxesField();
+        owner.orderLooseUnitsField = owner.orderPackageEditor.looseUnitsField();
+        formCard.add(owner.orderPackageEditor, gbc);
 
         gbc.gridx = 1;
         owner.orderDiscountField = new DecimalField("0", 2, false);
         formCard.add(owner.orderDiscountField, gbc);
 
         // Row 4: Lote/Validade (FEFO, read-only) e Série
-        gbc.gridx = 0; gbc.gridy = 8;
+        gbc.gridx = 0; gbc.gridy = 11;
         gbc.insets = new Insets(8, 8, 2, 8);
         JLabel batchLbl = new JLabel("Lote / Validade (FEFO):");
         batchLbl.setForeground(UIHelper.TEXT_MUTED);
@@ -132,7 +148,7 @@ final class CommercialOrdersView {
         serialLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(serialLbl, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 9;
+        gbc.gridx = 0; gbc.gridy = 12;
         gbc.insets = new Insets(2, 8, 12, 8);
         owner.orderBatchField = new JTextField();
         UIHelper.styleTextField(owner.orderBatchField);
@@ -147,7 +163,7 @@ final class CommercialOrdersView {
         formCard.add(owner.orderSerialField, gbc);
 
         // Row 5: action aligned below the line fields.
-        gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        gbc.gridx = 0; gbc.gridy = 13; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(16, 8, 12, 8);
         ModernButton addLineBtn = UIHelper.createAddLineButton();
 
@@ -224,6 +240,7 @@ final class CommercialOrdersView {
         ModernButton newOrderBtn = UIHelper.createPrimaryButton("Novo Pedido de Cliente…");
         newOrderBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newOrderBtn.addActionListener(e -> owner.openOrderEditor());
+        headerActions.add(UIHelper.createRefreshButton(owner::loadOrdersTable));
         headerActions.add(newOrderBtn);
         headerBar.add(headerActions, BorderLayout.EAST);
         panel.add(headerBar, BorderLayout.NORTH);
@@ -232,7 +249,8 @@ final class CommercialOrdersView {
         listCard.setLayout(new BorderLayout(0, 10));
         listCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        String[] ordersCols = {"ID", "Nº Encomenda", "Cliente", "Estado", "Total", "Impressões"};
+        // A coluna Tipo vai no fim para não deslocar os índices já usados pelas acções.
+        String[] ordersCols = {"ID", "Nº Encomenda", "Cliente", "Estado", "Total", "Impressões", "Tipo"};
         owner.ordersTableModel = new DefaultTableModel(ordersCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -241,6 +259,10 @@ final class CommercialOrdersView {
         UIHelper.styleTable(owner.ordersTable);
         owner.ordersTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
         owner.ordersTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
+        // A célula guarda o OrderKind; o renderer mostra o rótulo PT-MZ. Assim as acções lêem a
+        // via em vez de a inferirem de um texto traduzido.
+        owner.ordersTable.getColumnModel().getColumn(ComercialPanel.ORDERS_COL_KIND)
+                .setCellRenderer(TableCellRenderers.orderKind());
         owner.ordersTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         owner.ordersTable.setFillsViewportHeight(true);
 
@@ -254,6 +276,8 @@ final class CommercialOrdersView {
         owner.ordersTable.getColumnModel().getColumn(3).setPreferredWidth(75);   // Estado
         owner.ordersTable.getColumnModel().getColumn(4).setPreferredWidth(95);   // Total
         owner.ordersTable.getColumnModel().getColumn(5).setPreferredWidth(100);  // Impressões
+        owner.ordersTable.getColumnModel().getColumn(ComercialPanel.ORDERS_COL_KIND)
+                .setPreferredWidth(130);                                        // Tipo
 
         JScrollPane ordersScroll = new JScrollPane(owner.ordersTable);
         UIHelper.styleScrollPane(ordersScroll);
@@ -293,10 +317,15 @@ final class CommercialOrdersView {
 
         // LISTENERS
         addLineBtn.addActionListener(e -> owner.addDraftOrderLine());
-        owner.orderProductCombo.addActionListener(e -> { owner.refreshOrderFEFOHint(); OrderPackageQuantityBinding.totalChanged(owner); });
-        UIHelper.onTextChange(owner.orderBoxesField, () -> OrderPackageQuantityBinding.packagesChanged(owner));
-        UIHelper.onTextChange(owner.orderLooseUnitsField, () -> OrderPackageQuantityBinding.packagesChanged(owner));
-        UIHelper.onTextChange(owner.orderQuantityField, () -> OrderPackageQuantityBinding.totalChanged(owner));
+        owner.orderProductCombo.addActionListener(e -> {
+            owner.refreshOrderFEFOHint();
+            int index = owner.orderProductCombo.getSelectedIndex();
+            if (index >= 0 && index < owner.productsList.size()) {
+                int factor = owner.productsList.get(index).unitsPerBox();
+                owner.orderPackageEditor.setUnitsPerBox(factor);
+                owner.orderQuantityLabel.setText("Qtd total (" + Math.max(1, factor) + " un/caixa):");
+            }
+        });
         owner.orderWarehouseCombo.addActionListener(e -> owner.refreshOrderFEFOHint());
         billOrderBtn.addActionListener(e -> owner.billSelectedOrder());
         convertGuideBtn.addActionListener(e -> owner.convertSelectedOrderToGuide());

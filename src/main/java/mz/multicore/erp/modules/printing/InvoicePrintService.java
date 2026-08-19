@@ -1,9 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
-import com.lowagie.text.Element;
 import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Invoice;
@@ -48,7 +45,7 @@ public class InvoicePrintService {
                     "Fatura",
                     invoice.getInvoiceNumber()
             ));
-            doc.add(buildClientBlock(invoice));
+            doc.add(ClientBlockRenderer.build(invoice.getClient(), invoice.getCreatedAt(), invoice.getWarehouse()));
             doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines()),
                     documentConfigService.getColumns(invoice.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
@@ -60,43 +57,6 @@ public class InvoicePrintService {
             Paragraph status = new Paragraph("Estado: " + invoice.getStatus(), PdfTheme.boldFont());
             doc.add(status);
         });
-    }
-
-    private PdfPTable buildClientBlock(Invoice invoice) {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{60f, 40f}); } catch (Exception ignored) {}
-        table.setSpacingAfter(10f);
-
-        PdfPCell client = new PdfPCell();
-        client.setBorder(PdfPCell.NO_BORDER);
-        client.addElement(new Paragraph("Cliente", PdfTheme.subtitleFont()));
-        if (invoice.getClient() != null) {
-            client.addElement(new Paragraph(invoice.getClient().getName(), PdfTheme.bodyFont()));
-            if (invoice.getClient().getTaxId() != null) {
-                client.addElement(new Paragraph("NUIT: " + invoice.getClient().getTaxId(), PdfTheme.bodyFont()));
-            }
-            if (invoice.getClient().getAddress() != null) {
-                client.addElement(new Paragraph(invoice.getClient().getAddress(), PdfTheme.bodyFont()));
-            }
-        }
-        table.addCell(client);
-
-        PdfPCell meta = new PdfPCell();
-        meta.setBorder(PdfPCell.NO_BORDER);
-        meta.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        if (invoice.getCreatedAt() != null) {
-            Paragraph date = new Paragraph("Data: " + invoice.getCreatedAt().format(DATE_FMT), PdfTheme.bodyFont());
-            date.setAlignment(Element.ALIGN_RIGHT);
-            meta.addElement(date);
-        }
-        if (invoice.getWarehouse() != null) {
-            Paragraph wh = new Paragraph("Armazém: " + invoice.getWarehouse().getName(), PdfTheme.bodyFont());
-            wh.setAlignment(Element.ALIGN_RIGHT);
-            meta.addElement(wh);
-        }
-        table.addCell(meta);
-        return table;
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<InvoiceLine> lines) {

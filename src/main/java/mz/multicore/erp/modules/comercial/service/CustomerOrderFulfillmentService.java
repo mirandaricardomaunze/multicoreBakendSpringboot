@@ -13,7 +13,6 @@ import mz.multicore.erp.modules.printing.OrderPickingPrintService;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.service.AppUserService;
-import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,12 +28,10 @@ public class CustomerOrderFulfillmentService {
     private final InventoryService inventoryService;
     private final OrderPickingPrintService printService;
     private final AppUserService appUserService;
-    private final ApprovalService approvalService;
 
     public CustomerOrderFulfillmentService(ComercialService comercialService, OrderRepository orderRepository,
             OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
-            InventoryService inventoryService, OrderPickingPrintService printService, AppUserService appUserService,
-            ApprovalService approvalService) {
+            InventoryService inventoryService, OrderPickingPrintService printService, AppUserService appUserService) {
         this.comercialService = comercialService;
         this.orderRepository = orderRepository;
         this.orderLineRepository = orderLineRepository;
@@ -42,7 +39,6 @@ public class CustomerOrderFulfillmentService {
         this.inventoryService = inventoryService;
         this.printService = printService;
         this.appUserService = appUserService;
-        this.approvalService = approvalService;
     }
 
     @Transactional
@@ -57,10 +53,11 @@ public class CustomerOrderFulfillmentService {
     }
 
     private OrderDTO createAndReserve(CreateFulfillmentOrderRequest request, String key) {
-        OrderDTO created = comercialService.createOrder(request.order());
+        // A via é forçada aqui, não lida do pedido HTTP: este circuito é dono da sua via e não a
+        // pode deixar ao critério de quem chama. Como PICKING_REQUEST não cria aprovação nenhuma,
+        // deixou de ser preciso criar uma e cancelá-la a seguir.
+        OrderDTO created = comercialService.createOrder(request.order(), OrderKind.PICKING_REQUEST);
         Order order = requireOrder(created.id());
-        approvalService.cancelPendingForDocument("ORDER", order.getId(),
-                "Pedido encaminhado para o fluxo operacional de separacao.");
         for (OrderLine line : order.getLines()) {
             BigDecimal physical = inventoryService.lockAndGetPhysicalQuantity(line.getProduct().getId(), order.getWarehouse().getId());
             BigDecimal reserved = orderLineRepository.sumActiveReservations(line.getProduct().getId(), order.getWarehouse().getId());
@@ -82,7 +79,7 @@ public class CustomerOrderFulfillmentService {
     @Transactional
     public byte[] printForPicking(Long id, String terminal) {
         PermissionGuard.requireManagerOrAdmin("imprimir guia de separacao");
-        Order order = requireOrder(id);
+        Order order = requireSeparationCircuit(id, "imprimir a lista de separação");
         transition(order, OrderFulfillmentStatus.AWAITING_SEPARATION, OrderFulfillmentStatus.IN_SEPARATION);
         byte[] document = printService.render(id, false);
         registerPrint(order, terminal, "PICKING_PRINTED", "Primeira impressao; separacao iniciada.");
@@ -92,7 +89,7 @@ public class CustomerOrderFulfillmentService {
     @Transactional
     public byte[] reprint(Long id, ReprintAuthorizationRequest request) {
         PermissionGuard.requireManagerOrAdmin("reimprimir guia de separacao");
-        Order order = requireOrder(id);
+        Order order = requireSeparationCircuit(id, "reimprimir a lista de separação");
         if (!OrderFulfillmentStatus.IN_SEPARATION.name().equals(order.getStatus())) {
             throw new BusinessRuleException("A guia so pode ser reimpressa durante a separacao.");
         }
@@ -114,7 +111,7 @@ public class CustomerOrderFulfillmentService {
     @Transactional
     public OrderDTO completeSeparation(Long id, OrderActionRequest request) {
         PermissionGuard.requireManagerOrAdmin("concluir separacao");
-        Order order = requireOrder(id);
+        Order order = requireSeparationCircuit(id, "marcar como separado");
         transition(order, OrderFulfillmentStatus.IN_SEPARATION, OrderFulfillmentStatus.SEPARATED);
         order.getLines().forEach(line -> line.setSeparatedQuantity(line.getQuantity()));
         orderRepository.save(order);
@@ -152,6 +149,23 @@ public class CustomerOrderFulfillmentService {
         Order order = orderRepository.findById(id).orElseThrow(() -> new BusinessRuleException("Pedido nao encontrado."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
         order.getLines().size();
+        return order;
+    }
+
+    /**
+     * Recusa uma encomenda que não é deste circuito, <b>antes</b> de olhar para o estado.
+     *
+     * <p>Uma encomenda A4 nunca esteve em separação, pelo que a recusa por estado ("ainda aguarda
+     * separação") mandaria o operador imprimir uma lista que não existe. A via é a razão certa e
+     * é a que se diz.
+     */
+    private Order requireSeparationCircuit(Long id, String action) {
+        Order order = requireOrder(id);
+        if (!OrderKind.orDefault(order.getKind()).usesSeparationFlow()) {
+            throw new BusinessRuleException("Não é possível " + action + ": a encomenda "
+                    + order.getOrderNumber() + " é do tipo \"" + OrderKind.FORMAL_ORDER.label()
+                    + "\" e não passa pelo armazém — aprova-se e fatura-se directamente.");
+        }
         return order;
     }
 

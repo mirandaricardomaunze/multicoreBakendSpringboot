@@ -9,6 +9,7 @@ import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.QuantityField;
+import mz.multicore.erp.gui.components.PackageQuantityEditor;
 import mz.multicore.erp.gui.components.DecimalField;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.commercial.CommercialMovementsPanel;
@@ -55,6 +56,8 @@ public class ComercialPanel extends JPanel {
     JComboBox<String> productCombo;
     QuantityField quantityField;
     QuantityField invoiceBoxesField;
+    QuantityField invoiceLooseUnitsField;
+    PackageQuantityEditor invoicePackageEditor;
     DecimalField discountField;
     JTextField batchField;
     JTextField serialField;
@@ -71,6 +74,7 @@ public class ComercialPanel extends JPanel {
     // TAB 3: REGISTAR CLIENTE ELEMENTS
 
     // TAB 4: ENCOMENDAS ELEMENTS
+    JComboBox<mz.multicore.erp.modules.comercial.model.OrderKind> orderKindCombo;
     JComboBox<String> orderClientCombo;
     JTextField orderClientWalkInField;
     JComboBox<String> orderWarehouseCombo;
@@ -78,6 +82,8 @@ public class ComercialPanel extends JPanel {
     QuantityField orderQuantityField;
     QuantityField orderBoxesField;
     QuantityField orderLooseUnitsField;
+    PackageQuantityEditor orderPackageEditor;
+    JLabel orderQuantityLabel;
     DecimalField orderDiscountField;
     JTextField orderBatchField;
     JTextField orderSerialField;
@@ -89,12 +95,17 @@ public class ComercialPanel extends JPanel {
     DefaultTableModel ordersTableModel;
     JTable ordersTable;
 
+    /** Colunas da tabela de encomendas lidas pelas acções. Nomeadas para o índice não andar solto. */
+    static final int ORDERS_COL_ID = 0;
+    static final int ORDERS_COL_STATUS = 3;
+    static final int ORDERS_COL_KIND = 6;
+
     // TAB 5: GUIAS DE REMESSA ELEMENTS
 
     // Seeding lists for selections
-    private List<ClientDTO> clientsList = new ArrayList<>();
+    List<ClientDTO> clientsList = new ArrayList<>();
     final List<ProductDTO> productsList = new ArrayList<>();
-    private List<WarehouseDTO> warehousesList = new ArrayList<>();
+    List<WarehouseDTO> warehousesList = new ArrayList<>();
     
     // In-memory line items of the invoice currently being drafted
     final List<CreateInvoiceLineRequest> draftLines = new ArrayList<>();
@@ -115,7 +126,7 @@ public class ComercialPanel extends JPanel {
     JPanel invoiceFormContent;              // conteúdo do modal de nova fatura
     private mz.multicore.erp.modules.comercial.dto.InvoiceDTO lastCreatedInvoice;
     JPanel orderFormContent;                // conteúdo do editor de nova encomenda
-    private OrderDTO lastCreatedOrder;
+    OrderDTO lastCreatedOrder;
     CardLayout encomendasCards;             // alterna lista <-> editor na aba Encomendas
     JPanel encomendasHost;
     CardLayout faturacaoCards;              // alterna lista <-> editor na aba Faturação
@@ -328,20 +339,11 @@ public class ComercialPanel extends JPanel {
      * preenche a Qtd em UNIDADES = caixas × unidades/caixa. O cálculo de dinheiro continua por unidade
      * (a caixa é só conversão). Campo vazio não mexe na Qtd (permite entrada directa em unidades).
      */
-    void applyInvoiceBoxes() {
-        if (invoiceBoxesField == null) return;
-        String raw = invoiceBoxesField.getText().trim();
-        if (raw.isEmpty()) return;
+    void refreshInvoicePackaging() {
+        if (invoicePackageEditor == null) return;
         int idx = productCombo.getSelectedIndex();
         if (idx < 0 || idx >= productsList.size()) return;
-        int upb = Math.max(1, productsList.get(idx).unitsPerBox());
-        try {
-            int boxes = Integer.parseInt(raw);
-            if (boxes <= 0) return;
-            quantityField.setText(String.valueOf(boxes * upb));
-        } catch (NumberFormatException ignore) {
-            // texto inválido → não altera a Qtd
-        }
+        invoicePackageEditor.setUnitsPerBox(productsList.get(idx).unitsPerBox());
     }
 
     void addDraftLine() {
@@ -426,8 +428,7 @@ public class ComercialPanel extends JPanel {
         totalLabel.setText(String.format("Total Rascunho: %,.2f MT (incl. IVA)", draftTotal));
 
         // Clear details
-        quantityField.setText("1");
-        invoiceBoxesField.setText("");
+        invoicePackageEditor.reset();
         discountField.setText("0");
         serialField.setText("");
         refreshInvoiceFEFOHint();
@@ -560,24 +561,8 @@ public class ComercialPanel extends JPanel {
         }
     }
 
-    /** Guardar a partir do editor: valida+cria, informa, recarrega a lista e volta. Erro mantém o editor. */
     void saveOrderFromEditor() {
-        try {
-            mz.multicore.erp.modules.comercial.dto.CreateOrderRequest request = buildOrderRequest();
-            String idempotencyKey = java.util.UUID.randomUUID().toString();
-            UIHelper.runWithProgress(this, "A enviar pedido e reservar stock…",
-                    () -> comercialApiClient.submitFulfillmentOrder(request, idempotencyKey, CustomerOrderFulfillmentActions.terminalName()), created -> {
-            lastCreatedOrder = created;
-            String estadoMsg = "Enviado para separação e stock reservado (" + created.totalAmount() + " MT).";
-            JOptionPane.showMessageDialog(this, "Encomenda " + created.orderNumber() + " criada!\n" + estadoMsg,
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadOrdersTable();
-            backToOrdersList();
-            }, error -> showCommercialError("criar encomenda", error));
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage() == null ? "Falha ao criar encomenda." : ex.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        CommercialOrderSubmission.save(this, comercialApiClient);
     }
 
     void addDraftOrderLine() {
@@ -664,9 +649,7 @@ public class ComercialPanel extends JPanel {
         orderTotalLabel.setText(String.format("Total Rascunho: %,.2f MT (incl. IVA)", draftOrderTotal));
 
         // Clear details
-        orderBoxesField.setText("0");
-        orderLooseUnitsField.setText("0");
-        orderQuantityField.setText("1");
+        orderPackageEditor.reset();
         orderDiscountField.setText("0");
         orderSerialField.setText("");
         refreshOrderFEFOHint();
@@ -710,34 +693,9 @@ public class ComercialPanel extends JPanel {
                     () -> targetField.setText("Sem stock")), error -> targetField.setText(""));
     }
 
-    /** Validação + emissão da encomenda. Lança {@link RuntimeException} em erro para manter o editor aberto. */
-    private mz.multicore.erp.modules.comercial.dto.CreateOrderRequest buildOrderRequest() {
-        if (warehousesList.isEmpty()) {
-            throw new RuntimeException("Nenhum armazém disponível para a empresa atual.");
-        }
-        if (draftOrderLines.isEmpty()) {
-            throw new RuntimeException("Adicione pelo menos um item à encomenda.");
-        }
-        int clientIdx = orderClientCombo.getSelectedIndex();
-        int whIdx = orderWarehouseCombo.getSelectedIndex();
-        if (whIdx < 0) {
-            throw new RuntimeException("Selecione o armazém.");
-        }
-
-        // O índice 0 do combo é "Consumidor Final"; índices >0 mapeiam para clientsList[idx-1].
-        Long clientId = null;
-        String walkInName = null;
-        if (clientIdx > 0 && (clientIdx - 1) < clientsList.size()) {
-            clientId = clientsList.get(clientIdx - 1).id();
-        } else {
-            String typed = orderClientWalkInField == null ? "" : orderClientWalkInField.getText().trim();
-            if (!typed.isEmpty()) walkInName = typed;
-        }
-
-        WarehouseDTO warehouse = warehousesList.get(whIdx);
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        return new mz.multicore.erp.modules.comercial.dto.CreateOrderRequest(
-                clientId, walkInName, companyId, warehouse.id(), new ArrayList<>(draftOrderLines));
+    /** Via escolhida no editor — ver {@link CommercialOrderSubmission#selectedKind}. */
+    mz.multicore.erp.modules.comercial.model.OrderKind selectedOrderKind() {
+        return CommercialOrderSubmission.selectedKind(this);
     }
 
     /** Limpa o rascunho da encomenda (linhas, totais e selecção) antes de abrir o modal. */
@@ -890,7 +848,8 @@ public class ComercialPanel extends JPanel {
                     clientLabel,
                     order.status(),
                     order.totalAmount(),
-                    impressoes
+                    impressoes,
+                    order.kind()
             });
         }
     }
@@ -980,7 +939,7 @@ public class ComercialPanel extends JPanel {
                 "Erro", JOptionPane.ERROR_MESSAGE);
     }
 
-    private void showCommercialError(String action, Throwable error) {
+    void showCommercialError(String action, Throwable error) {
         JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
                 "Erro", JOptionPane.ERROR_MESSAGE);
     }

@@ -83,11 +83,10 @@ public final class CommercialNotesPanel {
         reject.setIcon(UIHelper.icon("fas-times", 14));
         reject.addActionListener(e -> rejectCredit());
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printCredit)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadCredits);
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printCredit);
         return buildTab("Notas de Crédito", creditTable,
                 new String[]{"RETURN", "DISCOUNT", "ERROR", "CANCELLATION"}, 4, 7,
-                more, reject, approve, create);
+                UIHelper.createRefreshButton(this::loadCredits), more, reject, approve, create);
     }
 
     private JPanel buildDebitTab() {
@@ -101,11 +100,10 @@ public final class CommercialNotesPanel {
         reject.setIcon(UIHelper.icon("fas-times", 14));
         reject.addActionListener(e -> rejectDebit());
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printDebit)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadDebits);
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printDebit);
         return buildTab("Notas de Débito", debitTable,
                 new String[]{"FREIGHT", "SURCHARGE", "CORRECTION", "OTHER"}, 4, 6,
-                more, reject, approve, create);
+                UIHelper.createRefreshButton(this::loadDebits), more, reject, approve, create);
     }
 
     private JPanel buildTab(String title, JTable table, String[] reasons, int reasonColumn, int statusColumn,
