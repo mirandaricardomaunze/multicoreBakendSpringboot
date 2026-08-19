@@ -2,7 +2,32 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
-**Última actualização:** 2026-08-15
+### Progresso — 2026-08-19 (encomendas: duas vias declaradas, não adivinhadas)
+
+- **Pedido do utilizador:** as encomendas deviam ter duas áreas — A4 profissional (desenho da
+  fatura, com aprovação) e pedido térmico (desenho do recibo do POS).
+- **Os dois circuitos já existiam**; o que não existia era o sistema **saber qual é qual**. A via
+  era adivinhada pelo estado (`else → A4`), pelo que um estado novo faria sair o documento errado
+  em silêncio. `OrderKind` (FORMAL_ORDER / PICKING_REQUEST) passa a ser declarado na criação,
+  gravado no documento (**V43**, backfill pela chave de idempotência — o estado é ambíguo, o
+  `CANCELLED` existe nos dois circuitos) e é o único a decidir aprovação, documento e circuito.
+- **O talão térmico não era um talão:** sem logótipo, NUIT, morada, telefone ou pontilhados, ao
+  contrário do recibo do POS. Novo `ThermalReceiptRenderer` partilhado pelos dois (o recibo do POS
+  não muda um pixel). Idem `ClientBlockRenderer` para fatura + encomenda A4, que tinham ~35 linhas
+  copiadas — a mesma forma do bug do IVA e do saldo em dívida.
+- **Desktop:** escolha da via no editor (com a consequência escrita antes de se escolher), coluna
+  **Tipo** e acções a lerem a via em vez de compararem estados. Até aqui o desktop **só** criava
+  pedidos de separação. Fluxo de criação extraído para `CommercialOrderSubmission` — a guarda
+  `UiPanelDecompositionTest` apanhou o painel a passar das 1000 linhas.
+- **Verificação:** suite completa **589 testes, 0 falhas/erros/ignorados** (eram 574). **ED-19
+  confirmado a falhar contra o código antigo** ("falta o NUIT"). **VALIDADO AO VIVO:** A4 nasce
+  `PENDING_APPROVAL` com aprovação pendente e **recusa** a lista de separação com a mensagem da
+  via; o circuito térmico **força** `PICKING_REQUEST` mesmo com `FORMAL_ORDER` no pedido HTTP;
+  talão impresso com NUIT/morada/email (9698 bytes, contra 1450 antes).
+- Spec/harness: `docs/ENCOMENDA_DUAS_VIAS_SPEC.md` + `_HARNESS.md` (ED-01..27 auto, ED-50..58).
+  **Por validar na UI Swing:** ED-51/56 (comparação visual A4 vs fatura, talão vs recibo POS).
+
+**Última actualização:** 2026-08-19 (bloco acima). Histórico anterior desde 2026-08-15:
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 As **cinco lacunas de gestão** levantadas na auditoria de 09/08 estão **fechadas** (ver abaixo) —
 incluindo a contabilidade, que era a maior ausência.
@@ -1428,3 +1453,9 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
   estado de stock, tooltip e superfície clicável (`docs/POS_CATALOGO_CARDS_SPEC.md`).
 - Identidade técnica migrada integralmente para `mz.multicore.erp`; caminhos, scripts, preferências,
   documentação e auxiliares usam apenas Multicore, protegidos por `ProductIdentityHarnessTest`.
+- Fluxo comercial multiutilizador ganhou `Actualizar` visível no POS, Facturação, Pedidos, Guias e
+  Notas, mantendo recarga automática após escritas (`docs/COMMERCIAL_MULTIUSER_REFRESH_SPEC.md`).
+- Conversão de pedidos por embalagem corrigida: estado inicial sem unidade residual, factor
+  `un/caixa` visível e cálculo bidireccional validado para caixas, soltas e total.
+- `PackageQuantityEditor` tornou a conversão transversal em faturas, pedidos, compras e encomendas
+  a fornecedor; guias continuam a herdar e apresentar a composição canónica.
