@@ -55,6 +55,8 @@ public class StockPanel extends JPanel {
     private final StockAlertsPanel alertsPanel;
     private final StockBatchesPanel batchesPanel;
 
+    private JTabbedPane stockTabs;
+
     // Transfer history
     private DefaultTableModel transferModel;
     JTable transferTable;
@@ -158,6 +160,7 @@ public class StockPanel extends JPanel {
 
         // TABS: Níveis | Movimentos | Transferências
         JTabbedPane tabs = new JTabbedPane();
+        this.stockTabs = tabs;
         UIHelper.styleTabbedPaneMulticore(tabs);
 
         tabs.addTab("Níveis de Stock",               UIHelper.icon("fas-boxes", 16, UIHelper.TEXT_LIGHT),         buildLevelsTab());
@@ -432,6 +435,23 @@ public class StockPanel extends JPanel {
         return tab;
     }
 
+
+    /**
+     * Abre o separador das transferências entre armazéns.
+     *
+     * <p>A guia de transferência vive no Stock — é lá que ela pertence, porque o que se move é
+     * mercadoria entre armazéns da mesma empresa. Mas quem a procura tende a procurá-la ao pé das
+     * Guias de Remessa, no Comercial; daí o atalho que chama este método.
+     */
+    public void showWarehouseTransfers() {
+        if (stockTabs == null) return;
+        for (int index = 0; index < stockTabs.getTabCount(); index++) {
+            if (!stockTabs.getTitleAt(index).startsWith("Transferências")) continue;
+            stockTabs.setSelectedIndex(index);
+            loadTransfers();
+            return;
+        }
+    }
 
     public void onPanelSelected() {
         refreshStockLock();

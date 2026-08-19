@@ -21,6 +21,16 @@ public final class DeliveryGuidesPanel extends JPanel {
     private final JTable table;
 
     public DeliveryGuidesPanel(ComercialApiClient apiClient, Runnable ordersRefresh) {
+        this(apiClient, ordersRefresh, null);
+    }
+
+    /**
+     * @param openWarehouseTransfers leva ao separador das transferências entre armazéns, no Stock.
+     *        Estas guias saem para o <b>cliente</b>; a transferência move mercadoria entre armazéns
+     *        da mesma empresa e por isso vive no Stock — mas é aqui que as pessoas a vêm procurar.
+     */
+    public DeliveryGuidesPanel(ComercialApiClient apiClient, Runnable ordersRefresh,
+                               Runnable openWarehouseTransfers) {
         this.apiClient = apiClient;
         this.ordersRefresh = ordersRefresh;
         setLayout(new BorderLayout(0, 15));
@@ -29,6 +39,17 @@ public final class DeliveryGuidesPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
         header.add(UIHelper.createHeading("Guias de Remessa"), BorderLayout.WEST);
+        if (openWarehouseTransfers != null) {
+            ModernButton transfersBtn = UIHelper.createSecondaryButton("Transferências entre Armazéns");
+            transfersBtn.setIcon(UIHelper.icon("fas-truck", 14));
+            transfersBtn.setToolTipText("Estas guias vão para o cliente. Para mover mercadoria entre "
+                    + "armazéns da empresa, use a Guia de Transferência (em Stock).");
+            transfersBtn.addActionListener(e -> openWarehouseTransfers.run());
+            JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            headerActions.setOpaque(false);
+            headerActions.add(transfersBtn);
+            header.add(headerActions, BorderLayout.EAST);
+        }
         add(header, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));

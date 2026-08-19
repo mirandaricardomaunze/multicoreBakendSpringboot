@@ -147,7 +147,12 @@ public class MainFrame extends JFrame {
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
             dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);
-            comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient);
+            // O Stock nasce antes do Comercial porque o Comercial recebe um atalho para ele: a guia
+            // de transferência vive no Stock (é lá que ela pertence), mas quem a procura procura-a
+            // ao pé das Guias de Remessa.
+            stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient);
+            comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient,
+                    () -> { navigate("stock"); topBar.setActive("Stock & Armazéns"); stockPanel.showWarehouseTransfers(); });
             financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
             hrPanel         = new HRPanel(hrApiClient);
             crmPanel        = new CRMPanel(crmApiClient);
@@ -156,7 +161,6 @@ public class MainFrame extends JFrame {
             accountingPanel = new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
-            stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
             configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient, mySubscriptionApiClient);

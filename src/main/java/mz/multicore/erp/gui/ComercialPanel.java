@@ -148,7 +148,9 @@ public class ComercialPanel extends JPanel {
             DebitNoteApiClient debitNoteApiClient,
             POSApiClient posApiClient,
             MovimentosApiClient movimentosApiClient,
-            PromotionApiClient promotionApiClient
+            PromotionApiClient promotionApiClient,
+            /** Atalho para as transferências entre armazéns (Stock); {@code null} desliga-o. */
+            Runnable openWarehouseTransfers
     ) {
         this.comercialApiClient = comercialApiClient;
         this.inventoryApiClient = inventoryApiClient;
@@ -159,7 +161,8 @@ public class ComercialPanel extends JPanel {
         this.outstandingAccountsPanel = new OutstandingAccountsPanel(comercialApiClient, financeApiClient, posApiClient);
         this.notesPanel = new CommercialNotesPanel(comercialApiClient, creditNoteApiClient, debitNoteApiClient,
                 () -> List.copyOf(warehousesList));
-        this.deliveryGuidesPanel = new DeliveryGuidesPanel(comercialApiClient, this::loadOrdersTable);
+        this.deliveryGuidesPanel = new DeliveryGuidesPanel(comercialApiClient, this::loadOrdersTable,
+                openWarehouseTransfers);
         this.receiptsPanel = new ReceiptsPanel(comercialApiClient, this::loadInvoicesTable);
         this.billOrderDialog = new BillOrderDialog(this, comercialApiClient,
                 this::loadInvoicesTable, this::loadOrdersTable);
