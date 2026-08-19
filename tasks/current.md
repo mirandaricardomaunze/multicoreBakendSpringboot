@@ -27,6 +27,24 @@
 - Spec/harness: `docs/ENCOMENDA_DUAS_VIAS_SPEC.md` + `_HARNESS.md` (ED-01..27 auto, ED-50..58).
   **Por validar na UI Swing:** ED-51/56 (comparação visual A4 vs fatura, talão vs recibo POS).
 
+### Progresso — 2026-08-19 (a guia de transferência não faltava; faltava ser encontrável)
+
+- **Relatado como em falta** pelo utilizador. Existe e está completa desde sempre: modelo,
+  serviço, endpoint, PDF A4 (origem/destino com localização, responsável, viatura, lotes, peso da
+  carga, assinaturas de entrega e recepção) e UI com aprovação — o stock só se move na aprovação.
+- **O problema era o sítio.** Vive em Stock → "Transferências entre Armazéns", que é onde
+  pertence (move mercadoria entre armazéns da empresa, não é uma venda), mas quem precisa dela
+  procura-a ao pé das Guias de Remessa, no Comercial.
+- **Atalho** no cabeçalho das Guias de Remessa, com tooltip a dizer a diferença entre os dois
+  documentos — é isso que evita a escolha errada, e a razão de o documento não mudar de sítio.
+  `StockPanel.showWarehouseTransfers()` no molde do `showCustomerOrders()`; no `MainFrame` o Stock
+  passa a nascer antes do Comercial.
+- **Verificação:** 2 casos novos; suite completa **591 testes, 0 falhas/erros/ignorados**.
+
+**Em curso por outra mão (não tocar sem falar):** módulo de **Cotação** (`Quotation*` em
+`modules/comercial`, `docs/COTACAO_*`) e uma alteração a `DocumentSeries` — por commitar na
+árvore de trabalho.
+
 **Última actualização:** 2026-08-19 (bloco acima). Histórico anterior desde 2026-08-15:
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 As **cinco lacunas de gestão** levantadas na auditoria de 09/08 estão **fechadas** (ver abaixo) —
