@@ -2,6 +2,47 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
+### Progresso — 2026-08-19 (cotação: o preço proposto passa a ser um documento)
+
+- **Pedido do utilizador:** funcionalidade de cotação profissional, com spec e harness.
+- **A lacuna:** o sistema começava na encomenda. Quem cotava fazia-o fora do sistema e reintroduzia
+  o preço à mão — a proposta não existia como documento (não se sabia o que se prometeu, a quem,
+  nem até quando) e o preço reintroduzido podia não ser o cotado.
+- **Nova série `CT`** (`Quotation` + linhas, migração **V44**, `UNIQUE(company_id, quotation_number)`).
+  Não move stock, dívida, caixa nem contabilidade — e o serviço **nem injecta** `InventoryService`
+  ou `FinanceService`: não ter a dependência à mão é mais forte do que prometer não a usar.
+- **A regra que carrega a funcionalidade — o preço cotado é o preço honrado.** A conversão copia as
+  linhas verbatim, como `billOrder` já copia as da encomenda. Reapreçar pelo catálogo fazia a
+  proposta de sexta-feira mudar sozinha na segunda. **CT-21/22 confirmados a falhar** contra a
+  variante que reapreça.
+- **Caducidade derivada, não gravada:** `Quotation.isExpired(hoje)` contra `valid_until` (gravada no
+  documento, lição da V35). Sem agendador nocturno, sem linhas desactualizadas, e estender a
+  validade não exige dança de estados. Converter caducada é recusado nomeando a data
+  (**CT-23/30 confirmados a falhar** sem a guarda); estender é **MANAGER/ADMIN** e fica auditado
+  **com a validade antiga e a nova** — sem isso, um preço ressuscitado era indistinguível de um
+  preço que nunca caducou.
+- **Converte uma só vez, e só em encomenda.** Mesma decisão dos "caminhos separados" da guia. Não há
+  cotação→fatura: seria a mesma regra (stock, crédito, vencimento, série FT) em dois sítios — a
+  forma exacta dos bugs do IVA, do saldo em dívida e da margem.
+- **Uma porta para criar encomendas:** núcleo de `createOrder` extraído para
+  `ComercialService.placeOrder`, agora o único sítio que numera `EC` e submete à Engine de
+  Aprovações. Auditoria estática (CT-36/37) confirma-o.
+- **Sem campo para ignorar:** `CreateQuotationLineRequest` não tem preço nem taxa — o apreçamento é
+  do artigo. É a porta que o campo `taxRate` do `CreateInvoiceLineRequest` foi até 06/08, fechada
+  por construção em vez de por convenção.
+- **Desktop:** aba **Cotações (CT)** com editor próprio (`QuotationsPanel` + `QuotationEditorDialog`
+  em `gui/commercial/`, para o `ComercialPanel` não passar das 1000 linhas — ficou em 961). O painel
+  **não** compara datas: mostra `expired`/`daysUntilExpiry` calculados pelo servidor.
+- **PDF A4** com o desenho partilhado da fatura, mais validade em destaque (com aviso quando já
+  caducou), condições, assinatura de aceitação do cliente e nota de que não é documento fiscal.
+  **Não imprime o armazém** — é interno, e o documento sai para o cliente.
+- **Movimentos:** `MovimentoTipo.COTACAO` na vista unificada.
+- **Verificação:** suite completa **630 testes, 0 falhas/erros/ignorados** (eram 589). Auditoria
+  estática CT-36..39 verde.
+- Spec/harness: `docs/COTACAO_SPEC.md` + `docs/COTACAO_HARNESS.md` (CT-01..41 auto, CT-50..62).
+  **Por validar ao vivo:** CT-50..62 (em especial CT-51/52, comparação visual do PDF com a fatura,
+  e CT-57, preço cotado honrado depois de o catálogo mudar).
+
 ### Progresso — 2026-08-19 (encomendas: duas vias declaradas, não adivinhadas)
 
 - **Pedido do utilizador:** as encomendas deviam ter duas áreas — A4 profissional (desenho da
@@ -45,7 +86,7 @@
 `modules/comercial`, `docs/COTACAO_*`) e uma alteração a `DocumentSeries` — por commitar na
 árvore de trabalho.
 
-**Última actualização:** 2026-08-19 (bloco acima). Histórico anterior desde 2026-08-15:
+**Última actualização:** 2026-08-19 (cotação — primeiro bloco). Histórico anterior desde 2026-08-15:
 **Estado:** software de loja concluído; Track B (cliente-fino) + correcções multi-tenant **em `main`**.
 As **cinco lacunas de gestão** levantadas na auditoria de 09/08 estão **fechadas** (ver abaixo) —
 incluindo a contabilidade, que era a maior ausência.

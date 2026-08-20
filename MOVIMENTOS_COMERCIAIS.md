@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-07-23
+**Última actualização:** 2026-08-19
 
 ---
 
@@ -17,6 +17,7 @@
 | **Nota de Crédito**     | ✅      | `CreditNote`, série **NC**. Devolve stock na aprovação se motivo = `RETURN`.        |
 | **Guia (transferência entre armazéns)** | ✅ | `StockTransfer`, série **TRF**. Create/approve/reject/cancel com stock a sair só na aprovação; PDF via `StockTransferPrintService`. |
 | **Guia de Remessa ao cliente** | ✅ | `DeliveryGuide`, série **GR**. Gerada a partir de uma encomenda; stock (SALE) sai só na aprovação; PDF via `DeliveryGuidePrintService`. |
+| **Cotação / proposta**  | ✅      | `Quotation`, série **CT**. Não move nada; converte-se em encomenda herdando os preços cotados. |
 
 > ✅ **Decisão (2026-07-23) — reverte a de 2026-06-21:** a **Guia de Remessa ao cliente passa a ser
 > requisito** e está implementada (`DeliveryGuide`, série `GR`) — ver §5.1 e
@@ -33,6 +34,7 @@ pela série central [`DocumentSeries`](src/main/java/mz/multicore/erp/modules/nu
 
 | Documento        | Entidade      | Série  | Tabela            | Estado / ciclo                                              |
 |------------------|---------------|--------|-------------------|------------------------------------------------------------|
+| Cotação          | `Quotation`   | `CT`   | `quotations`      | `DRAFT → SENT → ACCEPTED → CONVERTED` / `REJECTED` / `CANCELLED`. Caducidade **derivada** de `valid_until`, não gravada. |
 | Encomenda        | `Order`       | `EC`   | `customer_orders` | `PENDING_APPROVAL → (aprovação) → PENDING → BILLED` / `CANCELLED` |
 | Fatura           | `Invoice`     | `FT`   | `invoices`        | `DRAFT → PENDING_APPROVAL → APPROVED → PAID` / `CANCELLED` |
 | Recibo           | `Receipt`     | `RC`   | —                 | `COMPLETED` / anulado                                      |
@@ -81,6 +83,12 @@ FATURA MANUAL  (Invoice, SalesChannel.MANUAL)   ComercialService.createInvoice()
   └─ COM desconto >10%  → PENDING_DISCOUNT_APPROVAL → Engine de Aprovações
         └─ ao APROVAR:  InvoiceApprovalCallback.onApproved() → StockMovement SALE
      Recibo (createReceipt) → TreasuryTransaction DEBIT
+
+COTAÇÃO  (Quotation, série CT)                  QuotationService.create()
+  └─ NENHUM movimento: sem stock, sem dívida, sem caixa, sem contabilidade. É uma proposta.
+     convert() → encomenda EC herdando os preços COTADOS (não o catálogo de hoje) ⇒ cotação CONVERTED.
+     Caducada não converte; estender a validade é acto de gerente, auditado com data antiga e nova.
+     Converte uma só vez. Para facturar: converte-se em encomenda e factura-se a encomenda.
 
 ENCOMENDA  (Order, série EC)                    ComercialService.createOrder()
   └─ Engine de Aprovações (documentType "ORDER", por valor): ao APROVAR,
@@ -143,6 +151,25 @@ Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
   migração `V34`. Testada por `DeliveryGuideServiceTest` (9). Spec/harness:
   [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md).
 
+### 5.2 Cotação — a proposta que antecede a encomenda
+
+Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
+- Entidade `Quotation` + linhas, série `CT` (número único **por empresa**, migração `V44`).
+- **Não move nada** — sem stock, dívida, caixa ou contabilidade. O compromisso nasce na conversão.
+- **O preço cotado é o preço honrado:** `convert()` copia as linhas da cotação verbatim, tal como
+  `billOrder` copia as da encomenda. Não reapreça pelo catálogo.
+- **Caducada não converte.** A regra vive no domínio (`Quotation.isExpired`); a caducidade é
+  derivada da data, nunca gravada. Estender a validade é acto de **MANAGER/ADMIN**, auditado com a
+  validade antiga e a nova.
+- **Converte uma só vez** e **só em encomenda** — a fatura continua a sair pelo caminho existente
+  (`billOrder`), o único que sabe baixar stock, travar crédito e numerar `FT`.
+- As duas portas que criam encomendas (catálogo e cotação) passam por
+  `ComercialService.placeOrder`, o único sítio que numera `EC` e submete a aprovação.
+- Lógica em [QuotationService](src/main/java/mz/multicore/erp/modules/comercial/service/QuotationService.java),
+  PDF em [QuotationPrintService](src/main/java/mz/multicore/erp/modules/printing/QuotationPrintService.java).
+  Testada por `QuotationTest` (11) + `QuotationServiceTest` (28). Spec/harness:
+  [docs/COTACAO_SPEC.md](docs/COTACAO_SPEC.md) / [docs/COTACAO_HARNESS.md](docs/COTACAO_HARNESS.md).
+
 ---
 
 ## 6. Onde mexer (mapa rápido de ficheiros)
@@ -151,6 +178,8 @@ Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
 |-----------------------------------------|-------------------------------------------------------------------------------------------|
 | Lógica de venda POS                     | [POSService](src/main/java/mz/multicore/erp/modules/pos/service/POSService.java)                |
 | Faturação / encomenda / anulação        | [ComercialService](src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java) |
+| Cotação / conversão em encomenda        | [QuotationService](src/main/java/mz/multicore/erp/modules/comercial/service/QuotationService.java) |
+| **Criar uma encomenda** (porta única)   | `ComercialService.placeOrder` — numera `EC` e submete a aprovação |
 | Baixa de stock da fatura manual         | [InvoiceApprovalCallback](src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceApprovalCallback.java) |
 | Nota de crédito / devolução de stock    | [CreditNoteService](src/main/java/mz/multicore/erp/modules/comercial/service/CreditNoteService.java) |
 | Nota de débito                          | [DebitNoteService](src/main/java/mz/multicore/erp/modules/comercial/service/DebitNoteService.java) |

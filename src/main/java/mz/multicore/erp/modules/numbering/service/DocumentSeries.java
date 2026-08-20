@@ -11,6 +11,8 @@ public final class DocumentSeries {
     public static final String INVOICE = "FT";
     /** Encomenda de cliente. */
     public static final String ORDER = "EC";
+    /** Cotação ao cliente (proposta de preço). Não é série fiscal — a AT não numera propostas. */
+    public static final String QUOTATION = "CT";
     /** Recibo de pagamento. */
     public static final String RECEIPT = "RC";
     /** Nota de crédito. */

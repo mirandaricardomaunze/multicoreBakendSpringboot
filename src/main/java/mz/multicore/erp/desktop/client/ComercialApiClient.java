@@ -12,7 +12,10 @@ import mz.multicore.erp.modules.comercial.dto.OrderEventDTO;
 import mz.multicore.erp.modules.comercial.dto.ReprintAuthorizationRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateProductRequest;
+import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateReceiptRequest;
+import mz.multicore.erp.modules.comercial.dto.ExtendQuotationValidityRequest;
+import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
@@ -263,6 +266,57 @@ public class ComercialApiClient {
     public OrderDTO markOrderPrinted(Long orderId, String operator) {
         return clientFactory.authenticatedClient().post(
                 "/api/comercial/orders/" + orderId + "/print?operator=" + enc(operator), null, OrderDTO.class);
+    }
+
+    // ─── Cotações (CT) ───────────────────────────────────────────────────────
+    public List<QuotationDTO> getQuotationsByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/comercial/quotations?companyId=" + companyId, QuotationDTO.class);
+    }
+
+    public QuotationDTO getQuotationById(Long id) {
+        return clientFactory.authenticatedClient()
+                .get("/api/comercial/quotations/" + id, QuotationDTO.class);
+    }
+
+    public QuotationDTO createQuotation(CreateQuotationRequest request) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/quotations", request, QuotationDTO.class);
+    }
+
+    public QuotationDTO sendQuotation(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/quotations/" + id + "/send", null, QuotationDTO.class);
+    }
+
+    public QuotationDTO acceptQuotation(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/quotations/" + id + "/accept", null, QuotationDTO.class);
+    }
+
+    public QuotationDTO rejectQuotation(Long id, String reason) {
+        return clientFactory.authenticatedClient().post("/api/comercial/quotations/" + id + "/reject",
+                new CancelReasonRequest(reason), QuotationDTO.class);
+    }
+
+    public QuotationDTO cancelQuotation(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/quotations/" + id + "/cancel", null, QuotationDTO.class);
+    }
+
+    public QuotationDTO extendQuotationValidity(Long id, java.time.LocalDate validUntil) {
+        return clientFactory.authenticatedClient().post("/api/comercial/quotations/" + id + "/extend",
+                new ExtendQuotationValidityRequest(validUntil), QuotationDTO.class);
+    }
+
+    /** Converte a cotação e devolve a <b>encomenda</b> gerada — é o número dela que o operador quer. */
+    public OrderDTO convertQuotation(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/quotations/" + id + "/convert", null, OrderDTO.class);
+    }
+
+    public byte[] renderQuotation(Long id) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/quotation/" + id);
     }
 
     // ─── Guias de Remessa (GR) ───────────────────────────────────────────────

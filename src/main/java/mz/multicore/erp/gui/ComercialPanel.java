@@ -16,6 +16,7 @@ import mz.multicore.erp.gui.commercial.CommercialMovementsPanel;
 import mz.multicore.erp.gui.commercial.OutstandingAccountsPanel;
 import mz.multicore.erp.gui.commercial.CommercialNotesPanel;
 import mz.multicore.erp.gui.commercial.DeliveryGuidesPanel;
+import mz.multicore.erp.gui.commercial.QuotationsPanel;
 import mz.multicore.erp.gui.commercial.ReceiptsPanel;
 import mz.multicore.erp.gui.commercial.BillOrderDialog;
 import mz.multicore.erp.gui.commercial.CancelOrderDialog;
@@ -135,6 +136,7 @@ public class ComercialPanel extends JPanel {
     private final OutstandingAccountsPanel outstandingAccountsPanel;
     private final CommercialNotesPanel notesPanel;
     private final DeliveryGuidesPanel deliveryGuidesPanel;
+    private final QuotationsPanel quotationsPanel;
     private final ReceiptsPanel receiptsPanel;
     private final BillOrderDialog billOrderDialog;
     private final CancelOrderDialog cancelOrderDialog;
@@ -164,6 +166,8 @@ public class ComercialPanel extends JPanel {
         this.deliveryGuidesPanel = new DeliveryGuidesPanel(comercialApiClient, this::loadOrdersTable,
                 openWarehouseTransfers);
         this.receiptsPanel = new ReceiptsPanel(comercialApiClient, this::loadInvoicesTable);
+        this.quotationsPanel = new QuotationsPanel(comercialApiClient, () -> List.copyOf(clientsList),
+                () -> List.copyOf(productsList), () -> List.copyOf(warehousesList), this::loadOrdersTable);
         this.billOrderDialog = new BillOrderDialog(this, comercialApiClient,
                 this::loadInvoicesTable, this::loadOrdersTable);
         this.cancelOrderDialog = new CancelOrderDialog(this, comercialApiClient, this::loadOrdersTable);
@@ -176,6 +180,11 @@ public class ComercialPanel extends JPanel {
         commercialTabs = new JTabbedPane();
         JTabbedPane tabbedPane = commercialTabs;
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
+
+        // A cotação vem antes da faturação porque é aí que o ciclo comercial começa:
+        // cotação → encomenda → guia/fatura.
+        tabbedPane.addTab("Cotações (CT)", UIHelper.icon("fas-file-signature", 16, UIHelper.TEXT_LIGHT),
+                quotationsPanel);
 
         JPanel tabFaturacao = createFaturacaoTab();
         tabbedPane.addTab("Faturação (FT)", UIHelper.icon("fas-file-invoice", 16, UIHelper.TEXT_LIGHT), tabFaturacao);
@@ -276,6 +285,7 @@ public class ComercialPanel extends JPanel {
         loadInvoicesTable();
         receiptsPanel.refresh();
         loadOrdersTable();
+        quotationsPanel.refresh();
         deliveryGuidesPanel.refresh();
         notesPanel.refresh();
         outstandingAccountsPanel.refresh();

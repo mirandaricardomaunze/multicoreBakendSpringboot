@@ -17,6 +17,7 @@ public class PrintController {
     private final ReceiptPrintService receiptPrintService;
     private final InvoicePrintService invoicePrintService;
     private final OrderPrintService orderPrintService;
+    private final QuotationPrintService quotationPrintService;
     private final StockTransferPrintService stockTransferPrintService;
     private final PayslipPrintService payslipPrintService;
     private final CreditNotePrintService creditNotePrintService;
@@ -34,6 +35,7 @@ public class PrintController {
             ReceiptPrintService receiptPrintService,
             InvoicePrintService invoicePrintService,
             OrderPrintService orderPrintService,
+            QuotationPrintService quotationPrintService,
             StockTransferPrintService stockTransferPrintService,
             PayslipPrintService payslipPrintService,
             CreditNotePrintService creditNotePrintService,
@@ -50,6 +52,7 @@ public class PrintController {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
         this.orderPrintService = orderPrintService;
+        this.quotationPrintService = quotationPrintService;
         this.stockTransferPrintService = stockTransferPrintService;
         this.payslipPrintService = payslipPrintService;
         this.creditNotePrintService = creditNotePrintService;
@@ -82,6 +85,11 @@ public class PrintController {
     @GetMapping("/order/{orderId}")
     public ResponseEntity<Resource> order(@PathVariable Long orderId) {
         return pdfResponse(orderPrintService.render(orderId), "encomenda-" + orderId);
+    }
+
+    @GetMapping("/quotation/{quotationId}")
+    public ResponseEntity<Resource> quotation(@PathVariable Long quotationId) {
+        return pdfResponse(quotationPrintService.render(quotationId), "cotacao-" + quotationId);
     }
 
     @GetMapping("/guide/{invoiceId}")

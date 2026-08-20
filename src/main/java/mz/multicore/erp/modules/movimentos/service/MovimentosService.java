@@ -7,11 +7,13 @@ import mz.multicore.erp.modules.comercial.model.DebitNote;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Order;
+import mz.multicore.erp.modules.comercial.model.Quotation;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoTipo;
 import org.springframework.stereotype.Service;
@@ -38,19 +40,22 @@ public class MovimentosService {
     private final CreditNoteRepository creditNoteRepository;
     private final DebitNoteRepository debitNoteRepository;
     private final DeliveryGuideRepository deliveryGuideRepository;
+    private final QuotationRepository quotationRepository;
 
     public MovimentosService(
             InvoiceRepository invoiceRepository,
             OrderRepository orderRepository,
             CreditNoteRepository creditNoteRepository,
             DebitNoteRepository debitNoteRepository,
-            DeliveryGuideRepository deliveryGuideRepository
+            DeliveryGuideRepository deliveryGuideRepository,
+            QuotationRepository quotationRepository
     ) {
         this.invoiceRepository = invoiceRepository;
         this.orderRepository = orderRepository;
         this.creditNoteRepository = creditNoteRepository;
         this.debitNoteRepository = debitNoteRepository;
         this.deliveryGuideRepository = deliveryGuideRepository;
+        this.quotationRepository = quotationRepository;
     }
 
     /**
@@ -76,6 +81,18 @@ public class MovimentosService {
                     inv.getCreatedAt(),
                     statusName(inv.getStatus()),
                     inv.getTotalAmount()));
+        }
+        // A cotação é movimento comercial mesmo sem mover stock: quem pergunta "o que é que
+        // prometemos a este cliente?" procura no mesmo sítio onde procura tudo o resto.
+        for (Quotation quotation : quotationRepository.findByCompanyIdOrderByQuotationDateDesc(companyId)) {
+            movimentos.add(new MovimentoDTO(
+                    MovimentoTipo.COTACAO,
+                    quotation.getId(),
+                    quotation.getQuotationNumber(),
+                    nameOf(quotation.getClient(), quotation.getWalkInName()),
+                    quotation.getQuotationDate(),
+                    statusName(quotation.getStatus()),
+                    quotation.getTotalAmount()));
         }
         for (Order order : orderRepository.findByCompanyId(companyId)) {
             movimentos.add(new MovimentoDTO(

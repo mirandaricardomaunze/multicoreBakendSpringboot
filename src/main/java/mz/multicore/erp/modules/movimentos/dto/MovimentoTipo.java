@@ -7,6 +7,7 @@ package mz.multicore.erp.modules.movimentos.dto;
 public enum MovimentoTipo {
 
     FATURA("Fatura"),
+    COTACAO("Cotação"),
     ENCOMENDA("Encomenda"),
     GUIA_REMESSA("Guia de Remessa"),
     NOTA_CREDITO("Nota de Crédito"),

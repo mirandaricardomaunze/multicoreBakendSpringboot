@@ -1008,22 +1008,7 @@ public class ComercialService {
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
-        Order order = new Order();
-        order.setClient(client);
-        order.setCompany(company);
-        order.setWarehouse(warehouse);
-        order.setKind(kind);
-        // A encomenda A4 passa pela Engine de Aprovações antes de ser faturável (ver
-        // OrderApprovalCallback). O pedido de separação não — é trabalho interno de armazém, e o
-        // dinheiro/stock só se move na facturação, que tem as suas próprias travas.
-        order.setStatus(kind.requiresApproval() ? "PENDING_APPROVAL" : "PENDING");
-        if (request.walkInName() != null && !request.walkInName().isBlank()) {
-            order.setWalkInName(request.walkInName().trim());
-        }
-
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal totalTax = BigDecimal.ZERO;
-
+        List<OrderLine> lines = new java.util.ArrayList<>();
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
@@ -1053,10 +1038,50 @@ public class ComercialService {
                     unitPrice, lineReq.quantity(), discountPct, taxRate);
 
             line.setLineTotal(amounts.total());
-            order.addLine(line);
+            lines.add(line);
+        }
 
+        return placeOrder(company, client, warehouse, request.walkInName(), lines, kind);
+    }
+
+    /**
+     * Grava uma encomenda cujas linhas <b>já vêm apreçadas</b>, totaliza-a, numera-a e submete-a a
+     * aprovação quando a via o exige.
+     *
+     * <p>É por aqui que passam as duas portas que criam encomendas: a que apreça pelo catálogo
+     * ({@link #createOrder}) e a que herda os preços de uma cotação aceite
+     * ({@code QuotationService.convert}). Numeração da série {@code EC}, estado inicial segundo a
+     * via e encaminhamento para a Engine de Aprovações vivem <b>num só sítio</b> — duplicá-los era
+     * repetir a mesma regra em duas portas, que é a forma dos bugs do IVA e do saldo em dívida.
+     *
+     * <p>Recebe entidades e não DTOs por ser chamada de dentro do módulo, dentro da mesma
+     * transacção — o mesmo padrão de {@code DeliveryGuideService}, que também parte da {@code Order}
+     * persistida. A fronteira HTTP continua a ser só DTO.
+     */
+    @Transactional
+    public OrderDTO placeOrder(Company company, Client client, Warehouse warehouse, String walkInName,
+                                List<OrderLine> lines, OrderKind kind) {
+        Order order = new Order();
+        order.setClient(client);
+        order.setCompany(company);
+        order.setWarehouse(warehouse);
+        order.setKind(kind);
+        // A encomenda A4 passa pela Engine de Aprovações antes de ser faturável (ver
+        // OrderApprovalCallback). O pedido de separação não — é trabalho interno de armazém, e o
+        // dinheiro/stock só se move na facturação, que tem as suas próprias travas.
+        order.setStatus(kind.requiresApproval() ? "PENDING_APPROVAL" : "PENDING");
+        if (walkInName != null && !walkInName.isBlank()) {
+            order.setWalkInName(walkInName.trim());
+        }
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal totalTax = BigDecimal.ZERO;
+        for (OrderLine line : lines) {
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    line.getUnitPrice(), line.getQuantity(), line.getDiscountPercentage(), line.getTaxRate());
             subtotal = subtotal.add(amounts.net());
             totalTax = totalTax.add(amounts.tax());
+            order.addLine(line);
         }
 
         order.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));

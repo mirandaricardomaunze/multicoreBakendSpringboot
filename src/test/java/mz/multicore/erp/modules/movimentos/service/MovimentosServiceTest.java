@@ -42,6 +42,7 @@ class MovimentosServiceTest {
     private CreditNoteRepository creditNoteRepository;
     private DebitNoteRepository debitNoteRepository;
     private DeliveryGuideRepository deliveryGuideRepository;
+    private mz.multicore.erp.modules.comercial.repository.QuotationRepository quotationRepository;
     private MovimentosService service;
 
     @BeforeEach
@@ -51,8 +52,9 @@ class MovimentosServiceTest {
         creditNoteRepository = mock(CreditNoteRepository.class);
         debitNoteRepository = mock(DebitNoteRepository.class);
         deliveryGuideRepository = mock(DeliveryGuideRepository.class);
+        quotationRepository = mock(mz.multicore.erp.modules.comercial.repository.QuotationRepository.class);
         service = new MovimentosService(invoiceRepository, orderRepository,
-                creditNoteRepository, debitNoteRepository, deliveryGuideRepository);
+                creditNoteRepository, debitNoteRepository, deliveryGuideRepository, quotationRepository);
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
