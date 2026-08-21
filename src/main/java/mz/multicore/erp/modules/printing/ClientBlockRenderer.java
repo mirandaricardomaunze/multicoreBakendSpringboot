@@ -25,23 +25,40 @@ public final class ClientBlockRenderer {
 
     private ClientBlockRenderer() {}
 
+    /** Sem nome livre — o documento identifica o comprador pelo cliente registado. */
     public static PdfPTable build(Client client, LocalDateTime date, Warehouse warehouse) {
+        return build(client, null, date, warehouse);
+    }
+
+    /**
+     * @param buyerLabel nome escrito à mão para um comprador sem registo ({@code walkInName} na
+     *        encomenda e na cotação, {@code customerName} na fatura). Quando existe, é <b>este</b>
+     *        o nome impresso: foi o que o operador escreveu, e é a esta pessoa que o documento se
+     *        dirige. Vazio ou nulo cai no cliente registado.
+     */
+    public static PdfPTable build(Client client, String buyerLabel, LocalDateTime date, Warehouse warehouse) {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         try { table.setWidths(new float[]{60f, 40f}); } catch (Exception ignored) {}
         table.setSpacingAfter(10f);
 
-        table.addCell(clientCell(client));
+        table.addCell(clientCell(client, buyerLabel));
         table.addCell(metaCell(date, warehouse));
         return table;
     }
 
-    private static PdfPCell clientCell(Client client) {
+    private static PdfPCell clientCell(Client client, String buyerLabel) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(PdfPCell.NO_BORDER);
         cell.addElement(new Paragraph("Cliente", PdfTheme.subtitleFont()));
+
+        String name = buyerLabel != null && !buyerLabel.isBlank()
+                ? buyerLabel.trim()
+                : (client == null ? null : client.getName());
+        if (name != null && !name.isBlank()) {
+            cell.addElement(new Paragraph(name, PdfTheme.bodyFont()));
+        }
         if (client != null) {
-            cell.addElement(new Paragraph(client.getName(), PdfTheme.bodyFont()));
             if (client.getTaxId() != null) {
                 cell.addElement(new Paragraph("NUIT: " + client.getTaxId(), PdfTheme.bodyFont()));
             }

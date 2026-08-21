@@ -8,6 +8,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
+import mz.multicore.erp.modules.comercial.model.OrderStatusLabel;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.stereotype.Service;
@@ -45,7 +46,15 @@ public class OrderPrintService {
                     "Encomenda",
                     order.getOrderNumber()
             ));
-            doc.add(ClientBlockRenderer.build(order.getClient(), order.getCreatedAt(), order.getWarehouse()));
+            doc.add(ClientBlockRenderer.build(order.getClient(), order.getWalkInName(),
+                    order.getCreatedAt(), order.getWarehouse()));
+            // Origem: quem abre a encomenda tem de conseguir chegar à proposta que a justificou.
+            if (order.getQuotationNumber() != null && !order.getQuotationNumber().isBlank()) {
+                Paragraph origin = new Paragraph(
+                        "Origem: Cotação " + order.getQuotationNumber(), PdfTheme.boldFont());
+                origin.setSpacingAfter(8f);
+                doc.add(origin);
+            }
             doc.add(LineItemsTableRenderer.build(toRows(order.getLines()),
                     documentConfigService.getColumns(order.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
             java.math.BigDecimal grossWeight = order.getLines().stream()
@@ -62,7 +71,17 @@ public class OrderPrintService {
                     order.getTotalAmount()
             ));
             doc.add(PdfDocumentBuilder.spacer(10f));
-            doc.add(new Paragraph("Estado: " + order.getStatus(), PdfTheme.boldFont()));
+            // Condições acordadas + data prometida. Mesmo bloco da cotação — é o mesmo acordo.
+            PdfPTable terms = CommercialTermsRenderer.build(order.getPaymentTerms(),
+                    order.getDeliveryTerms(), order.getExpectedDeliveryDate(), null);
+            if (terms != null) {
+                doc.add(terms);
+            }
+            doc.add(PdfDocumentBuilder.spacer(18f));
+            doc.add(SignatureBlockRenderer.build("Pela empresa", "Confirmação do cliente"));
+            doc.add(PdfDocumentBuilder.spacer(8f));
+            // Estado em PT-MZ: este documento vai para o cliente e imprimia "PENDING_APPROVAL".
+            doc.add(new Paragraph("Estado: " + OrderStatusLabel.of(order.getStatus()), PdfTheme.boldFont()));
         });
     }
 

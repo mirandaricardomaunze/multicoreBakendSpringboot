@@ -59,7 +59,8 @@ public class QuotationPrintService {
                     "Cotação",
                     quotation.getQuotationNumber()
             ));
-            doc.add(ClientBlockRenderer.build(quotation.getClient(), quotation.getQuotationDate(), null));
+            doc.add(ClientBlockRenderer.build(quotation.getClient(), quotation.getWalkInName(),
+                    quotation.getQuotationDate(), null));
             doc.add(buildValidityBlock(quotation));
             doc.add(LineItemsTableRenderer.build(toRows(quotation.getLines()),
                     documentConfigService.getColumns(quotation.getCompany().getId(), DocumentType.COMMERCIAL)));
@@ -69,9 +70,15 @@ public class QuotationPrintService {
                     quotation.getTotalAmount()
             ));
             doc.add(PdfDocumentBuilder.spacer(10f));
-            addConditions(doc, quotation);
+            // Bloco partilhado com a encomenda A4 — são o mesmo acordo, não podem divergir.
+            PdfPTable terms = CommercialTermsRenderer.build(
+                    quotation.getPaymentTerms(), quotation.getDeliveryTerms(), null, quotation.getNotes());
+            if (terms != null) {
+                doc.add(terms);
+            }
             doc.add(PdfDocumentBuilder.spacer(18f));
-            doc.add(buildAcceptanceBlock());
+            doc.add(SignatureBlockRenderer.build(
+                    "Pela empresa", "Aceite pelo cliente (nome, assinatura e data)"));
             doc.add(PdfDocumentBuilder.spacer(8f));
             doc.add(disclaimer());
         });
@@ -107,45 +114,6 @@ public class QuotationPrintService {
         }
         table.addCell(cell);
         return table;
-    }
-
-    /** Só sai o que estiver preenchido — condições em branco não ocupam espaço no documento. */
-    private void addConditions(com.lowagie.text.Document doc, Quotation quotation) {
-        boolean any = notBlank(quotation.getPaymentTerms())
-                || notBlank(quotation.getDeliveryTerms())
-                || notBlank(quotation.getNotes());
-        if (!any) return;
-
-        doc.add(new Paragraph("Condições", PdfTheme.subtitleFont()));
-        if (notBlank(quotation.getPaymentTerms())) {
-            doc.add(new Paragraph("Pagamento: " + quotation.getPaymentTerms(), PdfTheme.bodyFont()));
-        }
-        if (notBlank(quotation.getDeliveryTerms())) {
-            doc.add(new Paragraph("Prazo de entrega: " + quotation.getDeliveryTerms(), PdfTheme.bodyFont()));
-        }
-        if (notBlank(quotation.getNotes())) {
-            doc.add(new Paragraph("Observações: " + quotation.getNotes(), PdfTheme.bodyFont()));
-        }
-    }
-
-    private PdfPTable buildAcceptanceBlock() {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{50f, 50f}); } catch (Exception ignored) {}
-        table.addCell(signatureCell("Pela empresa"));
-        table.addCell(signatureCell("Aceite pelo cliente (nome, assinatura e data)"));
-        return table;
-    }
-
-    private PdfPCell signatureCell(String label) {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setPaddingTop(20f);
-        cell.setPaddingLeft(12f);
-        cell.setPaddingRight(12f);
-        cell.addElement(new Paragraph("____________________________", PdfTheme.bodyFont()));
-        cell.addElement(new Paragraph(label, PdfTheme.smallFont()));
-        return cell;
     }
 
     private Paragraph disclaimer() {

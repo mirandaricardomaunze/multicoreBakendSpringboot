@@ -45,7 +45,8 @@ public class InvoicePrintService {
                     "Fatura",
                     invoice.getInvoiceNumber()
             ));
-            doc.add(ClientBlockRenderer.build(invoice.getClient(), invoice.getCreatedAt(), invoice.getWarehouse()));
+            doc.add(ClientBlockRenderer.build(invoice.getClient(), invoice.getCustomerName(),
+                    invoice.getCreatedAt(), invoice.getWarehouse()));
             doc.add(LineItemsTableRenderer.build(toRows(invoice.getLines()),
                     documentConfigService.getColumns(invoice.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
