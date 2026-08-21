@@ -330,6 +330,17 @@ public class ComercialApiClient {
                 .get("/api/comercial/delivery-guides/" + id, DeliveryGuideDTO.class);
     }
 
+    /**
+     * Converte uma reposição interna na transferência entre armazéns que a cumpre.
+     * Ver {@code docs/REPOSICAO_INTERNA_SPEC.md}.
+     */
+    public mz.multicore.erp.modules.inventory.dto.StockTransferDTO convertOrderToTransfer(
+            Long orderId, String responsible, String vehicle, String notes) {
+        return clientFactory.authenticatedClient().post("/api/comercial/orders/" + orderId + "/transfer",
+                new mz.multicore.erp.modules.comercial.dto.ConvertOrderToTransferRequest(responsible, vehicle, notes),
+                mz.multicore.erp.modules.inventory.dto.StockTransferDTO.class);
+    }
+
     public DeliveryGuideDTO createDeliveryGuide(Long orderId, String responsible, String vehicle, String notes) {
         return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides",
                 new CreateDeliveryGuideRequest(orderId, responsible, vehicle, notes), DeliveryGuideDTO.class);

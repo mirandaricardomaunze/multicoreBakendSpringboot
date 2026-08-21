@@ -81,8 +81,28 @@ final class CommercialOrderSubmission {
         }
 
         WarehouseDTO warehouse = owner.warehousesList.get(whIdx);
+        OrderKind kind = selectedKind(owner);
+        if (kind.requiresDestinationWarehouse()) {
+            return CreateOrderRequest.replenishment(CurrentUserContext.getCurrentCompanyId(),
+                    warehouse.id(), destinationWarehouseId(owner, warehouse),
+                    new ArrayList<>(owner.draftOrderLines));
+        }
         return new CreateOrderRequest(clientId, walkInName, CurrentUserContext.getCurrentCompanyId(),
-                warehouse.id(), new ArrayList<>(owner.draftOrderLines), selectedKind(owner));
+                warehouse.id(), new ArrayList<>(owner.draftOrderLines), kind);
+    }
+
+    /** A loja que recebe. Validado aqui só para o operador não ir ao servidor descobrir o óbvio. */
+    private static Long destinationWarehouseId(ComercialPanel owner, WarehouseDTO origin) {
+        int index = owner.orderDestinationCombo == null ? -1 : owner.orderDestinationCombo.getSelectedIndex();
+        if (index < 0 || index >= owner.warehousesList.size()) {
+            throw new RuntimeException("Seleccione o armazém de destino: uma reposição interna tem de "
+                    + "dizer para que loja vai a mercadoria.");
+        }
+        WarehouseDTO destination = owner.warehousesList.get(index);
+        if (destination.id().equals(origin.id())) {
+            throw new RuntimeException("O armazém de destino tem de ser diferente do de origem.");
+        }
+        return destination.id();
     }
 
     /** Via escolhida no editor. Sem escolha feita, o pedido de separação — o uso diário do balcão. */

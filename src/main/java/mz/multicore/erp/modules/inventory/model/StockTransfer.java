@@ -56,6 +56,16 @@ public class StockTransfer extends BaseEntity {
     @Column(name = "notes", length = 500)
     private String notes;
 
+    /**
+     * Encomenda de reposição que originou esta transferência, ou que foi registada a partir dela.
+     * Nulo numa transferência feita directamente. Ver {@code docs/REPOSICAO_INTERNA_SPEC.md}.
+     */
+    @Column(name = "order_id")
+    private Long orderId;
+
+    @Column(name = "order_number", length = 40)
+    private String orderNumber;
+
     /** Quem aprovou/rejeitou a guia (username). Null enquanto pendente. */
     @Column(name = "approved_by")
     private String approvedBy;

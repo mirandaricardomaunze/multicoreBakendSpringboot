@@ -95,8 +95,31 @@ final class CommercialOrdersView {
         kindHint.setForeground(UIHelper.TEXT_MUTED);
         kindHint.setFont(kindHint.getFont().deriveFont(11f));
         formCard.add(kindHint, gbc);
-        owner.orderKindCombo.addActionListener(e -> kindHint.setText(kindHint(owner.selectedOrderKind())));
-        kindHint.setText(kindHint(OrderKind.PICKING_REQUEST));
+
+        // Destino: só a reposição interna o usa, e por isso só ela o mostra. Um campo visível que
+        // não se aplica é um convite a preenchê-lo — e um campo preenchido que ninguém lê é uma
+        // mentira no documento.
+        gbc.gridy = 100;
+        gbc.insets = new Insets(0, 8, 2, 8);
+        JLabel destLbl = new JLabel("Armazém de destino (loja que recebe):");
+        destLbl.setForeground(UIHelper.TEXT_MUTED);
+        formCard.add(destLbl, gbc);
+
+        gbc.gridy = 101;
+        gbc.insets = new Insets(2, 8, 12, 8);
+        owner.orderDestinationCombo = new JComboBox<>();
+        UIHelper.styleComboBox(owner.orderDestinationCombo);
+        formCard.add(owner.orderDestinationCombo, gbc);
+
+        Runnable syncKind = () -> {
+            OrderKind kind = owner.selectedOrderKind();
+            kindHint.setText(kindHint(kind));
+            boolean replenishment = kind.requiresDestinationWarehouse();
+            destLbl.setVisible(replenishment);
+            owner.orderDestinationCombo.setVisible(replenishment);
+        };
+        owner.orderKindCombo.addActionListener(e -> syncKind.run());
+        syncKind.run();
 
         // Row 2: Product Selection (Full Width)
         gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2; gbc.weightx = 1.0;
@@ -249,8 +272,9 @@ final class CommercialOrdersView {
         listCard.setLayout(new BorderLayout(0, 10));
         listCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // A coluna Tipo vai no fim para não deslocar os índices já usados pelas acções.
-        String[] ordersCols = {"ID", "Nº Encomenda", "Cliente", "Estado", "Total", "Impressões", "Tipo"};
+        // Colunas novas vão sempre para o fim, para não deslocar os índices já usados pelas acções.
+        String[] ordersCols = {"ID", "Nº Encomenda", "Cliente", "Estado", "Total", "Impressões", "Tipo",
+                "Origem", "Entrega prevista"};
         owner.ordersTableModel = new DefaultTableModel(ordersCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -278,6 +302,10 @@ final class CommercialOrdersView {
         owner.ordersTable.getColumnModel().getColumn(5).setPreferredWidth(100);  // Impressões
         owner.ordersTable.getColumnModel().getColumn(ComercialPanel.ORDERS_COL_KIND)
                 .setPreferredWidth(130);                                        // Tipo
+        owner.ordersTable.getColumnModel().getColumn(ComercialPanel.ORDERS_COL_ORIGIN)
+                .setPreferredWidth(110);                                        // Origem
+        owner.ordersTable.getColumnModel().getColumn(ComercialPanel.ORDERS_COL_DELIVERY)
+                .setPreferredWidth(130);                                        // Entrega prevista
 
         JScrollPane ordersScroll = new JScrollPane(owner.ordersTable);
         UIHelper.styleScrollPane(ordersScroll);

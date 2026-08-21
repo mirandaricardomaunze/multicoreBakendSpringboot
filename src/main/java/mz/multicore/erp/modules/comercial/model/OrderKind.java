@@ -27,7 +27,19 @@ public enum OrderKind {
      * Não passa por aprovação — o dinheiro e o stock só se movem na facturação, que tem as suas
      * próprias travas (limite de crédito, stock disponível).
      */
-    PICKING_REQUEST("Pedido de separação");
+    PICKING_REQUEST("Pedido de separação"),
+
+    /**
+     * Pedido de uma loja da própria empresa ao armazém que a abastece. Termina em
+     * <b>transferência entre armazéns</b>, não em factura: a mercadoria muda de armazém e continua
+     * a ser da empresa.
+     *
+     * <p>Não passa por aprovação porque a transferência já exige MANAGER/ADMIN para mover stock —
+     * pedir autorização nas duas pontas seria pedir duas vezes a mesma coisa, para o mesmo acto.
+     *
+     * <p>Ver {@code docs/REPOSICAO_INTERNA_SPEC.md}.
+     */
+    INTERNAL_REPLENISHMENT("Reposição interna");
 
     private final String label;
 
@@ -46,12 +58,34 @@ public enum OrderKind {
 
     /** Talão de 80 mm (com o desenho do recibo do POS) em vez de A4. */
     public boolean isThermal() {
-        return this == PICKING_REQUEST;
+        return this != FORMAL_ORDER;
     }
 
-    /** Só o pedido de separação percorre aguarda separação → em separação → separado. */
+    /** Percorre aguarda separação → em separação → separado. Trabalho de armazém. */
     public boolean usesSeparationFlow() {
-        return this == PICKING_REQUEST;
+        return this != FORMAL_ORDER;
+    }
+
+    /**
+     * Se esta via termina em factura ao cliente.
+     *
+     * <p><b>É a trava que impede o stock de sair duas vezes.</b> Uma reposição interna termina em
+     * transferência; se também pudesse ser facturada, a mercadoria saía uma vez na aprovação da
+     * transferência e outra na facturação — e a segunda saída viria do armazém de onde ela já tinha
+     * partido. A trava vive aqui, no documento, e não num aviso do ecrã.
+     */
+    public boolean isBillable() {
+        return this != INTERNAL_REPLENISHMENT;
+    }
+
+    /** Só a reposição interna se converte em transferência entre armazéns. */
+    public boolean usesWarehouseTransfer() {
+        return this == INTERNAL_REPLENISHMENT;
+    }
+
+    /** A reposição interna precisa de saber para que loja vai. */
+    public boolean requiresDestinationWarehouse() {
+        return this == INTERNAL_REPLENISHMENT;
     }
 
     /**

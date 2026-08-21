@@ -1008,6 +1008,7 @@ public class ComercialService {
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
+        Warehouse destination = resolveDestination(request, kind, warehouse);
         List<OrderLine> lines = new java.util.ArrayList<>();
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
@@ -1041,7 +1042,8 @@ public class ComercialService {
             lines.add(line);
         }
 
-        return placeOrder(company, client, warehouse, request.walkInName(), lines, kind);
+        return placeOrder(company, client, warehouse, destination, request.walkInName(), lines, kind,
+                request.agreedTerms());
     }
 
     /**
@@ -1057,15 +1059,37 @@ public class ComercialService {
      * <p>Recebe entidades e não DTOs por ser chamada de dentro do módulo, dentro da mesma
      * transacção — o mesmo padrão de {@code DeliveryGuideService}, que também parte da {@code Order}
      * persistida. A fronteira HTTP continua a ser só DTO.
+     *
+     * @param terms origem e condições acordadas; {@code null} ou {@link OrderTerms#none()} para a
+     *              encomenda sem acordo prévio (ver docs/ENCOMENDA_PROFISSIONAL_SPEC.md)
      */
     @Transactional
     public OrderDTO placeOrder(Company company, Client client, Warehouse warehouse, String walkInName,
-                                List<OrderLine> lines, OrderKind kind) {
+                                List<OrderLine> lines, OrderKind kind, OrderTerms terms) {
+        return placeOrder(company, client, warehouse, null, walkInName, lines, kind, terms);
+    }
+
+    /**
+     * Variante com armazém de <b>destino</b>, que só a reposição interna usa: é a loja que pediu.
+     * Ver {@code docs/REPOSICAO_INTERNA_SPEC.md} §3.1.
+     */
+    @Transactional
+    public OrderDTO placeOrder(Company company, Client client, Warehouse warehouse, Warehouse destination,
+                                String walkInName, List<OrderLine> lines, OrderKind kind, OrderTerms terms) {
+        OrderTerms agreed = OrderTerms.orNone(terms);
         Order order = new Order();
         order.setClient(client);
         order.setCompany(company);
         order.setWarehouse(warehouse);
+        order.setDestinationWarehouse(destination);
         order.setKind(kind);
+        order.setQuotationId(agreed.quotationId());
+        order.setQuotationNumber(agreed.quotationNumber());
+        order.setPaymentTerms(agreed.paymentTerms());
+        order.setDeliveryTerms(agreed.deliveryTerms());
+        // A data prometida conta da CONFIRMAÇÃO, não da aprovação interna: se a aprovação demorar,
+        // a data prometida ao cliente não se mexe — foi essa que ele leu.
+        order.assignExpectedDelivery(LocalDate.now(), agreed.deliveryDays());
         // A encomenda A4 passa pela Engine de Aprovações antes de ser faturável (ver
         // OrderApprovalCallback). O pedido de separação não — é trabalho interno de armazém, e o
         // dinheiro/stock só se move na facturação, que tem as suas próprias travas.
@@ -1111,6 +1135,15 @@ public class ComercialService {
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
 
         CurrentUserContext.requireCompany(order.getCompany().getId());
+        // A trava que impede o stock de sair duas vezes: uma reposição interna termina em
+        // transferência entre armazéns. Se também pudesse ser facturada, a mercadoria saía na
+        // aprovação da transferência e outra vez na facturação — a segunda de um armazém de onde
+        // já tinha partido. Ver docs/REPOSICAO_INTERNA_SPEC.md §2.
+        if (!OrderKind.orDefault(order.getKind()).isBillable()) {
+            throw new BusinessRuleException("Não é possível facturar a encomenda " + order.getOrderNumber()
+                    + ": é uma reposição interna, mercadoria que muda de armazém dentro da empresa. "
+                    + "Não há cliente a quem cobrar — o que a cumpre é a transferência entre armazéns.");
+        }
         if (!"PENDING".equalsIgnoreCase(order.getStatus()) && !"SEPARATED".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException("Apenas encomendas no estado PENDENTE podem ser faturadas.");
         }
@@ -1266,6 +1299,93 @@ public class ComercialService {
                 .contains(needle.trim().toLowerCase(java.util.Locale.ROOT));
     }
 
+    /**
+     * Armazém de destino de uma reposição interna — a loja que pediu (R5).
+     *
+     * <p>Obrigatório nesta via e recusado nas outras: uma venda a cliente não tem armazém de
+     * destino, e aceitar um em silêncio deixaria um campo a mentir no documento.
+     */
+    private Warehouse resolveDestination(CreateOrderRequest request, OrderKind kind, Warehouse origin) {
+        if (!kind.requiresDestinationWarehouse()) {
+            return null;
+        }
+        if (request.destinationWarehouseId() == null) {
+            throw new BusinessRuleException("Indique o armazém de destino: uma reposição interna "
+                    + "tem de dizer para que loja vai a mercadoria.");
+        }
+        if (request.destinationWarehouseId().equals(origin.getId())) {
+            throw new BusinessRuleException("O armazém de destino tem de ser diferente do de origem.");
+        }
+        Warehouse destination = warehouseRepository.findById(request.destinationWarehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
+        if (!request.companyId().equals(destination.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém de destino não pertence à empresa ativa.");
+        }
+        return destination;
+    }
+
+    /**
+     * Regista a encomenda de reposição em falta a partir de uma transferência já aprovada (R10).
+     *
+     * <p><b>Não move stock e não é um compromisso novo</b> — a mercadoria já mudou de armazém na
+     * aprovação da transferência. Isto é escrituração: deixar registado o pedido que justificou um
+     * movimento que já aconteceu. Por isso a encomenda nasce já {@code TRANSFERRED}.
+     */
+    @Transactional
+    public Order createReplenishmentRecord(mz.multicore.erp.modules.inventory.dto.StockTransferDTO transfer) {
+        CurrentUserContext.requireCompany(transfer.companyId());
+        Company company = companyRepository.findById(transfer.companyId())
+                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Warehouse origin = warehouseRepository.findById(transfer.originWarehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém de origem não encontrado."));
+        Warehouse destination = warehouseRepository.findById(transfer.destinationWarehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
+
+        Order order = new Order();
+        order.setClient(walkInClientProvider.getOrCreate());
+        order.setCompany(company);
+        order.setWarehouse(origin);
+        order.setDestinationWarehouse(destination);
+        order.setKind(OrderKind.INTERNAL_REPLENISHMENT);
+        order.setStatus("TRANSFERRED");
+        order.setStockTransferId(transfer.id());
+        order.setTransferNumber(transfer.transferNumber());
+        order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));
+        order.setCreatedBy(CurrentUserContext.getUsername());
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal totalTax = BigDecimal.ZERO;
+        for (var transferLine : transfer.lines()) {
+            Product product = productRepository.findByIdAndCompaniesId(transferLine.productId(), transfer.companyId())
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "Produto não encontrado ID: " + transferLine.productId()));
+            BigDecimal unitPrice = product.effectiveUnitPrice(transferLine.quantity());
+            BigDecimal taxRate = product.effectiveTaxRate();
+
+            OrderLine line = new OrderLine();
+            line.setProduct(product);
+            line.setQuantity(transferLine.quantity());
+            line.setUnitPrice(unitPrice);
+            line.setTaxRate(taxRate);
+            line.setDiscountPercentage(BigDecimal.ZERO);
+            line.setBatchNumber(transferLine.batchNumber());
+
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    unitPrice, transferLine.quantity(), BigDecimal.ZERO, taxRate);
+            line.setLineTotal(amounts.total());
+            order.addLine(line);
+
+            subtotal = subtotal.add(amounts.net());
+            totalTax = totalTax.add(amounts.tax());
+        }
+        // Os valores servem só para dimensionar o pedido — nunca serão cobrados a ninguém.
+        order.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
+        order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
+        order.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+
+        return orderRepository.save(order);
+    }
+
     public OrderDTO toDTO(Order order) {
         var logistics = mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.calculate(order.getLines().stream()
                 .map(line -> new mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.Input(
@@ -1309,7 +1429,19 @@ public class ComercialService {
                 order.getPrintCount(),
                 order.getLastPrintedBy(),
                 OrderKind.orDefault(order.getKind()),
-                OrderKind.orDefault(order.getKind()).label()
+                OrderKind.orDefault(order.getKind()).label(),
+                OrderStatusLabel.of(order.getStatus()),
+                order.getQuotationId(),
+                order.getQuotationNumber(),
+                order.getPaymentTerms(),
+                order.getDeliveryTerms(),
+                order.getExpectedDeliveryDate(),
+                // Atraso derivado no servidor: o relógio do posto de trabalho não pode discordar.
+                order.isDeliveryOverdue(LocalDate.now()),
+                order.getDestinationWarehouse() == null ? null : order.getDestinationWarehouse().getId(),
+                order.getDestinationWarehouse() == null ? null : order.getDestinationWarehouse().getName(),
+                order.getStockTransferId(),
+                order.getTransferNumber()
         );
     }
 

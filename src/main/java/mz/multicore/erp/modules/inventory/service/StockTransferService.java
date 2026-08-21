@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.inventory.service;
 
+import mz.multicore.erp.architecture.events.StockTransferResolvedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -51,6 +52,7 @@ public class StockTransferService {
     private final ProductBatchService productBatchService;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public StockTransferService(
             StockTransferRepository transferRepository,
@@ -61,8 +63,10 @@ public class StockTransferService {
             StockMovementRepository stockMovementRepository,
             ProductBatchService productBatchService,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
+        this.eventPublisher = eventPublisher;
         this.transferRepository = transferRepository;
         this.warehouseRepository = warehouseRepository;
         this.companyRepository = companyRepository;
@@ -129,8 +133,7 @@ public class StockTransferService {
             Long productId = line.getProduct().getId();
             BigDecimal needed = requestedByProduct.get(productId);
             if (needed == null) continue; // já validado noutra linha do mesmo produto
-            BigDecimal available = productBatchService.sumQuantity(productId, origin.getId());
-            if (available == null) available = BigDecimal.ZERO;
+            BigDecimal available = availableForExit(productId, origin.getId());
             if (available.compareTo(needed) < 0) {
                 throw new BusinessRuleException(String.format(
                         "Stock insuficiente de '%s' no armazém de origem '%s'. Requerido: %s, Disponível: %s",
@@ -141,6 +144,27 @@ public class StockTransferService {
 
         transfer = transferRepository.save(transfer);
         return toDTO(transfer);
+    }
+
+    /**
+     * Quantidade que pode sair deste armazém — <b>a mesma pergunta que a saída autoritativa
+     * responde</b> ({@code InventoryService.registerExit}).
+     *
+     * <p>Perguntar só aos lotes ({@code productBatchService.sumQuantity}) dava zero em stock que
+     * existe: os lotes são uma subdivisão do stock, materializada <b>preguiçosamente</b> na
+     * primeira saída ({@code ensureLegacyBatchIfNeeded} cria um lote LEGACY a cobrir a diferença).
+     * Instalações anteriores aos lotes — e a base de demonstração — têm {@code stocks} preenchido e
+     * {@code product_batches} vazio, pelo que a guia era recusada por falta de stock que lá estava.
+     *
+     * <p>É a forma exacta do defeito que este projecto já apanhou três vezes: a mesma regra em duas
+     * portas, a responder coisas diferentes.
+     */
+    private BigDecimal availableForExit(Long productId, Long warehouseId) {
+        BigDecimal fromBatches = productBatchService.sumQuantity(productId, warehouseId);
+        final BigDecimal batches = fromBatches == null ? BigDecimal.ZERO : fromBatches;
+        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId)
+                .map(stock -> stock.getQuantity().max(batches))
+                .orElse(batches);
     }
 
     /**
@@ -170,7 +194,35 @@ public class StockTransferService {
         StockTransfer saved = transferRepository.save(transfer);
         auditLogService.logCurrent("STOCK_TRANSFER_APPROVE",
                 "Guia " + saved.getTransferNumber() + " aprovada.");
+        announce(saved, StockTransferResolvedEvent.Outcome.APPROVED);
         return toDTO(saved);
+    }
+
+    /**
+     * Liga a transferência à encomenda de reposição que a originou (ou que foi registada a partir
+     * dela). Ver {@code docs/REPOSICAO_INTERNA_SPEC.md} §4.
+     */
+    @Transactional
+    public StockTransferDTO linkToOrder(Long transferId, Long orderId, String orderNumber) {
+        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(
+                        transferId, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        transfer.setOrderId(orderId);
+        transfer.setOrderNumber(orderNumber);
+        // Devolve já ligada: quem converteu tem de ver a encomenda de origem na resposta, e não
+        // uma fotografia tirada antes da ligação existir.
+        return toDTO(transferRepository.save(transfer));
+    }
+
+    /**
+     * Avisa quem esteja à espera do desfecho da transferência.
+     *
+     * <p>Só quando veio de uma encomenda: uma transferência feita directamente não tem nada a
+     * actualizar. O inventário não conhece o comercial — ver {@link StockTransferResolvedEvent}.
+     */
+    private void announce(StockTransfer transfer, StockTransferResolvedEvent.Outcome outcome) {
+        if (transfer.getOrderId() == null) return;
+        eventPublisher.publishEvent(new StockTransferResolvedEvent(transfer.getOrderId(), outcome));
     }
 
     /** Rejeita uma guia pendente — não move stock. Só MANAGER/ADMIN. */
@@ -193,6 +245,7 @@ public class StockTransferService {
         StockTransfer saved = transferRepository.save(transfer);
         auditLogService.logCurrent("STOCK_TRANSFER_REJECT",
                 "Guia " + saved.getTransferNumber() + " rejeitada. Motivo: " + rejectionReason);
+        announce(saved, StockTransferResolvedEvent.Outcome.REJECTED);
         return toDTO(saved);
     }
 
@@ -208,6 +261,7 @@ public class StockTransferService {
         StockTransfer saved = transferRepository.save(transfer);
         auditLogService.logCurrent("STOCK_TRANSFER_CANCEL",
                 "Guia " + saved.getTransferNumber() + " cancelada.");
+        announce(saved, StockTransferResolvedEvent.Outcome.CANCELLED);
         return toDTO(saved);
     }
 
@@ -221,6 +275,14 @@ public class StockTransferService {
      */
     private String moveProduct(StockTransfer transfer, Product product, Warehouse origin,
                                 Warehouse destination, BigDecimal quantity) {
+        // Mesma migração preguiçosa que a saída de venda faz: stock antigo sem lote é materializado
+        // antes de se consumir FEFO. Sem isto a transferência encontrava "Disponível em lotes: 0"
+        // em stock que existe — e nunca funcionou sobre dados anteriores ao rastreio de lote.
+        productBatchService.materialiseLegacyIfNeeded(product, origin,
+                stockRepository.findByProductIdAndWarehouseId(product.getId(), origin.getId())
+                        .map(Stock::getQuantity)
+                        .orElse(null));
+
         List<ProductBatchService.BatchConsumption> debits =
                 productBatchService.consumeFEFO(product, origin, quantity);
 
@@ -332,7 +394,9 @@ public class StockTransferService {
                 t.getApprovedBy(),
                 t.getApprovedAt(),
                 t.getRejectionReason(),
-                lineDTOs
+                lineDTOs,
+                t.getOrderId(),
+                t.getOrderNumber()
         );
     }
 }

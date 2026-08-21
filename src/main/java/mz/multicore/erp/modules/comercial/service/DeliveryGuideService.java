@@ -62,6 +62,15 @@ public class DeliveryGuideService {
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
 
+        // A guia de remessa entrega a um cliente. Uma reposição interna não tem cliente — a
+        // mercadoria muda de armazém e continua a ser da empresa. O documento dela é a guia de
+        // transferência. Ver docs/REPOSICAO_INTERNA_SPEC.md §3 (R2).
+        if (mz.multicore.erp.modules.comercial.model.OrderKind
+                .orDefault(order.getKind()).usesWarehouseTransfer()) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber()
+                    + " é uma reposição interna e não tem cliente a quem entregar. "
+                    + "Converta-a em transferência entre armazéns.");
+        }
         if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException(
                     "Só encomendas aprovadas e ainda não expedidas/faturadas podem gerar guia. "

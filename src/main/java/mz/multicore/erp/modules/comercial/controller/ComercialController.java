@@ -16,10 +16,13 @@ public class ComercialController {
 
     private final ComercialService comercialService;
     private final ConcurrencyRetry concurrencyRetry;
+    private final mz.multicore.erp.modules.comercial.service.InternalReplenishmentService replenishmentService;
 
-    public ComercialController(ComercialService comercialService, ConcurrencyRetry concurrencyRetry) {
+    public ComercialController(ComercialService comercialService, ConcurrencyRetry concurrencyRetry,
+            mz.multicore.erp.modules.comercial.service.InternalReplenishmentService replenishmentService) {
         this.comercialService = comercialService;
         this.concurrencyRetry = concurrencyRetry;
+        this.replenishmentService = replenishmentService;
     }
 
     @GetMapping("/clients")
@@ -186,6 +189,14 @@ public class ComercialController {
     @PostMapping("/orders")
     public ResponseEntity<OrderDTO> createOrder(@RequestBody @Valid CreateOrderRequest request) {
         return ResponseEntity.ok(comercialService.createOrder(request));
+    }
+
+    /** Converte uma reposição interna na transferência que a cumpre. Ver REPOSICAO_INTERNA_SPEC §4. */
+    @PostMapping("/orders/{id}/transfer")
+    public ResponseEntity<mz.multicore.erp.modules.inventory.dto.StockTransferDTO> convertToTransfer(
+            @PathVariable Long id,
+            @RequestBody(required = false) @Valid mz.multicore.erp.modules.comercial.dto.ConvertOrderToTransferRequest request) {
+        return ResponseEntity.ok(replenishmentService.convertToTransfer(id, request));
     }
 
     @PostMapping("/orders/{id}/bill")

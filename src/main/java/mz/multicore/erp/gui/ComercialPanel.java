@@ -79,6 +79,8 @@ public class ComercialPanel extends JPanel {
     JComboBox<String> orderClientCombo;
     JTextField orderClientWalkInField;
     JComboBox<String> orderWarehouseCombo;
+    /** Armazém que recebe, só visível na reposição interna. Ver docs/REPOSICAO_INTERNA_SPEC.md. */
+    JComboBox<String> orderDestinationCombo;
     JComboBox<String> orderProductCombo;
     QuantityField orderQuantityField;
     QuantityField orderBoxesField;
@@ -100,6 +102,8 @@ public class ComercialPanel extends JPanel {
     static final int ORDERS_COL_ID = 0;
     static final int ORDERS_COL_STATUS = 3;
     static final int ORDERS_COL_KIND = 6;
+    static final int ORDERS_COL_ORIGIN = 7;
+    static final int ORDERS_COL_DELIVERY = 8;
 
     // TAB 5: GUIAS DE REMESSA ELEMENTS
 
@@ -338,11 +342,13 @@ public class ComercialPanel extends JPanel {
     private void applyWarehouses(List<WarehouseDTO> loaded) {
         warehouseCombo.removeAllItems();
         orderWarehouseCombo.removeAllItems();
+        if (orderDestinationCombo != null) orderDestinationCombo.removeAllItems();
         warehousesList = loaded;
 
         for (WarehouseDTO w : warehousesList) {
             warehouseCombo.addItem(w.name());
             orderWarehouseCombo.addItem(w.name());
+            if (orderDestinationCombo != null) orderDestinationCombo.addItem(w.name());
         }
     }
 
@@ -758,8 +764,20 @@ public class ComercialPanel extends JPanel {
             return;
         }
 
-        Long orderId = (Long) ordersTableModel.getValueAt(row, 0);
-        String status = String.valueOf(ordersTableModel.getValueAt(row, 3));
+        Long orderId = (Long) ordersTableModel.getValueAt(row, ORDERS_COL_ID);
+        String status = String.valueOf(ordersTableModel.getValueAt(row, ORDERS_COL_STATUS));
+
+        // A via decide que guia sai — remessa ao cliente ou transferência entre armazéns. Mesmo
+        // princípio da impressão: o documento é um facto da encomenda, não do estado em que está.
+        Object kindCell = ordersTableModel.getValueAt(row, ORDERS_COL_KIND);
+        if (kindCell instanceof mz.multicore.erp.modules.comercial.model.OrderKind kind
+                && kind.usesWarehouseTransfer()) {
+            UIHelper.loadAsync(this, () -> comercialApiClient.getOrderById(orderId),
+                    order -> InternalReplenishmentActions.showConvertDialog(this, comercialApiClient, order),
+                    error -> showCommercialLoadError("encomenda", error));
+            return;
+        }
+
         if (!"PENDING".equals(status)) {
             JOptionPane.showMessageDialog(this,
                     "Apenas encomendas aprovadas no estado PENDING podem ser convertidas em guia. Estado atual: " + status,
@@ -862,9 +880,19 @@ public class ComercialPanel extends JPanel {
                     order.status(),
                     order.totalAmount(),
                     impressoes,
-                    order.kind()
+                    order.kind(),
+                    order.quotationNumber() == null ? "—" : order.quotationNumber(),
+                    formatExpectedDelivery(order)
             });
         }
+    }
+
+    /** Data prometida, com o atraso que o <b>servidor</b> calculou — o painel não compara datas. */
+    private static String formatExpectedDelivery(OrderDTO order) {
+        if (order.expectedDeliveryDate() == null) return "—";
+        String date = order.expectedDeliveryDate()
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        return order.deliveryOverdue() ? date + " (em atraso)" : date;
     }
 
     void openBillFromOrderDialog() {

@@ -380,6 +380,23 @@ class ComercialServiceTest {
                 any(), any(), any());
     }
 
+    @Test // RI-09 💰 — a trava que impede o stock de sair duas vezes
+    void billOrder_reposicaoInterna_recusa_eNaoMoveStock() {
+        // Uma reposição interna termina em transferência entre armazéns. Se também pudesse ser
+        // facturada, a mercadoria saía na aprovação da transferência e outra vez aqui — a segunda
+        // de um armazém de onde já tinha partido. Ver docs/REPOSICAO_INTERNA_SPEC.md §2.
+        Order order = pendingOrder(new BigDecimal("3"));
+        order.setKind(mz.multicore.erp.modules.comercial.model.OrderKind.INTERNAL_REPLENISHMENT);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
+
+        assertTrue(error.getMessage().contains("reposição interna"), error.getMessage());
+        assertFalse(error.getMessage().contains("INTERNAL_REPLENISHMENT"), error.getMessage());
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
     @Test
     void billOrder_encomendaJaFaturada_bloqueia() {
         Order order = pendingOrder(new BigDecimal("3"));
