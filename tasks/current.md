@@ -2,6 +2,263 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
+### Verificação — 2026-08-23 — **suite completa verde, bloqueador do B7.1/B7.2 levantado**
+
+- A árvore voltou a compilar: `CrmTicketActions` e `CrmWorkSheetActions` existem e as migrações
+  deixaram de ter duas V46 (V46 reposição · V47 CRM · V48 ligação Employee↔AppUser).
+- **`mvn -o clean test` → 713 testes, 0 falhas, 0 erros, 0 ignorados** (eram 705 no fecho do CRM;
+  +8 do `HRServiceTest`, que passou de 13 a 21 no B7.2). 617 fontes principais compilam limpo.
+- **Armadilha a evitar, custou duas corridas:** duas sessões a correr `mvn` sobre a **mesma** árvore
+  partilham o `target/`, e o `clean` de uma apaga os `.class` que a outra está a ler. Deu um erro que
+  parece defeito grave e não é — `QuotationLineDTO.class` *truncated at offset 0* (ficheiro de 0
+  bytes) e, à segunda, `clean` incapaz de apagar `target/classes/db/migration`. **Um build de cada
+  vez**; com dois em curso, nenhum resultado é de confiança.
+- `lg.json` na raiz era lixo de teste ao vivo (token de sessão expirado a 22/08) — **apagado**.
+
+**Trabalho posto no git a 2026-08-23** (estava tudo só na árvore de trabalho):
+
+| Commit | O quê |
+|---|---|
+| `66e513f` | encomenda profissional — origem, condições, entrega prevista (V45 + `delivery_days` na V44) |
+| `51abc6e` | CRM — ciclo de vida do pedido, folha de obra imprimível, 3 bugs de dinheiro, fuga entre tenants (V47) |
+| `03a3a64` | reposição interna — acabamento desktop + materialização de lotes numa só porta |
+| `ace17c8` | separadores do Comercial que se escondiam atrás das setas |
+| `4660028` | cadastro de clientes sai do balcão do POS |
+
+- **O commit `2471323` estava partido:** foi feito com quatro classes por adicionar ao git
+  (`OrderTerms`, `OrderStatusLabel`, `CommercialTermsRenderer`, `SignatureBlockRenderer`) e com o
+  `StockTransferService` a chamar um `materialiseLegacyIfNeeded` que não existia. **O HEAD não
+  compilava desde 21/08.** O `66e513f` fecha a primeira metade e o `03a3a64` a segunda — a mensagem
+  do `66e513f` diz que repara o build por inteiro, o que é impreciso. Confirmado a compilar cada
+  commit em árvore isolada (`git worktree`), que é o único sítio onde isso se vê.
+- **RH (B7.1/B7.2) ficou POR COMMITAR, deliberadamente.** Enquanto isto era commitado, outra sessão
+  escreveu nesta mesma árvore um módulo de contratos de trabalho (V49, `EmploymentContract*`,
+  `DocumentSeries`) **dentro dos mesmos ficheiros** — `HRService`, `HRPanel`, `HRServiceTest`,
+  `HRController`, `HRApiClient`. Já não se separam sem cortar hunk a hunk trabalho alheio a meio, e
+  nada disso está coberto pela corrida das 05:42. Decidir se B7.1/B7.2 e contratos vão num commit só.
+
+### CRM & Assistência — 2026-08-22 — **fase fechada**
+
+- **Pedido do utilizador:** "no crm e assistencia nao falta nada / como acoes de botoes".
+- **O diagnóstico:** a aba "Pedidos de Assistência" não tinha **um único botão** — `POST
+  /api/crm/tickets` existia no backend mas o `CRMApiClient` nem tinha o método, por isso não havia
+  como abrir um pedido a partir da aplicação. E dos dois botões das Folhas de Obra, **"Faturar"
+  rebentava sempre**.
+- **Três bugs de dinheiro no `CRMService`, confirmados contra o backend a correr, não hipóteses:**
+  1. `SERV-TEC` nascia com `stockTracked=true` (default do `Product`) → o FEFO recusava a saída de
+     mão de obra com *"Stock insuficiente"* e **nenhuma folha era faturável**. Nasce sem stock, e
+     produtos antigos são reparados ao faturar.
+  2. `hoursWorked().intValue()` truncava as horas: 2,5 h saíam da factura como 2. `quantity` já era
+     `BigDecimal` — a folha dizia 212,50 e a factura cobrava 190.
+  3. `partsProduct.setUnitPrice(custo desta folha)` reescrevia o **catálogo partilhado** a cada
+     facturação. Agora o preço unitário fica fixo em 1,00 e o valor viaja na quantidade.
+- **Fuga entre tenants fechada:** o fallback `findBySku(...)` sem empresa ia buscar o produto de
+  outro tenant e anexava-lhe a empresa actual. Só `findBySkuAndCompaniesId`.
+- **Ciclo de vida do pedido** (`V47__crm_ticket_lifecycle.sql`): `status` deixou de ser `String`
+  livre → enums `TicketStatus` (Aberto/Em curso/Resolvido/Anulado) e `TicketPriority`, mais
+  `assignedTechnician`, `resolvedAt` e `closingNote`. Fecha-se um pedido **sem folha de obra**
+  (resolvido ao telefone), anula-se com motivo obrigatório, reabre-se. Nomes das constantes
+  escolhidos para coincidir com as strings antigas: sem conversão de dados.
+- **Folha de obra** ganhou `hourlyRate` gravada (a tarifa era constante no código; agora é o preço
+  do `SERV-TEC` no catálogo), correcção e **anulação com motivo** — anular reabre o pedido se não
+  sobrar trabalho vivo. Faturada, fecha-se: só nota de crédito.
+- **PDF novo:** `WorkSheetPrintService` + `/api/print/work-sheet/{id}`. Era o único documento do
+  sistema sem impressão. Deliberadamente **não fiscal** — resumo próprio (Mão de obra / Peças /
+  TOTAL sem IVA) em vez do `TotalsBlockRenderer`, porque imprimir "IVA 0,00" num papel que o
+  cliente assina seria dizer-lhe que não paga imposto. Folha anulada sai carimbada.
+- **Desktop:** `CRMPanel` decomposto em `CrmTicketActions` + `CrmWorkSheetActions` (molde do
+  `StockTransferActions`). Botões novos: Novo Pedido, Abrir Pedido (assumir/resolver/anular/reabrir
+  + atribuir técnico e prioridade), Actualizar, Corrigir, Anular, Imprimir PDF.
+- **Verificação:** `CRMServiceTest` (19) + `WorkSheetPrintServiceTest` (5, lêem o **texto** do PDF);
+  suite completa **705/705**. Ensaio ponta-a-ponta contra o backend: folha de 2,5 h + 100 MT →
+  factura FT-2026/1 com base **212,50** e IVA 34,00 — o número da folha e o da factura batem certo
+  pela primeira vez.
+
+### Auditoria — 2026-08-22 (RH: o que falta para além de contratos e ponto) — **só documentação**
+
+- **Pedido do utilizador:** "no RH falta contratos e ponto, o que mais para ser mais completo".
+- Spec/harness novos: `docs/RH_COMPLETO_SPEC.md` + `docs/RH_COMPLETO_HARNESS.md` (RHC-01..76 auto,
+  RHC-90..94 manuais). **Nada implementado** — é proposta e medição.
+- **O diagnóstico:** o RH sabe pagar, não sabe empregar. Falta o que vem **antes** do recibo
+  (contrato, ponto), o que vem **depois** (cessação e acerto final) e o **dinheiro que fica por
+  entregar** — IRPS e INSS são calculados e impressos no mapa fiscal e nunca mais tocados: não há
+  obrigação registada, não há saída de tesouraria, e os salários continuam sem lançamento
+  contabilístico (já declarado em `CONTABILIDADE_SPEC §7`).
+- **Defeitos confirmados no código, não hipóteses** (marcados 🔴 no harness): `recordAbsence`,
+  `deleteAbsence`, `submitVacation` e `submitExpense` **não têm guarda de perfil nem auditoria** e
+  recebem o `employeeId` no corpo — qualquer EMPLOYEE lança/apaga faltas e submete despesas em nome
+  de um colega; `contractEndDate` não trava a folha mensal (paga-se a quem já saiu); `baseSalary` é
+  sobreposto sem histórico (é o bug da margem histórica da V37 no RH); férias contadas em dias de
+  **calendário** contra os "dias úteis" prometidos na spec, com direito anual fixo em `22`
+  compilado; recibo sem `APPROVED`, ao contrário do que a `HR_PAYROLL_SPEC §3` promete.
+- ~~**Bloqueador encontrado de passagem:** duas migrações V46.~~ **Resolvido (2026-08-22):** a do CRM
+  passou a `V47__crm_ticket_lifecycle.sql`; `V46__internal_replenishment.sql` (já no git) ficou.
+- **Não decidido pela IA:** valores legais (dias de férias por antiguidade, acréscimos de hora
+  extra, prazos de INSS/IRPS, aviso prévio) ficam **configuráveis** e por confirmar com o
+  contabilista, no molde do `PayrollTaxConfig`.
+
+**B7.1 fechado (2026-08-22)** — guardas e rasto, sem alteração de schema:
+
+- `recordAbsence`, `deleteAbsence` e `submitVacation` passaram a exigir `ensureHrManager()`.
+  Eliminar uma falta era a porta mais silenciosa do RH: apagava o desconto que ela provoca no
+  recibo, sem guarda e sem rasto — o líquido subia e não ficava nada escrito.
+- Auditoria nova: `ABSENCE_CREATE` e `ABSENCE_DELETE` (o `delete` carrega a falta **antes** de
+  apagar, por `AbsenceRepository.findByIdAndEmployeeCompanyId`, para o rasto poder nomeá-la).
+- **`submitExpense` ficou deliberadamente sem guarda**, com auditoria `EXPENSE_SUBMIT` que nomeia
+  o colaborador **e** quem submeteu. É o único dos quatro com uso self-service legítimo (o
+  `DataLoader` submete como `EMPLOYEE` de propósito, para o painel de Aprovações mostrar o
+  submissor real); recusar exige a ligação `Employee ↔ User` (B7.2). Até lá, a substituição fica
+  **visível** em vez de impossível — e isso está declarado, não escondido.
+- **Verificação:** `HRServiceTest` 13/13 verdes; os **6 casos novos confirmados a falhar** contra o
+  `HRService` de HEAD. Dois deles só provam a guarda depois de terem sido apertados: passavam
+  contra o código antigo por outro motivo (colaborador/falta por stubbed), e agora afirmam a
+  mensagem da guarda.
+- **Não foi possível correr `mvn test` completo:** a árvore de trabalho está partida por **outra
+  sessão a meio de um refactor do CRM** — `gui/CRMPanel.java` (alterado às 21:02) importa
+  `CrmTicketActions` e `CrmWorkSheetActions`, que ainda não existem. Não lhe toquei. O backend
+  compila limpo (489 ficheiros, tudo menos `gui/` e `desktop/`) e os testes correram por
+  `javac` + JUnit Platform directos. ~~**Correr `mvn -o clean test` assim que o CRM fechar.**~~
+  **Corrido a 2026-08-23: 713 testes, 0 falhas/erros/ignorados** (ver abaixo).
+- **UI:** nas abas Faltas e Férias, um utilizador EMPLOYEE passa a receber a recusa em PT-MZ do
+  servidor. Desactivar os botões por perfil fica para quando o B7.2 trouxer a noção de "o próprio".
+
+**B7.2 fechado (2026-08-22)** — `Employee ↔ AppUser`, **migração V48**:
+
+- **A regra:** *um gestor age por qualquer colaborador; toda a gente age por si própria e por mais
+  ninguém* (`HRService.ensureCanActFor`). Até aqui "o próprio" não era identificável, pelo que agir
+  por outro era **indistinguível** de agir por si — e a única defesa possível (exigir MANAGER em
+  tudo, como o B7.1 fez às férias) matava o self-service, que é metade do sentido de um RH.
+- `submitVacation` e `submitExpense` voltam a ser self-service **e** recusam nome alheio.
+  `getAllPayslips` filtra para quem não é gestor, e **`loadPayslipForPrint` aplica a mesma regra** —
+  filtrar a lista e deixar imprimir por id era meia porta.
+- Associação validada nas três frentes: conta tem de existir, ter acesso à empresa activa e não
+  estar já noutro colaborador (espelha o índice único da V48). Campo em branco desliga a ligação.
+- **Coluna nullable de propósito:** colaboradores sem conta — a maioria numa loja — continuam
+  exactamente como antes. Nenhuma linha existente é alterada.
+- **Desktop:** campo "Conta de Utilizador (opcional)" no cadastro do colaborador. `HRPanel` ficou em
+  **995 linhas** (limite 1000 do `UiPanelDecompositionTest`) — a próxima adição tem de sair para
+  classe própria. `DataLoader` liga maria/joão às contas, para o self-service ser demonstrável.
+- **Verificação:** `HRServiceTest` **21/21 verdes**; contra uma variante sem `ensureCanActFor` e sem
+  o filtro dos recibos, **5 falham** — as 5 que carregam a regra. As outras 3 afirmam permissão e
+  não recusa, pelo que passam nas duas versões (dito aqui para não se confundir com cobertura).
+- **V48 escolhida a saltar o V47 de propósito**, para deixar essa versão livre para o
+  `V46__crm_ticket_lifecycle.sql` da outra sessão ser renomeado. ~~O Flyway não arranca com duas
+  V46~~ — **resolvido a 2026-08-23**: a outra sessão renomeou-o para V47, exactamente como se
+  esperava, pelo que a V48 encaixou sem colisão.
+- ~~**Por correr:** `mvn -o clean test` completo~~ **feito a 2026-08-23** (713 verdes; **730** depois
+  do B1.1). **Continua por correr:** V48 e V49 contra PostgreSQL real (receita do cluster
+  descartável de 21/08).
+
+**B1.1 fechado (2026-08-23)** — contrato de trabalho como documento, **migração V49**:
+
+- **A regra que carrega o bloco: o contrato manda na folha.** `processMonthlyPayroll` filtrava só
+  por `status == ACTIVE` na ficha — quem tinha contrato terminado a 31 de Julho recebia recibo em
+  Agosto, em silêncio, com saída de tesouraria e tudo. Agora quem não tem contrato vigente no mês é
+  saltado, e o resultado **diz quem e porquê**: `PayrollRunDTO(gerados, saltados)`.
+- **O silêncio era metade do defeito.** "12 recibos gerados" que esconde um 13º colaborador saltado
+  só se descobre quando alguém reclama o ordenado. A frase vive em `PayrollRunDTO.summaryMessage()`,
+  não no painel — o `HRPanel` mudou **uma linha** (está a 995/1000 do guard-test).
+- **Cobre qualquer dia do mês, não o último:** quem tem contrato até dia 15 trabalhou meio mês e tem
+  de ser pago. Usar só o último dia do mês fá-lo-ia desaparecer da folha.
+- **Nasce `RASCUNHO`, não `VIGENTE`** — divergência assumida contra a linha RHC-10 do harness, que
+  contradizia a máquina de estados da própria spec. É a **activação** que verifica a sobreposição e
+  escreve o salário acordado na ficha; assim dá para preparar um contrato com antecedência.
+- **`EXPIRADO` não é estado gravado**, deriva-se de `end_date` contra hoje — mesma lição da cotação.
+  Sem agendador nocturno e sem linhas desactualizadas entre passagens.
+- **Renovar cria contrato novo** ligado ao anterior, que fecha na **véspera** do novo. O histórico
+  do que foi acordado é imutável.
+- Serviço e controller **próprios** (`EmploymentContractService`/`Controller`): o `HRService` já
+  carrega colaboradores, recibos, faltas, férias, despesas e impostos.
+- **Verificação:** `EmploymentContractServiceTest` **15/15**, `HRServiceTest` **23/23**, suite
+  completa **730 verdes**.
+- **B1.2 por fazer:** PDF do contrato, alertas no `NotificationFeed` (a consulta e o endpoint
+  `/ending-soon` já existem) e o separador de contratos no `HRPanel` — que tem de nascer em classe
+  própria por causa do limite de 1000 linhas.
+
+### Progresso — 2026-08-21 (encomenda profissional + reposição interna: tudo a funcionar ao vivo)
+
+**Encomenda profissional** (spec/harness: `ENCOMENDA_PROFISSIONAL_SPEC.md` + `_HARNESS.md`, EP-01..30
+auto, EP-50..58). A conversão da cotação produzia uma encomenda **muda**: não sabia de onde vinha,
+esquecia as condições negociadas, nunca tinha data de entrega, e o PDF terminava com
+`Estado: PENDING_APPROVAL` — código interno num documento que vai para o cliente.
+
+- `Order` += origem (`quotationId`/`quotationNumber`), condições copiadas e `expectedDeliveryDate`.
+- **A cotação promete DIAS, a encomenda grava a DATA.** A cotação não sabe quando o cliente vai
+  confirmar; a data nasce na conversão e fica gravada (molde do `Invoice.dueDate`). Se a aprovação
+  interna atrasar, a data prometida não se mexe.
+- `OrderStatusLabel` como fonte única PT-MZ; o `switch` privado e incompleto do
+  `CustomerOrderFulfillmentService` passou a delegar.
+- Extraídos `CommercialTermsRenderer` e `SignatureBlockRenderer`, partilhados por encomenda, cotação
+  e guia. **Duas afirmações do harness foram corrigidas por serem falsas:** há mais **10 cópias**
+  byte-a-byte do `signatureCell` (salários/stock/fiscal) e o `UIHelper.humanStatus` diz "Pendente"
+  onde o `OrderStatusLabel` diz "Pendente de aprovação". Ambas ficam **declaradas** na spec §5.
+- **EP-07/08/09 e EP-15 confirmados a falhar** contra as variantes sem as regras.
+
+**Reposição interna** (`REPOSICAO_INTERNA_SPEC.md`, V46): a encomenda de uma loja ao armazém que a
+abastece, que termina em transferência e **nunca em factura**. Assumida e fechada nesta sessão.
+
+- **Dois bugs de produção encontrados a correr, que nenhum teste apanhava:**
+  1. **`kind` era `varchar(20)` e `INTERNAL_REPLENISHMENT` tem 22 caracteres.** A via nova não cabia
+     na base de dados: gravar rebentava com erro de SQL, não com regra de negócio. Coluna alargada
+     para 40 na V46 (e no mapeamento), com folga para a próxima via.
+  2. **A transferência nunca funcionou sobre stock sem lotes** — defeito pré-existente. Os lotes são
+     uma subdivisão do stock, materializada preguiçosamente na 1.ª saída; a venda fazia essa
+     migração (`ensureLegacyBatchIfNeeded`) e a transferência consumia FEFO por conta própria,
+     encontrando "Disponível em lotes: 0" em stock que existe. Como a base de demonstração — e
+     qualquer instalação anterior aos lotes — tem `stocks` preenchido e `product_batches` vazio, a
+     reposição era **inutilizável**. A regra passou a viver num só sítio
+     (`ProductBatchService.materialiseLegacyIfNeeded`), usada pelas duas portas.
+- `StockTransferServiceTest` actualizado ao construtor novo (+ 2 casos para a regra acima).
+
+**Verificação:** build limpo, suite completa **670 testes, 0 falhas/erros/ignorados** (eram 646).
+
+**VALIDADO AO VIVO** (backend de pé, H2, dados de demo, ADMIN/MANAGER/EMPLOYEE):
+- **EP:** cotação com condições e 7 dias → encomenda com origem `CT-2026/1`, condições herdadas e
+  **entrega prevista = hoje+7 exacta**; estado em PT-MZ; PDF gerado.
+- **RI:** R5 (origem=destino recusado), **R1** (facturar recusado), **R2** (guia recusada), **R6**
+  (converte em `TRF-2026/1`, encomenda → "Transferência por aprovar"), **R8** (2.ª conversão
+  recusada nomeando a transferência), **R9** (aprovar move o stock **uma vez**: Arroz 85→80 e +5 no
+  destino, Açúcar 120→110 e +10; encomenda → "Transferido para a loja"), **R10/R11/R12** (registo
+  retroactivo cria `EC-2026/3` já `TRANSFERRED`, recusa duplicar e recusa transferência por aprovar).
+- Todas as recusas com mensagens PT-MZ que dizem **o que fazer a seguir**, não só que falhou.
+
+**Desktop fechado:** botão **"Converter em Transferência"** na aba de encomendas (com diálogo de
+transporte; lê a via da célula, que guarda o `OrderKind`, e recusa vendas a cliente antes de ir ao
+servidor) e **"Registar Encomenda"** em Stock › Transferências, para o armazém que transferiu sem
+pedido formal. A lógica ficou em `OrderToTransferAction` (padrão do `CustomerOrderFulfillmentActions`)
+para o `ComercialPanel` não passar das 1000 linhas — ficou em **994**, apertado; a próxima adição
+tem de sair para uma classe própria.
+
+**Verificação final:** build de raiz (606 fontes), suite **674 testes, 0 falhas/erros/ignorados**.
+**Validado ao vivo:** reposição → `TRF-2026/1` com dados de transporte (a resposta já reflecte a
+ligação à encomenda) → aprovação move o stock **uma vez** (Arroz 85→81 e +4 no destino, Óleo 45→39
+e +6) → encomenda "Transferido para a loja"; e o registo retroactivo cria `EC-2026/2` já cumprida,
+ligada à `TRF-2026/2`.
+
+**V44/V45/V46 APLICADAS E VALIDADAS CONTRA POSTGRESQL REAL (2026-08-21).** Como a cadeia de
+migrações não corre em H2 (a **V2** falha, pré-existente) e não havia credenciais do PostgreSQL da
+máquina, criou-se um **cluster descartável** com os binários instalados (`initdb` + `pg_ctl` em
+porta própria, auth trust), sem tocar no servidor do utilizador — receita repetível para a próxima
+vez que for preciso validar migrações.
+
+- **45 migrações aplicadas, schema em v46**, e a aplicação **arrancou com `ddl-auto=validate`** no
+  perfil `prod`: cada mapeamento de entidade bate com o schema que o Flyway construiu.
+- Confirmado no schema real: `customer_orders.kind` é agora **varchar(40)** (a correcção do bug que
+  rebentava a via de 22 caracteres), as 8 colunas novas da V45/V46 são todas *nullable*, as tabelas
+  `quotations`/`quotation_lines` existem com `valid_until` e `delivery_days`, e a restrição
+  `uk_quotations_company_number` está lá (lição da V31).
+- **Percurso completo sobre PostgreSQL:** cotação `CT-2026/1` → encomenda com origem, condições e
+  entrega prevista correcta; reposição interna gravada com `INTERNAL_REPLENISHMENT` na coluna;
+  conversão em `TRF-2026/1`; aprovação move o stock **uma vez** (100 → 90 na origem, 10 no destino),
+  cria os lotes `LEGACY-1` pela migração preguiçosa corrigida, regista 2 movimentos `TRANSFER` e
+  fecha a encomenda em "Transferido para a loja".
+- **Nota de rigor:** houve um `NullPointerException` no `Versioning.increment` do Hibernate que
+  **não era defeito da aplicação** — as linhas de `stocks` tinham sido semeadas por SQL directo,
+  deixando `version` a NULL. Quem carregar dados numa base fora do Hibernate tem de preencher a
+  coluna `version`; corrigido o seed, o percurso passou.
+
+Cluster destruído no fim; o PostgreSQL do utilizador (porta 5432) nunca foi tocado.
+
 ### Progresso — 2026-08-19 (cotação: o preço proposto passa a ser um documento)
 
 - **Pedido do utilizador:** funcionalidade de cotação profissional, com spec e harness.
@@ -39,9 +296,36 @@
 - **Movimentos:** `MovimentoTipo.COTACAO` na vista unificada.
 - **Verificação:** suite completa **630 testes, 0 falhas/erros/ignorados** (eram 589). Auditoria
   estática CT-36..39 verde.
-- Spec/harness: `docs/COTACAO_SPEC.md` + `docs/COTACAO_HARNESS.md` (CT-01..41 auto, CT-50..62).
-  **Por validar ao vivo:** CT-50..62 (em especial CT-51/52, comparação visual do PDF com a fatura,
-  e CT-57, preço cotado honrado depois de o catálogo mudar).
+- **VALIDADO AO VIVO (CT-50..62):** backend de pé (H2, dados de demo), percurso HTTP completo com
+  ADMIN, MANAGER e EMPLOYEE.
+  - **CT-57 (a regra central) provado:** cotação emitida com Farinha a 80,00 e Óleo a 165,00; o
+    catálogo subiu para **200,00 e 400,00**; a conversão saiu na mesma a **80,00 e 165,00**, total
+    idêntico (782,80). O preço proposto não se mexeu com o catálogo.
+  - **CT-58:** linha envelhecida na BD para `valid_until` = hoje−3; o DTO passou a dizer
+    `expirada=true`, `daysUntilExpiry=-3` **sem nada ter sido gravado** (a caducidade é derivada) e
+    a conversão foi recusada com "caducou a 17/08/2026". Estendida por gerente → converteu.
+  - **CT-59/60:** EMPLOYEE recusado a estender ("requer perfil MANAGER ou ADMIN") com a validade
+    **inalterada**; MANAGER estendeu; estender para trás recusado nomeando a data actual.
+  - **CT-33:** auditoria da extensão contém **as duas datas** ("estendida de 17/08/2026 para
+    31/12/2026"), além de `QUOTATION_CREATE`/`QUOTATION_CONVERT`.
+  - **CT-61 (cadeia completa):** cotação 2.339,04 → encomenda `PENDING_APPROVAL` → aprovada →
+    `PENDING` → **fatura FT-2026/1** com o **mesmo total**. O stock só se moveu na facturação
+    (Arroz 85→82, Óleo 45→41): a cotação e a conversão não tocaram em stock nenhum.
+  - **CT-51/52/53:** PDF extraído com OpenPDF — todos os elementos partilhados presentes **nos dois**
+    documentos (cabeçalho, NUIT, morada, bloco do cliente, colunas das linhas, totais, rodapé) e só
+    a cotação tem "COTAÇÃO", validade, condições, aceitação do cliente e o aviso de não ser
+    documento fiscal. **"Armazém" aparece na fatura e não na cotação**, como especificado.
+  - **CT-09 ao vivo:** artigo isento saiu a **IVA 0,00** e o de 16% a 95,04 sobre 594 — a taxa é do
+    artigo também nesta porta nova.
+  - **CT-62:** Movimentos mostra a cadeia toda num sítio (CT-2026/3 → EC-2026/3 → FT-2026/1).
+- **V44 por aplicar contra PostgreSQL real:** em dev o Flyway está desligado (Hibernate faz o
+  schema), e a cadeia de migrações **não corre em H2** (a V2 falha — pré-existente, nada a ver com
+  esta iteração). Verificado mecanicamente que as colunas da V44 batem **exactamente** com o
+  mapeamento das entidades (25/25 e 8/8, sem falhas nos dois sentidos), que é o que o
+  `ddl-auto=validate` de produção exige; falta correr a migração numa BD PostgreSQL — não há
+  credenciais no repositório (deliberado) e não foram pedidas.
+- Spec/harness: `docs/COTACAO_SPEC.md` + `docs/COTACAO_HARNESS.md` (CT-01..41 auto, CT-50..62 ✅).
+  **Por validar:** a UI Swing (o backend está validado; o painel chama exactamente estes endpoints).
 
 ### Progresso — 2026-08-19 (encomendas: duas vias declaradas, não adivinhadas)
 
