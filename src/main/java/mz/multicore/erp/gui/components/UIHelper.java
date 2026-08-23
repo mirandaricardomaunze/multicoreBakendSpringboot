@@ -1581,6 +1581,8 @@ public class UIHelper {
             case "ACTIVA" -> "Activa";
             case "INACTIVA" -> "Inactiva";
             case "OPEN" -> "Aberto";
+            case "IN_PROGRESS" -> "Em curso";
+            case "RESOLVED" -> "Resolvido";
             case "CLOSED" -> "Fechado";
             case "PENDING", "PENDING_APPROVAL" -> "Pendente";
             case "APPROVED" -> "Aprovado";

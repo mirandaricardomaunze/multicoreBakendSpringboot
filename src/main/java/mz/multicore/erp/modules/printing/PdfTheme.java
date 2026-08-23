@@ -18,6 +18,8 @@ public final class PdfTheme {
     public static final Color BORDER = new Color(209, 213, 219);
     public static final Color TEXT = new Color(17, 24, 39);
     public static final Color TOTAL_ROW_BG = new Color(245, 247, 250);
+    /** Vermelho de anulação — carimbos de documento sem valor (folha de obra anulada). */
+    public static final Color DANGER = new Color(185, 28, 28);
 
     public static final float MARGIN_LEFT = 36f;
     public static final float MARGIN_RIGHT = 36f;
@@ -54,5 +56,10 @@ public final class PdfTheme {
 
     public static Font monoFont() {
         return FontFactory.getFont(FontFactory.COURIER, 9, TEXT);
+    }
+
+    /** Carimbo de documento anulado — tem de se ver de longe, numa folha em papel. */
+    public static Font voidStampFont() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, DANGER);
     }
 }

@@ -97,11 +97,17 @@ public final class TableCellRenderers {
             JLabel label = (JLabel) super.getTableCellRendererComponent(
                     table, UIHelper.humanStatus(value == null ? null : value.toString()), selected, focus, row, column);
             if (!selected) {
+                // Aceita o estado cru (enum do backend) e o rótulo PT-MZ já humanizado: há tabelas
+                // cuja célula guarda o rótulo para que o dropdown de filtro seja legível ao operador.
                 String status = value == null ? "" : value.toString().toUpperCase();
                 Color color = switch (status) {
-                    case "ACTIVE", "ACTIVA", "APPROVED", "PAID", "OPEN" -> UIHelper.APPROVED_GREEN;
-                    case "PENDING", "PENDING_APPROVAL", "PARTIALLY_PAID" -> UIHelper.PENDING_YELLOW;
-                    case "INACTIVE", "INACTIVA", "REJECTED", "CANCELLED", "OVERDUE" -> UIHelper.REJECTED_RED;
+                    case "ACTIVE", "ACTIVA", "APPROVED", "PAID", "OPEN",
+                         "ACTIVO", "APROVADO", "PAGA", "ABERTO", "RESOLVED", "RESOLVIDO",
+                         "FATURADA" -> UIHelper.APPROVED_GREEN;
+                    case "PENDING", "PENDING_APPROVAL", "PARTIALLY_PAID",
+                         "PENDENTE", "IN_PROGRESS", "EM CURSO", "POR FATURAR" -> UIHelper.PENDING_YELLOW;
+                    case "INACTIVE", "INACTIVA", "REJECTED", "CANCELLED", "OVERDUE",
+                         "INACTIVO", "REJEITADO", "ANULADO", "ANULADA", "EM ATRASO" -> UIHelper.REJECTED_RED;
                     default -> UIHelper.TEXT_MUTED;
                 };
                 label.setForeground(color);

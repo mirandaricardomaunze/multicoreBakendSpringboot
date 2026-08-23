@@ -155,7 +155,7 @@ public class MainFrame extends JFrame {
                     () -> { navigate("stock"); topBar.setActive("Stock & Armazéns"); stockPanel.showWarehouseTransfers(); });
             financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
             hrPanel         = new HRPanel(hrApiClient);
-            crmPanel        = new CRMPanel(crmApiClient);
+            crmPanel        = new CRMPanel(crmApiClient, comercialApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient);
             fiscalPanel     = new FiscalPanel(fiscalApiClient);
             accountingPanel = new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);

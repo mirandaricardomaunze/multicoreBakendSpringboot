@@ -14,5 +14,17 @@ public record CreateTicketRequest(
 
     @NotBlank(message = "A descrição é obrigatória.")
     @Size(max = 1000, message = "A descrição não pode exceder 1000 caracteres.")
-    String description
-) {}
+    String description,
+
+    /** Nome do enum {@code TicketPriority}. Nulo/vazio = NORMAL. */
+    String priority,
+
+    /** Técnico responsável. Opcional — um pedido pode entrar sem dono e ser atribuído depois. */
+    @Size(max = 255, message = "O nome do técnico não pode exceder 255 caracteres.")
+    String assignedTechnician
+) {
+    /** Compatibilidade com quem abre um pedido simples (povoamento, testes, integrações antigas). */
+    public CreateTicketRequest(Long clientId, String subject, String description) {
+        this(clientId, subject, description, null, null);
+    }
+}

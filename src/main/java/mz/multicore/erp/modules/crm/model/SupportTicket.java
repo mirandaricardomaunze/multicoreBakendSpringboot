@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "crm_tickets")
 @Getter
@@ -31,6 +33,23 @@ public class SupportTicket extends BaseEntity {
     @Column(name = "description", nullable = false, length = 1000)
     private String description;
 
-    @Column(name = "status", nullable = false)
-    private String status = "OPEN"; // "OPEN", "RESOLVED"
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private TicketStatus status = TicketStatus.OPEN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false, length = 20)
+    private TicketPriority priority = TicketPriority.NORMAL;
+
+    /** Técnico responsável pelo pedido. Nulo enquanto ninguém o assumir. */
+    @Column(name = "assigned_technician")
+    private String assignedTechnician;
+
+    /** Momento em que o pedido saiu de aberto (resolvido ou anulado). Nulo enquanto estiver em curso. */
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
+    /** Motivo da anulação, ou nota de fecho quando resolvido sem folha de obra. */
+    @Column(name = "closing_note", length = 500)
+    private String closingNote;
 }

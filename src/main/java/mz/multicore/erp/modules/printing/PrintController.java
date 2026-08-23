@@ -30,6 +30,7 @@ public class PrintController {
     private final ProductLabelPrintService productLabelPrintService;
     private final InventoryCountSheetPrintService inventoryCountSheetPrintService;
     private final POSZReportPrintService posZReportPrintService;
+    private final WorkSheetPrintService workSheetPrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -47,7 +48,8 @@ public class PrintController {
             PayrollFiscalMapPrintService payrollFiscalMapPrintService,
             ProductLabelPrintService productLabelPrintService,
             InventoryCountSheetPrintService inventoryCountSheetPrintService,
-            POSZReportPrintService posZReportPrintService
+            POSZReportPrintService posZReportPrintService,
+            WorkSheetPrintService workSheetPrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -65,6 +67,7 @@ public class PrintController {
         this.productLabelPrintService = productLabelPrintService;
         this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
         this.posZReportPrintService = posZReportPrintService;
+        this.workSheetPrintService = workSheetPrintService;
     }
 
     @GetMapping("/receipt/{invoiceId}")
@@ -100,6 +103,11 @@ public class PrintController {
     @GetMapping("/delivery-guide/{guideId}")
     public ResponseEntity<Resource> deliveryGuide(@PathVariable Long guideId) {
         return pdfResponse(deliveryGuidePrintService.render(guideId), "guia-remessa-" + guideId);
+    }
+
+    @GetMapping("/work-sheet/{workSheetId}")
+    public ResponseEntity<Resource> workSheet(@PathVariable Long workSheetId) {
+        return pdfResponse(workSheetPrintService.render(workSheetId), "folha-obra-" + workSheetId);
     }
 
     @GetMapping("/stock-transfer/{transferId}")

@@ -36,9 +36,28 @@ public class WorkSheet extends BaseEntity {
     @Column(name = "parts_cost", nullable = false)
     private BigDecimal partsCost = BigDecimal.ZERO;
 
+    /**
+     * Preço/hora praticado nesta folha, gravado no momento do registo. Antes a tarifa era uma
+     * constante no código e o total da folha não explicava como lá chegou — agora sai impresso na
+     * folha e no PDF, e o técnico consegue justificá-lo ao cliente.
+     */
+    @Column(name = "hourly_rate", nullable = false)
+    private BigDecimal hourlyRate = BigDecimal.ZERO;
+
     @Column(name = "total_value", nullable = false)
     private BigDecimal totalValue = BigDecimal.ZERO;
 
     @Column(name = "is_billed", nullable = false)
     private Boolean isBilled = false;
+
+    /**
+     * Folha anulada. Anular não apaga — uma folha errada tem de continuar visível com o motivo,
+     * senão o cliente pergunta pelo trabalho registado na semana passada e não há rasto nenhum.
+     * Só folhas <b>por faturar</b> podem ser anuladas.
+     */
+    @Column(name = "voided", nullable = false)
+    private boolean voided = false;
+
+    @Column(name = "void_reason", length = 500)
+    private String voidReason;
 }

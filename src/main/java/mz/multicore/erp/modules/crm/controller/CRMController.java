@@ -18,6 +18,16 @@ public class CRMController {
         this.crmService = crmService;
     }
 
+    @GetMapping("/settings")
+    public ResponseEntity<CrmSettingsDTO> getSettings() {
+        return ResponseEntity.ok(crmService.getSettings());
+    }
+
+    @PutMapping("/settings")
+    public ResponseEntity<CrmSettingsDTO> updateSettings(@RequestBody @Valid UpdateCrmSettingsRequest request) {
+        return ResponseEntity.ok(crmService.updateSettings(request));
+    }
+
     @GetMapping("/tickets")
     public ResponseEntity<List<SupportTicketDTO>> getTickets() {
         return ResponseEntity.ok(crmService.getAllTickets());
@@ -28,6 +38,18 @@ public class CRMController {
         return ResponseEntity.ok(crmService.createTicket(request));
     }
 
+    @PutMapping("/tickets/{id}")
+    public ResponseEntity<SupportTicketDTO> updateTicket(
+            @PathVariable Long id, @RequestBody @Valid UpdateTicketRequest request) {
+        return ResponseEntity.ok(crmService.updateTicket(id, request));
+    }
+
+    @PostMapping("/tickets/{id}/status")
+    public ResponseEntity<SupportTicketDTO> changeTicketStatus(
+            @PathVariable Long id, @RequestBody @Valid ChangeTicketStatusRequest request) {
+        return ResponseEntity.ok(crmService.changeTicketStatus(id, request));
+    }
+
     @GetMapping("/worksheets")
     public ResponseEntity<List<WorkSheetDTO>> getWorkSheets() {
         return ResponseEntity.ok(crmService.getAllWorkSheets());
@@ -36,6 +58,18 @@ public class CRMController {
     @PostMapping("/worksheets")
     public ResponseEntity<WorkSheetDTO> createWorkSheet(@RequestBody @Valid CreateWorkSheetRequest request) {
         return ResponseEntity.ok(crmService.createWorkSheet(request));
+    }
+
+    @PutMapping("/worksheets/{id}")
+    public ResponseEntity<WorkSheetDTO> updateWorkSheet(
+            @PathVariable Long id, @RequestBody @Valid UpdateWorkSheetRequest request) {
+        return ResponseEntity.ok(crmService.updateWorkSheet(id, request));
+    }
+
+    @PostMapping("/worksheets/{id}/void")
+    public ResponseEntity<WorkSheetDTO> voidWorkSheet(
+            @PathVariable Long id, @RequestBody @Valid VoidWorkSheetRequest request) {
+        return ResponseEntity.ok(crmService.voidWorkSheet(id, request));
     }
 
     @PostMapping("/worksheets/{id}/bill")
