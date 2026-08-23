@@ -33,6 +33,7 @@ public record QuotationDTO(
         String statusLabel,
         String paymentTerms,
         String deliveryTerms,
+        Integer deliveryDays,
         String notes,
         LocalDateTime sentAt,
         LocalDateTime decidedAt,

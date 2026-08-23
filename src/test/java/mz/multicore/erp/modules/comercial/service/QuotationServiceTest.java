@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
+import mz.multicore.erp.modules.comercial.model.OrderTerms;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.Quotation;
 import mz.multicore.erp.modules.comercial.model.QuotationLine;
@@ -145,7 +146,7 @@ class QuotationServiceTest {
         when(walkInClientProvider.getOrCreate()).thenReturn(walkIn);
 
         QuotationDTO dto = service.create(new CreateQuotationRequest(
-                null, "Sr. Alberto", 1L, 10L, 15, null, null, null,
+                null, "Sr. Alberto", 1L, 10L, 15, null, null, null, null,
                 List.of(new CreateQuotationLineRequest(100L, BigDecimal.ONE, BigDecimal.ZERO))));
 
         assertEquals("Sr. Alberto", dto.clientName());
@@ -255,7 +256,7 @@ class QuotationServiceTest {
         BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.convert(1L));
         assertTrue(ex.getMessage().contains(
                 q.getValidUntil().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
-        verify(comercialService, never()).placeOrder(any(), any(), any(), any(), any(), any());
+        verify(comercialService, never()).placeOrder(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -266,7 +267,7 @@ class QuotationServiceTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.convert(1L));
         assertTrue(ex.getMessage().contains("EC-2026/7"));
-        verify(comercialService, never()).placeOrder(any(), any(), any(), any(), any(), any());
+        verify(comercialService, never()).placeOrder(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -316,7 +317,7 @@ class QuotationServiceTest {
         // A via formal é o que faz a encomenda nascer PENDING_APPROVAL e ir à Engine de Aprovações,
         // dentro de placeOrder — daí bastar verificar a via com que a porta é chamada.
         verify(comercialService).placeOrder(eq(company), eq(client), eq(warehouse), any(), any(),
-                eq(OrderKind.FORMAL_ORDER));
+                eq(OrderKind.FORMAL_ORDER), any());
     }
 
     @Test
@@ -329,7 +330,7 @@ class QuotationServiceTest {
 
         // O serviço não tem sequer InventoryService/FinanceService injectados (CT-39); o que se
         // verifica aqui é que a única colaboração de escrita é a criação da encomenda.
-        verify(comercialService, times(1)).placeOrder(any(), any(), any(), any(), any(), any());
+        verify(comercialService, times(1)).placeOrder(any(), any(), any(), any(), any(), any(), any());
         verifyNoMoreInteractions(comercialService);
     }
 
@@ -344,6 +345,71 @@ class QuotationServiceTest {
         service.extendValidity(1L, LocalDate.now().plusDays(5));
         stubPlaceOrder();
         assertEquals("EC-2026/9", service.convert(1L).orderNumber());
+    }
+
+    // ─────────── origem e condições na encomenda gerada (ENCOMENDA_PROFISSIONAL) ───────────
+
+    @Test
+    void convert_encomendaGuardaACotacaoDeOrigem() { // EP-07
+        Quotation q = openQuotation(QuotationStatus.ACCEPTED, 10);
+        stubLoad(q);
+        stubPlaceOrder();
+
+        service.convert(1L);
+
+        OrderTerms terms = capturePlacedTerms();
+        assertEquals(1L, terms.quotationId());
+        assertEquals("CT-2026/1", terms.quotationNumber());
+    }
+
+    @Test
+    void convert_encomendaHerdaAsCondicoesAcordadas() { // EP-08, EP-09
+        Quotation q = openQuotation(QuotationStatus.ACCEPTED, 10);
+        q.setPaymentTerms("30 dias");
+        q.setDeliveryTerms("7 dias úteis");
+        q.setDeliveryDays(7);
+        stubLoad(q);
+        stubPlaceOrder();
+
+        service.convert(1L);
+
+        OrderTerms terms = capturePlacedTerms();
+        assertEquals("30 dias", terms.paymentTerms());
+        assertEquals("7 dias úteis", terms.deliveryTerms());
+        // Os DIAS é que viajam; a data nasce dentro do placeOrder, na confirmação.
+        assertEquals(7, terms.deliveryDays());
+    }
+
+    @Test
+    void convert_cotacaoComTextoDeEntregaMasSemDias_naoPrometeData() { // EP-10
+        Quotation q = openQuotation(QuotationStatus.ACCEPTED, 10);
+        q.setDeliveryTerms("Levantamento no armazém");
+        q.setDeliveryDays(null);
+        stubLoad(q);
+        stubPlaceOrder();
+
+        service.convert(1L);
+
+        OrderTerms terms = capturePlacedTerms();
+        assertEquals("Levantamento no armazém", terms.deliveryTerms());
+        assertNull(terms.deliveryDays());
+    }
+
+    @Test
+    void convert_cotacaoSemCondicoesNenhumas_naoRebenta() { // EP-11
+        Quotation q = openQuotation(QuotationStatus.ACCEPTED, 10);
+        q.setPaymentTerms(null);
+        q.setDeliveryTerms(null);
+        q.setDeliveryDays(null);
+        stubLoad(q);
+        stubPlaceOrder();
+
+        assertNotNull(service.convert(1L));
+        OrderTerms terms = capturePlacedTerms();
+        assertNull(terms.paymentTerms());
+        assertNull(terms.deliveryTerms());
+        // A origem continua a ser gravada mesmo sem condições.
+        assertEquals("CT-2026/1", terms.quotationNumber());
     }
 
     // ────────────────────────── validade e permissões ──────────────────────────
@@ -431,7 +497,7 @@ class QuotationServiceTest {
     }
 
     private void stubPlaceOrder() {
-        when(comercialService.placeOrder(any(), any(), any(), any(), any(), any()))
+        when(comercialService.placeOrder(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OrderDTO(500L, "EC-2026/9", 200L, "Cliente A", "123456789", null,
                         new BigDecimal("72.00"), new BigDecimal("3.60"), new BigDecimal("75.60"),
                         "PENDING_APPROVAL", null, List.of(), null, null, 0, null,
@@ -441,13 +507,19 @@ class QuotationServiceTest {
     @SuppressWarnings("unchecked")
     private List<OrderLine> capturePlacedLines() {
         ArgumentCaptor<List<OrderLine>> captor = ArgumentCaptor.forClass(List.class);
-        verify(comercialService).placeOrder(any(), any(), any(), any(), captor.capture(), any());
+        verify(comercialService).placeOrder(any(), any(), any(), any(), captor.capture(), any(), any());
+        return captor.getValue();
+    }
+
+    private OrderTerms capturePlacedTerms() {
+        ArgumentCaptor<OrderTerms> captor = ArgumentCaptor.forClass(OrderTerms.class);
+        verify(comercialService).placeOrder(any(), any(), any(), any(), any(), any(), captor.capture());
         return captor.getValue();
     }
 
     private CreateQuotationRequest request(CreateQuotationLineRequest... lines) {
         return new CreateQuotationRequest(200L, null, 1L, 10L, 15,
-                "50% na encomenda", "5 dias úteis", null, List.of(lines));
+                "50% na encomenda", "5 dias úteis", 5, null, List.of(lines));
     }
 
     /**

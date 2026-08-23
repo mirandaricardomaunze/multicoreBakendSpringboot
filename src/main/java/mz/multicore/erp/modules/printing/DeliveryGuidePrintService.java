@@ -58,7 +58,8 @@ public class DeliveryGuidePrintService {
             doc.add(PdfDocumentBuilder.spacer(8f));
             doc.add(buildTransportBlock(guide));
             doc.add(PdfDocumentBuilder.spacer(24f));
-            doc.add(buildSignatureBlock());
+            doc.add(SignatureBlockRenderer.build(
+                    "O Expedidor", "Recebi em conformidade (Destinatário)"));
         });
     }
 
@@ -119,26 +120,6 @@ public class DeliveryGuidePrintService {
         right.addElement(new Paragraph("Nº de volumes: ___________________________", PdfTheme.bodyFont()));
         table.addCell(right);
         return table;
-    }
-
-    private PdfPTable buildSignatureBlock() {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{50f, 50f}); } catch (Exception ignored) {}
-        table.addCell(signatureCell("O Expedidor"));
-        table.addCell(signatureCell("Recebi em conformidade (Destinatário)"));
-        return table;
-    }
-
-    private PdfPCell signatureCell(String label) {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setPaddingTop(20f);
-        cell.setPaddingLeft(12f);
-        cell.setPaddingRight(12f);
-        cell.addElement(new Paragraph("____________________________", PdfTheme.bodyFont()));
-        cell.addElement(new Paragraph(label, PdfTheme.smallFont()));
-        return cell;
     }
 
     private void addRight(PdfPCell cell, String text) {

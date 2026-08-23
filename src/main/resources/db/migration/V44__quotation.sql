@@ -24,6 +24,9 @@ create table if not exists quotations (
     status            varchar(20)    not null default 'DRAFT',
     payment_terms     varchar(200),
     delivery_terms    varchar(200),
+    -- Prazo de entrega em DIAS a contar da confirmação. Não é data porque a cotação não sabe
+    -- quando o cliente vai confirmar — a data nasce na conversão (ver ENCOMENDA_PROFISSIONAL_SPEC).
+    delivery_days     integer,
     notes             varchar(1000),
     sent_at           timestamp,
     decided_at        timestamp,

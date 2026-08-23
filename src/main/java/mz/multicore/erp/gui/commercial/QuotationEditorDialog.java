@@ -49,6 +49,7 @@ public final class QuotationEditorDialog {
     private QuantityField validityField;
     private JTextField paymentTermsField;
     private JTextField deliveryTermsField;
+    private JTextField deliveryDaysField;
     private JTextArea notesArea;
 
     private JComboBox<String> productCombo;
@@ -129,6 +130,13 @@ public final class QuotationEditorDialog {
         UIHelper.styleTextField(deliveryTermsField);
         deliveryTermsField.putClientProperty("JTextField.placeholderText", "Ex.: 5 dias úteis após confirmação");
 
+        // Os dias são o que o sistema calcula (data de entrega da encomenda, na conversão); o texto
+        // acima é o que o cliente lê. Ver docs/ENCOMENDA_PROFISSIONAL_SPEC.md §P3.
+        deliveryDaysField = new JTextField();
+        UIHelper.styleTextField(deliveryDaysField);
+        deliveryDaysField.putClientProperty("JTextField.placeholderText",
+                "Dias após confirmação — vazio = sem data prometida");
+
         notesArea = new JTextArea(3, 28);
         UIHelper.styleTextArea(notesArea);
         notesArea.setLineWrap(true);
@@ -143,6 +151,7 @@ public final class QuotationEditorDialog {
                 "Validade (dias):", validityField,
                 "Condições de pagamento:", paymentTermsField,
                 "Prazo de entrega:", deliveryTermsField,
+                "Entrega (dias):", deliveryDaysField,
                 "Observações:", notesScroll
         );
     }
@@ -300,6 +309,21 @@ public final class QuotationEditorDialog {
         int clientIdx = clientCombo.getSelectedIndex();
         Long clientId = clientIdx > 0 ? clients.get(clientIdx - 1).id() : null;
 
+        // Vazio é legítimo: cotação sem data de entrega prometida. Só o que estiver lá é que tem
+        // de ser um número — um "aproximadamente 5" não pode virar silenciosamente uma promessa.
+        Integer deliveryDays = null;
+        String rawDays = deliveryDaysField.getText();
+        if (rawDays != null && !rawDays.isBlank()) {
+            try {
+                deliveryDays = Integer.valueOf(rawDays.trim());
+            } catch (NumberFormatException ex) {
+                throw new RuntimeException("Os dias de entrega devem ser um número inteiro.");
+            }
+            if (deliveryDays <= 0) {
+                throw new RuntimeException("O prazo de entrega deve ser de pelo menos um dia.");
+            }
+        }
+
         return new CreateQuotationRequest(
                 clientId,
                 blankToNull(walkInField.getText()),
@@ -308,6 +332,7 @@ public final class QuotationEditorDialog {
                 validity,
                 blankToNull(paymentTermsField.getText()),
                 blankToNull(deliveryTermsField.getText()),
+                deliveryDays,
                 blankToNull(notesArea.getText()),
                 new ArrayList<>(draftLines));
     }

@@ -206,16 +206,13 @@ public class CustomerOrderFulfillmentService {
         return label(status.name());
     }
 
+    /**
+     * Delega na fonte única. Esta tradução chegou a viver aqui, privada e só com os estados de
+     * separação — o A4 e os restantes ecrãs ficavam a ver códigos internos. Ver
+     * {@link mz.multicore.erp.modules.comercial.model.OrderStatusLabel}.
+     */
     private String label(String status) {
-        if (status == null) return "—";
-        return switch (status) {
-            case "AWAITING_SEPARATION" -> "Aguarda separação";
-            case "IN_SEPARATION" -> "Em separação";
-            case "SEPARATED" -> "Separado";
-            case "INVOICED" -> "Facturado";
-            case "CANCELLED" -> "Cancelado";
-            default -> status;
-        };
+        return mz.multicore.erp.modules.comercial.model.OrderStatusLabel.of(status);
     }
 
     private void registerPrint(Order order, String terminal, String type, String details) {

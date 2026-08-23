@@ -117,6 +117,7 @@ public class QuotationService {
         quotation.setStatus(QuotationStatus.DRAFT);
         quotation.setPaymentTerms(blankToNull(request.paymentTerms()));
         quotation.setDeliveryTerms(blankToNull(request.deliveryTerms()));
+        quotation.setDeliveryDays(request.deliveryDays());
         quotation.setNotes(blankToNull(request.notes()));
         if (request.walkInName() != null && !request.walkInName().isBlank()) {
             quotation.setWalkInName(request.walkInName().trim());
@@ -296,13 +297,16 @@ public class QuotationService {
             orderLines.add(line);
         }
 
+        // A encomenda leva consigo de onde veio e o que foi acordado — é a cotação quem o declara
+        // (agreedTerms), e é aqui, na confirmação, que a data de entrega prometida se fixa.
         OrderDTO order = comercialService.placeOrder(
                 quotation.getCompany(),
                 quotation.getClient(),
                 quotation.getWarehouse(),
                 quotation.getWalkInName(),
                 orderLines,
-                OrderKind.FORMAL_ORDER);
+                OrderKind.FORMAL_ORDER,
+                quotation.agreedTerms());
 
         // Converter a partir de DRAFT/SENT é aceitar: sem este carimbo perdia-se o "quando é que o
         // cliente disse sim" de quem não usa o passo explícito de aceitação.
@@ -395,6 +399,7 @@ public class QuotationService {
                 q.getStatus().getLabel(),
                 q.getPaymentTerms(),
                 q.getDeliveryTerms(),
+                q.getDeliveryDays(),
                 q.getNotes(),
                 q.getSentAt(),
                 q.getDecidedAt(),

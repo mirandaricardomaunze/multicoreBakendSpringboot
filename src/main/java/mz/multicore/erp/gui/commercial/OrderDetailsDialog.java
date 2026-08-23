@@ -15,6 +15,7 @@ import java.util.Date;
 /** Apresentação e impressão de uma encomenda, sem regras de negócio locais. */
 public final class OrderDetailsDialog {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter DATE_ONLY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final JComponent owner;
     private final ComercialApiClient apiClient;
@@ -45,8 +46,26 @@ public final class OrderDetailsDialog {
         }
         header.append("<br><b>Data:</b> ")
                 .append(order.createdAt() != null ? order.createdAt().format(DATE_TIME) : "—")
-                .append("<br><b>Estado:</b> ").append(order.status())
-                .append("<br><b>Total:</b> ").append(order.totalAmount()).append(" MT</body></html>");
+                // Rótulo PT-MZ vindo do servidor — nunca a constante interna.
+                .append("<br><b>Estado:</b> ").append(order.statusLabel())
+                .append("<br><b>Total:</b> ").append(order.totalAmount()).append(" MT");
+        if (order.quotationNumber() != null && !order.quotationNumber().isBlank()) {
+            header.append("<br><b>Origem:</b> Cotação ").append(order.quotationNumber());
+        }
+        if (order.paymentTerms() != null && !order.paymentTerms().isBlank()) {
+            header.append("<br><b>Pagamento:</b> ").append(order.paymentTerms());
+        }
+        if (order.deliveryTerms() != null && !order.deliveryTerms().isBlank()) {
+            header.append("<br><b>Prazo de entrega:</b> ").append(order.deliveryTerms());
+        }
+        if (order.expectedDeliveryDate() != null) {
+            header.append("<br><b>Entrega prevista:</b> ")
+                    .append(order.expectedDeliveryDate().format(DATE_ONLY));
+            if (order.deliveryOverdue()) {
+                header.append(" <b>(em atraso)</b>");
+            }
+        }
+        header.append("</body></html>");
 
         DefaultTableModel model = new DefaultTableModel(
                 new String[]{"Produto", "Lote", "Qtd / Caixas", "Peso kg", "% Qtd", "% Peso", "Preço", "Total"}, 0) {

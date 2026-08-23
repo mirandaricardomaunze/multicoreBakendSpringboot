@@ -84,6 +84,18 @@ public class Quotation extends BaseEntity {
     @Column(name = "delivery_terms", length = 200)
     private String deliveryTerms;
 
+    /**
+     * Prazo de entrega em <b>dias a contar da confirmação</b>. Não é uma data porque a cotação não
+     * sabe quando o cliente vai confirmar — a data nasce na conversão
+     * ({@code Order.assignExpectedDelivery}). Nulo = sem prazo prometido.
+     *
+     * <p>Coexiste com {@link #deliveryTerms} sem ser redundante: nem toda a promessa de entrega é um
+     * número ("entrega faseada", "levantamento no armazém"). Os dias são o que o sistema calcula; o
+     * texto é o que o cliente leu.
+     */
+    @Column(name = "delivery_days")
+    private Integer deliveryDays;
+
     @Column(name = "notes", length = 1000)
     private String notes;
 
@@ -157,6 +169,14 @@ public class Quotation extends BaseEntity {
      */
     public boolean isConvertible(LocalDate today) {
         return status.isOpen() && !isExpired(today);
+    }
+
+    /**
+     * O que esta proposta prometeu, para a encomenda gerada na conversão o herdar. É a cotação quem
+     * sabe o que acordou — daí ser ela a dizê-lo, em vez de o serviço remontar os campos à mão.
+     */
+    public OrderTerms agreedTerms() {
+        return new OrderTerms(id, quotationNumber, paymentTerms, deliveryTerms, deliveryDays);
     }
 
     /** Rótulo do comprador: o nome livre quando não há cliente registado. */

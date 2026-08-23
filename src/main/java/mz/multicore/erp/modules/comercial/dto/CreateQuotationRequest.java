@@ -35,6 +35,10 @@ public record CreateQuotationRequest(
         @Size(max = 200, message = "Prazo de entrega deve ter no máximo 200 caracteres.")
         String deliveryTerms,
 
+        /** Dias de entrega a contar da confirmação. Ausente = sem data prometida na conversão. */
+        @Positive(message = "O prazo de entrega deve ser de pelo menos um dia.")
+        Integer deliveryDays,
+
         @Size(max = 1000, message = "Observações devem ter no máximo 1000 caracteres.")
         String notes,
 
