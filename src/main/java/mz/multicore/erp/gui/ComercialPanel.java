@@ -185,28 +185,28 @@ public class ComercialPanel extends JPanel {
         JTabbedPane tabbedPane = commercialTabs;
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
 
-        // A cotação vem antes da faturação porque é aí que o ciclo comercial começa:
-        // cotação → encomenda → guia/fatura.
-        tabbedPane.addTab("Cotações (CT)", UIHelper.icon("fas-file-signature", 16, UIHelper.TEXT_LIGHT),
+        // Rótulos sem o código da série: com dez separadores em SCROLL_TAB_LAYOUT, o que não cabe
+        // desaparece atrás das setas. Guarda em CommercialTabStripFitsTest. Ordem = ciclo comercial.
+        tabbedPane.addTab("Cotações", UIHelper.icon("fas-file-signature", 16, UIHelper.TEXT_LIGHT),
                 quotationsPanel);
 
         JPanel tabFaturacao = createFaturacaoTab();
-        tabbedPane.addTab("Faturação (FT)", UIHelper.icon("fas-file-invoice", 16, UIHelper.TEXT_LIGHT), tabFaturacao);
+        tabbedPane.addTab("Faturação", UIHelper.icon("fas-file-invoice", 16, UIHelper.TEXT_LIGHT), tabFaturacao);
 
-        tabbedPane.addTab("Recibos (RC)", UIHelper.icon("fas-receipt", 16, UIHelper.TEXT_LIGHT), receiptsPanel);
+        tabbedPane.addTab("Recibos", UIHelper.icon("fas-receipt", 16, UIHelper.TEXT_LIGHT), receiptsPanel);
 
         JPanel tabEncomendas = createEncomendasTab();
         tabbedPane.addTab("Pedidos & Separação", UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT), tabEncomendas);
 
         // TAB 5: GUIAS DE REMESSA (GR)
-        tabbedPane.addTab("Guias de Remessa (GR)", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Guias", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),
                 deliveryGuidesPanel);
 
         // TAB 6: NOTAS DE CRÉDITO (NC)
-        tabbedPane.addTab("Notas de Crédito (NC)", UIHelper.icon("fas-undo-alt", 16, UIHelper.TEXT_LIGHT), notesPanel.creditTab());
+        tabbedPane.addTab("Notas de Crédito", UIHelper.icon("fas-undo-alt", 16, UIHelper.TEXT_LIGHT), notesPanel.creditTab());
 
         // TAB 7: NOTAS DE DÉBITO (ND)
-        tabbedPane.addTab("Notas de Débito (ND)", UIHelper.icon("fas-plus-circle", 16, UIHelper.TEXT_LIGHT), notesPanel.debitTab());
+        tabbedPane.addTab("Notas de Débito", UIHelper.icon("fas-plus-circle", 16, UIHelper.TEXT_LIGHT), notesPanel.debitTab());
 
         // TAB 8: CONTAS CORRENTES (FIADOS)
         tabbedPane.addTab("Contas Correntes", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), outstandingAccountsPanel);
