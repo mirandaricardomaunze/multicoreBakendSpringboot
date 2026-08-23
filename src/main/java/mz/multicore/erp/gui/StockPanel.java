@@ -388,10 +388,16 @@ public class StockPanel extends JPanel {
         rejectTransferBtn.setIcon(UIHelper.icon("fas-times", 14));
         ModernButton printTransferBtn = UIHelper.createSecondaryButton("Imprimir Guia");
         printTransferBtn.setIcon(UIHelper.icon("fas-print", 14));
+        // Para o armazém que transferiu sem pedido formal ficar com registo de quem pediu.
+        ModernButton recordOrderBtn = UIHelper.createSecondaryButton("Registar Encomenda");
+        recordOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
+        recordOrderBtn.setToolTipText("Registar a encomenda de reposição em falta de uma "
+                + "transferência já aprovada. Não move stock — a mercadoria já mudou de armazém.");
         transferBtn.addActionListener(e -> createTransferDialog());
         approveTransferBtn.addActionListener(e -> approveSelectedTransfer());
         rejectTransferBtn.addActionListener(e -> rejectSelectedTransfer());
         printTransferBtn.addActionListener(e -> printSelectedTransfer());
+        recordOrderBtn.addActionListener(e -> transferActions.recordOrderForSelectedTransfer());
 
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -401,6 +407,7 @@ public class StockPanel extends JPanel {
         headerActions.add(approveTransferBtn);
         headerActions.add(rejectTransferBtn);
         headerActions.add(printTransferBtn);
+        headerActions.add(recordOrderBtn);
         headerActions.add(transferBtn);
         header.add(headerActions, BorderLayout.EAST);
         tab.add(header, BorderLayout.NORTH);

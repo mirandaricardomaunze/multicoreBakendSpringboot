@@ -39,6 +39,17 @@ public class StockTransferApiClient {
     }
 
     /** PDF da guia de transferência ({@code /api/print/stock-transfer/{id}}). */
+    /**
+     * Regista a encomenda de reposição em falta a partir de uma transferência já aprovada.
+     * É registo, não compromisso: a mercadoria já mudou de armazém e nada se move aqui.
+     * Ver docs/REPOSICAO_INTERNA_SPEC.md §5.
+     */
+    public mz.multicore.erp.modules.comercial.dto.OrderDTO recordOrder(Long transferId) {
+        return clientFactory.authenticatedClient().post(
+                "/api/inventory/transfers/" + transferId + "/order", null,
+                mz.multicore.erp.modules.comercial.dto.OrderDTO.class);
+    }
+
     public byte[] renderTransfer(Long transferId) {
         return clientFactory.authenticatedClient().getBytes("/api/print/stock-transfer/" + transferId);
     }

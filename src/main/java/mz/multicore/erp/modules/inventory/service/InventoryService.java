@@ -331,15 +331,12 @@ public class InventoryService {
     }
 
     private void ensureLegacyBatchIfNeeded(Product product, Warehouse warehouse) {
-        BigDecimal batchTotal = productBatchService.sumQuantity(product.getId(), warehouse.getId());
-        Stock stock = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                .orElse(null);
-        if (stock == null) return;
-
-        BigDecimal gap = stock.getQuantity().subtract(batchTotal);
-        if (gap.compareTo(BigDecimal.ZERO) > 0) {
-            productBatchService.ensureLegacyBatch(product, warehouse, batchTotal.add(gap));
-        }
+        // A regra vive no ProductBatchService, para a transferência entre armazéns — que também
+        // consome FEFO — poder fazer a mesma migração em vez de encontrar lotes a zero.
+        productBatchService.materialiseLegacyIfNeeded(product, warehouse,
+                stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+                        .map(Stock::getQuantity)
+                        .orElse(null));
     }
 
     private StockMovement saveMovement(Product product, Warehouse warehouse, BigDecimal qty,

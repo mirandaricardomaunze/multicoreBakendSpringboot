@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-08-19
+**Última actualização:** 2026-08-21
 
 ---
 
@@ -18,6 +18,7 @@
 | **Guia (transferência entre armazéns)** | ✅ | `StockTransfer`, série **TRF**. Create/approve/reject/cancel com stock a sair só na aprovação; PDF via `StockTransferPrintService`. |
 | **Guia de Remessa ao cliente** | ✅ | `DeliveryGuide`, série **GR**. Gerada a partir de uma encomenda; stock (SALE) sai só na aprovação; PDF via `DeliveryGuidePrintService`. |
 | **Cotação / proposta**  | ✅      | `Quotation`, série **CT**. Não move nada; converte-se em encomenda herdando os preços cotados. |
+| **Reposição interna**   | ✅      | `Order` com via `INTERNAL_REPLENISHMENT`. Pedido de uma loja ao armazém central; termina em `StockTransfer`, **nunca em factura**. |
 
 > ✅ **Decisão (2026-07-23) — reverte a de 2026-06-21:** a **Guia de Remessa ao cliente passa a ser
 > requisito** e está implementada (`DeliveryGuide`, série `GR`) — ver §5.1 e
@@ -89,6 +90,13 @@ COTAÇÃO  (Quotation, série CT)                  QuotationService.create()
      convert() → encomenda EC herdando os preços COTADOS (não o catálogo de hoje) ⇒ cotação CONVERTED.
      Caducada não converte; estender a validade é acto de gerente, auditado com data antiga e nova.
      Converte uma só vez. Para facturar: converte-se em encomenda e factura-se a encomenda.
+
+REPOSIÇÃO INTERNA  (Order, via INTERNAL_REPLENISHMENT)   InternalReplenishmentService
+  └─ NÃO move stock e NÃO é facturável: a mercadoria muda de armazém, não sai da empresa.
+     convertToTransfer() → StockTransfer (TRF) ⇒ encomenda TRANSFER_PENDING.
+     Aprovar a transferência move o stock UMA vez ⇒ encomenda TRANSFERRED (terminal).
+     Rejeitar/cancelar → encomenda volta a PENDING. Ligação gravada nos dois sentidos.
+     Se a transferência já foi feita sem pedido, regista-se a encomenda em falta (nasce TRANSFERRED).
 
 ENCOMENDA  (Order, série EC)                    ComercialService.createOrder()
   └─ Engine de Aprovações (documentType "ORDER", por valor): ao APROVAR,
@@ -179,6 +187,8 @@ Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
 | Lógica de venda POS                     | [POSService](src/main/java/mz/multicore/erp/modules/pos/service/POSService.java)                |
 | Faturação / encomenda / anulação        | [ComercialService](src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java) |
 | Cotação / conversão em encomenda        | [QuotationService](src/main/java/mz/multicore/erp/modules/comercial/service/QuotationService.java) |
+| Reposição interna (loja ⇄ armazém)      | [InternalReplenishmentService](src/main/java/mz/multicore/erp/modules/comercial/service/InternalReplenishmentService.java) |
+| **Disponibilidade para sair** de um armazém | `ProductBatchService.materialiseLegacyIfNeeded` — lotes são subdivisão do stock, materializada na 1.ª saída |
 | **Criar uma encomenda** (porta única)   | `ComercialService.placeOrder` — numera `EC` e submete a aprovação |
 | Baixa de stock da fatura manual         | [InvoiceApprovalCallback](src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceApprovalCallback.java) |
 | Nota de crédito / devolução de stock    | [CreditNoteService](src/main/java/mz/multicore/erp/modules/comercial/service/CreditNoteService.java) |

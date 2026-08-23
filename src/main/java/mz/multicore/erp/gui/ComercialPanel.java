@@ -895,6 +895,11 @@ public class ComercialPanel extends JPanel {
         return order.deliveryOverdue() ? date + " (em atraso)" : date;
     }
 
+    /** Reposição interna → transferência entre armazéns. Ver docs/REPOSICAO_INTERNA_SPEC.md. */
+    void convertSelectedOrderToTransfer() {
+        OrderToTransferAction.convertSelected(this, comercialApiClient);
+    }
+
     void openBillFromOrderDialog() {
         billOrderDialog.open();
     }

@@ -127,6 +127,31 @@ public class ProductBatchService {
         return batchRepository.save(batch);
     }
 
+    /**
+     * Materializa em lote o stock que existe <b>sem lote</b>, para que possa sair por FEFO.
+     *
+     * <p>Os lotes são uma subdivisão do stock, criada preguiçosamente: instalações anteriores ao
+     * rastreio de lote — e a base de demonstração — têm {@code stocks} preenchido e
+     * {@code product_batches} vazio. Quem consome FEFO sem passar por aqui encontra zero em stock
+     * que existe, e recusa a saída com "Disponível em lotes: 0".
+     *
+     * <p><b>Fonte única</b> desta migração: era privada no {@code InventoryService}, pelo que a
+     * transferência entre armazéns — que consome FEFO por conta própria — nunca a fazia e nunca
+     * funcionou sobre stock antigo. Recebe a quantidade em stock em vez de a ir buscar, para não
+     * precisar do {@code StockRepository} (mantém este serviço só sobre lotes).
+     *
+     * @param stockQuantity quantidade agregada em {@code stocks}; {@code null} = não há registo
+     */
+    @Transactional
+    public void materialiseLegacyIfNeeded(Product product, Warehouse warehouse, BigDecimal stockQuantity) {
+        if (stockQuantity == null) return;
+        BigDecimal batchTotal = sumQuantity(product.getId(), warehouse.getId());
+        if (batchTotal == null) batchTotal = BigDecimal.ZERO;
+        if (stockQuantity.compareTo(batchTotal) > 0) {
+            ensureLegacyBatch(product, warehouse, stockQuantity);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<ProductBatchDTO> findByCompany(Long companyId) {
         return batchRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();

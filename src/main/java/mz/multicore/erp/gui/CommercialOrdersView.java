@@ -333,11 +333,18 @@ final class CommercialOrdersView {
         ModernButton convertGuideBtn = UIHelper.createPrimaryButton("Converter em Guia");
         convertGuideBtn.setIcon(UIHelper.icon("fas-truck", 14));
         convertGuideBtn.setToolTipText("Criar uma Guia de Remessa a partir da encomenda aprovada selecionada.");
+        // A reposição interna não é facturável nem gera guia ao cliente: o que a cumpre é a
+        // transferência entre armazéns. Ver docs/REPOSICAO_INTERNA_SPEC.md.
+        ModernButton convertTransferBtn = UIHelper.createPrimaryButton("Converter em Transferência");
+        convertTransferBtn.setIcon(UIHelper.icon("fas-dolly", 14));
+        convertTransferBtn.setToolTipText("Criar a transferência entre armazéns que cumpre a "
+                + "reposição interna selecionada. O stock só se move na aprovação da transferência.");
         ModernButton cancelOrderBtn = UIHelper.createDangerButton("Cancelar Encomenda…");
         cancelOrderBtn.setIcon(UIHelper.icon("fas-ban", 14));
         btnPanel.add(moreBtn);
         btnPanel.add(billOrderBtn);
         btnPanel.add(convertGuideBtn);
+        btnPanel.add(convertTransferBtn);
         btnPanel.add(cancelOrderBtn);
         listCard.add(btnPanel, BorderLayout.SOUTH);
 
@@ -357,7 +364,48 @@ final class CommercialOrdersView {
         owner.orderWarehouseCombo.addActionListener(e -> owner.refreshOrderFEFOHint());
         billOrderBtn.addActionListener(e -> owner.billSelectedOrder());
         convertGuideBtn.addActionListener(e -> owner.convertSelectedOrderToGuide());
+        convertTransferBtn.addActionListener(e -> owner.convertSelectedOrderToTransfer());
         cancelOrderBtn.addActionListener(e -> owner.openCancelOrderDialog());
+
+        /*
+         * As acções que não se aplicam à linha seleccionada ficam DESACTIVADAS, não escondidas.
+         *
+         * Uma encomenda segue uma via só: a venda a cliente termina em fatura ou guia de remessa, a
+         * reposição interna termina em transferência entre armazéns. Com tudo sempre activo, dois
+         * dos três botões ofereciam um caminho que o servidor ia recusar — o operador só descobria
+         * qual, carregando. Desactivar diz-lhe antes, sem lhe tirar a acção da vista (regra do
+         * harness SCUI: Faturar, Converter e Cancelar continuam explícitas).
+         */
+        Runnable syncOrderActions = () -> {
+            int row = TableFilter.selectedModelRow(owner.ordersTable);
+            OrderKind kind = null;
+            if (row >= 0) {
+                Object cell = owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_KIND);
+                kind = cell instanceof OrderKind k ? k : OrderKind.FORMAL_ORDER;
+            }
+            boolean replenishment = kind != null && kind.usesWarehouseTransfer();
+            boolean sale = kind != null && !replenishment;
+
+            billOrderBtn.setEnabled(sale);
+            convertGuideBtn.setEnabled(sale);
+            convertTransferBtn.setEnabled(replenishment);
+
+            billOrderBtn.setToolTipText(sale ? "Emitir a fatura da encomenda selecionada."
+                    : kind == null ? "Selecione uma encomenda na tabela."
+                    : "Uma reposição interna não se fatura: a mercadoria não sai da empresa.");
+            convertGuideBtn.setToolTipText(sale ? "Criar uma Guia de Remessa a partir da encomenda selecionada."
+                    : kind == null ? "Selecione uma encomenda na tabela."
+                    : "Uma reposição interna não tem cliente a quem entregar — converta-a em transferência.");
+            convertTransferBtn.setToolTipText(replenishment
+                    ? "Criar a transferência entre armazéns que cumpre esta reposição. O stock só se "
+                            + "move na aprovação da transferência."
+                    : kind == null ? "Selecione uma encomenda na tabela."
+                    : "Só a reposição interna se converte em transferência. Uma venda a cliente sai "
+                            + "por fatura ou por guia de remessa.");
+        };
+        owner.ordersTable.getSelectionModel()
+                .addListSelectionListener(e -> syncOrderActions.run());
+        syncOrderActions.run();
 
         // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
         DocumentEditorHost orderEditor = new DocumentEditorHost(

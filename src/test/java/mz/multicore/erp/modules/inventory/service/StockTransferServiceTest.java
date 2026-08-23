@@ -59,6 +59,7 @@ class StockTransferServiceTest {
     private Warehouse origin;
     private Warehouse destination;
     private Product product;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @BeforeEach
     void setUp() {
@@ -72,10 +73,14 @@ class StockTransferServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
 
+        // A transferência anuncia o desfecho por evento, para o inventário não passar a conhecer o
+        // comercial (ver StockTransferResolvedEvent). Aqui basta um publicador mudo.
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+
         service = new StockTransferService(
                 transferRepository, warehouseRepository, companyRepository, productRepository,
                 stockRepository, stockMovementRepository, productBatchService, documentNumberService,
-                auditLogService);
+                auditLogService, eventPublisher);
 
         company = company(1L);
         origin = warehouse(10L, "Depósito", company);
@@ -119,6 +124,43 @@ class StockTransferServiceTest {
         when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
         when(documentNumberService.next(any())).thenReturn("TRF-2026/1");
         when(productBatchService.sumQuantity(100L, 10L)).thenReturn(new BigDecimal("2"));
+
+        assertThrows(BusinessRuleException.class, () -> service.create(request(new BigDecimal("5"))));
+        verify(transferRepository, never()).save(any());
+    }
+
+    @Test
+    void create_stockAntigoSemLotes_eAceite() { // RI: disponibilidade = a mesma da saída autoritativa
+        when(companyRepository.findById(1L)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(10L)).thenReturn(Optional.of(origin));
+        when(warehouseRepository.findById(20L)).thenReturn(Optional.of(destination));
+        when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
+        when(documentNumberService.next(any())).thenReturn("TRF-2026/1");
+        when(transferRepository.save(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Instalação anterior aos lotes (e a base de demonstração): stocks preenchido, lotes vazios.
+        // Os lotes são materializados preguiçosamente na primeira saída, por isso perguntar só a
+        // eles dava zero em stock que existe — e a guia era recusada por falta do que lá estava.
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(BigDecimal.ZERO);
+        Stock legacy = new Stock();
+        legacy.setQuantity(new BigDecimal("85"));
+        when(stockRepository.findByProductIdAndWarehouseId(100L, 10L)).thenReturn(Optional.of(legacy));
+
+        StockTransferDTO dto = service.create(request(new BigDecimal("5")));
+
+        assertEquals(TransferStatus.PENDING_APPROVAL.name(), dto.status());
+        verify(productBatchService, never()).consumeFEFO(any(), any(), any());
+    }
+
+    @Test
+    void create_semStockNemLotes_continuaARecusar() {
+        when(companyRepository.findById(1L)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(10L)).thenReturn(Optional.of(origin));
+        when(warehouseRepository.findById(20L)).thenReturn(Optional.of(destination));
+        when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
+        when(documentNumberService.next(any())).thenReturn("TRF-2026/1");
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(BigDecimal.ZERO);
+        when(stockRepository.findByProductIdAndWarehouseId(100L, 10L)).thenReturn(Optional.empty());
 
         assertThrows(BusinessRuleException.class, () -> service.create(request(new BigDecimal("5"))));
         verify(transferRepository, never()).save(any());

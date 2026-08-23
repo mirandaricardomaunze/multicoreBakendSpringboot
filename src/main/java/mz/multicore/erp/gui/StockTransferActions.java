@@ -269,6 +269,45 @@ final class StockTransferActions {
         printTransfer(selected.id(), selected.transferNumber());
     }
 
+    /**
+     * Regista a encomenda de reposição em falta a partir de uma transferência já aprovada.
+     *
+     * <p>Para o armazém que transferiu sem pedido formal: é <b>registo</b>, não compromisso. A
+     * mercadoria já mudou de armazém, pelo que a encomenda nasce cumprida e nada se move — mover
+     * seria contar a mesma saída duas vezes. Ver docs/REPOSICAO_INTERNA_SPEC.md §5.
+     */
+    public void recordOrderForSelectedTransfer() {
+        int row = TableFilter.selectedModelRow(owner.transferTable);
+        if (row < 0) {
+            JOptionPane.showMessageDialog(owner, "Selecione uma transferência na tabela primeiro.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        StockTransferDTO selected = owner.transfersList.get(row);
+        if (selected.orderId() != null) {
+            JOptionPane.showMessageDialog(owner,
+                    "A transferência " + selected.transferNumber() + " já tem a encomenda "
+                            + selected.orderNumber() + " registada.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(owner,
+                "Registar a encomenda de reposição em falta para " + selected.transferNumber() + "?\n\n"
+                        + "A mercadoria já mudou de armazém: a encomenda nasce cumprida e não move "
+                        + "stock nenhum.\nServe para ficar registo de que a loja pediu.",
+                "Registar encomenda em falta", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        UIHelper.runWithProgress(owner, "A registar encomenda…",
+                () -> owner.stockTransferApiClient.recordOrder(selected.id()), order -> {
+                    owner.onPanelSelected();
+                    JOptionPane.showMessageDialog(owner,
+                            "Encomenda " + order.orderNumber() + " registada para a transferência "
+                                    + selected.transferNumber() + ".",
+                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                }, owner::showStockError);
+    }
+
     private void printTransfer(Long transferId, String transferNumber) {
         UIHelper.runWithProgress(owner, "A gerar guia de transferência…",
                 () -> owner.stockTransferApiClient.renderTransfer(transferId),
