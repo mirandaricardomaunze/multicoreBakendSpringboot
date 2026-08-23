@@ -272,48 +272,4 @@ final class PosCatalogController {
         return code + " - " + p.name();
     }
 
-    public void createClient() {
-        JTextField nameField = new JTextField();
-        JTextField taxIdField = new JTextField();
-        JTextField emailField = new JTextField();
-        JTextField addressField = new JTextField();
-        for (JTextField field : new JTextField[]{nameField, taxIdField, emailField, addressField}) {
-            UIHelper.styleTextField(field);
-        }
-        JPanel form = UIHelper.createDialogForm("Nome:", nameField, "NUIT / NIF:", taxIdField,
-                "Email:", emailField, "Endereço:", addressField);
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Novo Cliente", "fas-address-book",
-                "Cadastro rápido de cliente", form).showDialog();
-        if (!confirmed) return;
-        String name = nameField.getText().trim();
-        String taxId = taxIdField.getText().trim();
-        String email = emailField.getText().trim();
-        String address = addressField.getText().trim();
-        if (name.isEmpty() || taxId.isEmpty() || email.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Nome, NUIT e Email são obrigatórios.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        UIHelper.runWithProgress(owner, "A criar cliente…", () -> {
-            ClientDTO created = owner.comercialApiClient.createClient(name, taxId, email, address);
-            return new CreatedClient(created, owner.comercialApiClient.getAllClients());
-        }, result -> {
-            owner.clientsList = result.clients();
-            owner.clientSearchField.setText(result.created().name());
-            filterClients(owner.clientSearchField.getText());
-            for (int i = 0; i < owner.filteredClients.size(); i++) {
-                if (owner.filteredClients.get(i).id().equals(result.created().id())) {
-                    owner.clientCombo.setSelectedIndex(i);
-                    break;
-                }
-            }
-            JOptionPane.showMessageDialog(owner, "Cliente '" + result.created().name() + "' criado.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-        }, error -> JOptionPane.showMessageDialog(owner,
-                "Não foi possível criar o cliente: " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE));
-    }
-
-    private record CreatedClient(ClientDTO created, java.util.List<ClientDTO> clients) {}
-
 }

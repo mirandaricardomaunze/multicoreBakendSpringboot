@@ -256,17 +256,8 @@ public class POSPanel extends JPanel {
         clientSearchField.getDocument().addDocumentListener(simpleDocumentListener(() -> filterClients(clientSearchField.getText())));
         productSearchField.getDocument().addDocumentListener(simpleDocumentListener(catalogController::scheduleCatalogReload));
 
-        ModernButton newClientBtn = UIHelper.createPrimaryButton("Novo");
-        newClientBtn.setIcon(UIHelper.icon("fas-user-plus", 12));
-        newClientBtn.setToolTipText("Criar novo cliente");
-        newClientBtn.addActionListener(e -> createClientDialog());
-
         // Cabeçalho operacional numa única linha: nenhum campo fica escondido ou rouba altura ao carrinho.
-        JPanel clientRow = new JPanel(new BorderLayout(6, 0));
-        clientRow.setOpaque(false);
-        clientRow.add(clientCombo, BorderLayout.CENTER);
-        clientRow.add(newClientBtn, BorderLayout.EAST);
-
+        // O cadastro de clientes vive no painel Clientes — no balcão a venda sem cliente vai para "Consumidor Final".
         topSelectsBar = new JPanel(new GridBagLayout());
         topSelectsBar.setOpaque(false);
         topSelectsBar.setBorder(new EmptyBorder(4, 0, 4, 0));
@@ -275,7 +266,7 @@ public class POSPanel extends JPanel {
         tg.gridx = 0; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[0]; tg.insets = new Insets(0, 0, 0, 6);
         topSelectsBar.add(labeledField("Pesquisar cliente", PosLayout.searchRow(clientSearchField)), tg);
         tg.gridx = 1; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[1];
-        topSelectsBar.add(labeledField("Cliente", clientRow), tg);
+        topSelectsBar.add(labeledField("Cliente", clientCombo), tg);
         tg.gridx = 2; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[2];
         topSelectsBar.add(labeledField("Armazém", warehouseCombo), tg);
         tg.gridx = 3; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[3];
@@ -695,8 +686,6 @@ public class POSPanel extends JPanel {
             @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
         };
     }
-
-    private void createClientDialog() { catalogController.createClient(); }
 
     private void openSession() { cashSessionActions.openSession(); }
 
