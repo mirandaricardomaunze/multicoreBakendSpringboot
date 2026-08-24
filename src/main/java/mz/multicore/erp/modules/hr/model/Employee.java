@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.hr.model;
 
 import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.users.model.AppUser;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,6 +39,10 @@ public class Employee extends BaseEntity {
     @Column(name = "phone", length = 40)
     private String phone;
 
+    /** Fotografia reduzida do colaborador, usada na ficha e identificação visual. */
+    @Column(name = "photo")
+    private byte[] photo;
+
     @Column(name = "tax_id", length = 40)
     private String taxId;
 
@@ -64,4 +69,24 @@ public class Employee extends BaseEntity {
 
     @Column(name = "employment_status", nullable = false, length = 20)
     private String status = "ACTIVE"; // ACTIVE, SUSPENDED, TERMINATED
+
+    /**
+     * Banco e conta para o ficheiro de pagamento da folha (§B8.7). Nulos são o caso normal de quem
+     * recebe em numerário — e quem os tiver em branco fica <b>listado à parte</b> no ficheiro, em
+     * vez de desaparecer dele em silêncio.
+     */
+    @Column(name = "bank_name", length = 120)
+    private String bankName;
+
+    @Column(name = "bank_account", length = 60)
+    private String bankAccount;
+
+    /**
+     * Conta de utilizador deste colaborador, quando tem uma. É o que torna "o próprio" identificável:
+     * sem ela, submeter férias ou despesa em nome de um colega é indistinguível de o fazer em nome
+     * próprio. Nulo é o caso normal numa loja — quem não tem conta não faz self-service.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "app_user_id")
+    private AppUser appUser;
 }

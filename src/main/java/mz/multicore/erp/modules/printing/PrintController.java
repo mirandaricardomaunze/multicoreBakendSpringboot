@@ -31,6 +31,8 @@ public class PrintController {
     private final InventoryCountSheetPrintService inventoryCountSheetPrintService;
     private final POSZReportPrintService posZReportPrintService;
     private final WorkSheetPrintService workSheetPrintService;
+    private final EmploymentContractPrintService employmentContractPrintService;
+    private final TerminationPrintService terminationPrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -49,7 +51,9 @@ public class PrintController {
             ProductLabelPrintService productLabelPrintService,
             InventoryCountSheetPrintService inventoryCountSheetPrintService,
             POSZReportPrintService posZReportPrintService,
-            WorkSheetPrintService workSheetPrintService
+            WorkSheetPrintService workSheetPrintService,
+            EmploymentContractPrintService employmentContractPrintService,
+            TerminationPrintService terminationPrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -68,6 +72,25 @@ public class PrintController {
         this.inventoryCountSheetPrintService = inventoryCountSheetPrintService;
         this.posZReportPrintService = posZReportPrintService;
         this.workSheetPrintService = workSheetPrintService;
+        this.employmentContractPrintService = employmentContractPrintService;
+        this.terminationPrintService = terminationPrintService;
+    }
+
+    @GetMapping("/employment-contract/{contractId}")
+    public ResponseEntity<Resource> employmentContract(@PathVariable Long contractId) {
+        return pdfResponse(employmentContractPrintService.render(contractId), "contrato-" + contractId);
+    }
+
+    @GetMapping("/termination-settlement/{terminationId}")
+    public ResponseEntity<Resource> terminationSettlement(@PathVariable Long terminationId) {
+        return pdfResponse(terminationPrintService.renderSettlement(terminationId),
+                "acerto-final-" + terminationId);
+    }
+
+    @GetMapping("/work-certificate/{terminationId}")
+    public ResponseEntity<Resource> workCertificate(@PathVariable Long terminationId) {
+        return pdfResponse(terminationPrintService.renderCertificate(terminationId),
+                "certificado-trabalho-" + terminationId);
     }
 
     @GetMapping("/receipt/{invoiceId}")

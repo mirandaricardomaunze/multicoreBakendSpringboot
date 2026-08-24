@@ -27,15 +27,18 @@ class AutomaticPostingServiceTest {
 
     private ChartOfAccountsService chartOfAccountsService;
     private JournalService journalService;
+    private mz.multicore.erp.modules.audit.service.AuditLogService auditLogService;
     private AutomaticPostingService service;
 
     @BeforeEach
     void setUp() {
         chartOfAccountsService = mock(ChartOfAccountsService.class);
         journalService = mock(JournalService.class);
-        service = new AutomaticPostingService(chartOfAccountsService, journalService);
+        auditLogService = mock(mz.multicore.erp.modules.audit.service.AuditLogService.class);
+        service = new AutomaticPostingService(chartOfAccountsService, journalService, auditLogService);
 
         when(chartOfAccountsService.hasChart(COMPANY_ID)).thenReturn(true);
+        when(chartOfAccountsService.hasAccounts(eq(COMPANY_ID), any(String[].class))).thenReturn(true);
         when(chartOfAccountsService.requirePostableAccount(eq(COMPANY_ID), anyString()))
                 .thenAnswer(call -> account(call.getArgument(1)));
         when(journalService.findByDocument(any(), any(), any())).thenReturn(Optional.empty());
@@ -174,5 +177,70 @@ class AutomaticPostingServiceTest {
         service.onSaleRegistered(venda("0", "0", "0", "0", "0", false));
 
         verify(journalService, never()).save(any(), any());
+    }
+
+    // ─── RH B5: a folha chega ao razão (RHC-53/54) ────────────────────────────
+
+    private mz.multicore.erp.architecture.events.PayslipPaidEvent salario() {
+        // 30.000 de base + 1.000 de subsídios; IRPS 3.000, INSS 900+900, outros descontos 1.000.
+        return new mz.multicore.erp.architecture.events.PayslipPaidEvent(
+                COMPANY_ID, 77L, "REC-2026/4", "Maria", HOJE,
+                new BigDecimal("31000.00"), BigDecimal.ZERO, new BigDecimal("3000.00"),
+                new BigDecimal("900.00"), new BigDecimal("900.00"), new BigDecimal("1000.00"),
+                new BigDecimal("26100.00"));
+    }
+
+    @Test // RHC-53
+    void salarioPago_debitaCustoEEncargos_creditaRetencoesECaixa() {
+        service.onPayslipPaid(salario());
+
+        JournalEntry entry = captureEntry();
+        assertTrue(entry.isBalanced(), "o lançamento da folha tem de fechar sem ajudas");
+        assertEquals(new BigDecimal("31000.00"), debitOf(entry, PgcNirfChart.CUSTOS_PESSOAL));
+        assertEquals(new BigDecimal("900.00"), debitOf(entry, PgcNirfChart.ENCARGOS_PESSOAL));
+        assertEquals(new BigDecimal("3000.00"), creditOf(entry, PgcNirfChart.IRPS_RETIDO));
+        assertEquals(new BigDecimal("1800.00"), creditOf(entry, PgcNirfChart.INSS_A_ENTREGAR),
+                "as duas quotas do INSS entregam-se juntas");
+        assertEquals(new BigDecimal("1000.00"), creditOf(entry, PgcNirfChart.PESSOAL_OUTROS_DESCONTOS));
+        assertEquals(new BigDecimal("26100.00"), creditOf(entry, PgcNirfChart.CAIXA));
+        assertEquals(JournalSource.PAYROLL, entry.getSource());
+    }
+
+    @Test
+    void faltasDescontadas_reduzemOCusto_naoSaoProveito() {
+        // Trabalho que não foi prestado não é receita da empresa: entra a reduzir o custo do mês.
+        service.onPayslipPaid(new mz.multicore.erp.architecture.events.PayslipPaidEvent(
+                COMPANY_ID, 78L, "REC-2026/5", "João", HOJE,
+                new BigDecimal("30000.00"), new BigDecimal("1000.00"), BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("29000.00")));
+
+        JournalEntry entry = captureEntry();
+        assertEquals(new BigDecimal("29000.00"), debitOf(entry, PgcNirfChart.CUSTOS_PESSOAL));
+        assertTrue(entry.isBalanced());
+    }
+
+    @Test // RHC-51
+    void entregaDaRetencao_liquidaADividaAoEstado() {
+        service.onPayrollLiabilityDelivered(
+                new mz.multicore.erp.architecture.events.PayrollLiabilityDeliveredEvent(
+                        COMPANY_ID, 12L, "IRPS", 2026, 8, HOJE, new BigDecimal("3000.00"), "M-Pesa 8891"));
+
+        JournalEntry entry = captureEntry();
+        assertTrue(entry.isBalanced());
+        assertEquals(new BigDecimal("3000.00"), debitOf(entry, PgcNirfChart.IRPS_RETIDO));
+        assertEquals(new BigDecimal("3000.00"), creditOf(entry, PgcNirfChart.CAIXA));
+        assertEquals(JournalSource.PAYROLL_DELIVERY, entry.getSource());
+    }
+
+    @Test
+    void planoSemAsContasDePessoal_naoLanca_masDeixaRasto() {
+        // Um plano semeado antes destas contas existirem está incompleto, não inexistente. Recusar o
+        // pagamento do salário por causa disso seria pior do que o problema — o salário está certo,
+        // o que falta é escriturá-lo. Por isso fica rasto a dizer o que fazer.
+        when(chartOfAccountsService.hasAccounts(eq(COMPANY_ID), any(String[].class))).thenReturn(false);
+
+        assertDoesNotThrow(() -> service.onPayslipPaid(salario()));
+        verify(journalService, never()).save(any(), any());
+        verify(auditLogService).logEvent(any(), eq(COMPANY_ID), eq("PAYROLL_POSTING_SKIPPED"), any());
     }
 }

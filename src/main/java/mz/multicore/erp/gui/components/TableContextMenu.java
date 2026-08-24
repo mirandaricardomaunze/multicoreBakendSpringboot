@@ -12,11 +12,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Menu de contexto (botão direito) genérico para tabelas: <b>Copiar linha · Copiar célula ·
+ * Menu de contexto (botão direito) genérico para tabelas: <b>Ver detalhes · Copiar linha · Copiar célula ·
  * Ir para o topo · Ir para o fundo</b>. Ao abrir, selecciona a linha sob o cursor.
  *
- * <p>Genérico de propósito: não depende do domínio (as acções específicas — Ver detalhes,
- * Imprimir, Anular — ficam nos botões de cada painel). Instalado centralmente por
+ * <p>Genérico de propósito: não depende do domínio (as acções específicas — Imprimir, Anular —
+ * ficam nos botões de cada painel). Instalado centralmente por
  * {@link UIHelper#styleScrollPane(JScrollPane)}. Ver docs/UI_TABELAS_UX_SPEC.md.</p>
  */
 public final class TableContextMenu {
@@ -50,6 +50,10 @@ public final class TableContextMenu {
 
     private static JPopupMenu buildMenu(JTable table, JScrollBar sb, int row, int col) {
         JPopupMenu menu = new JPopupMenu();
+        JMenuItem details = item("Ver detalhes", "fas-info-circle", () -> RowDetailsInspector.open(table));
+        details.setEnabled(row >= 0 && !Boolean.TRUE.equals(table.getClientProperty("noRowInspector")));
+        menu.add(details);
+        menu.addSeparator();
         JMenuItem copyRow = item("Copiar linha", "fas-copy",
                 () -> toClipboard(rowToText(rowValues(table, row))));
         JMenuItem copyCell = item("Copiar célula", "fas-clone",

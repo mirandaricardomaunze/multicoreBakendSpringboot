@@ -16,5 +16,11 @@ public record CreatePayslipRequest(
         @PositiveOrZero BigDecimal irpsDeduction,
         @PositiveOrZero BigDecimal inssDeduction,
         @PositiveOrZero BigDecimal otherDeductions,
-        String notes
+        String notes,
+        /**
+         * Justificação para usar horas extra diferentes das apuradas na folha de ponto fechada.
+         * Sem ponto fechado é ignorada; com ponto fechado, é o que torna a excepção declarada em
+         * vez de silenciosa. Molde do {@code taxRate} manual do {@code CreateInvoiceLineRequest}.
+         */
+        String overtimeOverrideReason
 ) {}

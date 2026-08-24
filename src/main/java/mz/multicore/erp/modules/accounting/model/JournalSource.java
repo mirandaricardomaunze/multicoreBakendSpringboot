@@ -16,7 +16,14 @@ public enum JournalSource {
     PURCHASE("Compra"),
 
     /** Processamento salarial. */
-    PAYROLL("Salários");
+    PAYROLL("Salários"),
+
+    /**
+     * Entrega das retenções da folha ao Estado (IRPS, INSS). Fonte própria e não {@link #PAYROLL}
+     * porque a chave anti-duplicação é <b>fonte + id do documento</b>: com a mesma fonte, o recibo
+     * nº 12 e a retenção nº 12 seriam o mesmo lançamento aos olhos do sistema.
+     */
+    PAYROLL_DELIVERY("Entrega de retenções");
 
     private final String label;
 

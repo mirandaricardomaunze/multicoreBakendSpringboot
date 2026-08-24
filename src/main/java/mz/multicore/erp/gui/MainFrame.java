@@ -163,7 +163,8 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
             configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);
-            notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient, mySubscriptionApiClient);
+            notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
+                    mySubscriptionApiClient, hrApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);

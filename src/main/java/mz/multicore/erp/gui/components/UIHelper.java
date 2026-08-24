@@ -754,17 +754,7 @@ public class UIHelper {
         table.setDefaultRenderer(Number.class, cellRenderer);
         table.setDefaultRenderer(String.class, cellRenderer);
 
-        // Duplo-clique abre o inspector de detalhes — salvo se a tabela optar por um modal próprio
-        // (client property "noRowInspector", ex.: a fila de aprovações usa o seu modal de decisão).
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && table.getSelectedRow() != -1
-                        && !Boolean.TRUE.equals(table.getClientProperty("noRowInspector"))) {
-                    showRowDetailsDialog(table);
-                }
-            }
-        });
+        RowDetailsInspector.install(table);
 
         installRowSelector(table);
         installListingFooter(table);
@@ -933,60 +923,7 @@ public class UIHelper {
      * área com quebra de linha.
      */
     public static void showRowDetailsDialog(JTable table) {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow == -1) return;
-
-        JPanel fields = new JPanel(new GridBagLayout());
-        fields.setOpaque(false);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(6, 6, 6, 6);
-        gbc.anchor = GridBagConstraints.NORTH;
-
-        int rowCount = 0;
-        for (int col = 0; col < table.getColumnCount(); col++) {
-            // Salta colunas escondidas (ex.: coluna de ID com largura 0)
-            if (table.getColumnModel().getColumn(col).getWidth() == 0 &&
-                table.getColumnModel().getColumn(col).getMaxWidth() == 0) {
-                continue;
-            }
-
-            String colName = table.getColumnName(col);
-            Object colVal = table.getValueAt(selectedRow, col);
-            String valStr = (colVal != null) ? colVal.toString() : "";
-
-            gbc.gridx = 0;
-            gbc.gridy = rowCount;
-            gbc.weightx = 0.32;
-            JLabel nameLabel = new JLabel(colName);
-            nameLabel.setFont(new Font(FONT, Font.BOLD, 12));
-            nameLabel.setForeground(ACCENT);
-            fields.add(nameLabel, gbc);
-
-            gbc.gridx = 1;
-            gbc.weightx = 0.68;
-            if (valStr.length() > 50 || valStr.contains("\n")) {
-                JTextArea valArea = new JTextArea(valStr);
-                valArea.setEditable(false);
-                valArea.setLineWrap(true);
-                valArea.setWrapStyleWord(true);
-                styleTextArea(valArea);
-                JScrollPane scrollArea = new JScrollPane(valArea);
-                scrollArea.setPreferredSize(new Dimension(360, 80));
-                scrollArea.setBorder(fieldBorder(BORDER, 1));
-                fields.add(scrollArea, gbc);
-            } else {
-                JTextField valField = new JTextField(valStr);
-                valField.setEditable(false);
-                styleTextField(valField);
-                fields.add(valField, gbc);
-            }
-            rowCount++;
-        }
-
-        new ModernFormDialog(mainWindow, "Detalhes do Registo", "fas-info-circle",
-                "Inspeção do registo seleccionado", fields)
-                .asReadOnly("Fechar").showDialog();
+        RowDetailsInspector.open(table);
     }
 
     /**

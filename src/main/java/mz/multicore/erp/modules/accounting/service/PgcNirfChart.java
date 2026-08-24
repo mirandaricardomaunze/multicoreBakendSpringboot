@@ -30,10 +30,14 @@ public final class PgcNirfChart {
     public static final String FORNECEDORES = "2201";
     public static final String IVA_LIQUIDADO = "2431";      // IVA a entregar ao Estado (vendas)
     public static final String IVA_DEDUTIVEL = "2432";      // IVA suportado (compras)
+    public static final String IRPS_RETIDO = "2421";        // IRPS retido ao pessoal, a entregar
+    public static final String INSS_A_ENTREGAR = "2451";    // segurança social, as duas quotas
     public static final String PESSOAL_REMUNERACOES = "2601";
+    public static final String PESSOAL_OUTROS_DESCONTOS = "2602";
     public static final String MERCADORIAS = "3201";
     public static final String CMVMC = "6101";              // custo das mercadorias vendidas
     public static final String CUSTOS_PESSOAL = "6301";
+    public static final String ENCARGOS_PESSOAL = "6302";   // INSS patronal: custo da empresa
     public static final String VENDAS = "7101";
 
     public static List<Seed> accounts() {
@@ -52,11 +56,16 @@ public final class PgcNirfChart {
                 new Seed("22", "Fornecedores", AccountNature.CREDORA, false),
                 new Seed(FORNECEDORES, "Fornecedores — conta corrente", AccountNature.CREDORA, true),
                 new Seed("24", "Estado e outros entes públicos", AccountNature.CREDORA, false),
+                new Seed("242", "Retenções de impostos sobre rendimentos", AccountNature.CREDORA, false),
+                new Seed(IRPS_RETIDO, "IRPS retido ao pessoal", AccountNature.CREDORA, true),
                 new Seed("243", "Imposto sobre o valor acrescentado", AccountNature.CREDORA, false),
                 new Seed(IVA_LIQUIDADO, "IVA liquidado (vendas)", AccountNature.CREDORA, true),
                 new Seed(IVA_DEDUTIVEL, "IVA dedutível (compras)", AccountNature.DEVEDORA, true),
+                new Seed("245", "Contribuições para a segurança social", AccountNature.CREDORA, false),
+                new Seed(INSS_A_ENTREGAR, "INSS a entregar", AccountNature.CREDORA, true),
                 new Seed("26", "Pessoal", AccountNature.CREDORA, false),
                 new Seed(PESSOAL_REMUNERACOES, "Remunerações a pagar", AccountNature.CREDORA, true),
+                new Seed(PESSOAL_OUTROS_DESCONTOS, "Outros descontos ao pessoal", AccountNature.CREDORA, true),
 
                 // Classe 3 — Existências
                 new Seed("3", "Existências", AccountNature.DEVEDORA, false),
@@ -76,6 +85,8 @@ public final class PgcNirfChart {
                 new Seed("6201", "Fornecimentos e serviços de terceiros", AccountNature.DEVEDORA, true),
                 new Seed("63", "Custos com o pessoal", AccountNature.DEVEDORA, false),
                 new Seed(CUSTOS_PESSOAL, "Remunerações do pessoal", AccountNature.DEVEDORA, true),
+                new Seed(ENCARGOS_PESSOAL, "Encargos sobre remunerações (INSS patronal)",
+                        AccountNature.DEVEDORA, true),
 
                 // Classe 7 — Proveitos e ganhos
                 new Seed("7", "Proveitos e ganhos", AccountNature.CREDORA, false),

@@ -29,6 +29,10 @@ public final class DocumentSeries {
     public static final String PURCHASE_ORDER = "EC-F";
     /** Recibo de vencimento (folha salarial). */
     public static final String PAYSLIP = "REC";
+    /** Contrato de trabalho. Não é série fiscal — numera-se para o contrato ser referenciável. */
+    public static final String EMPLOYMENT_CONTRACT = "CTR";
+    /** Acerto final de cessação. Documento próprio: é contra ele que o trabalhador confere a conta. */
+    public static final String TERMINATION = "AF";
     /** Lançamento contabilístico (diário). */
     public static final String JOURNAL_ENTRY = "LC";
 

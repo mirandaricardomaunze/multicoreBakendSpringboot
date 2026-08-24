@@ -6,8 +6,10 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.hr.dto.PayslipDeductionLineDTO;
 import mz.multicore.erp.modules.hr.model.Payslip;
 import mz.multicore.erp.modules.hr.service.HRService;
+import mz.multicore.erp.modules.hr.service.PayrollDeductionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +27,11 @@ public class PayslipPrintService {
     private static final Locale PT = new Locale("pt", "PT");
 
     private final HRService hrService;
+    private final PayrollDeductionService payrollDeductionService;
 
-    public PayslipPrintService(HRService hrService) {
+    public PayslipPrintService(HRService hrService, PayrollDeductionService payrollDeductionService) {
         this.hrService = hrService;
+        this.payrollDeductionService = payrollDeductionService;
     }
 
     @Transactional(readOnly = true)
@@ -135,13 +139,34 @@ public class PayslipPrintService {
         line(table, "IRPS",                    p.getIrpsDeduction());
         line(table, "INSS",                    p.getInssDeduction());
         line(table, "Faltas Injustificadas",   p.getAbsenceDeduction());
-        line(table, "Outros Descontos",        p.getOtherDeductions());
+        addOtherDeductionLines(table, p);
 
         BigDecimal total = p.getIrpsDeduction().add(p.getInssDeduction())
                 .add(p.getAbsenceDeduction()).add(p.getOtherDeductions());
         totalLine(table, "Total de Descontos", total);
         line(table, "INSS Patronal (informativo)", p.getEmployerInss());
         return table;
+    }
+
+    /**
+     * <b>Uma linha por desconto, não um total anónimo</b> (RHC-63). Um número solto num recibo é a
+     * origem clássica da reclamação do trabalhador: o líquido desce e ninguém sabe dizer porquê.
+     *
+     * <p>O que não estiver comprometido — um desconto pontual escrito à mão no recibo — continua a
+     * sair numa linha "Outros Descontos". Somar as duas coisas na mesma linha faria a discriminação
+     * mentir por omissão, que é pior do que não discriminar.
+     */
+    private void addOtherDeductionLines(PdfPTable table, Payslip p) {
+        BigDecimal itemised = BigDecimal.ZERO;
+        for (PayslipDeductionLineDTO deductionLine : payrollDeductionService.linesOf(p.getId())) {
+            line(table, deductionLine.kindLabel() + " — " + deductionLine.description(),
+                    deductionLine.amount());
+            itemised = itemised.add(deductionLine.amount());
+        }
+        BigDecimal remainder = p.getOtherDeductions().subtract(itemised);
+        if (remainder.signum() != 0 || itemised.signum() == 0) {
+            line(table, "Outros Descontos", remainder);
+        }
     }
 
     private PdfPTable buildNetPayBlock(Payslip p) {

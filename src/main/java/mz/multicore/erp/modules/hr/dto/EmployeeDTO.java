@@ -9,6 +9,7 @@ public record EmployeeDTO(
     String name,
     String email,
     String phone,
+    byte[] photo,
     String taxId,
     String inssNumber,
     int dependentsCount,
@@ -17,5 +18,10 @@ public record EmployeeDTO(
     String role,
     LocalDate hireDate,
     LocalDate contractEndDate,
-    String status
+    String status,
+    /** Conta de utilizador ligada, ou nulo. Nulo = este colaborador não faz self-service. */
+    String username,
+    /** Banco e conta para o ficheiro de pagamento (§B8.7). Nulos = recebe em numerário. */
+    String bankName,
+    String bankAccount
 ) {}

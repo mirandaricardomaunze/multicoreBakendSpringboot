@@ -40,32 +40,40 @@ public class ChartOfAccountsService {
     }
 
     /**
-     * Semeia o PGC-NIRF na empresa activa. <b>Idempotente</b>: se já houver plano, não faz nada
-     * — semear por cima criaria contas duplicadas ou reporia contas que o contabilista desactivou.
+     * Semeia o PGC-NIRF na empresa activa. <b>Idempotente por código</b>: cria só as contas que
+     * faltam e nunca toca nas que já existem.
      *
-     * @return número de contas criadas (zero quando já existia plano)
+     * <p>Antes era tudo-ou-nada — "se já houver plano, não faz nada" — e isso partia a via de
+     * actualização: uma empresa que semeou o plano em Junho <b>nunca</b> receberia as contas de
+     * pessoal que a folha passou a precisar, e o lançamento automático dos salários ficaria
+     * silenciosamente por fazer para sempre. Preencher lacunas resolve isso sem os dois riscos que
+     * a versão anterior evitava: não duplica (procura pelo código) nem repõe contas desactivadas
+     * (uma conta inactiva continua a existir, logo não é lacuna).
+     *
+     * @return número de contas criadas (zero quando o plano já está completo)
      */
     @Transactional
     public int seedDefaultChart() {
         PermissionGuard.requireManagerOrAdmin("semear o plano de contas");
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        if (accountRepository.existsByCompanyId(companyId)) {
-            return 0;
-        }
+        var existingCodes = accountRepository.findByCompanyIdOrderByCode(companyId).stream()
+                .map(Account::getCode).collect(java.util.stream.Collectors.toSet());
         var company = companyService.getCurrentCompanyReference(CurrentUserContext.getCurrentCompanyId());
-        List<Account> accounts = PgcNirfChart.accounts().stream().map(seed -> {
-            Account account = new Account();
-            account.setCode(seed.code());
-            account.setName(seed.name());
-            account.setCompany(company);
-            account.setAccountClass(AccountClass.ofCode(seed.code()));
-            account.setNature(seed.nature());
-            account.setPostable(seed.postable());
-            account.setActive(true);
-            account.setParentCode(Account.parentCodeOf(seed.code()));
-            account.setCreatedBy(CurrentUserContext.getUsername());
-            return account;
-        }).toList();
+        List<Account> accounts = PgcNirfChart.accounts().stream()
+                .filter(seed -> !existingCodes.contains(seed.code()))
+                .map(seed -> {
+                    Account account = new Account();
+                    account.setCode(seed.code());
+                    account.setName(seed.name());
+                    account.setCompany(company);
+                    account.setAccountClass(AccountClass.ofCode(seed.code()));
+                    account.setNature(seed.nature());
+                    account.setPostable(seed.postable());
+                    account.setActive(true);
+                    account.setParentCode(Account.parentCodeOf(seed.code()));
+                    account.setCreatedBy(CurrentUserContext.getUsername());
+                    return account;
+                }).toList();
         accountRepository.saveAll(accounts);
         return accounts.size();
     }
@@ -117,6 +125,25 @@ public class ChartOfAccountsService {
     @Transactional(readOnly = true)
     public boolean hasChart(Long companyId) {
         return accountRepository.existsByCompanyId(companyId);
+    }
+
+    /**
+     * Todas estas contas existem e aceitam lançamentos nesta empresa.
+     *
+     * <p>Serve para quem lança automaticamente <b>perguntar antes</b>, em vez de rebentar a meio de
+     * uma operação de negócio: um plano semeado antes de estas contas existirem está incompleto, não
+     * inexistente, e recusar o pagamento de um salário por causa disso seria pior do que o problema.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasAccounts(Long companyId, String... codes) {
+        for (String code : codes) {
+            boolean usable = accountRepository.findByCompanyIdAndCode(companyId, code)
+                    .filter(Account::isPostable).filter(Account::isActive).isPresent();
+            if (!usable) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static AccountDTO toDTO(Account account) {

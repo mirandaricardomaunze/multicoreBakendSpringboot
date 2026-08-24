@@ -294,6 +294,9 @@ public class DataLoader implements CommandLineRunner {
         maria.setRole("EMPLOYEE");
         maria.setHireDate(java.time.LocalDate.of(2022, 1, 10));
         maria.setCreatedBy("SYSTEM");
+        // Conta ligada ao colaborador (V48): é o que permite à Maria submeter despesas e pedir férias
+        // em nome PRÓPRIO — e só em nome próprio. Sem a ligação não há self-service nenhum.
+        maria.setAppUser(mariaUser);
         employeeRepository.save(maria);
 
         Employee joao = new Employee();
@@ -306,6 +309,7 @@ public class DataLoader implements CommandLineRunner {
         joao.setRole("MANAGER");
         joao.setHireDate(java.time.LocalDate.of(2021, 5, 3));
         joao.setCreatedBy("SYSTEM");
+        joao.setAppUser(joaoUser);
         employeeRepository.save(joao);
 
         Employee ana = new Employee();
@@ -512,8 +516,11 @@ public class DataLoader implements CommandLineRunner {
         ));
 
         // 6. Seed Expense Claims (triggers approvals)
+        // Cada despesa é submetida em nome do próprio funcionário. O povoamento corre como SYSTEM, e o
+        // ApprovalService grava como submissor quem está no contexto — sem isto o painel de Aprovações
+        // abria com "SYSTEM" em todas as linhas e a coluna Submissor não dizia nada a quem demonstra.
         // Under 50.00: Auto-approved
-        hrService.submitExpense(new CreateExpenseClaimRequest(
+        submitExpenseAs("maria", "EMPLOYEE", new CreateExpenseClaimRequest(
                 maria.getId(),
                 new BigDecimal("35.50"),
                 "MEALS",
@@ -521,7 +528,7 @@ public class DataLoader implements CommandLineRunner {
         ));
 
         // Between 50 and 500: Requires MANAGER approval
-        hrService.submitExpense(new CreateExpenseClaimRequest(
+        submitExpenseAs("maria", "EMPLOYEE", new CreateExpenseClaimRequest(
                 maria.getId(),
                 new BigDecimal("180.00"),
                 "TRAVEL",
@@ -529,12 +536,29 @@ public class DataLoader implements CommandLineRunner {
         ));
 
         // Above 500: Requires ADMIN approval
-        hrService.submitExpense(new CreateExpenseClaimRequest(
+        submitExpenseAs("joao", "MANAGER", new CreateExpenseClaimRequest(
                 joao.getId(),
                 new BigDecimal("750.00"),
                 "LODGING",
                 "Estadia de 4 dias no Hotel Ritz para conferência anual de parceiros"
         ));
+    }
+
+    /**
+     * Submete uma despesa de demonstração com o utilizador do funcionário no contexto, repondo no fim a
+     * sessão do povoamento (SYSTEM, posta pelo {@code runAsSystem} que envolve este método). Só troca o
+     * utilizador — a empresa activa fica intacta.
+     */
+    private void submitExpenseAs(String username, String role, CreateExpenseClaimRequest request) {
+        CurrentUserContext.UserSession seeder = CurrentUserContext.findCurrentUser();
+        CurrentUserContext.setCurrentUser(username, role);
+        try {
+            hrService.submitExpense(request);
+        } finally {
+            if (seeder != null) {
+                CurrentUserContext.setCurrentUser(seeder.username(), seeder.role());
+            }
+        }
     }
 
     private void shareProduct(Product product, Company... companies) {

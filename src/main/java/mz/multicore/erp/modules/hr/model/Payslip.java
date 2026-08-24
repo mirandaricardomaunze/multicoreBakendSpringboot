@@ -85,8 +85,13 @@ public class Payslip extends BaseEntity {
     @Column(name = "net_pay", nullable = false, precision = 14, scale = 2)
     private BigDecimal netPay = BigDecimal.ZERO;
 
+    /**
+     * DRAFT → APPROVED → PAID (ou CANCELLED antes de pago). O {@code APPROVED} entrou no §B8.4: a
+     * {@code HR_PAYROLL_SPEC §3} prometia-o e o recibo nunca o teve, pelo que <b>quem processava a
+     * folha pagava-a sozinho</b>, sem segunda vista sobre os números antes de o dinheiro sair.
+     */
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "DRAFT"; // DRAFT, PAID, CANCELLED
+    private String status = "DRAFT";
 
     @Column(name = "payment_date")
     private LocalDate paymentDate;
