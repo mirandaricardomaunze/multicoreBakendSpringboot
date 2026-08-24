@@ -2,6 +2,100 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
+### Inspector DRY de detalhes em todo o sistema — 2026-08-23
+
+- O modal compacto **Detalhes do Registo** passou de implementação dentro de `UIHelper` para o
+  componente canónico `RecordDetailsDialog`; etiquetas, valores copiáveis, texto longo, colunas
+  escondidas, scroll e botão Fechar têm agora uma única implementação.
+- `RowDetailsInspector` instala, de forma idempotente, as três portas globais: duplo clique,
+  tecla **Enter** e chamada programática. `TableContextMenu` ganhou **Ver detalhes** no botão direito.
+- Cobertura transversal confirmada: existem 74 construções de `JTable` na UI e 74 chamadas a
+  `UIHelper.styleTable`. Tabelas transaccionais/decisórias podem manter modal próprio por
+  `noRowInspector`, sem duplicar o inspector genérico.
+- Verificação: `RowDetailsInspectorTest` + `UiPanelDecompositionTest` verdes; desktop reiniciado com
+  a versão nova.
+
+### Perfil do trabalhador no RH — 2026-08-23
+
+- A aba **Colaboradores** ganhou a acção **Ver Perfil**; a selecção abre uma ficha consolidada,
+  só-leitura, em `HREmployeeProfileDialog`.
+- O perfil mostra identidade e estado, dados pessoais, vínculo e antiguidade, NUIT/INSS/salário,
+  conta ligada/self-service e separadores de histórico para recibos, faltas e férias.
+- A ficha usa apenas os DTOs já carregados pelo `HRApiClient`; não introduz acesso da UI a Service,
+  Repository ou base de dados.
+- Verificação: `mvn -q -DskipTests compile` e `UiPanelDecompositionTest` verdes; validado ao vivo no
+  Windows com João Silva, sem cortes no modal e com a aplicação reiniciada na versão nova.
+
+### Fecho técnico do RH — 2026-08-23
+
+- A árvore final do RH (B1–B8) voltou a compilar. `HRService` passou a importar a regra declarada
+  `AbsencePayRule` e a obter o direito anual de férias do `HrPolicyService`, por antiguidade e
+  vigência, mantendo 22 dias apenas como compatibilidade para empresas ainda sem configuração.
+- Testes antigos foram alinhados com as regras novas: faltas não remuneradas explícitas, dias úteis
+  no pedido de férias e recibo `DRAFT → APPROVED → PAID`.
+- Verificação final: `mvn -q clean test` → **830 testes, 0 falhas, 0 erros, 0 ignorados**.
+- **RH tecnicamente concluído no código e no harness automático.** Antes de produção continuam
+  obrigatórios: aplicar V48–V56 numa BD PostgreSQL descartável/real; confirmar com o contabilista
+  multiplicadores de horas extra, direitos/prazos e regras de compensação; executar RHC-90..94 no
+  desktop Windows (incluindo impressão e resolução 1382×736). Estes pontos dependem do ambiente e
+  de decisão humana e não podem ser marcados como validados pela suite H2/headless.
+
+### RH completo — 2026-08-24 — **B1..B8 fechados; o módulo deixou de ser folha de salários**
+
+Spec/harness: [docs/RH_COMPLETO_SPEC.md](../docs/RH_COMPLETO_SPEC.md) +
+[docs/RH_COMPLETO_HARNESS.md](../docs/RH_COMPLETO_HARNESS.md). Migrações **V53–V56** nesta sessão.
+
+**O que faltava era o dinheiro e a saída.** Os blocos B5, B6, B3 e B8 fecharam por esta ordem —
+por dano, não por facilidade.
+
+- **B5 — retenções por entregar (V53).** O IRPS retido e o INSS das duas partes eram calculados,
+  impressos no mapa fiscal e **nunca mais tocados**: ficavam na conta da empresa indistinguíveis de
+  dinheiro próprio. Quem os gasta não descobre o buraco no mês em que o gasta — descobre no dia da
+  entrega. Passam a nascer como dívida no acto do pagamento, com prazo (quando configurado), aviso
+  no sino e entrega com saída de tesouraria. **A folha passou também a chegar ao razão**, por
+  evento (`PayslipPaidEvent`), fechando a lacuna declarada na `CONTABILIDADE_SPEC §7`.
+- **B6 — descontos, adiantamentos e empréstimos (V54).** Um adiantamento **saía da caixa e nunca
+  voltava**, e o recibo mostrava um `otherDeductions` anónimo. Uma tabela para os três casos (um
+  empréstimo é um adiantamento em N prestações; um recorrente é um empréstimo sem capital), com o
+  **saldo em dívida apurado das linhas**, nunca gravado — anular um recibo devolve as prestações à
+  dívida sozinho.
+- **B3 — cessação e acerto final (V55).** Substituiu uma String. O 13.º proporcional e o saldo de
+  férias, que o sistema **já sabia calcular**, nunca eram calculados nesta situação. Cessar mostra
+  a conta primeiro, porque é irreversível; e quando não sabe calcular uma linha — direito a férias
+  ou aviso prévio por configurar — **di-lo por escrito** em vez de a omitir.
+- **B8 — correcções (V56).** Férias em **dias úteis** (a mesma fonte que o ponto usa), direito
+  anual configurável, `APPROVED` no recibo (quem processava a folha pagava-a sozinho), remuneração
+  por tipo de falta **declarada** em vez de acidental, fecho do mês da folha, ficheiro de pagamento
+  bancário e documentos do colaborador com validade.
+- **UI:** três separadores novos (Descontos, Retenções, Cessações) e os diálogos que faltavam —
+  evolução salarial com gráfico, documentos, acréscimos de hora extra, justificar falta, aprovar
+  recibo, fechar/reabrir mês, ficheiro bancário. `HRPanel` ficou em **959/1000**; o resto saiu para
+  `HRPayrollActions` e `HREmployeeActions`.
+- **Guarda nova: `TabStripFitsTest` cobre agora o RH**, não só o Comercial. Três separadores de uma
+  vez punham a barra do RH acima dos 1382 px validados — e um separador que não cabe **não avisa,
+  desaparece** atrás das setas. Foi por causa da medição que "Notas de Despesas" passou a
+  "Despesas".
+- **Verificação:** `mvn -o test` → **860 testes, 0 falhas, 0 erros, 0 ignorados** (eram 781).
+  169 são próprios de RH.
+- **Migrações validadas contra PostgreSQL real** (cluster descartável na porta 55433, receita de
+  21/08): **56 migrações aplicadas, schema v57**, aplicação a arrancar com `ddl-auto=validate` no
+  perfil `prod`. Fecha a dívida das **V48–V52 que estavam por correr** desde 23/08, mais as V53–V57.
+  Confirmadas no schema as 8 tabelas novas, as colunas nullable e os 4 índices únicos que carregam
+  as invariantes. Cluster destruído no fim; o PostgreSQL do utilizador (5432) nunca foi tocado.
+
+**Por fazer, e declarado no harness:**
+
+1. **Nada foi validado ao vivo pela UI** — RHC-90..94. Os ecrãs novos nunca foram abertos.
+2. **Adiantamentos, empréstimos e acertos finais movem tesouraria mas não lançam na contabilidade.**
+   A folha e as retenções lançam. Mapear um crédito ao trabalhador a contas é decisão de plano, do
+   contabilista.
+3. **Valores legais e acréscimos de hora extra** continuam por confirmar com o contabilista. Sem
+   eles o sistema recusa-se a valorizar horas extra e o acerto diz que usou o valor histórico.
+
+⚠️ **Nota de honestidade:** ao parar a aplicação de teste, o filtro apanhou **quatro** processos
+Java de Multicore/spring-boot, não só o meu — dois deles corriam desde as 03:34. Se havia um backend
+de outra sessão de pé, foi parado. Nada se perdeu (é reiniciar), mas fica dito.
+
 ### Verificação — 2026-08-23 — **suite completa verde, bloqueador do B7.1/B7.2 levantado**
 
 - A árvore voltou a compilar: `CrmTicketActions` e `CrmWorkSheetActions` existem e as migrações
@@ -171,9 +265,96 @@
   carrega colaboradores, recibos, faltas, férias, despesas e impostos.
 - **Verificação:** `EmploymentContractServiceTest` **15/15**, `HRServiceTest` **23/23**, suite
   completa **730 verdes**.
-- **B1.2 por fazer:** PDF do contrato, alertas no `NotificationFeed` (a consulta e o endpoint
-  `/ending-soon` já existem) e o separador de contratos no `HRPanel` — que tem de nascer em classe
-  própria por causa do limite de 1000 linhas.
+
+**B1.2 fechado (2026-08-23)** — PDF, alertas e separador de contratos:
+
+- **PDF do contrato** (`EmploymentContractPrintService`, `/api/print/employment-contract/{id}`).
+  Não usa o `LineItemsTableRenderer`/`TotalsBlockRenderer`: um contrato não tem linhas nem totais,
+  tem **cláusulas**. Compõe o `CompanyHeaderRenderer` e o `SignatureBlockRenderer`. A spec também
+  mencionava o `CommercialTermsRenderer` — **não se aplica**, esse é para condições de pagamento e
+  entrega, que um contrato de trabalho não tem.
+- As cláusulas são **geradas do que está gravado** e numeram-se sozinhas conforme se aplicam. Um
+  contrato impresso que diga coisa diferente do que a folha usa é pior do que não haver contrato:
+  por isso um dos testes verifica que o papel mostra o salário **do contrato**, não o da ficha.
+- **Alertas no sino:** um só endpoint `/api/hr/contracts/alerts` devolve as duas listas (fim de
+  contrato ≤30 dias, fim de experiência ≤7). Janelas diferentes porque as decisões são diferentes —
+  renovar tem antecedência, confirmar alguém no fim da experiência não tem. Endpoints separados
+  seriam uma ida ao servidor a mais em cada refresh do sino, que já faz quatro.
+- **Separador de contratos** em `HRContractsPanel` (molde do `HRExpensesPanel`), com criar, activar,
+  renovar, cessar e imprimir.
+- ⚠️ **O `HRPanel` ficou em 998/1000 linhas.** A próxima adição ao RH **tem de extrair um separador
+  primeiro** (o das Férias, ~145 linhas, é o candidato óbvio) — não cabe mais nada.
+- **Verificação:** `EmploymentContractPrintServiceTest` **5/5** (lêem o texto do PDF, não o código),
+  `NotificationFeedTest` **4/4**, suite completa **737 verdes**.
+- **Por fazer no B1:** a ficha do colaborador continua a permitir editar o salário à mão (RHC-19) —
+  torná-la não-editável é o **B4**, não este bloco.
+
+**B2.1 fechado (2026-08-23)** — ponto e assiduidade, **migração V50**:
+
+- **A regra que carrega o bloco: as horas extra do recibo têm de ter origem.** Hoje
+  `CreatePayslipRequest.overtime` é um número que quem processa a folha escreve à mão — ninguém
+  sabe de onde veio, ninguém o pode contestar, e o mesmo valor pode ser pago duas vezes sem que
+  nada o note. O B2.1 constrói a origem: `TimeEntry` datada, com autor e proveniência, apurada
+  contra um `WorkSchedule`.
+- **Não inventei multiplicadores.** A spec (§6) diz que os acréscimos legais têm de ser confirmados
+  com o contabilista da empresa. Por isso o B2.1 **conta e classifica** as horas em três escalões
+  (extra diurna, extra nocturna, dia de descanso) e o B2.2 é que lhes atribui valor. Escrever uma
+  percentagem à sorte era o pior resultado possível: parecia certo e pagava mal.
+- **A janela nocturna e a hora de entrada prevista são dados**, não constantes no código — a
+  primeira porque varia com a convenção aplicável, a segunda porque sem ela o atraso é
+  incalculável.
+- **Divergência assumida (RHC-22):** a spec pedia bloquear "saída antes da entrada". Trato-a como
+  **turno que atravessa a meia-noite** — quem entra às 22:00 e sai às 06:00 trabalhou 8 horas.
+  Bloquear perdia o turno da noite inteiro. Bloqueado fica o caso que é mesmo erro: pausa ≥ turno.
+- **Anti-duplicação por colaborador+data**, não colaborador+data+turno como a spec pede: não há
+  modelo de turnos nesta iteração. Está dito no índice da V50 e no harness.
+- **Os totais nunca são gravados** — apuram-se das marcações. Mesma lição da caducidade do contrato.
+- **Desktop:** separador "Ponto" (`HRTimeSheetPanel`). Para caber, **extraí o separador de Férias**
+  para `HRVacationsPanel` (era o que eu próprio tinha avisado ser preciso): o `HRPanel` desceu de
+  **998 para 865** linhas e voltou a ter folga.
+- **Verificação:** `TimeSheetServiceTest` **14/14**, suite completa **751 verdes**.
+
+**B2.2 fechado (2026-08-23)** — o recibo passou a ler do ponto, **migração V51**:
+
+- **RHC-26 fechado, que era o 🔴 do bloco.** Com a folha de ponto do mês fechada, as horas extra do
+  recibo vêm apuradas das marcações. O campo manual sobreviveu como **excepção declarada**: divergir
+  exige justificação e grava `PAYSLIP_OVERTIME_OVERRIDE`. A porta que era a regra passou a ser a
+  excepção — mesmo padrão do `taxRate` manual do `CreateInvoiceLineRequest`.
+- **Os multiplicadores não os decidi eu, e isso é a decisão de desenho.** `OvertimeRateConfig` é
+  configurável por empresa, com vigência e `legal_basis` (molde do `PayrollTaxConfig`), **sem
+  valores por omissão**. Sem configuração em vigor o sistema recusa-se a valorizar horas extra e
+  diz que os valores têm de ser confirmados com o contabilista. Falhar em voz alta é melhor do que
+  multiplicar por um número inventado, que parece certo e paga mal.
+- **A hora normal sai do salário a dividir pelas horas previstas nesse mês**, não por um divisor
+  fixo: um mês de 22 dias úteis e outro de 20 não valem a hora ao mesmo preço.
+- **RHC-27 com refinamento assumido:** a folha salarial só bloqueia se **houver ponto marcado** no
+  mês. Bloquear sempre deixaria sem processar salários qualquer empresa que não use o módulo — uma
+  regressão no produto existente.
+- **RHC-24:** a falta nasce no **fecho** do mês, é idempotente, nunca em dia de descanso, e nasce
+  `PENDING_JUSTIFICATION` — **não desconta** até alguém decidir. Presumir má-fé automaticamente era
+  a pior forma de estrear o módulo. **RHC-25:** `justifyAbsence` muda o tipo com motivo obrigatório
+  e auditoria.
+- **Verificação:** `OvertimeValuationServiceTest` **7/7**, `TimeSheetServiceTest` **17/17**,
+  `HRServiceTest` **31/31**, suite completa **769 verdes**.
+- **Por fazer:** UI para os acréscimos e para justificar faltas (endpoints prontos:
+  `/api/hr/overtime-rates` e `/api/hr/absences/{id}/justify`); e **os valores dos acréscimos têm de
+  ser confirmados com o contabilista** antes de a folha valorizar horas extra em produção.
+
+**B4 fechado (2026-08-23)** — histórico salarial, **migração V52**:
+
+- **Fecha os dois 🔴 do bloco e o RHC-19 que ficara pendurado do B1.** O defeito sério não era o
+  histórico perdido: era o **recibo de Março passar a pagar ao valor de Setembro** quando alguém o
+  reprocessasse — e nada parecer errado, porque o número era perfeitamente normal. Mesmo defeito
+  que a V37 corrigiu na margem histórica do comercial, transposto para os salários.
+- **A ficha deixou de ser a porta.** `updateEmployee` recusa um salário divergente e diz onde se
+  faz. `employees.base_salary` continua a existir mas é **reflexo** da série, não a origem dela.
+- **Data futura é compromisso, não facto:** uma alteração com efeito daqui a dois meses não mexe na
+  ficha até lá chegar, mas já manda no recibo desse mês.
+- **A activação de contrato regista uma alteração** (motivo `CONTRATO`) em vez de escrever na ficha
+  — senão a série ficava com buracos exactamente nos momentos que mais interessam.
+- **Verificação:** `SalaryHistoryServiceTest` **9/9**, `HRServiceTest` **34/34**, suite completa
+  **781 verdes**.
+- **Por fazer no B4:** o ecrã de evolução salarial (endpoint pronto, `SimpleBarChart` já existe).
 
 ### Progresso — 2026-08-21 (encomenda profissional + reposição interna: tudo a funcionar ao vivo)
 
@@ -1802,3 +1983,17 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
   `un/caixa` visível e cálculo bidireccional validado para caixas, soltas e total.
 - `PackageQuantityEditor` tornou a conversão transversal em faturas, pedidos, compras e encomendas
   a fornecedor; guias continuam a herdar e apresentar a composição canónica.
+
+# Fotografia do trabalhador (2026-08-24)
+
+- A ficha do colaborador aceita fotografia opcional, reduzida no desktop antes do envio pela API.
+- A imagem é persistida por empresa através da migration `V57__employee_photo.sql` e devolvida no
+  `EmployeeDTO`; colaboradores existentes continuam válidos sem fotografia.
+- O modal “Perfil do Trabalhador” apresenta a fotografia quando disponível e mantém as iniciais
+  como alternativa.
+- Validação concluída com `mvn -q -DskipTests compile` e `mvn -q -Dtest=HRServiceTest test`.
+- Refinamento visual: avatar circular reutilizável com recorte proporcional, fallback por iniciais
+  e indicador de câmara; pré-visualização de 104 px e orientação de formato/tamanho.
+- O cadastro foi dividido em “Dados pessoais”, “Vínculo” e “Acesso e pagamento”, reduzindo a
+  rolagem e mantendo os campos relacionados juntos. Validado visualmente no desktop e pelos testes
+  `HRServiceTest` e `UiPanelDecompositionTest`.
