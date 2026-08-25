@@ -96,6 +96,37 @@ por dano, não por facilidade.
 Java de Multicore/spring-boot, não só o meu — dois deles corriam desde as 03:34. Se havia um backend
 de outra sessão de pé, foi parado. Nada se perdeu (é reiniciar), mas fica dito.
 
+### Migrações — 2026-08-25 — **V1..V58 VALIDADAS CONTRA POSTGRESQL REAL** (arranque limpo *e* actualização)
+
+Cluster descartável (PostgreSQL 18.2, `initdb` + `pg_ctl` em porta **55432**, auth trust), a partir de um
+`git worktree` no HEAD para validar o estado **committado** e não apanhar ficheiros meio-escritos de
+outra sessão. O servidor do utilizador (5432) nunca foi tocado; cluster e worktree destruídos no fim.
+
+**1. Arranque de raiz** — base vazia, perfil `prod` (Flyway dono do schema, `ddl-auto=validate`):
+- **57 migrações aplicadas, 0 falhadas, schema em v58** (2,2 s). 85 tabelas.
+- **`Started MulticoreApplication`** — cada mapeamento de entidade bate com o schema que o Flyway
+  construiu. É este passo que apanha a coluna que o Java tem e o SQL não (o bug do `varchar(20)`).
+- O buraco no **V29 nunca existiu** — 58 versões menos uma dá as 57 aplicadas. Inofensivo, e agora
+  provado em vez de presumido.
+
+**2. Actualização sobre base povoada** — o percurso que uma loja faz de verdade, e o que faltava:
+- Base levada só até à **V47** (46 migrações), povoada por SQL directo com empresa, 3 colaboradores
+  (um `TERMINATED`), 2 recibos (`PAID` e `DRAFT`) e 2 utilizadores.
+- Salto **V48→V58 por cima dos dados**: 11 migrações, **0 falhadas**, e a app arrancou com
+  `ddl-auto=validate`.
+- **Nada foi inventado nem reescrito:** as colunas novas (`app_user_id`, `bank_name`, `bank_account`,
+  `photo`) ficaram a NULL nas linhas existentes, e os recibos antigos mantiveram o estado
+  (`PAID` continua `PAID`) — a V56 não reescreveu história.
+- **Porquê corre bem:** as únicas 4 alterações a tabelas existentes em toda a cadeia V48..V58 são
+  `add column` **nullable**. Zero colunas `not null` sem default — que é o que parte uma base com dados.
+
+**Nota de rigor:** `companies`, `employees`, `payslips` e `app_users` **não têm coluna `version`** (só
+`stocks` tem). A lição de 21/08 sobre preencher `version` em seeds SQL aplica-se só às tabelas que a
+têm — não é geral.
+
+**Por validar ainda:** a **V59** (custos de fornecedor da saúde ocupacional) estava por commitar
+quando isto correu, logo ficou de fora.
+
 ### Verificação — 2026-08-23 — **suite completa verde, bloqueador do B7.1/B7.2 levantado**
 
 - A árvore voltou a compilar: `CrmTicketActions` e `CrmWorkSheetActions` existem e as migrações
