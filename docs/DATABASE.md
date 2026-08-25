@@ -72,3 +72,9 @@ Mas erros de utilizador devem ser tratados antes no Service com `BusinessRuleExc
 - [ ] Indices foram adicionados para consultas importantes.
 - [ ] Migration nova foi criada.
 - [ ] Service cobre regras antes de persistir.
+# Saúde ocupacional
+
+- `occupational_health_exams` guarda o histórico por `company_id` e `employee_id`.
+- `fitness_result` aceita `FIT`, `FIT_WITH_RESTRICTIONS` ou `UNFIT`; o estado de validade é
+  derivado de `expiry_date`, nunca persistido.
+- A migration `V58__occupational_health_exams.sql` cria índices por trabalhador/data e validade.

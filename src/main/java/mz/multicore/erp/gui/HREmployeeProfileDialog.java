@@ -9,6 +9,7 @@ import mz.multicore.erp.modules.hr.dto.AbsenceDTO;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.PayslipDTO;
 import mz.multicore.erp.modules.hr.dto.VacationDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthSummaryDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -30,7 +31,8 @@ final class HREmployeeProfileDialog {
                      EmployeeDTO employee,
                      List<PayslipDTO> payslips,
                      List<AbsenceDTO> absences,
-                     List<VacationDTO> vacations) {
+                     List<VacationDTO> vacations,
+                     OccupationalHealthSummaryDTO health) {
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
         tabs.addTab("Perfil", UIHelper.icon("fas-id-card", 14, UIHelper.TEXT_LIGHT), profile(employee));
@@ -40,6 +42,7 @@ final class HREmployeeProfileDialog {
                 absences(employee.id(), absences));
         tabs.addTab("Férias", UIHelper.icon("fas-umbrella-beach", 14, UIHelper.TEXT_LIGHT),
                 vacations(employee.id(), vacations));
+        tabs.addTab("Saúde", UIHelper.icon("fas-heartbeat", 14, UIHelper.TEXT_LIGHT), health(health));
 
         new ModernFormDialog(parent, "Perfil do Trabalhador", "fas-id-card",
                 employee.name() + " · " + value(employee.employeeNumber()), tabs)
@@ -115,6 +118,43 @@ final class HREmployeeProfileDialog {
         table.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.status());
         return historyPanel(table, model.getRowCount(), "Nenhum recibo encontrado para este trabalhador.");
+    }
+
+    private static JPanel health(OccupationalHealthSummaryDTO health) {
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(14, 4, 4, 4));
+        if (health == null || !health.hasExam()) {
+            panel.add(section("Aptidão médica", "fas-heartbeat",
+                    row("Situação", "Sem exame ocupacional registado"),
+                    row("Acção", "Agendar exame de admissão ou periódico")), BorderLayout.NORTH);
+            return panel;
+        }
+        panel.add(section("Aptidão médica", "fas-heartbeat",
+                row("Resultado", fitnessLabel(health.fitnessResult())),
+                row("Data do exame", date(health.examDate())),
+                row("Validade", date(health.expiryDate())),
+                row("Situação", healthStatusLabel(health.validityStatus(), health.daysUntilExpiry()))),
+                BorderLayout.NORTH);
+        return panel;
+    }
+
+    private static String fitnessLabel(String result) {
+        return switch (value(result)) {
+            case "FIT" -> "Apto";
+            case "FIT_WITH_RESTRICTIONS" -> "Apto com restrições";
+            case "UNFIT" -> "Inapto";
+            default -> value(result);
+        };
+    }
+
+    private static String healthStatusLabel(String status, Long days) {
+        return switch (value(status)) {
+            case "EXPIRED" -> "Expirado há " + Math.abs(days == null ? 0 : days) + " dia(s)";
+            case "EXPIRING" -> "Renovar em " + (days == null ? 0 : days) + " dia(s)";
+            case "VALID" -> "Válido";
+            default -> "Não registado";
+        };
     }
 
     private static JPanel absences(Long employeeId, List<AbsenceDTO> source) {

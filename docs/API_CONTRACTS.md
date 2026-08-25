@@ -126,3 +126,9 @@ Como o Swing vai migrar para clients HTTP:
   devolve `PageResponse<POSCatalogItemDTO>`.
 - `GET /api/comercial/products/pos-catalog/by-barcode?barcode=...` devolve um item com produto e
   disponibilidade, permitindo ao scanner operar fora da página visível.
+# Saúde ocupacional
+
+- `GET /api/hr/occupational-health/employee/{id}/summary` — resumo não clínico do último exame.
+- `GET /api/hr/occupational-health/employee/{id}` — histórico clínico, restrito a gestor/admin.
+- `GET /api/hr/occupational-health/expiring` — últimos exames a renovar em até 60 dias ou vencidos.
+- `POST /api/hr/occupational-health` — regista exame/renovação sem alterar o histórico anterior.

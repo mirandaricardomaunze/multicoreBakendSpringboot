@@ -1997,3 +1997,14 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
 - O cadastro foi dividido em “Dados pessoais”, “Vínculo” e “Acesso e pagamento”, reduzindo a
   rolagem e mantendo os campos relacionados juntos. Validado visualmente no desktop e pelos testes
   `HRServiceTest` e `UiPanelDecompositionTest`.
+
+# Saúde ocupacional do trabalhador (2026-08-24)
+
+- Histórico de exames com cartão, exame, validade, aptidão, clínica/médico, restrições, observações
+  e comprovativo opcional até 5 MB.
+- Renovar cria nova linha e preserva o histórico; validade e alertas de 60 dias são derivados.
+- Perfil geral mostra somente aptidão e validade; detalhes clínicos exigem `MANAGER` ou `ADMIN` e
+  cada registo produz auditoria `OCCUPATIONAL_HEALTH_EXAM_REGISTER`.
+- O sino recebe alertas de exames expirados ou próximos da renovação sem expor dados a outros
+  perfis.
+- Validação concluída com compilação limpa, testes dirigidos e suíte Maven completa.

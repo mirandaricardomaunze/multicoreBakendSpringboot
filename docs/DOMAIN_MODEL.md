@@ -75,3 +75,10 @@ Evitar:
 - Movimentos financeiros devem ter origem clara: POS, factura, recibo, ajuste ou tesouraria.
 - Numeracao oficial nao pode reutilizar numeros.
 - Regra fiscal deve ser explicita, testavel e documentada quando nao for obvia.
+# Saúde ocupacional
+
+- `OccupationalHealthExam` pertence ao domínio RH e à empresa activa.
+- Cada renovação cria um novo exame; registos anteriores não são substituídos, preservando o
+  histórico de aptidão e validade do trabalhador.
+- O perfil geral consome apenas `OccupationalHealthSummaryDTO`. Clínica, médico, restrições,
+  observações e comprovativo são dados restritos a `MANAGER`/`ADMIN`.

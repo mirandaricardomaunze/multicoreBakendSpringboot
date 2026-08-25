@@ -23,6 +23,7 @@ import mz.multicore.erp.modules.hr.dto.ExpenseClaimDTO;
 import mz.multicore.erp.modules.hr.dto.PayslipDTO;
 import mz.multicore.erp.modules.hr.dto.VacationDTO;
 import mz.multicore.erp.modules.hr.dto.UpsertEmployeeRequest;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthSummaryDTO;
 import mz.multicore.erp.desktop.client.HRApiClient;
 import mz.multicore.erp.modules.printing.PdfFileSaver;
 import mz.multicore.erp.modules.printing.TablePdfExporter;
@@ -330,6 +331,8 @@ public class HRPanel extends JPanel {
                 .addAction("Evolução Salarial", UIHelper.icon("fas-chart-line", 14),
                         employeeActions::openSalaryHistory)
                 .addAction("Documentos", UIHelper.icon("fas-id-card", 14), employeeActions::openDocuments)
+                .addAction("Saúde Ocupacional", UIHelper.icon("fas-heartbeat", 14),
+                        employeeActions::openOccupationalHealth)
                 .addAction("Alterar Estado", UIHelper.icon("fas-user-shield", 14), this::changeSelectedEmployeeStatus)
                 .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
                         () -> exportTable("colaboradores", "Colaboradores", employeesTable));
@@ -400,8 +403,11 @@ public class HRPanel extends JPanel {
     private void openSelectedEmployeeProfile() {
         EmployeeDTO employee = selectedEmployee();
         if (employee == null) return;
-        HREmployeeProfileDialog.show(SwingUtilities.getWindowAncestor(this), employee,
-                payslipsList, absencesList, vacationsList);
+        UIHelper.runWithProgress(this, "A carregar perfil do trabalhador…",
+                () -> hrApiClient.getOccupationalHealthSummary(employee.id()),
+                health -> HREmployeeProfileDialog.show(SwingUtilities.getWindowAncestor(this), employee,
+                        payslipsList, absencesList, vacationsList, health),
+                this::showActionError);
     }
 
     private void openEmployeeDialog(EmployeeDTO existing) {

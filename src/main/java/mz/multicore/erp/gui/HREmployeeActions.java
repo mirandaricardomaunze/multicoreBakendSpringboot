@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ModernFormDialog;
+import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.SimpleBarChart;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -11,12 +12,16 @@ import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.EmployeeDocumentDTO;
 import mz.multicore.erp.modules.hr.dto.SalaryChangeDTO;
 import mz.multicore.erp.modules.hr.dto.SaveEmployeeDocumentRequest;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
+import mz.multicore.erp.modules.hr.dto.SaveOccupationalHealthExamRequest;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -40,6 +45,8 @@ final class HREmployeeActions {
 
     private static final String[] DOCUMENT_TYPES = {
             "BI", "DIRE", "PASSAPORTE", "NUIT", "CERTIFICADO", "OUTRO"};
+    private static final String[] FITNESS_RESULTS = {"FIT", "FIT_WITH_RESTRICTIONS", "UNFIT"};
+    private static final String[] FITNESS_LABELS = {"Apto", "Apto com restrições", "Inapto"};
 
     /** Tipos de falta para justificação. O primeiro é o que a falta gerada pelo ponto deixa de ser. */
     private static final String[] ABSENCE_TYPES = {
@@ -257,6 +264,141 @@ final class HREmployeeActions {
                         "Sucesso", JOptionPane.INFORMATION_MESSAGE),
                 owner::showActionError);
     }
+
+    // ─── Saúde ocupacional ───────────────────────────────────────────────────
+
+    void openOccupationalHealth() {
+        EmployeeDTO employee = employeeSelection.get();
+        if (employee == null) return;
+        if (!PermissionGuard.isManagerOrAdmin()) {
+            JOptionPane.showMessageDialog(owner,
+                    "Apenas gestores ou administradores podem consultar dados de saúde ocupacional.",
+                    "Acesso restrito", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        UIHelper.runWithProgress(owner, "A carregar saúde ocupacional…",
+                () -> owner.hrApiClient.getOccupationalHealthHistory(employee.id()),
+                history -> showOccupationalHealth(employee, history), owner::showActionError);
+    }
+
+    private void showOccupationalHealth(EmployeeDTO employee, List<OccupationalHealthExamDTO> history) {
+        String[] cols = {"Exame", "Validade", "Resultado", "Situação", "Clínica", "Comprovativo"};
+        DefaultTableModel model = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        for (OccupationalHealthExamDTO exam : history) {
+            model.addRow(new Object[]{exam.examDate().format(DATE_FMT), exam.expiryDate().format(DATE_FMT),
+                    fitnessLabel(exam.fitnessResult()), healthSituation(exam),
+                    exam.clinic() == null ? "—" : exam.clinic(), exam.hasAttachment() ? "Sim" : "Não"});
+        }
+        JTable table = new JTable(model);
+        UIHelper.styleTable(table);
+        JScrollPane scroll = new JScrollPane(table);
+        UIHelper.styleScrollPane(scroll);
+        scroll.setPreferredSize(new Dimension(760, 280));
+        JLabel privacy = new JLabel("Dados clínicos restritos · cada renovação mantém o histórico anterior");
+        privacy.setForeground(UIHelper.TEXT_MUTED);
+        JPanel content = new JPanel(new BorderLayout(0, 10));
+        content.setOpaque(false);
+        content.add(privacy, BorderLayout.NORTH);
+        content.add(scroll, BorderLayout.CENTER);
+
+        String action = history.isEmpty() ? "Registar Exame" : "Registar Renovação";
+        Object[] options = {action, "Fechar"};
+        int answer = JOptionPane.showOptionDialog(owner, content,
+                "Saúde Ocupacional — " + employee.name(), JOptionPane.DEFAULT_OPTION,
+                JOptionPane.PLAIN_MESSAGE, null, options, options[1]);
+        if (answer == 0) openOccupationalHealthForm(employee);
+    }
+
+    private void openOccupationalHealthForm(EmployeeDTO employee) {
+        JTextField cardField = new JTextField();
+        DateField examDate = new DateField(LocalDate.now());
+        DateField expiryDate = new DateField(LocalDate.now().plusYears(1));
+        JComboBox<String> resultCombo = new JComboBox<>(FITNESS_LABELS);
+        JTextField clinicField = new JTextField();
+        JTextField doctorField = new JTextField();
+        JTextField restrictionsField = new JTextField();
+        JTextField notesField = new JTextField();
+        for (JTextField field : new JTextField[]{cardField, clinicField, doctorField, restrictionsField, notesField}) {
+            UIHelper.styleTextField(field);
+        }
+        UIHelper.styleComboBox(resultCombo);
+
+        final byte[][] attachment = {null};
+        final String[] attachmentName = {null};
+        JLabel attachmentLabel = new JLabel("Nenhum comprovativo seleccionado");
+        attachmentLabel.setForeground(UIHelper.TEXT_MUTED);
+        ModernButton attachmentButton = UIHelper.createSecondaryButton("Anexar comprovativo…");
+        attachmentButton.setIcon(UIHelper.icon("fas-paperclip", 14));
+        attachmentButton.addActionListener(event -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Escolher comprovativo do exame");
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                    "PDF ou imagem", "pdf", "jpg", "jpeg", "png"));
+            if (chooser.showOpenDialog(owner) != JFileChooser.APPROVE_OPTION) return;
+            try {
+                byte[] data = Files.readAllBytes(chooser.getSelectedFile().toPath());
+                if (data.length > 5_000_000) throw new IllegalArgumentException("O ficheiro excede 5 MB.");
+                attachment[0] = data;
+                attachmentName[0] = chooser.getSelectedFile().getName();
+                attachmentLabel.setText(attachmentName[0]);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(owner, ex.getMessage(), "Comprovativo inválido",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        JPanel attachmentPanel = new JPanel(new BorderLayout(8, 0));
+        attachmentPanel.setOpaque(false);
+        attachmentPanel.add(attachmentButton, BorderLayout.WEST);
+        attachmentPanel.add(attachmentLabel, BorderLayout.CENTER);
+
+        JPanel form = UIHelper.createDialogForm(
+                "Número do cartão:", cardField,
+                "Data do exame:", examDate,
+                "Validade:", expiryDate,
+                "Resultado:", resultCombo,
+                "Clínica:", clinicField,
+                "Médico responsável:", doctorField,
+                "Restrições laborais:", restrictionsField,
+                "Observações:", notesField,
+                "Comprovativo (máx. 5 MB):", attachmentPanel);
+        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
+                "Exame de Saúde — " + employee.name(), "fas-heartbeat",
+                "A renovação cria um novo registo e preserva todo o histórico médico ocupacional.", form)
+                .setSize(820, 650).showDialog();
+        if (!confirmed) return;
+
+        SaveOccupationalHealthExamRequest request = new SaveOccupationalHealthExamRequest(
+                employee.id(), blank(cardField.getText()), examDate.value(), expiryDate.value(),
+                FITNESS_RESULTS[resultCombo.getSelectedIndex()], blank(clinicField.getText()),
+                blank(doctorField.getText()), blank(restrictionsField.getText()), blank(notesField.getText()),
+                attachmentName[0], attachment[0]);
+        UIHelper.runWithProgress(owner, "A registar exame ocupacional…",
+                () -> owner.hrApiClient.registerOccupationalHealthExam(request),
+                ignored -> JOptionPane.showMessageDialog(owner,
+                        "Exame ocupacional registado. O histórico anterior foi preservado.",
+                        "Saúde Ocupacional", JOptionPane.INFORMATION_MESSAGE), owner::showActionError);
+    }
+
+    private String healthSituation(OccupationalHealthExamDTO exam) {
+        return switch (exam.validityStatus()) {
+            case "EXPIRED" -> "Expirado há " + Math.abs(exam.daysUntilExpiry()) + " dia(s)";
+            case "EXPIRING" -> "Renovar em " + exam.daysUntilExpiry() + " dia(s)";
+            default -> "Válido";
+        };
+    }
+
+    private String fitnessLabel(String value) {
+        return switch (value) {
+            case "FIT" -> "Apto";
+            case "FIT_WITH_RESTRICTIONS" -> "Apto com restrições";
+            case "UNFIT" -> "Inapto";
+            default -> value;
+        };
+    }
+
+    private String blank(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 
     // ─── §B2 (RHC-25): justificar uma falta ───────────────────────────────────
 

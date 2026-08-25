@@ -9,6 +9,8 @@ import mz.multicore.erp.modules.hr.dto.ContractAlertsDTO;
 import mz.multicore.erp.modules.hr.dto.EmployeeDocumentDTO;
 import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
@@ -52,6 +54,7 @@ public class NotificationFeed {
         addContracts(items);
         addPayrollLiabilities(items);
         addEmployeeDocuments(items);
+        addOccupationalHealth(items);
         items.sort(Comparator.comparingInt(NotificationItem::priority).reversed()
                 .thenComparing(NotificationItem::type)
                 .thenComparing(NotificationItem::title));
@@ -203,6 +206,31 @@ public class NotificationFeed {
                     document.expiryDate().format(DATE_FORMAT), "hr",
                     document.expired() || days <= 15 ? 3 : 2));
         }
+    }
+
+    /** Alertas apenas para gestores/admin: o sino não expõe informação médica a outros perfis. */
+    private void addOccupationalHealth(List<NotificationItem> items) {
+        if (!PermissionGuard.isManagerOrAdmin()) return;
+        for (OccupationalHealthExamDTO exam : hrApiClient.getExpiringOccupationalHealthExams()) {
+            long days = exam.daysUntilExpiry();
+            String title = days < 0
+                    ? "Exame ocupacional expirado: " + exam.employeeName()
+                    : days == 0
+                            ? "Exame ocupacional expira hoje: " + exam.employeeName()
+                            : "Renovar exame em " + days + " dia(s): " + exam.employeeName();
+            items.add(new NotificationItem("Saúde Ocupacional", title,
+                    "Agendar exame periódico · " + fitnessLabel(exam.fitnessResult()),
+                    exam.expiryDate().format(DATE_FORMAT), "hr", days <= 15 ? 3 : 2));
+        }
+    }
+
+    private static String fitnessLabel(String result) {
+        return switch (result) {
+            case "FIT" -> "Apto";
+            case "FIT_WITH_RESTRICTIONS" -> "Apto com restrições";
+            case "UNFIT" -> "Inapto";
+            default -> "Sem resultado";
+        };
     }
 
     private static String humanDocumentType(String type) {
