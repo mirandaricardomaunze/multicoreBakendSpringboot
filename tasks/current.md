@@ -165,8 +165,19 @@ outra sessão. O servidor do utilizador (5432) nunca foi tocado; cluster e workt
 `stocks` tem). A lição de 21/08 sobre preencher `version` em seeds SQL aplica-se só às tabelas que a
 têm — não é geral.
 
-**Por validar ainda:** a **V59** (custos de fornecedor da saúde ocupacional) estava por commitar
-quando isto correu, logo ficou de fora.
+~~**Por validar ainda:** a **V59**~~ **V59 validada a 2026-08-26**, mesma receita, cadeia completa
+**V1..V59**:
+- **Arranque de raiz:** 58 migrações, 0 falhadas, schema em **v59**, e `Started MulticoreApplication`
+  com `ddl-auto=validate`.
+- **Actualização V58 → V59 com a tabela alvo POVOADA:** a V59 altera `occupational_health_exams`, pelo
+  que a base foi levada à V58, semeada com **dois exames de aptidão** e só depois actualizada.
+  Alterar tabela vazia não prova nada. 1 migração, 0 falhadas; os dois exames sobreviveram com os
+  dados originais, as 4 colunas novas a NULL, e os índices `idx_occupational_health_provider` e
+  `idx_occupational_health_unpaid` criados.
+- **Porquê corre bem:** as 4 alterações da V59 são `add column` **nullable**, e não há `update` a
+  reescrever dados existentes.
+
+**Continua por validar:** o que entrar depois do `2a95394`.
 
 ### Verificação — 2026-08-23 — **suite completa verde, bloqueador do B7.1/B7.2 levantado**
 
