@@ -129,6 +129,15 @@ Como o Swing vai migrar para clients HTTP:
 # Saúde ocupacional
 
 - `GET /api/hr/occupational-health/employee/{id}/summary` — resumo não clínico do último exame.
+  Restrito a gestor/admin **e ao próprio trabalhador**: a aptidão é dado de saúde.
 - `GET /api/hr/occupational-health/employee/{id}` — histórico clínico, restrito a gestor/admin.
+  Cada consulta grava `OCCUPATIONAL_HEALTH_ACCESS` na auditoria.
 - `GET /api/hr/occupational-health/expiring` — últimos exames a renovar em até 60 dias ou vencidos.
+- `GET /api/hr/occupational-health/missing` — trabalhadores no activo sem exame de aptidão nenhum.
+- `GET /api/hr/occupational-health/providers` — prestadores activos do cadastro de fornecedores.
+- `GET /api/hr/occupational-health/costs?from=&to=` — custo dos exames no intervalo, por prestador.
 - `POST /api/hr/occupational-health` — regista exame/renovação sem alterar o histórico anterior.
+  Recusa texto com estado serológico e recusa número de factura sem valor.
+- `POST /api/hr/occupational-health/{id}/pay` — paga o exame à clínica por saída de tesouraria.
+  Encargo do empregador; pagar duas vezes é recusado. Ver
+  [CONFORMIDADE_LEGAL_MZ_SPEC.md](CONFORMIDADE_LEGAL_MZ_SPEC.md).

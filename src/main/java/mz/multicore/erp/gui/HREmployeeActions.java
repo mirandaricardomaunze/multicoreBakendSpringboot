@@ -14,11 +14,16 @@ import mz.multicore.erp.modules.hr.dto.SalaryChangeDTO;
 import mz.multicore.erp.modules.hr.dto.SaveEmployeeDocumentRequest;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.SaveOccupationalHealthExamRequest;
+import mz.multicore.erp.modules.hr.dto.HealthProviderDTO;
+import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthCostDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthProviderCostDTO;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.nio.file.Files;
@@ -47,6 +52,7 @@ final class HREmployeeActions {
             "BI", "DIRE", "PASSAPORTE", "NUIT", "CERTIFICADO", "OUTRO"};
     private static final String[] FITNESS_RESULTS = {"FIT", "FIT_WITH_RESTRICTIONS", "UNFIT"};
     private static final String[] FITNESS_LABELS = {"Apto", "Apto com restrições", "Inapto"};
+    private static final String NO_PROVIDER = "— sem prestador cadastrado —";
 
     /** Tipos de falta para justificação. O primeiro é o que a falta gerada pelo ponto deixa de ser. */
     private static final String[] ABSENCE_TYPES = {
@@ -282,48 +288,187 @@ final class HREmployeeActions {
     }
 
     private void showOccupationalHealth(EmployeeDTO employee, List<OccupationalHealthExamDTO> history) {
-        String[] cols = {"Exame", "Validade", "Resultado", "Situação", "Clínica", "Comprovativo"};
+        String[] cols = {"Exame", "Validade", "Resultado", "Situação", "Prestador", "Custo",
+                "Pagamento", "Comprovativo"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
+        BigDecimal spent = BigDecimal.ZERO;
+        BigDecimal owed = BigDecimal.ZERO;
         for (OccupationalHealthExamDTO exam : history) {
+            if (exam.cost() != null) {
+                spent = spent.add(exam.cost());
+                if (!exam.paid()) owed = owed.add(exam.cost());
+            }
             model.addRow(new Object[]{exam.examDate().format(DATE_FMT), exam.expiryDate().format(DATE_FMT),
                     fitnessLabel(exam.fitnessResult()), healthSituation(exam),
-                    exam.clinic() == null ? "—" : exam.clinic(), exam.hasAttachment() ? "Sim" : "Não"});
+                    exam.providerName() == null ? "—" : exam.providerName(),
+                    exam.cost() == null ? "—" : money(exam.cost()),
+                    exam.cost() == null ? "—" : exam.paid()
+                            ? "Pago em " + exam.paidAt().format(DATE_FMT) : "Por pagar",
+                    exam.hasAttachment() ? "Sim" : "Não"});
         }
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        scroll.setPreferredSize(new Dimension(760, 280));
-        JLabel privacy = new JLabel("Dados clínicos restritos · cada renovação mantém o histórico anterior");
+        scroll.setPreferredSize(new Dimension(900, 280));
+        JLabel privacy = new JLabel("Dados clínicos restritos · cada consulta fica registada na auditoria "
+                + "· cada renovação mantém o histórico anterior");
         privacy.setForeground(UIHelper.TEXT_MUTED);
+        JLabel totals = new JLabel(spent.signum() == 0
+                ? "Sem custos de exames registados para este trabalhador."
+                : String.format("Custo suportado pela empresa: %s · por pagar às clínicas: %s",
+                        money(spent), money(owed)));
+        totals.setForeground(UIHelper.TEXT_LIGHT);
         JPanel content = new JPanel(new BorderLayout(0, 10));
         content.setOpaque(false);
         content.add(privacy, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
+        content.add(totals, BorderLayout.SOUTH);
 
         String action = history.isEmpty() ? "Registar Exame" : "Registar Renovação";
-        Object[] options = {action, "Fechar"};
+        Object[] options = {action, "Registar Pagamento", "Custos e Conformidade", "Fechar"};
         int answer = JOptionPane.showOptionDialog(owner, content,
                 "Saúde Ocupacional — " + employee.name(), JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE, null, options, options[1]);
+                JOptionPane.PLAIN_MESSAGE, null, options, options[3]);
         if (answer == 0) openOccupationalHealthForm(employee);
+        else if (answer == 1) payOccupationalHealthExam(employee, history, table.getSelectedRow());
+        else if (answer == 2) openOccupationalHealthCompliance();
+    }
+
+    /**
+     * Paga o exame à clínica. O encargo é do empregador — a saída é de tesouraria e não tem
+     * contrapartida nenhuma na folha do trabalhador.
+     */
+    private void payOccupationalHealthExam(EmployeeDTO employee,
+                                           List<OccupationalHealthExamDTO> history, int row) {
+        if (row < 0 || row >= history.size()) {
+            JOptionPane.showMessageDialog(owner,
+                    "Seleccione na lista o exame cuja factura vai pagar.", "Registar pagamento",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        OccupationalHealthExamDTO exam = history.get(row);
+        if (exam.cost() == null) {
+            JOptionPane.showMessageDialog(owner,
+                    "Este exame não tem custo registado. Registe a factura da clínica antes de pagar.",
+                    "Sem custo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (exam.paid()) {
+            JOptionPane.showMessageDialog(owner,
+                    "Este exame já foi pago em " + exam.paidAt().format(DATE_FMT) + ".",
+                    "Já pago", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(owner, String.format(
+                "Pagar %s a %s pelo exame de %s?%nA saída sai da tesouraria como encargo da empresa.",
+                money(exam.cost()), exam.providerName() == null ? "prestador não identificado"
+                        : exam.providerName(), employee.name()),
+                "Confirmar pagamento", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        UIHelper.runWithProgress(owner, "A pagar exame ocupacional…",
+                () -> owner.hrApiClient.payOccupationalHealthExam(exam.id()),
+                ignored -> JOptionPane.showMessageDialog(owner,
+                        "Pagamento registado na tesouraria.", "Saúde Ocupacional",
+                        JOptionPane.INFORMATION_MESSAGE), owner::showActionError);
+    }
+
+    /**
+     * Conformidade da empresa, não de uma pessoa: quem está no activo <b>sem exame nenhum</b> e o
+     * que a saúde ocupacional custou este ano, por prestador.
+     *
+     * <p>Vive dentro deste diálogo e não num separador próprio porque a barra do RH já está no
+     * limite que a {@code TabStripFitsTest} mede — um separador que não cabe não avisa, desaparece.
+     */
+    private void openOccupationalHealthCompliance() {
+        LocalDate from = LocalDate.now().withDayOfYear(1);
+        LocalDate to = LocalDate.now();
+        UIHelper.runWithProgress(owner, "A apurar conformidade e custos…",
+                () -> new HealthCompliance(owner.hrApiClient.getEmployeesMissingHealthExam(),
+                        owner.hrApiClient.getOccupationalHealthCosts(from, to)),
+                this::showOccupationalHealthCompliance, owner::showActionError);
+    }
+
+    private void showOccupationalHealthCompliance(HealthCompliance snapshot) {
+        DefaultTableModel missing = new DefaultTableModel(
+                new String[]{"Trabalhador", "Função", "Departamento", "Admissão", "Dias sem exame"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        for (MissingHealthExamDTO item : snapshot.missing()) {
+            missing.addRow(new Object[]{item.employeeName(),
+                    item.role() == null ? "—" : item.role(),
+                    item.department() == null ? "—" : item.department(),
+                    item.hireDate() == null ? "—" : item.hireDate().format(DATE_FMT),
+                    item.daysSinceHire() == null ? "Admissão por registar" : item.daysSinceHire()});
+        }
+        DefaultTableModel costs = new DefaultTableModel(
+                new String[]{"Prestador", "Exames", "Total", "Por pagar"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        for (OccupationalHealthProviderCostDTO line : snapshot.costs().byProvider()) {
+            costs.addRow(new Object[]{line.providerName(), line.examCount(),
+                    money(line.total()), money(line.pending())});
+        }
+
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Sem exame (" + snapshot.missing().size() + ")",
+                UIHelper.icon("fas-exclamation-triangle", 14), complianceTable(missing,
+                        "Trabalhadores no activo que nunca fizeram exame de aptidão. Quem nunca fez "
+                                + "não aparece nos avisos de validade — é aqui que aparece."));
+        tabs.addTab("Custos do ano", UIHelper.icon("fas-coins", 14), complianceTable(costs,
+                String.format("De %s a %s · %d exame(s) com custo · total %s · por pagar %s. "
+                                + "O exame de aptidão é encargo do empregador, nunca do trabalhador.",
+                        snapshot.costs().from().format(DATE_FMT), snapshot.costs().to().format(DATE_FMT),
+                        snapshot.costs().examCount(), money(snapshot.costs().total()),
+                        money(snapshot.costs().pending()))));
+
+        JOptionPane.showMessageDialog(owner, tabs, "Saúde Ocupacional — Conformidade e Custos",
+                JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private JPanel complianceTable(DefaultTableModel model, String caption) {
+        JTable table = new JTable(model);
+        UIHelper.styleTable(table);
+        JScrollPane scroll = new JScrollPane(table);
+        UIHelper.styleScrollPane(scroll);
+        scroll.setPreferredSize(new Dimension(860, 300));
+        JLabel label = new JLabel("<html><body style=\"width:820px\">" + caption + "</body></html>");
+        label.setForeground(UIHelper.TEXT_MUTED);
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.setOpaque(false);
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(scroll, BorderLayout.CENTER);
+        return panel;
     }
 
     private void openOccupationalHealthForm(EmployeeDTO employee) {
+        UIHelper.runWithProgress(owner, "A carregar prestadores…",
+                () -> owner.hrApiClient.getHealthProviders(),
+                providers -> showOccupationalHealthForm(employee, providers), owner::showActionError);
+    }
+
+    private void showOccupationalHealthForm(EmployeeDTO employee, List<HealthProviderDTO> providers) {
         JTextField cardField = new JTextField();
         DateField examDate = new DateField(LocalDate.now());
         DateField expiryDate = new DateField(LocalDate.now().plusYears(1));
         JComboBox<String> resultCombo = new JComboBox<>(FITNESS_LABELS);
+        JComboBox<String> providerCombo = new JComboBox<>();
+        providerCombo.addItem(NO_PROVIDER);
+        for (HealthProviderDTO provider : providers) providerCombo.addItem(provider.name());
         JTextField clinicField = new JTextField();
         JTextField doctorField = new JTextField();
         JTextField restrictionsField = new JTextField();
         JTextField notesField = new JTextField();
-        for (JTextField field : new JTextField[]{cardField, clinicField, doctorField, restrictionsField, notesField}) {
+        MoneyField costField = new MoneyField();
+        JTextField invoiceField = new JTextField();
+        for (JTextField field : new JTextField[]{cardField, clinicField, doctorField, restrictionsField,
+                notesField, invoiceField}) {
             UIHelper.styleTextField(field);
         }
         UIHelper.styleComboBox(resultCombo);
+        UIHelper.styleComboBox(providerCombo);
 
         final byte[][] attachment = {null};
         final String[] attachmentName = {null};
@@ -358,27 +503,46 @@ final class HREmployeeActions {
                 "Data do exame:", examDate,
                 "Validade:", expiryDate,
                 "Resultado:", resultCombo,
-                "Clínica:", clinicField,
+                "Prestador (cadastrado):", providerCombo,
+                "Clínica (se não cadastrada):", clinicField,
                 "Médico responsável:", doctorField,
                 "Restrições laborais:", restrictionsField,
                 "Observações:", notesField,
+                "Custo do exame:", costField,
+                "Nº da factura:", invoiceField,
                 "Comprovativo (máx. 5 MB):", attachmentPanel);
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
                 "Exame de Saúde — " + employee.name(), "fas-heartbeat",
-                "A renovação cria um novo registo e preserva todo o histórico médico ocupacional.", form)
-                .setSize(820, 650).showDialog();
+                "A renovação cria um novo registo e preserva todo o histórico. Registe apenas "
+                        + "aptidão e restrições de função: a lei não permite ao empregador guardar "
+                        + "diagnóstico nem estado serológico do trabalhador.", form)
+                .setSize(860, 760).showDialog();
         if (!confirmed) return;
 
+        int providerIndex = providerCombo.getSelectedIndex();
+        Long providerId = providerIndex <= 0 ? null : providers.get(providerIndex - 1).id();
+        BigDecimal cost;
+        try {
+            cost = costField.optionalValue();
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(owner, "Introduza um custo válido para o exame.",
+                    "Custo inválido", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         SaveOccupationalHealthExamRequest request = new SaveOccupationalHealthExamRequest(
                 employee.id(), blank(cardField.getText()), examDate.value(), expiryDate.value(),
-                FITNESS_RESULTS[resultCombo.getSelectedIndex()], blank(clinicField.getText()),
+                FITNESS_RESULTS[resultCombo.getSelectedIndex()], providerId, blank(clinicField.getText()),
                 blank(doctorField.getText()), blank(restrictionsField.getText()), blank(notesField.getText()),
-                attachmentName[0], attachment[0]);
+                cost, blank(invoiceField.getText()), attachmentName[0], attachment[0]);
         UIHelper.runWithProgress(owner, "A registar exame ocupacional…",
                 () -> owner.hrApiClient.registerOccupationalHealthExam(request),
                 ignored -> JOptionPane.showMessageDialog(owner,
                         "Exame ocupacional registado. O histórico anterior foi preservado.",
                         "Saúde Ocupacional", JOptionPane.INFORMATION_MESSAGE), owner::showActionError);
+    }
+
+    private static String money(BigDecimal value) {
+        return String.format("%,.2f MT", value == null ? BigDecimal.ZERO : value);
     }
 
     private String healthSituation(OccupationalHealthExamDTO exam) {
@@ -397,6 +561,9 @@ final class HREmployeeActions {
             default -> value;
         };
     }
+
+    /** As duas leituras da conformidade numa só ida ao servidor. */
+    private record HealthCompliance(List<MissingHealthExamDTO> missing, OccupationalHealthCostDTO costs) {}
 
     private String blank(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 

@@ -15,6 +15,7 @@ Este directorio organiza a documentacao que orienta arquitectura, manutencao e a
 | Rever permissoes, tenant ou auditoria | [SECURITY_AND_AUDIT.md](SECURITY_AND_AUDIT.md) |
 | Preparar o sistema para loja/mercearia | [RETAIL_STORE_SPEC.md](RETAIL_STORE_SPEC.md) + [RETAIL_STORE_HARNESS.md](RETAIL_STORE_HARNESS.md) |
 | Fechar as lacunas do RH (contrato, ponto, cessacao, retencoes) | [RH_COMPLETO_SPEC.md](RH_COMPLETO_SPEC.md) + [RH_COMPLETO_HARNESS.md](RH_COMPLETO_HARNESS.md) |
+| Verificar conformidade legal (laboral e dados pessoais, Mocambique) | [CONFORMIDADE_LEGAL_MZ_SPEC.md](CONFORMIDADE_LEGAL_MZ_SPEC.md) + [CONFORMIDADE_LEGAL_MZ_HARNESS.md](CONFORMIDADE_LEGAL_MZ_HARNESS.md) |
 | Correr, compilar ou diagnosticar o sistema | [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) |
 | Entender decisoes arquitecturais historicas | [adr/](adr/) |
 

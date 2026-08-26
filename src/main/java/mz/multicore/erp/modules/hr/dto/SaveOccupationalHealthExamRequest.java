@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record SaveOccupationalHealthExamRequest(
@@ -12,10 +13,15 @@ public record SaveOccupationalHealthExamRequest(
         @NotNull(message = "Indique a data do exame.") LocalDate examDate,
         @NotNull(message = "Indique a validade do exame.") LocalDate expiryDate,
         @NotBlank(message = "Indique o resultado de aptidão.") String fitnessResult,
+        /** Prestador no registo de fornecedores; nulo usa {@link #clinic} em texto livre. */
+        Long providerId,
         String clinic,
         String doctorName,
         String restrictions,
         String notes,
+        /** Custo do exame — encargo do empregador, nunca do trabalhador. */
+        BigDecimal cost,
+        String invoiceNumber,
         String attachmentName,
         @Size(max = 5_000_000, message = "O comprovativo não pode exceder 5 MB.") byte[] attachmentData
 ) {}

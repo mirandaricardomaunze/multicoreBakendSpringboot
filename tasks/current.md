@@ -2,6 +2,47 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
+### Clínicas, custo dos exames e conformidade legal — 2026-08-25 — **V59**
+
+Spec/harness: [docs/CONFORMIDADE_LEGAL_MZ_SPEC.md](../docs/CONFORMIDADE_LEGAL_MZ_SPEC.md) +
+[docs/CONFORMIDADE_LEGAL_MZ_HARNESS.md](../docs/CONFORMIDADE_LEGAL_MZ_HARNESS.md).
+
+- **A clínica passou a ser fornecedor.** `provider_id → suppliers(id)`, porque é lá que a factura
+  vive com NUIT e histórico. O texto livre `clinic` fica para as não cadastradas e para os registos
+  anteriores à V59. O exame ganhou `cost`, `invoice_number` e `paid_at`: o encargo com saúde
+  ocupacional — que é do empregador — **não existia em número nenhum**, saía da tesouraria
+  misturado com tudo o resto. Paga-se pela mesma porta do recibo, pagar duas vezes é recusado, e
+  há relatório por prestador (total / por pagar). **Não lança na contabilidade** — mesma fronteira
+  declarada no §B5 para adiantamentos.
+- **Três defeitos de protecção de dados, fechados.** (1) `summary()` **não tinha guarda nenhuma**:
+  qualquer conta autenticada lia a aptidão de qualquer colega trocando o número no endereço — agora
+  é do gestor e do próprio. (2) O campo de observações era um campo de diagnóstico à espera de
+  acontecer; texto com estado serológico passa a ser recusado (Lei n.º 19/2014 e Lei n.º 13/2023
+  proíbem apurar HIV/SIDA, e o médico só pode comunicar aptidão). (3) **Ler** dados de saúde não
+  deixava rasto — `history()` grava `OCCUPATIONAL_HEALTH_ACCESS` e por isso deixou de ser `readOnly`.
+- **Quem nunca fez exame passou a aparecer.** A lista de alertas partia da validade, logo só via os
+  cumpridores: quem nunca fez exame não tem validade a caducar. `missingExams()` + linha no sino.
+  Mesma lição das obrigações sem prazo do §B5.
+- **Verificação:** `mvn -o test` → **878 testes, 0 falhas, 0 erros, 0 ignorados** (eram 865).
+  **V59 aplicada contra PostgreSQL real** (cluster descartável na 55433): 58 migrações, schema v59,
+  arranque com `ddl-auto=validate`, FK para `suppliers` e 2 índices confirmados no schema. Cluster
+  destruído; o PostgreSQL do utilizador (5432) nunca foi tocado.
+
+**Por fazer, e declarado no harness:**
+
+1. **A homologação jurídica está por assinar** — §4 do harness, 12 linhas (H-01..H-12). Enquanto
+   estiver vazia, o sistema **não pode ser apresentado como legalmente homologado**, só como
+   preparado para o ser. A periodicidade dos exames e o prazo de conservação dos dados de saúde
+   estão num **diploma ministerial conjunto (Trabalho + Saúde) que não consegui identificar** — sem
+   ele o sistema não inventa nenhum dos dois.
+2. **Moçambique não tem lei de protecção de dados em vigor.** A proposta foi aprovada em Conselho
+   de Ministros em Março/2026 e aguarda votação. O desenho segue os princípios da proposta, mas
+   nada aqui pode ser dito "conforme à lei de protecção de dados" — ela ainda não existe.
+3. **Anexos dos exames guardados em claro** (`bytea`), backups incluídos. Declarado, não escondido.
+4. **Nada validado ao vivo pela UI** — os ecrãs novos (prestador/custo no formulário, colunas de
+   pagamento, *Registar Pagamento*, separadores *Sem exame* e *Custos do ano*) nunca foram abertos.
+   Junta-se aos RHC-90..94.
+
 ### Inspector DRY de detalhes em todo o sistema — 2026-08-23
 
 - O modal compacto **Detalhes do Registo** passou de implementação dentro de `UIHelper` para o

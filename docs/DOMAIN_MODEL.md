@@ -82,3 +82,12 @@ Evitar:
   histórico de aptidão e validade do trabalhador.
 - O perfil geral consome apenas `OccupationalHealthSummaryDTO`. Clínica, médico, restrições,
   observações e comprovativo são dados restritos a `MANAGER`/`ADMIN`.
+- O resumo é acessível a `MANAGER`/`ADMIN` **e ao próprio trabalhador** (ligação `Employee↔AppUser`
+  da V48) — "inapto" continua a ser dado de saúde.
+- O exame não tem campo de diagnóstico e recusa texto com estado serológico: a lei limita o que o
+  médico pode comunicar ao empregador à capacidade ou incapacidade para o trabalho. Ver
+  [CONFORMIDADE_LEGAL_MZ_SPEC.md](CONFORMIDADE_LEGAL_MZ_SPEC.md).
+- O prestador do exame é um `Supplier` do módulo `purchases` — uma clínica é quem passa factura à
+  empresa. É o único acoplamento do RH a esse módulo, e é a dado mestre, não a documento.
+- O custo do exame é encargo do empregador: paga-se por saída de tesouraria e nunca gera desconto
+  na folha.

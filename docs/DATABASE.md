@@ -78,3 +78,7 @@ Mas erros de utilizador devem ser tratados antes no Service com `BusinessRuleExc
 - `fitness_result` aceita `FIT`, `FIT_WITH_RESTRICTIONS` ou `UNFIT`; o estado de validade é
   derivado de `expiry_date`, nunca persistido.
 - A migration `V58__occupational_health_exams.sql` cria índices por trabalhador/data e validade.
+- A migration `V59__occupational_health_provider_cost.sql` acrescenta `provider_id` (FK para
+  `suppliers`), `cost`, `invoice_number` e `paid_at`. O prestador é o cadastro de fornecedores, não
+  um cadastro próprio do RH; `clinic` em texto livre fica para clínicas não cadastradas e para os
+  registos anteriores à V59.

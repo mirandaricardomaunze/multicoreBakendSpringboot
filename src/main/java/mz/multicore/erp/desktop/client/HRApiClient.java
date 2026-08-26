@@ -9,6 +9,9 @@ import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthSummaryDTO;
 import mz.multicore.erp.modules.hr.dto.SaveOccupationalHealthExamRequest;
+import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
+import mz.multicore.erp.modules.hr.dto.HealthProviderDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthCostDTO;
 import mz.multicore.erp.modules.hr.dto.ExpenseClaimDTO;
 import mz.multicore.erp.modules.hr.dto.ContractAlertsDTO;
 import mz.multicore.erp.modules.hr.dto.CreateTimeEntryRequest;
@@ -97,6 +100,28 @@ public class HRApiClient {
     public OccupationalHealthExamDTO registerOccupationalHealthExam(SaveOccupationalHealthExamRequest request) {
         return clientFactory.authenticatedClient().post(
                 "/api/hr/occupational-health", request, OccupationalHealthExamDTO.class);
+    }
+
+    public List<HealthProviderDTO> getHealthProviders() {
+        return clientFactory.authenticatedClient().getList(
+                "/api/hr/occupational-health/providers", HealthProviderDTO.class);
+    }
+
+    /** Trabalhadores no activo que nunca fizeram exame de aptidao. */
+    public List<MissingHealthExamDTO> getEmployeesMissingHealthExam() {
+        return clientFactory.authenticatedClient().getList(
+                "/api/hr/occupational-health/missing", MissingHealthExamDTO.class);
+    }
+
+    public OccupationalHealthCostDTO getOccupationalHealthCosts(LocalDate from, LocalDate to) {
+        return clientFactory.authenticatedClient().get(
+                "/api/hr/occupational-health/costs?from=" + from + "&to=" + to,
+                OccupationalHealthCostDTO.class);
+    }
+
+    public OccupationalHealthExamDTO payOccupationalHealthExam(Long examId) {
+        return clientFactory.authenticatedClient().post(
+                "/api/hr/occupational-health/" + examId + "/pay", null, OccupationalHealthExamDTO.class);
     }
 
     // ─── Despesas ────────────────────────────────────────────────────────────

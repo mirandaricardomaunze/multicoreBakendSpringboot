@@ -5,7 +5,9 @@ import lombok.Getter;
 import lombok.Setter;
 import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.purchases.model.Supplier;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
@@ -40,6 +42,15 @@ public class OccupationalHealthExam extends BaseEntity {
     @Column(name = "fitness_result", nullable = false, length = 30)
     private String fitnessResult;
 
+    /**
+     * O prestador que fez o exame, no registo de fornecedores — é onde a factura da clínica vive.
+     * Anulável: clínicas ainda não cadastradas e os registos anteriores à V59 só têm {@link #clinic}.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_id")
+    private Supplier provider;
+
+    /** Nome da clínica em texto livre, para quando não há prestador cadastrado. */
     @Column(name = "clinic", length = 160)
     private String clinic;
 
@@ -58,7 +69,32 @@ public class OccupationalHealthExam extends BaseEntity {
     @Column(name = "attachment_data")
     private byte[] attachmentData;
 
+    /** Custo do exame, encargo do empregador. Anulável: nem toda a gente regista a factura. */
+    @Column(name = "cost", precision = 19, scale = 2)
+    private BigDecimal cost;
+
+    @Column(name = "invoice_number", length = 60)
+    private String invoiceNumber;
+
+    /** Data em que a clínica foi paga. Nulo = por pagar. */
+    @Column(name = "paid_at")
+    private LocalDate paidAt;
+
     public long daysUntilExpiry(LocalDate today) {
         return ChronoUnit.DAYS.between(today, expiryDate);
+    }
+
+    /** Um exame sem custo registado não está "por pagar" — está por facturar. */
+    public boolean isPayable() {
+        return cost != null && cost.signum() > 0;
+    }
+
+    public boolean isPaid() {
+        return paidAt != null;
+    }
+
+    /** O nome que se mostra: o prestador cadastrado manda sobre o texto livre. */
+    public String providerLabel() {
+        return provider != null ? provider.getName() : clinic;
     }
 }

@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.hr.dto.EmployeeDocumentDTO;
 import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
+import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
@@ -221,6 +222,17 @@ public class NotificationFeed {
             items.add(new NotificationItem("Saúde Ocupacional", title,
                     "Agendar exame periódico · " + fitnessLabel(exam.fitnessResult()),
                     exam.expiryDate().format(DATE_FORMAT), "hr", days <= 15 ? 3 : 2));
+        }
+        // Quem nunca fez exame não tem validade a caducar, logo nunca entrava no ciclo acima — e é
+        // o caso mais grave dos dois perante a inspecção do trabalho. Mesma lição das obrigações
+        // sem prazo do §B5: a ausência precisa de linha própria ou é a única coisa que desaparece.
+        for (MissingHealthExamDTO missing : hrApiClient.getEmployeesMissingHealthExam()) {
+            items.add(new NotificationItem("Saúde Ocupacional",
+                    "Sem exame de aptidão: " + missing.employeeName(),
+                    missing.daysSinceHire() == null
+                            ? "Admissão por registar · exame de admissão nunca realizado"
+                            : "Admitido há " + missing.daysSinceHire() + " dia(s) sem exame de admissão",
+                    missing.hireDate() == null ? "—" : missing.hireDate().format(DATE_FORMAT), "hr", 3));
         }
     }
 
