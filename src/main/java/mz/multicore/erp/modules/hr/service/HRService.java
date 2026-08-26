@@ -44,6 +44,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +61,9 @@ public class HRService {
      * direito crescer com a antiguidade, pelo que um número fixo está errado para alguém.
      */
     private static final int FALLBACK_ANNUAL_VACATION_DAYS = 22;
+
+    /** Datas em mensagens ao utilizador: quem lê o erro tem de reconhecer a data da ficha. */
+    private static final DateTimeFormatter DATE_PT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final EmployeeRepository employeeRepository;
     private final ExpenseClaimRepository expenseClaimRepository;
@@ -242,6 +246,7 @@ public class HRService {
         // Um mês já pago, entregue ao Estado e contabilizado não aceita recibos novos (§B8.6).
         payrollPeriodService.ensureOpen(request.year(), request.month());
         Employee employee = findActiveEmployee(request.employeeId());
+        ensureEmploymentCovers(employee, request.year(), request.month());
 
         if (payslipRepository.findByEmployeeIdAndYearAndMonth(employee.getId(), request.year(), request.month()).isPresent()) {
             throw new BusinessRuleException(
@@ -802,6 +807,43 @@ public class HRService {
             throw new BusinessRuleException("O colaborador não está ativo.");
         }
         return employee;
+    }
+
+    /**
+     * O recibo é de um mês do passado; o {@code status} da ficha é de hoje. Esta guarda fecha a
+     * distância entre as duas coisas (§B8.3).
+     *
+     * <p><b>Porque não bastava o estado.</b> A cessação marca {@code TERMINATED} e o
+     * {@code findActiveEmployee} recusa — esse caminho está tapado. O que não estava: o contrato a
+     * prazo que chegou ao fim <b>sem ninguém correr a cessação</b> fica {@code ACTIVE} com o
+     * {@code contractEndDate} para trás, e continuava a receber; e um recibo de mês <b>anterior à
+     * admissão</b> não era travado por nada.
+     *
+     * <p><b>As duas portas discordavam</b>, que é a forma exacta dos bugs que este projecto já
+     * apanhou no IVA e no saldo em dívida: o {@code processMonthlyPayroll} exige contrato vigente no
+     * período e salta quem não o tem, enquanto o {@code createPayslip} — a porta individual — não
+     * perguntava nada. Bastava emitir um a um para contornar a guarda do processamento em lote.
+     *
+     * <p>A regra vive no {@link Employee#wasEmployedDuring(int, int)}, não aqui: é do colaborador a
+     * resposta a "tinhas vínculo neste mês?". Aqui fica só a mensagem, que nomeia a data para quem a
+     * lê poder ir corrigir a ficha — o mesmo desenho da cotação caducada, que diz a data da caducidade.
+     */
+    private void ensureEmploymentCovers(Employee employee, int year, int month) {
+        if (employee.wasEmployedDuring(year, month)) {
+            return;
+        }
+        LocalDate monthStart = LocalDate.of(year, month, 1);
+        if (employee.getHireDate() != null
+                && employee.getHireDate().isAfter(monthStart.withDayOfMonth(monthStart.lengthOfMonth()))) {
+            throw new BusinessRuleException(String.format(
+                    "%s foi admitido a %s: não há recibo de %d/%d, que é anterior à admissão. "
+                            + "Corrija a data de admissão na ficha se estiver errada.",
+                    employee.getName(), DATE_PT.format(employee.getHireDate()), month, year));
+        }
+        throw new BusinessRuleException(String.format(
+                "O vínculo de %s terminou a %s: não há recibo de %d/%d. "
+                        + "Valores ainda em dívida pagam-se pelo acerto final da cessação.",
+                employee.getName(), DATE_PT.format(employee.getContractEndDate()), month, year));
     }
 
     private Long currentCompanyId() {

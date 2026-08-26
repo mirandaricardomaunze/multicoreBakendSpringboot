@@ -905,6 +905,71 @@ class HRServiceTest {
         );
     }
 
+    // ─── §B8.3: a folha passa a perguntar QUANDO, não só se a pessoa está activa hoje ───────────
+
+    @Test
+    void createPayslip_afterContractEnded_isRefusedNamingTheDate() {
+        Employee gone = employee(30L, "EMP-30", "Contrato Findo");
+        gone.setHireDate(LocalDate.of(2024, 1, 10));
+        // Contrato a prazo terminou em Maio; ninguém correu a cessação, pelo que continua ACTIVE.
+        gone.setContractEndDate(LocalDate.of(2026, 5, 31));
+        when(employeeRepository.findByIdAndCompanyId(30L, 7L)).thenReturn(Optional.of(gone));
+
+        var ex = assertThrows(BusinessRuleException.class, () -> service.createPayslip(
+                new CreatePayslipRequest(30L, 2026, 6, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, null)));
+        assertEquals(true, ex.getMessage().contains("terminou a 31/05/2026"));
+        // Nada foi gravado: a recusa é antes de existir recibo.
+        verify(payslipRepository, never()).save(any(Payslip.class));
+    }
+
+    @Test
+    void createPayslip_monthOfTermination_isStillAllowed() {
+        Employee leaving = employee(31L, "EMP-31", "Saiu A Vinte");
+        leaving.setHireDate(LocalDate.of(2024, 1, 10));
+        leaving.setContractEndDate(LocalDate.of(2026, 6, 20)); // saiu a meio de Junho
+        when(employeeRepository.findByIdAndCompanyId(31L, 7L)).thenReturn(Optional.of(leaving));
+        when(payslipRepository.findByEmployeeIdAndYearAndMonth(31L, 2026, 6)).thenReturn(Optional.empty());
+        when(documentNumberService.next(any())).thenReturn("REC-2026/9");
+        when(payrollTaxService.calculate(any(), any(), any(), eq(2026), eq(6)))
+                .thenReturn(new PayrollCalculationDTO(
+                        BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, "cfg", "lei"));
+        when(payslipRepository.save(any(Payslip.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Trabalhou 20 dias de Junho: o recibo desse mês é legítimo. A guarda é contra a DATA,
+        // não contra o facto de a pessoa ter saído — senão o último recibo era sempre impossível.
+        var dto = service.createPayslip(new CreatePayslipRequest(
+                31L, 2026, 6, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, null));
+
+        assertEquals("REC-2026/9", dto.payslipNumber());
+    }
+
+    @Test
+    void createPayslip_beforeHireDate_isRefused() {
+        Employee recent = employee(32L, "EMP-32", "Admitido Agora");
+        recent.setHireDate(LocalDate.of(2026, 6, 15));
+        when(employeeRepository.findByIdAndCompanyId(32L, 7L)).thenReturn(Optional.of(recent));
+
+        var ex = assertThrows(BusinessRuleException.class, () -> service.createPayslip(
+                new CreatePayslipRequest(32L, 2026, 3, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, null)));
+        assertEquals(true, ex.getMessage().contains("admitido a 15/06/2026"));
+        verify(payslipRepository, never()).save(any(Payslip.class));
+    }
+
+    @Test
+    void wasEmployedDuring_withoutDates_imposesNoRestriction() {
+        // Quem não tem admissão nem fim registados continua exactamente como antes: esta guarda
+        // não pode transformar fichas incompletas — o caso normal numa loja — em folha bloqueada.
+        Employee bare = employee(33L, "EMP-33", "Sem Datas");
+
+        assertEquals(true, bare.wasEmployedDuring(2026, 6));
+        assertEquals(true, bare.wasEmployedDuring(1999, 1));
+    }
+
     private static Employee employee(Long id, String number, String name) {
         Employee employee = new Employee();
         employee.setId(id);
