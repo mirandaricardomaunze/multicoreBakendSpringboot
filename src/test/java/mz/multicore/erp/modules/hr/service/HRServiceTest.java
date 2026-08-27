@@ -107,7 +107,9 @@ class HRServiceTest {
                 payslipRepository,
                 absenceRepository,
                 vacationRepository,
-                companyRepository,
+                // Guarda REAL sobre os mocks: as regras de "quem pode agir sobre quem" continuam a
+                // ser exercitadas por estes testes. Um mock da guarda esvaziava-os em silêncio.
+                new HrAccessGuard(employeeRepository, companyRepository),
                 payrollTaxService,
                 mock(ApprovalService.class),
                 documentNumberService,

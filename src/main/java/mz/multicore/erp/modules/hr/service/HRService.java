@@ -5,8 +5,6 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -48,7 +46,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,7 +67,8 @@ public class HRService {
     private final PayslipRepository payslipRepository;
     private final AbsenceRepository absenceRepository;
     private final VacationRepository vacationRepository;
-    private final CompanyRepository companyRepository;
+    /** Quem pode agir, sobre quem, em que empresa. Partilhada com os restantes serviços do RH. */
+    private final HrAccessGuard guard;
     private final PayrollTaxService payrollTaxService;
     private final ApprovalService approvalService;
     private final DocumentNumberService documentNumberService;
@@ -93,7 +91,7 @@ public class HRService {
             PayslipRepository payslipRepository,
             AbsenceRepository absenceRepository,
             VacationRepository vacationRepository,
-            CompanyRepository companyRepository,
+            HrAccessGuard guard,
             PayrollTaxService payrollTaxService,
             @Lazy ApprovalService approvalService, // Lazy injection to break potential cycles
             DocumentNumberService documentNumberService,
@@ -115,7 +113,7 @@ public class HRService {
         this.payslipRepository = payslipRepository;
         this.absenceRepository = absenceRepository;
         this.vacationRepository = vacationRepository;
-        this.companyRepository = companyRepository;
+        this.guard = guard;
         this.payrollTaxService = payrollTaxService;
         this.approvalService = approvalService;
         this.documentNumberService = documentNumberService;
@@ -135,8 +133,8 @@ public class HRService {
 
     @Transactional
     public ExpenseClaimDTO submitExpense(CreateExpenseClaimRequest request) {
-        Employee employee = findEmployee(request.employeeId());
-        ensureCanActFor(employee);
+        Employee employee = guard.findEmployee(request.employeeId());
+        guard.ensureCanActFor(employee);
 
         ExpenseClaim claim = new ExpenseClaim();
         claim.setEmployee(employee);
@@ -165,7 +163,7 @@ public class HRService {
 
     @Transactional(readOnly = true)
     public List<ExpenseClaimDTO> getAllExpenses() {
-        return expenseClaimRepository.findAllWithEmployeeByCompanyId(currentCompanyId())
+        return expenseClaimRepository.findAllWithEmployeeByCompanyId(guard.currentCompanyId())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -173,7 +171,7 @@ public class HRService {
 
     @Transactional(readOnly = true)
     public List<EmployeeDTO> getAllEmployees() {
-        return employeeRepository.findByCompanyIdOrderByName(currentCompanyId())
+        return employeeRepository.findByCompanyIdOrderByName(guard.currentCompanyId())
                 .stream()
                 .map(this::employeeToDTO)
                 .collect(Collectors.toList());
@@ -181,12 +179,12 @@ public class HRService {
 
     @Transactional
     public EmployeeDTO createEmployee(UpsertEmployeeRequest request) {
-        ensureHrManager();
-        Long companyId = currentCompanyId();
+        guard.ensureHrManager();
+        Long companyId = guard.currentCompanyId();
         validateEmployeeUniqueness(companyId, null, request);
 
         Employee employee = new Employee();
-        employee.setCompany(currentCompany());
+        employee.setCompany(guard.currentCompany());
         employee.setStatus("ACTIVE");
         applyEmployee(employee, request);
         Employee saved = employeeRepository.save(employee);
@@ -197,9 +195,9 @@ public class HRService {
 
     @Transactional
     public EmployeeDTO updateEmployee(Long id, UpsertEmployeeRequest request) {
-        ensureHrManager();
-        Long companyId = currentCompanyId();
-        Employee employee = findEmployee(id);
+        guard.ensureHrManager();
+        Long companyId = guard.currentCompanyId();
+        Employee employee = guard.findEmployee(id);
         validateEmployeeUniqueness(companyId, id, request);
         applyEmployee(employee, request);
         Employee saved = employeeRepository.save(employee);
@@ -210,8 +208,8 @@ public class HRService {
 
     @Transactional
     public EmployeeDTO changeEmployeeStatus(Long id, String status) {
-        ensureHrManager();
-        Employee employee = findEmployee(id);
+        guard.ensureHrManager();
+        Employee employee = guard.findEmployee(id);
         String normalized = status == null ? "" : status.trim().toUpperCase();
         if (!List.of("ACTIVE", "SUSPENDED", "TERMINATED").contains(normalized)) {
             throw new BusinessRuleException("Estado laboral inválido.");
@@ -242,10 +240,10 @@ public class HRService {
 
     @Transactional
     public PayslipDTO createPayslip(CreatePayslipRequest request) {
-        ensureHrManager();
+        guard.ensureHrManager();
         // Um mês já pago, entregue ao Estado e contabilizado não aceita recibos novos (§B8.6).
         payrollPeriodService.ensureOpen(request.year(), request.month());
-        Employee employee = findActiveEmployee(request.employeeId());
+        Employee employee = guard.findActiveEmployee(request.employeeId());
         ensureEmploymentCovers(employee, request.year(), request.month());
 
         if (payslipRepository.findByEmployeeIdAndYearAndMonth(employee.getId(), request.year(), request.month()).isPresent()) {
@@ -392,7 +390,7 @@ public class HRService {
      */
     @Transactional
     public PayrollRunDTO processMonthlyPayroll(int year, int month) {
-        ensureHrManager();
+        guard.ensureHrManager();
         ensureTimeSheetClosed(year, month);
         LocalDate monthStart = LocalDate.of(year, month, 1);
         LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
@@ -400,7 +398,7 @@ public class HRService {
         List<PayslipDTO> generated = new ArrayList<>();
         List<PayrollRunDTO.PayrollSkipDTO> skipped = new ArrayList<>();
 
-        for (Employee employee : employeeRepository.findByCompanyIdOrderByName(currentCompanyId())) {
+        for (Employee employee : employeeRepository.findByCompanyIdOrderByName(guard.currentCompanyId())) {
             if (!"ACTIVE".equals(employee.getStatus())) {
                 continue; // Inactivo é decisão já tomada e visível na ficha — não é surpresa nenhuma.
             }
@@ -432,8 +430,8 @@ public class HRService {
      */
     @Transactional
     public PayslipDTO approvePayslip(Long id) {
-        ensureHrManager();
-        Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, currentCompanyId())
+        guard.ensureHrManager();
+        Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
         if (!"DRAFT".equals(p.getStatus())) {
             throw new BusinessRuleException("Apenas recibos em rascunho podem ser aprovados.");
@@ -449,8 +447,8 @@ public class HRService {
 
     @Transactional
     public PayslipDTO markPayslipPaid(Long id) {
-        ensureHrManager();
-        Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, currentCompanyId())
+        guard.ensureHrManager();
+        Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
         if (!"APPROVED".equals(p.getStatus())) {
             throw new BusinessRuleException(
@@ -473,7 +471,7 @@ public class HRService {
         // O lançamento contabilístico vai por evento, para o RH não passar a conhecer a
         // contabilidade — mesmo desenho do SaleRegisteredEvent (RHC-54).
         eventPublisher.publishEvent(new PayslipPaidEvent(
-                currentCompanyId(), saved.getId(), saved.getPayslipNumber(),
+                guard.currentCompanyId(), saved.getId(), saved.getPayslipNumber(),
                 saved.getEmployee().getName(), saved.getPaymentDate(),
                 saved.getBaseSalary().add(saved.getAllowances()).add(saved.getOvertime()),
                 saved.getAbsenceDeduction(), saved.getIrpsDeduction(), saved.getInssDeduction(),
@@ -487,8 +485,8 @@ public class HRService {
 
     @Transactional
     public PayslipDTO cancelPayslip(Long id) {
-        ensureHrManager();
-        Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, currentCompanyId())
+        guard.ensureHrManager();
+        Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
         if ("PAID".equals(p.getStatus())) {
             throw new BusinessRuleException("Não é possível cancelar um recibo já pago.");
@@ -509,9 +507,9 @@ public class HRService {
      */
     @Transactional(readOnly = true)
     public List<PayslipDTO> getAllPayslips() {
-        List<Payslip> payslips = payslipRepository.findAllWithEmployeeByCompanyId(currentCompanyId());
-        if (!isHrManager()) {
-            Long selfId = findSelfEmployee().map(Employee::getId).orElse(null);
+        List<Payslip> payslips = payslipRepository.findAllWithEmployeeByCompanyId(guard.currentCompanyId());
+        if (!guard.isHrManager()) {
+            Long selfId = guard.findSelfEmployee().map(Employee::getId).orElse(null);
             payslips = payslips.stream()
                     .filter(p -> selfId != null && selfId.equals(p.getEmployee().getId()))
                     .toList();
@@ -521,10 +519,10 @@ public class HRService {
 
     @Transactional(readOnly = true)
     public Payslip loadPayslipForPrint(Long id) {
-        Payslip payslip = payslipRepository.findByIdWithEmployeeAndCompanyId(id, currentCompanyId())
+        Payslip payslip = payslipRepository.findByIdWithEmployeeAndCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
         // Mesma regra da listagem: filtrar a lista e deixar imprimir por id era meia porta.
-        ensureCanActFor(payslip.getEmployee());
+        guard.ensureCanActFor(payslip.getEmployee());
         return payslip;
     }
 
@@ -602,8 +600,8 @@ public class HRService {
     public AbsenceDTO recordAbsence(CreateAbsenceRequest request) {
         // Lançar falta é acto de gestão sobre outra pessoa: nunca foi self-service, e sem guarda
         // qualquer utilizador da empresa marcava faltas a um colega.
-        ensureHrManager();
-        Employee employee = findActiveEmployee(request.employeeId());
+        guard.ensureHrManager();
+        Employee employee = guard.findActiveEmployee(request.employeeId());
         if (request.endDate().isBefore(request.startDate())) {
             throw new BusinessRuleException("A data de fim não pode ser anterior à data de início.");
         }
@@ -634,14 +632,14 @@ public class HRService {
      */
     @Transactional
     public AbsenceDTO justifyAbsence(Long id, String absenceType, String reason, boolean hasDocument) {
-        ensureHrManager();
+        guard.ensureHrManager();
         if (absenceType == null || absenceType.isBlank()) {
             throw new BusinessRuleException("Indique o tipo de falta.");
         }
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("Justificar uma falta exige um motivo.");
         }
-        Absence absence = absenceRepository.findByIdAndEmployeeCompanyId(id, currentCompanyId())
+        Absence absence = absenceRepository.findByIdAndEmployeeCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Falta não encontrada."));
 
         String previousType = absence.getAbsenceType();
@@ -662,8 +660,8 @@ public class HRService {
     public void deleteAbsence(Long id) {
         // Eliminar uma falta apaga o desconto que ela provoca no recibo. Sem guarda nem rasto, era a
         // porta mais silenciosa do RH: a falta desaparecia e o líquido subia sem ninguém saber porquê.
-        ensureHrManager();
-        Long companyId = currentCompanyId();
+        guard.ensureHrManager();
+        Long companyId = guard.currentCompanyId();
         Absence absence = absenceRepository.findByIdAndEmployeeCompanyId(id, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Falta não encontrada."));
         String detail = String.format(
@@ -677,7 +675,7 @@ public class HRService {
 
     @Transactional(readOnly = true)
     public List<AbsenceDTO> getAllAbsences() {
-        return absenceRepository.findAllWithEmployeeByCompanyId(currentCompanyId()).stream()
+        return absenceRepository.findAllWithEmployeeByCompanyId(guard.currentCompanyId()).stream()
                 .map(this::absenceToDTO).collect(Collectors.toList());
     }
 
@@ -701,8 +699,8 @@ public class HRService {
     public VacationDTO submitVacation(CreateVacationRequest request) {
         // O colaborador a quem as férias pertencem vem do corpo do pedido: sem a regra abaixo, qualquer
         // utilizador pedia férias em nome de outro.
-        Employee employee = findActiveEmployee(request.employeeId());
-        ensureCanActFor(employee);
+        Employee employee = guard.findActiveEmployee(request.employeeId());
+        guard.ensureCanActFor(employee);
         if (request.endDate().isBefore(request.startDate())) {
             throw new BusinessRuleException("A data de fim não pode ser anterior à data de início.");
         }
@@ -748,8 +746,8 @@ public class HRService {
 
     @Transactional
     public VacationDTO decideVacation(Long id, boolean approve, String rejectionReason) {
-        ensureHrManager();
-        Vacation v = vacationRepository.findByIdAndEmployeeCompanyId(id, currentCompanyId())
+        guard.ensureHrManager();
+        Vacation v = vacationRepository.findByIdAndEmployeeCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Pedido de férias não encontrado."));
         if (!"PENDING".equals(v.getStatus())) {
             throw new BusinessRuleException("Apenas pedidos pendentes podem ser decididos.");
@@ -775,7 +773,7 @@ public class HRService {
 
     @Transactional(readOnly = true)
     public List<VacationDTO> getAllVacations() {
-        return vacationRepository.findAllWithEmployeeByCompanyId(currentCompanyId()).stream()
+        return vacationRepository.findAllWithEmployeeByCompanyId(guard.currentCompanyId()).stream()
                 .map(this::vacationToDTO).collect(Collectors.toList());
     }
 
@@ -794,19 +792,6 @@ public class HRService {
                 v.getDecisionAt(),
                 v.getRejectionReason()
         );
-    }
-
-    private Employee findEmployee(Long id) {
-        return employeeRepository.findByIdAndCompanyId(id, currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Colaborador não encontrado na empresa ativa."));
-    }
-
-    private Employee findActiveEmployee(Long id) {
-        Employee employee = findEmployee(id);
-        if (!"ACTIVE".equals(employee.getStatus())) {
-            throw new BusinessRuleException("O colaborador não está ativo.");
-        }
-        return employee;
     }
 
     /**
@@ -844,57 +829,6 @@ public class HRService {
                 "O vínculo de %s terminou a %s: não há recibo de %d/%d. "
                         + "Valores ainda em dívida pagam-se pelo acerto final da cessação.",
                 employee.getName(), DATE_PT.format(employee.getContractEndDate()), month, year));
-    }
-
-    private Long currentCompanyId() {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        if (companyId == null) {
-            throw new BusinessRuleException("Selecione uma empresa ativa.");
-        }
-        return companyId;
-    }
-
-    private Company currentCompany() {
-        return companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa ativa não encontrada."));
-    }
-
-    private void ensureHrManager() {
-        if (!isHrManager()) {
-            throw new BusinessRuleException("Apenas gestores ou administradores podem executar esta operação de RH.");
-        }
-    }
-
-    private boolean isHrManager() {
-        String role = CurrentUserContext.getRole();
-        return "ADMIN".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role);
-    }
-
-    /** O colaborador do utilizador autenticado, quando a conta está ligada a um (V48). */
-    private Optional<Employee> findSelfEmployee() {
-        String username = CurrentUserContext.getUsername();
-        if (username == null || username.isBlank()) {
-            return Optional.empty();
-        }
-        return employeeRepository.findByCompanyIdAndAppUserUsername(currentCompanyId(), username);
-    }
-
-    /**
-     * Um gestor age por qualquer colaborador; toda a gente age **por si própria** e por mais ninguém.
-     * É esta regra que devolve o self-service sem reabrir o furo: até à V48, "o próprio" não era
-     * identificável, pelo que agir por outro era indistinguível de agir por si.
-     */
-    private void ensureCanActFor(Employee employee) {
-        if (isHrManager()) {
-            return;
-        }
-        Employee self = findSelfEmployee().orElseThrow(() -> new BusinessRuleException(
-                "A sua conta não está associada a nenhum colaborador. Peça ao RH para fazer a associação."));
-        if (!self.getId().equals(employee.getId())) {
-            throw new BusinessRuleException(
-                    "Só pode submeter pedidos em seu próprio nome. Para o fazer por outro colaborador é "
-                            + "preciso perfil de gestor ou administrador.");
-        }
     }
 
     private void validateEmployeeUniqueness(Long companyId, Long employeeId, UpsertEmployeeRequest request) {
@@ -959,7 +893,7 @@ public class HRService {
         if (user == null) {
             throw new BusinessRuleException("Utilizador \"" + username + "\" não existe.");
         }
-        Long companyId = currentCompanyId();
+        Long companyId = guard.currentCompanyId();
         if (!user.hasCompany(companyId)) {
             throw new BusinessRuleException(
                     "O utilizador \"" + username + "\" não tem acesso a esta empresa.");
