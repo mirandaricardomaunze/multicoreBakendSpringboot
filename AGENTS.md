@@ -19,6 +19,12 @@ Se uma instrucao do utilizador colidir com estes documentos, perguntar antes de 
 
 ## Regras nao negociaveis
 
+- A arquitectura física obrigatória é o reactor Maven `contracts`, `backend`, `desktop`, conforme `docs/MULTI_MODULE_ARCHITECTURE_SPEC.md`.
+- `desktop` depende apenas de `contracts` e comunica com o backend por HTTPS; nunca recebe JPA, Flyway, driver de BD, Repository ou Service.
+- `backend` depende de `contracts`, é headless e nunca importa Swing, `gui` ou `desktop`.
+- `contracts` é independente de Spring, JPA e Swing.
+- Toda IA deve executar `MultiModuleArchitectureHarnessTest` quando alterar POMs, fronteiras, DTOs ou mover classes entre módulos.
+
 - Controller nunca chama Repository directamente.
 - Controller nunca recebe ou devolve Entity JPA.
 - Service contem regras de negocio, validacoes semanticas e transaccoes.

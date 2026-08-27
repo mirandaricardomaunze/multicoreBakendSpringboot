@@ -11,9 +11,13 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
-RUN mvn -q -B -e dependency:go-offline
-COPY src ./src
-RUN mvn -q -B -e -DskipTests clean package
+COPY contracts/pom.xml contracts/pom.xml
+COPY backend/pom.xml backend/pom.xml
+COPY desktop/pom.xml desktop/pom.xml
+RUN mvn -q -B -e -pl backend -am dependency:go-offline
+COPY contracts/src contracts/src
+COPY backend/src backend/src
+RUN mvn -q -B -e -pl backend -am -DskipTests clean package
 
 # ---- Runtime ----
 FROM eclipse-temurin:21-jre-jammy AS runtime
@@ -35,7 +39,7 @@ RUN apt-get update \
 # Utilizador não-root.
 RUN useradd -r -u 1001 -m -d /app appuser
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/backend/target/multicore-backend-*.jar app.jar
 RUN mkdir -p /app/backups && chown -R appuser:appuser /app
 USER appuser
 

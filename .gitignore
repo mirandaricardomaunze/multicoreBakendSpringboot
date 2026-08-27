@@ -2,6 +2,9 @@
 target/
 out/
 build/
+dist/
+tools/wix/
+tools/*.zip
 
 # Runtime data and backups
 backups/

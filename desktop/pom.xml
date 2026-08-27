@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion><parent><groupId>mz.multicore.erp</groupId><artifactId>multicore-parent</artifactId><version>1.0.0</version></parent>
+  <artifactId>multicore-desktop</artifactId><name>Multicore Desktop</name>
+  <dependencies>
+    <dependency><groupId>mz.multicore.erp</groupId><artifactId>multicore-contracts</artifactId><version>${project.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter</artifactId></dependency>
+    <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId></dependency><dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>
+    <dependency><groupId>org.kordamp.ikonli</groupId><artifactId>ikonli-swing</artifactId><version>${ikonli.version}</version></dependency><dependency><groupId>org.kordamp.ikonli</groupId><artifactId>ikonli-fontawesome5-pack</artifactId><version>${ikonli.version}</version></dependency>
+    <dependency><groupId>com.github.librepdf</groupId><artifactId>openpdf</artifactId><version>${openpdf.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+  </dependencies>
+  <build><plugins>
+    <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId><configuration><mainClass>mz.multicore.erp.desktop.DesktopApplication</mainClass></configuration></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><configuration>
+      <forkCount>1</forkCount><reuseForks>true</reuseForks><argLine>-Xmx1536m</argLine>
+      <systemPropertyVariables><java.awt.headless>false</java.awt.headless></systemPropertyVariables>
+    </configuration></plugin>
+  </plugins></build>
+</project>

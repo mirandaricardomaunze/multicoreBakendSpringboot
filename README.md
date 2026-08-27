@@ -1,11 +1,12 @@
 # Multicore — ERP profissional em Java/Spring Boot + Swing
 
-Multicore é um ERP modular (vendas, compras, stock, POS, fiscal, RH, CRM, financeira, aprovações, auditoria) com **um único codebase** que arranca em dois modos:
+Multicore é um ERP modular (vendas, compras, stock, POS, fiscal, RH, CRM, financeira, aprovações, auditoria) com um reactor Maven de três módulos fisicamente separados:
 
-- **Backend HTTP/API** — `mz.multicore.erp.MulticoreApplication` (Spring Boot puro, sem janelas).
-- **Cliente desktop Swing** — `mz.multicore.erp.desktop.DesktopApplication` (arranca Spring Boot com perfil `desktop` e abre a janela de login).
+- **`contracts`** — DTOs e tipos partilhados, sem Spring/JPA/Swing.
+- **`backend`** — API Spring Boot, regras, JPA, Flyway e PostgreSQL; é o único componente hospedado.
+- **`desktop`** — aplicação Swing instalada no Windows; usa HTTPS e nunca conhece a base de dados.
 
-A meta de migração é o desktop falar **só HTTPS** com o backend; ver [ARCHITECTURE.md](ARCHITECTURE.md).
+Esta separação é protegida pelo SPEC e pelo harness em [docs/MULTI_MODULE_ARCHITECTURE_SPEC.md](docs/MULTI_MODULE_ARCHITECTURE_SPEC.md).
 
 ## Stack
 
@@ -26,30 +27,11 @@ A meta de migração é o desktop falar **só HTTPS** com o backend; ver [ARCHIT
 
 ## Estrutura
 
-```
-src/main/java/mz/multicore/erp/
-├── MulticoreApplication.java        # entrypoint backend (sem Swing)
-├── architecture/                     # base classes: BaseEntity, exceções, security context
-├── desktop/
-│   └── DesktopApplication.java      # entrypoint Swing
-├── gui/                              # painéis Swing (StockPanel, POSPanel, ComercialPanel, …)
-│   └── components/                   # UIHelper, ModernButton, ModernPanel, …
-└── modules/                          # módulos de negócio (uma pasta = um domínio)
-    ├── approvals/
-    ├── audit/
-    ├── backup/
-    ├── comercial/                    # produtos, clientes, faturas, encomendas
-    ├── company/
-    ├── crm/
-    ├── financeira/
-    ├── fiscal/
-    ├── hr/
-    ├── inventory/                    # armazéns, stock, lotes, validades, FEFO
-    ├── pos/
-    ├── printing/
-    ├── purchases/
-    ├── reports/
-    └── users/
+```text
+contracts/src/main/java/   # contratos HTTP puros
+backend/src/main/java/     # controllers, services, repositories e entidades
+backend/src/main/resources/# configuração e migrações Flyway
+desktop/src/main/java/     # Swing, clientes HTTP e impressão local
 ```
 
 Cada módulo segue a mesma sub-estrutura **obrigatória**:
@@ -67,27 +49,13 @@ modules/<nome>/
 
 ### Desktop (uso diário)
 
-O `pom.xml` fixa `<mainClass>mz.multicore.erp.MulticoreApplication</mainClass>`, pelo que
-`mvn spring-boot:run` arranca **sempre o backend puro** (sem janela) — o
-`-Dspring-boot.run.main-class` da linha de comando **não** sobrepõe um valor literal
-da configuração. Para arrancar o cliente desktop, correr o `DesktopApplication` directamente:
+O desktop tem POM e entrypoint próprios:
 
 ```powershell
-mvn -q compile
-mvn -q dependency:build-classpath "-Dmdep.outputFile=target/cp.txt"
-$cp = "target/classes;" + (Get-Content target/cp.txt -Raw)
-java -cp $cp mz.multicore.erp.desktop.DesktopApplication
+mvn -pl desktop -am spring-boot:run
 ```
 
-> 🗄️ **Base de dados:** o perfil `desktop` usa **PostgreSQL local** (`jdbc:postgresql://localhost:5432/multicore`),
-> não H2 — os dados persistem. Requer um servidor PostgreSQL a correr, a BD `multicore` + role `multicore`,
-> e a variável de ambiente **`DB_PASSWORD`** com a password da role. Flyway é dono do schema (`V1..V17`),
-> Hibernate apenas valida. Detalhes em [docs/BD_POSTGRES_DESKTOP_SPEC.md](docs/BD_POSTGRES_DESKTOP_SPEC.md).
-> Para criar a BD/role de raiz:
-> ```sql
-> CREATE ROLE multicore LOGIN PASSWORD 'a_tua_password';
-> CREATE DATABASE multicore OWNER multicore;
-> ```
+> O desktop não contém driver de BD nem credenciais. Configure apenas `DESKTOP_API_BASE_URL` com o endereço HTTPS do backend.
 
 O login e a seleção de empresa do desktop comunicam com a API HTTP. Por defeito,
 o modo desktop usa o backend local em `http://localhost:8080`. Para apontar para
@@ -95,14 +63,14 @@ um backend remoto:
 
 ```powershell
 $env:DESKTOP_API_BASE_URL="https://erp.exemplo.co.mz"
-mvn spring-boot:run "-Dspring-boot.run.main-class=mz.multicore.erp.desktop.DesktopApplication"
+mvn -pl desktop -am spring-boot:run
 ```
 
 O token de autenticação fica apenas em memória durante a sessão do desktop.
 
 ### Backend isolado (sem janelas)
 ```powershell
-mvn spring-boot:run
+mvn -pl backend -am spring-boot:run
 ```
 
 ### Compilar / verificar

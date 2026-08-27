@@ -9,15 +9,13 @@ Documento único e canónico das **regras de arquitectura**. Consolida o antigo 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │           CLIENTE DESKTOP (Swing)                                │
-│  mz.multicore.erp.desktop.DesktopApplication                          │
-│  + mz.multicore.erp.gui.*  (Painéis, UIHelper, componentes)           │
+│  módulo desktop: DesktopApplication + gui.*                      │
 └────────────────────────┬────────────────────────────────────────┘
-                         │  hoje: chamadas directas a @Service
-                         │  meta: HTTPS contra backend
+                         │  exclusivamente HTTPS + DTOs de contracts
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │           BACKEND (Spring Boot)                                  │
-│  mz.multicore.erp.MulticoreApplication                                │
+│  módulo backend: mz.multicore.erp.MulticoreApplication           │
 │  └── modules/<dominio>/                                          │
 │       controller → service → repository → model                 │
 └────────────────────────┬────────────────────────────────────────┘
@@ -28,12 +26,22 @@ Documento único e canónico das **regras de arquitectura**. Consolida o antigo 
                    └──────────────┘
 ```
 
-Dois entrypoints, **uma única árvore Java**:
+Três módulos Maven físicos, com dependência unidireccional:
+
+```text
+desktop ──→ contracts ←── backend ──→ PostgreSQL
+```
+
+O contrato completo e o harness permanente estão em
+[`docs/MULTI_MODULE_ARCHITECTURE_SPEC.md`](docs/MULTI_MODULE_ARCHITECTURE_SPEC.md) e
+`MultiModuleArchitectureHarnessTest`. A separação não é uma meta futura: é uma regra presente.
+
+Dois entrypoints em árvores independentes:
 
 | Entrypoint                                       | Quando usar                                       |
 |--------------------------------------------------|---------------------------------------------------|
 | `mz.multicore.erp.MulticoreApplication`                | Backend puro (API online, sem Swing)              |
-| `mz.multicore.erp.desktop.DesktopApplication`          | Cliente desktop — perfil `desktop`, abre Swing    |
+| `mz.multicore.erp.desktop.DesktopApplication`          | Cliente instalado — abre Swing e chama a API      |
 
 ---
 
@@ -181,9 +189,9 @@ Mensagens são **vistas pelo utilizador final** — sempre em português de Moç
 
 ---
 
-## 7. Migração desktop ⇄ backend
+## 7. Desktop ⇄ backend
 
-Hoje os painéis Swing (`mz.multicore.erp.gui.*`) **injectam Services directamente** (`@Autowired` via construtor) — comodidade do monolito durante a migração. Meta:
+A migração foi concluída: os painéis Swing usam clientes HTTP e não podem injectar Services ou Repositories.
 
 ```text
 Swing instalado
@@ -192,17 +200,13 @@ Swing instalado
             └─ PostgreSQL gerido
 ```
 
-### Passos sequenciais
+Regras permanentes:
 
-1. Criar `mz.multicore.erp.desktop.client.ApiConfig` com base URL configurável.
-2. Camada `mz.multicore.erp.desktop.client.<dominio>Client` (um por módulo) que chama o backend via `RestClient` ou `WebClient`.
-3. Substituir injecções directas de Service nos painéis pelos Clients.
-4. Ordem de migração sugerida: **auth → produtos → stock → POS → vendas → compras → restantes**.
-5. Quando todos os painéis usarem Clients, separar o desktop em módulo Maven independente.
-
-Enquanto a migração está em curso:
-- **Lógica vai sempre para Service**, mesmo que hoje seja chamada directamente pelo Swing. Quando o Client HTTP existir, o Service não muda.
-- **Regras de negócio nunca em painéis** — se for puxado para o backend amanhã, perde-se.
+1. `desktop` recebe e envia apenas tipos de `contracts`.
+2. A URL vem de `DESKTOP_API_BASE_URL`; em produção deve ser HTTPS.
+3. Tokens ficam na sessão do cliente e nunca são gravados no código.
+4. Regras de negócio permanecem em Services do backend; painéis tratam apenas interacção e apresentação.
+5. Impressão que depende do sistema operativo fica no desktop; geração documental de negócio fica no backend.
 
 ---
 
