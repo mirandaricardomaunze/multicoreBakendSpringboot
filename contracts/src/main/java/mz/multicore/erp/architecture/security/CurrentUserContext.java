@@ -9,7 +9,7 @@ import java.util.function.Supplier;
  * {@link SecurityInterceptor} a cada pedido HTTP.
  *
  * <p><b>Fail-closed.</b> Sem contexto não há papel e não há empresa: {@link #getRole()} devolve vazio
- * (o {@link PermissionGuard} recusa) e {@link #getCurrentCompanyId()} lança. Versões anteriores
+ * (o {@code PermissionGuard} do backend recusa) e {@link #getCurrentCompanyId()} lança. Versões anteriores
  * inventavam {@code ("SYSTEM", "ADMIN")} e a empresa {@code 1} — qualquer caminho sem contexto corria
  * com privilégios máximos contra o tenant errado, em silêncio. Quem precisa mesmo de correr sem
  * utilizador (cron, arranque) declara-o em {@link #runAsSystem(Runnable)}.
@@ -42,7 +42,7 @@ public final class CurrentUserContext {
 
     /**
      * Sessão activa. Sem contexto devolve o utilizador {@code SYSTEM} <b>sem papel</b> — o nome é só
-     * etiqueta de auditoria; o papel vazio faz o {@link PermissionGuard} recusar.
+     * etiqueta de auditoria; o papel vazio faz o {@code PermissionGuard} do backend recusar.
      */
     public static UserSession getCurrentUser() {
         UserSession session = userSessionThreadLocal.get();

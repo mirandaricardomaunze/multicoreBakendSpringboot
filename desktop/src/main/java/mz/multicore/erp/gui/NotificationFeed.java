@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
-import mz.multicore.erp.architecture.security.PermissionGuard;
+import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
@@ -211,7 +211,7 @@ public class NotificationFeed {
 
     /** Alertas apenas para gestores/admin: o sino não expõe informação médica a outros perfis. */
     private void addOccupationalHealth(List<NotificationItem> items) {
-        if (!PermissionGuard.isManagerOrAdmin()) return;
+        if (!SignedInUser.isManagerOrAdmin()) return;
         for (OccupationalHealthExamDTO exam : hrApiClient.getExpiringOccupationalHealthExams()) {
             long days = exam.daysUntilExpiry();
             String title = days < 0

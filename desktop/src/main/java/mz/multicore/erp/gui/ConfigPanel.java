@@ -1,7 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.architecture.security.PermissionGuard;
+import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -558,7 +558,7 @@ public class ConfigPanel extends JPanel {
 
     /** Executa já o backup físico automático (retenção + registo). Só ADMIN. */
     private void runAutoBackupNow() {
-        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+        if (!SignedInUser.isAdmin()) {
             JOptionPane.showMessageDialog(this, "Apenas administradores podem executar o backup.",
                     "Acesso restrito", JOptionPane.WARNING_MESSAGE);
             return;
@@ -597,7 +597,7 @@ public class ConfigPanel extends JPanel {
         String activeUser = CurrentUserContext.getUsername();
         String activeRole = CurrentUserContext.getRole();
 
-        if (!"ADMIN".equalsIgnoreCase(activeRole)) {
+        if (!SignedInUser.isAdmin()) {
             JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem iniciar cópias de segurança manuais.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -618,7 +618,7 @@ public class ConfigPanel extends JPanel {
 
     private void runPhysicalBackup() {
         String activeUser = CurrentUserContext.getUsername();
-        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+        if (!SignedInUser.isAdmin()) {
             JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem gerar backups físicos.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -641,7 +641,7 @@ public class ConfigPanel extends JPanel {
     }
 
     private void verifySelectedBackup() {
-        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+        if (!SignedInUser.isAdmin()) {
             JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem verificar cópias de segurança.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -684,7 +684,7 @@ public class ConfigPanel extends JPanel {
 
     private void loadUsersList() {
         usersTableModel.setRowCount(0);
-        if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
+        if (!SignedInUser.isAdmin()) {
             usersTableModel.addRow(new Object[]{
                     "Acesso restrito", "Apenas administradores podem gerir utilizadores.", "", ""
             });

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ActionMenuButton;
@@ -475,7 +476,7 @@ public class StockPanel extends JPanel {
     // ─── Bloqueio de stock (contagem cega) ───────────────────────────────────
 
     private static boolean isAdmin() {
-        return "ADMIN".equalsIgnoreCase(CurrentUserContext.getRole());
+        return SignedInUser.isAdmin();
     }
 
     /** As quantidades devem ser ocultadas ao utilizador actual? (trancado E não-admin) */

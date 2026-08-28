@@ -1,7 +1,7 @@
 package mz.multicore.erp.desktop;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.architecture.security.PermissionGuard;
+import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.desktop.client.AuthApiClient;
 import mz.multicore.erp.desktop.config.DesktopApiConfig;
 import mz.multicore.erp.desktop.session.DesktopSession;
@@ -56,7 +56,7 @@ public class DesktopLauncher {
 
         if (session.superAdmin()) {
             // Superadmin não tem empresa: corre com papel de plataforma e sem tenant activo.
-            CurrentUserContext.setCurrentUser(session.username(), PermissionGuard.SUPERADMIN_ROLE);
+            CurrentUserContext.setCurrentUser(session.username(), SignedInUser.SUPERADMIN);
         } else {
             if (session.companies().isEmpty()) {
                 context.close();

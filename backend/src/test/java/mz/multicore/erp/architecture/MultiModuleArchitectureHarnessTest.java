@@ -50,6 +50,29 @@ class MultiModuleArchitectureHarnessTest {
         assertThat(pom).doesNotContain("ikonli-swing", "<artifactId>multicore-desktop</artifactId>");
     }
 
+    /**
+     * <b>A autorização não viaja no artefacto que se instala nas máquinas dos clientes.</b>
+     *
+     * <p>O {@code PermissionGuard} chegou a viver em {@code contracts}, e compilava: 30 ficheiros do
+     * backend usavam-no para <i>impor</i> e 3 do desktop para decidir se desenhavam um botão. A
+     * mesma classe com dois níveis de confiança convida ao erro que não se vê — "verificar a
+     * permissão" no cliente e acreditar que se fez alguma coisa. O cliente decide o que desenha
+     * ({@code SignedInUser}); o servidor decide o que é permitido.
+     */
+    @Test
+    void authorisationGuardLivesOnlyInTheBackend() throws Exception {
+        assertThat(ROOT.resolve(Path.of("backend", "src", "main", "java", "mz", "multicore", "erp",
+                "architecture", "security", "PermissionGuard.java")))
+                .as("o PermissionGuard pertence ao backend")
+                .exists();
+        assertThat(ROOT.resolve(Path.of("contracts", "src", "main", "java", "mz", "multicore", "erp",
+                "architecture", "security", "PermissionGuard.java")))
+                .as("o PermissionGuard não pode voltar a contracts — vai no jar de cada cliente")
+                .doesNotExist();
+        assertSourcesDoNotContain(ROOT.resolve(Path.of("desktop", "src", "main", "java")),
+                List.of("PermissionGuard.requireManagerOrAdmin", "PermissionGuard.isManagerOrAdmin"));
+    }
+
     @Test
     void contractsRemainFrameworkFree() throws Exception {
         assertSourcesDoNotContain(ROOT.resolve(Path.of("contracts", "src", "main", "java")), List.of(

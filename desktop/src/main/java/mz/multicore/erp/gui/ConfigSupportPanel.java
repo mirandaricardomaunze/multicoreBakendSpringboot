@@ -1,6 +1,6 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.architecture.security.PermissionGuard;
+import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.support.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.support.dto.CreateTicketRequest;
@@ -77,7 +77,7 @@ final class ConfigSupportPanel {
     }
 
     public void refresh() {
-        if (!PermissionGuard.isManagerOrAdmin()) {
+        if (!SignedInUser.isManagerOrAdmin()) {
             owner.supportModel.setRowCount(0);
             owner.supportModel.addRow(new Object[]{"", "Apenas gestor/administrador pode gerir pedidos.", "", "", ""});
             return;

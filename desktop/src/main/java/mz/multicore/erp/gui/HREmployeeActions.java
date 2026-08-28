@@ -18,7 +18,7 @@ import mz.multicore.erp.modules.hr.dto.HealthProviderDTO;
 import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthCostDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthProviderCostDTO;
-import mz.multicore.erp.architecture.security.PermissionGuard;
+import mz.multicore.erp.desktop.session.SignedInUser;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -276,7 +276,7 @@ final class HREmployeeActions {
     void openOccupationalHealth() {
         EmployeeDTO employee = employeeSelection.get();
         if (employee == null) return;
-        if (!PermissionGuard.isManagerOrAdmin()) {
+        if (!SignedInUser.isManagerOrAdmin()) {
             JOptionPane.showMessageDialog(owner,
                     "Apenas gestores ou administradores podem consultar dados de saúde ocupacional.",
                     "Acesso restrito", JOptionPane.WARNING_MESSAGE);
