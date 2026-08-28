@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.events.PayrollLiabilityDeliveredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -142,7 +143,7 @@ public class PayrollLiabilityService {
      */
     @Transactional
     public PayrollLiabilityDTO markDelivered(Long id, String paymentReference) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("entregar retenções da folha");
         PayrollLiability liability = liabilityRepository.findByIdAndCompanyId(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Retenção não encontrada."));
         if (!liability.isPending()) {
@@ -247,14 +248,6 @@ public class PayrollLiabilityService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem entregar retenções da folha.");
-        }
     }
 
     private String blankToNull(String value) {

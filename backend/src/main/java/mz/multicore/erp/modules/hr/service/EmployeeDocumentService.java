@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -66,7 +67,7 @@ public class EmployeeDocumentService {
 
     @Transactional
     public EmployeeDocumentDTO save(SaveEmployeeDocumentRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir documentos de colaboradores");
         Employee employee = employeeRepository
                 .findByIdAndCompanyId(request.employeeId(), currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Colaborador não encontrado na empresa activa."));
@@ -95,7 +96,7 @@ public class EmployeeDocumentService {
 
     @Transactional
     public void delete(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir documentos de colaboradores");
         EmployeeDocument document = documentRepository.findByIdAndCompanyId(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Documento não encontrado."));
         String detail = String.format("Documento %s de %s eliminado",
@@ -106,14 +107,6 @@ public class EmployeeDocumentService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem gerir documentos de colaboradores.");
-        }
     }
 
     private String blankToNull(String value) {

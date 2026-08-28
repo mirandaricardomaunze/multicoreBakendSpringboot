@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -48,15 +49,26 @@ public class HrAccessGuard {
                 .orElseThrow(() -> new BusinessRuleException("Empresa ativa não encontrada."));
     }
 
+    /**
+     * Perfil de gestão exigido, dizendo <b>qual</b> operação foi recusada.
+     *
+     * <p>Delega no {@link PermissionGuard} canónico de propósito. Antes desta unificação, treze
+     * serviços do RH tinham cada um a sua cópia privada de
+     * {@code !"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)} — mecânica
+     * idêntica, mensagem própria. Treze cópias de uma regra de autorização é uma divergência à
+     * espera de acontecer: bastava a décima quarta ser escrita com {@code equals} em vez de
+     * {@code equalsIgnoreCase} para abrir uma porta que ninguém veria a correr o programa.
+     */
+    public void ensureHrManager(String operation) {
+        PermissionGuard.requireManagerOrAdmin(operation);
+    }
+
     public void ensureHrManager() {
-        if (!isHrManager()) {
-            throw new BusinessRuleException("Apenas gestores ou administradores podem executar esta operação de RH.");
-        }
+        ensureHrManager("executar esta operação de RH");
     }
 
     public boolean isHrManager() {
-        String role = CurrentUserContext.getRole();
-        return "ADMIN".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role);
+        return PermissionGuard.isManagerOrAdmin();
     }
 
     public Employee findEmployee(Long id) {

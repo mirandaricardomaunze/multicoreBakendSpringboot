@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -88,7 +89,7 @@ public class HrPolicyService {
 
     @Transactional
     public HrPolicyConfigDTO create(SaveHrPolicyConfigRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("configurar os valores legais de RH");
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new BusinessRuleException("O fim da vigência não pode ser anterior ao início.");
         }
@@ -123,7 +124,7 @@ public class HrPolicyService {
 
     @Transactional
     public void deactivate(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("configurar os valores legais de RH");
         HrPolicyConfig config = repository.findByIdAndCompanyId(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Configuração não encontrada."));
         config.setActive(false);
@@ -134,14 +135,6 @@ public class HrPolicyService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem configurar os valores legais de RH.");
-        }
     }
 
     private static String orDash(Integer value) {

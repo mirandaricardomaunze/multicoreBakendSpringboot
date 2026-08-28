@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -45,7 +46,7 @@ public class OvertimeRateConfigService {
 
     @Transactional
     public OvertimeRateConfigDTO create(SaveOvertimeRateConfigRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("configurar acréscimos de hora extra");
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new BusinessRuleException("O fim da vigência não pode ser anterior ao início.");
         }
@@ -73,7 +74,7 @@ public class OvertimeRateConfigService {
 
     @Transactional
     public void deactivate(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("configurar acréscimos de hora extra");
         OvertimeRateConfig config = repository.findByIdAndCompanyId(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Configuração não encontrada."));
         config.setActive(false);
@@ -84,14 +85,6 @@ public class OvertimeRateConfigService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem configurar acréscimos de hora extra.");
-        }
     }
 
     private OvertimeRateConfigDTO toDTO(OvertimeRateConfig c) {

@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -67,7 +68,7 @@ public class SalaryHistoryService {
 
     @Transactional
     public SalaryChangeDTO registerChange(CreateSalaryChangeRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("alterar salários");
         Employee employee = findEmployee(request.employeeId());
         SalaryChangeReason reason = parseReason(request.reason());
         return record(employee, request.newSalary(), request.effectiveDate(), reason,
@@ -155,14 +156,6 @@ public class SalaryHistoryService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem alterar salários.");
-        }
     }
 
     private String blankToNull(String value) {

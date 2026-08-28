@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
@@ -96,7 +97,7 @@ public class PayrollBonusService {
      */
     @Transactional
     public ThirteenthMonthDTO payThirteenthMonth(int year) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("pagar subsídios");
         List<ThirteenthMonthDTO.ThirteenthMonthLineDTO> paid = new ArrayList<>();
         for (Employee e : employeeRepository.findByCompanyIdOrderByName(currentCompanyId())) {
             ThirteenthMonthDTO.ThirteenthMonthLineDTO line = line(e, year);
@@ -121,7 +122,7 @@ public class PayrollBonusService {
     /** Paga o subsídio de férias de um pedido aprovado. Bloqueia se já tiver sido pago. */
     @Transactional
     public VacationAllowanceDTO payVacationAllowance(Long vacationId) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("pagar subsídios");
         Vacation v = vacationRepository.findByIdAndEmployeeCompanyId(vacationId, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Pedido de férias não encontrado."));
         if (!"APPROVED".equals(v.getStatus())) {
@@ -150,13 +151,6 @@ public class PayrollBonusService {
         bonus.setPaymentDate(LocalDate.now());
         bonusRepository.save(bonus);
         financeService.registerAutoPayout(amount, description);
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException("Apenas gestores ou administradores podem pagar subsídios.");
-        }
     }
 
     private ThirteenthMonthDTO.ThirteenthMonthLineDTO line(Employee e, int year) {

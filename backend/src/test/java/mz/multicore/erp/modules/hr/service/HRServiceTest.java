@@ -263,7 +263,7 @@ class HRServiceTest {
         var ex = assertThrows(BusinessRuleException.class, () -> service.recordAbsence(
                 new CreateAbsenceRequest(5L, "UNJUSTIFIED",
                         LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 2), "sem aviso", false)));
-        assertEquals(true, ex.getMessage().contains("gestores ou administradores"));
+        assertEquals(true, ex.getMessage().contains("MANAGER ou ADMIN"));
         verify(absenceRepository, never()).save(any(Absence.class));
     }
 
@@ -292,7 +292,7 @@ class HRServiceTest {
         CurrentUserContext.setCurrentUser("operador", "EMPLOYEE");
 
         var ex = assertThrows(BusinessRuleException.class, () -> service.deleteAbsence(3L));
-        assertEquals(true, ex.getMessage().contains("gestores ou administradores"));
+        assertEquals(true, ex.getMessage().contains("MANAGER ou ADMIN"));
         verify(absenceRepository, never()).deleteByIdAndEmployeeCompanyId(any(), any());
     }
 

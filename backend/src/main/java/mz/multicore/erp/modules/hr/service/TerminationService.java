@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -98,7 +99,7 @@ public class TerminationService {
      */
     @Transactional(readOnly = true)
     public TerminationDTO preview(CreateTerminationRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("cessar vínculos e pagar acertos finais");
         Employee employee = findEmployee(request.employeeId());
         Settlement settlement = compute(employee, request);
         return previewDTO(employee, settlement, request);
@@ -113,7 +114,7 @@ public class TerminationService {
      */
     @Transactional
     public TerminationDTO terminate(CreateTerminationRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("cessar vínculos e pagar acertos finais");
         Long companyId = currentCompanyId();
         Employee employee = findEmployee(request.employeeId());
         if (terminationRepository.existsByCompanyIdAndEmployeeId(companyId, employee.getId())) {
@@ -168,7 +169,7 @@ public class TerminationService {
      */
     @Transactional
     public TerminationDTO paySettlement(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("cessar vínculos e pagar acertos finais");
         Termination termination = terminationRepository.findByIdWithLines(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Acerto final não encontrado."));
         if (termination.getStatus() == SettlementStatus.PAGO) {
@@ -361,14 +362,6 @@ public class TerminationService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem cessar vínculos e pagar acertos finais.");
-        }
     }
 
     private String blankToNull(String value) {

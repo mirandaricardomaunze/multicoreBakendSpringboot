@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.hr.dto.BankPaymentFileDTO;
@@ -48,7 +49,7 @@ public class BankPaymentFileService {
      */
     @Transactional(readOnly = true)
     public BankPaymentFileDTO generate(int year, int month) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerar o ficheiro de pagamento");
         List<Payslip> approved = payslipRepository
                 .findByCompanyIdAndYearAndMonth(currentCompanyId(), year, month).stream()
                 .filter(p -> APPROVED.equals(p.getStatus()))
@@ -120,11 +121,4 @@ public class BankPaymentFileService {
         return CurrentUserContext.requireCurrentCompanyId();
     }
 
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem gerar o ficheiro de pagamento.");
-        }
-    }
 }

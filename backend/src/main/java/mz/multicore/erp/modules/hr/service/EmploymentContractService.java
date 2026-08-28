@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
@@ -87,7 +88,7 @@ public class EmploymentContractService {
 
     @Transactional
     public EmploymentContractDTO createContract(CreateContractRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir contratos");
         Employee employee = findEmployee(request.employeeId());
         ContractType type = parseType(request.contractType());
         validateDates(type, request.startDate(), request.endDate(), request.probationEndDate(),
@@ -121,7 +122,7 @@ public class EmploymentContractService {
      */
     @Transactional
     public EmploymentContractDTO activateContract(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir contratos");
         EmploymentContract contract = findContract(id);
         if (contract.getStatus() != ContractStatus.RASCUNHO) {
             throw new BusinessRuleException("Só um contrato em rascunho pode passar a vigente.");
@@ -145,7 +146,7 @@ public class EmploymentContractService {
      */
     @Transactional
     public EmploymentContractDTO renewContract(Long id, RenewContractRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir contratos");
         EmploymentContract previous = findContract(id);
         if (previous.getStatus() == ContractStatus.RASCUNHO) {
             throw new BusinessRuleException("Um contrato em rascunho não se renova — altere-o.");
@@ -193,7 +194,7 @@ public class EmploymentContractService {
 
     @Transactional
     public EmploymentContractDTO terminateContract(Long id, LocalDate terminationDate, String reason) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir contratos");
         EmploymentContract contract = findContract(id);
         if (contract.getStatus().isTerminal()) {
             throw new BusinessRuleException("Este contrato já está cessado.");
@@ -328,13 +329,6 @@ public class EmploymentContractService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException("Apenas gestores ou administradores podem gerir contratos.");
-        }
     }
 
     private String blankToNull(String value) {

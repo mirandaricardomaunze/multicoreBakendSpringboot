@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
@@ -81,7 +82,7 @@ public class TimeSheetService {
 
     @Transactional
     public TimeEntryDTO recordEntry(CreateTimeEntryRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir o ponto");
         Long companyId = currentCompanyId();
         Employee employee = findEmployee(request.employeeId());
         ensurePeriodOpen(request.entryDate().getYear(), request.entryDate().getMonthValue());
@@ -115,7 +116,7 @@ public class TimeSheetService {
 
     @Transactional
     public void deleteEntry(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir o ponto");
         Long companyId = currentCompanyId();
         TimeEntry entry = timeEntryRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Marcação não encontrada."));
@@ -281,7 +282,7 @@ public class TimeSheetService {
 
     @Transactional
     public TimeSheetDTO closePeriod(int year, int month) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir o ponto");
         TimeSheet sheet = findOrCreateSheet(year, month);
         if (sheet.isClosed()) {
             throw new BusinessRuleException(
@@ -357,7 +358,7 @@ public class TimeSheetService {
      */
     @Transactional
     public TimeSheetDTO reopenPeriod(int year, int month, String reason) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir o ponto");
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("Reabrir a folha de ponto exige um motivo.");
         }
@@ -473,13 +474,6 @@ public class TimeSheetService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException("Apenas gestores ou administradores podem gerir o ponto.");
-        }
     }
 
     private String blankToNull(String value) {

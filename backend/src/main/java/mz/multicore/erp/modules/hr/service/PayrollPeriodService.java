@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -68,7 +69,7 @@ public class PayrollPeriodService {
 
     @Transactional
     public PayrollPeriodDTO close(int year, int month) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("fechar ou reabrir a folha do mês");
         PayrollPeriod period = findOrCreate(year, month);
         if (period.isClosed()) {
             throw new BusinessRuleException(String.format("A folha de %d/%d já está fechada.", month, year));
@@ -91,7 +92,7 @@ public class PayrollPeriodService {
      */
     @Transactional
     public PayrollPeriodDTO reopen(int year, int month, String reason) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("fechar ou reabrir a folha do mês");
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("Reabrir a folha de um mês exige um motivo.");
         }
@@ -127,14 +128,6 @@ public class PayrollPeriodService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem fechar ou reabrir a folha do mês.");
-        }
     }
 
     private static PayrollPeriodDTO toDTO(PayrollPeriod p) {

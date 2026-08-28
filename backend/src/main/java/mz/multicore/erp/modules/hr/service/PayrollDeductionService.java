@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -72,7 +73,7 @@ public class PayrollDeductionService {
      */
     @Transactional
     public PayrollDeductionDTO create(CreatePayrollDeductionRequest request) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir descontos e adiantamentos");
         Employee employee = findEmployee(request.employeeId());
         PayrollDeductionKind kind = parseKind(request.kind());
         validate(kind, request);
@@ -110,7 +111,7 @@ public class PayrollDeductionService {
 
     @Transactional
     public void deactivate(Long id) {
-        ensureHrManager();
+        PermissionGuard.requireManagerOrAdmin("gerir descontos e adiantamentos");
         PayrollDeduction deduction = deductionRepository.findByIdAndCompanyId(id, currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Desconto não encontrado."));
         deduction.setActive(false);
@@ -288,14 +289,6 @@ public class PayrollDeductionService {
 
     private Long currentCompanyId() {
         return CurrentUserContext.requireCurrentCompanyId();
-    }
-
-    private void ensureHrManager() {
-        String role = CurrentUserContext.getRole();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role)) {
-            throw new BusinessRuleException(
-                    "Apenas gestores ou administradores podem gerir descontos e adiantamentos.");
-        }
     }
 
     private String blankToNull(String value) {
