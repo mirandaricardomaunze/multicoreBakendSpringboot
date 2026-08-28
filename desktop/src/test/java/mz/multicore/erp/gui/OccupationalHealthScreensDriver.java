@@ -9,6 +9,7 @@ import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.desktop.session.DesktopSessionStore;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -72,6 +73,10 @@ public final class OccupationalHealthScreensDriver {
 
         HREmployeeActions[] actions = new HREmployeeActions[1];
         SwingUtilities.invokeAndWait(() -> {
+            // O tema instala-se em UIManager, e é o DesktopLauncher que o faz no arranque real.
+            // Sem esta linha o driver fotografa os diálogos com o Look&Feel de fábrica — fundo azul
+            // claro — e faz parecer defeito do ecrã aquilo que é falta de arranque do driver.
+            UIHelper.loadAndApplySavedTheme();
             JFrame frame = new JFrame("Driver Saúde Ocupacional");
             UIHelper.registerMainWindow(frame);
             HRPanel panel = new HRPanel(hr);
@@ -87,7 +92,18 @@ public final class OccupationalHealthScreensDriver {
             actions[0] = new HREmployeeActions(panel, () -> employee, () -> null, () -> {});
         });
 
-        shootDialog(out, "01-historico", () -> actions[0].openOccupationalHealth());
+        List<OccupationalHealthExamDTO> history = hr.getOccupationalHealthHistory(employee.id());
+
+        shootDialog(out, "01-historico", () -> actions[0].openOccupationalHealth(), 0);
+        shootDialog(out, "02-formulario", () -> actions[0].openOccupationalHealthForm(employee), 0);
+        // Dois separadores dentro do mesmo diálogo: "Sem exame" e "Custos do ano". Fotografar só o
+        // primeiro deixava o segundo por ver, que é exactamente como um ecrã passa despercebido.
+        shootDialog(out, "03-conformidade-sem-exame", () -> actions[0].openOccupationalHealthCompliance(), 0);
+        shootDialog(out, "04-conformidade-custos", () -> actions[0].openOccupationalHealthCompliance(), 1);
+        if (!history.isEmpty()) {
+            shootDialog(out, "05-pagamento",
+                    () -> actions[0].payOccupationalHealthExam(employee, history, 0), 0);
+        }
 
         System.out.println("[driver] PNGs em " + out.toAbsolutePath());
         context.close();
@@ -102,18 +118,43 @@ public final class OccupationalHealthScreensDriver {
      * porque o carregamento é assíncrono — sem ela fotografava-se a barra de progresso e o driver
      * dizia que estava tudo bem.
      */
-    private static void shootDialog(Path out, String name, Runnable open) throws Exception {
+    /** O maior diálogo visível — a barra de progresso é pequena e não pode ganhar a escolha. */
+    private static Window largestDialog() {
+        Window found = null;
+        for (Window window : Window.getWindows()) {
+            boolean candidate = window.isVisible() && window instanceof java.awt.Dialog;
+            if (candidate && (found == null || window.getWidth() * window.getHeight()
+                    > found.getWidth() * found.getHeight())) {
+                found = window;
+            }
+        }
+        return found;
+    }
+
+    private static void selectTab(java.awt.Container container, int index) {
+        if (container == null) {
+            return;
+        }
+        for (java.awt.Component child : container.getComponents()) {
+            if (child instanceof javax.swing.JTabbedPane tabs && tabs.getTabCount() > index) {
+                tabs.setSelectedIndex(index);
+                return;
+            }
+            if (child instanceof java.awt.Container nested) {
+                selectTab(nested, index);
+            }
+        }
+    }
+
+    private static void shootDialog(Path out, String name, Runnable open, int tab) throws Exception {
         SwingUtilities.invokeLater(open);
         Thread.sleep(6000);
+        if (tab > 0) {
+            SwingUtilities.invokeAndWait(() -> selectTab(largestDialog(), tab));
+            Thread.sleep(600);
+        }
         SwingUtilities.invokeAndWait(() -> {
-            Window dialog = null;
-            for (Window window : Window.getWindows()) {
-                boolean candidate = window.isVisible() && window instanceof java.awt.Dialog;
-                if (candidate && (dialog == null || window.getWidth() * window.getHeight()
-                        > dialog.getWidth() * dialog.getHeight())) {
-                    dialog = window;
-                }
-            }
+            Window dialog = largestDialog();
             if (dialog == null) {
                 System.out.println("[driver] FALHOU: nenhum diálogo visível para \"" + name + "\"");
                 return;

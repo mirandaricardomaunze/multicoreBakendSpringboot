@@ -351,7 +351,7 @@ final class HREmployeeActions {
      * Paga o exame à clínica. O encargo é do empregador — a saída é de tesouraria e não tem
      * contrapartida nenhuma na folha do trabalhador.
      */
-    private void payOccupationalHealthExam(EmployeeDTO employee,
+    void payOccupationalHealthExam(EmployeeDTO employee,
                                            List<OccupationalHealthExamDTO> history, int row) {
         if (row < 0 || row >= history.size()) {
             JOptionPane.showMessageDialog(owner,
@@ -392,7 +392,7 @@ final class HREmployeeActions {
      * <p>Vive dentro deste diálogo e não num separador próprio porque a barra do RH já está no
      * limite que a {@code TabStripFitsTest} mede — um separador que não cabe não avisa, desaparece.
      */
-    private void openOccupationalHealthCompliance() {
+    void openOccupationalHealthCompliance() {
         LocalDate from = LocalDate.now().withDayOfYear(1);
         LocalDate to = LocalDate.now();
         UIHelper.runWithProgress(owner, "A apurar conformidade e custos…",
@@ -453,7 +453,7 @@ final class HREmployeeActions {
         return panel;
     }
 
-    private void openOccupationalHealthForm(EmployeeDTO employee) {
+    void openOccupationalHealthForm(EmployeeDTO employee) {
         UIHelper.runWithProgress(owner, "A carregar prestadores…",
                 () -> owner.hrApiClient.getHealthProviders(),
                 providers -> showOccupationalHealthForm(employee, providers), owner::showActionError);
@@ -523,9 +523,11 @@ final class HREmployeeActions {
                 "Comprovativo (máx. 5 MB):", attachmentPanel);
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
                 "Exame de Saúde — " + employee.name(), "fas-heartbeat",
-                "A renovação cria um novo registo e preserva todo o histórico. Registe apenas "
-                        + "aptidão e restrições de função: a lei não permite ao empregador guardar "
-                        + "diagnóstico nem estado serológico do trabalhador.", form)
+                // Curta de propósito: o subtítulo do diálogo é de uma linha e trunca. A frase que
+                // estava aqui cortava em "a lei não permite ao empreg…" — desaparecia exactamente
+                // a parte que diz o que não se pode escrever.
+                "Registe apenas aptidão e restrições de função: a lei não permite guardar "
+                        + "diagnóstico. A renovação preserva o histórico.", form)
                 .setSize(860, 760).showDialog();
         if (!confirmed) return;
 
