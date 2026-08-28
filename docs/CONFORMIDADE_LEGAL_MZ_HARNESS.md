@@ -62,7 +62,7 @@ casos é preencher configuração, **não escrever código novo**.
 
 | ID | Pergunta ao jurista | Onde entra no sistema | Resposta | Data / Assinatura |
 |----|---------------------|-----------------------|----------|-------------------|
-| H-01 | Qual o **diploma ministerial conjunto** (Trabalho + Saúde) que fixa as regras dos testes, exames médicos e **respectivos registos**? Está em vigor? | Base legal de tudo o que está em CL-13 e CL-14 | | |
+| H-01 | Qual o **diploma ministerial conjunto** (Trabalho + Saúde) que fixa as regras dos testes, exames médicos e **respectivos registos**? Está em vigor? | Base legal de tudo o que está em CL-13 e CL-14 | *Pesquisa de 2026-08-28: confirma-se que a Lei n.º 13/2023 **remete** para este diploma, mas ele não é identificável em fontes públicas — nem número, nem data, nem texto. Pedi-lo ao MITESS/MTGAS é passo de jurista, não de pesquisa.* | |
 | H-02 | **Periodicidade** legal dos exames de aptidão — geral e agravada (funções de risco, menores, trabalho nocturno) | Campo novo em `hr_policy_configs` com `legal_basis` | | |
 | H-03 | **Prazo de conservação** dos registos de saúde ocupacional após a cessação do contrato | Campo novo + relatório de registos fora de prazo | | |
 | H-04 | O **exame de admissão** é obrigatório antes do início de funções, ou basta na admissão? | Torna CL-10 uma recusa em vez de um aviso, se for o caso | | |
@@ -79,10 +79,13 @@ casos é preencher configuração, **não escrever código novo**.
 
 ## 5. Declarações honestas
 
-1. **Nada foi validado ao vivo pela UI.** Os ecrãs novos — prestador e custo no formulário do exame,
-   colunas de custo e pagamento no histórico, botão *Registar Pagamento*, separadores *Sem exame* e
-   *Custos do ano* — nunca foram abertos numa aplicação a correr. Junta-se aos RHC-90..94 que já
-   estavam por fazer.
+1. ~~Nada foi validado ao vivo pela UI.~~ **O ecrã de histórico foi** (2026-08-28), pelo
+   `OccupationalHealthScreensDriver`, contra backend real e com dados que cobrem os dois caminhos
+   de cada campo. Encontrou e fechou três defeitos que só existem ao pintar: a linha de totais
+   saía cortada a meio, a coluna de dinheiro truncava, e o papel do utilizador lido fora da EDT
+   dava "sem permissão" a um ADMIN verdadeiro. **Continuam por abrir** o formulário de registo, o
+   fluxo de *Registar Pagamento* e os separadores *Sem exame* / *Custos do ano* — o driver está
+   escrito e estende-se a eles com uma linha cada.
 2. ~~A V59 não foi aplicada contra PostgreSQL real.~~ **Foi** — ver §6.
 3. **A tabela de homologação (§4) está vazia.** Enquanto estiver, o sistema **não pode ser
    apresentado a um cliente como legalmente homologado** — só como preparado para o ser.
