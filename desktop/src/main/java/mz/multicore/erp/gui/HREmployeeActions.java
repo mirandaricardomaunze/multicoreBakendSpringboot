@@ -310,22 +310,32 @@ final class HREmployeeActions {
         }
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
+        // Oito colunas em 900 px truncam as que interessam se ninguém decidir a repartição: o
+        // resultado de aptidão ficava "Apto com re..." e a situação "Expirado há ...". As datas e o
+        // comprovativo têm largura fixa e conhecida; o que sobra vai para os campos de texto.
+        int[] widths = {95, 95, 150, 125, 145, 110, 125, 91};
+        for (int column = 0; column < widths.length && column < table.getColumnCount(); column++) {
+            table.getColumnModel().getColumn(column).setPreferredWidth(widths[column]);
+        }
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        scroll.setPreferredSize(new Dimension(900, 280));
-        JLabel privacy = new JLabel("Dados clínicos restritos · cada consulta fica registada na auditoria "
-                + "· cada renovação mantém o histórico anterior");
-        privacy.setForeground(UIHelper.TEXT_MUTED);
-        JLabel totals = new JLabel(spent.signum() == 0
+        // 240 e não 280: com 280 a linha de totais ficava cortada a meio pela margem do diálogo —
+        // o número que diz quanto a empresa gastou era exactamente o que não se lia.
+        scroll.setPreferredSize(new Dimension(936, 240));
+        // Um rótulo HTML de duas linhas, e não dois rótulos empilhados: dois JLabel num BoxLayout
+        // recebiam menos altura do que pediam e a segunda linha — a que diz quanto a empresa gastou —
+        // saía cortada a meio. Com HTML a altura preferida é calculada pelo próprio rótulo.
+        String totalsLine = spent.signum() == 0
                 ? "Sem custos de exames registados para este trabalhador."
-                : String.format("Custo suportado pela empresa: %s · por pagar às clínicas: %s",
-                        money(spent), money(owed)));
-        totals.setForeground(UIHelper.TEXT_LIGHT);
+                : String.format("Custo suportado pela empresa: <b>%s</b> · por pagar às clínicas: <b>%s</b>",
+                        money(spent), money(owed));
+        JLabel privacy = new JLabel("<html>Dados clínicos restritos · cada consulta fica registada na "
+                + "auditoria · cada renovação mantém o histórico anterior<br>" + totalsLine + "</html>");
+        privacy.setForeground(UIHelper.TEXT_MUTED);
         JPanel content = new JPanel(new BorderLayout(0, 10));
         content.setOpaque(false);
         content.add(privacy, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
-        content.add(totals, BorderLayout.SOUTH);
 
         String action = history.isEmpty() ? "Registar Exame" : "Registar Renovação";
         Object[] options = {action, "Registar Pagamento", "Custos e Conformidade", "Fechar"};
