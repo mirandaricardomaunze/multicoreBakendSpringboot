@@ -19,8 +19,8 @@ Internet ── 443 ──▶ [ Caddy (TLS) ] ──▶ [ backend:8080 ] ──�
 Só o Caddy publica portas. `backend` e `db` vivem na rede interna do compose — o PostgreSQL **não**
 tem `ports:`, logo é inacessível de fora do host. É o objetivo "BD 100% privada".
 
-Ficheiros: [Dockerfile](../Dockerfile) · [docker-compose.yml](../docker-compose.yml) ·
-[Caddyfile](../Caddyfile) · [.env.example](../.env.example)
+Ficheiros: [Dockerfile](../deployment/Dockerfile) · [docker-compose.yml](../docker-compose.yml) ·
+[Caddyfile](../deployment/Caddyfile) · [.env.example](../.env.example)
 
 ---
 

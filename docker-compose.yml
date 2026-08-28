@@ -23,7 +23,9 @@ services:
 
   backend:
     build:
+      # Contexto na raiz (o Dockerfile copia os três módulos); o ficheiro vive em deployment/.
       context: .
+      dockerfile: deployment/Dockerfile
       args:
         # Coincidir com a major do PostgreSQL acima (para o pg_dump do backup).
         PG_MAJOR: ${PG_MAJOR:-16}
@@ -54,7 +56,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?defina DOMAIN no .env (ex.: erp.exemplo.co.mz)}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deployment/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     networks: [internal]

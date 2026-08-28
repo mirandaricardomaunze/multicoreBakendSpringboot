@@ -28,6 +28,15 @@ deployment/                contentores, hospedagem e configuração de produçã
 
 O `pom.xml` raiz tem `packaging=pom` e agrega exactamente `contracts`, `backend` e `desktop`.
 
+**Divergência assumida — o `docker-compose.yml` fica na raiz.** A pasta `deployment/` guarda o
+`Dockerfile` e o `Caddyfile`; o compose não. O `docker compose` lê o `.env` a partir da pasta onde
+o ficheiro está, e o `.env` de produção vive na raiz, ao lado do `.env.example`. Mover o compose
+obrigava o operador a mover também o `.env` **na máquina de produção**, à mão, ou o próximo
+`git pull` deixava o deploy a falhar com `DB_PASSWORD` por definir. O mesmo se aplicaria ao volume
+`./data/backups`, que passaria a apontar para outro sítio e deixaria os backups existentes órfãos.
+Arrumar pastas não vale partir uma instalação a correr: o compose refere `deployment/Dockerfile` e
+`./deployment/Caddyfile`, e o comando do operador não muda.
+
 ## 3. Dependências permitidas
 
 ```text

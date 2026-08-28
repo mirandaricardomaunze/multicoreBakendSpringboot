@@ -26,7 +26,7 @@ para o container.
 3. **`SecurityInterceptor`** mantém-se por cima — resolve empresa/papel (`X-Company-Id`), superadmin em
    `/api/platform/**`, e audita. Redundância deliberada (o token é validado nas duas camadas).
 4. **Actuator** (nova dependência) — expõe **só** `/actuator/health` (`show-details=never`); nada de
-   `env`/`beans`/`mappings`. Usado pelo `HEALTHCHECK` do [Dockerfile](../Dockerfile).
+   `env`/`beans`/`mappings`. Usado pelo `HEALTHCHECK` do [Dockerfile](../deployment/Dockerfile).
 
 **Importante:** as chamadas **em processo** do desktop (painéis ainda não migrados) **não passam por
 este filtro** — não são HTTP. Logo o endurecimento não afecta a app a correr; só fecha a superfície HTTP.
