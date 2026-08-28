@@ -78,10 +78,24 @@ mvn test
 mvn -pl backend test   # so um modulo
 ```
 
-> **`clean` na raiz falha se houver um backend antigo a correr.** Um processo iniciado antes da
-> separacao em modulos segura o `target/` da raiz aberto (tipicamente
-> `target/backend-health.out.log`) e o `maven-clean-plugin` nao o consegue apagar. Parar esse
-> processo resolve; o `target/` da raiz e resto do layout anterior e pode ser apagado.
+> **`clean` falha enquanto houver um backend a correr a partir do `target/`.** Um processo
+> lancado com `java -jar backend/target/multicore-backend-1.0.0.jar`, ou um `spring-boot:run`
+> esquecido, segura o proprio ficheiro que o `maven-clean-plugin` tenta apagar. O erro nomeia
+> sempre o ficheiro preso — nao e um defeito do build:
+>
+> ```
+> Failed to clean project: Failed to delete ...ackend	arget\multicore-backend-1.0.0.jar
+> ```
+>
+> Descobrir quem o segura e parar so esse processo:
+>
+> ```powershell
+> Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
+>     Select-Object ProcessId, CreationDate, CommandLine
+> ```
+>
+> Instancias antigas podem estar a correr codigo anterior a uma migracao ou a separacao em
+> modulos, o que e por si so razao para as reiniciar. Sem `clean`, o `verify` passa na mesma.
 
 Nota: erros `cannot find symbol: getX()` no IDE podem ser ruido de Lombok. O Maven e a verdade.
 
