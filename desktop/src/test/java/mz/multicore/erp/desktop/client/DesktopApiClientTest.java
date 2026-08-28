@@ -118,6 +118,16 @@ class DesktopApiClientTest {
         assertTrue(req.headers().firstValue("Authorization").isEmpty());
     }
 
+    // TC-06 — o pacote de produção precisa do módulo JSR-310 para interpretar a validade do login.
+    @Test
+    void get_parsesJavaTimeInstant_usedByLoginResponse() throws Exception {
+        stubResponse(200, "{\"expiresAt\":\"2026-08-29T03:34:43.054107300Z\"}");
+
+        LoginExpiry result = anonymous.get("/api/auth/sample", LoginExpiry.class);
+
+        assertEquals(Instant.parse("2026-08-29T03:34:43.054107300Z"), result.expiresAt());
+    }
+
     @SuppressWarnings("unchecked")
     private void stubBytes(int status, byte[] body) throws Exception {
         HttpResponse<byte[]> response = mock(HttpResponse.class);
@@ -126,7 +136,7 @@ class DesktopApiClientTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
     }
 
-    // TC-06 — postForList parseia um array JSON devolvido por um POST.
+    // TC-07 — postForList parseia um array JSON devolvido por um POST.
     @Test
     void postForList_parsesJsonArray_fromPost() throws Exception {
         stubResponse(200, "[{\"id\":1,\"name\":\"A\"},{\"id\":2,\"name\":\"B\"}]");
@@ -137,7 +147,7 @@ class DesktopApiClientTest {
         assertEquals("POST", captureRequest().method());
     }
 
-    // TC-07 — getBytes devolve o corpo binário (PDF) e pede Accept: application/pdf.
+    // TC-08 — getBytes devolve o corpo binário (PDF) e pede Accept: application/pdf.
     @Test
     void getBytes_returnsBinaryBody_withPdfAccept() throws Exception {
         byte[] pdf = {0x25, 0x50, 0x44, 0x46}; // "%PDF"
@@ -152,4 +162,5 @@ class DesktopApiClientTest {
     }
 
     record Sample(long id, String name) {}
+    record LoginExpiry(Instant expiresAt) {}
 }

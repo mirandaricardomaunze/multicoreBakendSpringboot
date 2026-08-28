@@ -1,5 +1,31 @@
 # Tarefa Actual
 
+### Contrato no instalador e primeiro acesso — 2026-08-27 — **implementado**
+
+- Instalador `jpackage` recebe a mesma licença vigente do backend e exige aceitação antes de instalar.
+- Após login/empresa, `LicenseAcceptanceDialog` bloqueia a janela principal até o backend confirmar
+  aceitação; chamadas HTTP correm fora do EDT.
+- V60 conserva empresa, utilizador, versão, SHA-256, declaração, instante, IP, versão do desktop e
+  user-agent; só MANAGER/ADMIN pode representar a empresa e a operação entra na auditoria.
+- SPEC/harness: `docs/LICENCA_UTILIZADOR_SPEC.md`; suite completa **894/894 testes verdes**
+  (backend 780, desktop 114), incluindo os novos harnesses.
+- Instalador validado em `dist/Multicore-1.0.0.exe` (73,49 MB), gerado com WiX portátil e
+  `jpackage`; SHA-256 `956CBC6FDA4029AA0CB1E90FDB62C7A0438269A0650EC5C20DFB6A3802D38A71`.
+- O texto `EULA-1.0` é uma minuta técnica e continua a exigir revisão por advogado moçambicano.
+- Hotfix desktop `1.0.1`: incluído `jackson-datatype-jsr310` para interpretar `Instant` na resposta
+  de login do backend instalado; teste de regressão `DesktopApiClientTest` verde e instalador gerado
+  em `dist/Multicore-1.0.1.exe`.
+
+### Separação profissional backend/desktop — 2026-08-27 — **concluída no código**
+
+- Reactor Maven físico criado: `contracts`, `backend`, `desktop`; fluxo obrigatório `desktop → contracts ← backend`.
+- Desktop sem JPA, Flyway, H2, PostgreSQL, Repository ou Service; backend sem Swing/GUI/desktop.
+- SPEC canónico: `docs/MULTI_MODULE_ARCHITECTURE_SPEC.md`. Harness permanente:
+  `MultiModuleArchitectureHarnessTest` (4 regras, todas verdes).
+- Backend e desktop compilam isoladamente; os 124 testes existentes foram repartidos e compilam nos módulos certos.
+- Docker compila e publica apenas `multicore-backend`; o desktop permanece aplicação instalada e aponta para a API por `DESKTOP_API_BASE_URL`.
+- Verificação: backend **774/774**, desktop **112/112**, total **886 testes verdes**; harness arquitectural 4/4 verde.
+
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
 ### Clínicas, custo dos exames e conformidade legal — 2026-08-25 — **V59**

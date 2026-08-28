@@ -79,6 +79,18 @@ mvn clean compile           # build completo
 mvn test                    # testes
 ```
 
+### Instalador Windows com contrato
+
+O instalador `.exe` inclui a licença e exige aceitação antes da instalação. O primeiro login exige
+também aceitação auditável da empresa no backend. O texto actual é uma minuta para revisão jurídica.
+
+```powershell
+.\scripts\build-windows-installer.ps1 -Version 1.0.0
+```
+
+Requer JDK 21 com `jpackage` e WiX Toolset 3; o script também detecta uma cópia portátil em
+`tools\wix`. SPEC: [docs/LICENCA_UTILIZADOR_SPEC.md](docs/LICENCA_UTILIZADOR_SPEC.md).
+
 ### Console H2
 Com o backend a correr: `http://localhost:8080/h2-console`
 

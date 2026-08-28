@@ -3,10 +3,12 @@ package mz.multicore.erp.desktop;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.desktop.client.AuthApiClient;
+import mz.multicore.erp.desktop.client.LicenseApiClient;
 import mz.multicore.erp.desktop.config.DesktopApiConfig;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.desktop.session.DesktopSessionStore;
 import mz.multicore.erp.gui.LoginDialog;
+import mz.multicore.erp.gui.LicenseAcceptanceDialog;
 import mz.multicore.erp.gui.MainFrame;
 import mz.multicore.erp.gui.components.UIHelper;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -19,6 +21,7 @@ public class DesktopLauncher {
 
     private final ConfigurableApplicationContext context;
     private AuthApiClient authApiClient;
+    private DesktopApiConfig apiConfig;
     private DesktopSession session;
     private MainFrame currentFrame;
 
@@ -30,7 +33,7 @@ public class DesktopLauncher {
         EventQueue.invokeLater(() -> {
             UIHelper.loadAndApplySavedTheme();
 
-            DesktopApiConfig apiConfig = DesktopApiConfig.from(context.getEnvironment());
+            apiConfig = DesktopApiConfig.from(context.getEnvironment());
             authApiClient = new AuthApiClient(apiConfig);
 
             // Trocar de tema reconstrói a janela já com a paleta nova (cobre ícones/pintura custom).
@@ -68,8 +71,25 @@ public class DesktopLauncher {
         }
         context.getBean(DesktopSessionStore.class).setSession(session);
 
+        if (!session.superAdmin() && !ensureLicenseAccepted()) {
+            try {
+                authApiClient.logout(session);
+            } finally {
+                context.getBean(DesktopSessionStore.class).clear();
+                CurrentUserContext.clear();
+                context.close();
+            }
+            return;
+        }
+
         // Arranque após login: janela maximizada (loja trabalha em ecrã cheio).
         showMainFrame(null, java.awt.Frame.MAXIMIZED_BOTH);
+    }
+
+    private boolean ensureLicenseAccepted() {
+        LicenseAcceptanceDialog dialog = new LicenseAcceptanceDialog(new LicenseApiClient(apiConfig, session));
+        dialog.setVisible(true);
+        return dialog.isAccepted();
     }
 
     /**

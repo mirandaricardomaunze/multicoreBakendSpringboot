@@ -5,6 +5,7 @@
   <dependencies>
     <dependency><groupId>mz.multicore.erp</groupId><artifactId>multicore-contracts</artifactId><version>${project.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter</artifactId></dependency>
     <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId></dependency><dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>
+    <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jsr310</artifactId></dependency>
     <dependency><groupId>org.kordamp.ikonli</groupId><artifactId>ikonli-swing</artifactId><version>${ikonli.version}</version></dependency><dependency><groupId>org.kordamp.ikonli</groupId><artifactId>ikonli-fontawesome5-pack</artifactId><version>${ikonli.version}</version></dependency>
     <dependency><groupId>com.github.librepdf</groupId><artifactId>openpdf</artifactId><version>${openpdf.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   </dependencies>
