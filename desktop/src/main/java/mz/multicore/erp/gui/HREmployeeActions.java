@@ -130,9 +130,13 @@ final class HREmployeeActions {
         }
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
+        // Sete colunas a dividir 720 px cortavam quatro cabeçalhos ao mesmo tempo: "Data de ef…",
+        // "Anterior (…", "Diferença …" e "Aprovado …". Numa tabela de dinheiro, um título cortado
+        // é a diferença entre ler o valor e adivinhar de que valor se trata.
+        UIHelper.ensureHeadersFit(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        scroll.setPreferredSize(new Dimension(720, 180));
+        scroll.setPreferredSize(new Dimension(880, 180));
         content.add(scroll, BorderLayout.SOUTH);
 
         Object[] options = {"Registar Alteração", "Fechar"};
