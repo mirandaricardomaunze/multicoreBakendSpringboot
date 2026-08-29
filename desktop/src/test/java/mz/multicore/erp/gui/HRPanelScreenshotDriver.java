@@ -74,6 +74,9 @@ public final class HRPanelScreenshotDriver {
         HRApiClient hrApiClient = context.getBean(HRApiClient.class);
 
         SwingUtilities.invokeAndWait(() -> {
+            // Sem isto o driver fotografa com o Look&Feel de fábrica e faz parecer defeito dos
+            // ecrãs o que é falta de arranque do driver — ver OccupationalHealthScreensDriver.
+            UIHelper.loadAndApplySavedTheme();
             JFrame frame = new JFrame("Driver RH");
             UIHelper.registerMainWindow(frame);
             HRPanel panel = new HRPanel(hrApiClient);

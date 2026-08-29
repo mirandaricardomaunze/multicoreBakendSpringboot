@@ -1484,7 +1484,6 @@ public class UIHelper {
         combo.setForeground(TEXT_LIGHT);
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
         installFocusBorder(combo);
-        applyFormControlHeight(combo);
         flattenComboArrow(combo);
         // O fundo da lista do popup segue o tema (SELECTION_BG/FIELD_BG), senão em tema claro
         // a opção destacada ficava com fundo escuro e texto escuro = ilegível.
@@ -1507,6 +1506,42 @@ public class UIHelper {
                 return rendered;
             }
         });
+        // Depois do renderer, nunca antes. O renderer acrescenta 8 px de cada lado, e
+        // applyFormControlHeight congela a largura no momento em que corre: medida antes, a
+        // largura ficava 16 px curta e o JLabel truncava o valor para "…". Era o que se via em
+        // TODAS as tabelas paginadas do sistema — "Por página: …" em vez de "Por página: 50".
+        applyFormControlHeight(combo);
+    }
+
+    /**
+     * Garante que nenhum cabeçalho de coluna fica truncado: mede o título e usa-o como largura
+     * mínima da coluna.
+     *
+     * <p>Uma tabela com muitas colunas divide a largura por igual, e um título longo numa coluna
+     * estreita é cortado — "Descontado (MT)" fica "Descontado (…". Numa coluna de dinheiro isso é a
+     * diferença entre saber o que se está a ler e adivinhar.
+     *
+     * <p><b>Não é aplicado a todas as tabelas de propósito.</b> Forçar mínimos numa tabela com
+     * colunas a mais empurra-a para deslocamento horizontal, e há 70+ tabelas neste sistema que
+     * ninguém mediu uma a uma. Chama-se onde o problema foi visto.
+     */
+    public static void ensureHeadersFit(JTable table) {
+        java.awt.FontMetrics metrics = table.getTableHeader().getFontMetrics(
+                table.getTableHeader().getFont());
+        for (int i = 0; i < table.getColumnModel().getColumnCount(); i++) {
+            javax.swing.table.TableColumn column = table.getColumnModel().getColumn(i);
+            Object title = column.getHeaderValue();
+            if (title == null) {
+                continue;
+            }
+            int needed = metrics.stringWidth(title.toString()) + 24;
+            if (column.getMinWidth() < needed) {
+                column.setMinWidth(needed);
+            }
+            if (column.getPreferredWidth() < needed) {
+                column.setPreferredWidth(needed);
+            }
+        }
     }
 
     /** Tradução central de estados frequentes; valores desconhecidos ficam legíveis. */

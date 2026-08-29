@@ -91,6 +91,10 @@ final class HRDeductionsPanel {
             table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         }
         table.getColumnModel().getColumn(9).setCellRenderer(TableCellRenderers.status());
+        // Dez colunas a dividir a largura por igual deixavam "Descontado (MT)" cortado a meio, em
+        // "Descontado (…". Medir o cabeçalho e usá-lo como mínimo garante que o título nunca fica
+        // ilegível — que numa coluna de dinheiro é a diferença entre saber e adivinhar o que se lê.
+        UIHelper.ensureHeadersFit(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 

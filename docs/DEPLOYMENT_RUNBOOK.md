@@ -26,6 +26,12 @@ mvn install -DskipTests
 Poe o `multicore-contracts` no repositorio local. Sem isso, `mvn -pl backend spring-boot:run` falha
 com *Could not resolve dependencies ... multicore-contracts:jar:1.0.0*.
 
+> **A armadilha e a segunda vez, nao a primeira.** Depois de acrescentar ou mudar um DTO em
+> `contracts`, o `spring-boot:run` continua a usar o **jar antigo** do repositorio local e o
+> arranque rebenta com `NoClassDefFoundError` desse DTO — apontando o dedo ao modulo que o usa, nao
+> ao jar velho. `mvn clean` tambem apaga o `target/desktop-cp.txt` usado pelos drivers de ecra.
+> Regra simples: **mexeu em `contracts`, corre `mvn install -DskipTests`**.
+
 ## Requisitos
 
 - Java 21.
@@ -135,6 +141,7 @@ de segredos, ao lado da password da base de dados.
 | `mvn` na raiz nao faz nada | a raiz e `packaging=pom`; compilar/testar corre na raiz, arrancar usa `-pl <modulo>` |
 | `Unable to find a suitable main class` | usou `-am` com `spring-boot:run`; tirar o `-am` |
 | `Could not resolve ... multicore-contracts` | falta `mvn install -DskipTests` uma vez |
+| `NoClassDefFoundError` de um DTO que existe e compila | o `contracts` do repositorio local esta velho. `mvn install -DskipTests` outra vez — **sempre que mudar um DTO** |
 | Desktop nao compila por falta de um DTO | o DTO pertence a `contracts`, nao ao `backend` |
 
 ## Antes de deploy
