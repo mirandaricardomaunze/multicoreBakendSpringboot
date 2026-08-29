@@ -40,6 +40,12 @@ import java.nio.file.Path;
  * <pre>
  * java -cp ... PanelScreenshotDriver &lt;pasta&gt; &lt;empresa&gt; ComercialPanel POSPanel ComprasPanel
  * </pre>
+ *
+ * <p><b>O que este driver não monta, e porque não precisa:</b> os sub-painéis de Stock e Compras
+ * ({@code StockAlertsPanel}, {@code PurchaseOrdersPanel}, …) recebem o painel-pai no construtor e
+ * não existem sozinhos — aparecem como separadores dentro do {@code StockPanel} e do
+ * {@code ComprasPanel}, que o driver monta. Fotografá-los isolados seria fotografar duas vezes o
+ * mesmo ecrã. Montar o pai chega, e é o que o utilizador vê.
  */
 public final class PanelScreenshotDriver {
 
@@ -107,7 +113,7 @@ public final class PanelScreenshotDriver {
                     CurrentUserContext.setCurrentCompanyId(company.id());
                     window[0] = new JFrame("Driver " + simpleName);
                     UIHelper.registerMainWindow(window[0]);
-                    panel[0] = (JPanel) ctor.newInstance(argsForCtor);
+                    panel[0] = asPanel(ctor.newInstance(argsForCtor));
                     window[0].setContentPane(panel[0]);
                     window[0].setSize(WIDTH, HEIGHT);
                     window[0].setVisible(true);
@@ -155,14 +161,52 @@ public final class PanelScreenshotDriver {
         }
     }
 
+    /**
+     * Os construtores <b>declarados</b>, não só os públicos: os sub-painéis (Stock*, Purchase*)
+     * são criados pelos painéis-pai e o seu construtor é de pacote. Com {@code getConstructors()}
+     * o driver rebentava com {@code ArrayIndexOutOfBoundsException} em dez painéis e parecia que
+     * eles não montavam — quando o que não montava era o driver.
+     */
     private static Constructor<?> widestConstructor(Class<?> type) {
-        Constructor<?> widest = type.getConstructors()[0];
-        for (Constructor<?> candidate : type.getConstructors()) {
+        Constructor<?>[] all = type.getDeclaredConstructors();
+        if (all.length == 0) {
+            throw new IllegalStateException(type.getSimpleName() + " não tem construtor visível");
+        }
+        Constructor<?> widest = all[0];
+        for (Constructor<?> candidate : all) {
             if (candidate.getParameterCount() > widest.getParameterCount()) {
                 widest = candidate;
             }
         }
+        widest.setAccessible(true);
         return widest;
+    }
+
+    /**
+     * Nem tudo o que se chama {@code ...Panel} <b>é</b> um painel.
+     *
+     * <p>Metade dos ecrãs de Stock e Compras são <i>construtores</i> de painel — classes de pacote
+     * com {@code buildPanel()} — e não subclasses de {@code JPanel}. O driver aceita as duas
+     * formas; sem isto, dez ecrãs davam {@code ClassCastException} e parecia que não montavam.
+     */
+    private static JPanel asPanel(Object instance) throws Exception {
+        if (instance instanceof JPanel ready) {
+            return ready;
+        }
+        for (String name : new String[]{"buildPanel", "build", "getPanel", "panel"}) {
+            try {
+                Method builder = instance.getClass().getMethod(name);
+                builder.setAccessible(true);
+                Object built = builder.invoke(instance);
+                if (built instanceof JPanel made) {
+                    return made;
+                }
+            } catch (NoSuchMethodException ignored) {
+                // tenta o nome seguinte
+            }
+        }
+        throw new IllegalStateException(instance.getClass().getSimpleName()
+                + " não é JPanel nem tem método que o construa");
     }
 
     /** Os painéis carregam quando são seleccionados; sem isto fotografava-se tudo vazio. */
