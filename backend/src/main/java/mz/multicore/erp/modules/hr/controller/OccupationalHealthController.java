@@ -51,6 +51,12 @@ public class OccupationalHealthController {
         return ResponseEntity.ok(service.costReport(from, to));
     }
 
+    /** Comprovativo digitalizado, decifrado. Só gestor/admin, e cada abertura fica auditada. */
+    @GetMapping("/exam/{id}/attachment")
+    public ResponseEntity<OccupationalHealthAttachmentDTO> attachment(@PathVariable Long id) {
+        return ResponseEntity.ok(service.attachment(id));
+    }
+
     @PostMapping
     public ResponseEntity<OccupationalHealthExamDTO> register(
             @RequestBody @Valid SaveOccupationalHealthExamRequest request) {

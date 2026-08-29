@@ -23,7 +23,10 @@ Legenda: ✅ feito · 🟡 parcial · ❌ em falta · 🔴 **defeito confirmado 
 | CL-05 | Registos **anteriores** que já contenham texto proibido | Não são apagados nem mascarados pelo sistema | 🟡 **assumido**: apagar dados existentes sem decisão humana é destruir prova. Verificação e limpeza são do RH da empresa — ver §4, linha H-07 |
 | CL-06 | Restrição legítima ("sem levantar cargas acima de 20 kg") | Passa; a guarda não é um filtro de palavras genérico | ✅ teste `ordinaryRestrictionIsNotMistakenForProhibitedData` |
 | CL-07 | Conta `EMPLOYEE` pede a lista de exames a caducar ou em falta | Recusado | ✅ `requireManagerOrAdmin` em `expiring()` e `missingExams()`; o sino não os mostra a outros perfis |
-| CL-08 | Anexo digitalizado do exame na base de dados | Guardado **em claro** (`bytea`), sem cifra, e entra nos backups | ❌ **declarado, não escondido.** Decisão de infra-estrutura — ver §4, linha H-08 |
+| CL-08 | Anexo digitalizado do exame na base de dados | Cifrado em repouso; ilegível em backup ou cópia da BD | 🔴→✅ **estava em claro — e, pior, era gravado e nunca mais saía.** `AttachmentCrypto` (AES-256-GCM, chave em `security.attachment-key`); 8 testes |
+| CL-08b | Anexos gravados **antes** da cifra | Continuam a abrir, sem migração | ✅ prefixo `MCE1`: sem ele, o blob é devolvido tal e qual (`legacyPlainAttachmentsStillOpen`) |
+| CL-08c | Anexo cifrado com a chave em falta ou errada | Recusado com a razão, nunca bytes ilegíveis | ✅ 3 testes, incluindo anexo adulterado na BD (GCM detecta) |
+| CL-08d | Abrir o comprovativo | Só MANAGER/ADMIN e fica auditado | ✅ `OCCUPATIONAL_HEALTH_ATTACHMENT_ACCESS`; `employeeCannotOpenAnAttachment` |
 | CL-09 | Direitos do titular (acesso, rectificação, oposição, eliminação) | Não implementados | ❌ ⚖️ não há regime em vigor que os defina em Moçambique. Rever quando a Lei de Protecção de Dados entrar em vigor |
 
 ## 2. Saúde ocupacional — conformidade laboral
@@ -56,6 +59,12 @@ Legenda: ✅ feito · 🟡 parcial · ❌ em falta · 🔴 **defeito confirmado 
 
 ## 4. Homologação jurídica — **por assinar**
 
+> **H-01 a H-04 já têm o pedido escrito.** Ver
+> [PEDIDO_MITESS_EXAMES_MEDICOS.md](PEDIDO_MITESS_EXAMES_MEDICOS.md) — minuta pronta a rever, pôr em
+> papel timbrado e enviar ao MITESS/MTGAS, com a tabela de onde cada resposta entra no sistema.
+> Nenhuma delas exige código novo.
+
+
 Cada linha precisa de confirmação de um jurista ou advogado com prática laboral moçambicana. A
 coluna *Onde entra no sistema* diz o que acontece depois de a resposta existir — em quase todos os
 casos é preencher configuração, **não escrever código novo**.
@@ -69,7 +78,7 @@ casos é preencher configuração, **não escrever código novo**.
 | H-05 | Confirma que o **custo dos exames é integralmente do empregador**, sem excepções, e que nunca pode ser descontado na folha? | Confirma CL-29, hoje garantido por construção | | |
 | H-06 | Que **artigos** da Lei n.º 13/2023 suportam: exames de aptidão, sigilo médico e proibição de teste de HIV/SIDA? | §2 e §3 da spec passam a citar artigo | | |
 | H-07 | Como tratar registos históricos que contenham informação clínica que hoje é recusada (CL-05)? Apagar, mascarar, ou conservar? | Decide se é preciso um procedimento de limpeza | | |
-| H-08 | O anexo digitalizado do exame (CL-08) tem de estar **cifrado em repouso** e nos backups? | Decisão de infra-estrutura; muda `attachment_data` e o `BackupService` | | |
+| H-08 | ~~O anexo tem de estar cifrado em repouso?~~ **Feito** (CL-08). Resta confirmar o **período de custódia da chave** e quem lhe tem acesso | Procedimento de segredos de produção | | |
 | H-09 | É exigível **informar por escrito** o trabalhador sobre os dados que a empresa guarda sobre si? | Se sim, documento do colaborador (§B8.8) — não é código novo | | |
 | H-10 | Confirmação dos **valores legais do RH** já declarados como pendentes: escalões de IRPS, taxas de INSS, dias de férias por antiguidade, aviso prévio, multiplicadores de horas extra | `PayrollTaxConfig`, `HrPolicyConfig`, `OvertimeRateConfig` — todos já configuráveis com `legal_basis` | | |
 | H-11 | Com a **Lei de Protecção de Dados** ainda por aprovar, que regime se aplica hoje à conservação e ao acesso a dados de trabalhadores? | Confirma ou corrige §2 da spec | | |

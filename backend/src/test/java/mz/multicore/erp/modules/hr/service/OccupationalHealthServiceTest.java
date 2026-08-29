@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.AttachmentCrypto;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
@@ -32,6 +33,7 @@ class OccupationalHealthServiceTest {
     private CompanyRepository companyRepository;
     private SupplierRepository supplierRepository;
     private FinanceService financeService;
+    private AttachmentCrypto attachmentCrypto;
     private AuditLogService auditLogService;
     private OccupationalHealthService service;
     private Company company;
@@ -44,9 +46,12 @@ class OccupationalHealthServiceTest {
         companyRepository = mock(CompanyRepository.class);
         supplierRepository = mock(SupplierRepository.class);
         financeService = mock(FinanceService.class);
+        attachmentCrypto = new AttachmentCrypto(java.util.Base64.getEncoder()
+                .encodeToString("chave-de-32-bytes-para-aes256!!!".getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8)));
         auditLogService = mock(AuditLogService.class);
         service = new OccupationalHealthService(repository, employeeRepository, companyRepository,
-                supplierRepository, financeService, auditLogService);
+                supplierRepository, financeService, attachmentCrypto, auditLogService);
         CurrentUserContext.setCurrentCompanyId(7L);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
         company = new Company();
@@ -312,7 +317,59 @@ class OccupationalHealthServiceTest {
         assertEquals(200L, missing.get(0).daysSinceHire());
     }
 
+    // ─── Comprovativo: cifrado em repouso, legível por quem pode (CL-08) ──────
+
+    /** O que fica na base de dados não pode ser o ficheiro. É isto que protege também os backups. */
+    @Test
+    void attachmentIsEncryptedBeforeItReachesTheDatabase() {
+        byte[] scan = "PDF do exame".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        service.register(request("FIT", null, scan));
+
+        org.mockito.ArgumentCaptor<OccupationalHealthExam> saved =
+                org.mockito.ArgumentCaptor.forClass(OccupationalHealthExam.class);
+        verify(repository).save(saved.capture());
+        byte[] stored = saved.getValue().getAttachmentData();
+
+        assertFalse(java.util.Arrays.equals(scan, stored), "o ficheiro não pode ficar em claro");
+        assertEquals("MCE1", new String(stored, 0, 4, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void attachmentComesBackDecryptedAndTheAccessIsAudited() {
+        byte[] scan = "PDF do exame".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        OccupationalHealthExam exam = exam("FIT", LocalDate.now().plusYears(1));
+        exam.setId(10L);
+        exam.setAttachmentName("aptidao.pdf");
+        exam.setAttachmentData(attachmentCrypto.protect(scan));
+        when(repository.findByIdAndCompanyId(10L, 7L)).thenReturn(Optional.of(exam));
+
+        var result = service.attachment(10L);
+
+        assertArrayEquals(scan, result.content());
+        assertEquals("aptidao.pdf", result.fileName());
+        verify(auditLogService).logCurrent(eq("OCCUPATIONAL_HEALTH_ATTACHMENT_ACCESS"), contains("Ana Matola"));
+    }
+
+    @Test
+    void employeeCannotOpenAnAttachment() {
+        CurrentUserContext.setCurrentUser("trabalhador", "EMPLOYEE");
+        assertThrows(BusinessRuleException.class, () -> service.attachment(10L));
+        verify(repository, never()).findByIdAndCompanyId(anyLong(), anyLong());
+    }
+
+    @Test
+    void examWithoutAttachmentSaysSoInsteadOfReturningEmptyBytes() {
+        OccupationalHealthExam exam = exam("FIT", LocalDate.now().plusYears(1));
+        exam.setId(10L);
+        when(repository.findByIdAndCompanyId(10L, 7L)).thenReturn(Optional.of(exam));
+
+        BusinessRuleException error =
+                assertThrows(BusinessRuleException.class, () -> service.attachment(10L));
+        assertTrue(error.getMessage().contains("comprovativo"));
+    }
+
     // ─── Auxiliares ───────────────────────────────────────────────────────────
+
 
     private OccupationalHealthExam exam(String result, LocalDate expiry) {
         OccupationalHealthExam exam = new OccupationalHealthExam();

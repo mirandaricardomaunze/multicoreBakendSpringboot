@@ -105,6 +105,17 @@ Nota: erros `cannot find symbol: getX()` no IDE podem ser ruido de Lombok. O Mav
 - `prod`: configuracao alvo de producao quando aplicavel.
 - default: desenvolvimento local.
 
+## Segredos de producao
+
+| Variavel | Para que serve | Se faltar |
+|----------|----------------|-----------|
+| `DB_URL` / `DB_USER` / `DB_PASSWORD` | Ligacao PostgreSQL | A aplicacao nao arranca (sem defaults, de proposito) |
+| `ATTACHMENT_KEY` | Cifra AES-256-GCM dos anexos clinicos (`security.attachment-key`) | Nao cifra; anexos novos ficam em claro. Anexos **ja cifrados** deixam de abrir, com erro explicito |
+
+Gerar a chave de anexos: `openssl rand -base64 32` (32 bytes exactos; outro tamanho e recusado no
+arranque com instrucoes). **Perder a chave e perder os anexos cifrados com ela** — entra na custodia
+de segredos, ao lado da password da base de dados.
+
 ## Base de dados
 
 - Migrations vivem em `backend/src/main/resources/db/migration`.

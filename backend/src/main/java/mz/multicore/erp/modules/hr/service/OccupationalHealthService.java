@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.AttachmentCrypto;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -64,6 +65,7 @@ public class OccupationalHealthService {
     private final CompanyRepository companyRepository;
     private final SupplierRepository supplierRepository;
     private final FinanceService financeService;
+    private final AttachmentCrypto attachmentCrypto;
     private final AuditLogService auditLogService;
 
     public OccupationalHealthService(OccupationalHealthExamRepository repository,
@@ -71,12 +73,14 @@ public class OccupationalHealthService {
                                      CompanyRepository companyRepository,
                                      SupplierRepository supplierRepository,
                                      @Lazy FinanceService financeService,
+                                     AttachmentCrypto attachmentCrypto,
                                      AuditLogService auditLogService) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.companyRepository = companyRepository;
         this.supplierRepository = supplierRepository;
         this.financeService = financeService;
+        this.attachmentCrypto = attachmentCrypto;
         this.auditLogService = auditLogService;
     }
 
@@ -116,6 +120,30 @@ public class OccupationalHealthService {
                 "%s consultou o historial de saúde ocupacional de %s (%d registo(s))",
                 CurrentUserContext.getUsername(), employee.getName(), history.size()));
         return history;
+    }
+
+    /**
+     * Abre o comprovativo digitalizado de um exame.
+     *
+     * <p>Mesmo regime do {@code history()}, e pela mesma razão: é um documento clínico de uma pessoa
+     * com nome. Só gestor ou administrador, e <b>cada abertura fica registada</b> — um anexo que se
+     * abre sem deixar rasto é a parte do processo em que ninguém sabe quem viu o quê.
+     */
+    @Transactional
+    public OccupationalHealthAttachmentDTO attachment(Long examId) {
+        PermissionGuard.requireManagerOrAdmin("abrir comprovativos de exames de saúde ocupacional");
+        OccupationalHealthExam exam = repository.findByIdAndCompanyId(examId, companyId())
+                .orElseThrow(() -> new BusinessRuleException("Exame não encontrado na empresa activa."));
+        byte[] stored = exam.getAttachmentData();
+        if (stored == null || stored.length == 0) {
+            throw new BusinessRuleException("Este exame não tem comprovativo digitalizado.");
+        }
+        byte[] content = attachmentCrypto.reveal(stored);
+        auditLogService.logCurrent("OCCUPATIONAL_HEALTH_ATTACHMENT_ACCESS", String.format(
+                "%s abriu o comprovativo do exame de %s de %s",
+                CurrentUserContext.getUsername(), exam.getEmployee().getName(), exam.getExamDate()));
+        return new OccupationalHealthAttachmentDTO(exam.getId(),
+                exam.getAttachmentName() == null ? "comprovativo" : exam.getAttachmentName(), content);
     }
 
     @Transactional(readOnly = true)
@@ -195,7 +223,7 @@ public class OccupationalHealthService {
         exam.setCost(cost);
         exam.setInvoiceNumber(blank(request.invoiceNumber()));
         exam.setAttachmentName(blank(request.attachmentName()));
-        exam.setAttachmentData(request.attachmentData());
+        exam.setAttachmentData(attachmentCrypto.protect(request.attachmentData()));
         OccupationalHealthExam saved = repository.save(exam);
         auditLogService.logCurrent("OCCUPATIONAL_HEALTH_EXAM_REGISTER", String.format(
                 "Exame ocupacional de %s registado: %s, válido até %s%s",

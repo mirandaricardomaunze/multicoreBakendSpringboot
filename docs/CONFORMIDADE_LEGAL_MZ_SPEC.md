@@ -75,7 +75,7 @@ carga viral, CD4) é **recusada com a razão em PT-MZ**, em vez de ser gravada.
 A lista é **curta de propósito**. Não tenta detectar "diagnóstico" — nenhuma expressão regular sabe
 fazer isso — apura só o caso que a lei nomeia. Um falso positivo custa reformular a frase; um falso
 negativo custa dados que não podiam ter sido escritos.
-[`OccupationalHealthService.PROHIBITED_HEALTH_DATA`](../src/main/java/mz/multicore/erp/modules/hr/service/OccupationalHealthService.java)
+[`OccupationalHealthService.PROHIBITED_HEALTH_DATA`](../backend/src/main/java/mz/multicore/erp/modules/hr/service/OccupationalHealthService.java)
 
 ### 3.2 Quem pode ver
 
@@ -95,7 +95,32 @@ quem, e quantos registos. Por isso `history()` **não é `@Transactional(readOnl
 transacção só de leitura o registo de acesso seria criado e nunca escrito — um rasto que parece
 existir e não existe é pior do que nenhum.
 
-### 3.4 Quem paga o exame
+### 3.4 O comprovativo: cifrado em repouso e legível por quem pode
+
+O anexo digitalizado do exame era **gravado e nunca mais saía** — não havia endpoint, serviço nem
+cliente que o lesse. Ficava em claro na base de dados e nos backups sem servir para nada: exposto e
+inútil ao mesmo tempo. Cifrá-lo sem o tornar legível seria proteger um documento morto, pelo que as
+duas coisas foram feitas juntas.
+
+- **Cifra AES-256-GCM** em repouso (`AttachmentCrypto`), com chave em `security.attachment-key`
+  (32 bytes, Base64). GCM autentica além de cifrar: um anexo adulterado na base de dados é detectado
+  em vez de descodificado, e o IV é aleatório por anexo.
+- **Instalável numa loja a funcionar.** O que é cifrado leva o prefixo `MCE1`; blobs sem esse prefixo
+  são devolvidos tal e qual, pelo que **os anexos gravados antes desta alteração continuam a abrir**,
+  sem migração e sem janela em que ninguém lê nada. Sem chave configurada, o comportamento é o de
+  antes — falhar o arranque por falta de chave transformaria segurança em paragem de serviço.
+- **Mas nunca falha em silêncio.** Cifrado sem chave, ou com a chave errada, é **recusado com a
+  razão**. Devolver bytes ilegíveis a fingir que são o ficheiro é como um anexo se perde sem ninguém
+  dar por isso.
+- **Abrir é acto registado.** `GET /api/hr/occupational-health/exam/{id}/attachment` exige
+  MANAGER/ADMIN e grava `OCCUPATIONAL_HEALTH_ATTACHMENT_ACCESS` — mesmo regime do histórico, e pela
+  mesma razão: é um documento clínico de uma pessoa com nome.
+
+> **A chave não vive no código nem no repositório.** Vai por variável de ambiente, como as
+> credenciais da base de dados (`application-prod.properties`). Perder a chave é perder os anexos
+> cifrados com ela — entra no mesmo procedimento de custódia dos segredos de produção.
+
+### 3.5 Quem paga o exame
 
 O custo do exame de aptidão é **encargo do empregador**. O sistema regista-o no exame (`cost`,
 `invoice_number`), paga-o à clínica por **saída de tesouraria** — a mesma porta do recibo e da
@@ -138,7 +163,6 @@ contabilista, não da IA, e o RH não importa contabilidade (`HrDoesNotKnowAccou
 |---|---|---|
 | **Periodicidade dos exames** | Está no diploma ministerial conjunto que esta análise não conseguiu identificar. Escrever "12 meses" seria inventar um prazo legal | Jurista identifica o diploma → entra no `HrPolicyConfig` com `legal_basis`, como o IRPS e as horas extra |
 | **Prazo de conservação e eliminação dos dados de saúde** | Mesmo motivo. E eliminar registos é irreversível: não se constrói um expurgo sem saber ao fim de quanto tempo | Jurista → depois, campo configurável + relatório de registos fora de prazo. **Eliminar continua a ser acto humano** |
-| **Anexos digitalizados guardados em claro** | `attachment_data bytea` não é cifrado. O comprovativo do exame está legível para quem tiver a base de dados ou um backup | Decisão de infra-estrutura + jurista. Está declarado, não escondido |
 | **Direitos do titular** (acesso, rectificação, oposição) | Não existe regime em vigor que os defina em Moçambique. Implementar hoje seria adivinhar o desenho da lei | Rever quando a Lei de Protecção de Dados entrar em vigor |
 | **Consentimento / informação ao trabalhador** | O sistema não regista que o trabalhador foi informado de que dados a empresa guarda sobre si | Jurista decide se é exigível hoje; se sim, é um documento do colaborador (§B8.8), não código novo |
 | **Valores legais do RH** (IRPS, INSS, férias, aviso prévio, horas extra) | Já eram configuráveis com `legal_basis` e **já estavam declarados como por confirmar** desde o §B2.2/§B6 | Contabilista + jurista, na tabela de homologação |

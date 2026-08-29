@@ -16,6 +16,7 @@ import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.SaveOccupationalHealthExamRequest;
 import mz.multicore.erp.modules.hr.dto.HealthProviderDTO;
 import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthAttachmentDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthCostDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthProviderCostDTO;
 import mz.multicore.erp.desktop.session.SignedInUser;
@@ -338,13 +339,53 @@ final class HREmployeeActions {
         content.add(scroll, BorderLayout.CENTER);
 
         String action = history.isEmpty() ? "Registar Exame" : "Registar Renovação";
-        Object[] options = {action, "Registar Pagamento", "Custos e Conformidade", "Fechar"};
+        Object[] options = {action, "Abrir Comprovativo", "Registar Pagamento",
+                "Custos e Conformidade", "Fechar"};
         int answer = JOptionPane.showOptionDialog(owner, content,
                 "Saúde Ocupacional — " + employee.name(), JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE, null, options, options[3]);
+                JOptionPane.PLAIN_MESSAGE, null, options, options[4]);
         if (answer == 0) openOccupationalHealthForm(employee);
-        else if (answer == 1) payOccupationalHealthExam(employee, history, table.getSelectedRow());
-        else if (answer == 2) openOccupationalHealthCompliance();
+        else if (answer == 1) openOccupationalHealthAttachment(history, table.getSelectedRow());
+        else if (answer == 2) payOccupationalHealthExam(employee, history, table.getSelectedRow());
+        else if (answer == 3) openOccupationalHealthCompliance();
+    }
+
+    /**
+     * Abre o comprovativo digitalizado do exame seleccionado.
+     *
+     * <p>Até esta versão o ficheiro era anexado e nunca mais saía — não havia por onde. Agora sai,
+     * e por isso passa a sair pela porta certa: o servidor exige gestor/admin, decifra-o e regista
+     * quem o abriu.
+     */
+    void openOccupationalHealthAttachment(List<OccupationalHealthExamDTO> history, int row) {
+        if (row < 0 || row >= history.size()) {
+            JOptionPane.showMessageDialog(owner, "Seleccione na lista o exame cujo comprovativo quer abrir.",
+                    "Abrir comprovativo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        OccupationalHealthExamDTO exam = history.get(row);
+        if (!exam.hasAttachment()) {
+            JOptionPane.showMessageDialog(owner, "Este exame não tem comprovativo digitalizado.",
+                    "Sem comprovativo", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        UIHelper.runWithProgress(owner, "A abrir comprovativo…",
+                () -> owner.hrApiClient.getOccupationalHealthAttachment(exam.id()),
+                attachment -> {
+                    try {
+                        String name = attachment.fileName() == null ? "comprovativo" : attachment.fileName();
+                        int dot = name.lastIndexOf('.');
+                        java.io.File file = java.io.File.createTempFile("multicore-exame-",
+                                dot > 0 ? name.substring(dot) : ".pdf");
+                        file.deleteOnExit();
+                        Files.write(file.toPath(), attachment.content());
+                        Desktop.getDesktop().open(file);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(owner,
+                                "Não foi possível abrir o comprovativo: " + ex.getMessage(),
+                                "Comprovativo", JOptionPane.ERROR_MESSAGE);
+                    }
+                }, owner::showActionError);
     }
 
     /**

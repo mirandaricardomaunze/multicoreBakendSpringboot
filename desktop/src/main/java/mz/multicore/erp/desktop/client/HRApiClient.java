@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.hr.dto.OccupationalHealthSummaryDTO;
 import mz.multicore.erp.modules.hr.dto.SaveOccupationalHealthExamRequest;
 import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.HealthProviderDTO;
+import mz.multicore.erp.modules.hr.dto.OccupationalHealthAttachmentDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthCostDTO;
 import mz.multicore.erp.modules.hr.dto.ExpenseClaimDTO;
 import mz.multicore.erp.modules.hr.dto.ContractAlertsDTO;
@@ -117,6 +118,12 @@ public class HRApiClient {
         return clientFactory.authenticatedClient().get(
                 "/api/hr/occupational-health/costs?from=" + from + "&to=" + to,
                 OccupationalHealthCostDTO.class);
+    }
+
+    public OccupationalHealthAttachmentDTO getOccupationalHealthAttachment(Long examId) {
+        return clientFactory.authenticatedClient().get(
+                "/api/hr/occupational-health/exam/" + examId + "/attachment",
+                OccupationalHealthAttachmentDTO.class);
     }
 
     public OccupationalHealthExamDTO payOccupationalHealthExam(Long examId) {
