@@ -651,9 +651,9 @@ final class HREmployeeActions {
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Justificar Falta",
                 "fas-user-check",
-                String.format("%s — %s (%d dia(s)), hoje %s", absence.employeeName(),
+                String.format("%s — %s (%d dia(s)), actualmente %s", absence.employeeName(),
                         absence.startDate().format(DATE_FMT), absence.totalDays(),
-                        absence.absenceType()), form).showDialog();
+                        UIHelper.humanStatus(absence.absenceType())), form).showDialog();
         if (!confirmed) {
             return;
         }

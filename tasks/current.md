@@ -28,6 +28,22 @@
 
 > Ponteiro da sessão. A IA lê-o no início e actualiza-o sempre que uma fase fecha. ≤1 página. Histórico no `git log`.
 
+### Estado a 2026-08-29 — RH visto ao vivo, ecrã a ecrã
+
+- **Os 11 separadores do RH e os 4 diálogos por colaborador foram abertos e fotografados** contra um
+  backend real. Nenhum falhou a pintar. Seis defeitos de apresentação encontrados e corrigidos.
+- **Um deles não era do RH:** `styleComboBox` congelava a largura antes de instalar o renderer, e
+  todas as tabelas paginadas do sistema mostravam `Por página: …` e `Todos os esta…`. Corrigido com
+  uma linha mudada de sítio, mais uma guarda que falha com `155 < 171` contra o código antigo.
+- **Tipos de falta chegavam ao ecrã em inglês** (`PENDING_JUSTIFIC…`). Traduzidos no
+  `UIHelper.humanStatus`. Ao humanizar a coluna parti o filtro por tipo — o `TableFilter` compara
+  texto exacto com o modelo — e corrigi o dropdown, que aliás mostrava enums ingleses ao operador.
+- **Anexos dos exames**: cifrados em repouso (AES-256-GCM, `ATTACHMENT_KEY`) e, pela primeira vez,
+  legíveis — eram gravados e nunca mais saíam. Abrir exige gestor/admin e fica auditado.
+- **Por decidir, e não é da IA:** valores legais com o contabilista; carta ao MITESS pronta a enviar
+  em [docs/PEDIDO_MITESS_EXAMES_MEDICOS.md](../docs/PEDIDO_MITESS_EXAMES_MEDICOS.md); gerar e
+  guardar a `ATTACHMENT_KEY`.
+
 ### Clínicas, custo dos exames e conformidade legal — 2026-08-25 — **V59**
 
 Spec/harness: [docs/CONFORMIDADE_LEGAL_MZ_SPEC.md](../docs/CONFORMIDADE_LEGAL_MZ_SPEC.md) +

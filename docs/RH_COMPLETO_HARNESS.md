@@ -369,10 +369,13 @@ mvn -o test            → 860 testes, 0 falhas, 0 erros, 0 ignorados (2026-08-2
 
 ## Declarações honestas (o que este harness **não** afirma)
 
-- **Nada disto foi validado ao vivo pela UI.** O backend está testado e as migrações correram contra
-  PostgreSQL; os separadores novos (Descontos, Retenções, Cessações) e os diálogos de evolução
-  salarial, documentos, acréscimos e justificação de faltas **nunca foram abertos numa janela**.
-  RHC-90..94 continuam por fazer.
+- ~~**Nada disto foi validado ao vivo pela UI.**~~ **Feito a 2026-08-29.** Os 11 separadores do RH e
+  os 4 diálogos por colaborador foram abertos contra um backend real e fotografados um a um
+  (`HRPanelScreenshotDriver`, `HREmployeeDialogsDriver`). Nenhum falhou a pintar. **Encontraram-se
+  seis defeitos de apresentação, todos corrigidos** — e um deles não era do RH: o selector de
+  registos por página mostrava `…` em vez do número em **todas as tabelas paginadas do sistema**.
+  Ver os commits de 29/08. RHC-90..94 podem ser dados por cobertos no que toca a *abrir e ver*;
+  clicar em cada acção com dados reais continua por fazer.
 - **Adiantamentos, empréstimos e acertos finais movem tesouraria mas não fazem lançamento
   contabilístico.** A folha e as retenções fazem (RHC-53). Estes ficam de fora porque um adiantamento
   é um crédito ao trabalhador e o abate no acerto liquida-o: mapear isso a contas exige uma decisão
@@ -383,7 +386,7 @@ mvn -o test            → 860 testes, 0 falhas, 0 erros, 0 ignorados (2026-08-2
 - **`AbsencePayRule` é uma decisão registada, não uma verificação legal.** A lista do que desconta
   passou a estar explícita; se a lei disser outra coisa, muda-se num sítio — que é o ponto.
 
-**Antes de qualquer migração nova:** resolver as **duas migrações com versão 46**
-(`V46__crm_ticket_lifecycle.sql` e `V46__internal_replenishment.sql`) — o Flyway recusa arrancar com
-versões duplicadas. Confirmar com a receita do cluster PostgreSQL descartável descrita em
+~~**Antes de qualquer migração nova:** resolver as duas migrações com versão 46.~~ **Resolvido em
+2026-08-23**: o CRM passou a `V47__crm_ticket_lifecycle.sql` e já não há versões duplicadas. A
+cadeia correu até à **V60** contra PostgreSQL real. Confirmar com a receita do cluster PostgreSQL descartável descrita em
 [tasks/current.md](../tasks/current.md) (2026-08-21), já que a cadeia não corre em H2.

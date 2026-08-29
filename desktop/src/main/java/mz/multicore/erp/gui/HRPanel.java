@@ -842,8 +842,13 @@ public class HRPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
 
         JTextField absSearch = TableFilter.searchField("Colaborador ou motivo…");
+        // Os rótulos têm de ser os MESMOS que a coluna mostra: o filtro compara texto exacto com a
+        // célula do modelo. Estavam aqui os enums crus do backend — o operador via "UNJUSTIFIED"
+        // num dropdown de uma aplicação em PT-MZ, e faltavam dois tipos que existem no domínio.
         JComboBox<String> absTipo = TableFilter.combo("Todos os tipos",
-                "JUSTIFIED", "UNJUSTIFIED", "SICK", "MATERNITY", "OTHER");
+                UIHelper.humanStatus("PENDING_JUSTIFICATION"), UIHelper.humanStatus("JUSTIFIED"),
+                UIHelper.humanStatus("UNJUSTIFIED"), UIHelper.humanStatus("SICK"),
+                UIHelper.humanStatus("MATERNITY"), UIHelper.humanStatus("UNPAID_LEAVE"));
         JComboBox<String> absPeriodo = TableFilter.periodCombo();
         TableFilter.install(absencesTable, absSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(absTipo, 2)),
@@ -868,7 +873,7 @@ public class HRPanel extends JPanel {
         absencesModel.setRowCount(0);
         for (AbsenceDTO a : absencesList) {
             absencesModel.addRow(new Object[]{
-                    a.id(), a.employeeName(), a.absenceType(),
+                    a.id(), a.employeeName(), UIHelper.humanStatus(a.absenceType()),
                     a.startDate().format(DATE_FMT), a.endDate().format(DATE_FMT),
                     a.totalDays(),
                     a.hasSupportingDocument() ? "Sim" : "Não",

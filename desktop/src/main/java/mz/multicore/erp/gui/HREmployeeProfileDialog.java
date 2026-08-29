@@ -160,7 +160,8 @@ final class HREmployeeProfileDialog {
     private static JPanel absences(Long employeeId, List<AbsenceDTO> source) {
         DefaultTableModel model = model("Tipo", "Início", "Fim", "Dias", "Motivo", "Documento");
         source.stream().filter(a -> employeeId.equals(a.employeeId())).forEach(a -> model.addRow(new Object[]{
-                a.absenceType(), date(a.startDate()), date(a.endDate()), a.totalDays(), value(a.reason()),
+                UIHelper.humanStatus(a.absenceType()), date(a.startDate()), date(a.endDate()),
+                a.totalDays(), value(a.reason()),
                 a.hasSupportingDocument() ? "Sim" : "Não"}));
         return historyPanel(table(model), model.getRowCount(), "Nenhuma falta encontrada para este trabalhador.");
     }

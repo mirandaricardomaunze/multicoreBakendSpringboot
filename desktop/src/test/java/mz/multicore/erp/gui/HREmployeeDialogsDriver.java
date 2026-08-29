@@ -7,6 +7,7 @@ import mz.multicore.erp.desktop.config.DesktopApiConfig;
 import mz.multicore.erp.desktop.session.DesktopSession;
 import mz.multicore.erp.desktop.session.DesktopSessionStore;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.modules.hr.dto.AbsenceDTO;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -56,7 +57,14 @@ public final class HREmployeeDialogsDriver {
         EmployeeDTO employee = hr.getAllEmployees().stream().findFirst().orElseThrow();
         System.out.println("[driver] " + company.name() + " · colaborador " + employee.name());
 
+        // Justificar uma falta precisa de uma falta seleccionada. Sem isto o diálogo não abre e o
+        // driver reportava "não abriu diálogo nenhum" como se fosse defeito do ecrã.
+        AbsenceDTO absence = hr.getAllAbsences().stream().findFirst().orElse(null);
+        System.out.println("[driver] falta para justificar: "
+                + (absence == null ? "NENHUMA — semeie uma antes de correr" : absence.employeeName()));
+
         HREmployeeActions[] actions = new HREmployeeActions[1];
+        HRTimeSheetPanel[] timeSheet = new HRTimeSheetPanel[1];
         SwingUtilities.invokeAndWait(() -> {
             UIHelper.loadAndApplySavedTheme();
             JFrame frame = new JFrame("Driver Diálogos RH");
@@ -65,12 +73,17 @@ public final class HREmployeeDialogsDriver {
             frame.setContentPane(panel);
             frame.setSize(1382, 736);
             frame.setVisible(true);
-            actions[0] = new HREmployeeActions(panel, () -> employee, () -> null, () -> { });
+            actions[0] = new HREmployeeActions(panel, () -> employee, () -> absence, () -> { });
+            timeSheet[0] = new HRTimeSheetPanel(panel);
         });
         Thread.sleep(3000);
 
         shoot(out, "01-evolucao-salarial", () -> actions[0].openSalaryHistory());
         shoot(out, "02-documentos", () -> actions[0].openDocuments());
+        shoot(out, "03-acrescimos-hora-extra", () -> timeSheet[0].openOvertimeRatesDialog());
+        if (absence != null) {
+            shoot(out, "04-justificar-falta", () -> actions[0].justifyAbsence());
+        }
 
         System.out.println("[driver] PNGs em " + out.toAbsolutePath());
         context.close();

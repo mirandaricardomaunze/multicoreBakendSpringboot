@@ -218,7 +218,7 @@ final class HRTimeSheetPanel {
      * contabilista. Escrever uma percentagem à sorte era o pior resultado possível — parecia certo
      * e pagava mal, e ninguém reparava até alguém reclamar.
      */
-    private void openOvertimeRatesDialog() {
+    void openOvertimeRatesDialog() {
         java.util.List<mz.multicore.erp.modules.hr.dto.OvertimeRateConfigDTO> existing;
         try {
             existing = owner.hrApiClient.getOvertimeRates();

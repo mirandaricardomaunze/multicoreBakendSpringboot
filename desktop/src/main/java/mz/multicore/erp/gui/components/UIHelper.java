@@ -1563,6 +1563,15 @@ public class UIHelper {
             case "PAID" -> "Paga";
             case "PARTIALLY_PAID" -> "Parcialmente paga";
             case "OVERDUE" -> "Em atraso";
+            // Tipos de falta (§B2). Estavam a chegar ao ecrã em bruto e em inglês:
+            // "PENDING_JUSTIFIC…" na tabela de Faltas e "hoje PENDING_JUSTIFICATION" no diálogo
+            // de justificação — num módulo cujas mensagens são todas em PT-MZ.
+            case "PENDING_JUSTIFICATION" -> "Por justificar";
+            case "JUSTIFIED" -> "Justificada";
+            case "UNJUSTIFIED" -> "Injustificada";
+            case "SICK" -> "Baixa médica";
+            case "MATERNITY" -> "Maternidade";
+            case "UNPAID_LEAVE" -> "Licença sem vencimento";
             default -> status.trim().replace('_', ' ');
         };
     }
