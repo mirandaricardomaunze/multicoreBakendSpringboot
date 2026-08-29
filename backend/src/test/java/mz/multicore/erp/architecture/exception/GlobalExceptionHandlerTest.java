@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Um caminho que não existe é <b>404</b>, não 500.
@@ -49,6 +51,23 @@ class GlobalExceptionHandlerTest {
 
         assertFalse(response.getBody().message().contains("interno"));
         assertFalse(response.getBody().message().contains("segredo"));
+    }
+
+    /**
+     * Faltar um parâmetro obrigatório é erro de quem chama, não avaria do servidor.
+     *
+     * <p>Encontrado ao chamar {@code /api/inventory/warehouses} sem {@code ?companyId=}: saía
+     * <i>Internal Server Error</i>. É o caso mais frequente da família — mais do que um caminho
+     * errado — porque acontece a toda a gente que integra contra a API pela primeira vez.
+     */
+    @Test
+    void missingRequiredParameterIsBadRequestAndSaysWhichOne() {
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMalformedRequest(
+                new MissingServletRequestParameterException("companyId", "Long"));
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().message().contains("companyId"),
+                "quem integra tem de descobrir o que falta sem acesso ao log do servidor");
     }
 
     /** Uma regra de negócio continua a ser 400, com a razão em PT-MZ para o operador. */

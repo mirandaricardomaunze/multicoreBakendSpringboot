@@ -8,6 +8,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
@@ -69,6 +72,34 @@ public class GlobalExceptionHandler {
                 "O endereço pedido não existe neste servidor."
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
+     * Pedido mal formado é <b>400</b>, não 500.
+     *
+     * <p>Mesma família do 404 acima, e mais frequente na prática: faltar um parâmetro obrigatório
+     * ({@code ?companyId=}), mandá-lo com o tipo errado, ou enviar um corpo JSON que não se lê. São
+     * todos erros de <b>quem chama</b>, e nenhum deles é uma avaria do servidor — mas todos saíam
+     * como <i>Internal Server Error</i> e escreviam "Erro não tratado" no log, com stack trace.
+     *
+     * <p>A mensagem diz <b>o que falta</b>, porque quem integra contra a API tem de o poder
+     * descobrir sem acesso ao log do servidor.
+     */
+    @ExceptionHandler({MissingServletRequestParameterException.class,
+                       MethodArgumentTypeMismatchException.class,
+                       HttpMessageNotReadableException.class})
+    public ResponseEntity<ErrorResponse> handleMalformedRequest(Exception ex) {
+        String detail = switch (ex) {
+            case MissingServletRequestParameterException missing ->
+                    "Falta o parâmetro obrigatório \"" + missing.getParameterName() + "\".";
+            case MethodArgumentTypeMismatchException mismatch ->
+                    "O parâmetro \"" + mismatch.getName() + "\" tem um valor inválido.";
+            default -> "O corpo do pedido não pôde ser interpretado.";
+        };
+        log.warn("Pedido mal formado: {}", detail);
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(), HttpStatus.BAD_REQUEST.value(), "Bad Request", detail);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(Exception.class)
