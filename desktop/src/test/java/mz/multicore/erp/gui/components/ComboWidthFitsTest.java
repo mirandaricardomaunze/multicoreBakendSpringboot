@@ -65,6 +65,25 @@ class ComboWidthFitsTest {
                 "o selector de registos por página mostrava \"…\" em vez do número");
     }
 
+    /**
+     * Um valor de conjunto fechado tem de caber, não só o cabeçalho.
+     *
+     * <p>Nas Contas Correntes via-se "Corrente (por …" — e todos os escalões de antiguidade começam
+     * por "Corrente" ou por um número, pelo que a célula cortada não distinguia nada de nada.
+     */
+    @Test
+    void ensureColumnFitsMakesRoomForTheWidestKnownValue() {
+        Assumptions.assumeFalse(GraphicsEnvironment.isHeadless(), "precisa de ambiente gráfico");
+
+        JTable table = new JTable(new DefaultTableModel(new String[]{"Nº", "Antiguidade"}, 0));
+        UIHelper.styleTable(table);
+        UIHelper.ensureColumnFits(table, 1, "Corrente (por vencer)");
+
+        int needed = table.getFontMetrics(table.getFont()).stringWidth("Corrente (por vencer)");
+        assertTrue(table.getColumnModel().getColumn(1).getMinWidth() >= needed,
+                "o escalão mais longo continua a não caber");
+    }
+
     /** Cabeçalho de coluna truncado numa coluna de dinheiro é a diferença entre ler e adivinhar. */
     @Test
     void ensureHeadersFitKeepsMoneyHeadersReadable() {

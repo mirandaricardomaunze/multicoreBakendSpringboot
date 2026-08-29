@@ -70,6 +70,15 @@ public final class OutstandingAccountsPanel extends JPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
+        // O rotulo mais longo da antiguidade — "Corrente (por vencer)" — nao cabia e saia
+        // "Corrente (por …", que e o mesmo que nao dizer nada: todos os escaloes comecam por
+        // "Corrente" ou por um numero.
+        UIHelper.ensureColumnFits(table, 9, "Corrente (por vencer)");
+        // E o estado, pela mesma razao: "Parcialmente paga" e o rotulo mais longo, e distingui-lo
+        // de "Paga" e o que a coluna existe para fazer. O espaco sai do Cliente, que e texto livre
+        // e vai truncar de qualquer maneira — ali a ficha do cliente resolve; aqui nao ha para onde ir.
+        UIHelper.ensureColumnFits(table, 10, "Parcialmente paga");
         for (int column : new int[]{4, 5, 6}) table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(10).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(table);
@@ -120,7 +129,10 @@ public final class OutstandingAccountsPanel extends JPanel {
         for (InvoiceDTO invoice : invoices) {
             BigDecimal paid = invoice.amountPaid() == null ? BigDecimal.ZERO : invoice.amountPaid();
             model.addRow(new Object[]{invoice.invoiceNumber(),
-                    invoice.createdAt() == null ? "-" : invoice.createdAt().format(DATE_TIME),
+                    // Data e nao data-hora: a coluna nao tem largura para as duas e via-se
+                    // "29/08/2026 22…" — a hora a comer a data numa tabela de dividas, onde a hora
+                    // de emissao nao decide nada e a data decide tudo.
+                    invoice.createdAt() == null ? "-" : invoice.createdAt().format(DATE),
                     invoice.clientName(), invoice.clientTaxId(), invoice.totalAmount(), paid,
                     invoice.outstandingAmount(),
                     invoice.dueDate() == null ? "-" : invoice.dueDate().format(DATE),

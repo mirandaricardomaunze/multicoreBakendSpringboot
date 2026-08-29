@@ -1544,6 +1544,32 @@ public class UIHelper {
         }
     }
 
+    /**
+     * Garante que uma coluna cabe um valor <b>conhecido</b>, não só o seu título.
+     *
+     * <p>O {@link #ensureHeadersFit} resolve cabeçalhos cortados; não resolve células cortadas. Há
+     * colunas cujo conteúdo vem de um conjunto fechado — escalões de antiguidade, estados — e para
+     * essas sabe-se de antemão qual é o valor mais largo. Cortar "Corrente (por vencer)" em
+     * "Corrente (por …" é o mesmo que não dizer nada, porque todos os escalões começam por
+     * "Corrente" ou por um número.
+     *
+     * <p>Só para conjuntos fechados: para texto livre não há valor mais largo, e forçar largura
+     * pelo maior caso possível estraga a tabela para o caso normal.
+     */
+    public static void ensureColumnFits(JTable table, int column, String widestValue) {
+        if (column < 0 || column >= table.getColumnModel().getColumnCount()) {
+            return;
+        }
+        int needed = table.getFontMetrics(table.getFont()).stringWidth(widestValue) + 24;
+        javax.swing.table.TableColumn target = table.getColumnModel().getColumn(column);
+        if (target.getMinWidth() < needed) {
+            target.setMinWidth(needed);
+        }
+        if (target.getPreferredWidth() < needed) {
+            target.setPreferredWidth(needed);
+        }
+    }
+
     /** Tradução central de estados frequentes; valores desconhecidos ficam legíveis. */
     public static String humanStatus(String status) {
         if (status == null || status.isBlank()) return "—";
