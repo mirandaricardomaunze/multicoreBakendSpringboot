@@ -105,7 +105,7 @@ public class FiscalPanel extends JPanel {
         controls.setOpaque(false);
         controls.add(filterLabel("Período:"));
         payrollMonthSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getMonthValue(), 1, 12, 1));
-        payrollYearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
+        payrollYearSpinner = UIHelper.createYearSpinner(LocalDate.now().getYear());
         ModernButton refresh = UIHelper.createSecondaryButton("Actualizar Mapa");
         refresh.addActionListener(e -> loadPayrollFiscal());
         ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Mapa Fiscal");
@@ -186,8 +186,7 @@ public class FiscalPanel extends JPanel {
         periodPanel.setOpaque(false);
         periodPanel.add(filterLabel("Período:"));
         ivaMonthSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getMonthValue(), 1, 12, 1));
-        ivaYearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
-        ((JSpinner.NumberEditor) ivaYearSpinner.getEditor()).getFormat().setGroupingUsed(false);
+        ivaYearSpinner = UIHelper.createYearSpinner(LocalDate.now().getYear());
         ivaMonthSpinner.addChangeListener(e -> recomputeIva());
         ivaYearSpinner.addChangeListener(e -> recomputeIva());
         periodPanel.add(ivaMonthSpinner);

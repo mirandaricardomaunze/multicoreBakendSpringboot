@@ -361,8 +361,11 @@ public class StockPanel extends JPanel {
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
         JTextField mvSearch = TableFilter.searchField("Artigo, lote, série ou descrição…");
+        // Valores crus, e de propósito: o TableFilter compara com o VALOR DO MODELO, não com o que
+        // o renderer desenha. A coluna mostra "Compra" porque o TableCellRenderers.status() a
+        // humaniza na apresentação; o modelo continua canónico. Faltava o REVERSAL.
         JComboBox<String> mvTipo = TableFilter.combo("Todos os tipos",
-                "PURCHASE", "ENTRY", "SALE", "TRANSFER", "ADJUSTMENT", "RETURN");
+                "PURCHASE", "ENTRY", "SALE", "TRANSFER", "ADJUSTMENT", "RETURN", "REVERSAL");
         JComboBox<String> mvPeriodo = TableFilter.periodCombo();
         TableFilter.install(movementsTable, mvSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(mvTipo, 4)),

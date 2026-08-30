@@ -1587,6 +1587,21 @@ public class UIHelper {
         return banner;
     }
 
+    /**
+     * Selector de <b>ano</b>. Um ano não leva separador de milhares: 2026, nunca "2.026".
+     *
+     * <p>O {@code JSpinner} formata números com agrupamento por omissão, e desligá-lo depois de
+     * construir — {@code getFormat().setGroupingUsed(false)} — <b>não repinta o texto já
+     * formatado</b>. Era o que a Área Fiscal fazia, e por isso mostrava "2.026" no Apuramento de
+     * IVA e no mapa de IRPS. A forma que funciona é dar um editor novo com padrão explícito.
+     */
+    public static javax.swing.JSpinner createYearSpinner(int year) {
+        javax.swing.JSpinner spinner =
+                new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(year, 2000, 2100, 1));
+        spinner.setEditor(new javax.swing.JSpinner.NumberEditor(spinner, "#"));
+        return spinner;
+    }
+
     /** Tradução central de estados frequentes; valores desconhecidos ficam legíveis. */
     public static String humanStatus(String status) {
         if (status == null || status.isBlank()) return "—";
@@ -1615,6 +1630,16 @@ public class UIHelper {
             case "SICK" -> "Baixa médica";
             case "MATERNITY" -> "Maternidade";
             case "UNPAID_LEAVE" -> "Licença sem vencimento";
+            // Tipos de movimento de stock. Apareciam em bruto na coluna "Tipo Mov." da
+            // rastreabilidade — PURCHASE, SALE, ADJUSTMENT — numa aplicação em PT-MZ, e num ecrã
+            // que existe para alguém perceber PORQUE é que o stock mexeu.
+            case "PURCHASE" -> "Compra";
+            case "ENTRY" -> "Entrada";
+            case "SALE" -> "Venda";
+            case "TRANSFER" -> "Transferência";
+            case "ADJUSTMENT" -> "Ajuste";
+            case "RETURN" -> "Devolução";
+            case "REVERSAL" -> "Estorno";
             default -> status.trim().replace('_', ' ');
         };
     }

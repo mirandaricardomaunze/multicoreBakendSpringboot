@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,6 +53,30 @@ class AbsenceTypeLabelsTest {
                     "\"" + label + "\" serve " + clash + " e " + type + " — o filtro por tipo "
                             + "compara texto exacto e passaria a apanhar os dois");
         }
+    }
+
+    /**
+     * Tipos de movimento de stock: apareciam em bruto — PURCHASE, SALE, ADJUSTMENT — na coluna
+     * "Tipo Mov." da rastreabilidade. O renderer já os humanizava; faltavam os casos.
+     */
+    @Test
+    void everyStockMovementTypeHasAPortugueseLabel() {
+        for (String type : List.of("PURCHASE", "ENTRY", "SALE", "TRANSFER",
+                                   "ADJUSTMENT", "RETURN", "REVERSAL")) {
+            String label = UIHelper.humanStatus(type);
+            assertFalse(label.equalsIgnoreCase(type),
+                    "o tipo de movimento \"" + type + "\" chega ao ecrã em inglês");
+        }
+    }
+
+    /** Um ano não leva separador de milhares. A Área Fiscal mostrava "2.026". */
+    @Test
+    void yearSpinnerHasNoThousandsSeparator() {
+        org.junit.jupiter.api.Assumptions.assumeFalse(
+                java.awt.GraphicsEnvironment.isHeadless(), "precisa de ambiente gráfico");
+        javax.swing.JSpinner spinner = UIHelper.createYearSpinner(2026);
+        javax.swing.JSpinner.NumberEditor editor = (javax.swing.JSpinner.NumberEditor) spinner.getEditor();
+        assertEquals("2026", editor.getTextField().getText());
     }
 
     /**
