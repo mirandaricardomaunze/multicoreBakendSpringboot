@@ -111,6 +111,21 @@ Nota: erros `cannot find symbol: getX()` no IDE podem ser ruido de Lombok. O Mav
 - `prod`: configuracao alvo de producao quando aplicavel.
 - default: desenvolvimento local.
 
+## Exercitar as regras de negocio
+
+```powershell
+mvn -pl backend spring-boot:run -Dspring-boot.run.arguments=--server.port=18099   # noutra consola
+python scripts/exercitar-modulos.py
+```
+
+29 verificacoes sobre Inventario, POS, Fiscal e RH, contra um backend a serio. **Nao verifica que
+responde — verifica que a conta bate**: uma venda tira do stock exactamente o que vendeu, uma
+transferencia nao cria nem destroi mercadoria, o IVA e do artigo e nao do payload, e reapurar as
+retencoes nao duplica a divida ao Estado.
+
+**Escreve na base de dados** (facturas, ajustes, vendas). So em desenvolvimento. Sai com codigo 1
+se alguma conta nao bater, pelo que serve para CI com uma base descartavel.
+
 ## Segredos de producao
 
 | Variavel | Para que serve | Se faltar |
