@@ -93,8 +93,12 @@ public final class QuotationsPanel extends JPanel {
         JTextField search = TableFilter.searchField("Nº cotação, cliente ou NUIT…");
         JComboBox<String> status = TableFilter.combo("Todos os estados",
                 "Rascunho", "Enviada", "Aceite", "Recusada", "Convertida", "Cancelada");
-        TableFilter.install(table, search, new TableFilter.ColumnFilter(status, COL_STATUS));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status);
+        JComboBox<String> periodo = TableFilter.periodCombo();
+        TableFilter.install(table, search,
+                java.util.List.of(new TableFilter.ColumnFilter(status, COL_STATUS)),
+                java.util.List.of(new TableFilter.PeriodFilter(periodo, 2)));
+        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status,
+                TableFilter.label("Data:", "fas-calendar-alt"), periodo);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         card.add(filters, BorderLayout.NORTH);
 

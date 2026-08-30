@@ -135,8 +135,22 @@ public final class TableFilter {
     }
 
     /** Combo de período pronto (com ícone de calendário via label na barra). */
+    /** Períodos para colunas de datas <b>passadas</b>: emissão, pagamento, movimento. */
     public static JComboBox<String> periodCombo() {
         return combo("Todo o período", "Hoje", "Últimos 7 dias", "Últimos 30 dias", "Este mês");
+    }
+
+    /**
+     * Períodos para colunas de <b>validade</b> — datas que estão à frente, não atrás.
+     *
+     * <p>Usar aqui o {@link #periodCombo()} seria pior do que não ter filtro: "Últimos 30 dias"
+     * numa coluna de validade mostra o que <i>já</i> venceu no mês passado, e esconde exactamente
+     * o que interessa a quem gere lotes — <b>o que está prestes a vencer</b>. Mesma peça, duas
+     * linguagens, porque as perguntas são opostas.
+     */
+    public static JComboBox<String> expiryPeriodCombo() {
+        return combo("Toda a validade", "Já vencidos", "Vence em 7 dias", "Vence em 30 dias",
+                "Vence em 90 dias");
     }
 
     /** Extrai a data do início da célula (formato dd/MM/yyyy, com ou sem hora). Null se não parsear. */
@@ -152,13 +166,20 @@ public final class TableFilter {
 
     /** Lógica pura: a data cai no período escolhido? Opção nula/"Todo…" ⇒ sempre verdadeiro. */
     public static boolean matchesPeriod(java.time.LocalDate date, String option, java.time.LocalDate today) {
-        if (option == null || option.isBlank() || option.startsWith("Todo")) return true;
+        if (option == null || option.isBlank()
+                || option.startsWith("Todo") || option.startsWith("Toda")) return true;
         if (date == null) return false;
         return switch (option) {
             case "Hoje" -> date.isEqual(today);
             case "Últimos 7 dias" -> !date.isBefore(today.minusDays(6)) && !date.isAfter(today);
             case "Últimos 30 dias" -> !date.isBefore(today.minusDays(29)) && !date.isAfter(today);
             case "Este mês" -> date.getMonthValue() == today.getMonthValue() && date.getYear() == today.getYear();
+            // Validades: para a frente. "Vence em 30 dias" inclui hoje e exclui o que já venceu —
+            // o que já venceu tem opção própria, porque é outra pergunta e outra urgência.
+            case "Já vencidos" -> date.isBefore(today);
+            case "Vence em 7 dias" -> !date.isBefore(today) && !date.isAfter(today.plusDays(7));
+            case "Vence em 30 dias" -> !date.isBefore(today) && !date.isAfter(today.plusDays(30));
+            case "Vence em 90 dias" -> !date.isBefore(today) && !date.isAfter(today.plusDays(90));
             default -> true;
         };
     }

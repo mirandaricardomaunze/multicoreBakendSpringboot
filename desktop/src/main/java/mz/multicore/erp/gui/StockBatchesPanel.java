@@ -102,6 +102,24 @@ final class StockBatchesPanel {
         owner.batchesTable.setAutoCreateRowSorter(true);
         JScrollPane scroll = new JScrollPane(owner.batchesTable);
         UIHelper.styleScrollPane(scroll);
+
+        // Esta tabela não tinha filtro nenhum — só paginação. Num ecrã de lotes, a pergunta que se
+        // faz todos os dias é "o que vence a seguir", e a resposta era percorrer as páginas à mão.
+        // A validade é uma data FUTURA, por isso usa o vocabulário próprio: "Últimos 30 dias" aqui
+        // mostraria o que já venceu no mês passado, que é o contrário do que se procura.
+        javax.swing.JTextField search = mz.multicore.erp.gui.components.TableFilter.searchField(
+                "Artigo, SKU, lote ou armazém…");
+        javax.swing.JComboBox<String> validade =
+                mz.multicore.erp.gui.components.TableFilter.expiryPeriodCombo();
+        mz.multicore.erp.gui.components.TableFilter.install(owner.batchesTable, search,
+                java.util.List.of(),
+                java.util.List.of(new mz.multicore.erp.gui.components.TableFilter.PeriodFilter(
+                        validade, 4)));
+        javax.swing.JPanel bar = mz.multicore.erp.gui.components.TableFilter.bar(search,
+                mz.multicore.erp.gui.components.TableFilter.label("Validade:", "fas-hourglass-half"),
+                validade);
+        bar.setBorder(new javax.swing.border.EmptyBorder(0, 0, 10, 0));
+        card.add(bar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(mz.multicore.erp.gui.components.ClientTablePagination.install(owner.batchesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);

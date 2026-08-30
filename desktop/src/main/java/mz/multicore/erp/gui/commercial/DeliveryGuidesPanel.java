@@ -66,8 +66,12 @@ public final class DeliveryGuidesPanel extends JPanel {
         JTextField search = TableFilter.searchField("Nº guia, encomenda, cliente ou viatura…");
         JComboBox<String> status = TableFilter.combo("Todos os estados",
                 "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
-        TableFilter.install(table, search, new TableFilter.ColumnFilter(status, 9));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status);
+        JComboBox<String> periodo = TableFilter.periodCombo();
+        TableFilter.install(table, search,
+                java.util.List.of(new TableFilter.ColumnFilter(status, 9)),
+                java.util.List.of(new TableFilter.PeriodFilter(periodo, 2)));
+        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status,
+                TableFilter.label("Data:", "fas-calendar-alt"), periodo);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         card.add(filters, BorderLayout.NORTH);
         JScrollPane scroll = new JScrollPane(table);
