@@ -86,7 +86,10 @@ public final class PanelScreenshotDriver {
                                    String simpleName, DesktopSession session,
                                    DesktopSession.CompanyAccess company) {
         try {
-            Class<?> type = Class.forName("mz.multicore.erp.gui." + simpleName);
+            // Aceita nome simples (mz.multicore.erp.gui.X) ou qualificado, para os painéis que
+            // vivem em sub-pacotes — a contabilidade está em gui.accounting.
+            Class<?> type = Class.forName(simpleName.contains(".")
+                    ? simpleName : "mz.multicore.erp.gui." + simpleName);
             Constructor<?> ctor = widestConstructor(type);
             Object[] argsForCtor = new Object[ctor.getParameterCount()];
             for (int i = 0; i < argsForCtor.length; i++) {
@@ -226,7 +229,7 @@ public final class PanelScreenshotDriver {
         try {
             BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
             frame.paint(image.getGraphics());
-            String safe = (panel + "-" + title).replaceAll("[^A-Za-z0-9]+", "-").toLowerCase();
+            String safe = (panel.substring(panel.lastIndexOf('.') + 1) + "-" + title).replaceAll("[^A-Za-z0-9]+", "-").toLowerCase();
             ImageIO.write(image, "png", out.resolve(safe + ".png").toFile());
             System.out.println("[driver] " + panel + " · " + title + " → " + safe + ".png");
         } catch (Exception ex) {

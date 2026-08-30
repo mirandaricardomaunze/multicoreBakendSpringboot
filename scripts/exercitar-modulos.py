@@ -3,7 +3,8 @@
 Não verifica que os endpoints respondem — isso é fácil e diz pouco. Verifica que **a conta bate**:
 uma venda tira do stock exactamente o que vendeu, uma transferência não cria nem destrói
 mercadoria, o IVA apurado é o IVA dos documentos, a taxa de imposto é do artigo e não do payload,
-e reapurar as retenções não duplica a dívida ao Estado.
+reapurar as retenções não duplica a dívida ao
+Estado, e o balancete equilibra.
 
     # com o backend de pé (ver docs/DEPLOYMENT_RUNBOOK.md):
     python scripts/exercitar-modulos.py            # porta 18099 por omissão
@@ -209,10 +210,18 @@ if code == 200:
     print(f"  líquido previsto: {preview.get('netAmount')}"
           f" · avisos do que não sabe calcular: {len(preview.get('warnings') or [])}")
     check("a pré-visualização devolve a conta", True, preview.get("netAmount") is not None)
-    code, _ = call("/api/hr/terminations", token, "POST",
-                   {"employeeId": 2, "terminationDate": "2026-08-31",
-                    "reason": "MUTUO_ACORDO", "noticeServed": True})
-    check("cessação registada", 200, code)
+    # Repetível: numa segunda corrida o colaborador já está cessado, e cessar de novo TEM de ser
+    # recusado. Distinguir os dois casos é o que impede o harness de acusar um defeito que não há.
+    already = [t for t in (call("/api/hr/terminations", token)[1] or [])
+               if t.get("employeeId") == 2]
+    if already:
+        print(f"  NOTA  o colaborador 2 já estava cessado ({already[0].get('reference') or ''})"
+              f" — a cessação nova não se repete")
+    else:
+        code, _ = call("/api/hr/terminations", token, "POST",
+                       {"employeeId": 2, "terminationDate": "2026-08-31",
+                        "reason": "MUTUO_ACORDO", "noticeServed": True})
+        check("cessação registada", 200, code)
     code, _ = call("/api/hr/terminations", token, "POST",
                    {"employeeId": 2, "terminationDate": "2026-08-31",
                     "reason": "MUTUO_ACORDO", "noticeServed": True})
@@ -223,6 +232,91 @@ if code == 200:
     check("recibo a colaborador cessado é recusado", 400, code)
 else:
     print(f"  NOTA  o colaborador 2 já estava cessado ({code}) — cenário não repetível sem repor dados")
+
+# ─── COMPRAS ─────────────────────────────────────────────────────────────────
+section("Compras: a encomenda é um documento; a mercadoria entra na recepção")
+suppliers = call("/api/purchases/suppliers?companyId=1", token)[1]
+supplier = suppliers[0]["id"]
+before = stock_of(1)
+code, order = call("/api/purchases/orders", token, "POST",
+                   {"supplierId": supplier, "warehouseId": 1, "companyId": 1,
+                    "expectedDate": "2026-09-15", "notes": "Reposição mensal",
+                    "lines": [{"productId": 1, "quantity": 20, "unitPrice": 400.00}]})
+check("encomenda criada", 200, code)
+check("criar a encomenda NÃO faz entrar mercadoria", before, stock_of(1))
+
+section("Compras: recepção parcial entra só o que chegou")
+line_id = order["lines"][0]["id"]
+code, partial = call(f"/api/purchases/orders/{order['id']}/receive-partial", token, "POST",
+                     {"lines": [{"lineId": line_id, "quantity": 12,
+                                 "damagedQuantity": 0, "missingQuantity": 0,
+                                 "notes": "Primeira metade"}]})
+check("recepção parcial aceite", 200, code)
+check("entram 12, não as 20 encomendadas", before + 12, stock_of(1))
+print(f"  estado da encomenda após parcial: {partial.get('status')}")
+
+section("Compras: o que chega danificado não entra como bom")
+mid = stock_of(1)
+# Faltam 8 das 20. Recebemos 5 boas + 3 danificadas = as 8 que faltavam: mais do que isso é
+# recusado, e bem — receber acima do encomendado é como entra mercadoria fantasma no stock.
+code, damaged = call(f"/api/purchases/orders/{order['id']}/receive-partial", token, "POST",
+                     {"lines": [{"lineId": line_id, "quantity": 5,
+                                 "damagedQuantity": 3, "missingQuantity": 0,
+                                 "notes": "Três embalagens rasgadas"}]})
+if code == 200:
+    check("as 3 danificadas NÃO entram como stock bom", mid + 5, stock_of(1))
+    disc = call("/api/purchases/discrepancies/open?companyId=1", token)[1]
+    check("a divergência fica registada em aberto", True, len(disc or []) > 0)
+else:
+    print(f"  NOTA  recepção devolveu {code}: {str(damaged)[:140]}")
+
+section("Compras: a dívida ao fornecedor nasce e baixa ao pagar")
+payables = call("/api/purchases/payables?companyId=1", token)[1]
+if payables:
+    payable = payables[0]
+    owed = Decimal(str(payable.get("outstandingAmount") or payable.get("totalAmount") or 0))
+    account = call("/api/finance/accounts?companyId=1", token)[1][0]["id"]
+    pay = min(owed, Decimal("1000"))
+    code, _ = call(f"/api/purchases/{payable['id']}/pay?amount={pay}"
+                   f"&financeAccountId={account}&reference=TESTE", token, "POST")
+    check("pagamento ao fornecedor aceite", 200, code)
+    after_pay = [p for p in call("/api/purchases/payables?companyId=1", token)[1]
+                 if p["id"] == payable["id"]]
+    if after_pay:
+        left = Decimal(str(after_pay[0].get("outstandingAmount")
+                           or after_pay[0].get("totalAmount") or 0))
+        check("a dívida baixa exactamente o que se pagou", owed - pay, left)
+    else:
+        print("  NOTA  a conta saiu da lista de pendentes — ficou liquidada")
+else:
+    print("  NOTA  não há contas a pagar — a recepção pode não gerar factura sozinha")
+
+# ─── CONTABILIDADE ───────────────────────────────────────────────────────────
+section("Contabilidade: o balancete equilibra — débitos iguais a créditos")
+code, tb = call("/api/accounting/trial-balance?from=2026-01-01&to=2026-12-31", token)
+check("balancete devolvido", 200, code)
+if code == 200:
+    debit = Decimal(str(tb["totalDebit"]))
+    credit = Decimal(str(tb["totalCredit"]))
+    print(f"  débitos: {debit} · créditos: {credit} · {len(tb['lines'])} conta(s)")
+    # Se estes dois não coincidirem há lançamentos corrompidos. É a invariante mais antiga da
+    # contabilidade e a única que não admite excepção.
+    check("débitos == créditos", debit, credit)
+    check("e o balancete diz-se equilibrado", True, tb["balanced"])
+
+section("Contabilidade: a folha paga chega ao razão (RHC-53)")
+code, journal = call("/api/accounting/journal?companyId=1", token)
+entries = journal.get("items", []) if isinstance(journal, dict) else (journal or [])
+if code == 200 and entries:
+    sources = {e.get("source") for e in entries}
+    print(f"  {len(entries)} lançamento(s) · origens: {sorted(s for s in sources if s)}")
+    check("há lançamentos vindos da folha de salários", True,
+          any("PAYROLL" in str(s).upper() for s in sources))
+else:
+    # Sem plano de contas o AutomaticPostingService devolve em silêncio — nada é escriturado e não
+    # fica rasto. É por isso que o ecrã da Contabilidade passou a avisar enquanto a tabela do plano
+    # estiver vazia. Semeie o plano (botão "Semear PGC-NIRF") e volte a correr.
+    print(f"  NOTA  razão vazio ({code}) — esta empresa tem plano de contas semeado?")
 
 print(f"\nRESULTADO: {TALLY['ok']} OK, {TALLY['bad']} FALHA(S)")
 sys.exit(1 if TALLY["bad"] else 0)

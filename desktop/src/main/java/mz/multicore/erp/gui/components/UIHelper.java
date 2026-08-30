@@ -1570,6 +1570,23 @@ public class UIHelper {
         }
     }
 
+    /**
+     * Faixa de aviso para um estado que o utilizador tem de saber ao abrir o ecrã — não um erro,
+     * não um modal: uma frase que fica à vista enquanto a condição durar.
+     *
+     * <p>Nasce escondida. Quem a mostra é quem sabe se a condição se verifica.
+     */
+    public static JLabel createWarningBanner(String message) {
+        JLabel banner = new JLabel("<html><body style=\"width:900px\">" + message + "</body></html>");
+        banner.setOpaque(true);
+        banner.setBackground(PENDING_YELLOW);
+        banner.setForeground(BG_DARK);
+        banner.setFont(new Font(FONT, Font.BOLD, 13));
+        banner.setBorder(new EmptyBorder(10, 14, 10, 14));
+        banner.setVisible(false);
+        return banner;
+    }
+
     /** Tradução central de estados frequentes; valores desconhecidos ficam legíveis. */
     public static String humanStatus(String status) {
         if (status == null || status.isBlank()) return "—";

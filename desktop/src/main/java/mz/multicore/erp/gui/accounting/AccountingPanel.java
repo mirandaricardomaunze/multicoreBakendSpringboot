@@ -59,11 +59,21 @@ public final class AccountingPanel extends JPanel {
         add(tabs, BorderLayout.CENTER);
 
         LocalDate today = LocalDate.now();
-        balanceFrom.setText(today.withDayOfMonth(1).format(DATE));
-        balanceTo.setText(today.format(DATE));
-        ledgerFrom.setText(today.withDayOfMonth(1).format(DATE));
-        ledgerTo.setText(today.format(DATE));
+        // ISO, porque é o que o DateField lê — ver o javadoc de DateField.value(). Escrever aqui
+        // dd/MM/yyyy fazia "Calcular" e "Carregar" falharem À PRIMEIRA, com o ecrã acabado de abrir
+        // e o utilizador sem ter tocado em nada. Só se viu depois de o campo ter largura para
+        // mostrar a data: um defeito escondia o outro.
+        balanceFrom.setText(today.withDayOfMonth(1).toString());
+        balanceTo.setText(today.toString());
+        ledgerFrom.setText(today.withDayOfMonth(1).toString());
+        ledgerTo.setText(today.toString());
     }
+
+    /** Visível só enquanto não houver plano — ver {@link #loadAccounts()}. */
+    private final JLabel emptyChartWarning = UIHelper.createWarningBanner(
+            "Esta empresa não tem plano de contas. Enquanto assim for, as facturas, os recibos e os "
+                    + "salários pagos NÃO são escriturados — e não fica registo de que foram "
+                    + "saltados. Use \"Semear PGC-NIRF\" para criar o plano.");
 
     /** Carregamento preguiçoso: só busca quando o painel é aberto (sem HTTP no construtor). */
     public void onPanelSelected() {
@@ -87,6 +97,7 @@ public final class AccountingPanel extends JPanel {
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> loadAccounts());
 
+        card.add(emptyChartWarning, BorderLayout.NORTH);
         card.add(buttons(refresh, create, seed), BorderLayout.SOUTH);
         return wrap(card);
     }
@@ -100,6 +111,13 @@ public final class AccountingPanel extends JPanel {
                         account.nature() == null ? "-" : account.nature().name(),
                         account.postable() ? "Sim" : "Não (conta-mãe)"});
             }
+            // Sem plano de contas, o AutomaticPostingService devolve em silêncio: facturas, recibos
+            // e salários pagos NÃO chegam ao razão e não fica rasto nenhum de que foram saltados —
+            // ao contrário do plano incompleto, que já deixa PAYROLL_POSTING_SKIPPED na auditoria.
+            // O aviso vive aqui, e não num registo por documento, porque uma empresa que não usa
+            // contabilidade não deve ser inundada; mas quem abre este ecrã tem de saber o que se
+            // está a perder enquanto a tabela estiver vazia.
+            emptyChartWarning.setVisible(accounts.isEmpty());
         }, error -> showError("carregar o plano de contas", error));
     }
 
