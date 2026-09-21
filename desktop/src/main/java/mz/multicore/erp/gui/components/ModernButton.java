@@ -22,9 +22,42 @@ public class ModernButton extends JButton {
         setContentAreaFilled(false);
         setFocusPainted(false);
         setBorderPainted(false);
+        setBackground(normalColor);
         setForeground(textColor);
         setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         setCursor(new Cursor(Cursor.HAND_CURSOR));
+        setUI(new javax.swing.plaf.basic.BasicButtonUI() {
+            @Override
+            protected void paintText(Graphics g, JComponent c, Rectangle textRect, String text) {
+                AbstractButton b = (AbstractButton) c;
+                FontMetrics fm = g.getFontMetrics();
+                int mnemonicIndex = b.getDisplayedMnemonicIndex();
+                if (b.isEnabled()) {
+                    g.setColor(b.getForeground());
+                } else {
+                    Color bg = b.getBackground();
+                    Color readable = UIHelper.readableTextOn(bg != null ? bg : Color.WHITE);
+                    if (Color.WHITE.equals(readable)) {
+                        g.setColor(new Color(255, 255, 255, 140));
+                    } else {
+                        g.setColor(new Color(107, 114, 128, 180));
+                    }
+                }
+                javax.swing.plaf.basic.BasicGraphicsUtils.drawStringUnderlineCharAt(g, text, mnemonicIndex,
+                        textRect.x + getTextShiftOffset(),
+                        textRect.y + fm.getAscent() + getTextShiftOffset());
+            }
+
+            @Override
+            protected void paintIcon(Graphics g, JComponent c, Rectangle iconRect) {
+                AbstractButton b = (AbstractButton) c;
+                Icon icon = b.getIcon();
+                if (icon != null) {
+                    icon.paintIcon(c, g, iconRect.x + getTextShiftOffset(),
+                            iconRect.y + getTextShiftOffset());
+                }
+            }
+        });
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -75,7 +108,45 @@ public class ModernButton extends JButton {
         // precisa de texto escuro, senão fica branco sobre branco no tema claro.
         this.textColor = UIHelper.readableTextOn(base);
         setForeground(this.textColor);
+        if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+            fi.setIconColor(this.textColor);
+        }
         repaint();
+    }
+
+    @Override
+    public void setIcon(Icon icon) {
+        if (icon instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+            fi.setIconColor(this.textColor != null ? this.textColor : Color.WHITE);
+        }
+        super.setIcon(icon);
+    }
+
+    @Override
+    public void setBackground(Color bg) {
+        super.setBackground(bg);
+        if (bg != null && this.textColor != null && UIHelper.contrastRatio(bg, this.textColor) < 3.0) {
+            Color safeFg = UIHelper.readableTextOn(bg);
+            super.setForeground(safeFg);
+            this.textColor = safeFg;
+            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+                fi.setIconColor(safeFg);
+            }
+        }
+    }
+
+    @Override
+    public void setForeground(Color fg) {
+        Color safeFg = fg;
+        Color bg = getBackground();
+        if (bg != null && fg != null && UIHelper.contrastRatio(bg, fg) < 3.0) {
+            safeFg = UIHelper.readableTextOn(bg);
+        }
+        super.setForeground(safeFg);
+        this.textColor = safeFg;
+        if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+            fi.setIconColor(safeFg != null ? safeFg : Color.WHITE);
+        }
     }
 
     public void setGradient(Color start, Color end) {
@@ -130,6 +201,26 @@ public class ModernButton extends JButton {
 
         g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
         g2.dispose();
+
+        // Salvaguarda visual inegociável: nunca renderizar texto branco sobre fundo claro
+        Color currentFg = getForeground();
+        if (bg != null && (currentFg == null || UIHelper.contrastRatio(bg, currentFg) < 3.0)) {
+            Color safeFg = UIHelper.readableTextOn(bg);
+            super.setForeground(safeFg);
+            this.textColor = safeFg;
+            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+                fi.setIconColor(safeFg);
+            }
+        } else if (!isEnabled()) {
+            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+                Color baseIconColor = this.textColor != null ? this.textColor : Color.WHITE;
+                fi.setIconColor(new Color(baseIconColor.getRed(), baseIconColor.getGreen(), baseIconColor.getBlue(), 120));
+            }
+        } else {
+            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+                fi.setIconColor(this.textColor != null ? this.textColor : Color.WHITE);
+            }
+        }
 
         super.paintComponent(g);
     }

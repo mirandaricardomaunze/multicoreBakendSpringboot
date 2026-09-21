@@ -22,16 +22,16 @@ final class PosReturnDialog {
     public void show() {
         int selectedRow = owner.salesHistoryTable == null ? -1 : TableFilter.selectedModelRow(owner.salesHistoryTable);
         if (selectedRow < 0 || selectedRow >= owner.salesHistoryList.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma venda no histórico primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPosNotice(FeedbackType.WARNING, "Seleccione uma venda",
+                    "Escolha uma venda no histórico para iniciar a devolução.");
             return;
         }
         if (owner.warehousesList.isEmpty()) {
             owner.loadMetadata();
         }
         if (owner.warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Não há armazéns configurados para receber a devolução.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPosNotice(FeedbackType.WARNING, "Sem armazém de devolução",
+                    "Configure um armazém para receber a devolução.");
             return;
         }
 
@@ -94,11 +94,11 @@ final class PosReturnDialog {
                 }
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(owner, "Quantidade inválida em alguma linha.", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPosNotice(FeedbackType.ERROR, "Quantidade inválida", "Corrija a quantidade indicada nas linhas da devolução.");
             return;
         }
         if (lines.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Informe pelo menos uma quantidade a devolver.", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPosNotice(FeedbackType.ERROR, "Quantidade obrigatória", "Indique pelo menos uma quantidade a devolver.");
             return;
         }
 
@@ -107,7 +107,7 @@ final class PosReturnDialog {
         if (!"CASH".equals(method) && !"CREDIT".equals(method)) {
             int accIdx = refundAccountCombo.getSelectedIndex();
             if (accIdx < 0 || accIdx >= owner.accountsList.size()) {
-                JOptionPane.showMessageDialog(owner, "Selecione a conta de tesouraria para o reembolso.", "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showPosNotice(FeedbackType.ERROR, "Conta obrigatória", "Seleccione a conta de tesouraria para o reembolso.");
                 return;
             }
             accountId = owner.accountsList.get(accIdx).id();
@@ -118,10 +118,8 @@ final class PosReturnDialog {
                 owner.warehousesList.get(warehouseReturnCombo.getSelectedIndex()).id(),
                 reasonField.getText().trim(), method, accountId, lines);
         UIHelper.runWithProgress(owner, "A registar devolução…", () -> owner.posApiClient.returnSale(request), note -> {
-            JOptionPane.showMessageDialog(owner,
-                    "Devolução registada com sucesso.\nNota de crédito: " + note.noteNumber()
-                            + "\nTotal: " + note.totalAmount() + " MT",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showPosSuccess("Devolução registada; nota de crédito " + note.noteNumber()
+                    + ", total " + note.totalAmount() + " MT.");
             int exchange = JOptionPane.showConfirmDialog(owner,
                     "Pretende lançar agora a venda de troca/substituição?",
                     "Troca", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
@@ -131,8 +129,7 @@ final class PosReturnDialog {
             owner.refreshSalesHistory();
             owner.refreshSessionState();
             owner.loadMetadata();
-        }, error -> JOptionPane.showMessageDialog(owner,
-                "Não foi possível registar a devolução: " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE));
+        }, error -> owner.showPosNotice(FeedbackType.ERROR,
+                "Não foi possível registar a devolução", error.getMessage()));
     }
 }

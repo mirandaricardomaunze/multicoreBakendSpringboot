@@ -4,6 +4,7 @@ import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 
@@ -24,20 +25,17 @@ final class OrderToTransferAction {
     static void convertSelected(ComercialPanel owner, ComercialApiClient api) {
         int row = TableFilter.selectedModelRow(owner.ordersTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner,
-                    "Selecione uma encomenda de reposição interna para converter em transferência.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showCommercialNotice(FeedbackType.WARNING, "Seleccione uma encomenda interna",
+                    "Escolha uma encomenda de reposição para converter em transferência.");
             return;
         }
 
         Object kindCell = owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_KIND);
         OrderKind kind = kindCell instanceof OrderKind k ? k : OrderKind.FORMAL_ORDER;
         if (!kind.usesWarehouseTransfer()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Esta encomenda é " + kind.label().toLowerCase() + " — uma venda a cliente.\n\n"
-                            + "A mercadoria de uma venda sai por factura ou por guia de remessa. "
-                            + "Só a reposição interna se converte em transferência entre armazéns.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showCommercialNotice(FeedbackType.INFO, "Tipo de encomenda incompatível",
+                    "Esta encomenda é " + kind.label().toLowerCase()
+                            + ". Só a reposição interna se converte em transferência.");
             return;
         }
 
@@ -80,12 +78,9 @@ final class OrderToTransferAction {
                 });
 
         if (dialog.showDialog() && created[0] != null) {
-            JOptionPane.showMessageDialog(owner,
-                    "Transferência " + created[0].transferNumber() + " criada a partir de " + orderNumber + ".\n\n"
-                            + "A mercadoria só sai do armazém quando a transferência for aprovada"
-                            + ("—".equals(destination) ? "" : ", com destino a " + destination) + ".\n"
-                            + "A aprovação faz-se em Stock › Transferências.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showCommercialSuccess("Transferência " + created[0].transferNumber() + " criada a partir de "
+                    + orderNumber + ("—".equals(destination) ? "" : ", com destino a " + destination)
+                    + "; requer aprovação em Stock › Transferências.");
             owner.loadOrdersTable();
         }
     }

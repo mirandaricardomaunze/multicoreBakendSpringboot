@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.*;
@@ -28,11 +29,26 @@ final class StockProductActions {
         }
     }
 
+    private static String sanitizeNumber(String raw) {
+        if (raw == null) return "";
+        String clean = raw.replaceAll("[^0-9,.-]", "").trim();
+        if (clean.contains(",") && clean.contains(".")) {
+            if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+                clean = clean.replace(".", "").replace(',', '.');
+            } else {
+                clean = clean.replace(",", "");
+            }
+        } else {
+            clean = clean.replace(',', '.');
+        }
+        return clean;
+    }
+
     /** Decimal > 0 a partir de texto livre; vazio/inválido/≤0 → null (campos opcionais de grosso). */
     private static BigDecimal parsePositiveOrNull(String raw) {
         if (raw == null || raw.trim().isEmpty()) return null;
         try {
-            BigDecimal v = new BigDecimal(raw.trim());
+            BigDecimal v = new BigDecimal(sanitizeNumber(raw));
             return v.signum() > 0 ? v : null;
         } catch (NumberFormatException ex) {
             return null;
@@ -43,7 +59,7 @@ final class StockProductActions {
     private static BigDecimal parseDecimalOrZero(String raw) {
         if (raw == null || raw.trim().isEmpty()) return BigDecimal.ZERO;
         try {
-            BigDecimal v = new BigDecimal(raw.trim());
+            BigDecimal v = new BigDecimal(sanitizeNumber(raw));
             return v.signum() < 0 ? BigDecimal.ZERO : v;
         } catch (NumberFormatException ex) {
             return BigDecimal.ZERO;
@@ -53,11 +69,11 @@ final class StockProductActions {
     public void createBatchEntryDialog(ProductDTO preselected) {
         List<ProductDTO> products = new ArrayList<>(owner.catalogProducts);
         if (products.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre primeiro um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Produto necessário", "Registe primeiro um produto.");
             return;
         }
         if (owner.warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Crie primeiro um armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Armazém necessário", "Registe primeiro um armazém.");
             return;
         }
 
@@ -71,7 +87,7 @@ final class StockProductActions {
         totalUnitsField.setEditable(false);
         JLabel unitsPerBoxHint = new JLabel(" ");
         unitsPerBoxHint.setForeground(UIHelper.TEXT_MUTED);
-        JTextField expirationField = new JTextField();
+        DateField expirationField = new DateField();
         JTextField batchField = new JTextField();
         JTextField serialField = new JTextField();
         JTextField descField = new JTextField("Entrada de lote/validade");
@@ -81,7 +97,6 @@ final class StockProductActions {
         UIHelper.styleTextField(boxesField);
         UIHelper.styleTextField(looseField);
         UIHelper.styleTextField(totalUnitsField);
-        UIHelper.styleTextField(expirationField);
         UIHelper.styleTextField(batchField);
         UIHelper.styleTextField(serialField);
         UIHelper.styleTextField(descField);
@@ -147,24 +162,24 @@ final class StockProductActions {
             // A quantidade gravada é o total em unidades (caixas × und/caixa + soltas).
             qty = new BigDecimal(totalUnitsField.getText().trim());
             if (qty.compareTo(BigDecimal.ZERO) <= 0) {
-                JOptionPane.showMessageDialog(owner, "Quantidade deve ser maior que zero. Indique o nº de caixas e/ou unidades soltas.", "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida", "Indique uma quantidade maior que zero em caixas e/ou unidades soltas.");
                 return;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(owner, "Quantidade inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida", "Introduza uma quantidade numérica válida.");
             return;
         }
 
         String expRaw = expirationField.getText().trim();
         if (expRaw.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Validade é obrigatória (formato yyyy-MM-dd).", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.ERROR, "Validade obrigatória", "Introduza a validade no formato yyyy-MM-dd.");
             return;
         }
         LocalDate expirationDate;
         try {
             expirationDate = LocalDate.parse(expRaw);
         } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(owner, "Validade inválida. Use o formato yyyy-MM-dd (ex: 2027-12-31).", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.ERROR, "Validade inválida", "Use o formato yyyy-MM-dd, por exemplo 2027-12-31.");
             return;
         }
         if (expirationDate.isBefore(LocalDate.now())) {
@@ -187,9 +202,7 @@ final class StockProductActions {
                     selectedDTO.id(), selectedWarehouse.id(), qty, "ENTRY",
                     batch, serial, desc, expirationDate);
         UIHelper.runWithProgress(owner, "A registar entrada de lote…", () -> owner.inventoryApiClient.registerMovement(request), ignored -> {
-            JOptionPane.showMessageDialog(owner,
-                    "Lote registado com sucesso para '" + selectedDTO.name() + "'.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showStockSuccess("Lote registado com sucesso para '" + selectedDTO.name() + "'.");
             owner.onPanelSelected();
         }, owner::showStockError);
     }
@@ -239,10 +252,11 @@ final class StockProductActions {
         // IVA dinâmico: taxa de IVA por produto (default = IVA Normal 16%).
         JComboBox<String> taxCombo = new JComboBox<>();
         UIHelper.styleComboBox(taxCombo);
+        taxCombo.addItem("— IVA Padrão (16%) —");
         int defaultTaxIdx = 0;
         for (int i = 0; i < vatRates.size(); i++) {
             taxCombo.addItem(vatRates.get(i).name());
-            if ("IVA_STANDARD".equals(vatRates.get(i).type())) defaultTaxIdx = i;
+            if ("IVA_STANDARD".equals(vatRates.get(i).type())) defaultTaxIdx = i + 1;
         }
         if (taxCombo.getItemCount() > 0) taxCombo.setSelectedIndex(defaultTaxIdx);
 
@@ -262,7 +276,7 @@ final class StockProductActions {
             if (fc.showOpenDialog(owner) == JFileChooser.APPROVE_OPTION) {
                 byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
                 if (bytes == null) {
-                    JOptionPane.showMessageDialog(owner, "Não foi possível ler a imagem.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    owner.showStockNotice(FeedbackType.ERROR, "Imagem inválida", "Não foi possível ler a imagem seleccionada.");
                     return;
                 }
                 imageHolder[0] = bytes;
@@ -294,77 +308,93 @@ final class StockProductActions {
                 "Imagem (opcional):", imagePanel
         );
 
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Registar Novo Produto", "fas-boxes", "Defina os dados e o IVA do artigo", dialogPanel).showDialog();
-        if (confirmed) {
+        ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Registar Novo Produto", "fas-boxes",
+                "Defina os dados e o IVA do artigo", dialogPanel)
+                .setConfirmButton("Registar Produto", "fas-save");
+
+        final ProductDTO[] createdHolder = {null};
+        dialog.setOnSaveAsync(() -> {
             String sku = skuField.getText().trim();
             String reference = referenceField.getText().trim();
             String barcode = barcodeField.getText().trim();
             String name = nameField.getText().trim();
-            String salesPriceStr = salesPriceField.getText().trim();
-            String purchasePriceStr = purchasePriceField.getText().trim();
-            String minStockStr = minStockField.getText().trim();
+            String salesPriceStr = sanitizeNumber(salesPriceField.getText());
+            String purchasePriceStr = sanitizeNumber(purchasePriceField.getText());
+            String minStockStr = sanitizeNumber(minStockField.getText());
             String unitsPerBoxStr = unitsPerBoxField.getText().trim();
             String desc = descField.getText().trim();
 
-            if (sku.isEmpty() || name.isEmpty() || salesPriceStr.isEmpty() || purchasePriceStr.isEmpty()) {
-                JOptionPane.showMessageDialog(owner, "SKU, Nome, Preço de Venda e Preço de Compra são campos obrigatórios.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
+            if (sku.isEmpty() || name.isEmpty() || salesPriceStr.isEmpty()) {
+                throw new BusinessRuleException("Preencha SKU, Nome e Preço de Venda.");
             }
 
+            BigDecimal salesPrice;
+            BigDecimal purchasePrice;
+            BigDecimal minStock;
             try {
-                BigDecimal salesPrice = new BigDecimal(salesPriceStr);
-                BigDecimal purchasePrice = new BigDecimal(purchasePriceStr);
-                BigDecimal minStock = new BigDecimal(minStockStr);
-                int unitsPerBox;
-                try {
-                    unitsPerBox = unitsPerBoxStr.isEmpty() ? 1 : Integer.parseInt(unitsPerBoxStr);
-                    if (unitsPerBox < 1) unitsPerBox = 1;
-                } catch (NumberFormatException nfe) {
-                    JOptionPane.showMessageDialog(owner, "Unidades por caixa deve ser um número inteiro.", "Erro", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
+                salesPrice = new BigDecimal(salesPriceStr);
+                purchasePrice = purchasePriceStr.isEmpty() ? BigDecimal.ZERO : new BigDecimal(purchasePriceStr);
+                minStock = minStockStr.isEmpty() ? BigDecimal.ZERO : new BigDecimal(minStockStr);
+            } catch (NumberFormatException nfe) {
+                throw new BusinessRuleException("Preços e stock mínimo devem ser números válidos.");
+            }
 
-                int catIdx = categoryCombo.getSelectedIndex();
-                Long categoryId = null;
-                if (catIdx > 0 && (catIdx - 1) < categories.size()) {
-                    categoryId = categories.get(catIdx - 1).id();
-                }
-                Long taxRateId = null;
-                int taxIdx = taxCombo.getSelectedIndex();
-                if (taxIdx >= 0 && taxIdx < vatRates.size()) {
-                    taxRateId = vatRates.get(taxIdx).id();
-                }
-                BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
-                BigDecimal wholesaleMinQty = parsePositiveOrNull(wholesaleMinQtyField.getText());
-                BigDecimal netWeightKg = parsePositiveOrNull(netWeightField.getText());
-                BigDecimal grossWeightKg = parsePositiveOrNull(grossWeightField.getText());
+            if (salesPrice.signum() < 0) throw new BusinessRuleException("O preço de venda não pode ser negativo.");
+            if (purchasePrice.signum() < 0) throw new BusinessRuleException("O preço de compra não pode ser negativo.");
+            if (minStock.signum() < 0) throw new BusinessRuleException("O stock mínimo não pode ser negativo.");
 
-                Long selectedCategoryId = categoryId;
-                Long selectedTaxRateId = taxRateId;
-                int selectedUnitsPerBox = unitsPerBox;
-                byte[] selectedImage = imageHolder[0];
-                UIHelper.runWithProgress(owner, "A registar produto…", () -> {
-                    ProductDTO created = owner.comercialApiClient.createProduct(
-                            sku, reference.isEmpty() ? null : reference,
-                            barcode.isEmpty() ? null : barcode, name, salesPrice, purchasePrice,
-                            minStock, selectedUnitsPerBox, selectedCategoryId, "UNIT", true,
-                            selectedTaxRateId, desc.isEmpty() ? null : desc,
-                            wholesalePrice, wholesaleMinQty, netWeightKg, grossWeightKg);
-                    if (selectedImage != null) {
-                        owner.comercialApiClient.updateProductImage(created.id(), selectedImage);
-                    }
-                    return created;
-                }, created -> {
-                    owner.onPanelSelected();
-                    int addStock = JOptionPane.showConfirmDialog(owner,
-                        "Produto '" + name + "' cadastrado.\nDeseja adicionar stock inicial com validade agora?",
+            int unitsPerBox = parseIntOrZero(unitsPerBoxStr);
+            if (unitsPerBox < 1) unitsPerBox = 1;
+
+            int catIdx = categoryCombo.getSelectedIndex();
+            Long categoryId = null;
+            if (catIdx > 0 && (catIdx - 1) < categories.size()) {
+                categoryId = categories.get(catIdx - 1).id();
+            }
+
+            Long taxRateId = null;
+            int taxIdx = taxCombo.getSelectedIndex();
+            if (taxIdx > 0 && (taxIdx - 1) < vatRates.size()) {
+                taxRateId = vatRates.get(taxIdx - 1).id();
+            }
+
+            BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
+            BigDecimal wholesaleMinQty = parsePositiveOrNull(wholesaleMinQtyField.getText());
+            BigDecimal netWeightKg = parsePositiveOrNull(netWeightField.getText());
+            BigDecimal grossWeightKg = parsePositiveOrNull(grossWeightField.getText());
+
+            if (netWeightKg != null && grossWeightKg != null && grossWeightKg.compareTo(netWeightKg) < 0) {
+                throw new BusinessRuleException("O peso bruto deve ser igual ou superior ao peso líquido.");
+            }
+
+            Long selectedCategoryId = categoryId;
+            Long selectedTaxRateId = taxRateId;
+            int selectedUnitsPerBox = unitsPerBox;
+            byte[] selectedImage = imageHolder[0];
+
+            return () -> {
+                ProductDTO created = owner.comercialApiClient.createProduct(
+                        sku, reference.isEmpty() ? null : reference,
+                        barcode.isEmpty() ? null : barcode, name, salesPrice, purchasePrice,
+                        minStock, selectedUnitsPerBox, selectedCategoryId, "UNIT", true,
+                        selectedTaxRateId, desc.isEmpty() ? null : desc,
+                        wholesalePrice, wholesaleMinQty, netWeightKg, grossWeightKg);
+                if (selectedImage != null) {
+                    owner.comercialApiClient.updateProductImage(created.id(), selectedImage);
+                }
+                createdHolder[0] = created;
+                return created;
+            };
+        });
+
+        if (dialog.showDialog()) {
+            owner.onPanelSelected();
+            ProductDTO created = createdHolder[0];
+            if (created != null) {
+                int addStock = JOptionPane.showConfirmDialog(owner,
+                        "Produto '" + created.name() + "' cadastrado.\nDeseja adicionar stock inicial com validade agora?",
                         "Adicionar stock inicial", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                    if (addStock == JOptionPane.YES_OPTION) createBatchEntryDialog(created);
-                }, owner::showStockError);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(owner, "Os valores de preço e stock mínimo devem ser numéricos.", "Erro", JOptionPane.ERROR_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(owner, "Erro ao registar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                if (addStock == JOptionPane.YES_OPTION) createBatchEntryDialog(created);
             }
         }
     }
@@ -376,15 +406,15 @@ final class StockProductActions {
      */
     public void editProductDialog(Long preselectedProductId) {
         loadProductOptions(options -> showEditProductDialog(
-                preselectedProductId, options.categories(), options.vatRates()));
+                preselectedProductId, options.products(), options.categories(), options.vatRates()));
     }
 
     private void showEditProductDialog(Long preselectedProductId,
+            java.util.List<ProductDTO> products,
             java.util.List<mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO> categories,
             java.util.List<mz.multicore.erp.modules.fiscal.dto.TaxRateDTO> vatRates) {
-        java.util.List<ProductDTO> products = new ArrayList<>(owner.catalogProducts);
-        if (products.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre primeiro um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+        if (products == null || products.isEmpty()) {
+            owner.showStockNotice(FeedbackType.WARNING, "Produto necessário", "Não foram encontrados produtos registados.");
             return;
         }
 
@@ -434,6 +464,7 @@ final class StockProductActions {
 
         JComboBox<String> taxCombo = new JComboBox<>();
         UIHelper.styleComboBox(taxCombo);
+        taxCombo.addItem("— IVA Padrão (16%) —");
         for (var r : vatRates) taxCombo.addItem(r.name());
 
         final byte[][] imageHolder = {null};
@@ -451,7 +482,7 @@ final class StockProductActions {
             if (fc.showOpenDialog(owner) == JFileChooser.APPROVE_OPTION) {
                 byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
                 if (bytes == null) {
-                    JOptionPane.showMessageDialog(owner, "Não foi possível ler a imagem.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    owner.showStockNotice(FeedbackType.ERROR, "Imagem inválida", "Não foi possível ler a imagem seleccionada.");
                     return;
                 }
                 imageHolder[0] = bytes;
@@ -489,9 +520,10 @@ final class StockProductActions {
                     if (categories.get(i).id().equals(p.categoryId())) { categoryCombo.setSelectedIndex(i + 1); break; }
                 }
             }
+            taxCombo.setSelectedIndex(0);
             if (p.taxRateId() != null) {
                 for (int i = 0; i < vatRates.size(); i++) {
-                    if (vatRates.get(i).id().equals(p.taxRateId())) { taxCombo.setSelectedIndex(i); break; }
+                    if (vatRates.get(i).id().equals(p.taxRateId())) { taxCombo.setSelectedIndex(i + 1); break; }
                 }
             }
             imageHolder[0] = null; // só reenvia imagem se o operador escolher uma nova
@@ -526,49 +558,58 @@ final class StockProductActions {
                 "Imagem (opcional):", imagePanel
         );
 
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Editar Produto", "fas-edit", "Actualize os dados do artigo", dialogPanel).showDialog();
-        if (!confirmed) return;
+        ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Editar Produto", "fas-edit",
+                "Actualize os dados do artigo", dialogPanel)
+                .setConfirmButton("Actualizar", "fas-save");
 
-        int idx = productCombo.getSelectedIndex();
-        if (idx < 0 || idx >= products.size()) return;
-        ProductDTO selected = products.get(idx);
-
-        String reference = referenceField.getText().trim();
-        String barcode = barcodeField.getText().trim();
-        String name = nameField.getText().trim();
-        String salesPriceStr = salesPriceField.getText().trim();
-        String purchasePriceStr = purchasePriceField.getText().trim();
-        String minStockStr = minStockField.getText().trim();
-        String unitsPerBoxStr = unitsPerBoxField.getText().trim();
-        String desc = descField.getText().trim();
-
-        if (name.isEmpty() || salesPriceStr.isEmpty() || purchasePriceStr.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Nome, Preço de Venda e Preço de Compra são campos obrigatórios.", "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            BigDecimal salesPrice = new BigDecimal(salesPriceStr);
-            BigDecimal purchasePrice = new BigDecimal(purchasePriceStr);
-            BigDecimal minStock = new BigDecimal(minStockStr.isEmpty() ? "0" : minStockStr);
-            int unitsPerBox;
-            try {
-                unitsPerBox = unitsPerBoxStr.isEmpty() ? 1 : Integer.parseInt(unitsPerBoxStr);
-                if (unitsPerBox < 1) unitsPerBox = 1;
-            } catch (NumberFormatException nfe) {
-                JOptionPane.showMessageDialog(owner, "Unidades por caixa deve ser um número inteiro.", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
+        dialog.setOnSaveAsync(() -> {
+            int idx = productCombo.getSelectedIndex();
+            if (idx < 0 || idx >= products.size()) {
+                throw new BusinessRuleException("Selecione um produto válido.");
             }
+            ProductDTO selected = products.get(idx);
+
+            String reference = referenceField.getText().trim();
+            String barcode = barcodeField.getText().trim();
+            String name = nameField.getText().trim();
+            String salesPriceStr = sanitizeNumber(salesPriceField.getText());
+            String purchasePriceStr = sanitizeNumber(purchasePriceField.getText());
+            String minStockStr = sanitizeNumber(minStockField.getText());
+            String unitsPerBoxStr = unitsPerBoxField.getText().trim();
+            String desc = descField.getText().trim();
+
+            if (name.isEmpty() || salesPriceStr.isEmpty()) {
+                throw new BusinessRuleException("Preencha Nome e Preço de Venda.");
+            }
+
+            BigDecimal salesPrice;
+            BigDecimal purchasePrice;
+            BigDecimal minStock;
+            try {
+                salesPrice = new BigDecimal(salesPriceStr);
+                purchasePrice = purchasePriceStr.isEmpty() ? BigDecimal.ZERO : new BigDecimal(purchasePriceStr);
+                minStock = minStockStr.isEmpty() ? BigDecimal.ZERO : new BigDecimal(minStockStr);
+            } catch (NumberFormatException nfe) {
+                throw new BusinessRuleException("Preços e stock mínimo devem ser números válidos.");
+            }
+
+            if (salesPrice.signum() < 0) throw new BusinessRuleException("O preço de venda não pode ser negativo.");
+            if (purchasePrice.signum() < 0) throw new BusinessRuleException("O preço de compra não pode ser negativo.");
+            if (minStock.signum() < 0) throw new BusinessRuleException("O stock mínimo não pode ser negativo.");
+
+            int unitsPerBox = parseIntOrZero(unitsPerBoxStr);
+            if (unitsPerBox < 1) unitsPerBox = 1;
 
             int catIdx = categoryCombo.getSelectedIndex();
             Long categoryId = null;
             if (catIdx > 0 && (catIdx - 1) < categories.size()) {
                 categoryId = categories.get(catIdx - 1).id();
             }
+
             Long taxRateId = null;
             int taxIdx = taxCombo.getSelectedIndex();
-            if (taxIdx >= 0 && taxIdx < vatRates.size()) {
-                taxRateId = vatRates.get(taxIdx).id();
+            if (taxIdx > 0 && (taxIdx - 1) < vatRates.size()) {
+                taxRateId = vatRates.get(taxIdx - 1).id();
             }
 
             BigDecimal wholesalePrice = parsePositiveOrNull(wholesalePriceField.getText());
@@ -576,42 +617,52 @@ final class StockProductActions {
             BigDecimal netWeightKg = parsePositiveOrNull(netWeightField.getText());
             BigDecimal grossWeightKg = parsePositiveOrNull(grossWeightField.getText());
 
+            if (netWeightKg != null && grossWeightKg != null && grossWeightKg.compareTo(netWeightKg) < 0) {
+                throw new BusinessRuleException("O peso bruto deve ser igual ou superior ao peso líquido.");
+            }
+
             Long selectedCategoryId = categoryId;
             Long selectedTaxRateId = taxRateId;
             int selectedUnitsPerBox = unitsPerBox;
             byte[] selectedImage = imageHolder[0];
-            UIHelper.runWithProgress(owner, "A actualizar produto…", () -> {
+            String saleType = selected.saleType() != null ? selected.saleType() : "UNIT";
+            boolean stockTracked = selected.stockTracked();
+
+            return () -> {
                 owner.comercialApiClient.updateProduct(
                         selected.id(), reference.isEmpty() ? null : reference,
                         barcode.isEmpty() ? null : barcode, name, salesPrice, purchasePrice,
-                        minStock, selectedUnitsPerBox, selectedCategoryId, selected.saleType(),
-                        selected.stockTracked(), selectedTaxRateId,
+                        minStock, selectedUnitsPerBox, selectedCategoryId, saleType,
+                        stockTracked, selectedTaxRateId,
                         desc.isEmpty() ? null : desc, wholesalePrice, wholesaleMinQty,
                         netWeightKg, grossWeightKg);
                 if (selectedImage != null) {
                     owner.comercialApiClient.updateProductImage(selected.id(), selectedImage);
                 }
                 return null;
-            }, ignored -> {
-                owner.onPanelSelected();
-                JOptionPane.showMessageDialog(owner, "Produto '" + name + "' actualizado com sucesso.",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            }, owner::showStockError);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(owner, "Os valores de preço e stock mínimo devem ser numéricos.", "Erro", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(owner, "Erro ao actualizar produto: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            };
+        });
+
+        boolean confirmed = dialog.showDialog();
+        if (confirmed) {
+            owner.onPanelSelected();
+            owner.showStockSuccess("Produto actualizado com sucesso.");
         }
     }
 
     private void loadProductOptions(java.util.function.Consumer<ProductOptions> onLoaded) {
-        UIHelper.loadAsync(owner, () -> new ProductOptions(
-                        owner.comercialApiClient.getActiveCategories(),
-                        owner.comercialApiClient.getActiveVatRates()),
-                onLoaded, owner::showStockError);
+        UIHelper.loadAsync(owner, () -> {
+            java.util.List<ProductDTO> products = owner.comercialApiClient.getAllProducts();
+            owner.catalogProducts = products;
+            return new ProductOptions(
+                    products,
+                    owner.comercialApiClient.getActiveCategories(),
+                    owner.comercialApiClient.getActiveVatRates());
+        }, onLoaded, owner::showStockError);
     }
 
     private record ProductOptions(
+            java.util.List<ProductDTO> products,
             java.util.List<mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO> categories,
             java.util.List<mz.multicore.erp.modules.fiscal.dto.TaxRateDTO> vatRates) {}
 }

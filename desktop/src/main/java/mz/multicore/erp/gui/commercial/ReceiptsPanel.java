@@ -21,6 +21,7 @@ public final class ReceiptsPanel extends JPanel {
     private final Runnable invoicesRefresh;
     private final DefaultTableModel model;
     private final JTable table;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public ReceiptsPanel(ComercialApiClient apiClient, Runnable invoicesRefresh) {
         this.apiClient = apiClient;
@@ -28,7 +29,11 @@ public final class ReceiptsPanel extends JPanel {
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(15, 15, 15, 15));
-        add(UIHelper.createHeading("Recibos Emitidos (Liquidações)"), BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        JComponent heading = UIHelper.createHeading("Recibos Emitidos (Liquidações)");
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(heading); north.add(feedback); add(north, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -71,8 +76,7 @@ public final class ReceiptsPanel extends JPanel {
     public void openPayment(Long invoiceId, String invoiceNumber, BigDecimal invoiceTotal,
                             List<TreasuryAccountDTO> accounts) {
         if (accounts.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Não existem contas de tesouraria registadas.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Sem contas de tesouraria", "Registe uma conta de tesouraria antes de emitir o recibo.");
             return;
         }
         JComboBox<String> accountCombo = new JComboBox<>();
@@ -96,8 +100,7 @@ public final class ReceiptsPanel extends JPanel {
         try {
             BigDecimal amount = amountField.value();
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                JOptionPane.showMessageDialog(this, "O valor pago deve ser maior que zero.",
-                        "Erro", JOptionPane.ERROR_MESSAGE);
+                showNotice(FeedbackType.ERROR, "Valor inválido", "O valor pago deve ser maior que zero.");
                 return;
             }
             Long accountId = accounts.get(accountCombo.getSelectedIndex()).id();
@@ -108,14 +111,12 @@ public final class ReceiptsPanel extends JPanel {
                         String message = remaining.compareTo(BigDecimal.ZERO) > 0
                                 ? "Recibo emitido. Continuam por receber " + remaining + " MT desta fatura."
                                 : "Fatura liquidada com sucesso! Recibo emitido.";
-                        JOptionPane.showMessageDialog(this, message, "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                        ToastManager.success(this, message);
                         invoicesRefresh.run();
                         refresh();
-                    }, error -> JOptionPane.showMessageDialog(this,
-                            "Não foi possível emitir o recibo: " + error.getMessage(),
-                            "Erro", JOptionPane.ERROR_MESSAGE));
+                    }, error -> showNotice(FeedbackType.ERROR, "Não foi possível emitir o recibo", error.getMessage()));
         } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.ERROR, "Dados de pagamento inválidos", ex.getMessage());
         }
     }
 
@@ -135,8 +136,7 @@ public final class ReceiptsPanel extends JPanel {
     private void cancelSelected() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione um recibo na tabela para anular.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Seleccione um recibo", "Escolha um recibo na tabela para anular.");
             return;
         }
         Long id = (Long) model.getValueAt(row, 0);
@@ -148,9 +148,7 @@ public final class ReceiptsPanel extends JPanel {
             apiClient.cancelReceipt(id, reason);
             return null;
         }, ignored -> {
-            JOptionPane.showMessageDialog(this,
-                    "Recibo " + number + " anulado com sucesso. O estado da fatura foi actualizado.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Recibo " + number + " anulado; o estado da fatura foi actualizado.");
             invoicesRefresh.run();
             refresh();
         }, error -> showError("anular recibo", error));
@@ -163,7 +161,10 @@ public final class ReceiptsPanel extends JPanel {
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        showNotice(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
+    }
+
+    private void showNotice(FeedbackType type, String title, String message) {
+        feedback.show(type, title, message, null, null);
     }
 }

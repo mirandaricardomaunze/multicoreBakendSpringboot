@@ -33,6 +33,7 @@ class PurchaseServiceTest {
     private SupplierRepository supplierRepository;
     private mz.multicore.erp.modules.purchases.repository.PurchaseRepository purchaseRepository;
     private FinanceService financeService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private PurchaseService service;
 
     @BeforeEach
@@ -40,6 +41,7 @@ class PurchaseServiceTest {
         supplierRepository = mock(SupplierRepository.class);
         purchaseRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseRepository.class);
         financeService = mock(FinanceService.class);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
         service = new PurchaseService(
                 supplierRepository,
                 purchaseRepository,
@@ -49,12 +51,18 @@ class PurchaseServiceTest {
                 mock(InventoryService.class),
                 financeService,
                 mock(DocumentNumberService.class),
-                mock(AuditLogService.class));
+                mock(AuditLogService.class), eventPublisher);
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
         when(supplierRepository.save(any(Supplier.class))).thenAnswer(inv -> inv.getArgument(0));
         when(purchaseRepository.save(any(mz.multicore.erp.modules.purchases.model.Purchase.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
+        when(financeService.registerTransaction(anyLong(), anyString(), any(), anyString()))
+                .thenReturn(new mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO(
+                        91L, 9L, "Banco", "CREDIT", new java.math.BigDecimal("100"),
+                        "Pagamento", java.time.LocalDateTime.of(2026, 9, 4, 10, 0)));
+        when(financeService.accountType(anyLong()))
+                .thenReturn(mz.multicore.erp.modules.financeira.model.TreasuryAccountType.BANK);
     }
 
     private mz.multicore.erp.modules.purchases.model.Purchase purchase(String total, String paid, String status) {
@@ -145,6 +153,7 @@ class PurchaseServiceTest {
         var dto = service.registerSupplierPayment(50L, new java.math.BigDecimal("100"), 9L, "ref-1");
         assertEquals(new java.math.BigDecimal("150"), dto.amountPaid());
         verify(financeService).registerTransaction(eq(9L), eq("CREDIT"), eq(new java.math.BigDecimal("100")), anyString());
+        verify(eventPublisher).publishEvent(any(mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent.class));
     }
 
     @Test // AP-05

@@ -14,4 +14,5 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
     List<ApprovalRequest> findByCompanyIdAndStatus(Long companyId, ApprovalStatus status);
     List<ApprovalRequest> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
     java.util.Optional<ApprovalRequest> findByIdAndCompanyId(Long id, Long companyId);
+    List<ApprovalRequest> findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(Long companyId, String documentType, Long documentId, ApprovalStatus status);
 }

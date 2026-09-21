@@ -11,11 +11,13 @@ Este directorio organiza a documentacao que orienta arquitectura, manutencao e a
 | Criar ou alterar tabelas/migrations | [DATABASE.md](DATABASE.md) |
 | Criar ou alterar endpoints REST | [API_CONTRACTS.md](API_CONTRACTS.md) |
 | Melhorar telas Swing | [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md) |
+| Uniformizar mensagens, erros, toasts e confirmações Swing | [UI_FEEDBACK_PROFISSIONAL_SPEC.md](UI_FEEDBACK_PROFISSIONAL_SPEC.md) + [UI_FEEDBACK_PROFISSIONAL_HARNESS.md](UI_FEEDBACK_PROFISSIONAL_HARNESS.md) |
 | Decidir que testes escrever | [TESTING_STRATEGY.md](TESTING_STRATEGY.md) |
 | Rever permissoes, tenant ou auditoria | [SECURITY_AND_AUDIT.md](SECURITY_AND_AUDIT.md) |
 | Preparar o sistema para loja/mercearia | [RETAIL_STORE_SPEC.md](RETAIL_STORE_SPEC.md) + [RETAIL_STORE_HARNESS.md](RETAIL_STORE_HARNESS.md) |
 | Fechar as lacunas do RH (contrato, ponto, cessacao, retencoes) | [RH_COMPLETO_SPEC.md](RH_COMPLETO_SPEC.md) + [RH_COMPLETO_HARNESS.md](RH_COMPLETO_HARNESS.md) |
 | Verificar conformidade legal (laboral e dados pessoais, Mocambique) | [CONFORMIDADE_LEGAL_MZ_SPEC.md](CONFORMIDADE_LEGAL_MZ_SPEC.md) + [CONFORMIDADE_LEGAL_MZ_HARNESS.md](CONFORMIDADE_LEGAL_MZ_HARNESS.md) |
+| Imprimir documentos (modal, impressora, copias, posicao) | [IMPRESSAO_MODAL_SPEC.md](IMPRESSAO_MODAL_SPEC.md) + [IMPRESSAO_MODAL_HARNESS.md](IMPRESSAO_MODAL_HARNESS.md) |
 | Correr, compilar ou diagnosticar o sistema | [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) |
 | Entender decisoes arquitecturais historicas | [adr/](adr/) |
 

@@ -324,6 +324,7 @@ public class ConfigPanel extends JPanel {
         };
         usersTable = new JTable(usersTableModel);
         UIHelper.styleTable(usersTable);
+        usersTable.putClientProperty("noRowInspector", Boolean.TRUE);
         usersTable.getColumnModel().getColumn(2).setCellRenderer(mz.multicore.erp.gui.components.TableCellRenderers.role());
         usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override

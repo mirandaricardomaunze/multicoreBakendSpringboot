@@ -79,7 +79,9 @@ public final class HRPanelScreenshotDriver {
             UIHelper.loadAndApplySavedTheme();
             JFrame frame = new JFrame("Driver RH");
             UIHelper.registerMainWindow(frame);
-            HRPanel panel = new HRPanel(hrApiClient);
+            // O driver fotografa ecrãs; não imprime. Sem cliente de impressão, o botão
+            // "Exportar PDF" diz-lhe isso em vez de estoirar.
+            HRPanel panel = new HRPanel(hrApiClient, null);
             frame.setContentPane(panel);
             frame.setSize(WIDTH, HEIGHT);
             frame.setVisible(true);

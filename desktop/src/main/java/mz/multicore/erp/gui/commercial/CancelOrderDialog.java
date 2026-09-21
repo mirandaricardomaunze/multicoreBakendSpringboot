@@ -3,6 +3,8 @@ package mz.multicore.erp.gui.commercial;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.ComercialPanel;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 
 import javax.swing.*;
@@ -28,9 +30,8 @@ public final class CancelOrderDialog {
 
     private void show(List<OrderDTO> orders) {
         if (orders.isEmpty()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Não há encomendas canceláveis. Apenas encomendas ainda não faturadas podem ser canceladas.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            notice(FeedbackType.INFO, "Sem encomendas canceláveis",
+                    "Apenas encomendas ainda não faturadas podem ser canceladas.");
             return;
         }
         JTextField search = new JTextField();
@@ -62,7 +63,7 @@ public final class CancelOrderDialog {
         String text = reason.getText().trim();
         if (index < 0 || index >= orders.size()) return;
         if (text.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Indique o motivo do cancelamento.", "Erro", JOptionPane.ERROR_MESSAGE);
+            notice(FeedbackType.ERROR, "Motivo obrigatório", "Indique o motivo do cancelamento.");
             return;
         }
         OrderDTO selected = orders.get(index);
@@ -70,14 +71,16 @@ public final class CancelOrderDialog {
             apiClient.cancelOrder(selected.id(), text);
             return null;
         }, ignored -> {
-            JOptionPane.showMessageDialog(owner, "Encomenda " + selected.orderNumber() + " cancelada.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            if (owner instanceof ComercialPanel panel) panel.showCommercialSuccess(
+                    "Encomenda " + selected.orderNumber() + " cancelada.");
             ordersRefresh.run();
         }, error -> showError("cancelar encomenda", error));
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(owner, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        notice(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
+    }
+    private void notice(FeedbackType type, String title, String message) {
+        if (owner instanceof ComercialPanel panel) panel.showCommercialNotice(type, title, message);
     }
 }

@@ -29,6 +29,7 @@ try {
     if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
         throw "WiX 3 não encontrado. Instale-o ou extraia os binários em tools\wix."
     }
+    $icon = Join-Path $workspace "installer\app-icon.ico"
     New-Item -ItemType Directory -Force -Path $output | Out-Null
     jpackage `
         --type exe `
@@ -36,11 +37,13 @@ try {
         --app-version $Version `
         --vendor "Multicore" `
         --description "Sistema integrado de gestão Multicore" `
+        --icon $icon `
         --input $desktopTarget `
         --main-jar $desktopJar.Name `
         --main-class "org.springframework.boot.loader.launch.JarLauncher" `
         --license-file $license `
         --dest $output `
+        --win-per-user-install `
         --win-menu `
         --win-shortcut `
         --win-dir-chooser

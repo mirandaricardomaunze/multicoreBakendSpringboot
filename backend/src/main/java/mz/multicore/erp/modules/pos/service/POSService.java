@@ -226,25 +226,103 @@ public class POSService {
         CurrentUserContext.requireCompany(session.getCompany().getId());
 
         BigDecimal opening = session.getOpeningBalance() == null ? BigDecimal.ZERO : session.getOpeningBalance();
-        BigDecimal sales = BigDecimal.ZERO;
+        BigDecimal cashSales = BigDecimal.ZERO;
         BigDecimal suprimentos = BigDecimal.ZERO;
         BigDecimal sangrias = BigDecimal.ZERO;
         BigDecimal refunds = BigDecimal.ZERO;
         int saleCount = 0;
+        int refundsCount = 0;
         for (TillMovement m : tillMovementRepository.findByTillSessionId(sessionId)) {
             switch (m.getMovementType()) {
-                case SALE -> { sales = sales.add(m.getAmount()); saleCount++; }
+                case SALE -> { cashSales = cashSales.add(m.getAmount()); saleCount++; }
                 case SUPRIMENTO -> suprimentos = suprimentos.add(m.getAmount());
                 case SANGRIA -> sangrias = sangrias.add(m.getAmount());
-                case REFUND -> refunds = refunds.add(m.getAmount());
+                case REFUND -> { refunds = refunds.add(m.getAmount()); refundsCount++; }
             }
         }
-        BigDecimal expected = opening.add(sales).add(suprimentos).subtract(sangrias).subtract(refunds);
+
+        // Vendas por outros meios de pagamento durante o período da sessão
+        LocalDateTime openDate = session.getOpenDate();
+        LocalDateTime closeDate = session.getCloseDate() != null ? session.getCloseDate() : LocalDateTime.now();
+
+        BigDecimal cardSales = BigDecimal.ZERO;
+        BigDecimal mpesaSales = BigDecimal.ZERO;
+        BigDecimal chequeSales = BigDecimal.ZERO;
+        BigDecimal creditSales = BigDecimal.ZERO;
+
+        List<PaymentEntry> entries = paymentEntryRepository.findByInvoiceCompanyIdAndPaidAtBetween(
+                session.getCompany().getId(), openDate, closeDate);
+
+        for (PaymentEntry entry : entries) {
+            if (entry.getInvoice() != null && SalesChannel.POS == entry.getInvoice().getSalesChannel()
+                    && (session.getOperator() == null || session.getOperator().equalsIgnoreCase(entry.getInvoice().getCreatedBy()))) {
+                if (entry.getMethod() != null) {
+                    switch (entry.getMethod()) {
+                        case CARD -> cardSales = cardSales.add(entry.getAmount());
+                        case MPESA, EMOLA -> mpesaSales = mpesaSales.add(entry.getAmount());
+                        case BANK_TRANSFER -> chequeSales = chequeSales.add(entry.getAmount());
+                        case CREDIT -> creditSales = creditSales.add(entry.getAmount());
+                        default -> {}
+                    }
+                }
+            }
+        }
+
+        BigDecimal totalSales = cashSales.add(cardSales).add(mpesaSales).add(chequeSales).add(creditSales);
+        BigDecimal expected = opening.add(cashSales).add(suprimentos).subtract(sangrias).subtract(refunds);
         BigDecimal counted = session.getClosingBalanceReal();
         BigDecimal difference = counted == null ? null : counted.subtract(expected);
-        return new PosZReportDTO(session.getId(), session.getOperator(), session.getOpenDate(),
-                session.getCloseDate(), session.getStatus(), opening, sales, suprimentos, sangrias,
-                refunds, expected, counted, difference, saleCount);
+
+        return new PosZReportDTO(
+                session.getId(),
+                session.getOperator(),
+                session.getOpenDate(),
+                session.getCloseDate(),
+                session.getStatus(),
+                opening,
+                cashSales,
+                cardSales,
+                mpesaSales,
+                chequeSales,
+                creditSales,
+                totalSales,
+                suprimentos,
+                sangrias,
+                refunds,
+                expected,
+                counted,
+                difference,
+                saleCount,
+                refundsCount
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO> getSessionsHistory(
+            Long companyId, LocalDateTime from, LocalDateTime to) {
+        CurrentUserContext.requireCompany(companyId);
+        List<TillSession> sessions;
+        if (from != null && to != null) {
+            sessions = tillSessionRepository.findByCompanyIdAndOpenDateBetweenOrderByOpenDateDesc(companyId, from, to);
+        } else {
+            sessions = tillSessionRepository.findByCompanyIdOrderByOpenDateDesc(companyId);
+        }
+        return sessions.stream().map(s -> {
+            PosZReportDTO z = buildZReport(s.getId());
+            return new mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO(
+                    s.getId(),
+                    s.getOperator(),
+                    s.getOpenDate(),
+                    s.getCloseDate(),
+                    s.getStatus(),
+                    s.getOpeningBalance(),
+                    z.expectedCash(),
+                    s.getClosingBalanceReal(),
+                    s.getDifference(),
+                    z.totalSales(),
+                    z.saleCount()
+            );
+        }).toList();
     }
 
     @Transactional
@@ -294,6 +372,18 @@ public class POSService {
     @Transactional
     public Invoice checkout(POSCheckoutRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
+
+        // Idempotência para Modo de Contingência (Offline-First):
+        // Se a venda com esta referência de contingência já foi sincronizada anteriormente,
+        // devolve o documento emitido sem duplicar cobrança ou saída de stock.
+        if (request.contingencyReference() != null && !request.contingencyReference().isBlank()) {
+            java.util.Optional<Invoice> existing = invoiceRepository.findByCompanyIdAndContingencyReference(
+                    request.companyId(), request.contingencyReference().trim());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+
         TillSession session = getActiveSession(request.operator(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Deverá abrir uma sessão de caixa antes de efetuar vendas no POS."));
 
@@ -319,6 +409,9 @@ public class POSService {
         }
 
         Invoice invoice = new Invoice();
+        if (request.contingencyReference() != null && !request.contingencyReference().isBlank()) {
+            invoice.setContingencyReference(request.contingencyReference().trim());
+        }
         invoice.setClient(client);
         // Nome a imprimir no recibo: o rótulo walk-in escrito pelo operador, ou o nome do
         // cliente registado quando não há rótulo livre.

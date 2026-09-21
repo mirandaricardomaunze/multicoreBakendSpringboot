@@ -14,6 +14,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -159,7 +160,7 @@ public final class TableNavigator {
     }
 
     private static JButton navButton(String iconCode, String tooltip, Runnable action) {
-        JButton b = new JButton(UIHelper.icon(iconCode, 13, UIHelper.TEXT_LIGHT));
+        JButton b = new JButton(UIHelper.icon(iconCode, 13, Color.WHITE));
         b.setRolloverIcon(UIHelper.icon(iconCode, 13, UIHelper.ACCENT));
         b.setToolTipText(tooltip);
         b.getAccessibleContext().setAccessibleName(tooltip);

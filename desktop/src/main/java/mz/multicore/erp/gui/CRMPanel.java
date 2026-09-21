@@ -5,6 +5,9 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.modules.crm.dto.*;
@@ -32,6 +35,7 @@ public class CRMPanel extends JPanel {
     final CRMApiClient crmApiClient;
     private final CrmTicketActions ticketActions;
     private final CrmWorkSheetActions workSheetActions;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     private DefaultTableModel ticketsModel;
     JTable ticketsTable;
@@ -52,7 +56,15 @@ public class CRMPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        add(UIHelper.createHeading("CRM & Assistência"), BorderLayout.NORTH);
+        JPanel north = new JPanel();
+        north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        JComponent heading = UIHelper.createHeading("CRM & Assistência");
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(heading);
+        north.add(feedback);
+        add(north, BorderLayout.NORTH);
 
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -111,6 +123,7 @@ public class CRMPanel extends JPanel {
         };
         ticketsTable = new JTable(ticketsModel);
         UIHelper.styleTable(ticketsTable);
+        ticketsTable.putClientProperty("noRowInspector", Boolean.TRUE);
         ticketsTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
         ticketsTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent ev) {
@@ -200,6 +213,7 @@ public class CRMPanel extends JPanel {
         };
         worksheetsTable = new JTable(worksheetsModel);
         UIHelper.styleTable(worksheetsTable);
+        worksheetsTable.putClientProperty("noRowInspector", Boolean.TRUE);
         worksheetsTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         worksheetsTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.money());
         worksheetsTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
@@ -231,9 +245,8 @@ public class CRMPanel extends JPanel {
         UIHelper.loadAsync(this,
                 () -> new CRMData(crmApiClient.getAllTickets(), crmApiClient.getAllWorkSheets()),
                 this::applyData,
-                error -> JOptionPane.showMessageDialog(this,
-                        "Não foi possível carregar CRM e assistência: " + error.getMessage(),
-                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+                error -> showNotice(FeedbackType.ERROR, "Não foi possível carregar CRM e assistência",
+                        error.getMessage(), "Tentar novamente", this::refreshData));
     }
 
     private void applyData(CRMData data) {
@@ -276,6 +289,18 @@ public class CRMPanel extends JPanel {
             }
         }
         return open;
+    }
+
+    void showNotice(FeedbackType type, String title, String message) {
+        showNotice(type, title, message, null, null);
+    }
+
+    void showNotice(FeedbackType type, String title, String message, String actionLabel, Runnable action) {
+        feedback.show(type, title, message, actionLabel, action);
+    }
+
+    void showSuccess(String message) {
+        ToastManager.success(this, message);
     }
 
     private record CRMData(List<SupportTicketDTO> tickets, List<WorkSheetDTO> worksheets) {}

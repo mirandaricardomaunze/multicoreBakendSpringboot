@@ -8,11 +8,13 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.function.Supplier;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 /**
  * Cotações ao cliente: listagem, decisão e conversão em encomenda.
@@ -48,6 +51,7 @@ public final class QuotationsPanel extends JPanel {
     private final Runnable ordersRefresh;
     private final DefaultTableModel model;
     private final JTable table;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public QuotationsPanel(ComercialApiClient apiClient,
                            Supplier<List<ClientDTO>> clients,
@@ -74,7 +78,14 @@ public final class QuotationsPanel extends JPanel {
         headerActions.setOpaque(false);
         headerActions.add(newBtn);
         header.add(headerActions, BorderLayout.EAST);
-        add(header, BorderLayout.NORTH);
+        JPanel north = new JPanel();
+        north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
+        feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(header);
+        north.add(feedback);
+        add(north, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
@@ -170,11 +181,8 @@ public final class QuotationsPanel extends JPanel {
         QuotationDTO created = new QuotationEditorDialog(this, apiClient,
                 clients.get(), products.get(), warehouses.get()).open();
         if (created == null) return;
-        JOptionPane.showMessageDialog(this,
-                "Cotação " + created.quotationNumber() + " emitida.\n"
-                        + "Total: " + created.totalAmount() + " MT.\n"
-                        + "Válida até " + created.validUntil().format(DATE) + ".",
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        showSuccess("Cotação " + created.quotationNumber() + " emitida; total "
+                + created.totalAmount() + " MT, válida até " + created.validUntil().format(DATE) + ".");
         refresh();
     }
 
@@ -184,8 +192,7 @@ public final class QuotationsPanel extends JPanel {
         Long id = (Long) model.getValueAt(row, COL_ID);
         String number = String.valueOf(model.getValueAt(row, COL_NUMBER));
         UIHelper.runWithProgress(this, "A registar envio…", () -> apiClient.sendQuotation(id), ignored -> {
-            JOptionPane.showMessageDialog(this, "Cotação " + number + " marcada como enviada ao cliente.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showSuccess("Cotação " + number + " marcada como enviada ao cliente.");
             refresh();
         }, error -> showError("marcar a cotação como enviada", error));
     }
@@ -196,9 +203,7 @@ public final class QuotationsPanel extends JPanel {
         Long id = (Long) model.getValueAt(row, COL_ID);
         String number = String.valueOf(model.getValueAt(row, COL_NUMBER));
         UIHelper.runWithProgress(this, "A registar aceitação…", () -> apiClient.acceptQuotation(id), ignored -> {
-            JOptionPane.showMessageDialog(this,
-                    "Cotação " + number + " marcada como aceite.\nPode agora convertê-la em encomenda.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showSuccess("Cotação " + number + " aceite; pode agora convertê-la em encomenda.");
             refresh();
         }, error -> showError("registar a aceitação", error));
     }
@@ -213,8 +218,7 @@ public final class QuotationsPanel extends JPanel {
         if (reason == null) return;
         UIHelper.runWithProgress(this, "A registar recusa…", () -> apiClient.rejectQuotation(id, reason),
                 ignored -> {
-                    JOptionPane.showMessageDialog(this, "Cotação " + number + " registada como recusada.",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    showSuccess("Cotação " + number + " registada como recusada.");
                     refresh();
                 }, error -> showError("registar a recusa", error));
     }
@@ -228,8 +232,7 @@ public final class QuotationsPanel extends JPanel {
                 "Confirmar Cancelamento", JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         UIHelper.runWithProgress(this, "A cancelar cotação…", () -> apiClient.cancelQuotation(id), ignored -> {
-            JOptionPane.showMessageDialog(this, "Cotação " + number + " cancelada.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showSuccess("Cotação " + number + " cancelada.");
             refresh();
         }, error -> showError("cancelar a cotação", error));
     }
@@ -242,27 +245,19 @@ public final class QuotationsPanel extends JPanel {
         String number = String.valueOf(model.getValueAt(row, COL_NUMBER));
         String current = String.valueOf(model.getValueAt(row, COL_VALIDITY));
 
-        String input = JOptionPane.showInputDialog(this,
-                "Cotação " + number + " — validade actual: " + current + ".\n\n"
-                        + "Estender a validade volta a garantir ao cliente os preços desta proposta.\n"
-                        + "Nova data de validade (aaaa-mm-dd):",
-                "Estender Validade", JOptionPane.QUESTION_MESSAGE);
-        if (input == null || input.isBlank()) return;
-
-        LocalDate newValidUntil;
-        try {
-            newValidUntil = LocalDate.parse(input.trim());
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Data inválida. Use o formato aaaa-mm-dd (ex.: 2026-09-30).",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        mz.multicore.erp.gui.components.DateField validity = new mz.multicore.erp.gui.components.DateField();
+        JPanel form = UIHelper.createDialogForm("Validade actual:", new JLabel(current),
+                "Nova validade:", validity);
+        boolean confirmed = new mz.multicore.erp.gui.components.ModernFormDialog(UIHelper.mainWindow,
+                "Estender Validade", "fas-calendar-alt",
+                "Estender volta a garantir ao cliente os preços desta proposta", form)
+                .setConfirmButton("Estender", "fas-check").showDialog();
+        if (!confirmed) return;
+        LocalDate newValidUntil = validity.value();
 
         UIHelper.runWithProgress(this, "A estender validade…",
                 () -> apiClient.extendQuotationValidity(id, newValidUntil), updated -> {
-                    JOptionPane.showMessageDialog(this, "Cotação " + number + " válida até "
-                                    + updated.validUntil().format(DATE) + ".",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    showSuccess("Cotação " + number + " válida até " + updated.validUntil().format(DATE) + ".");
                     refresh();
                 }, error -> showError("estender a validade", error));
     }
@@ -286,11 +281,8 @@ public final class QuotationsPanel extends JPanel {
 
         UIHelper.runWithProgress(this, "A converter em encomenda…", () -> apiClient.convertQuotation(id),
                 order -> {
-                    JOptionPane.showMessageDialog(this,
-                            "Cotação " + number + " convertida na encomenda " + order.orderNumber() + ".\n"
-                                    + "Total: " + order.totalAmount() + " MT.\n"
-                                    + "A encomenda aguarda aprovação antes de poder ser facturada.",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    showSuccess("Cotação " + number + " convertida na encomenda " + order.orderNumber()
+                            + "; total " + order.totalAmount() + " MT, pendente de aprovação.");
                     refresh();
                     ordersRefresh.run();
                 }, error -> showError("converter a cotação", error));
@@ -302,7 +294,7 @@ public final class QuotationsPanel extends JPanel {
         Long id = (Long) model.getValueAt(row, COL_ID);
         String number = String.valueOf(model.getValueAt(row, COL_NUMBER));
         UIHelper.runWithProgress(this, "A gerar cotação em PDF…", () -> apiClient.renderQuotation(id),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "cotacao-" + number),
+                pdf -> PrintPreviewDialog.show(this, pdf, "cotacao-" + number),
                 error -> showError("gerar a cotação em PDF", error));
     }
 
@@ -331,8 +323,8 @@ public final class QuotationsPanel extends JPanel {
     private int selected(String action) {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma cotação na tabela para " + action + ".",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Seleccione uma cotação",
+                    "Escolha uma cotação na tabela para " + action + ".");
         }
         return row;
     }
@@ -348,7 +340,12 @@ public final class QuotationsPanel extends JPanel {
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        showNotice(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
     }
+
+    void showNotice(FeedbackType type, String title, String message) {
+        feedback.show(type, title, message, null, null);
+    }
+
+    void showSuccess(String message) { ToastManager.success(this, message); }
 }

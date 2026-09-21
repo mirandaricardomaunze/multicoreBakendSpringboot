@@ -2,6 +2,8 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.gui.pos.PosBlindCloseDialog;
+import mz.multicore.erp.gui.pos.PosSessionHistoryDialog;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.pos.dto.TillSessionDTO;
 
@@ -21,41 +23,31 @@ final class PosCashSessionActions {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.runWithProgress(owner, "A abrir caixa…",
                 () -> owner.posApiClient.openSession(operator, bal, companyId), opened -> {
-            JOptionPane.showMessageDialog(owner, "Sessão de caixa aberta com sucesso!", "Informação", JOptionPane.INFORMATION_MESSAGE);
+            owner.showPosSuccess("Sessão de caixa aberta com sucesso.");
             owner.refreshSessionState();
         }, error -> showError("Não foi possível abrir a sessão de caixa", error));
     }
 
     public void closeSession() {
         if (owner.activeSession == null) return;
+        PosBlindCloseDialog dialog = new PosBlindCloseDialog(
+                SwingUtilities.getWindowAncestor(owner),
+                owner.posApiClient,
+                owner.activeSession,
+                owner::refreshSessionState
+        );
+        dialog.setVisible(true);
+    }
 
-        BigDecimal closingReal = UIHelper.promptAmount("Fechar Caixa", "fas-lock",
-                "Numerário fisicamente contado na gaveta", "Saldo Físico no Fecho (MT):", BigDecimal.ZERO);
-        if (closingReal == null) return;
-
-        // Conta de tesouraria que recebe o depósito do numerário da sessão (opcional).
-        Long depositAccountId = chooseDepositAccount();
-
-        Long sessionId = owner.activeSession.id();
-        UIHelper.runWithProgress(owner, "A fechar caixa…",
-                () -> owner.posApiClient.closeSession(sessionId, closingReal, depositAccountId), closed -> {
-            Long closedId = closed.id();
-
-            String summary = String.format("Sessão Fechada com sucesso!\n" +
-                    "Saldo Esperado: %,.2f MT\n" +
-                    "Saldo Real: %,.2f MT\n" +
-                    "Diferença: %,.2f MT\n\nImprimir o fecho de caixa (Z)?",
-                    closed.closingBalanceExpected(), closed.closingBalanceReal(), closed.difference());
-            int print = JOptionPane.showConfirmDialog(owner, summary, "Fecho de Caixa",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
-            if (print == JOptionPane.YES_OPTION) {
-                UIHelper.runWithProgress(owner, "A gerar fecho (Z)…",
-                        () -> owner.posApiClient.renderZReport(closedId),
-                        pdf -> mz.multicore.erp.modules.printing.PdfFileSaver.saveAndOpen(pdf, "fecho-caixa-Z-" + closedId),
-                        err -> JOptionPane.showMessageDialog(owner, "Erro ao gerar o Z: " + err.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
-            }
-            owner.refreshSessionState();
-        }, error -> showError("Não foi possível fechar a sessão de caixa", error));
+    public void showSessionHistory() {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (companyId == null) return;
+        PosSessionHistoryDialog dialog = new PosSessionHistoryDialog(
+                SwingUtilities.getWindowAncestor(owner),
+                owner.posApiClient,
+                companyId
+        );
+        dialog.setVisible(true);
     }
 
     /**
@@ -105,27 +97,25 @@ final class PosCashSessionActions {
                 BigDecimal amt = amountField.value();
                 String desc = descField.getText().trim();
                 if (amt.compareTo(BigDecimal.ZERO) <= 0) {
-                    JOptionPane.showMessageDialog(owner, "O valor deve ser maior do que zero.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    owner.showPosNotice(FeedbackType.ERROR, "Valor inválido", "O valor deve ser maior do que zero.");
                     return;
                 }
                 Long sessionId = owner.activeSession.id();
                 UIHelper.runWithProgress(owner, "A registar movimento…",
                         () -> owner.posApiClient.addCashMovement(sessionId, type, amt, desc), ignored -> {
-                            JOptionPane.showMessageDialog(owner, "Movimento de caixa registado com sucesso!",
-                                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                            owner.showPosSuccess("Movimento de caixa registado com sucesso.");
                             owner.refreshSessionState();
                         }, error -> showError("Não foi possível registar o movimento de caixa", error));
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(owner, "Valor de montante inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showPosNotice(FeedbackType.ERROR, "Montante inválido", "Introduza um montante numérico válido.");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showPosNotice(FeedbackType.ERROR, "Não foi possível movimentar o caixa", ex.getMessage());
             }
         }
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(owner, action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        owner.showPosNotice(FeedbackType.ERROR, action, error.getMessage());
     }
 
     // (Adicionar ao carrinho agora é feito por clique no card — ver addProductToCart. O FEFO é

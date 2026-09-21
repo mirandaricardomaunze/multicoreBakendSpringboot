@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Dados do fecho de caixa (Z) — reconciliação da gaveta de uma sessão. {@code countedCash} e
- * {@code difference} vêm null enquanto a sessão está aberta (pré-visualização).
+ * Dados do fecho de caixa (Z) — reconciliação da gaveta e desagregação por meio de pagamento.
+ * {@code countedCash} e {@code difference} vêm null enquanto a sessão está aberta (pré-visualização).
  */
 public record PosZReportDTO(
         Long sessionId,
@@ -15,11 +15,58 @@ public record PosZReportDTO(
         String status,
         BigDecimal openingBalance,
         BigDecimal cashSales,
+        BigDecimal cardSales,
+        BigDecimal mpesaSales,
+        BigDecimal chequeSales,
+        BigDecimal creditSales,
+        BigDecimal totalSales,
         BigDecimal suprimentos,
         BigDecimal sangrias,
         BigDecimal refunds,
         BigDecimal expectedCash,
         BigDecimal countedCash,
         BigDecimal difference,
-        int saleCount
-) {}
+        int saleCount,
+        int refundsCount
+) {
+    /** Construtor de compatibilidade para código legado que omitia desagregações por meio de pagamento. */
+    public PosZReportDTO(
+            Long sessionId,
+            String operator,
+            LocalDateTime openDate,
+            LocalDateTime closeDate,
+            String status,
+            BigDecimal openingBalance,
+            BigDecimal cashSales,
+            BigDecimal suprimentos,
+            BigDecimal sangrias,
+            BigDecimal refunds,
+            BigDecimal expectedCash,
+            BigDecimal countedCash,
+            BigDecimal difference,
+            int saleCount
+    ) {
+        this(
+                sessionId,
+                operator,
+                openDate,
+                closeDate,
+                status,
+                openingBalance,
+                cashSales,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                cashSales != null ? cashSales : BigDecimal.ZERO,
+                suprimentos,
+                sangrias,
+                refunds,
+                expectedCash,
+                countedCash,
+                difference,
+                saleCount,
+                0
+        );
+    }
+}

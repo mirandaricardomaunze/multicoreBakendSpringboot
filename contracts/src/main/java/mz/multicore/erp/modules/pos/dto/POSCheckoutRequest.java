@@ -22,5 +22,15 @@ public record POSCheckoutRequest(
         Long treasuryAccountId,
         @NotEmpty(message = "A venda deve conter pelo menos uma linha.") @Valid List<POSCheckoutLineRequest> lines,
         /** Multi-método: lista de pagamentos (CASH/CARD/BANK_TRANSFER/CREDIT). Se vazio, usa-se treasuryAccountId. */
-        @Valid List<PosPaymentRequest> payments
-) {}
+        @Valid List<PosPaymentRequest> payments,
+        /** Referência única de contingência (ex.: CONT-20260917-192000-A1B2) para idempotência e rastreio. */
+        @Size(max = 60, message = "Referência de contingência não pode exceder 60 caracteres.")
+        String contingencyReference
+) {
+    /** Construtor de conveniência para compatibilidade com versões e testes anteriores. */
+    public POSCheckoutRequest(String operator, Long companyId, Long clientId, String walkInName,
+                              Long warehouseId, Long treasuryAccountId,
+                              List<POSCheckoutLineRequest> lines, List<PosPaymentRequest> payments) {
+        this(operator, companyId, clientId, walkInName, warehouseId, treasuryAccountId, lines, payments, null);
+    }
+}

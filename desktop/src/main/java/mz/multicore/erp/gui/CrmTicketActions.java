@@ -6,6 +6,7 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.crm.dto.ChangeTicketStatusRequest;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
@@ -45,16 +46,13 @@ final class CrmTicketActions {
         UIHelper.runWithProgress(owner, "A carregar clientes…",
                 comercialApiClient::getClients,
                 this::showNewTicketDialog,
-                error -> JOptionPane.showMessageDialog(owner,
-                        "Não foi possível carregar os clientes: " + error.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE));
+                error -> owner.showNotice(FeedbackType.ERROR, "Não foi possível carregar os clientes", error.getMessage()));
     }
 
     private void showNewTicketDialog(List<ClientDTO> clients) {
         if (clients == null || clients.isEmpty()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Não há clientes registados. Registe o cliente antes de abrir o pedido.",
-                    "Informação", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem clientes registados",
+                    "Registe o cliente antes de abrir o pedido.");
             return;
         }
 
@@ -101,8 +99,7 @@ final class CrmTicketActions {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(owner, "Pedido de assistência aberto.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showSuccess("Pedido de assistência aberto.");
             owner.refreshData();
         }
     }
@@ -110,8 +107,8 @@ final class CrmTicketActions {
     void openSelectedTicket() {
         int row = TableFilter.selectedModelRow(owner.ticketsTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione um pedido na tabela.",
-                    "Informação", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um pedido",
+                    "Escolha um pedido na tabela para continuar.");
             return;
         }
         showTicketDialog(owner.ticketsList.get(row));
@@ -190,15 +187,9 @@ final class CrmTicketActions {
         button.addActionListener(e -> {
             String note = null;
             if (needsNote) {
-                note = JOptionPane.showInputDialog(UIHelper.mainWindow,
-                        "Motivo da anulação do pedido #" + ticket.id() + ":", label,
-                        JOptionPane.QUESTION_MESSAGE);
-                if (note == null) return;                       // cancelou
-                if (note.isBlank()) {
-                    JOptionPane.showMessageDialog(UIHelper.mainWindow,
-                            "É obrigatório indicar o motivo da anulação.", "Erro", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
+                note = UIHelper.promptRequiredText(label, "fas-ban", "Pedido #" + ticket.id(),
+                        "Motivo da anulação:");
+                if (note == null) return;
             } else if ("RESOLVED".equals(targetStatus)) {
                 note = JOptionPane.showInputDialog(UIHelper.mainWindow,
                         "Nota de fecho (opcional):", label, JOptionPane.QUESTION_MESSAGE);
@@ -210,13 +201,10 @@ final class CrmTicketActions {
                     () -> crmApiClient.changeTicketStatus(ticket.id(), request),
                     updated -> {
                         dlg.close();
-                        JOptionPane.showMessageDialog(owner,
-                                "Pedido #" + ticket.id() + " ficou em '" + updated.statusLabel() + "'.",
-                                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                        owner.showSuccess("Pedido #" + ticket.id() + " ficou em '" + updated.statusLabel() + "'.");
                         owner.refreshData();
                     },
-                    error -> JOptionPane.showMessageDialog(owner, error.getMessage(),
-                            "Erro", JOptionPane.ERROR_MESSAGE));
+                    error -> owner.showNotice(FeedbackType.ERROR, "Não foi possível actualizar o pedido", error.getMessage()));
         });
         return button;
     }

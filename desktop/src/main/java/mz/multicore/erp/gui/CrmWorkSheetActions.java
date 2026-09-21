@@ -4,6 +4,7 @@ import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.CrmSettingsDTO;
 import mz.multicore.erp.modules.crm.dto.UpdateCrmSettingsRequest;
@@ -11,11 +12,11 @@ import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.crm.dto.UpdateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.VoidWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.WorkSheetDTO;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import java.math.BigDecimal;
 import java.util.List;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 /** Acções sobre folhas de obra: registar, corrigir, anular, imprimir e faturar. */
 final class CrmWorkSheetActions {
@@ -32,9 +33,8 @@ final class CrmWorkSheetActions {
     void registerWorkSheet() {
         List<SupportTicketDTO> openTickets = owner.openTickets();
         if (openTickets.isEmpty()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Não existem pedidos em aberto para registar trabalho.",
-                    "Informação", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem pedidos em aberto",
+                    "Não existem pedidos em aberto para registar trabalho.");
             return;
         }
 
@@ -70,8 +70,7 @@ final class CrmWorkSheetActions {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(owner, "Folha de Obra gravada com sucesso!\n"
-                    + "O pedido foi marcado como RESOLVIDO.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showSuccess("Folha de obra gravada; o pedido foi marcado como resolvido.");
             owner.refreshData();
         }
     }
@@ -111,8 +110,7 @@ final class CrmWorkSheetActions {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(owner, "Folha de obra corrigida.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showSuccess("Folha de obra corrigida.");
             owner.refreshData();
         }
     }
@@ -123,27 +121,17 @@ final class CrmWorkSheetActions {
         if (ws == null) return;
         if (!assertEditable(ws, "anulada")) return;
 
-        String reason = JOptionPane.showInputDialog(UIHelper.mainWindow,
-                "Motivo da anulação da folha #" + ws.id() + ":",
-                "Anular Folha de Obra", JOptionPane.QUESTION_MESSAGE);
+        String reason = UIHelper.promptRequiredText("Anular Folha de Obra", "fas-ban",
+                "Folha #" + ws.id(), "Motivo da anulação:");
         if (reason == null) return;
-        if (reason.isBlank()) {
-            JOptionPane.showMessageDialog(owner, "É obrigatório indicar o motivo da anulação.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
 
         UIHelper.runWithProgress(owner, "A anular folha de obra…",
                 () -> crmApiClient.voidWorkSheet(ws.id(), new VoidWorkSheetRequest(reason)),
                 ignored -> {
-                    JOptionPane.showMessageDialog(owner,
-                            "Folha #" + ws.id() + " anulada. Se o pedido tinha sido fechado por causa "
-                                    + "dela, voltou a ficar aberto.",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    owner.showSuccess("Folha #" + ws.id() + " anulada; o pedido associado voltou a ficar aberto quando aplicável.");
                     owner.refreshData();
                 },
-                error -> JOptionPane.showMessageDialog(owner, error.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE));
+                error -> owner.showNotice(FeedbackType.ERROR, "Não foi possível anular a folha", error.getMessage()));
     }
 
     /** O papel que o técnico deixa assinado no cliente. */
@@ -153,10 +141,8 @@ final class CrmWorkSheetActions {
 
         UIHelper.runWithProgress(owner, "A gerar folha de obra…",
                 () -> crmApiClient.workSheetPdf(ws.id()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "folha-obra-" + ws.id()),
-                error -> JOptionPane.showMessageDialog(owner,
-                        "Não foi possível gerar o PDF: " + error.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE));
+                pdf -> PrintPreviewDialog.show(owner, pdf, "folha-obra-" + ws.id()),
+                error -> owner.showNotice(FeedbackType.ERROR, "Não foi possível gerar o PDF", error.getMessage()));
     }
 
     void billWorkSheet() {
@@ -164,13 +150,11 @@ final class CrmWorkSheetActions {
         if (ws == null) return;
 
         if (ws.voided()) {
-            JOptionPane.showMessageDialog(owner, "Esta folha de obra está anulada.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Folha anulada", "Esta folha de obra está anulada.");
             return;
         }
         if (Boolean.TRUE.equals(ws.isBilled())) {
-            JOptionPane.showMessageDialog(owner, "Esta folha de obra já foi faturada.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Folha já faturada", "Esta folha de obra já foi faturada.");
             return;
         }
 
@@ -178,12 +162,9 @@ final class CrmWorkSheetActions {
             crmApiClient.billWorkSheet(ws.id());
             return null;
         }, ignored -> {
-            JOptionPane.showMessageDialog(owner, "Folha de obra faturada com sucesso!\n" +
-                    "Uma fatura comercial foi gerada para " + ws.clientName() + ".",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showSuccess("Folha de obra faturada; foi gerada uma fatura comercial para " + ws.clientName() + ".");
             owner.refreshData();
-        }, error -> JOptionPane.showMessageDialog(owner, "Erro ao faturar: " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE));
+        }, error -> owner.showNotice(FeedbackType.ERROR, "Não foi possível faturar a folha", error.getMessage()));
     }
 
     /**
@@ -194,9 +175,7 @@ final class CrmWorkSheetActions {
         UIHelper.runWithProgress(owner, "A ler a tarifa…",
                 crmApiClient::getSettings,
                 this::showHourlyRateDialog,
-                error -> JOptionPane.showMessageDialog(owner,
-                        "Não foi possível ler a tarifa: " + error.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE));
+                error -> owner.showNotice(FeedbackType.ERROR, "Não foi possível ler a tarifa", error.getMessage()));
     }
 
     private void showHourlyRateDialog(CrmSettingsDTO settings) {
@@ -219,8 +198,7 @@ final class CrmWorkSheetActions {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(owner, "Tarifa actualizada.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showSuccess("Tarifa actualizada.");
             owner.refreshData();
         }
     }
@@ -230,8 +208,8 @@ final class CrmWorkSheetActions {
     private WorkSheetDTO selected() {
         int row = TableFilter.selectedModelRow(owner.worksheetsTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma folha de obra na tabela.",
-                    "Informação", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione uma folha de obra",
+                    "Escolha uma folha de obra na tabela para continuar.");
             return null;
         }
         return owner.worksheetsList.get(row);
@@ -239,14 +217,12 @@ final class CrmWorkSheetActions {
 
     private boolean assertEditable(WorkSheetDTO ws, String action) {
         if (Boolean.TRUE.equals(ws.isBilled())) {
-            JOptionPane.showMessageDialog(owner,
-                    "Folha já faturada: não pode ser " + action + ". Emita uma nota de crédito da factura.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Folha já faturada",
+                    "A folha não pode ser " + action + ". Emita uma nota de crédito da factura.");
             return false;
         }
         if (ws.voided()) {
-            JOptionPane.showMessageDialog(owner, "Esta folha de obra já está anulada.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Folha já anulada", "Esta folha de obra já está anulada.");
             return false;
         }
         return true;

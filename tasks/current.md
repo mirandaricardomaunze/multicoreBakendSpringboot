@@ -1,5 +1,790 @@
 # Tarefa Actual
 
+## ⚡ Como Iniciar a Aplicação
+
+> **Regra permanente guardada em** `.agents/rules/startup_procedure.md`
+
+```powershell
+# 1. Verificar backend
+curl.exe -s http://localhost:8080/actuator/health   # deve retornar {"status":"UP"}
+
+# 2. Se backend não estiver UP — iniciar (daemon)
+mvn spring-boot:run -pl backend
+
+# 3. Lançar desktop (após backend UP)
+Start-Process "C:\Users\miran\.jdks\ms-21.0.10\bin\java.exe" `
+    -ArgumentList "-jar","C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1.0.0.jar"
+```
+
+**Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
+
+### Fase 16: Ícone Profissional Executivo & Seletor Universal de Calendário — 2026-09-20 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/UNIVERSAL_DATE_PICKER_SPEC.md` — Especificação do seletor visual universal de datas com popup FlatLaf e navegação de calendário.
+  - `docs/UNIVERSAL_DATE_PICKER_HARNESS.md` — Matriz de testes automatizados do calendário e campos de data.
+- **Componentes Canónicos Criados e Integrados:**
+  - `desktop/src/main/resources/icons/`: Gerado conjunto multi-resolução (`app-icon.ico` com mipmaps 16, 24, 32, 48, 64, 128, 256px e PNGs correspondentes) a partir de arte gráfica 3D de microprocessador multicore de alta tecnologia.
+  - `installer/app-icon.ico`: Cópia dedicada para o instalador Windows.
+  - `scripts/build-windows-installer.ps1`: Adicionado parâmetro `--icon $icon` ao `jpackage` para embutir o ícone no `.exe`, atalho do menu Iniciar e atalho da área de trabalho na instalação.
+  - `UIHelper.java`: Métodos `getAppIcons()` (lista de multi-resolução para `Window.setIconImages`) e `getAppIcon(int size)`.
+  - `MainFrame.java` & `LoginDialog.java`: Atualizados para `setIconImages(UIHelper.getAppIcons())` e emblema de alta resolução de 64px no login.
+  - `C:\Users\miran\Desktop\Multicore ERP.lnk`: Atualizado com o ícone `installer\app-icon.ico`.
+- **Validação Automatizada:**
+  - `AppIconHarnessTest.java` (3/3 testes verdes).
+  - `UiOrganizationNavigationHarnessTest.java` (6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes).
+  - Reactor empacotado com **100% BUILD SUCCESS** e desktop relançado com sucesso.
+- **Correção de Resiliência no Stock/Comercial (Atualizar Produto):**
+  - Implementada sanitização universal de números (`sanitizeNumber`) em `StockProductActions.java` (suporta vírgula, espaços de milhar e símbolos).
+  - Preço de compra opcional (default 0 para serviços/itens sem custo direto), validação de valores não-negativos e validação de invariante de peso.
+  - Mapeamento robusto de taxas de IVA e persistência com `setOnSaveAsync` e feedback visual integrado.
+  - Testado via `StockInteractionHarnessTest`, `ComercialControllerIntegrationTest` e verificado live no desktop (`PID 5208`).
+
+---
+
+### Fase 15: Gestão de Fecho de Caixa & Relatório Z (Physical Cash Closing & Z-Report) — 2026-09-19 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/POS_FECHO_CAIXA_ZREPORT_SPEC.md` — Especificação técnica do fecho cego de caixa, reconciliação de gaveta, decomposição de vendas por método de pagamento (Numerário, Cartão, M-Pesa/e-Mola, Transferência Bancária, Crédito), histórico auditável de sessões e geração de Dossiê PDF A4.
+  - `docs/POS_FECHO_CAIXA_ZREPORT_HARNESS.md` — Matriz de conformidade automatizada ZREP-01 a ZREP-08.
+- **Componentes Canónicos Criados e Integrados:**
+  - `contracts`: `PosZReportDTO.java` (decomposição por meio de pagamento, construtor canónico de 20 parâmetros + 14 parâmetros retrocompatível) e `PosSessionSummaryDTO.java`.
+  - `backend`: Repositório `TillSessionRepository.java` (`findByCompanyIdOrderByOpenDateDesc`), serviço `POSService.java` (`buildZReport` com cálculo detalhado por meio de pagamento e `getSessionsHistory`), gerador PDF `POSZReportPrintService.java` (`buildPaymentBreakdownTable`) e endpoints REST em `POSController.java` (`/api/pos/sessions/{sessionId}/z-report`, `/api/pos/sessions/{sessionId}/z-report/pdf`, `/api/pos/sessions/history`).
+  - `desktop`: Cliente HTTP `POSApiClient.java` (`getZReport`, `getSessionsHistory`, `renderZReport`), diálogos Swing `PosBlindCloseDialog.java` e `PosSessionHistoryDialog.java`, e botão "Histórico Fechos (Z)" integrado em `POSPanel.java` (mantido em **998 linhas**, $\le 1000$).
+- **Validação Automatizada:**
+  - `PosZReportHarnessTest.java` (backend - 3/3 testes verdes).
+  - `PosZReportUiHarnessTest.java` (desktop - 2/2 testes verdes).
+  - `FinalUiUniformityHarnessTest.java` (desktop - 4/4 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis prioritários $\le 1000$ linhas).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes, reactor isolado `contracts` / `backend` / `desktop`).
+  - **16/16 testes unitários e de integração 100% verdes (BUILD SUCCESS)**.
+  - Reactor Maven empacotado com **100% BUILD SUCCESS**.
+
+---
+
+### Fase 14: Módulo de Inventário & Contagem Física de Stock — 2026-09-19 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/INVENTARIO_CONTAGEM_FISICA_SPEC.md` — Especificação técnica da contagem física de stock (leitura por código de barras, contagem cega opcional, apuramento de excedentes/faltas em MT, reconciliação automática de stock e exportação de Dossiê PDF A4).
+  - `docs/INVENTARIO_CONTAGEM_FISICA_HARNESS.md` — Matriz de conformidade automatizada ICF-01 a ICF-08.
+- **Componentes Canónicos Criados e Integrados:**
+  - `contracts`: `InventoryStatus`, `InventoryItemDTO`, `InventorySessionDTO`, `CreateInventorySessionRequest`, `UpdateInventoryItemCountRequest` DTOs em `mz.multicore.erp.modules.inventory.dto`.
+  - `backend`: Migração Flyway `V66__inventory_physical_counting.sql`, entidades JPA `InventoryPhysicalSession` e `InventoryPhysicalItem`, repositórios Spring Data JPA `InventoryPhysicalSessionRepository` e `InventoryPhysicalItemRepository`, serviço de negócio `InventoryPhysicalCountingService`, gerador de PDF `InventoryPhysicalCountingPrintService` e controlador REST `InventoryPhysicalCountingController`.
+  - `desktop`: Cliente HTTP `InventoryPhysicalCountingApiClient`, painel UI Swing `PhysicalInventoryPanel.java`, integrado como aba 5 ("Inventário & Contagem Física") em `StockPanel.java` (mantido em **928 linhas**, $\le 1000$) e acções em `MainFrame.java`.
+- **Validação Automatizada:**
+  - `PhysicalInventoryHarnessTest.java` (backend - 4/4 testes verdes).
+  - `PhysicalInventoryPanelHarnessTest.java` (desktop - 3/3 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis prioritários $\le 1000$ linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes, isolamento do reactor Maven `contracts` / `backend` / `desktop`).
+  - **18/18 testes unitários e de integração 100% verdes (BUILD SUCCESS)**.
+  - Reactor Maven empacotado com **100% BUILD SUCCESS**, backend ativo (`{"status":"UP"}`) e aplicação desktop lançada interativamente via Windows Task Scheduler.
+
+---
+
+### Fase 13: Integração Directa com Balança USB/Serial no POS & Cartão de Fidelidade — 2026-09-19 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/POS_BALANCA_FIDELIDADE_SPEC.md` — Especificação técnica do driver de balança USB/Serial em tempo real, widget visual de peso vivo, protocolo NCI/Toledo/Simulado e integração do Cartão de Fidelidade com resgate de pontos.
+  - `docs/POS_BALANCA_FIDELIDADE_HARNESS.md` — Matriz de conformidade automatizada SCL-01 a SCL-05 e LYT-01 a LYT-04.
+- **Componentes Canónicos Criados e Integrados:**
+  - `SerialScaleReader.java`: Driver thread-safe para parsing de tramas ASCII de balança Serial/USB COM (STX/ETX, NCI, Toledo), gestão de tara e modo de simulação para desenvolvimento/testes.
+  - `PosScaleLiveWidget.java`: Componente visual compacto integrado no cabeçalho do POS exibindo estado da balança (🟢 Ligada / 🟡 Instável / 🔴 Desconectada), peso activo em tempo real (ex: `1.850 kg`), indicador de tara e botões rápidos `[ ⚖️ Capturar ]` e `[ Tarar ]`.
+  - `PosLoyaltyController.java`: Controller desacoplado para consulta rápida do Cartão de Fidelidade por scanner de código de barras, NUIT ou telemóvel (`F7`), cálculo de pontos acumulados (`1 ponto por 100 MT`), valor monetário equivalente e abatimento de pontos no checkout (`LoyaltyEngine`).
+  - `ClientDTO.java`: Expansão retrocompatível no módulo `contracts` para suportar `loyaltyPoints` e `code`.
+  - `POSPanel.java`: Integração limpa do `PosScaleLiveWidget` e atalho `F7` mantendo a classe estritamente em **994 linhas** ($\le 1000$).
+- **Validação Automatizada:**
+  - `SerialScaleReaderTest.java` (4/4 testes verdes).
+  - `PosScaleLoyaltyHarnessTest.java` (3/3 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis prioritários $\le 1000$ linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes, reactor isolado `contracts` / `backend` / `desktop`).
+  - **12/12 testes unitários e de integração 100% verdes (BUILD SUCCESS)**.
+  - Reactor Maven empacotado com **100% BUILD SUCCESS**, backend ativo (`{"status":"UP"}`) e desktop lançado interativamente via Windows Task Scheduler.
+
+---
+
+### Fase 12: Uniformização de Texto e Ícones Brancos em Botões e Menus em Todo o Sistema — 2026-09-19 — **implementado e validado**
+- **Objectivo & Alcance:**
+  - Eliminação de textos e ícones cinzentos/apagados em botões na aplicação desktop, substituindo-os por branco nítido (`Color.WHITE`) para máxima legibilidade e conformidade ergonómica em tema escuro.
+- **Componentes e Painéis Atualizados:**
+  - `UIHelper.java`:
+    - `UIManager.put("Button.foreground", Color.WHITE)` (substitui cinzento por branco em botões nativos e de diálogos).
+    - `UIManager.put("Button.disabledText", new Color(255, 255, 255, 140))` (texto em botões inativos com branco translúcido nítido em vez de cinzento escuro).
+    - `UIManager.put("TabbedPane.foreground", Color.WHITE)` (abas de navegação com texto branco).
+    - Menus e popups com `MenuItem.foreground`, `Menu.foreground`, `PopupMenu.foreground` configurados com `Color.WHITE`.
+  - `DashboardPanel.java`:
+    - `updatePeriodButtonStyles()`: botões de período inativos (`Hoje`, `Esta Semana`, `Este Mês`, `Este Ano`) agora mantêm texto `Color.WHITE` sobre o fundo do card, eliminando o cinzento `TEXT_MUTED` de difícil leitura.
+  - `LoginDialog.java`:
+    - Botões rápidos de credenciais de teste (*chips*) com `Color.WHITE`.
+    - Botão de alternância de visualização de senha com ícone `Color.WHITE`.
+  - `CashFlowForecastPanel.java`:
+    - Botão de impressão com ícone e texto `Color.WHITE` e hover `ACCENT_BLUE_HOVER`.
+  - `SidebarNavItem.java`:
+    - Itens inativos da barra lateral com texto `Color.WHITE` em tema escuro.
+  - `TableNavigator.java` e `ArrowScrollPanel.java`:
+    - Ícones de setas de navegação vertical e lateral atualizados para `Color.WHITE`.
+  - `TableContextMenu.java`:
+    - Itens de menu de contexto com ícones e texto `Color.WHITE`.
+- **Validação Automatizada:**
+  - `ButtonContrastTest` (4/4 verde), `ButtonIconContrastHarnessTest` (5/5 verde).
+  - Regressão: `FinalUiUniformityHarnessTest` (4/4 verde), `UniversalTablePaginationHarnessTest` (5/5 verde), `DesktopInitializationTest` (1/1 verde), `UiPanelDecompositionTest` (1/1 verde).
+  - Total: **20/20 testes verdes** sem qualquer exceção na thread AWT.
+  - Aplicação empacotada e reiniciada via tarefa agendada `MulticoreERP`.
+
+---
+
+### Fase 11: Paginação Universal Automática em Tabelas Desktop (`ClientTablePagination` & `PaginationSouthComposite`) — 2026-09-19 — **implementado e validado**
+- **Objectivo & Alcance:**
+  - Todas as tabelas de listagem (`JTable`) da aplicação desktop Swing agora recebem automaticamente paginação local consistente e uniforme (tamanhos de página: 25, 50, 100, 200; contagem de registos; selector de página; navegação primeira/anterior/próxima/última).
+  - Resolução definitiva de tabelas sem `RowSorter` inicial ou com rodapés pré-existentes / tardios em `BorderLayout.SOUTH`.
+- **Componentes Canónicos Aprimorados:**
+  - `ClientTablePagination.java`:
+    - Auto-instalação de `TableRowSorter` se a tabela ainda não possuir sorter no momento da estilização.
+    - Suporte dinâmico a trocas de modelo (`PropertyChangeListener("model")`) e de sorter (`PropertyChangeListener("rowSorter")`).
+    - Métodos `isInstalled(table)` e `component()`.
+  - `UIHelper.java`:
+    - Criação de `PaginationSouthComposite` (contentor `BoxLayout.Y_AXIS` empilhando a barra de paginação no topo e rodapés adicionais em baixo).
+    - `installSouthGuard`: `ContainerListener` permanente que intercepta adições tardias a `BorderLayout.SOUTH` e as funde dinamicamente no `PaginationSouthComposite`, evitando a perda de paginação quando painéis adicionam totais ou botões após a tabela.
+    - Suporte para contentores `BoxLayout`.
+  - Opt-out controlado para tabelas operacionais e com `TablePager` de servidor:
+    - POS Cart (`cartTable` em `POSPanel.java`).
+    - Faturação com paginação de servidor (`owner.invoicesTable` em `CommercialInvoicesView.java`).
+    - Histórico de Vendas POS com paginação de servidor (`owner.salesHistoryTable` em `PosSalesHistoryPanel.java`).
+    - Diário Contabilístico (`AccountingPanel.java`).
+- **Validação Automatizada:**
+  - `UniversalTablePaginationHarnessTest.java` (5/5 testes verdes cobrindo instalação automática, composição com rodapé pré-existente, guarda de adições tardias, opt-out de `DISABLED` e verificação de tabelas reais de negócio).
+  - Regressão: `ClientTablePaginationTest`, `DesktopInitializationTest`, `FinalUiUniformityHarnessTest`, `UiPanelDecompositionTest`, `MultiModuleArchitectureHarnessTest` (6/6 verde no backend).
+  - Aplicação empacotada com sucesso e lançada interativamente via Windows Task Scheduler.
+
+---
+
+### Fase 10: Painel com Navegação por Setas e Eliminação de Overflow Horizontal (`ArrowScrollPanel`) — 2026-09-17 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/DASHBOARD_ARROW_SCROLL_OVERFLOW_SPEC.md` (`SPEC-ASO-001`) — Especificação técnica do contentor rolável responsivo sem overflow horizontal e sistema de navegação por setas verticais ([ ▲ ] topo e [ ▼ ] base).
+  - `docs/DASHBOARD_ARROW_SCROLL_OVERFLOW_HARNESS.md` (`HARNESS-ASO-001`) — Critérios de validação e matriz de testes ASO-01 a ASO-07.
+- **Componentes Canónicos Criados e Integrados:**
+  - `ArrowScrollPanel.java` (`mz.multicore.erp.gui.components`):
+    - Contentor interno `WidthTrackingContainer` implementando `Scrollable.getScrollableTracksViewportWidth() == true`, forçando o conteúdo a ajustar-se à largura da viewport e eliminando 100% dos overflows horizontais.
+    - Ocultação das barras de rolagem nativas cinzentas (`HORIZONTAL_SCROLLBAR_NEVER`, `VERTICAL_SCROLLBAR_NEVER`).
+    - Barra lateral estreita de controlo (34px) com botão superior [ ▲ ], botão inferior [ ▼ ], indicador de progresso proporcional (`ScrollIndicatorTrack`) e animação suave (`scrollSmoothly`).
+    - Desativação automática de botões nos extremos (topo e base) com tooltips contextuais.
+    - Suporte nativo e contínuo a teclado (`Page Up`, `Page Down`, `Ctrl+Home`, `Ctrl+End`) e rato (`MouseWheelListener`).
+  - `DashboardPanel.java`: migrado de `JScrollPane` convencional para `ArrowScrollPanel`, eliminando o corte do 4.º cartão das grelhas de métricas e gráficos sem ultrapassar o limite de 1000 linhas (**602 linhas**, $\le 1000$).
+- **Validação Automatizada:**
+  - `ArrowScrollPanelTest.java` (5/5 testes verdes cobrindo ASO-01 a ASO-07).
+  - `FinalUiUniformityHarnessTest` (4/4 testes verdes, zero literais de cor fora de `UIHelper`).
+  - `UiPanelDecompositionTest` (1/1 teste verde, todos os painéis $\le 1000$ linhas).
+  - `MultiModuleArchitectureHarnessTest` (6/6 testes verdes, isolamento estrito `contracts` / `backend` / `desktop`).
+  - Reactor Maven compilado com **100% BUILD SUCCESS** e desktop empacotado e reiniciado interativamente via Windows Task Scheduler.
+
+---
+
+### Fase 9: Apuramento Periódico de IVA de Moçambique (Modelo A / Mapa Recapitulativo) — 2026-09-17 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/APURAMENTO_IVA_MOCAMBIQUE_SPEC.md` (SPEC-AIVA-001) — Especificação técnica do apuramento de IVA em conformidade com o Regulamento do IVA de Moçambique (Decreto n.º 7/2008 de 16 de Abril, PAE 16%), incorporando dedução de compras, crédito fiscal anterior e apuramento do saldo final (`A_PAGAR` vs `CREDITO_A_TRANSPORTAR`).
+  - `docs/APURAMENTO_IVA_MOCAMBIQUE_HARNESS.md` (HARNESS-AIVA-001) — Matriz de testes de cálculo de IVA AIVA-01 a AIVA-08.
+- **Módulo `contracts`:**
+  - `IvaSummaryDTO`: campos adicionais `previousCredit`, `payableAmount`, `creditToCarry`, `fiscalStatus`, com construtor canónico e retrocompatível.
+- **Módulo `backend`:**
+  - `FiscalSummaryService`: cálculo completo considerando `previousCredit` com fórmula $S = (I_{\text{liq}} - I_{\text{ded}}) - C_{\text{ant}}$.
+  - `FiscalController`: suporte ao parâmetro opcional `previousCredit` em `/api/fiscal/iva-summary`.
+  - `IvaDeclarationPrintService` & `PrintController`: renderização em PDF da Declaração Mensal de IVA referenciando a legislação moçambicana e discriminando base, IVA, crédito reportado e montante a entregar ou reportar.
+  - `VatSettlementHarnessTest`: 5 testes unitários e de integração verdes cobrindo apuramento com imposto a pagar, crédito a transportar, absorção total e parcial pelo crédito anterior, e exclusão de faturas/compras canceladas.
+- **Módulo `desktop`:**
+  - `FiscalApiClient`: chamadas `ivaSummary` e `renderIvaDeclaration` com suporte a `previousCredit`.
+  - `FiscalPanel`: input dedicado de `Crédito Anterior (MT)` com botão `Recalcular`, substituição dos cards legados por 4 cartões padronizados `KpiCard.createMetricCard` (IVA Liquidado, IVA Deduzido, Crédito Anterior, Saldo Fiscal Líquido), mantendo o painel em 784 linhas ($\le 1000$).
+- **Validação:**
+  - `VatSettlementHarnessTest` (5/5 verde no backend).
+  - `FinalUiUniformityHarnessTest` (4/4 verde), `UiPanelDecompositionTest` (1/1 verde).
+  - `MultiModuleArchitectureHarnessTest` (6/6 verde).
+  - Reactor completo compilado com **100% BUILD SUCCESS**.
+
+---
+
+### Fase 8: Envio Directo de Extratos & Cobranças por Email (SMTP com Anexo PDF) — 2026-09-17 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/ENVIO_EMAIL_COBRANCA_SPEC.md` (SPEC-EEC-001) — Especificação do despacho transacional de extratos de conta corrente via SMTP com geração em memória do extrato PDF e envio de cópia de segurança.
+  - `docs/ENVIO_EMAIL_COBRANCA_HARNESS.md` (HARNESS-EEC-001) — Testes EEC-01 a EEC-07.
+- **Módulo `contracts`:**
+  - `SendStatementEmailRequest`, `EmailDispatchResultDTO`.
+- **Módulo `backend`:**
+  - `spring-boot-starter-mail` adicionado ao `backend/pom.xml`.
+  - `CustomerStatementMailService`: geração de PDF via `CustomerStatementPrintService` e despacho `MimeMessageHelper` com modo simulado seguro em dev.
+  - Endpoint `POST /api/comercial/statements/customer/email` em `CustomerStatementController`.
+  - `CustomerStatementMailHarnessTest`: 3 testes unitários com Mockito.
+- **Módulo `desktop`:**
+  - `AccountStatementApiClient`: método `sendCustomerStatementEmail`.
+  - `SendStatementEmailDialog`: formulário modal para destinatário, CC, assunto, mensagem personalizada e opção de anexo PDF.
+  - `CustomerStatementPanel`: botão `Enviar por Email` na barra superior de ações.
+  - `SendStatementEmailDialogTest`: teste automatizado de UI.
+
+---
+
+### Fase 7: Padronização dos KPI Cards nos Restantes Painéis — 2026-09-17 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/KPI_CARDS_PADRONIZACAO_SPEC.md` (SPEC-KPI-001) — Regras de unificação de estilo de cartões métricos através de `KpiCard.createMetricCard`.
+  - `docs/KPI_CARDS_PADRONIZACAO_HARNESS.md` (HARNESS-KPI-001) — Critérios KPI-01 a KPI-08.
+- **Módulo `desktop`:**
+  - `KpiCard`: métodos auxiliares `createMetricCard` com ícones, cores temáticas de `UIHelper` e suporte a labels dinâmicos de subtítulo.
+  - Painéis unificados: `CreditRiskPanel`, `StockWastePanel`, `CustomerStatementPanel`, `SupplierStatementPanel` e `FiscalPanel` (remoção total de código duplicado de cards).
+  - Validação: `KpiCardStandardizationTest` (6/6 verde), `UiPanelDecompositionTest` (1/1 verde), `FinalUiUniformityHarnessTest` (4/4 verde).
+
+---
+
+### Fase 6: Painel de Decisão Executiva Unificado (Dashboard 360°) — 2026-09-17 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/DASHBOARD_EXECUTIVO_360_SPEC.md` (SPEC-D360-001) — Especificação do widget "Pulso Estratégico da Empresa".
+  - `docs/DASHBOARD_EXECUTIVO_360_HARNESS.md` (HARNESS-D360-001) — Critérios D360-01 a D360-07.
+- **Módulo `desktop`:**
+  - `StrategicPulseWidget`: consolidação de 4 pilares estratégicos (Conformidade Forense, Liquidez Previsional 30d, Risco de Crédito em Mora e Metas Comerciais) com navegação em 1 clique para os respectivos módulos.
+  - Integração em `DashboardPanel` (607 linhas $\le 1000$) e atalho `F12` em `MainFrame`.
+  - Validação: `StrategicPulseWidgetTest` (6/6 verde).
+
+---
+
+### Modo de Contingência & Resiliência Local no POS (Offline-First Leve) (Fase 5) — 2026-09-17 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/POS_CONTINGENCIA_RESILIENCIA_SPEC.md` (SPEC-PCR-001) — Especificação técnica da persistência atómica em fila local durável (`pos_contingency_queue.json`), emissão de talão térmico provisório nativo AWT com aviso regulamentar, idempotência fiscal no backend via `contingencyReference` e motor de sincronização FIFO em segundo plano.
+  - `docs/POS_CONTINGENCIA_RESILIENCIA_HARNESS.md` (HARNESS-PCR-001) — Matriz de conformidade e testes automatizados PCR-01 a PCR-10.
+- **Módulo `contracts`:**
+  - Enum `PosContingencyStatus` (`PENDING_SYNC`, `SYNCED`, `REVISION_NEEDED`).
+  - Extensão retrocompatível de `POSCheckoutRequest` com campo opcional `contingencyReference`.
+- **Módulo `backend`:**
+  - Migração de base de dados `V65__pos_contingency.sql` com coluna `contingency_reference` e índice composto `idx_invoices_contingency`.
+  - `Invoice` e `InvoiceRepository`: mapeamento e consulta `findByCompanyIdAndContingencyReference`.
+  - `POSService`: validação de idempotência estrita (se já sincronizada, devolve a fatura existente sem duplicar número `FT`, stock ou tesouraria).
+- **Módulo `desktop`:**
+  - `PosContingencySale`: modelo imutável com JSON serialization.
+  - `PosThermalReceiptPrinter`: renderizador nativo AWT (`Printable`) e formatador de texto para talões térmicos (80mm/58mm) com carimbo de documento provisório de contingência.
+  - `PosContingencyManager`: gestor thread-safe com persistência em ficheiro JSON, deteção de erros de rede e controlo de fila.
+  - `PosContingencySyncService`: serviço em background com agendamento periódico a cada 45s e acionamento sob demanda.
+  - `PosContingencyDialog`: diálogo modal para auditoria da fila local, reimpressão de talão e sincronização forçada com feedback visual.
+  - `POSPanel`: integração com botão dinâmico de contingência `[ ⚠️ Contingência (X) ]`, fallback no checkout e extração de `PosCartItem` preservando a classe estritamente abaixo do limite (**990 linhas**, $\le 1000$).
+- **Validação Automatizada:**
+  - `PosContingencyHarnessTest.java` (3/3 testes verdes no backend cobrindo PCR-01 a PCR-03).
+  - `PosContingencyManagerTest.java` (4/4 testes verdes no desktop cobrindo PCR-04 a PCR-07).
+  - Suite de testes POS completa (`PosErgonomicsHarnessTest`, `PosLayoutTest`, `PosProfessionalErgonomicsHarnessTest`, etc.) com **24/24 testes verdes**.
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis $\le 1000$ linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes, zero literais de cor fora do `UIHelper`).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes, isolamento estrito).
+  - Reactor Maven compilado com **100% BUILD SUCCESS**.
+
+---
+
+### Central de Auditoria Forense & Controlo de Fraude Interna (Fase 4) — 2026-09-17 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/AUDITORIA_FORENSE_SPEC.md` (SPEC-AFF-001) — Especificação técnica da auditoria forense contínua, regras analíticas de severidade (`CRITICAL`, `SUSPICIOUS`, `INFO`), apuramento de exposição financeira total ($R_{\text{total}} = \sum R_{\text{crítico}} + \sum R_{\text{suspeito}}$), matriz de conformidade (*Compliance Score*) e dossiê probatório em PDF A4.
+  - `docs/AUDITORIA_FORENSE_HARNESS.md` (HARNESS-AFF-001) — Critérios de conformidade automatizados AFF-01 a AFF-07.
+- **Módulo `contracts`:**
+  - Enums criados: `ForensicSeverity` (`CRITICAL`, `SUSPICIOUS`, `INFO`), `ForensicCategory` (`DOC_CANCELLATION`, `EXCESSIVE_DISCOUNT`, `STOCK_SHRINKAGE`, `CREDIT_OVERRIDE`, `PAYMENT_VOID`, `AUDIT_SECURITY`).
+  - DTOs records imutáveis: `ForensicAnomalyDTO`, `ForensicAuditSummaryDTO`.
+- **Módulo `backend`:**
+  - `ForensicAuditService`: Motor analítico de deteção de cancelamentos fiscais, descontos anormais (>10%), quebras de stock atípicas (> 3.000 / > 10.000 MT) e logs de ações sensíveis de segurança.
+  - `ForensicAuditPrintService`: Emissão de Dossiê Oficial de Auditoria em PDF A4 com `CompanyHeaderRenderer`, cartões KPI de risco, banner de conformidade, tabela zebrada de anomalias com severidade e termo de encerramento.
+  - `ForensicAuditController`: Endpoints REST multi-tenant `/api/audit/forensic` e `/api/audit/forensic/pdf`.
+- **Módulo `desktop`:**
+  - `ForensicAuditApiClient`: Cliente HTTP tipado com suporte a filtros combinados de período, severidade, categoria e operador.
+  - `ForensicAuditPanel.java`: Interface executiva elegante com 4 KPI cards superiores, filtros dinâmicos, tabela zebrada interativa com semáforo de risco, diálogo modal de detalhe probatório e pré-visualização integrada de PDF.
+  - `MainFrame.java`: Integrado na secção lateral "Fiscal & Auditoria", atalho na pesquisa global Spotlight (`Ctrl+K`), mantendo a classe estritamente abaixo do limite de 1000 linhas (**964 linhas**, $\le 1000$).
+- **Validação Automatizada:**
+  - `ForensicAuditHarnessTest.java` (5/5 testes verdes no backend cobrindo AFF-01 a AFF-06).
+  - `ForensicAuditPanelHarnessTest.java` (3/3 testes verdes no desktop cobrindo AFF-07).
+  - `DesktopThinContextTest` (2/2 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis $\le 1000$ linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes, zero literais de cor fora do `UIHelper`).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes, reactor isolado `contracts` / `backend` / `desktop`).
+  - Backend Spring Boot ativo e verificado com `/actuator/health` UP e testes REST/PDF bem-sucedidos.
+  - Desktop empacotado e reiniciado interativamente via Windows Task Scheduler.
+
+---
+
+### Tesouraria & Projeção de Fluxo de Caixa Previsional (Cash Flow Forecast) (Fase 3) — 2026-09-17 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/TESOURARIA_FLUXO_CAIXA_SPEC.md` (SPEC-TFC-001) — Especificação técnica do motor de liquidez previsional, consolidação de posição de caixa ($C_0$), alocação temporal de entradas e saídas por baldes (`OVERDUE`, `TODAY`, `DAYS_1_7`, `DAYS_8_15`, `DAYS_16_30`, `DAYS_31_60`, `DAYS_PLUS_60`), projeção progressiva cumulativa ($C_t = C_{t-1} + I_t - O_t$), alertas de défice de tesouraria (*Cash Shortage Alert*) e relatório executivo em PDF A4.
+  - `docs/TESOURARIA_FLUXO_CAIXA_HARNESS.md` (HARNESS-TFC-001) — Critérios de conformidade automatizados TFC-01 a TFC-07.
+- **Módulo `contracts`:**
+  - DTOs records imutáveis: `CashFlowForecastDTO`, `CashFlowBucketDTO`, `CashFlowItemDTO`, `CashFlowAlertDTO`.
+- **Módulo `backend`:**
+  - `CashFlowForecastService`: Cálculo da posição imediata em caixas e bancos, agregação por vencimento de faturas a clientes e compras a fornecedores, projeção cumulativa progressiva e emissão de alertas executivos (`CRITICAL`, `WARNING`, `HEALTHY`).
+  - `CashFlowForecastPrintService`: Gerador canónico de relatório de tesouraria em PDF A4 com `CompanyHeaderRenderer`, cartões métricos superiores, banner contextual de liquidez, matriz temporal zebrada, tabela dos 10 maiores recebimentos/pagamentos e termo de responsabilidade financeira.
+  - `CashFlowForecastController`: Endpoints REST multi-tenant `/api/finance/forecast` e `/api/finance/forecast/pdf`.
+- **Módulo `desktop`:**
+  - `CashFlowForecastApiClient`: Cliente HTTP tipado para consulta de projeção e download de PDF.
+  - `CashFlowForecastPanel.java`: Interface executiva de alta densidade com 4 KPI cards superiores, banner inteligente de alerta, matriz temporal de liquidez com renderers monetários coloridos e abas de detalhamento de clientes e fornecedores.
+  - `FinanceiroPanel.java`: Integrada nova aba 4 "Projeção Previsional" mantendo o painel estritamente em **287 linhas** ($\le 1000$).
+  - `MainFrame.java`: Injeção de dependências preservando estritamente as regras de limite de tamanho de painel (**996 linhas**, $\le 1000$).
+- **Validação Automatizada:**
+  - `CashFlowForecastHarnessTest.java` (5/5 testes verdes no backend cobrindo TFC-01 a TFC-06).
+  - `CashFlowForecastPanelHarnessTest.java` (2/2 testes verdes no desktop cobrindo TFC-07).
+  - `DesktopThinContextTest` (2/2 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis $\le 1000$ linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes, zero literais de cor fora do `UIHelper`).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes, isolamento do reactor `contracts` / `backend` / `desktop`).
+  - Reactor Maven compilado com **100% BUILD SUCCESS** e desktop empacotado e reiniciado interativamente via Windows Task Scheduler.
+
+---
+
+### Extrato de Conta Corrente de Clientes & Fornecedores com Reconciliação e PDF Canónico (Fase 2) — 2026-09-16 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/EXTRATO_CONTA_CORRENTE_SPEC.md` (SPEC-ECC-001) — Especificação técnica do extrato de conta corrente, fórmula de saldo progressivo ($S_i = S_{i-1} + \text{débitos} - \text{créditos}$ para clientes, $S_i = S_{i-1} + \text{créditos} - \text{débitos}$ para fornecedores), consolidação de saldo anterior ($S_0$), reconciliação de pendentes e carta canónica de circularização em PDF A4.
+  - `docs/EXTRATO_CONTA_CORRENTE_HARNESS.md` (HARNESS-ECC-001) — Critérios de conformidade automatizados ECC-01 a ECC-07.
+- **Módulo `contracts`:**
+  - DTOs records imutáveis: `CustomerStatementDTO`, `CustomerStatementLineDTO`, `SupplierStatementDTO`, `SupplierStatementLineDTO`.
+- **Módulo `backend`:**
+  - `CustomerStatementService`: Ordenação cronológica de Faturas (FT), Recibos (RC), Notas de Crédito (NC) e Notas de Débito (ND), cálculo de saldo anterior antes da data de início, saldo corrente linha a linha e montante vencido.
+  - `SupplierStatementService`: Ordenação cronológica de Compras a Fornecedor (V/FT) e Pagamentos (PG) com cálculo de saldo em aberto e saldo progressivo.
+  - `CustomerStatementPrintService` & `SupplierStatementPrintService`: Geradores de PDF A4 em OpenPDF com `CompanyHeaderRenderer`, bloco de identificação de entidade, cartões métricos superiores, tabela zebrada de movimentos e termo formal de circularização com blocos de assinatura.
+  - `CustomerStatementController` (`/api/comercial/statements/customer`, `/api/comercial/statements/customer/pdf`).
+  - `SupplierStatementController` (`/api/purchases/statements/supplier`, `/api/purchases/statements/supplier/pdf`).
+- **Módulo `desktop`:**
+  - `AccountStatementApiClient`: Cliente HTTP tipado para consulta de extratos e download/impressão de PDFs.
+  - `CustomerStatementPanel.java`: Interface executiva integrada como aba 3 em `ClientesPanel.java` ("Conta Corrente & Reconciliação") com seletores de cliente, filtros temporais, 4 KPI cards de resumo, tabela progressiva com renderers monetários e diálogo integrado de impressão com pré-visualização.
+  - `SupplierStatementPanel.java`: Interface integrada como aba 5 em `ComprasPanel.java` ("Conta Corrente & Reconciliação") para gestão de saldos com fornecedores.
+  - `MainFrame.java`: Injeção de dependências preservando estritamente as regras de limite de tamanho de painel (996 linhas, $\le 1000$).
+- **Validação Automatizada:**
+  - `AccountStatementHarnessTest.java` (5/5 testes verdes no backend cobrindo ECC-01 a ECC-05).
+  - `AccountStatementPanelHarnessTest.java` (2/2 testes verdes no desktop cobrindo ECC-06 e ECC-07).
+  - `DesktopThinContextTest` (2/2 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis $\le 1000$ linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes, zero violações de cores fora do UIHelper).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes, reactor isolado `contracts` / `backend` / `desktop`).
+  - Reactor Maven compilado com **100% BUILD SUCCESS** e desktop empacotado e reiniciado interativamente via Windows Task Scheduler.
+
+---
+
+### Radar de Alertas Inteligentes & Risco Proactivo (Fase 1) — 2026-09-16 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/RADAR_ALERTAS_PROACTIVO_SPEC.md` — Especificação técnica do monitoramento proativo de 360° unificando o sino (`NotificationFeed`), painel de notificações e diálogo de intervenção rápida (`SmartAlertsDialog`).
+  - `docs/RADAR_ALERTAS_PROACTIVO_HARNESS.md` — Critérios de conformidade automatizados RAP-01 a RAP-07.
+- **Componentes e Melhorias Realizadas:**
+  - `NotificationFeed.java`: Injeção de `CreditRiskApiClient` e `StockWasteApiClient` com construtores retrocompatíveis. Deteção automática de clientes com risco crítico (`CRITICAL`), clientes bloqueados ou atrasos > 30d (prioridade 3), e quebras de stock pendentes de validação gerencial (`PENDING_APPROVAL`, prioridade 2). Degradação suave contra erros de rede/serviço.
+  - `SmartAlertsDialog.java`: Mapeamento das novas categorias com ações contextuais inteligentes (`"Cobrar / Ver Risco"` para crédito e `"Aprovar Quebras"` para perdas de stock).
+  - `StockPanel.java`: Adicionado método `selectWasteTab()` (alias de `showWasteManagement()`).
+  - `MainFrame.java`: Resolução de rotas virtuais `risco_credito` (redireciona para o cartão `clientes` e ativa a aba de Aging) e `stock_waste` (redireciona para o cartão `stock` e ativa a aba de Quebras). `MainFrame.java` mantido estritamente abaixo de 1000 linhas (997 linhas).
+- **Validação Automatizada:**
+  - `RadarAlertasProactivoHarnessTest.java` (7/7 testes verdes cobrindo RAP-01 a RAP-07).
+  - `NotificationFeedTest.java` (6/6 testes verdes).
+  - `CreditRiskPanelHarnessTest.java` (7/7 testes verdes).
+  - `StockWastePanelHarnessTest.java` (7/7 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes).
+  - Reactor Maven compilado com **100% BUILD SUCCESS** e desktop empacotado e reiniciado interativamente via Windows Task Scheduler.
+
+---
+
+### Centro de Risco de Crédito & Cobrança (CRCC) — 2026-09-16 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/RISCO_CREDITO_COBRANCA_SPEC.md` — Especificação técnica do Centro de Risco de Crédito, Matriz de Aging por faixas (Corrente, 1-30d, 31-60d, 61-90d, >90d), níveis executivos (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), cartas de cobrança formal em PDF e fluxo de aprovação de excepções de crédito.
+  - `docs/RISCO_CREDITO_COBRANCA_HARNESS.md` — Critérios de conformidade automatizados RCC-01 a RCC-07.
+- **Componentes e Melhorias Realizadas:**
+  - `CreditRiskPanel.java`: Interface executiva elegante com 4 KPI cards superiores (Total a Receber, Saldo em Mora, Clientes Bloqueados, Risco Elevado/Crítico), matriz de aging em tabela com alinhamento monetário à direita, semáforo visual de risco, pesquisa rápida por nome/NUIT/email, geração e pré-visualização de Notificação de Cobrança em PDF e diálogo modal para solicitação de excepção de crédito conectada ao módulo de aprovações.
+  - Decomposição estrita de linhas: painel mantido com 615 linhas (muito abaixo do limite de 1000 linhas).
+- **Validação Automatizada:**
+  - `CreditRiskPanelHarnessTest.java` (7/7 testes verdes).
+  - `CreditRiskHarnessTest.java` no backend (7/7 testes verdes).
+  - `StockWastePanelHarnessTest.java` (7/7 testes verdes).
+  - `StockWasteHarnessTest.java` no backend (8/8 testes verdes).
+  - `UniversalPeriodFilterHarnessTest.java` (9/9 testes verdes).
+  - `PeriodFilterVocabularyTest.java` (6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (6/6 testes verdes).
+  - Reactor Maven compilado com **100% BUILD SUCCESS** e desktop empacotado e reiniciado interativamente via Windows Task Scheduler.
+
+---
+
+### Filtro Universal por Período & Gestão de Quebras de Stock — 2026-09-15 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/FILTRO_PERIODO_UNIVERSAL_SPEC.md` — Especificação canónica da linguagem temporal retrospetiva, cálculo de fronteiras e integração nas tabelas transacionais.
+  - `docs/FILTRO_PERIODO_UNIVERSAL_HARNESS.md` — Critérios de validação automatizada UFP-01 a UFP-08.
+  - `docs/GESTAO_QUEBRAS_STOCK_SPEC.md` — Especificação técnica do ciclo de vida auditável de quebras (alçadas de aprovação, motivos fiscais, custo histórico e radar de validades).
+  - `docs/GESTAO_QUEBRAS_STOCK_HARNESS.md` — Critérios de conformidade automatizados GQS-01 a GQS-08.
+- **Componentes e Melhorias Realizadas:**
+  - `TableFilter.java`: Expansão do vocabulário do `periodCombo()` com `"Ontem"`, `"Esta semana"`, `"Este ano"`, garantindo conformidade matemática e retrospetiva em `matchesPeriod()`.
+  - `CommercialInvoicesView.java` & `ComercialPanel.java`: Adicionada a coluna `"Data"` (formato `dd/MM/yyyy HH:mm`) e instalado o filtro universal por período (`PeriodFilter`) em conjunto com o filtro de estado. Constantes de leitura de modelo preservadas e `ComercialPanel.java` mantido estritamente abaixo do limite de 1000 linhas (991 linhas).
+  - `StockWastePanel.java`: Integrado o `periodFilterCombo` na barra de ferramentas superior da tabela de quebras, com filtragem combinada de período, estado, motivo e texto.
+- **Validação Automatizada:**
+  - `UniversalPeriodFilterHarnessTest.java` (9/9 testes verdes).
+  - `PeriodFilterVocabularyTest.java` (6/6 testes verdes).
+  - `StockWastePanelHarnessTest.java` (7/7 testes verdes).
+  - `StockWasteHarnessTest.java` no backend (8/8 testes verdes).
+  - `UiPanelDecompositionTest.java` (1/1 teste verde, todos os painéis prioritários < 1000 linhas).
+  - `FinalUiUniformityHarnessTest.java` (4/4 testes verdes, zero violações cromáticas).
+  - Reactor Maven compilado com **100% BUILD SUCCESS** e desktop empacotado e reiniciado.
+
+---
+
+### Centro de Desempenho Comercial (CDC) — 2026-09-15 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/COMMERCIAL_PERFORMANCE_SPEC.md` — Especificação técnica do módulo CDC (Metas comerciais, progresso em tempo real, ranking de vendedores, bónus e integração com RH/folha salarial).
+  - `docs/COMMERCIAL_PERFORMANCE_HARNESS.md` — Critérios de conformidade automatizados (CDC-BIZ-01 a CDC-BIZ-12).
+- **Módulo `contracts`:**
+  - Enums criados: `GoalPeriod`, `GoalScope`, `BonusType`, `GoalStatus`, `BonusStatus`, `AlertLevel`.
+  - DTOs records criados: `SalesGoalDTO`, `CreateSalesGoalRequest`, `UpdateSalesGoalRequest`, `SalesGoalProgressDTO`, `EmployeeRankingDTO`, `SalesGoalBonusDTO`, `ApproveBonusRequest`, `AdjustBonusRequest`, `PerformanceReportDTO`.
+  - Atualizado `PayslipDTO` com campo `salesBonus`.
+- **Módulo `backend`:**
+  - Migração de base de dados: `V62__commercial_performance.sql` criando tabelas `sales_goals`, `sales_goal_bonuses` e coluna `payslips.sales_bonus`.
+  - Entidades JPA e Repositórios: `SalesGoal`, `SalesGoalBonus`, `SalesGoalRepository`, `SalesGoalBonusRepository` e entidade `Payslip` atualizada.
+  - Motores de Negócio:
+    - `BonusCalculatorEngine`: cálculo de prémio fixo, % de receita e % de margem com suporte a teto (`bonusCap`).
+    - `GoalProgressEngine`: cálculo de receita e margem realizadas (com custo histórico `lineCost`), ritmo ideal vs real, projeção linear e níveis de alerta (`NONE`, `CAUTION`, `LATE`, `CRITICAL`).
+    - `EmployeeRankingService`: agregações por funcionário/vendedor com ranking de vendas, margem bruta, ticket médio e progresso da meta.
+    - `SalesGoalService`: gestão completa de metas, validações semânticas BIZ-01 a BIZ-11, aprovação e ajuste de bónus com auditoria.
+    - `PerformanceReportService`: consolidação de relatórios executivos de desempenho por equipa.
+    - `PerformanceReportPrintService`: geração de PDF executivo de desempenho comercial.
+    - `HRService`: integração automática de prémios aprovados nos recibos de vencimento (`salesBonus`), recálculo do líquido e bloqueio após fecho do período.
+  - Controlador REST: `PerformanceController` com 12 endpoints versionados sob `/api/performance`.
+- **Módulo `desktop`:**
+  - Cliente HTTP: `PerformanceApiClient`.
+  - Painel decomposto (< 1000 linhas): `PerformancePanel` integrando 4 abas especializadas:
+    - `GoalsTab`: listagem, filtros, criação e cancelamento de metas comerciais.
+    - `ProgressTab`: visualização em tempo real de cartões com barras de progresso, alertas e projeções.
+    - `RankingTab`: tabela de classificação por vendas, margem e ticket médio com botão de exportação/impressão em PDF.
+    - `BonusTab`: aprovação, ajuste e integração direta de prémios na folha de pagamentos.
+  - Navegação e Alertas:
+    - `MainFrame`: registado no menu lateral "Gestão & CRM" com ícone de troféu, atalho no Spotlight (`Ctrl+K`) e navegação suave.
+    - `NotificationFeed` e `SmartAlertsDialog`: metas com atraso crítico ou ritmo lento geram alertas inteligentes com navegação direta para o CDC.
+- **Validação Automatizada:**
+  - `BonusCalculatorEngineTest` (5/5 testes verdes).
+  - `GoalProgressEngineTest` (3/3 testes verdes).
+  - `CommercialPerformanceHarnessTest` (11/11 testes verdes cobrindo CDC-BIZ-01 a CDC-BIZ-12).
+  - `UiPanelDecompositionTest` (1/1 verde).
+  - `UiOrganizationNavigationHarnessTest` (6/6 verde).
+  - `MultiModuleArchitectureHarnessTest` (6/6 verde).
+  - Compilação do reactor Maven: `mvn clean compile` com **100% BUILD SUCCESS**.
+
+---
+
+### Pacote de Excelência Executiva, Rentabilidade e Automação Operacional — 2026-09-13 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/MELHORIAS_EXECUTIVAS_SPEC.md` — Especificação técnica dos 6 novos módulos executivos (Alertas Inteligentes, Impressão Direta POS, Rentabilidade/Margens/DRE, Câmbios Multimoeda, Fidelização por Pontos e Centro de Backup).
+  - `docs/MELHORIAS_EXECUTIVAS_HARNESS.md` — Critérios de conformidade automatizados (EX-01 a EX-07).
+- **Componentes Canónicos Criados e Integrados:**
+  - `SmartAlertsDialog.java`: Centro de alertas classificados por criticidade (🔴 Crítico, 🟡 Atenção, 🟢 Informativo) com botões de ação imediata com 1-clique.
+  - `PosDirectPrintEngine.java`: Motor de impressão direta/silenciosa para impressoras térmicas (80mm) sem diálogo modal de confirmação.
+  - `ProfitEngine.java` & `ProfitAnalyticsWidget.java`: Motor de apuramento de CMVMC, Lucro Bruto, Margem % e Ticket Médio integrado ao Dashboard com filtro de período.
+  - `MultiCurrencyEngine.java` & `CurrencyExchangeDialog.java`: Calculadora de câmbio multimoeda (USD, ZAR, EUR) e conversão de troco em Meticais no POS.
+  - `LoyaltyEngine.java`: Motor de pontuação e fidelização de clientes (1 ponto por cada 100 MT) e resgate de desconto.
+  - `DatabaseBackupDialog.java`: Diálogo para geração de cópias de segurança com 1 clique e validação de integridade.
+  - `MainFrame.java`: Ações `act_alerts`, `act_backup`, `act_currency` registadas na pesquisa global Spotlight (`Ctrl+K`).
+- **Validação Automatizada:**
+  - `ExecutiveSuiteHarnessTest.java` (6/6 verde), `ProductivitySuiteHarnessTest.java` (6/6 verde), `ProfessionalFeedbackHarnessTest` (9/9 verde), `MultiModuleArchitectureHarnessTest` (6/6 verde), suite completa do desktop com **223/223 testes verdes** e build do reactor com **100% BUILD SUCCESS**.
+
+### Pacote de Produtividade Total, Gestão e Rigor Operacional — 2026-09-13 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/PRODUTIVIDADE_TOTAL_SPEC.md` — Especificação técnica dos 5 novos módulos de produtividade (Dashboard com Filtro Dinâmico e Top 5, POS Fecho Cego, Gerador de Etiquetas de Prateleira, Feed de Atividades Recentes e Exportação CSV Universal).
+  - `docs/PRODUTIVIDADE_TOTAL_HARNESS.md` — Critérios de conformidade automatizados (PT-01 a PT-07).
+- **Componentes Canónicos Criados e Integrados:**
+  - `TableCsvExporter.java` & `TableContextMenu.java`: Exportação universal de qualquer tabela para CSV formatado em UTF-8 com BOM (compatível com Excel) através do menu de contexto e atalho `Ctrl+E`.
+  - `ShelfLabelsDialog.java`: Gerador e impressor de etiquetas de prateleira com código de barras vetorial, categoria, data e preço em Meticais em destaque. Integrado no menu de stock e pesquisa global.
+  - `TopProductsWidget.java`: Widget visual com ranking dos Top 5 produtos mais vendidos, percentagens e barras de progresso com gradientes.
+  - `RecentActivityWidget.java`: Linha do tempo visual de atividade recente (faturas, vendas, compras) com ícones e timestamps relativos.
+  - `DashboardPanel.java`: Adicionados chips de filtro dinâmico de período (`Hoje`, `Esta Semana`, `Este Mês`, `Este Ano`, `Todo o Período`) com recálculo assíncrono instantâneo.
+  - `StockPanel.java`: Decomposição e integração com `ShelfLabelsDialog` reduzindo linhas de código.
+- **Validação Automatizada:**
+  - `ProductivitySuiteHarnessTest.java` (6/6 verde), `GlobalSearchShortcutsHarnessTest` (5/5 verde), `ButtonIconContrastHarnessTest` (5/5 verde), `IconSystemHarnessTest` (6/6 verde), `FinalUiUniformityHarnessTest` (4/4 verde), `PosErgonomicsHarnessTest` (4/4 verde), `UiOrganizationNavigationHarnessTest` (6/6 verde), `UiPanelDecompositionTest` (1/1 verde), `MultiModuleArchitectureHarnessTest` (6/6 verde) e build do reactor com **100% BUILD SUCCESS**.
+
+### Pesquisa Global Rápida (`Ctrl+K`), Atalhos (`F1`/`F11`) e Produtividade — 2026-09-13 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/PESQUISA_GLOBAL_ATALHOS_SPEC.md` — Especificação técnica da paleta de comandos Spotlight, indexação de módulos e ações, navegação por teclado e modos operacionais.
+  - `docs/PESQUISA_GLOBAL_ATALHOS_HARNESS.md` — Critérios de conformidade automatizados (PGA-01 a PGA-05).
+- **Componentes Canónicos Criados:**
+  - `GlobalSearchDialog.java`: Diálogo de pesquisa estilo Spotlight/Command Palette com filtragem em tempo real (título, categoria, sinónimos/keywords), atalho `ESC`, navegação por setas `Up`/`Down` e execução direta com `Enter`.
+  - `ShortcutHelpDialog.java`: Guia visual temático de atalhos operacionais organizado em cartões categorizados (Navegação & Sistema, POS & Balcão).
+- **Integração no Cabeçalho e Janela Principal:**
+  - `TopNavBar.java`: Adicionada pílula de pesquisa central `[ 🔍 Pesquisar módulos ou ações...  Ctrl+K ]` clicável.
+  - `MainFrame.java`: Registados atalhos globais no `RootPane` (`Ctrl+K` para pesquisa, `F1` para ajuda de atalhos, `F11` para alternar ecrã completo/fullscreen e `Ctrl+B` para menu lateral).
+- **Validação Automatizada:**
+  - `GlobalSearchShortcutsHarnessTest.java` implementado cobrindo 100% dos requisitos PGA-01 a PGA-05 (**5/5 testes verdes**).
+  - Regressão: `ButtonIconContrastHarnessTest`, `ButtonContrastTest`, `IconSystemHarnessTest`, `FinalUiUniformityHarnessTest`, `PosErgonomicsHarnessTest`, `UiOrganizationNavigationHarnessTest`, `UiPanelDecompositionTest`, `MultiModuleArchitectureHarnessTest` e `mvn compile` todos **100% verdes (BUILD SUCCESS)**.
+
+### Harmonização e Contraste de Ícones e Texto nos Botões — 2026-09-13 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/BOTOES_ICONES_CONTRASTE_SPEC.md` — Especificação técnica para cálculo de contraste, regras de sincronização dinâmica do `FontIcon` com a cor de texto do `ModernButton`, e paletas seguras para botões sólidos e contornados.
+  - `docs/BOTOES_ICONES_CONTRASTE_HARNESS.md` — Critérios de conformidade automatizados (BIC-01 a BIC-05).
+- **Sincronização Dinâmica em `ModernButton.java`:**
+  - Sobrescrito `setIcon(Icon)` e `setForeground(Color)` para interceptar instâncias de `FontIcon` e sincronizar automaticamente sua cor interna (`setIconColor`) com o `textColor` / `readableTextOn(background)` do botão.
+  - No método `setColors(...)`, o ícone agora acompanha as alterações dinâmicas de tema e estado ativo/inativo (ex.: botões de filtro e segmentação que alternam entre fundo escuro e fundo claro).
+- **Cor Padrão Segura de Ícones em `UIHelper.java`:**
+  - `UIHelper.icon(code, size)` e `fallbackIcon` restaurados para `Color.WHITE` por padrão, garantindo alto contraste imediato na vasta maioria de botões de ação com cores sólidas (`ACCENT_BLUE`, `APPROVED_GREEN`, `REJECTED_RED`, `BUTTON_NEUTRAL`, `SECONDARY`).
+- **Validação Automatizada:**
+  - Criado `ButtonIconContrastHarnessTest.java` cobrindo 100% dos requisitos BIC-01 a BIC-05 (**5/5 testes verdes**).
+  - Regressão: `ButtonContrastTest` (4/4), `IconSystemHarnessTest` (6/6), `FinalUiUniformityHarnessTest` (4/4), `PosErgonomicsHarnessTest` (4/4), `UiPanelDecompositionTest` (1/1), `MultiModuleArchitectureHarnessTest` (6/6) e `mvn compile` no reactor Maven todos **100% verdes (BUILD SUCCESS)**.
+
+
+- **Documentação Canónica:**
+  - `docs/POS_MODERNIZACAO_ERGONOMIA_SPEC.md` — Especificação da geometria do checkout, densidade do catálogo, cabeçalho e atalhos operacionais.
+  - `docs/POS_MODERNIZACAO_ERGONOMIA_HARNESS.md` — Critérios de conformidade automatizados (POS-01 a POS-06).
+- **Recuperação de Espaço Vertical no Checkout (`POSPanel.java`):**
+  - Removidos os 3 cartões grandes de resumo da visão de venda ativa, liberando ~95px de altura útil imediata para visualização de mais produtos e mais linhas na tabela de compras.
+  - Atalho de leitura de código de barras `F3` adicionado ao `InputMap` com indicador explícito no campo.
+- **Alta Densidade no Catálogo de Produtos (`PosCatalogController.java`):**
+  - Otimizada a geometria dos cartões de produto (`CARD_IMAGE_WIDTH = 80`, `CARD_IMAGE_HEIGHT = 44`, padding e gaps compactos), permitindo exibir **6 a 8 produtos por página** em simultâneo sem rolagem forçada.
+- **Validação Automatizada:**
+  - `PosErgonomicsHarnessTest.java` (4/4 verde), `PosCatalogAvailabilityTest`, `PosButtonColourHierarchyTest`, `PosLayoutTest`, `POSKeyboardShortcutTest`, `UiPanelDecompositionTest` (POSPanel em 995 linhas, <1000) e `MultiModuleArchitectureHarnessTest` todos **verdes**.
+
+### Modernização e Padronização do Sistema de Ícones — 2026-09-13 — **implementado com SPEC e HARNESS**
+
+- **Documentação Canónica:**
+  - `docs/SISTEMA_ICONES_SPEC.md` — Especificação técnica dos tokens de dimensão, convenções cromáticas, acessibilidade e fallback de segurança.
+  - `docs/SISTEMA_ICONES_HARNESS.md` — Critérios de conformidade automatizados (IC-01 a IC-08).
+- **Resiliência e Proteção Contra Falhas (`UIHelper.java`):**
+  - Implementado fallback gracioso no carregamento de ícones (`fallbackIcon`), garantindo que códigos nulos, vazios ou incorretos não quebrem a aplicação com `IllegalArgumentException`.
+  - A sobrecarga padrão `UIHelper.icon(code, size)` passa a assumir a cor de texto do tema ativo (`UIHelper.TEXT_LIGHT`), evitando ícones brancos invisíveis no Modo Claro.
+- **Tokens Canónicos de Dimensão:**
+  - Introduzidas as constantes semânticas `ICON_XS (12)`, `ICON_SM (14)`, `ICON_MD (16)`, `ICON_LG (20)`, `ICON_XL (24)` e `ICON_HERO (48)`.
+- **Ícones Compostos com Crachá (`BadgedIcon.java`):**
+  - Criado o componente canónico `BadgedIcon` e o utilitário `UIHelper.badgedIcon(...)` para sobrepor contadores numéricos e indicadores de estado em tempo real.
+- **Acessibilidade para Botões Icon-Only:**
+  - Criado o helper `UIHelper.createIconButton(...)` com atribuição obrigatória de `toolTipText` e `AccessibleName`.
+- **Validação Automatizada:**
+  - `IconSystemHarnessTest.java` implementado cobrindo 100% dos critérios IC-01 a IC-06 (**6/6 testes verdes**).
+  - Regressão: `UiOrganizationNavigationHarnessTest`, `FinalUiUniformityHarnessTest`, `UiPanelDecompositionTest`, `SimplePieChartTest` e `MultiModuleArchitectureHarnessTest` todos **verdes**.
+
+### Otimização de Espaço no POS e Gráficos de Pizza no Painel Inicial — 2026-09-13 — **concluído**
+
+- **Componente canónico criado:** `SimplePieChart.java` (gráfico de pizza clássico sólido em Java 2D vetorial anti-aliased com percentagens desenhadas diretamente no interior de cada fatia com cálculo de contraste automático, linhas divisórias nítidas, paleta de cores vibrante cyan/orange/blue/lime/slate e legendas completas) e testes em `SimplePieChartTest.java`.
+- **Painel Inicial (`DashboardPanel.java`):**
+  - Adicionado card KPI de POS: **VENDAS POS (HOJE)** com faturação e total de vendas do balcão em tempo real.
+  - Integrados dois novos gráficos de pizza sólida em grelha 2x2 com os gráficos de barras:
+    1. **Vendas por Canal (POS vs Faturas):** Comparativo entre volume de balcão POS e faturação comercial direta.
+    2. **Estrutura Financeira (Receita, Compras, IVA):** Proporção entre receitas, compras a fornecedores e IVA.
+- **Otimização do POS (`PosSalesHistoryPanel.java`):**
+  - Substituída a barra volumosa de 3 cartões grandes por chips de resumo horizontais compactos (`createSummaryChip`), recuperando ~70-80px de altura vertical para a tabela de vendas.
+- **Validação:** `SimplePieChartTest` (2/2), `UiPanelDecompositionTest`, `FinalUiUniformityHarnessTest`, `UiOrganizationNavigationHarnessTest` e `MultiModuleArchitectureHarnessTest` todos **verdes**.
+
+### Simplificação do Cabeçalho Superior (Remoção do Menu Duplicado) — 2026-09-13 — **concluído**
+
+- **Contexto:** Com a introdução da `CollapsibleSidebar` com 4 secções temáticas e navegação categorizada, os botões de módulos repetidos na barra superior tornaram-se redundantes e ocupavam espaço vertical.
+- **Alterações:**
+  - Removida a linha de ícones de navegação de módulos de `TopNavBar` e `MainFrame.buildTopBar()`.
+  - O cabeçalho superior (`TopNavBar`) passou a atuar como um cabeçalho limpo e contextual:
+    - **Esquerda:** Exibe dinamicamente o título do módulo ativo em foco (ex.: "Painel Inicial", "POS — Caixa", "Stock & Armazéns", etc.).
+    - **Direita:** Utilitários essenciais preservados (Alternador de tema Claro/Escuro, Sino de Notificações com contador e prévia, Chip de Subscrição PRO, Seletor de Empresa para multi-tenant e Chip de Perfil de Utilizador/Sessão).
+  - Validação automatizada: `UiOrganizationNavigationHarnessTest`, `FinalUiUniformityHarnessTest` e `TopNavItemTest` executados com **100% de sucesso (BUILD SUCCESS)**.
+
+### Correcção de Inicialização do Desktop (ActionMenuButton no HRPanel) — 2026-09-13 — **correcção crítica de arranque**
+
+- **Causa raiz:** O separador de Recibos de Salário (`HRPanel.buildPayslipsTab()`) adicionava 6 acções ao menu `Documentos`. Como `ActionMenuButton` valida estritamente um máximo de 5 acções (`MAX_ACTIONS = 5`), era lançada uma `IllegalStateException: O menu de acções não pode ter mais de cinco opções.` durante a instanciação do `MainFrame`, terminando a aplicação imediatamente após o login.
+- **Resolução:**
+  - Separado o menu em dois agrupamentos temáticos: `Documentos` (Imprimir PDF, Exportar Lista, Ficheiro de Pagamento) e `Mais acções` (13.º Mês, Fechar Mês, Reabrir Mês), ambos com <= 3 itens respeitando a restrição do componente.
+  - Mantida a guarda de tamanho do `HRPanel.java` abaixo do limite de 1000 linhas (999 linhas) em conformidade com `UiPanelDecompositionTest`.
+  - Validação automatizada: `UiPanelDecompositionTest`, `HRSubsidiesUiHarnessTest` e `MultiModuleArchitectureHarnessTest` todos com **BUILD SUCCESS**.
+
+### UI e Organização da Navegação (Login & Sidebar) — 2026-09-12 — **implementado com SPEC e HARNESS**
+
+- Modernização completa da autenticação com `LoginDialog`:
+  - Detetor dinâmico de Caps Lock ativado em tempo real para prevenção de erros de entrada.
+  - Alternador de visibilidade de senha (mostrar/ocultar senha com feedback sonoro e acessibilidade).
+  - Chips de contas de demonstração rápidas (Maria - Gestão, João - Caixa/Vendas, Ana - RH) com preenchimento instantâneo e foco no botão de entrada.
+  - Contentor rolável responsivo (`JScrollPane` com viewport transparente) para ecrãs menores ou resoluções compactas.
+  - Adaptação coerente aos temas Claro e Escuro sem recorrer a literais de cores fora do `UIHelper`.
+- Estruturação modular da navegação com `CollapsibleSidebar` e `SidebarNavItem`:
+  - Organização semântica em quatro secções temáticas: Operações, Gestão & CRM, Fiscal & Auditoria e Sistema.
+  - Transição fluida entre modo expandido (240px) e modo recolhido/rail (64px) com tooltips contextuais.
+  - Atalho de teclado global `Ctrl+B` integrado ao `MainFrame` para alternar o estado do menu lateral.
+  - Suporte a badges numéricos dinâmicos para notificações e pendências.
+  - Acessibilidade completa com `AccessibleContext` e navegação por teclado (Enter/Espaço).
+- Respeito integral às regras arquiteturais e de qualidade:
+  - Extraído `PosTodaySummaryView` para isolar os cartões de resumo diário do POS, reduzindo `POSPanel.java` de 1066 para 997 linhas (respeitando o teto de 1000 linhas).
+  - Eliminadas instâncias locais de `new Color(...)` no `POSPanel` e `PosSalesHistoryPanel`.
+  - Documentação canónica: `docs/UI_ORGANIZACAO_NAVEGACAO_SPEC.md` e `docs/UI_ORGANIZACAO_NAVEGACAO_HARNESS.md`.
+  - Validação automatizada: `UiOrganizationNavigationHarnessTest` (6/6 verde), `FinalUiUniformityHarnessTest` + `UiPanelDecompositionTest` (5/5 verde), `MultiModuleArchitectureHarnessTest` (6/6 verde) e `mvn clean compile` no reactor com **BUILD SUCCESS**.
+
+### POS historico — 2026-09-09 — **filtro de data no servidor**
+
+- O filtro de data do Historico de Vendas POS existia visualmente, mas actuava apenas sobre a pagina
+  carregada. Como a tabela e paginada pelo servidor, isso podia esconder vendas de outras paginas.
+- `GET /api/comercial/pos-sales/page` aceita agora `from` e `to` opcionais e filtra por
+  `createdAt` antes da paginacao.
+- `ComercialApiClient` envia o intervalo e `PosSalesHistoryPanel` recarrega a primeira pagina ao
+  mudar o periodo: Todo o periodo, Hoje, Ultimos 7 dias, Ultimos 30 dias e Este mes.
+- O painel ganhou cards de variacao no topo: vendas do periodo, total POS do periodo e variacao de
+  receita contra o periodo anterior equivalente. O resumo vem de `/api/comercial/pos-sales/summary`.
+- O painel principal do POS tambem ganhou cards de hoje: vendas hoje, total hoje e variacao contra
+  ontem, actualizados ao abrir o painel, ao clicar em actualizar e depois de finalizar uma venda.
+- Validacao focada: `ComercialControllerIntegrationTest` verde com contrato `from/to`; backend e
+  desktop compilaram no reactor dirigido. `MultiModuleArchitectureHarnessTest` verde por causa do
+  novo DTO partilhado `POSSalesSummaryDTO`.
+
+### POS demo — 2026-09-08 — **dados vendaveis corrigidos**
+
+- O backend estava UP, mas a base H2 local tinha seed invalida para o POS: os produtos eram
+  partilhados entre Portugal e Mocambique, enquanto o stock ficava repartido entre armazens de
+  empresas diferentes. Na empresa da Maria havia 7 produtos visiveis e apenas 4 vendaveis.
+- `DataLoader` passou a semear stock positivo, em armazem de venda, para todos os produtos fisicos
+  partilhados em cada empresa de demonstracao.
+- Validacao focada: `ComercialControllerIntegrationTest`, `InventoryServiceTest` e
+  `MoneyFlowHttpIntegrationTest` verdes (**10 testes, zero falhas/erros**).
+- Backend reiniciado em `http://localhost:8080` com PID `15416`; health **UP**. Verificacao ao vivo:
+  7 produtos totais, 7 vendaveis, catalogo POS "Todos" = 7, "Disponiveis" = 7, indisponiveis = 0.
+
+### Recuperação de backup em PostgreSQL isolado — 2026-09-07 — **prova técnica concluída**
+
+- `scripts/verify-backup-restore.ps1` cria um cluster temporário em loopback, com duas bases novas,
+  e encerra exclusivamente esse cluster no fim. A instância habitual não é usada.
+- `DatabaseBackupRoundTripTest` aplica as migrações reais, arranca o backend com Hibernate
+  `validate`, gera e restaura o dump pelo `DatabaseBackupService` e compara todos os dados.
+- Execução em PostgreSQL 18.2: **87 tabelas** (inclui a tabela de prova), **81 sequências** e
+  **923 registos de estrutura de constraints** iguais. Bytes, decimais, FK e próximo ID confirmados.
+  Backend restaurado arrancou e o login HTTP devolveu **200**, com token e acesso a empresa.
+- Testes dirigidos: **13 testes, zero falhas/erros**. `mvn clean compile`: **BUILD SUCCESS** nos
+  três módulos. Sem o guião, o teste PostgreSQL é opt-in.
+- Evidência local: `data/restore-validation/77a30d84219c409798312d55b25721f7/evidence.txt`;
+  dump e logs preservados nesse directório (ignorado pelo Git). Só dados de demonstração.
+- Mantêm-se a observação dos fluxos no desktop, a impressão/periféricos físicos e o ensaio com
+  uma cópia autorizada dos dados de produção. BR-50/BR-54 visuais não foram declarados concluídos.
+- Contabilidade: fecho de exercício, pagamentos mistos e mapeamentos de RH dependem das decisões
+  contabilísticas já indicadas. Assinatura do instalador depende do certificado; homologação
+  jurídica e parâmetros legais continuam a depender dos responsáveis.
+
+### Compras ligadas à contabilidade e tesouraria tipada — 2026-09-04 — **implementado**
+
+- `PurchaseRegisteredEvent` lança D Mercadorias 3201, D IVA dedutível 2432 e C Fornecedores 2201;
+  pagamento no acto liquida 2201 contra Caixa/Banco no mesmo lançamento.
+- Pagamentos posteriores publicam `SupplierPaymentRegisteredEvent`, fonte contabilística própria
+  `SUPPLIER_PAYMENT` e chave idempotente pelo movimento de tesouraria.
+- Contas de tesouraria passaram a declarar `TreasuryAccountType` (`CASH`/`BANK`) no contrato, JPA,
+  DTO e ecrã. A V61 migra contas antigas: com número bancário → BANK; sem número → CASH.
+- Spec/harness actualizados em `docs/CONTABILIDADE_SPEC.md` e
+  `docs/COMPRAS_CONTABILIDADE_HARNESS.md` (CT-30..CT-33).
+- Verificação limpa após notas comerciais: `mvn -q clean test` → **996 testes, 0 falhas, 0 erros**; inclui o
+  `MultiModuleArchitectureHarnessTest`. `HRPanel` ficou exactamente no limite de 1000 linhas.
+- Notas comerciais aprovadas também chegaram ao razão: NC estorna Vendas/IVA/Clientes e, numa
+  devolução, Mercadorias/CMVMC pelo custo histórico; ND lança Clientes contra Outros proveitos
+  operacionais 7501 e IVA. CT-34/CT-35 cobrem as partidas.
+
+### Subsídios legais e instalador Windows — 2026-09-03 — **implementado**
+
+- UI de RH para pré-visualizar e pagar 13.º mês e subsídio de férias via API, fora do EDT, com
+  confirmação e feedback Multicore. Spec/harness: `RH_SUBSIDIOS_UI_*`.
+- Instalador por utilizador, configuração persistente da API em `%LOCALAPPDATA%` e harnesses.
+  Artefacto: `dist/Multicore-1.0.0.exe`; assinatura continua dependente de certificado externo.
+
+### Feedback profissional e interacções não bloqueantes — 2026-08-31 — **infraestrutura implementada**
+
+- Criados `ToastManager`, `InlineFeedbackPanel`, `ModernMessageDialog` e `FeedbackType`: sucessos
+  breves deixam de exigir clique; falhas recuperáveis permanecem no contexto; confirmações críticas
+  têm aparência, teclado e contenção Multicore.
+- `ModernFormDialog` apresenta erros de validação/gravação acima dos campos, mantém o modal aberto e
+  deixou de abrir `JOptionPane` nesses casos.
+- Aprovações é o fluxo de referência: falha de carregamento oferece `Tentar novamente`; aprovar e
+  rejeitar confirmam por toast sem roubar foco.
+- SPEC/harness: `docs/UI_FEEDBACK_PROFISSIONAL_SPEC.md` e
+  `docs/UI_FEEDBACK_PROFISSIONAL_HARNESS.md`; `ProfessionalFeedbackHarnessTest` cobre banner, retry,
+  toast, corpo de confirmação e adopção estática.
+- Verificação: compilação do reactor até `desktop` verde; harness focado verde. FP-20..27 continuam
+  a exigir validação visual no Windows real, temas claro/escuro e escalas 100/125/150%.
+- **Fase 2:** Comercial e POS ficaram com zero `JOptionPane`; Stock e Compras ganharam banners de
+  carregamento/retry e toasts nas operações concluídas. O inventário global caiu de 426 para 372 e
+  ficou protegido por teste monotónico; confirmações de impressão no POS usam o diálogo Multicore.
+- **Fase 3:** Stock e Compras também ficaram com zero `JOptionPane`. A contagem de stock grava pelo
+  `ModernFormDialog` assíncrono e mantém erros no formulário; quantidade, preço, data e IVA da compra
+  marcam o campo inválido. Inventário global actualizado para 365 e gate alargado aos quatro painéis.
+- **Fase 4:** encomendas a fornecedor, transferências e catálogo/lotes de stock migraram
+  pré-condições, erros e sucessos para banner/toast; recepção total usa confirmação Multicore.
+  Inventário global caiu para 337. Permanecem apenas confirmações críticas, o editor composto de
+  recepção parcial e validações de formulários ainda não convertidos integralmente.
+- **Fase 5 (2026-09-01):** Configurações ficou com zero `JOptionPane`; Plataforma ficou com dois,
+  ambos compostos (histórico de pagamentos e conversa de assistência). Confirmações de activação e
+  suspensão usam diálogo Multicore. Inventário global caiu para 299 e o harness protege os limites.
+- **Fase 6 (2026-09-01):** RH e CRM adoptaram banner contextual e toast nos painéis e nas classes
+  de acções. Restam apenas confirmações, vistas compostas ou recolhas de texto justificadas:
+  RHPanel ≤4, HREmployeeActions ≤2, CRMPanel =0 e acções CRM ≤3. O inventário global caiu
+  para 244 e FP-20/FP-21 impedem regressões.
+- **Fase 7 (2026-09-01):** leitura de códigos do POS ficou sem `JOptionPane`; caixa POS, inventário
+  físico e catálogo/lotes migraram todo o feedback simples para banner/toast. Restam somente
+  decisões compostas (POS ≤2, contagem ≤1, produtos ≤2). O inventário global caiu para 207 e
+  FP-22..FP-24 protegem estes limites.
+- **Fase 8 em curso (2026-09-01):** cotações, guias, notas comerciais, recibos, clientes, fiscal e
+  devoluções POS migrados. Notas e recibos ficaram a zero; os restantes conservam somente decisões
+  ou vistas compostas. Inventário intermédio: 155, protegido por FP-25/FP-26.
+  Segundo bloco: armazéns, contas a pagar e promoções ficaram a zero; subpainéis de RH migraram
+  todo o feedback simples. Inventário intermédio actualizado para 111, com FP-27/FP-28.
+  Terceiro bloco: controladores auxiliares de POS/comercial/stock/compras, Tesouraria e Notificações
+  ficaram a zero; fulfilment conserva duas vistas/autorizações compostas. Inventário: 85, com
+  FP-29/FP-30.
+  Quarto bloco: diálogos comerciais migrados e infraestrutura de impressão/exportação ficou a
+  zero, com erros dentro da pré-visualização. Inventário global: 58, protegido por FP-31/FP-32.
+  Fecho da fase: Contabilidade, movimentos, suporte e feedback de transferências migrados; motivos
+  obrigatórios e validade usam formulários canónicos. Restam 45 chamadas revistas, exclusivamente
+  modais justificadas, protegidas por allowlist FP-33. Fase 8 concluída.
+- **Fase 9 concluída (2026-09-01):** inventário classificado em confirmações,
+  vistas/mensagens críticas e recolhas opcionais; allowlist exacto activo. A validação humana foi
+  separada como M-01..M-08 para não colidir com os IDs automáticos FP-01..FP-33.
+  `mvn clean compile`, harness FP-01..FP-33 e 174 testes do desktop concluídos sem falhas.
+
+### Listagens exportadas passam a dizer quem as emitiu — 2026-08-30 — **implementado**
+
+- **A última folha sem cabeçalho.** O *Exportar PDF* das listagens (Clientes, Faturas, Encomendas,
+  Lotes & Validades, e os separadores do RH) era desenhado **pelo desktop**, por uma cópia própria
+  do `TablePdfExporter`: saía título, tabela, e mais nada — sem nome de empresa, sem NUIT, sem
+  morada. A `DADOS_EMPRESA_DOCUMENTOS_SPEC` manda identificar quem emite em *todos* os documentos
+  imprimíveis, e este era o que faltava. Duas cópias do mesmo desenho também divergem: corrigir o
+  cabeçalho num sítio deixava o outro por corrigir.
+- **A listagem sobe, o PDF desce.** `POST /api/print/table` → `TableExportPrintService`, com o
+  mesmo `CompanyHeaderRenderer` da factura e da guia. Contrato novo em `contracts`
+  (`TableExportRequest`), cliente novo no desktop (`PrintApiClient`), e um só sítio no ecrã
+  (`TableExportAction`) — nasce deitado, porque listagens são largas.
+- **Leva o que o operador filtrou, não a página que está a ver.**
+  `ClientTablePagination.filteredModelRows` respeita o filtro e ignora a paginação; as células
+  sobem já formatadas, porque é isso que ele leu. Tectos de 20 000 linhas e 40 colunas, recusados
+  com a razão.
+- **O desktop deixou de compor PDF.** A cópia foi apagada e o OpenPDF passou a `scope=test` no
+  `desktop/pom.xml` — o cliente **lê e imprime** (PDFBox), não desenha.
+  `MultiModuleArchitectureHarnessTest.desktopDoesNotDrawPdfDocuments` impede o regresso.
+- **Verificação:** `mvn -o test` → **971 testes, 0 falhas, 0 erros** (backend 807, desktop 164).
+  Novos: `TableExportPrintServiceTest` (6, lê o texto do PDF), `TableExportFilterTest` (6),
+  IM-26 e a regra arquitectural. O IM-02 do harness de impressão passou a aceitar a delegação no
+  `TableExportAction` — que também abre o modal, e o CE-05 prende isso.
+- **Por confirmar na loja, e não é da IA:** a exportação nunca foi corrida contra um backend a
+  correr — o PDF de uma listagem real, com o logótipo da empresa, ainda não saiu no papel.
+
+### Modal de impressão antes de cada documento — 2026-08-30 — **implementado**
+
+- **Nenhum documento sai para o papel sem passar por um modal.** Os 28 pontos de impressão do
+  desktop chamavam `PdfFileSaver.saveAndOpen` e entregavam o PDF ao leitor do sistema: sem escolha
+  de impressora, sem cópias, sem posição, e sem ver o documento dentro do ERP. Sem leitor de PDF
+  instalado, `Desktop.open` falhava **em silêncio** e o ecrã não dizia nada.
+- **`PrintPreviewDialog`** — pré-visualização da folha à esquerda (navegação, zoom 0,6×–3×),
+  opções à direita (impressora · cópias 1–99 · páginas *Todas/Actual/`1,3-5`* · orientação · ajuste
+  · escala de cinzentos), resumo em tempo real e `Cancelar · Abrir no leitor · Guardar PDF ·
+  **Imprimir**`. Cartões `ModernPanel`, cabeçalho premium, `SectionHeader`+`FormField`, ícones
+  `UIHelper.icon`. `Esc` fecha, `Ctrl+P` imprime.
+- **Seis classes, uma responsabilidade cada** (`gui/components/`): `PrintOptions` (validação),
+  `PrintOptionsStore` (memória por família — a etiqueta lembra a térmica, a factura a laser),
+  `PdfPreviewDocument` (render+cache), `PaperLayout` (geometria), `PdfPrinter` (fila),
+  `PrintPreviewDialog` (só composição). Cinco testam-se sem abrir janela.
+- **Retrato/paisagem viram a folha do próprio documento**, não a forçam a A4: um recibo térmico de
+  80 mm continua estreito. No spool, cada página leva o seu `PageFormat` dentro de um `Book`.
+- **Dependência nova, só no desktop:** `pdfbox 3.0.6`. O OpenPDF gera PDF mas não o desenha nem o
+  imprime. O backend não foi tocado.
+- **A fotografia do diálogo apanhou dois defeitos antes da loja.** O cartão de opções cortava
+  *Ajuste* e *Escala de cinzentos* fora do ecrã. E, pior, a pré-visualização rodava a página em
+  paisagem mas o `PDFPrintable` **não roda nada** — sairia um documento pequeno ao meio da folha,
+  diferente do que se via. O `PdfPrinter` passou a rodar a página (`/Rotate += 90`) com a **mesma**
+  regra da pré-visualização, para que não possam divergir.
+- SPEC/harness: [docs/IMPRESSAO_MODAL_SPEC.md](../docs/IMPRESSAO_MODAL_SPEC.md) +
+  [docs/IMPRESSAO_MODAL_HARNESS.md](../docs/IMPRESSAO_MODAL_HARNESS.md); **25 testes** em
+  `PrintModalHarnessTest` (19), `PrintPreviewDialogPaintTest` (3) e `PdfPrinterOrientationTest` (3).
+  IM-01 falha se um ecrã voltar a gravar o PDF directamente.
+- **Verificação:** `mvn -o test` → **951 testes, 0 falhas, 0 erros** (backend 800, desktop 151);
+  harness arquitectural 5/5 verde. Instalador: o jar do desktop leva pdfbox/fontbox/pdfbox-io.
+- **Por confirmar na loja, e não é da IA:** o modal foi validado com impressoras do sistema, mas
+  **o papel a sair de uma térmica de 80 mm não foi visto** (MI-08/MI-15 do harness).
+
 ### Contrato no instalador e primeiro acesso — 2026-08-27 — **implementado**
 
 - Instalador `jpackage` recebe a mesma licença vigente do backend e exige aceitação antes de instalar.
@@ -2133,3 +2918,27 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
 - O sino recebe alertas de exames expirados ou próximos da renovação sem expor dados a outros
   perfis.
 - Validação concluída com compilação limpa, testes dirigidos e suíte Maven completa.
+## 2026-09-03 — Harness visual de feedback
+
+- Adicionado `ProfessionalFeedbackVisualDriver`, isolado do backend, para executar M-01..M-08.
+- M-01..M-08 homologados no Windows; escalas 100%, 125% e 150% verificadas sem cortes.
+- Corrigida a revalidação do layout do `InlineFeedbackPanel` ao ficar visível ou oculto.
+- Corrigido o contraste do `InlineFeedbackPanel` ao alternar entre tema escuro e claro.
+- Validação final: `mvn clean compile` e 175 testes aprovados (zero falhas/erros); o harness de
+  feedback executou 9 testes, incluindo a nova regressão de contraste entre temas.
+- Impressão física bloqueada pelo ambiente: só existem impressoras virtuais PDF, XPS e Fax.
+## 2026-09-03 — Fecho funcional por fases: RH e distribuição Windows
+
+- **Fase RH:** a auditoria confirmou que acréscimos de horas extra, justificação de faltas e
+  evolução salarial já tinham UI. Foi fechada a lacuna real: 13.º mês em **Recibos de Salário** e
+  subsídio de férias em **Férias**, ambos com apuramento no backend, pré-visualização, confirmação,
+  chamada assíncrona, tesouraria e feedback profissional. SPEC/HARNESS:
+  `docs/RH_SUBSIDIOS_UI_SPEC.md` e `docs/RH_SUBSIDIOS_UI_HARNESS.md`.
+- **Fase instalador:** `jpackage --win-per-user-install`; URL da API persistente fora da instalação
+  em `%LOCALAPPDATA%\Multicore\desktop.properties`. O instalador não substitui o ficheiro.
+- Gerado ao vivo `dist/Multicore-1.0.0.exe` (77.613.056 bytes). `Get-AuthenticodeSignature`
+  confirma `NotSigned`: falta certificado de code signing, não código do instalador.
+- Harnesses focados: 8 testes, zero falhas (`HRSubsidiesUiHarnessTest`,
+  `DesktopLocalSettingsTest`, `WindowsInstallerHarnessTest`).
+- Próxima decisão obrigatória: mapeamento contabilístico para compras, notas, pagamentos mistos,
+  subsídios/adiantamentos e fecho de exercício; não inventar contas ou política contabilística.

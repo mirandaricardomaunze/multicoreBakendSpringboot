@@ -27,7 +27,12 @@ import mz.multicore.erp.desktop.client.PurchaseApiClient;
 import mz.multicore.erp.desktop.client.StockTransferApiClient;
 import mz.multicore.erp.gui.components.Theme;
 import mz.multicore.erp.gui.components.TopNavBar;
+import mz.multicore.erp.gui.components.CollapsibleSidebar;
+import mz.multicore.erp.gui.components.GlobalSearchDialog;
+import mz.multicore.erp.gui.components.ShortcutHelpDialog;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.HRApiClient;
 
 import javax.swing.BorderFactory;
@@ -35,16 +40,21 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.KeyStroke;
+import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.math.BigDecimal;
 import java.util.List;
 
 @org.springframework.stereotype.Component
@@ -70,15 +80,19 @@ public class MainFrame extends JFrame {
     private final ComprasPanel comprasPanel;
     private final ConfigPanel configPanel;
     private final PlataformaPanel plataformaPanel;
+    private final PerformancePanel performancePanel;
     private final NotificationFeed notificationFeed;
     private final NotificationsPanel notificationsPanel;
     private final NotificationReadStore notificationReadStore;
+    private final ForensicAuditPanel forensicAuditPanel;
 
     private final DesktopSessionStore desktopSessionStore;
     private final mz.multicore.erp.desktop.client.VersionApiClient versionApiClient;
     private final MySubscriptionApiClient mySubscriptionApiClient;
+    private final BackupApiClient backupApiClient;
     private final boolean superAdmin;
     private TopNavBar topBar;
+    private CollapsibleSidebar sidebar;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
     private JLabel notificationBadgeLabel;
@@ -117,16 +131,22 @@ public class MainFrame extends JFrame {
             FiscalApiClient fiscalApiClient,
             PlatformApiClient platformApiClient,
             mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
-            mz.multicore.erp.desktop.client.AccountingApiClient accountingApiClient,
-            mz.multicore.erp.desktop.client.VersionApiClient versionApiClient
+            mz.multicore.erp.desktop.client.AccountingApiClient accountingApiClient, mz.multicore.erp.desktop.client.VersionApiClient versionApiClient,
+            mz.multicore.erp.desktop.client.PrintApiClient printApiClient, mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient,
+            mz.multicore.erp.desktop.client.StockWasteApiClient stockWasteApiClient, mz.multicore.erp.desktop.client.CreditRiskApiClient creditRiskApiClient,
+            mz.multicore.erp.desktop.client.BankReconciliationApiClient bankReconciliationApiClient, mz.multicore.erp.desktop.client.AccountStatementApiClient accountStatementApiClient,
+            mz.multicore.erp.desktop.client.CashFlowForecastApiClient cashFlowForecastApiClient,
+            mz.multicore.erp.desktop.client.ForensicAuditApiClient forensicAuditApiClient,
+            mz.multicore.erp.desktop.client.InventoryPhysicalCountingApiClient inventoryPhysicalCountingApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
         this.mySubscriptionApiClient = mySubscriptionApiClient;
+        this.backupApiClient = backupApiClient;
         this.superAdmin = desktopSessionStore.requireSession().superAdmin();
 
         setTitle("MULTICORE — Gestão Profissional");
-        setIconImage(UIHelper.iconImage("fas-cube", 64, UIHelper.ACCENT));
+        setIconImages(UIHelper.getAppIcons());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 820);
         setMinimumSize(new Dimension(1024, 700));
@@ -135,70 +155,82 @@ public class MainFrame extends JFrame {
         getContentPane().setBackground(UIHelper.BG_DARK);
 
         if (superAdmin) {
-            // O superadmin só usa a consola da plataforma. Não construir os painéis de empresa evita
-            // carregamentos e avisos ("nenhum armazém disponível", etc.) de módulos que exigem uma
-            // empresa activa — que o superadmin não tem.
             dashboardPanel = null; comercialPanel = null; financeiroPanel = null; hrPanel = null;
             crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null;
-            accountingPanel = null;
+            accountingPanel = null; performancePanel = null; forensicAuditPanel = null;
             posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
             notificationFeed = null; notificationsPanel = null; notificationReadStore = null;
             plataformaPanel = new PlataformaPanel(platformApiClient);
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
-            dashboardPanel  = new DashboardPanel(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient);
-            // O Stock nasce antes do Comercial porque o Comercial recebe um atalho para ele: a guia
-            // de transferência vive no Stock (é lá que ela pertence), mas quem a procura procura-a
-            // ao pé das Guias de Remessa.
-            stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient);
-            comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient,
-                    () -> { navigate("stock"); topBar.setActive("Stock & Armazéns"); stockPanel.showWarehouseTransfers(); });
-            financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient);
-            hrPanel         = new HRPanel(hrApiClient);
+            dashboardPanel  = new DashboardPanel(
+                    comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient,
+                    forensicAuditApiClient, cashFlowForecastApiClient, creditRiskApiClient, performanceApiClient, this::navigate);
+            stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient);
+            comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient, printApiClient,
+                    () -> {
+                        navigate("stock");
+                        if (topBar != null) topBar.setActive("Stock & Armazéns");
+                        if (sidebar != null) sidebar.setActive("Stock & Armazéns");
+                        stockPanel.showWarehouseTransfers();
+                    });
+            financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient, bankReconciliationApiClient, cashFlowForecastApiClient);
+            hrPanel         = new HRPanel(hrApiClient, printApiClient);
             crmPanel        = new CRMPanel(crmApiClient, comercialApiClient);
-            clientesPanel   = new ClientesPanel(comercialApiClient);
+            clientesPanel   = new ClientesPanel(comercialApiClient, printApiClient, creditRiskApiClient, accountStatementApiClient);
             fiscalPanel     = new FiscalPanel(fiscalApiClient);
             accountingPanel = new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
-            comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient);
+            comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
             configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);
+            performancePanel = new PerformancePanel(performanceApiClient, desktopSessionStore);
+            forensicAuditPanel = new ForensicAuditPanel(forensicAuditApiClient);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
-                    mySubscriptionApiClient, hrApiClient);
+                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);
             plataformaPanel = null;
-
-            contentPanel.add(dashboardPanel,  "dashboard");
-            contentPanel.add(posPanel,        "pos");
-            contentPanel.add(comercialPanel,  "comercial");
-            contentPanel.add(comprasPanel,    "compras");
-            contentPanel.add(stockPanel,      "stock");
-            contentPanel.add(financeiroPanel, "financeiro");
-            contentPanel.add(hrPanel,         "hr");
-            contentPanel.add(crmPanel,        "crm");
-            contentPanel.add(clientesPanel,   "clientes");
-            contentPanel.add(fiscalPanel,     "fiscal");
-            contentPanel.add(accountingPanel, "contabilidade");
-            contentPanel.add(approvalsPanel,  "approvals");
-            contentPanel.add(configPanel,     "config");
+            contentPanel.add(dashboardPanel, "dashboard"); contentPanel.add(posPanel, "pos");
+            contentPanel.add(comercialPanel, "comercial"); contentPanel.add(comprasPanel, "compras");
+            contentPanel.add(stockPanel, "stock"); contentPanel.add(financeiroPanel, "financeiro");
+            contentPanel.add(hrPanel, "hr"); contentPanel.add(performancePanel, "desempenho");
+            contentPanel.add(crmPanel, "crm"); contentPanel.add(clientesPanel, "clientes");
+            contentPanel.add(fiscalPanel, "fiscal"); contentPanel.add(accountingPanel, "contabilidade");
+            contentPanel.add(approvalsPanel, "approvals"); contentPanel.add(configPanel, "config");
+            contentPanel.add(forensicAuditPanel, "auditoria_forense");
             contentPanel.add(notificationsPanel, "notifications");
         }
 
         setLayout(new BorderLayout());
-
+        sidebar = buildSidebar();
         topBar = buildTopBar();
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
-        add(topBar, BorderLayout.NORTH);
-        add(contentPanel, BorderLayout.CENTER);
-        add(statusBar, BorderLayout.SOUTH);
+
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false);
+        centerContainer.add(topBar, BorderLayout.NORTH);
+        centerContainer.add(contentPanel, BorderLayout.CENTER);
+        centerContainer.add(statusBar, BorderLayout.SOUTH);
+
+        add(sidebar, BorderLayout.WEST);
+        add(centerContainer, BorderLayout.CENTER);
+
+        // Atalhos de Teclado Rápidos (Ctrl+B, Ctrl+K, F1, F11)
+        int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        getRootPane().registerKeyboardAction(e -> { if (sidebar != null) sidebar.toggle(); }, KeyStroke.getKeyStroke(KeyEvent.VK_B, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> openGlobalSearch(), KeyStroke.getKeyStroke(KeyEvent.VK_K, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> openShortcutHelp(), KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> toggleFullScreen(), KeyStroke.getKeyStroke(KeyEvent.VK_F11, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         if (superAdmin) {
             navigate("plataforma");
             topBar.setActive("Plataforma");
+            if (sidebar != null) sidebar.setActive("Plataforma");
         } else {
             topBar.setActive("Painel Inicial");
+            if (sidebar != null) sidebar.setActive("Painel Inicial");
         }
 
         startSubscriptionWatch();
@@ -211,6 +243,7 @@ public class MainFrame extends JFrame {
         if (dashboardPanel != null) dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sessionUserLabel != null) sessionUserLabel.setText(displayName);
         if (sessionRoleLabel != null) sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
+        if (sidebar != null) sidebar.setUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (statusBar != null) {
             DesktopSession s = desktopSessionStore.requireSession();
             String company = s.companies().isEmpty() ? "" : s.companies().get(0).name();
@@ -256,29 +289,10 @@ public class MainFrame extends JFrame {
             return buildSuperAdminTopBar();
         }
 
-        TopNavBar bar = new TopNavBar("MULTICORE", "ERP Profissional");
+        TopNavBar bar = new TopNavBar("Painel Inicial", "");
+        bar.setSearchAction(this::openGlobalSearch);
 
-        // Navegação: ícones-only com tooltip = nome do módulo (CONVENTIONS: UIHelper.icon, sem emojis).
-        bar.addItem(navIcon("fas-th-large"),            "Painel Inicial",     UIHelper.MODULE_DASHBOARD,  () -> navigate("dashboard"));
-        bar.addItem(navIcon("fas-cash-register"),       "POS — Caixa",        UIHelper.MODULE_POS,        () -> navigate("pos"));
-        bar.addItem(navIcon("fas-clipboard-list"),      "Pedidos",            UIHelper.MODULE_COMERCIAL,  () -> {
-            navigate("comercial");
-            comercialPanel.showCustomerOrders();
-        });
-        bar.addItem(navIcon("fas-shopping-cart"),       "Compras",            UIHelper.MODULE_COMPRAS,    () -> navigate("compras"));
-        bar.addItem(navIcon("fas-boxes"),               "Stock & Armazéns",   UIHelper.MODULE_STOCK,      () -> navigate("stock"));
-        bar.addItem(navIcon("fas-coins"),               "Tesouraria",         UIHelper.MODULE_FINANCEIRO, () -> navigate("financeiro"));
-        bar.addItem(navIcon("fas-users"),               "Recursos Humanos",   UIHelper.MODULE_HR,         () -> navigate("hr"));
-        bar.addItem(navIcon("fas-headset"),             "CRM & Assistência",  UIHelper.MODULE_CRM,        () -> navigate("crm"));
-        bar.addItem(navIcon("fas-address-book"),        "Clientes",           UIHelper.MODULE_CLIENTES,   () -> navigate("clientes"));
-        bar.addMenu(navIcon("fas-ellipsis-h"), "Mais", UIHelper.MODULE_CONFIG, List.of(
-                new TopNavBar.MenuEntry(navIcon("fas-percent"), "Área Fiscal", () -> navigate("fiscal")),
-                new TopNavBar.MenuEntry(navIcon("fas-book"), "Contabilidade", () -> navigate("contabilidade")),
-                new TopNavBar.MenuEntry(navIcon("fas-check-double"), "Aprovações", () -> navigate("approvals")),
-                new TopNavBar.MenuEntry(navIcon("fas-cog"), "Configurações", () -> navigate("config"))
-        ));
-
-        // Área direita: seletor de empresa + chip de utilizador.
+        // Área direita: utilitários + seletor de empresa + chip de utilizador.
         JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
         UIHelper.styleComboBox(companyCombo);
         companyCombo.setToolTipText("Empresa ativa");
@@ -289,7 +303,7 @@ public class MainFrame extends JFrame {
         bar.addTrailing(buildNotificationBell());
         javax.swing.JComponent subChip = buildSubscriptionChip();
         if (subChip != null) bar.addTrailing(subChip);
-        // Seletor de empresa só quando há mais de uma — com uma só é redundante (a sub-marca já mostra
+        // Seletor de empresa só quando há mais de uma — com uma só é redundante (a barra lateral já mostra
         // o nome). O combo é sempre construído (selecciona a empresa activa no contexto), mas só se
         // mostra quando há escolha a fazer.
         if (desktopSessionStore.requireSession().companies().size() > 1) {
@@ -297,23 +311,65 @@ public class MainFrame extends JFrame {
         }
         bar.addTrailing(buildUserChip());
 
-        // Marca: MULTICORE no topo, nome da empresa activa por baixo.
-        DesktopSession initialSession = desktopSessionStore.requireSession();
-        if (!initialSession.companies().isEmpty()) {
-            bar.setSubBrand(initialSession.companies().get(0).name());
-        }
-
         return bar;
     }
 
-    /** Barra do superadmin: só a consola da plataforma, sem seletor de empresa nem abas de tenant. */
+    /** Barra do superadmin: cabeçalho limpo com utilitários e chip de utilizador. */
     private TopNavBar buildSuperAdminTopBar() {
-        TopNavBar bar = new TopNavBar("MULTICORE", "Consola da Plataforma");
-        bar.addItem(navIcon("fas-server"), "Plataforma", UIHelper.MODULE_CONFIG, () -> navigate("plataforma"));
+        TopNavBar bar = new TopNavBar("Consola da Plataforma", "");
+        bar.setSearchAction(this::openGlobalSearch);
         bar.addTrailing(buildThemeToggle());
         bar.addTrailing(buildUserChip());
-        bar.setSubBrand("Plataforma");
         return bar;
+    }
+
+    public CollapsibleSidebar getSidebar() {
+        return sidebar;
+    }
+
+    private CollapsibleSidebar buildSidebar() {
+        DesktopSession initialSession = desktopSessionStore.requireSession();
+        String subBrand = initialSession.companies().isEmpty() ? "ERP Profissional" : initialSession.companies().get(0).name();
+        CollapsibleSidebar sb = new CollapsibleSidebar("MULTICORE", subBrand);
+
+        if (superAdmin) {
+            sb.addSection("Plataforma");
+            sb.addItem(UIHelper.icon("fas-server", 16, UIHelper.ACCENT_BLUE), "Plataforma", UIHelper.ACCENT_BLUE, () -> navigate("plataforma"));
+            return sb;
+        }
+
+        // 1. OPERAÇÕES
+        sb.addSection("Operações");
+        sb.addItem(UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), "Painel Inicial", UIHelper.MODULE_DASHBOARD, () -> navigate("dashboard"));
+        sb.addItem(UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), "POS — Caixa", UIHelper.MODULE_POS, () -> navigate("pos"));
+        sb.addItem(UIHelper.icon("fas-clipboard-list", 16, UIHelper.MODULE_COMERCIAL), "Pedidos", UIHelper.MODULE_COMERCIAL, () -> {
+            navigate("comercial");
+            comercialPanel.showCustomerOrders();
+        });
+        sb.addItem(UIHelper.icon("fas-shopping-cart", 16, UIHelper.MODULE_COMPRAS), "Compras", UIHelper.MODULE_COMPRAS, () -> navigate("compras"));
+        sb.addItem(UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), "Stock & Armazéns", UIHelper.MODULE_STOCK, () -> navigate("stock"));
+
+        // 2. GESTÃO & CRM
+        sb.addSection("Gestão & CRM");
+        sb.addItem(UIHelper.icon("fas-coins", 16, UIHelper.MODULE_FINANCEIRO), "Tesouraria", UIHelper.MODULE_FINANCEIRO, () -> navigate("financeiro"));
+        sb.addItem(UIHelper.icon("fas-users", 16, UIHelper.MODULE_HR), "Recursos Humanos", UIHelper.MODULE_HR, () -> navigate("hr"));
+        sb.addItem(UIHelper.icon("fas-trophy", 16, UIHelper.MODULE_COMERCIAL), "Desempenho", UIHelper.MODULE_COMERCIAL, () -> navigate("desempenho"));
+        sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM & Assistência", UIHelper.MODULE_CRM, () -> navigate("crm"));
+        sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate("clientes"));
+
+        // 3. FISCAL & AUDITORIA
+        sb.addSection("Fiscal & Auditoria");
+        sb.addItem(UIHelper.icon("fas-percent", 16, UIHelper.MODULE_CONFIG), "Área Fiscal", UIHelper.MODULE_CONFIG, () -> navigate("fiscal"));
+        sb.addItem(UIHelper.icon("fas-book", 16, UIHelper.MODULE_CONFIG), "Contabilidade", UIHelper.MODULE_CONFIG, () -> navigate("contabilidade"));
+        sb.addItem(UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_CONFIG), "Aprovações", UIHelper.MODULE_CONFIG, () -> navigate("approvals"));
+        sb.addItem(UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), "Auditoria Forense", UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"));
+
+        // 4. SISTEMA
+        sb.addSection("Sistema");
+        sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.MODULE_CONFIG), "Notificações", UIHelper.MODULE_CONFIG, () -> navigate("notifications"));
+        sb.addItem(UIHelper.icon("fas-cog", 16, UIHelper.MODULE_CONFIG), "Configurações", UIHelper.MODULE_CONFIG, () -> navigate("config"));
+
+        return sb;
     }
 
     /** Botão de tema na barra de menu (ícone sol/lua). Trocar reconstrói a janela no tema escolhido. */
@@ -463,10 +519,14 @@ public class MainFrame extends JFrame {
     }
 
     private void updateNotificationBadge(int count) {
-        if (notificationBadgeLabel == null) return;
-        notificationBadgeLabel.setText(count > 99 ? "99+" : String.valueOf(count));
-        notificationBadgeLabel.setVisible(count > 0);
-        notificationBadgeLabel.setToolTipText(count + " notificação" + (count == 1 ? " pendente" : " pendentes"));
+        if (notificationBadgeLabel != null) {
+            notificationBadgeLabel.setText(count > 99 ? "99+" : String.valueOf(count));
+            notificationBadgeLabel.setVisible(count > 0);
+            notificationBadgeLabel.setToolTipText(count + " notificação" + (count == 1 ? " pendente" : " pendentes"));
+        }
+        if (sidebar != null) {
+            sidebar.setBadge("Notificações", count);
+        }
     }
 
     private static String shorten(String value, int maxLength) {
@@ -489,6 +549,7 @@ public class MainFrame extends JFrame {
             if (selected != null) {
                 selectDesktopCompany(selected);
                 if (topBar != null) topBar.setSubBrand(selected.name());
+                if (sidebar != null) sidebar.setSubBrand(selected.name());
                 updateSessionRole();
                 refreshActivePanel();
                 refreshNotificationBadgeAsync();
@@ -604,8 +665,7 @@ public class MainFrame extends JFrame {
         String msg = "A assinatura da sua empresa expira "
                 + (s.daysRemaining() == 0 ? "hoje" : "em " + s.daysRemaining() + " dia(s)")
                 + " (" + s.validUntil() + ").\nContacte o suporte da plataforma para renovar a tempo.";
-        javax.swing.JOptionPane.showMessageDialog(this, msg, "Assinatura",
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+        ToastManager.show(this, FeedbackType.WARNING, msg);
     }
 
     /**
@@ -646,28 +706,40 @@ public class MainFrame extends JFrame {
     }
 
     private void navigate(String cardName) {
-        cardLayout.show(contentPanel, cardName);
-        if (statusBar != null) {
-            String modName = switch (cardName) {
-                case "dashboard"  -> "Painel Inicial";
-                case "pos"        -> "POS \u2014 Caixa";
-                case "comercial"  -> "Vendas & Fatura\u00e7\u00e3o";
-                case "compras"    -> "Compras";
-                case "stock"      -> "Stock & Armaz\u00e9ns";
-                case "financeiro" -> "Tesouraria";
-                case "hr"         -> "Recursos Humanos";
-                case "crm"        -> "CRM & Assist\u00eancia";
-                case "clientes"   -> "Clientes";
-                case "fiscal"     -> "\u00c1rea Fiscal";
-                case "contabilidade" -> "Contabilidade";
-                case "approvals"  -> "Aprova\u00e7\u00f5es";
-                case "config"     -> "Configura\u00e7\u00f5es";
-                case "notifications" -> "Notifica\u00e7\u00f5es";
-                case "plataforma" -> "Plataforma";
-                default           -> cardName;
-            };
-            statusBar.setModule(modName);
+        if ("risco_credito".equals(cardName)) {
+            cardName = "clientes";
+            if (clientesPanel != null) clientesPanel.selectCreditRiskTab();
+        } else if ("stock_waste".equals(cardName)) {
+            cardName = "stock";
+            if (stockPanel != null) stockPanel.showWasteManagement();
+        } else if ("previsao_tesouraria".equals(cardName)) {
+            cardName = "financeiro";
+            if (financeiroPanel != null) financeiroPanel.showForecastTab();
         }
+        cardLayout.show(contentPanel, cardName);
+        String modName = switch (cardName) {
+            case "dashboard"  -> "Painel Inicial";
+            case "pos"        -> "POS — Caixa";
+            case "comercial"  -> "Vendas & Faturação";
+            case "compras"    -> "Compras";
+            case "stock"      -> "Stock & Armazéns";
+            case "financeiro" -> "Tesouraria";
+            case "hr"         -> "Recursos Humanos";
+            case "desempenho" -> "Desempenho Comercial";
+            case "crm"        -> "CRM & Assistência";
+            case "clientes"   -> "Clientes";
+            case "fiscal"     -> "Área Fiscal";
+            case "contabilidade" -> "Contabilidade";
+            case "approvals"  -> "Aprovações";
+            case "auditoria_forense" -> "Auditoria Forense";
+            case "config"     -> "Configurações";
+            case "notifications" -> "Notificações";
+            case "plataforma" -> "Plataforma";
+            default           -> cardName;
+        };
+        if (statusBar != null) statusBar.setModule(modName);
+        if (topBar != null) topBar.setActive(modName);
+        if (sidebar != null) sidebar.setActive(modName);
         refreshPanel(cardName);
     }
 
@@ -677,11 +749,13 @@ public class MainFrame extends JFrame {
             case "comercial"  -> comercialPanel.onPanelSelected();
             case "financeiro" -> financeiroPanel.onPanelSelected();
             case "hr"         -> hrPanel.onPanelSelected();
+            case "desempenho" -> performancePanel.onPanelSelected();
             case "crm"        -> crmPanel.onPanelSelected();
             case "clientes"   -> clientesPanel.onPanelSelected();
             case "fiscal"     -> fiscalPanel.onPanelSelected();
             case "contabilidade" -> accountingPanel.onPanelSelected();
             case "approvals"  -> approvalsPanel.onPanelSelected();
+            case "auditoria_forense" -> forensicAuditPanel.loadData();
             case "pos"        -> posPanel.onPanelSelected();
             case "stock"      -> stockPanel.onPanelSelected();
             case "compras"    -> comprasPanel.onPanelSelected();
@@ -694,8 +768,9 @@ public class MainFrame extends JFrame {
     private void navigateFromNotification(String cardName) {
         String navLabel = switch (cardName) {
             case "approvals" -> "Aprovações";
-            case "stock" -> "Stock & Armazéns";
+            case "stock", "stock_waste" -> "Stock & Armazéns";
             case "config" -> "Configurações";
+            case "clientes", "risco_credito" -> "Clientes";
             default -> null;
         };
         topBar.setActive(navLabel);
@@ -709,6 +784,7 @@ public class MainFrame extends JFrame {
             else if (comp instanceof ComercialPanel p)  p.onPanelSelected();
             else if (comp instanceof FinanceiroPanel p) p.onPanelSelected();
             else if (comp instanceof HRPanel p)         p.onPanelSelected();
+            else if (comp instanceof PerformancePanel p) p.onPanelSelected();
             else if (comp instanceof CRMPanel p)        p.onPanelSelected();
             else if (comp instanceof ClientesPanel p)   p.onPanelSelected();
             else if (comp instanceof FiscalPanel p)     p.onPanelSelected();
@@ -731,5 +807,164 @@ public class MainFrame extends JFrame {
         if (sessionDisplayName != null && dashboardPanel != null) {
             dashboardPanel.updateWelcomeMessage(sessionDisplayName, activeRole);
         }
+    }
+
+    public void openGlobalSearch() {
+        GlobalSearchDialog.show(this, buildSearchIndex());
+    }
+
+    public void openShortcutHelp() {
+        ShortcutHelpDialog.show(this);
+    }
+
+    public void toggleFullScreen() {
+        int state = getExtendedState();
+        if ((state & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH) {
+            setExtendedState(JFrame.NORMAL);
+        } else {
+            setExtendedState(JFrame.MAXIMIZED_BOTH);
+        }
+    }
+
+    public void openSmartAlerts() {
+        if (notificationFeed != null) {
+            Long companyId = CurrentUserContext.getCurrentCompanyId();
+            List<mz.multicore.erp.gui.NotificationFeed.NotificationItem> notifs = notificationFeed.load(companyId);
+            List<mz.multicore.erp.gui.components.SmartAlertsDialog.SmartAlert> alerts = notifs.stream()
+                    .map(mz.multicore.erp.gui.components.SmartAlertsDialog.SmartAlert::fromNotification)
+                    .toList();
+            new mz.multicore.erp.gui.components.SmartAlertsDialog(this, alerts, this::navigate).setVisible(true);
+        }
+    }
+
+    public void openBackupDialog() {
+        new mz.multicore.erp.gui.components.DatabaseBackupDialog(this, backupApiClient).setVisible(true);
+    }
+
+    public void openCurrencyDialog() {
+        new mz.multicore.erp.gui.components.CurrencyExchangeDialog(this, BigDecimal.valueOf(1000), res -> {
+            ToastManager.success(this, "Câmbio: " + res.foreignAmount() + " " + res.currency().name() + " = " + res.mznEquivalent() + " MT");
+        }).setVisible(true);
+    }
+
+    public List<GlobalSearchDialog.SearchItem> buildSearchIndex() {
+        List<GlobalSearchDialog.SearchItem> items = new java.util.ArrayList<>();
+        if (superAdmin) {
+            items.add(new GlobalSearchDialog.SearchItem(
+                    "mod_plataforma", "Consola da Plataforma", "Módulos", null,
+                    UIHelper.icon("fas-server", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE,
+                    () -> navigate("plataforma"), List.of("plataforma", "tenants", "empresas", "admin")
+            ));
+            return items;
+        }
+
+        // 1. Módulos Principais
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_dashboard", "Painel Inicial", "Módulos", null,
+                UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), UIHelper.MODULE_DASHBOARD,
+                () -> navigate("dashboard"), List.of("inicio", "home", "resumo", "kpi", "graficos")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_pos", "POS — Caixa e Balcão", "Módulos", "F9",
+                UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), UIHelper.MODULE_POS,
+                () -> navigate("pos"), List.of("venda", "balcao", "caixa", "terminal", "pagamento")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_comercial", "Vendas & Faturação", "Módulos", null,
+                UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.MODULE_COMERCIAL), UIHelper.MODULE_COMERCIAL,
+                () -> navigate("comercial"), List.of("fatura", "cotacao", "guia", "proforma", "documentos")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_compras", "Compras & Fornecedores", "Módulos", null,
+                UIHelper.icon("fas-shopping-cart", 16, UIHelper.MODULE_COMPRAS), UIHelper.MODULE_COMPRAS,
+                () -> navigate("compras"), List.of("encomenda", "aquisicoes", "recepcao", "fatura de compra")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_stock", "Stock & Armazéns", "Módulos", null,
+                UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK,
+                () -> navigate("stock"), List.of("artigos", "produtos", "inventario", "transferencias", "lotes")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_financeiro", "Tesouraria & Contas", "Módulos", null,
+                UIHelper.icon("fas-coins", 16, UIHelper.MODULE_FINANCEIRO), UIHelper.MODULE_FINANCEIRO,
+                () -> navigate("financeiro"), List.of("banco", "caixa", "saldo", "fluxo", "movimentos")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_hr", "Recursos Humanos & Salários", "Módulos", null,
+                UIHelper.icon("fas-users", 16, UIHelper.MODULE_HR), UIHelper.MODULE_HR,
+                () -> navigate("hr"), List.of("colaboradores", "folha", "salario", "recibos", "ferias", "faltas")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_desempenho", "Centro de Desempenho Comercial", "Módulos", null,
+                UIHelper.icon("fas-trophy", 16, UIHelper.MODULE_COMERCIAL), UIHelper.MODULE_COMERCIAL,
+                () -> navigate("desempenho"), List.of("metas", "ranking", "bonus", "premios", "comercial", "desempenho")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_crm", "CRM & Assistência Técnica", "Módulos", null,
+                UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), UIHelper.MODULE_CRM,
+                () -> navigate("crm"), List.of("pedidos", "suporte", "tickets", "folhas de obra", "tecnicos")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_clientes", "Gestão de Clientes", "Módulos", null,
+                UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), UIHelper.MODULE_CLIENTES,
+                () -> navigate("clientes"), List.of("contactos", "nuit", "saldo", "extrato")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_credit_risk", "Risco de Crédito & Cobrança (Aging)", "Módulos", null,
+                UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.MODULE_COMERCIAL), UIHelper.MODULE_COMERCIAL,
+                () -> {
+                    navigate("clientes");
+                    if (clientesPanel != null) clientesPanel.selectCreditRiskTab();
+                },
+                List.of("aging", "cobranca", "risco", "credito", "mora", "devedores", "bloqueio")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_fiscal", "Área Fiscal & IVA", "Módulos", null,
+                UIHelper.icon("fas-percent", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
+                () -> navigate("fiscal"), List.of("imposto", "declaracao", "mapa", "retencoes")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_contabilidade", "Contabilidade & Razão", "Módulos", null,
+                UIHelper.icon("fas-book", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
+                () -> navigate("contabilidade"), List.of("lancamentos", "diario", "balancete", "contas")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_approvals", "Aprovações Pendentes", "Módulos", null,
+                UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
+                () -> navigate("approvals"), List.of("autorizar", "pendencias", "requisicoes")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_notifications", "Notificações & Avisos", "Módulos", null,
+                UIHelper.icon("fas-bell", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
+                () -> navigate("notifications"), List.of("alertas", "sino", "avisos", "validade")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "mod_config", "Configurações do Sistema", "Módulos", null,
+                UIHelper.icon("fas-cog", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
+                () -> navigate("config"), List.of("utilizadores", "empresa", "auditoria", "backup", "licenca")
+        ));
+
+        // 2. Ações Rápidas & Ferramentas
+        items.add(new GlobalSearchDialog.SearchItem(
+                "act_help", "Guia de Atalhos de Teclado", "Ferramentas", "F1",
+                UIHelper.icon("fas-keyboard", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE,
+                this::openShortcutHelp, List.of("atalhos", "ajuda", "comandos", "teclado", "help")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem(
+                "act_fullscreen", "Alternar Modo Ecrã Completo", "Ferramentas", "F11",
+                UIHelper.icon("fas-expand", 16, UIHelper.BUTTON_NEUTRAL), UIHelper.BUTTON_NEUTRAL,
+                this::toggleFullScreen, List.of("fullscreen", "ecra inteiro", "maximizar", "quiosque")
+        ));
+        items.add(new GlobalSearchDialog.SearchItem("act_sidebar", "Alternar Menu Lateral", "Ferramentas", "Ctrl+B", UIHelper.icon("fas-bars", 16, UIHelper.BUTTON_NEUTRAL), UIHelper.BUTTON_NEUTRAL, () -> { if (sidebar != null) sidebar.toggle(); }, List.of("menu", "sidebar", "ocultar", "expandir")));
+        items.add(new GlobalSearchDialog.SearchItem("act_labels", "Gerador de Etiquetas de Prateleira", "Ferramentas", null, UIHelper.icon("fas-barcode", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK, () -> { navigate("stock"); if (stockPanel != null) stockPanel.openLabelDialog(); }, List.of("etiquetas", "barcode", "preco", "prateleira", "gondola", "rotulos")));
+        items.add(new GlobalSearchDialog.SearchItem("act_waste", "Gestão de Quebras, Perdas & Desperdício", "Stock", null, UIHelper.icon("fas-trash-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> { navigate("stock"); if (stockPanel != null) stockPanel.showWasteManagement(); }, List.of("quebras", "perdas", "desperdicio", "validade", "avarias", "furto", "waste", "radar")));
+        items.add(new GlobalSearchDialog.SearchItem("act_reconciliation", "Centro de Reconciliação Bancária", "Financeiro", null, UIHelper.icon("fas-university", 16, UIHelper.MODULE_FINANCEIRO), UIHelper.MODULE_FINANCEIRO, () -> { navigate("financeiro"); if (financeiroPanel != null) financeiroPanel.showReconciliationTab(); }, List.of("reconciliacao", "bancaria", "extracto", "bancos", "bim", "bci", "conciliar", "extrato")));
+        items.add(new GlobalSearchDialog.SearchItem("act_forensic_audit", "Central de Auditoria Forense & Controlo de Fraude", "Fiscal & Auditoria", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"), List.of("auditoria", "forense", "fraude", "desvios", "anomalias", "cancelamentos", "quebras", "risco")));
+        items.add(new GlobalSearchDialog.SearchItem("act_alerts", "Alertas Inteligentes & Ações Proativas", "Ferramentas", null, UIHelper.icon("fas-bell", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, this::openSmartAlerts, List.of("alertas", "acoes", "proativo", "notificacoes", "urgente")));
+        items.add(new GlobalSearchDialog.SearchItem("act_backup", "Cópias de Segurança & Integridade", "Ferramentas", null, UIHelper.icon("fas-database", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openBackupDialog, List.of("backup", "copia", "restauro", "base de dados", "seguranca")));
+        items.add(new GlobalSearchDialog.SearchItem("act_currency", "Calculadora e Câmbio Multimoeda", "Ferramentas", null, UIHelper.icon("fas-money-bill-wave", 16, UIHelper.APPROVED_GREEN), UIHelper.APPROVED_GREEN, this::openCurrencyDialog, List.of("cambio", "moeda", "dolar", "rand", "euro", "troco")));
+        items.add(new GlobalSearchDialog.SearchItem("act_theme", "Alternar Tema Claro / Escuro", "Ferramentas", null, UIHelper.icon(UIHelper.isLight() ? "fas-moon" : "fas-sun", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> UIHelper.setTheme(UIHelper.isLight() ? Theme.DARK : Theme.LIGHT), List.of("tema", "dark", "light", "cores", "modo noturno")));
+
+        return items;
     }
 }

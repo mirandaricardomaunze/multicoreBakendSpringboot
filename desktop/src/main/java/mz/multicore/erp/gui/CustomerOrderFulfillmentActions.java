@@ -3,11 +3,12 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 final class CustomerOrderFulfillmentActions {
     private CustomerOrderFulfillmentActions() {}
@@ -36,7 +37,7 @@ final class CustomerOrderFulfillmentActions {
                     // instalado, ficheiro bloqueado), a tabela ficava a mostrar o estado antigo
                     // e o passo seguinte parecia impossível — o estado real e o que se vê no
                     // ecrã deixavam de coincidir.
-                    pdf -> { owner.loadOrdersTable(); PdfFileSaver.saveAndOpen(pdf, "separacao-" + id); },
+                    pdf -> { owner.loadOrdersTable(); PrintPreviewDialog.show(owner, pdf, "separacao-" + id); },
                     error -> showError(owner, "imprimir guia de separação", error));
         } else if ("IN_SEPARATION".equals(status)) reprint(owner, api, id);
         else printA4(owner, api, id);
@@ -44,7 +45,7 @@ final class CustomerOrderFulfillmentActions {
 
     private static void printA4(ComercialPanel owner, ComercialApiClient api, Long id) {
         UIHelper.runWithProgress(owner, "A gerar encomenda em PDF…", () -> api.renderOrder(id),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "encomenda-" + id),
+                pdf -> PrintPreviewDialog.show(owner, pdf, "encomenda-" + id),
                 error -> showError(owner, "imprimir encomenda", error));
     }
 
@@ -65,12 +66,12 @@ final class CustomerOrderFulfillmentActions {
         // isto é só cortesia, não é a guarda.
         String impedimento = whyCannotSeparate(kindOf(owner, row), status);
         if (impedimento != null) {
-            JOptionPane.showMessageDialog(owner, impedimento, "Separação", JOptionPane.INFORMATION_MESSAGE);
+            owner.showCommercialNotice(FeedbackType.INFO, "Separação indisponível", impedimento);
             return;
         }
 
         UIHelper.runWithProgress(owner, "A concluir separação…", () -> api.completeSeparation(id, terminalName()),
-                ignored -> { owner.loadOrdersTable(); JOptionPane.showMessageDialog(owner, "Pedido marcado como separado."); },
+                ignored -> { owner.loadOrdersTable(); owner.showCommercialSuccess("Pedido marcado como separado."); },
                 error -> showError(owner, "concluir separação", error));
     }
 
@@ -126,7 +127,7 @@ final class CustomerOrderFulfillmentActions {
         String secret = new String(password.getPassword());
         UIHelper.runWithProgress(owner, "A autorizar reimpressão…",
                 () -> api.reprintPicking(id, user.getText(), secret, reason.getText(), terminalName()),
-                pdf -> { PdfFileSaver.saveAndOpen(pdf, "reimpressao-separacao-" + id); owner.loadOrdersTable(); },
+                pdf -> { PrintPreviewDialog.show(owner, pdf, "reimpressao-separacao-" + id); owner.loadOrdersTable(); },
                 error -> showError(owner, "reimprimir guia", error));
     }
 
@@ -136,10 +137,10 @@ final class CustomerOrderFulfillmentActions {
     }
 
     private static void warn(ComercialPanel owner) {
-        JOptionPane.showMessageDialog(owner, "Seleccione um pedido.", "Aviso", JOptionPane.WARNING_MESSAGE);
+        owner.showCommercialNotice(FeedbackType.WARNING, "Seleccione um pedido", "Escolha um pedido na tabela para continuar.");
     }
 
     private static void showError(ComercialPanel owner, String action, Throwable error) {
-        JOptionPane.showMessageDialog(owner, "Não foi possível " + action + ": " + error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        owner.showCommercialError(action, error);
     }
 }

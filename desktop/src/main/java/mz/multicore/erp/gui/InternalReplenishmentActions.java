@@ -50,11 +50,8 @@ final class InternalReplenishmentActions {
                 });
         if (!dialog.showDialog() || created[0] == null) return;
         owner.loadOrdersTable();
-        JOptionPane.showMessageDialog(owner,
-                "Transferência " + created[0].transferNumber() + " criada a partir de " + order.orderNumber() + ".\n\n"
-                        + "A mercadoria ainda não se moveu: aprove a transferência em "
-                        + "Stock → Transferências entre Armazéns.",
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        owner.showCommercialSuccess("Transferência " + created[0].transferNumber() + " criada a partir de "
+                + order.orderNumber() + "; aprove-a em Stock → Transferências entre Armazéns.");
     }
 
     private static String route(OrderDTO order) {

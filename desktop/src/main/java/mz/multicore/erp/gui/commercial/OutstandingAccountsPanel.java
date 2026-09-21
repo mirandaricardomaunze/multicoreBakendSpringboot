@@ -32,6 +32,7 @@ public final class OutstandingAccountsPanel extends JPanel {
     private final DefaultTableModel model;
     private final JTable table;
     private final JLabel agingSummary;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private List<InvoiceDTO> invoices = new ArrayList<>();
 
     public OutstandingAccountsPanel(ComercialApiClient comercialApiClient,
@@ -58,7 +59,10 @@ public final class OutstandingAccountsPanel extends JPanel {
         actions.add(refresh);
         actions.add(pay);
         header.add(actions, BorderLayout.EAST);
-        add(header, BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -158,7 +162,7 @@ public final class OutstandingAccountsPanel extends JPanel {
     private InvoiceDTO selected() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= invoices.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Seleccione uma fatura", "Escolha uma fatura na tabela para continuar.");
             return null;
         }
         return invoices.get(row);
@@ -203,16 +207,19 @@ public final class OutstandingAccountsPanel extends JPanel {
                 posApiClient.registerLatePayment(invoice.id(), request);
                 return null;
             }, ignored -> {
-                JOptionPane.showMessageDialog(this, "Pagamento registado com sucesso.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                ToastManager.success(this, "Pagamento registado com sucesso.");
                 refresh();
             }, error -> showError("registar pagamento", error));
         } catch (IllegalArgumentException error) {
-            JOptionPane.showMessageDialog(this, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.ERROR, "Dados de pagamento inválidos", error.getMessage());
         }
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        showNotice(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
+    }
+
+    private void showNotice(FeedbackType type, String title, String message) {
+        feedback.show(type, title, message, null, null);
     }
 }

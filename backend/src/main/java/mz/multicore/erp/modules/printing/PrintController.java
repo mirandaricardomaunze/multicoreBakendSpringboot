@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.printing;
 
+import jakarta.validation.Valid;
+import mz.multicore.erp.modules.printing.dto.TableExportRequest;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -7,7 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -33,6 +38,8 @@ public class PrintController {
     private final WorkSheetPrintService workSheetPrintService;
     private final EmploymentContractPrintService employmentContractPrintService;
     private final TerminationPrintService terminationPrintService;
+    private final TableExportPrintService tableExportPrintService;
+    private final PerformanceReportPrintService performanceReportPrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -53,7 +60,9 @@ public class PrintController {
             POSZReportPrintService posZReportPrintService,
             WorkSheetPrintService workSheetPrintService,
             EmploymentContractPrintService employmentContractPrintService,
-            TerminationPrintService terminationPrintService
+            TerminationPrintService terminationPrintService,
+            TableExportPrintService tableExportPrintService,
+            PerformanceReportPrintService performanceReportPrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -74,6 +83,20 @@ public class PrintController {
         this.workSheetPrintService = workSheetPrintService;
         this.employmentContractPrintService = employmentContractPrintService;
         this.terminationPrintService = terminationPrintService;
+        this.tableExportPrintService = tableExportPrintService;
+        this.performanceReportPrintService = performanceReportPrintService;
+    }
+
+    /**
+     * Exportação de uma listagem do desktop. É {@code POST} porque as linhas vêm no corpo: o
+     * cliente manda o que está no ecrã e o servidor devolve-o em PDF com o cabeçalho da empresa.
+     */
+    @PostMapping("/table")
+    public ResponseEntity<Resource> tableExport(
+            @RequestParam Long companyId,
+            @Valid @RequestBody TableExportRequest request
+    ) {
+        return pdfResponse(tableExportPrintService.render(companyId, request), "listagem");
     }
 
     @GetMapping("/employment-contract/{contractId}")
@@ -167,10 +190,11 @@ public class PrintController {
     public ResponseEntity<Resource> ivaDeclaration(
             @org.springframework.web.bind.annotation.RequestParam Long companyId,
             @org.springframework.web.bind.annotation.RequestParam int year,
-            @org.springframework.web.bind.annotation.RequestParam int month
+            @org.springframework.web.bind.annotation.RequestParam int month,
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "0") java.math.BigDecimal previousCredit
     ) {
         return pdfResponse(
-                ivaDeclarationPrintService.render(companyId, year, month),
+                ivaDeclarationPrintService.render(companyId, year, month, previousCredit),
                 "declaracao-iva-" + year + "-" + String.format("%02d", month));
     }
 
@@ -201,6 +225,25 @@ public class PrintController {
     ) {
         return pdfResponse(inventoryCountSheetPrintService.render(companyId, warehouseId),
                 "folha-contagem-" + companyId);
+    }
+
+    @GetMapping("/performance-report")
+    public ResponseEntity<Resource> performanceReport(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to
+    ) {
+        return pdfResponse(performanceReportPrintService.render(companyId, from, to),
+                "relatorio-desempenho-" + companyId);
+    }
+
+    @PostMapping("/performance-report")
+    public ResponseEntity<Resource> performanceReportPost(
+            @RequestParam Long companyId,
+            @RequestBody mz.multicore.erp.modules.performance.dto.PerformanceReportDTO report
+    ) {
+        return pdfResponse(performanceReportPrintService.renderReport(companyId, report),
+                "relatorio-desempenho-" + companyId);
     }
 
     private ResponseEntity<Resource> pdfResponse(byte[] bytes, String fileBase) {

@@ -3,6 +3,10 @@ package mz.multicore.erp.modules.accounting.service;
 import mz.multicore.erp.architecture.events.PayrollLiabilityDeliveredEvent;
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
 import mz.multicore.erp.architecture.events.PayslipPaidEvent;
+import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
+import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
+import mz.multicore.erp.architecture.events.CreditNoteApprovedEvent;
+import mz.multicore.erp.architecture.events.DebitNoteApprovedEvent;
 import mz.multicore.erp.architecture.events.SaleRegisteredEvent;
 import mz.multicore.erp.modules.accounting.model.Account;
 import mz.multicore.erp.modules.accounting.model.JournalEntry;
@@ -132,6 +136,135 @@ public class AutomaticPostingService {
         entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CLIENTES),
                 amount, "Liquidação de conta corrente"));
 
+        journalService.save(entry, event.companyId());
+    }
+
+    /** Compra: D Mercadorias, D IVA dedutível, C Fornecedores. */
+    @EventListener
+    @Transactional
+    public void onPurchaseRegistered(PurchaseRegisteredEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (alreadyPosted(event.companyId(), JournalSource.PURCHASE, event.purchaseId())) return;
+
+        BigDecimal total = safe(event.totalAmount());
+        if (total.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date());
+        entry.setDescription("Compra " + event.purchaseNumber());
+        entry.setSource(JournalSource.PURCHASE);
+        entry.setSourceDocumentId(event.purchaseId());
+        entry.setSourceDocumentNumber(event.purchaseNumber());
+
+        BigDecimal net = safe(event.netAmount());
+        BigDecimal tax = safe(event.taxAmount());
+        if (net.signum() > 0) {
+            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.MERCADORIAS),
+                    net, "Entrada de mercadorias"));
+        }
+        if (tax.signum() > 0) {
+            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.IVA_DEDUTIVEL),
+                    tax, "IVA dedutível"));
+        }
+        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.FORNECEDORES),
+                total, "Dívida ao fornecedor"));
+        BigDecimal paidNow = safe(event.amountPaidNow());
+        if (paidNow.signum() > 0) {
+            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.FORNECEDORES),
+                    paidNow, "Liquidação no acto"));
+            entry.addLine(JournalLine.credit(cashAccount(event.companyId(), event.cashPayment()),
+                    paidNow, "Pagamento no acto"));
+        }
+        journalService.save(entry, event.companyId());
+    }
+
+    /** Pagamento posterior: D Fornecedores, C Caixa/Banco. */
+    @EventListener
+    @Transactional
+    public void onSupplierPaymentRegistered(SupplierPaymentRegisteredEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (alreadyPosted(event.companyId(), JournalSource.SUPPLIER_PAYMENT, event.transactionId())) return;
+        BigDecimal amount = safe(event.amount());
+        if (amount.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date());
+        entry.setDescription("Pagamento da compra " + event.purchaseNumber());
+        entry.setSource(JournalSource.SUPPLIER_PAYMENT);
+        entry.setSourceDocumentId(event.transactionId());
+        entry.setSourceDocumentNumber(event.purchaseNumber());
+        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.FORNECEDORES),
+                amount, "Liquidação ao fornecedor"));
+        entry.addLine(JournalLine.credit(cashAccount(event.companyId(), event.cashPayment()),
+                amount, "Saída de tesouraria"));
+        journalService.save(entry, event.companyId());
+    }
+
+    /** Nota de crédito: estorna Clientes, Vendas e IVA; devoluções repõem existências ao custo. */
+    @EventListener
+    @Transactional
+    public void onCreditNoteApproved(CreditNoteApprovedEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (alreadyPosted(event.companyId(), JournalSource.CREDIT_NOTE, event.noteId())) return;
+        BigDecimal total = safe(event.totalAmount());
+        if (total.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date());
+        entry.setDescription("Nota de crédito " + event.noteNumber());
+        entry.setSource(JournalSource.CREDIT_NOTE);
+        entry.setSourceDocumentId(event.noteId());
+        entry.setSourceDocumentNumber(event.noteNumber());
+        BigDecimal net = safe(event.netAmount());
+        BigDecimal tax = safe(event.taxAmount());
+        if (net.signum() > 0) {
+            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.VENDAS),
+                    net, "Estorno da venda"));
+        }
+        if (tax.signum() > 0) {
+            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.IVA_LIQUIDADO),
+                    tax, "Estorno do IVA liquidado"));
+        }
+        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CLIENTES),
+                total, "Redução da dívida do cliente"));
+        BigDecimal cost = safe(event.returnedGoodsCost());
+        if (cost.signum() > 0) {
+            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.MERCADORIAS),
+                    cost, "Reposição das mercadorias devolvidas"));
+            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CMVMC),
+                    cost, "Estorno do custo da venda"));
+        }
+        journalService.save(entry, event.companyId());
+    }
+
+    /** Nota de débito: aumenta Clientes e reconhece outros proveitos e IVA. */
+    @EventListener
+    @Transactional
+    public void onDebitNoteApproved(DebitNoteApprovedEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (alreadyPosted(event.companyId(), JournalSource.DEBIT_NOTE, event.noteId())) return;
+        BigDecimal total = safe(event.totalAmount());
+        if (total.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date());
+        entry.setDescription("Nota de débito " + event.noteNumber());
+        entry.setSource(JournalSource.DEBIT_NOTE);
+        entry.setSourceDocumentId(event.noteId());
+        entry.setSourceDocumentNumber(event.noteNumber());
+        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.CLIENTES),
+                total, "Acréscimo à dívida do cliente"));
+        BigDecimal net = safe(event.netAmount());
+        BigDecimal tax = safe(event.taxAmount());
+        if (net.signum() > 0) {
+            entry.addLine(JournalLine.credit(
+                    account(event.companyId(), PgcNirfChart.OUTROS_PROVEITOS_OPERACIONAIS),
+                    net, "Frete, sobretaxa ou correcção"));
+        }
+        if (tax.signum() > 0) {
+            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.IVA_LIQUIDADO),
+                    tax, "IVA liquidado"));
+        }
         journalService.save(entry, event.companyId());
     }
 

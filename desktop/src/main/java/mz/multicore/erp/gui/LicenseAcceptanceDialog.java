@@ -43,6 +43,7 @@ public class LicenseAcceptanceDialog extends JDialog {
         setSize(820, 680);
         setMinimumSize(new Dimension(700, 560));
         setLocationRelativeTo(null);
+        setAlwaysOnTop(true);
         setIconImage(UIHelper.iconImage("fas-file-contract", 48, UIHelper.ACCENT));
         buildUi();
         addWindowListener(new WindowAdapter() {

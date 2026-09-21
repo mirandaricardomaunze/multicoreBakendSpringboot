@@ -6,6 +6,7 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.SimpleBarChart;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.hr.dto.AbsenceDTO;
 import mz.multicore.erp.modules.hr.dto.CreateSalaryChangeRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
@@ -182,8 +183,7 @@ final class HREmployeeActions {
         UIHelper.runWithProgress(owner, "A registar alteração salarial…",
                 () -> owner.hrApiClient.registerSalaryChange(request),
                 ignored -> {
-                    JOptionPane.showMessageDialog(owner, "Alteração salarial registada.",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    owner.showSuccess("Alteração salarial registada.");
                     owner.refreshData();
                 }, owner::showActionError);
     }
@@ -271,8 +271,7 @@ final class HREmployeeActions {
                 notesField.getText().trim().isEmpty() ? null : notesField.getText().trim());
         UIHelper.runWithProgress(owner, "A gravar documento…",
                 () -> owner.hrApiClient.saveEmployeeDocument(request),
-                ignored -> JOptionPane.showMessageDialog(owner, "Documento registado.",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE),
+                ignored -> owner.showSuccess("Documento registado."),
                 owner::showActionError);
     }
 
@@ -282,9 +281,8 @@ final class HREmployeeActions {
         EmployeeDTO employee = employeeSelection.get();
         if (employee == null) return;
         if (!SignedInUser.isManagerOrAdmin()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Apenas gestores ou administradores podem consultar dados de saúde ocupacional.",
-                    "Acesso restrito", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Acesso restrito",
+                    "Apenas gestores ou administradores podem consultar dados de saúde ocupacional.");
             return;
         }
         UIHelper.runWithProgress(owner, "A carregar saúde ocupacional…",
@@ -363,14 +361,14 @@ final class HREmployeeActions {
      */
     void openOccupationalHealthAttachment(List<OccupationalHealthExamDTO> history, int row) {
         if (row < 0 || row >= history.size()) {
-            JOptionPane.showMessageDialog(owner, "Seleccione na lista o exame cujo comprovativo quer abrir.",
-                    "Abrir comprovativo", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um exame",
+                    "Escolha na lista o exame cujo comprovativo quer abrir.");
             return;
         }
         OccupationalHealthExamDTO exam = history.get(row);
         if (!exam.hasAttachment()) {
-            JOptionPane.showMessageDialog(owner, "Este exame não tem comprovativo digitalizado.",
-                    "Sem comprovativo", JOptionPane.INFORMATION_MESSAGE);
+            owner.showNotice(FeedbackType.INFO, "Sem comprovativo",
+                    "Este exame não tem comprovativo digitalizado.");
             return;
         }
         UIHelper.runWithProgress(owner, "A abrir comprovativo…",
@@ -385,9 +383,7 @@ final class HREmployeeActions {
                         Files.write(file.toPath(), attachment.content());
                         Desktop.getDesktop().open(file);
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(owner,
-                                "Não foi possível abrir o comprovativo: " + ex.getMessage(),
-                                "Comprovativo", JOptionPane.ERROR_MESSAGE);
+                        owner.showNotice(FeedbackType.ERROR, "Não foi possível abrir o comprovativo", ex.getMessage());
                     }
                 }, owner::showActionError);
     }
@@ -399,22 +395,19 @@ final class HREmployeeActions {
     void payOccupationalHealthExam(EmployeeDTO employee,
                                            List<OccupationalHealthExamDTO> history, int row) {
         if (row < 0 || row >= history.size()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Seleccione na lista o exame cuja factura vai pagar.", "Registar pagamento",
-                    JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um exame",
+                    "Escolha na lista o exame cuja factura vai pagar.");
             return;
         }
         OccupationalHealthExamDTO exam = history.get(row);
         if (exam.cost() == null) {
-            JOptionPane.showMessageDialog(owner,
-                    "Este exame não tem custo registado. Registe a factura da clínica antes de pagar.",
-                    "Sem custo", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem custo registado",
+                    "Registe a factura da clínica antes de pagar este exame.");
             return;
         }
         if (exam.paid()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Este exame já foi pago em " + exam.paidAt().format(DATE_FMT) + ".",
-                    "Já pago", JOptionPane.INFORMATION_MESSAGE);
+            owner.showNotice(FeedbackType.INFO, "Exame já pago",
+                    "Este exame foi pago em " + exam.paidAt().format(DATE_FMT) + ".");
             return;
         }
         int confirm = JOptionPane.showConfirmDialog(owner, String.format(
@@ -425,9 +418,7 @@ final class HREmployeeActions {
         if (confirm != JOptionPane.YES_OPTION) return;
         UIHelper.runWithProgress(owner, "A pagar exame ocupacional…",
                 () -> owner.hrApiClient.payOccupationalHealthExam(exam.id()),
-                ignored -> JOptionPane.showMessageDialog(owner,
-                        "Pagamento registado na tesouraria.", "Saúde Ocupacional",
-                        JOptionPane.INFORMATION_MESSAGE), owner::showActionError);
+                ignored -> owner.showSuccess("Pagamento registado na tesouraria."), owner::showActionError);
     }
 
     /**
@@ -544,8 +535,7 @@ final class HREmployeeActions {
                 attachmentName[0] = chooser.getSelectedFile().getName();
                 attachmentLabel.setText(attachmentName[0]);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(owner, ex.getMessage(), "Comprovativo inválido",
-                        JOptionPane.ERROR_MESSAGE);
+                owner.showNotice(FeedbackType.ERROR, "Comprovativo inválido", ex.getMessage());
             }
         });
         JPanel attachmentPanel = new JPanel(new BorderLayout(8, 0));
@@ -582,8 +572,8 @@ final class HREmployeeActions {
         try {
             cost = costField.optionalValue();
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(owner, "Introduza um custo válido para o exame.",
-                    "Custo inválido", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.ERROR, "Custo inválido",
+                    "Introduza um custo válido para o exame.");
             return;
         }
         SaveOccupationalHealthExamRequest request = new SaveOccupationalHealthExamRequest(
@@ -593,9 +583,8 @@ final class HREmployeeActions {
                 cost, blank(invoiceField.getText()), attachmentName[0], attachment[0]);
         UIHelper.runWithProgress(owner, "A registar exame ocupacional…",
                 () -> owner.hrApiClient.registerOccupationalHealthExam(request),
-                ignored -> JOptionPane.showMessageDialog(owner,
-                        "Exame ocupacional registado. O histórico anterior foi preservado.",
-                        "Saúde Ocupacional", JOptionPane.INFORMATION_MESSAGE), owner::showActionError);
+                ignored -> owner.showSuccess("Exame ocupacional registado; o histórico anterior foi preservado."),
+                owner::showActionError);
     }
 
     private static String money(BigDecimal value) {
@@ -659,8 +648,8 @@ final class HREmployeeActions {
         }
         String reason = reasonField.getText().trim();
         if (reason.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Justificar uma falta exige um motivo.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Motivo obrigatório",
+                    "Justificar uma falta exige um motivo.");
             return;
         }
         String type = ABSENCE_TYPES[typeCombo.getSelectedIndex()];

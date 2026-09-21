@@ -46,6 +46,22 @@ Se uma instrucao do utilizador colidir com estes documentos, perguntar antes de 
 4. Adicionar ou ajustar testes quando a regra de negocio muda.
 5. Actualizar documentacao apenas quando uma decisao, fluxo ou contrato muda.
 
+### Arranque e Reinício da Aplicação (Backend & Desktop no Windows)
+
+Quando o utilizador pedir para abrir ou reiniciar a aplicação ("abre app", "reinicia app") ou antes de empacotar com `mvn package`:
+1. **Verificar Processos Bloqueadores (`javaw`):** Garantir que nenhuma instância anterior de `javaw` está a bloquear o JAR:
+   ```powershell
+   Get-Process javaw -ErrorAction SilentlyContinue | Stop-Process -Force
+   ```
+2. **Verificar Backend:** Confirmar que `http://localhost:8080/actuator/health` responde `{"status":"UP"}` antes de abrir o desktop.
+3. **Evitar GUI no Terminal de Background:** Não iniciar `java -jar multicore-desktop-1.0.0.jar` directamente dentro do shell de background do agente, pois não renderiza na sessão interativa do utilizador (`WinSta0\Default`).
+4. **Lançamento Interativo Canónico:** Executar a tarefa interativa do Windows ou `scripts/run_gui.bat` via:
+   ```cmd
+   schtasks /create /tn "MulticoreERP" /tr "C:\Users\miran\Desktop\manager\scripts\run_gui.bat" /sc ONCE /st 23:59 /it /f
+   schtasks /run /tn "MulticoreERP"
+   ```
+5. **Propriedades Obrigatórias do Desktop:** Sempre incluir `-Djava.awt.headless=false -Dspring.profiles.active=desktop`.
+
 ## Quando parar e perguntar
 
 - A mudanca exige quebrar uma regra em [ARCHITECTURE.md](ARCHITECTURE.md).

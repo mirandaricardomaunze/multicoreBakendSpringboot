@@ -131,9 +131,10 @@ public class FiscalController {
     public ResponseEntity<IvaSummaryDTO> ivaSummary(
             @RequestParam Long companyId,
             @RequestParam int year,
-            @RequestParam int month
+            @RequestParam int month,
+            @RequestParam(required = false, defaultValue = "0") java.math.BigDecimal previousCredit
     ) {
-        return ResponseEntity.ok(fiscalSummaryService.computeMonth(companyId, year, month));
+        return ResponseEntity.ok(fiscalSummaryService.computeMonth(companyId, year, month, previousCredit));
     }
 
     // ── Exportação SAF-T (vendas) ────────────────────────────────────────────

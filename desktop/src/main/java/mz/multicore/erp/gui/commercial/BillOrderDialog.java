@@ -3,6 +3,7 @@ package mz.multicore.erp.gui.commercial;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.gui.ComercialPanel;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 
@@ -38,8 +39,7 @@ public final class BillOrderDialog {
 
     private void show(List<OrderDTO> orders) {
         if (orders.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Não há encomendas pendentes para faturar.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            notice(FeedbackType.INFO, "Sem encomendas pendentes", "Não há encomendas pendentes para faturar.");
             return;
         }
         JTextField search = new JTextField();
@@ -109,9 +109,8 @@ public final class BillOrderDialog {
     }
 
     private void success(OrderDTO order, InvoiceDTO invoice) {
-        JOptionPane.showMessageDialog(owner,
-                "Fatura " + invoice.invoiceNumber() + " emitida a partir da encomenda " + order.orderNumber() + ".",
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        if (owner instanceof ComercialPanel panel) panel.showCommercialSuccess(
+                "Fatura " + invoice.invoiceNumber() + " emitida a partir da encomenda " + order.orderNumber() + ".");
         invoicesRefresh.run();
         ordersRefresh.run();
     }
@@ -124,7 +123,10 @@ public final class BillOrderDialog {
         label.setFont(new Font(UIHelper.FONT, Font.BOLD, 13)); return label;
     }
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(owner, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        if (owner instanceof ComercialPanel panel) panel.showCommercialNotice(
+                FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
+    }
+    private void notice(FeedbackType type, String title, String message) {
+        if (owner instanceof ComercialPanel panel) panel.showCommercialNotice(type, title, message);
     }
 }

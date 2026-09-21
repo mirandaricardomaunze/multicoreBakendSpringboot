@@ -13,7 +13,7 @@ final class PosLayout {
     static final int ROOT_VERTICAL_MARGIN = 14;
     static final int SECTION_VERTICAL_GAP = 6;
     static final int CARD_VERTICAL_GAP = 8;
-    static final double[] HEADER_FIELD_WEIGHTS = {0.20, 0.22, 0.16, 0.18, 0.24};
+    static final double[] HEADER_FIELD_WEIGHTS = {0.18, 0.20, 0.19, 0.19, 0.24};
 
     private PosLayout() {}
 
@@ -137,4 +137,61 @@ final class PosLayout {
         return row + 2;
     }
 
+    static mz.multicore.erp.gui.components.ModernPanel createSessionBanner(JLabel statusLabel) {
+        mz.multicore.erp.gui.components.ModernPanel banner = new mz.multicore.erp.gui.components.ModernPanel(10);
+        banner.setLayout(new BorderLayout());
+        banner.setBorder(new EmptyBorder(6, 12, 6, 12));
+        banner.add(statusLabel, BorderLayout.CENTER);
+        return banner;
+    }
+
+    static mz.multicore.erp.gui.components.ModernPanel createTotalsRow(JLabel subtotalValue, JLabel ivaValue, JLabel totalValue) {
+        mz.multicore.erp.gui.components.ModernPanel totalRow = new mz.multicore.erp.gui.components.ModernPanel(12);
+        totalRow.setBackground(UIHelper.SELECTION_BG);
+        totalRow.setLayout(new BorderLayout());
+        totalRow.setBorder(new EmptyBorder(8, 14, 8, 14));
+
+        JPanel taxSummary = new JPanel(new GridLayout(2, 2, 12, 2));
+        taxSummary.setOpaque(false);
+
+        JLabel subCap = new JLabel("Subtotal s/ IVA");
+        subCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subCap.setForeground(UIHelper.TEXT_MUTED);
+
+        JLabel ivaCap = new JLabel("IVA");
+        ivaCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        ivaCap.setForeground(UIHelper.TEXT_MUTED);
+
+        subtotalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        subtotalValue.setForeground(UIHelper.TEXT_LIGHT);
+        subtotalValue.setHorizontalAlignment(SwingConstants.RIGHT);
+
+        ivaValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        ivaValue.setForeground(UIHelper.TEXT_LIGHT);
+        ivaValue.setHorizontalAlignment(SwingConstants.RIGHT);
+
+        taxSummary.add(subCap);
+        taxSummary.add(subtotalValue);
+        taxSummary.add(ivaCap);
+        taxSummary.add(ivaValue);
+
+        JLabel totalCaption = new JLabel("TOTAL A PAGAR");
+        totalCaption.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        totalCaption.setForeground(UIHelper.TEXT_MUTED);
+
+        totalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
+        totalValue.setForeground(UIHelper.ACCENT_BLUE);
+
+        JPanel payable = new JPanel(new BorderLayout(14, 0));
+        payable.setOpaque(false);
+        payable.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 1, 0, 0, UIHelper.BORDER),
+                new EmptyBorder(0, 12, 0, 0)));
+        payable.add(totalCaption, BorderLayout.WEST);
+        payable.add(totalValue, BorderLayout.EAST);
+
+        totalRow.add(taxSummary, BorderLayout.WEST);
+        totalRow.add(payable, BorderLayout.EAST);
+        return totalRow;
+    }
 }

@@ -1,5 +1,8 @@
 package mz.multicore.erp.gui.components;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatLaf;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -19,6 +22,9 @@ import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class UIHelper {
@@ -73,6 +79,13 @@ public class UIHelper {
     public static final Color BUTTON_NEUTRAL = new Color(51, 65, 85);       // Slate-700
     public static final Color BUTTON_NEUTRAL_HOVER = new Color(71, 85, 105); // Slate-600
 
+    // ── Pré-visualização de impressão ─────────────────────────────────────────────────────────
+    //    Papel é papel: a folha desenhada no modal de impressão não segue o tema da aplicação,
+    //    senão o operador via um documento escuro e recebia um documento branco da impressora.
+    public static final Color PAPER = Color.WHITE;
+    public static final Color PAPER_SHADOW = new Color(0, 0, 0, 70);
+    public static final Color PAPER_INK = new Color(31, 41, 55); // Gray-800 — texto sobre a folha
+
     // ── Cores de acento por módulo (partilhadas entre temas). Uma só fonte de verdade — a barra de
     //    topo e os painéis referenciam estas em vez de literais Color soltos. ────────────────────
     public static final Color MODULE_DASHBOARD  = ACCENT_BLUE;
@@ -91,6 +104,14 @@ public class UIHelper {
 
     // ── Tipografia: família base num só sítio (evita "Segoe UI" repetido; troca/fallback central). ──
     public static final String FONT = "Segoe UI";
+
+    // ── Escala canónica de tamanhos de ícones (px): evita números mágicos soltos (12/14/16/20/24/48). ──
+    public static final int ICON_XS = 12;   // Badges, micro tags, status inline
+    public static final int ICON_SM = 14;   // Ações de tabela, botões compactos, barras secundárias
+    public static final int ICON_MD = 16;   // Botões padrão, abas (tabs), menus de contexto
+    public static final int ICON_LG = 20;   // Sidebar, barra de contexto, toggles principais
+    public static final int ICON_XL = 24;   // Títulos de diálogos, cabeçalhos de secção, KPIs
+    public static final int ICON_HERO = 48; // Empty states, ilustrações, ecrãs de sucesso/erro
 
     // ── Escala de raios de canto (px): uma linguagem única em vez de valores soltos (8/10/14/16/20). ──
     public static final int RADIUS_SM = 8;   // realces de nav, tabs, chips
@@ -247,6 +268,9 @@ public class UIHelper {
         }
         PREFS.put("theme", theme.id);
         applyTheme(theme);
+        try {
+            FlatLaf.updateUI();
+        } catch (Exception ignored) {}
         if (onThemeChanged != null) {
             onThemeChanged.run(); // desktop: reconstrói a janela já com a paleta nova
         } else {
@@ -352,6 +376,13 @@ public class UIHelper {
         return new ModernButton(text, SECONDARY, SECONDARY_HOVER);
     }
 
+    public static ModernButton createButton(String text, Icon icon, Color baseColor, java.awt.event.ActionListener listener) {
+        ModernButton btn = new ModernButton(text, baseColor, baseColor.brighter());
+        if (icon != null) btn.setIcon(icon);
+        if (listener != null) btn.addActionListener(listener);
+        return btn;
+    }
+
     /** Acção canónica de recarga manual para vistas partilhadas entre vários utilizadores. */
     public static ModernButton createRefreshButton(Runnable refreshAction) {
         Objects.requireNonNull(refreshAction, "A acção de actualização é obrigatória.");
@@ -393,6 +424,38 @@ public class UIHelper {
 
     public static void initGlobalTheme() {
         try {
+            // Activa o Look & Feel moderno FlatLaf conforme o tema activo
+            if (activeTheme == Theme.LIGHT) {
+                FlatLightLaf.setup();
+            } else {
+                FlatDarkLaf.setup();
+            }
+
+            // Propriedades modernas do FlatLaf: cantos arredondados, foco, tipografia e HiDPI
+            UIManager.put("Component.arc", 10);
+            UIManager.put("Button.arc", 10);
+            UIManager.put("TextComponent.arc", 8);
+            UIManager.put("ProgressBar.arc", 8);
+            UIManager.put("ScrollBar.showButtons", false);
+            UIManager.put("ScrollBar.width", 10);
+            UIManager.put("ScrollBar.thumbArc", 10);
+            UIManager.put("TabbedPane.showTabSeparators", true);
+            UIManager.put("TabbedPane.hasFullBorder", false);
+            UIManager.put("TitlePane.unifiedBackground", true);
+            UIManager.put("TitlePane.menuBarEmbedded", true);
+            UIManager.put("TitlePane.centerTitle", false);
+
+            // Tabelas modernas com linhas zebradas e cantos de seleção arredondados
+            UIManager.put("Table.alternateRowColor", ROW_ALT);
+            UIManager.put("Table.showHorizontalLines", true);
+            UIManager.put("Table.showVerticalLines", false);
+            UIManager.put("Table.intercellSpacing", new Dimension(0, 1));
+            UIManager.put("Table.selectionArc", 8);
+            UIManager.put("Table.rowHeight", 36);
+
+            // Campos de texto com botão limpar (X)
+            UIManager.put("TextField.showClearButton", true);
+
             // Style OptionPane and dialogs for Dark Theme
             UIManager.put("Panel.background", BG_DARK);
             UIManager.put("OptionPane.background", BG_DARK);
@@ -402,7 +465,7 @@ public class UIHelper {
 
             // Buttons inside dialogs
             UIManager.put("Button.background", BG_CARD);
-            UIManager.put("Button.foreground", TEXT_LIGHT);
+            UIManager.put("Button.foreground", readableTextOn(BG_CARD));
             UIManager.put("Button.select", SELECTION_BG);
             UIManager.put("Button.focus", new Color(0, 0, 0, 0));
             // O L&F Metal/Ocean pinta o botão com um gradiente claro próprio e ignora o
@@ -410,11 +473,19 @@ public class UIHelper {
             // Achatar o gradiente para a cor sólida do tema repõe o contraste do texto.
             UIManager.put("Button.gradient",
                     java.util.Arrays.asList(1f, 0f, BG_CARD, BG_CARD, BG_CARD));
-            UIManager.put("Button.disabledText", TEXT_MUTED);
+            UIManager.put("Button.disabledText", readableTextOn(BG_CARD).equals(Color.WHITE)
+                    ? new Color(255, 255, 255, 140)
+                    : new Color(107, 114, 128, 180));
+
+            // Menus and Popups
+            UIManager.put("MenuItem.foreground", TEXT_LIGHT);
+            UIManager.put("MenuItem.selectionForeground", TEXT_LIGHT);
+            UIManager.put("Menu.foreground", TEXT_LIGHT);
+            UIManager.put("PopupMenu.foreground", TEXT_LIGHT);
 
             // TabbedPane dark theme consistency
             UIManager.put("TabbedPane.background", BG_CARD);
-            UIManager.put("TabbedPane.foreground", TEXT_LIGHT);
+            UIManager.put("TabbedPane.foreground", Color.WHITE);
             UIManager.put("TabbedPane.selected", ACCENT);
             UIManager.put("TabbedPane.selectedForeground", Color.WHITE);
             UIManager.put("TabbedPane.focusInputMap", new UIDefaults.LazyInputMap(new Object[]{}));
@@ -761,36 +832,173 @@ public class UIHelper {
     }
 
     /**
-     * Instala automaticamente um {@link TableFooter} (contagem + soma) por baixo das <b>tabelas de
-     * listagem</b> — as que têm um {@code RowSorter} (filtro), o que as distingue das tabelas de
-     * formulário/carrinho (sem sorter). Só o faz quando o card que contém a tabela usa
-     * {@code BorderLayout} e tem o SOUTH livre. Para excluir uma tabela específica:
-     * {@code table.putClientProperty("noTableFooter", Boolean.TRUE)}.
+     * Contentor composto para o rodapé SOUTH de tabelas com paginação e rodapé adicional (ex.: totais, acções).
+     */
+    public static class PaginationSouthComposite extends JPanel {
+        private JComponent pagination;
+        private JComponent extraFooter;
+
+        public PaginationSouthComposite(JComponent pagination) {
+            super();
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            setOpaque(false);
+            setPagination(pagination);
+        }
+
+        public void setPagination(JComponent pagination) {
+            if (this.pagination != null) {
+                remove(this.pagination);
+            }
+            this.pagination = pagination;
+            if (pagination != null) {
+                add(pagination, 0);
+            }
+            revalidate();
+            repaint();
+        }
+
+        public void setExtraFooter(JComponent footer) {
+            if (this.extraFooter == footer) return;
+            if (this.extraFooter != null) {
+                remove(this.extraFooter);
+            }
+            this.extraFooter = footer;
+            if (footer != null) {
+                add(footer);
+            }
+            revalidate();
+            repaint();
+        }
+
+        public JComponent getPagination() {
+            return pagination;
+        }
+
+        public JComponent getExtraFooter() {
+            return extraFooter;
+        }
+    }
+
+    /**
+     * Instala automaticamente a barra de paginação e contagem sob as tabelas de listagem da aplicação.
+     * Suporta layouts BorderLayout com composição automática de rodapés existentes e BoxLayout.
      */
     private static void installListingFooter(JTable table) {
         if (Boolean.TRUE.equals(table.getClientProperty("listingFooterWired"))) return;
         table.putClientProperty("listingFooterWired", Boolean.TRUE);
         table.addHierarchyListener(e -> {
-            if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) == 0) return;
+            if ((e.getChangeFlags() & (HierarchyEvent.PARENT_CHANGED | HierarchyEvent.SHOWING_CHANGED)) == 0) return;
             maybeAddListingFooter(table);
         });
-        // O sorter pode ser instalado (TableFilter) depois de a tabela já estar na árvore.
         table.addPropertyChangeListener("rowSorter", e -> maybeAddListingFooter(table));
+        table.addPropertyChangeListener("model", e -> maybeAddListingFooter(table));
     }
 
     private static void maybeAddListingFooter(JTable table) {
         if (Boolean.TRUE.equals(table.getClientProperty("noTableFooter"))) return;
         if (Boolean.TRUE.equals(table.getClientProperty(ClientTablePagination.DISABLED))) return;
-        if (table.getRowSorter() == null) return; // só tabelas de listagem (com filtro)
         JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, table);
-        if (sp == null || !(sp.getParent() instanceof JComponent parent)) return;
-        if (!(parent.getLayout() instanceof BorderLayout bl)) return;
-        if (bl.getLayoutComponent(BorderLayout.SOUTH) != null) return;    // SOUTH ocupado (rodapé próprio)
-        if (Boolean.TRUE.equals(parent.getClientProperty("tableFooterAdded"))) return;
-        parent.putClientProperty("tableFooterAdded", Boolean.TRUE);
-        parent.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
+        if (sp == null) return;
+        if (sp.getParent() == null) {
+            if (!Boolean.TRUE.equals(sp.getClientProperty("paginationHierarchyWired"))) {
+                sp.putClientProperty("paginationHierarchyWired", Boolean.TRUE);
+                sp.addHierarchyListener(ev -> {
+                    if ((ev.getChangeFlags() & (HierarchyEvent.PARENT_CHANGED | HierarchyEvent.SHOWING_CHANGED)) != 0) {
+                        maybeAddListingFooter(table);
+                    }
+                });
+            }
+            return;
+        }
+        if (!(sp.getParent() instanceof JComponent parent)) return;
+
+        if (parent.getLayout() instanceof BorderLayout bl) {
+            installSouthGuard(parent, table);
+            wirePaginationComposite(parent, bl, table);
+        } else if (parent.getLayout() instanceof BoxLayout) {
+            if (!Boolean.TRUE.equals(parent.getClientProperty("boxPaginationInstalled"))) {
+                parent.putClientProperty("boxPaginationInstalled", Boolean.TRUE);
+                int spIdx = -1;
+                for (int i = 0; i < parent.getComponentCount(); i++) {
+                    if (parent.getComponent(i) == sp) {
+                        spIdx = i;
+                        break;
+                    }
+                }
+                JPanel pager = ClientTablePagination.install(table);
+                if (spIdx >= 0) {
+                    parent.add(pager, spIdx + 1);
+                } else {
+                    parent.add(pager);
+                }
+                parent.revalidate();
+                parent.repaint();
+            }
+        }
+    }
+
+    private static void wirePaginationComposite(JComponent parent, BorderLayout bl, JTable table) {
+        if (Boolean.TRUE.equals(table.getClientProperty("noTableFooter"))) return;
+        if (Boolean.TRUE.equals(table.getClientProperty(ClientTablePagination.DISABLED))) return;
+
+        Component currentSouth = bl.getLayoutComponent(BorderLayout.SOUTH);
+        JPanel pager = ClientTablePagination.install(table);
+
+        if (currentSouth instanceof PaginationSouthComposite composite) {
+            if (composite.getPagination() != pager) {
+                composite.setPagination(pager);
+            }
+            return;
+        }
+
+        PaginationSouthComposite composite = new PaginationSouthComposite(pager);
+        parent.putClientProperty("paginationSouthComposite", composite);
+        if (currentSouth instanceof JComponent extra) {
+            parent.remove(extra);
+            composite.setExtraFooter(extra);
+        }
+        parent.add(composite, BorderLayout.SOUTH);
         parent.revalidate();
         parent.repaint();
+    }
+
+    private static void installSouthGuard(JComponent parent, JTable table) {
+        if (Boolean.TRUE.equals(parent.getClientProperty("paginationGuardInstalled"))) return;
+        parent.putClientProperty("paginationGuardInstalled", Boolean.TRUE);
+
+        parent.addContainerListener(new java.awt.event.ContainerAdapter() {
+            private boolean rearranging = false;
+
+            @Override
+            public void componentAdded(java.awt.event.ContainerEvent e) {
+                if (rearranging) return;
+                Component child = e.getChild();
+                if (child instanceof PaginationSouthComposite) return;
+
+                if (parent.getLayout() instanceof BorderLayout bl) {
+                    if (bl.getLayoutComponent(BorderLayout.SOUTH) == child && child instanceof JComponent extra) {
+                        rearranging = true;
+                        try {
+                            parent.remove(extra);
+                            Object prop = parent.getClientProperty("paginationSouthComposite");
+                            PaginationSouthComposite comp;
+                            if (prop instanceof PaginationSouthComposite existing) {
+                                comp = existing;
+                            } else {
+                                comp = new PaginationSouthComposite(ClientTablePagination.install(table));
+                                parent.putClientProperty("paginationSouthComposite", comp);
+                            }
+                            comp.setExtraFooter(extra);
+                            parent.add(comp, BorderLayout.SOUTH);
+                            parent.revalidate();
+                            parent.repaint();
+                        } finally {
+                            rearranging = false;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -930,17 +1138,95 @@ public class UIHelper {
      * Vector icon helper backed by Ikonli + FontAwesome 5.
      * Use FontAwesome icon codes like "fas-users", "fas-print", "fas-file-pdf".
      * See https://fontawesome.com/v5/search?o=r&m=free for the catalogue.
+     * Possui protecção de fallback seguro (nunca lança excepção com código inválido/nulo).
      */
     public static javax.swing.Icon icon(String code, int size, Color color) {
-        org.kordamp.ikonli.swing.FontIcon fi = org.kordamp.ikonli.swing.FontIcon.of(
-                org.kordamp.ikonli.fontawesome5.FontAwesomeSolid.valueOf(toFaEnum(code)));
-        fi.setIconSize(size);
-        fi.setIconColor(color);
-        return fi;
+        Color resolvedColor = (color != null) ? color : Color.WHITE;
+        int resolvedSize = size > 0 ? size : ICON_MD;
+        try {
+            if (code == null || code.isBlank()) {
+                return fallbackIcon(resolvedSize, resolvedColor);
+            }
+            String faEnumName = toFaEnum(code);
+            org.kordamp.ikonli.fontawesome5.FontAwesomeSolid fa =
+                    org.kordamp.ikonli.fontawesome5.FontAwesomeSolid.valueOf(faEnumName);
+            org.kordamp.ikonli.swing.FontIcon fi = org.kordamp.ikonli.swing.FontIcon.of(fa);
+            fi.setIconSize(resolvedSize);
+            fi.setIconColor(resolvedColor);
+            return fi;
+        } catch (Exception ex) {
+            return fallbackIcon(resolvedSize, resolvedColor);
+        }
     }
 
     public static javax.swing.Icon icon(String code, int size) {
         return icon(code, size, Color.WHITE);
+    }
+
+    /** Devolve um ícone de fallback seguro (question-circle ou circle) quando o código for inválido. */
+    private static javax.swing.Icon fallbackIcon(int size, Color color) {
+        try {
+            org.kordamp.ikonli.swing.FontIcon fi = org.kordamp.ikonli.swing.FontIcon.of(
+                    org.kordamp.ikonli.fontawesome5.FontAwesomeSolid.QUESTION_CIRCLE);
+            fi.setIconSize(size > 0 ? size : ICON_MD);
+            fi.setIconColor(color != null ? color : TEXT_LIGHT);
+            return fi;
+        } catch (Exception ignored) {
+            return new javax.swing.Icon() {
+                @Override
+                public void paintIcon(Component c, Graphics g, int x, int y) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setColor(color != null ? color : Color.GRAY);
+                    g2.drawOval(x, y, getIconWidth() - 1, getIconHeight() - 1);
+                    g2.dispose();
+                }
+                @Override
+                public int getIconWidth() { return size > 0 ? size : 16; }
+                @Override
+                public int getIconHeight() { return size > 0 ? size : 16; }
+            };
+        }
+    }
+
+    /** Cria um ícone composto com badge numérico ou indicador no canto superior direito. */
+    public static javax.swing.Icon badgedIcon(String code, int size, Color color, int badgeCount, Color badgeBg) {
+        return new BadgedIcon(icon(code, size, color), badgeCount, badgeBg);
+    }
+
+    /**
+     * Cria um botão de acção exclusivo por ícone com acessibilidade (tooltip e AccessibleName) garantidos.
+     */
+    public static JButton createIconButton(String code, int size, String tooltip, Runnable action) {
+        JButton btn = new JButton(icon(code, size));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        if (tooltip != null && !tooltip.isBlank()) {
+            btn.setToolTipText(tooltip);
+            btn.getAccessibleContext().setAccessibleName(tooltip);
+        }
+        if (action != null) {
+            btn.addActionListener(e -> action.run());
+        }
+        return btn;
+    }
+
+    public static JPanel createFilterGroup(String labelText, JComponent component) {
+        JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        group.setOpaque(false);
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font(FONT, Font.BOLD, 12));
+        label.setForeground(TEXT_LIGHT);
+        group.add(label);
+        group.add(component);
+        return group;
+    }
+
+    public static void previewOrPrintPdf(Component parent, byte[] pdfBytes, String title) {
+        if (pdfBytes == null || pdfBytes.length == 0) return;
+        Window owner = SwingUtilities.getWindowAncestor(parent);
+        PrintPreviewDialog.show(owner, pdfBytes, title);
     }
 
     /** Maps "fas-cart-plus" → "CART_PLUS" for the FontAwesomeSolid enum. */
@@ -954,15 +1240,87 @@ public class UIHelper {
      * {@code JFrame.setIconImage(...)} / {@code JDialog.setIconImage(...)}.
      */
     public static java.awt.Image iconImage(String code, int size, Color color) {
-        javax.swing.Icon ic = icon(code, size, color);
+        int resolvedSize = size > 0 ? size : ICON_MD;
+        javax.swing.Icon ic = icon(code, resolvedSize, color);
         java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
-                size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                resolvedSize, resolvedSize, java.awt.image.BufferedImage.TYPE_INT_ARGB);
         java.awt.Graphics2D g = img.createGraphics();
         g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
                 java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
         ic.paintIcon(null, g, 0, 0);
         g.dispose();
         return img;
+    }
+
+    private static volatile List<java.awt.Image> cachedAppIcons = null;
+
+    /**
+     * Retorna a lista de ícones multi-resolução da aplicação (16x16 até 256x256)
+     * para uso em {@link java.awt.Window#setIconImages(List)}, garantindo nitidez e
+     * fidelidade máxima no título da janela, barra de tarefas do Windows e Alt+Tab.
+     */
+    public static List<java.awt.Image> getAppIcons() {
+        if (cachedAppIcons != null) {
+            return cachedAppIcons;
+        }
+        List<java.awt.Image> icons = new ArrayList<>();
+        int[] sizes = {16, 24, 32, 48, 64, 128, 256};
+        for (int s : sizes) {
+            try {
+                java.net.URL url = UIHelper.class.getResource("/icons/icon-" + s + ".png");
+                if (url != null) {
+                    java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(url);
+                    if (img != null) {
+                        icons.add(img);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        if (icons.isEmpty()) {
+            try {
+                java.net.URL mainUrl = UIHelper.class.getResource("/icons/app-icon.png");
+                if (mainUrl != null) {
+                    java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(mainUrl);
+                    if (img != null) {
+                        icons.add(img);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        if (icons.isEmpty()) {
+            icons.add(iconImage("fas-cube", 64, ACCENT));
+        }
+        cachedAppIcons = Collections.unmodifiableList(icons);
+        return cachedAppIcons;
+    }
+
+    /**
+     * Retorna o ícone oficial da aplicação com a dimensão pretendida.
+     */
+    public static java.awt.Image getAppIcon(int size) {
+        List<java.awt.Image> icons = getAppIcons();
+        for (java.awt.Image img : icons) {
+            if (img.getWidth(null) == size) {
+                return img;
+            }
+        }
+        if (!icons.isEmpty()) {
+            java.awt.Image best = icons.get(icons.size() - 1);
+            if (best.getWidth(null) == size) return best;
+            // Escala suavemente
+            java.awt.image.BufferedImage scaled = new java.awt.image.BufferedImage(
+                    size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = scaled.createGraphics();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.drawImage(best, 0, 0, size, size, null);
+            g2.dispose();
+            return scaled;
+        }
+        return iconImage("fas-cube", size, ACCENT);
     }
 
     /**
@@ -1304,6 +1662,7 @@ public class UIHelper {
         field.setForeground(TEXT_LIGHT);
         field.setCaretColor(TEXT_LIGHT);
         field.setFont(new Font(FONT, Font.PLAIN, 13));
+        field.putClientProperty("JTextField.showClearButton", Boolean.TRUE);
         installFocusBorder(field);
         applyFormControlHeight(field);
     }
@@ -1375,7 +1734,7 @@ public class UIHelper {
     /**
      * Modal profissional para introduzir **uma linha de texto obrigatória** (ex.: motivo de anulação/
      * rejeição). Devolve o texto (sem espaços nas pontas) ou {@code null} se cancelado. Vazio mantém
-     * o modal aberto com mensagem. Substitui os {@code JOptionPane.showInputDialog} de motivo.
+     * o modal aberto com mensagem. Substitui a antiga recolha textual genérica de motivo.
      */
     public static String promptRequiredText(String title, String iconCode, String subtitle, String label) {
         JTextArea field = new JTextArea(3, 24);

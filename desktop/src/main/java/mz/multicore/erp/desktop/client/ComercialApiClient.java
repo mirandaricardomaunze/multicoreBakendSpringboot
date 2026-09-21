@@ -21,6 +21,7 @@ import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
+import mz.multicore.erp.modules.comercial.dto.POSSalesSummaryDTO;
 import mz.multicore.erp.modules.comercial.dto.ReceiptDTO;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
 import org.springframework.context.annotation.Profile;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -90,9 +92,24 @@ public class ComercialApiClient {
     /** Página do histórico de vendas do POS. */
     @SuppressWarnings("unchecked")
     public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size) {
-        return clientFactory.authenticatedClient().getGeneric(
-                "/api/comercial/pos-sales/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
-                PageResponse.class, InvoiceDTO.class);
+        return getPOSSalesPage(companyId, page, size, null, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size,
+                                                    LocalDate from, LocalDate to) {
+        String path = "/api/comercial/pos-sales/page?companyId=" + companyId
+                + "&page=" + page + "&size=" + size;
+        if (from != null) path += "&from=" + from;
+        if (to != null) path += "&to=" + to;
+        return clientFactory.authenticatedClient().getGeneric(path, PageResponse.class, InvoiceDTO.class);
+    }
+
+    public POSSalesSummaryDTO getPOSSalesSummary(Long companyId, LocalDate from, LocalDate to) {
+        String path = "/api/comercial/pos-sales/summary?companyId=" + companyId;
+        if (from != null) path += "&from=" + from;
+        if (to != null) path += "&to=" + to;
+        return clientFactory.authenticatedClient().get(path, POSSalesSummaryDTO.class);
     }
 
     public List<ProductDTO> getAllProducts() {

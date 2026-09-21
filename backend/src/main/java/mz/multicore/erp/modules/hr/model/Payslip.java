@@ -49,6 +49,9 @@ public class Payslip extends BaseEntity {
     @Column(name = "overtime", nullable = false, precision = 14, scale = 2)
     private BigDecimal overtime = BigDecimal.ZERO;
 
+    @Column(name = "sales_bonus", nullable = false, precision = 14, scale = 2)
+    private BigDecimal salesBonus = BigDecimal.ZERO;
+
     @Column(name = "irps_deduction", nullable = false, precision = 14, scale = 2)
     private BigDecimal irpsDeduction = BigDecimal.ZERO;
 

@@ -202,6 +202,14 @@ try {
 - **Diálogos**: `UIHelper.createDialogForm(...)` para criar forms label-campo; `UIHelper.makeDialogScrollable(...)` para diálogos altos.
 - **Datas pelo utilizador**: hoje `JTextField` com placeholder `yyyy-MM-dd` e parsing via `LocalDate.parse(...)`. Não introduzir uma terceira biblioteca de date picker — manter o padrão.
 - **Tabelas**: `DefaultTableModel` com `isCellEditable` definido. Render via `UIHelper.styleTable(tbl)`.
+- **Inputs e Selects (38 px)**: Todos os campos de texto (`JTextField`, `MoneyField`, `DateField`) e selects (`JComboBox`) devem ter altura unificada obrigatória de 38 px (`UIHelper.FORM_CONTROL_HEIGHT`), igual à dos botões (`ModernButton`).
+- **Filtros de Toolbar**: Agrupar label e select com alinhamento vertical idêntico de 38 px (ex.: `createFilterGroup("Estado:", combo)`).
+- **Selects Tipados**: Usar `UIHelper.labelRenderer(...)` para traduzir enums em texto legível em português de Moçambique antes de `UIHelper.styleComboBox`.
+- **Anti-Truncamento em Botões**: Nunca fixar larguras arbitrárias inferiores a 130 px (`setPreferredSize(new Dimension(<130, ...))`) em botões que combinam ícone e texto (ex.: "Actualizar", "Imprimir"). Usar preferencialmente `UIHelper.createRefreshButton(...)` ou cálculo dinâmico com folga (`Math.max(130, pref.width + 16)`).
+- **Tabelas Espaçosas & Anti-Confinamento**:
+  - Nunca usar `JSplitPane.VERTICAL_SPLIT` para empilhar duas tabelas em painéis com cabeçalhos/KPIs, pois comprime-as a ~100 px.
+  - Para páginas com múltiplos blocos ou tabelas empilhadas, envolver o painel no `ArrowScrollPanel` para rolagem fluida e sem overflow horizontal.
+  - Tabelas de dimensão fixa (ex.: matrizes de 5 a 7 períodos) devem configurar `table.setPreferredScrollableViewportSize(...)` para exibir todas as linhas sem barra de scroll vertical interna.
 - **Tarefas longas**: executar em `SwingWorker`, não bloquear o EDT.
 
 ---

@@ -7,6 +7,7 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.hr.dto.CreateVacationRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.VacationDTO;
@@ -49,13 +50,17 @@ final class HRVacationsPanel {
         rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
+        ModernButton allowanceBtn = UIHelper.createPrimaryButton("Subsídio");
+        allowanceBtn.setIcon(UIHelper.icon("fas-money-check-alt", 14));
         newBtn.addActionListener(e -> openCreateVacationDialog());
         approveBtn.addActionListener(e -> decideVacation(true));
         rejectBtn.addActionListener(e -> decideVacation(false));
         exportBtn.addActionListener(e -> owner.exportTable("ferias", "Mapa de Férias", owner.vacationsTable));
+        allowanceBtn.addActionListener(e -> openVacationAllowance());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
         actions.add(exportBtn);
+        actions.add(allowanceBtn);
         actions.add(rejectBtn);
         actions.add(approveBtn);
         actions.add(newBtn);
@@ -114,7 +119,7 @@ final class HRVacationsPanel {
 
     private void openCreateVacationDialog() {
         if (owner.employeesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre colaboradores primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe colaboradores primeiro.");
             return;
         }
         JComboBox<String> empCombo = new JComboBox<>();
@@ -148,18 +153,18 @@ final class HRVacationsPanel {
                     notesField.getText().trim().isEmpty() ? null : notesField.getText().trim()
             );
             UIHelper.runWithProgress(owner, "A submeter pedido de férias…", () -> owner.hrApiClient.submitVacation(req), ignored -> {
-                JOptionPane.showMessageDialog(owner, "Pedido de férias submetido.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                owner.showSuccess("Pedido de férias submetido.");
                 load();
             }, owner::showActionError);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.ERROR, "Não foi possível submeter o pedido de férias", ex.getMessage());
         }
     }
 
     private void decideVacation(boolean approve) {
         int row = TableFilter.selectedModelRow(owner.vacationsTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione um pedido na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um pedido", "Escolha um pedido na tabela para continuar.");
             return;
         }
         VacationDTO sel = owner.vacationsList.get(row);
@@ -174,6 +179,16 @@ final class HRVacationsPanel {
             owner.hrApiClient.decideVacation(sel.id(), approve, decisionReason);
             return null;
         }, ignored -> load(), owner::showActionError);
+    }
+
+    private void openVacationAllowance() {
+        int row = TableFilter.selectedModelRow(owner.vacationsTable);
+        if (row < 0) {
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um pedido",
+                    "Escolha as férias aprovadas cujo subsídio pretende consultar.");
+            return;
+        }
+        new HRBonusActions(owner).openVacationAllowance(owner.vacationsList.get(row));
     }
 
 }

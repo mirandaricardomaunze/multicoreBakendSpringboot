@@ -38,11 +38,16 @@ public class IvaDeclarationPrintService {
 
     @Transactional(readOnly = true)
     public byte[] render(Long companyId, int year, int month) {
+        return render(companyId, year, month, BigDecimal.ZERO);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] render(Long companyId, int year, int month, BigDecimal previousCredit) {
         Company company = companyService.getCompanyById(companyId);
         if (company == null) {
             throw new BusinessRuleException("Empresa não encontrada.");
         }
-        IvaSummaryDTO summary = fiscalSummaryService.computeMonth(companyId, year, month);
+        IvaSummaryDTO summary = fiscalSummaryService.computeMonth(companyId, year, month, previousCredit);
         String monthLabel = capitalize(Month.of(month).getDisplayName(TextStyle.FULL, PT)) + " de " + year;
 
         return PdfDocumentBuilder.buildA4(doc -> {
@@ -82,7 +87,7 @@ public class IvaDeclarationPrintService {
         left.setBorder(PdfPCell.NO_BORDER);
         left.addElement(new Paragraph("Período de Apuramento", PdfTheme.subtitleFont()));
         left.addElement(new Paragraph(monthLabel, PdfTheme.bodyFont()));
-        left.addElement(new Paragraph("Imposto sobre o Valor Acrescentado — Lei do IVA / DL 8/2024", PdfTheme.smallFont()));
+        left.addElement(new Paragraph("Regulamento do IVA de Moçambique — Decreto n.º 7/2008 (Taxa em vigor 16% / PAE)", PdfTheme.smallFont()));
         table.addCell(left);
 
         PdfPCell right = new PdfPCell();
@@ -108,29 +113,44 @@ public class IvaDeclarationPrintService {
         body(table, MoneyFormat.formatPlain(s.salesBase()), Element.ALIGN_RIGHT);
         body(table, MoneyFormat.formatPlain(s.outputTax()), Element.ALIGN_RIGHT);
 
-        body(table, "Operações de Entrada — Compras (IVA Deduzível)", Element.ALIGN_LEFT);
+        body(table, "Operações de Entrada — Compras (IVA Dedutível)", Element.ALIGN_LEFT);
         body(table, MoneyFormat.formatPlain(s.purchasesBase()), Element.ALIGN_RIGHT);
         body(table, MoneyFormat.formatPlain(s.inputTax()), Element.ALIGN_RIGHT);
+
+        if (s.previousCredit() != null && s.previousCredit().compareTo(BigDecimal.ZERO) > 0) {
+            body(table, "Crédito Fiscal Reportado do Mês Anterior", Element.ALIGN_LEFT);
+            body(table, "—", Element.ALIGN_RIGHT);
+            body(table, MoneyFormat.formatPlain(s.previousCredit()), Element.ALIGN_RIGHT);
+        }
 
         return table;
     }
 
     private PdfPTable buildResult(IvaSummaryDTO s) {
-        BigDecimal net = s.netDue();
-        boolean toPay = net.compareTo(BigDecimal.ZERO) >= 0;
-        String label = toPay ? "IVA A ENTREGAR AO ESTADO" : "CRÉDITO DE IVA A REPORTAR";
+        String label;
+        BigDecimal amount;
+        if (s.payableAmount() != null && s.payableAmount().compareTo(BigDecimal.ZERO) > 0) {
+            label = "IVA A ENTREGAR AO ESTADO (A PAGAR)";
+            amount = s.payableAmount();
+        } else if (s.creditToCarry() != null && s.creditToCarry().compareTo(BigDecimal.ZERO) > 0) {
+            label = "CRÉDITO DE IVA A REPORTAR AO MÊS SEGUINTE";
+            amount = s.creditToCarry();
+        } else {
+            label = "SALDO DE IVA NULO";
+            amount = BigDecimal.ZERO;
+        }
 
-        PdfPTable wrapper = new PdfPTable(new float[]{55f, 45f});
+        PdfPTable wrapper = new PdfPTable(new float[]{50f, 50f});
         wrapper.setWidthPercentage(100);
 
         PdfPCell empty = new PdfPCell(new Phrase(""));
         empty.setBorder(PdfPCell.NO_BORDER);
         wrapper.addCell(empty);
 
-        PdfPTable inner = new PdfPTable(new float[]{60f, 40f});
+        PdfPTable inner = new PdfPTable(new float[]{65f, 35f});
 
         PdfPCell l = new PdfPCell(new Phrase(label, PdfTheme.subtitleFont()));
-        PdfPCell v = new PdfPCell(new Phrase(MoneyFormat.format(net.abs()), PdfTheme.subtitleFont()));
+        PdfPCell v = new PdfPCell(new Phrase(MoneyFormat.format(amount), PdfTheme.subtitleFont()));
         l.setBorder(PdfPCell.NO_BORDER);
         v.setBorder(PdfPCell.NO_BORDER);
         v.setHorizontalAlignment(Element.ALIGN_RIGHT);

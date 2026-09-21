@@ -29,6 +29,8 @@ public final class AccountingPanel extends JPanel {
     private final DefaultTableModel journalModel = table("Nº", "Data", "Descrição", "Origem", "Documento", "Débito", "Crédito");
     private final DefaultTableModel balanceModel = table("Conta", "Nome", "Classe", "Débito", "Crédito", "Saldo");
     private final DefaultTableModel ledgerModel = table("Data", "Lançamento", "Descrição", "Documento", "Débito", "Crédito", "Saldo");
+    private final DefaultTableModel incomeModel = table("Secção", "Conta", "Nome", "Valor");
+    private final DefaultTableModel statementBalanceModel = table("Secção", "Conta", "Nome", "Valor");
 
     private final JLabel balanceSummary = mutedLabel();
     private final JLabel ledgerSummary = mutedLabel();
@@ -37,7 +39,11 @@ public final class AccountingPanel extends JPanel {
     private final DateField balanceTo = new DateField();
     private final DateField ledgerFrom = new DateField();
     private final DateField ledgerTo = new DateField();
+    private final DateField statementsFrom = new DateField();
+    private final DateField statementsTo = new DateField();
+    private final JLabel statementsSummary = mutedLabel();
     private TablePager journalPager;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public AccountingPanel(AccountingApiClient accountingApiClient) {
         this.accountingApiClient = accountingApiClient;
@@ -48,7 +54,10 @@ public final class AccountingPanel extends JPanel {
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
         top.add(UIHelper.createHeading("Contabilidade"), BorderLayout.WEST);
-        add(top, BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        top.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(top); north.add(feedback); add(north, BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
@@ -56,6 +65,7 @@ public final class AccountingPanel extends JPanel {
         tabs.addTab("Diário", UIHelper.icon("fas-book", 14), buildJournalTab());
         tabs.addTab("Balancete", UIHelper.icon("fas-balance-scale", 14), buildTrialBalanceTab());
         tabs.addTab("Razão", UIHelper.icon("fas-list-alt", 14), buildLedgerTab());
+        tabs.addTab("Demonstrações", UIHelper.icon("fas-chart-line", 14), buildStatementsTab());
         add(tabs, BorderLayout.CENTER);
 
         LocalDate today = LocalDate.now();
@@ -67,6 +77,8 @@ public final class AccountingPanel extends JPanel {
         balanceTo.setText(today.toString());
         ledgerFrom.setText(today.withDayOfMonth(1).toString());
         ledgerTo.setText(today.toString());
+        statementsFrom.setText(today.withDayOfYear(1).toString());
+        statementsTo.setText(today.toString());
     }
 
     /** Visível só enquanto não houver plano — ver {@link #loadAccounts()}. */
@@ -125,10 +137,9 @@ public final class AccountingPanel extends JPanel {
         UIHelper.runWithProgress(this, "A semear o plano de contas…",
                 accountingApiClient::seedChart,
                 created -> {
-                    JOptionPane.showMessageDialog(this, created == 0
-                                    ? "Esta empresa já tem plano de contas — nada foi alterado."
-                                    : created + " contas criadas no plano PGC-NIRF.",
-                            "Plano de Contas", JOptionPane.INFORMATION_MESSAGE);
+                    ToastManager.success(this, created == 0
+                            ? "Esta empresa já tem plano de contas; nada foi alterado."
+                            : created + " contas criadas no plano PGC-NIRF.");
                     loadAccounts();
                 },
                 error -> showError("semear o plano de contas", error));
@@ -323,6 +334,76 @@ public final class AccountingPanel extends JPanel {
         }, error -> showError("carregar o extracto da conta", error));
     }
 
+    private JPanel buildStatementsTab() {
+        JTable income = styledTable(incomeModel);
+        JTable balance = styledTable(statementBalanceModel);
+        money(income, 3);
+        money(balance, 3);
+
+        JPanel incomeCard = card(income);
+        incomeCard.add(UIHelper.createSubheading("Demonstração de resultados"), BorderLayout.NORTH);
+        incomeCard.setPreferredSize(new Dimension(0, 300));
+
+        JPanel balanceCard = card(balance);
+        balanceCard.add(UIHelper.createSubheading("Balanço"), BorderLayout.NORTH);
+        balanceCard.setPreferredSize(new Dimension(0, 300));
+
+        JPanel tablesContainer = new JPanel();
+        tablesContainer.setOpaque(false);
+        tablesContainer.setLayout(new BoxLayout(tablesContainer, BoxLayout.Y_AXIS));
+        incomeCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        balanceCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tablesContainer.add(incomeCard);
+        tablesContainer.add(Box.createVerticalStrut(12));
+        tablesContainer.add(balanceCard);
+
+        ModernButton load = UIHelper.createPrimaryButton("Calcular");
+        load.setIcon(UIHelper.icon("fas-calculator", 14));
+        load.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
+        load.addActionListener(e -> loadStatements());
+
+        JPanel content = new JPanel(new BorderLayout(0, 8));
+        content.setOpaque(false);
+        content.add(TableFilter.bar(TableFilter.label("De:", "fas-calendar-alt"), statementsFrom,
+                TableFilter.label("A:", "fas-calendar-alt"), statementsTo, load), BorderLayout.NORTH);
+
+        ArrowScrollPanel scroll = new ArrowScrollPanel(tablesContainer);
+        content.add(scroll, BorderLayout.CENTER);
+        content.add(statementsSummary, BorderLayout.SOUTH);
+        return wrap(content);
+    }
+
+    private void loadStatements() {
+        LocalDate from = parseDate(statementsFrom.getText());
+        LocalDate to = parseDate(statementsTo.getText());
+        UIHelper.loadAsync(this,
+                () -> new StatementsData(accountingApiClient.getIncomeStatement(from, to),
+                        accountingApiClient.getBalanceSheet(to)),
+                data -> {
+                    incomeModel.setRowCount(0);
+                    data.income().revenues().forEach(line -> addStatementLine(incomeModel, "Proveitos", line));
+                    data.income().expenses().forEach(line -> addStatementLine(incomeModel, "Custos", line));
+                    statementBalanceModel.setRowCount(0);
+                    data.balance().assets().forEach(line -> addStatementLine(statementBalanceModel, "Activo", line));
+                    data.balance().liabilities().forEach(line -> addStatementLine(statementBalanceModel, "Passivo", line));
+                    data.balance().equity().forEach(line -> addStatementLine(statementBalanceModel, "Capital", line));
+                    statementsSummary.setText(String.format(
+                            "<html><b>Resultado:</b> %,.2f MT &nbsp;·&nbsp; <b>Activo:</b> %,.2f MT "
+                                    + "&nbsp;·&nbsp; <b>Capital + Passivo:</b> %,.2f MT &nbsp;·&nbsp; %s</html>",
+                            data.income().netResult(), data.balance().totalAssets(),
+                            data.balance().totalEquityAndLiabilities(),
+                            data.balance().balanced() ? "<b>Balanço fecha</b>"
+                                    : "<b style='color:#c0392b'>NÃO FECHA</b>"));
+                }, error -> showError("calcular as demonstrações financeiras", error));
+    }
+
+    private static void addStatementLine(DefaultTableModel model, String section,
+                                         FinancialStatementLineDTO line) {
+        model.addRow(new Object[]{section, line.accountCode(), line.accountName(), line.amount()});
+    }
+
+    private record StatementsData(IncomeStatementDTO income, BalanceSheetDTO balance) {}
+
     // ─────────────────────────── helpers de UI ───────────────────────────
 
     private static DefaultTableModel table(String... columns) {
@@ -385,7 +466,6 @@ public final class AccountingPanel extends JPanel {
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        feedback.show(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage(), null, null);
     }
 }

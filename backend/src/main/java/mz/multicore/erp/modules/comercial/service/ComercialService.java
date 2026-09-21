@@ -502,12 +502,41 @@ public class ComercialService {
 
     /** Página do histórico de vendas do POS — a listagem que mais cresce numa loja. */
     @Transactional(readOnly = true)
-    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, Integer page, Integer size) {
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, Integer page, Integer size,
+                                                    java.time.LocalDate from, java.time.LocalDate to) {
         CurrentUserContext.requireCompany(companyId);
+        java.time.LocalDateTime fromDateTime = from == null ? null : from.atStartOfDay();
+        java.time.LocalDateTime toDateTime = to == null ? null : to.plusDays(1).atStartOfDay().minusNanos(1);
         return mz.multicore.erp.architecture.paging.PageResponseMapper.from(
-                invoiceRepository.findByCompanyIdAndSalesChannelOrderByCreatedAtDesc(
-                        companyId, SalesChannel.POS, PageQuery.of(page, size)),
+                invoiceRepository.findSalesPage(
+                        companyId, SalesChannel.POS, fromDateTime, toDateTime, PageQuery.of(page, size)),
                 this::toDTO);
+    }
+
+    /** Totais do historico POS no periodo escolhido e variacao contra o periodo anterior equivalente. */
+    @Transactional(readOnly = true)
+    public POSSalesSummaryDTO getPOSSalesSummary(Long companyId, java.time.LocalDate from, java.time.LocalDate to) {
+        CurrentUserContext.requireCompany(companyId);
+        java.time.LocalDateTime fromDateTime = from == null ? null : from.atStartOfDay();
+        java.time.LocalDateTime toDateTime = to == null ? null : to.plusDays(1).atStartOfDay().minusNanos(1);
+        long count = invoiceRepository.countSales(companyId, SalesChannel.POS, fromDateTime, toDateTime);
+        BigDecimal total = invoiceRepository.sumSalesTotal(companyId, SalesChannel.POS, fromDateTime, toDateTime);
+        if (from == null || to == null) {
+            return new POSSalesSummaryDTO(count, total, null, null, null, null);
+        }
+
+        long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
+        java.time.LocalDate previousTo = from.minusDays(1);
+        java.time.LocalDate previousFrom = previousTo.minusDays(days - 1);
+        java.time.LocalDateTime previousFromDateTime = previousFrom.atStartOfDay();
+        java.time.LocalDateTime previousToDateTime = previousTo.plusDays(1).atStartOfDay().minusNanos(1);
+        long previousCount = invoiceRepository.countSales(
+                companyId, SalesChannel.POS, previousFromDateTime, previousToDateTime);
+        BigDecimal previousTotal = invoiceRepository.sumSalesTotal(
+                companyId, SalesChannel.POS, previousFromDateTime, previousToDateTime);
+        return new POSSalesSummaryDTO(count, total, previousCount, previousTotal,
+                percentVariation(BigDecimal.valueOf(count), BigDecimal.valueOf(previousCount)),
+                percentVariation(total, previousTotal));
     }
 
     @Transactional(readOnly = true)
@@ -1297,6 +1326,17 @@ public class ComercialService {
         if (haystack == null) return false;
         return haystack.toLowerCase(java.util.Locale.ROOT)
                 .contains(needle.trim().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private BigDecimal percentVariation(BigDecimal current, BigDecimal previous) {
+        BigDecimal safeCurrent = current == null ? BigDecimal.ZERO : current;
+        BigDecimal safePrevious = previous == null ? BigDecimal.ZERO : previous;
+        if (safePrevious.signum() == 0) {
+            return safeCurrent.signum() == 0 ? BigDecimal.ZERO : null;
+        }
+        return safeCurrent.subtract(safePrevious)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(safePrevious, 1, RoundingMode.HALF_UP);
     }
 
     /**

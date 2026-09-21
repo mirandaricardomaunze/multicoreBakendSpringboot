@@ -66,7 +66,8 @@ class CreditNoteServiceTest {
         auditLogService = mock(AuditLogService.class);
 
         service = new CreditNoteService(creditNoteRepository, invoiceRepository, warehouseRepository,
-                inventoryService, documentNumberService, auditLogService);
+                inventoryService, documentNumberService, auditLogService,
+                mock(org.springframework.context.ApplicationEventPublisher.class));
 
         company = company(1L);
         client = client(5L, "Cliente Fiado");

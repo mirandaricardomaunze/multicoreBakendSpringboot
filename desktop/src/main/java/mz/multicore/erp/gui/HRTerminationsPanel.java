@@ -8,10 +8,10 @@ import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.hr.dto.CreateTerminationRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.TerminationDTO;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -20,6 +20,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 /**
  * Separador das <b>cessações e acertos finais</b>. Ver docs/RH_COMPLETO_SPEC.md §B3.
@@ -137,8 +138,7 @@ final class HRTerminationsPanel {
 
     private void openTerminationDialog() {
         if (owner.employeesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre colaboradores primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe colaboradores primeiro.");
             return;
         }
         JComboBox<String> empCombo = new JComboBox<>();
@@ -218,9 +218,7 @@ final class HRTerminationsPanel {
         UIHelper.runWithProgress(owner, "A cessar o vínculo…",
                 () -> owner.hrApiClient.terminate(request),
                 ignored -> {
-                    JOptionPane.showMessageDialog(owner,
-                            "Cessação registada. O acerto fica por pagar até alguém o liquidar.",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    owner.showSuccess("Cessação registada; o acerto fica por pagar até ser liquidado.");
                     load();
                     owner.refreshData();
                 }, owner::showActionError);
@@ -250,7 +248,7 @@ final class HRTerminationsPanel {
         }
         UIHelper.runWithProgress(owner, "A gerar o acerto…",
                 () -> owner.hrApiClient.renderSettlement(sel.id()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "acerto-final-" + sel.settlementNumber()),
+                pdf -> PrintPreviewDialog.show(owner, pdf, "acerto-final-" + sel.settlementNumber()),
                 owner::showActionError);
     }
 
@@ -261,15 +259,14 @@ final class HRTerminationsPanel {
         }
         UIHelper.runWithProgress(owner, "A gerar o certificado…",
                 () -> owner.hrApiClient.renderWorkCertificate(sel.id()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "certificado-" + sel.settlementNumber()),
+                pdf -> PrintPreviewDialog.show(owner, pdf, "certificado-" + sel.settlementNumber()),
                 owner::showActionError);
     }
 
     private TerminationDTO selected() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma cessação na tabela.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione uma cessação", "Escolha uma cessação na tabela para continuar.");
             return null;
         }
         return terminations.get(row);

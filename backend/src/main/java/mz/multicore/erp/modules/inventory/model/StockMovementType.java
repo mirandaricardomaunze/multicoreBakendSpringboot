@@ -17,5 +17,7 @@ public enum StockMovementType {
     /** Entrada por devolução de cliente (nota de crédito). */
     RETURN,
     /** Estorno de uma venda anulada (reposição de stock). */
-    REVERSAL
+    REVERSAL,
+    /** Saída por quebra, perda ou desperdício de stock. */
+    WASTE
 }

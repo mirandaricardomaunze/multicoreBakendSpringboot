@@ -47,6 +47,8 @@ Regras:
 - Datas de input usam `yyyy-MM-dd` enquanto nao houver date picker oficial.
 - Datas apresentadas usam `dd/MM/yyyy`.
 - Validacao de regra fica no Service; UI apenas mostra mensagem clara.
+- Todos os inputs e selects partilham a altura canónica de 38 px (`UIHelper.FORM_CONTROL_HEIGHT`).
+- Selects de filtro em barras de ferramentas têm largura mínima consistente (ex.: 160 px) e altura de 38 px.
 
 ## Tabelas
 
@@ -55,6 +57,21 @@ Regras:
 - Colunas monetarias alinhadas e formatadas.
 - Quantidades com precisao consistente.
 - Evitar carregar listas enormes sem filtro/paginacao quando o volume crescer.
+- **Tabelas Espaçosas & Eliminação de Confinamento Vertical**:
+  - Evitar dividir a janela verticalmente com `JSplitPane.VERTICAL_SPLIT` quando há mais de uma tabela; adotar layout de página fluida com `ArrowScrollPanel`.
+  - Tabelas de horizonte fixo (ex.: matrizes de 5 a 7 períodos) devem ter altura total calculada (`linhas * rowHeight + headerHeight`) com `setPreferredScrollableViewportSize` para exibição imediata e limpa de 100% dos registos sem barra de scroll interna.
+- **Botões de Ação com Ícone**: Largura mínima recomendada de 130 px para ações com texto e ícone (ex.: *"Actualizar"* via `UIHelper.createRefreshButton(...)`) para prevenir reticências (`...`) sob qualquer densidade de píxeis.
+
+
+### Filtros de Tabela e Navegação Temporal (Spec)
+- **Tabelas com Datas Operacionais:** Toda a tabela que contenha datas de eventos (emissão de documentos, movimentos de stock, transações de tesouraria, ordens de compra e cotações) deve obrigatoriamente disponibilizar:
+  1. Campo de pesquisa textual universal (`TableFilter.searchField(...)`).
+  2. Filtro de estado/tipo relevante via `TableFilter.ColumnFilter` quando o domínio tiver múltiplos estados operacionais.
+  3. Filtro de período temporal via `TableFilter.periodCombo()` e `TableFilter.PeriodFilter`, cobrindo no mínimo: *"Todo o período"*, *"Hoje"*, *"Últimos 7 dias"*, *"Últimos 30 dias"*, *"Este mês"*.
+- **Posicionamento Canónico na Barra de Ferramentas:**
+  `TableFilter.bar(searchField, TableFilter.label("Estado:"), statusCombo, TableFilter.label("Data:", "fas-calendar-alt"), periodCombo)`
+- **Uniformidade Geométrica:** Todos os controlos da barra de filtros têm altura de 38 px (`UIHelper.FORM_CONTROL_HEIGHT`).
+
 
 ## Dialogos
 

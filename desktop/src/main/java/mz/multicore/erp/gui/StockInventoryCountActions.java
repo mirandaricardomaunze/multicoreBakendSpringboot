@@ -3,7 +3,6 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -63,7 +62,7 @@ final class StockInventoryCountActions {
 
         Runnable openSelected = () -> {
             int r = table.getSelectedRow();
-            if (r < 0) { JOptionPane.showMessageDialog(owner, "Selecione uma contagem.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
+            if (r < 0) { owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma contagem", "Escolha uma contagem na tabela para continuar."); return; }
             openCountSession(rows.get(r).id());
             reload.run();
         };
@@ -75,9 +74,9 @@ final class StockInventoryCountActions {
         cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
         cancelBtn.addActionListener(e -> {
             int r = table.getSelectedRow();
-            if (r < 0) { JOptionPane.showMessageDialog(owner, "Selecione uma contagem.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
+            if (r < 0) { owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma contagem", "Escolha uma contagem na tabela para continuar."); return; }
             var s = rows.get(r);
-            if (!"DRAFT".equals(s.status())) { JOptionPane.showMessageDialog(owner, "Só é possível cancelar contagens em curso.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
+            if (!"DRAFT".equals(s.status())) { owner.showStockNotice(FeedbackType.WARNING, "Contagem encerrada", "Só é possível cancelar contagens em curso."); return; }
             if (JOptionPane.showConfirmDialog(owner, "Cancelar a contagem #" + s.id() + "?", "Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
             UIHelper.runWithProgress(owner, "A cancelar contagem…", () -> {
                 owner.inventoryCountApiClient.cancelSession(s.id());
@@ -101,7 +100,7 @@ final class StockInventoryCountActions {
     /** Cria uma nova sessão de contagem para um armazém e abre-a já para contar. */
     private void startNewCountSession(Runnable afterCreate) {
         if (owner.warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre um armazém primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Sem armazém", "Registe um armazém primeiro.");
             return;
         }
         JComboBox<String> whCombo = new JComboBox<>();
@@ -178,7 +177,7 @@ final class StockInventoryCountActions {
         printBtn.addActionListener(e -> UIHelper.runWithProgress(owner, "A gerar folha de contagem…",
                 () -> owner.inventoryApiClient.renderCountSheet(
                         CurrentUserContext.getCurrentCompanyId(), session.warehouseId()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "folha-contagem-" + session.warehouseName()),
+                pdf -> PrintPreviewDialog.show(owner, pdf, "folha-contagem-" + session.warehouseName()),
                 this::showError));
 
         ModernButton saveBtn = UIHelper.createSecondaryButton("Guardar Rascunho");
@@ -189,7 +188,7 @@ final class StockInventoryCountActions {
                 owner.inventoryCountApiClient.saveCounts(sessionId, counts);
                 return null;
             }, ignored -> {
-                JOptionPane.showMessageDialog(owner, "Contagem guardada.", "Rascunho", JOptionPane.INFORMATION_MESSAGE);
+                owner.showStockSuccess("Rascunho da contagem guardado.");
                 dlg.close();
             }, this::showError);
         });
@@ -220,10 +219,9 @@ final class StockInventoryCountActions {
                             d.signum() > 0 ? "+" : "", d.stripTrailingZeros().toPlainString()));
                 }
             }
-            JOptionPane.showMessageDialog(owner,
-                    applied + " artigo(s) reconciliado(s).\n\n"
-                            + (diffs.length() == 0 ? "Sem diferenças face ao sistema." : "Diferenças:\n" + diffs),
-                    "Inventário aplicado", JOptionPane.INFORMATION_MESSAGE);
+            owner.showStockNotice(FeedbackType.SUCCESS, "Inventário aplicado",
+                    applied + " artigo(s) reconciliado(s).\n"
+                            + (diffs.length() == 0 ? "Sem diferenças face ao sistema." : "Diferenças:\n" + diffs));
             }, this::showError);
         }
     }
@@ -255,7 +253,7 @@ final class StockInventoryCountActions {
     }
 
     private void showError(Throwable error) {
-        JOptionPane.showMessageDialog(owner, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        owner.showStockError(error);
     }
 
     /** Diálogo de impressão de etiquetas: escolher produtos (multi-selecção) + cópias → folha PDF. */

@@ -6,6 +6,11 @@ public record DesktopApiConfig(String baseUrl) {
 
     public static DesktopApiConfig from(Environment environment) {
         String configured = environment.getProperty("desktop.api.base-url", "http://localhost:8080");
+        String persisted = DesktopLocalSettings.readBaseUrl(DesktopLocalSettings.settingsFile());
+        if ((configured == null || configured.isBlank() || "http://localhost:8080".equals(configured.trim()))
+                && persisted != null && !persisted.isBlank()) {
+            configured = persisted;
+        }
         return new DesktopApiConfig(normalize(configured));
     }
 

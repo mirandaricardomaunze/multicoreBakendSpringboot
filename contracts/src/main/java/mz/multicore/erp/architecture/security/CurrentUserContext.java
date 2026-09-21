@@ -71,6 +71,10 @@ public final class CurrentUserContext {
      * Empresa activa. Lança se não houver — nunca assume uma empresa por omissão, senão uma thread sem
      * contexto lê e escreve no tenant errado sem dar erro.
      */
+    public static Long getCompanyId() {
+        return getCurrentCompanyId();
+    }
+
     public static Long getCurrentCompanyId() {
         return requireCurrentCompanyId();
     }

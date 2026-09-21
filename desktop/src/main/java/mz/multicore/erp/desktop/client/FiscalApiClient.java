@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.hr.dto.PayrollFiscalSummaryDTO;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -37,9 +38,15 @@ public class FiscalApiClient {
 
     // ─── Apuramento do IVA ───────────────────────────────────────────────────
     public IvaSummaryDTO ivaSummary(Long companyId, int year, int month) {
-        return clientFactory.authenticatedClient()
-                .get("/api/fiscal/iva-summary?companyId=" + companyId + "&year=" + year + "&month=" + month,
-                        IvaSummaryDTO.class);
+        return ivaSummary(companyId, year, month, BigDecimal.ZERO);
+    }
+
+    public IvaSummaryDTO ivaSummary(Long companyId, int year, int month, BigDecimal previousCredit) {
+        String url = "/api/fiscal/iva-summary?companyId=" + companyId + "&year=" + year + "&month=" + month;
+        if (previousCredit != null && previousCredit.compareTo(BigDecimal.ZERO) > 0) {
+            url += "&previousCredit=" + previousCredit.toPlainString();
+        }
+        return clientFactory.authenticatedClient().get(url, IvaSummaryDTO.class);
     }
 
     // ─── Taxas fiscais ───────────────────────────────────────────────────────
@@ -97,8 +104,15 @@ public class FiscalApiClient {
 
     // ─── Impressões fiscais (PDF) ─────────────────────────────────────────────
     public byte[] renderIvaDeclaration(Long companyId, int year, int month) {
-        return clientFactory.authenticatedClient()
-                .getBytes("/api/print/iva-declaration?companyId=" + companyId + "&year=" + year + "&month=" + month);
+        return renderIvaDeclaration(companyId, year, month, BigDecimal.ZERO);
+    }
+
+    public byte[] renderIvaDeclaration(Long companyId, int year, int month, BigDecimal previousCredit) {
+        String url = "/api/print/iva-declaration?companyId=" + companyId + "&year=" + year + "&month=" + month;
+        if (previousCredit != null && previousCredit.compareTo(BigDecimal.ZERO) > 0) {
+            url += "&previousCredit=" + previousCredit.toPlainString();
+        }
+        return clientFactory.authenticatedClient().getBytes(url);
     }
 
     public byte[] renderPayrollFiscalMap(Long companyId, int year, int month) {

@@ -222,4 +222,41 @@ class AccountingReportServiceTest {
         assertEquals("FT-LC-2026/1", ledger.movements().get(0).sourceDocumentNumber(),
                 "o razão diz qual foi o documento de origem, sem obrigar a ir buscá-lo");
     }
+
+    @Test // CT-47
+    void demonstracaoResultados_separaProveitosCustosEApuraResultado() {
+        LocalDate dia = LocalDate.of(2026, 8, 10);
+        JournalEntry custo = new JournalEntry();
+        custo.setEntryDate(dia);
+        custo.addLine(JournalLine.debit(account(PgcNirfChart.CMVMC), new BigDecimal("120.00"), null));
+        custo.addLine(JournalLine.credit(account(PgcNirfChart.MERCADORIAS), new BigDecimal("120.00"), null));
+        stubEntries(dia, dia, List.of(venda(dia, "LC-1", "232.00", "200.00", "32.00"), custo));
+
+        var report = service.getIncomeStatement(dia, dia);
+
+        assertEquals(new BigDecimal("200.00"), report.totalRevenue());
+        assertEquals(new BigDecimal("120.00"), report.totalExpense());
+        assertEquals(new BigDecimal("80.00"), report.netResult());
+        assertEquals(PgcNirfChart.VENDAS, report.revenues().get(0).accountCode());
+    }
+
+    @Test // CT-48
+    void balanco_incluiResultadoDoPeriodoEFecha() {
+        LocalDate dia = LocalDate.of(2026, 8, 10);
+        stubEntries(dia, dia, List.of(venda(dia, "LC-1", "232.00", "200.00", "32.00")));
+
+        var report = service.getBalanceSheet(dia);
+
+        assertEquals(new BigDecimal("232.00"), report.totalAssets());
+        assertEquals(new BigDecimal("32.00"), report.totalLiabilities());
+        assertEquals(new BigDecimal("200.00"), report.currentResult());
+        assertEquals(new BigDecimal("232.00"), report.totalEquityAndLiabilities());
+        assertTrue(report.balanced());
+    }
+
+    @Test // CT-49
+    void demonstracaoResultados_recusaPeriodoInvertido() {
+        assertThrows(mz.multicore.erp.architecture.exception.BusinessRuleException.class,
+                () -> service.getIncomeStatement(LocalDate.of(2026, 12, 31), LocalDate.of(2026, 1, 1)));
+    }
 }

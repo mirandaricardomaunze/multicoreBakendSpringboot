@@ -2,6 +2,10 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ModernButton;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.KpiCard;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -46,7 +50,9 @@ public class FiscalPanel extends JPanel {
     // IVA tab
     private JSpinner ivaYearSpinner;
     private JSpinner ivaMonthSpinner;
-    private JLabel ivaOutputLbl, ivaInputLbl, ivaNetLbl, ivaSalesBaseLbl, ivaPurchasesBaseLbl;
+    private MoneyField ivaPreviousCreditField;
+    private JLabel ivaOutputLbl, ivaInputLbl, ivaNetLbl, ivaPreviousCreditLbl;
+    private JLabel ivaSalesSubLbl, ivaPurchasesSubLbl, ivaPrevCreditSubLbl, ivaStatusSubLbl;
     private DefaultTableModel ivaSalesModel;
     private DefaultTableModel ivaPurchasesModel;
 
@@ -193,11 +199,23 @@ public class FiscalPanel extends JPanel {
         periodPanel.add(new JLabel("/"));
         periodPanel.add(ivaYearSpinner);
 
+        periodPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        periodPanel.add(filterLabel("Crédito Anterior (MT):"));
+        ivaPreviousCreditField = new MoneyField("0.00");
+        ivaPreviousCreditField.setPreferredSize(new Dimension(100, UIHelper.FORM_CONTROL_HEIGHT));
+        ivaPreviousCreditField.addActionListener(e -> recomputeIva());
+        periodPanel.add(ivaPreviousCreditField);
+
+        ModernButton recalcBtn = UIHelper.createSecondaryButton("Recalcular");
+        recalcBtn.setIcon(UIHelper.icon("fas-sync-alt", 12));
+        recalcBtn.addActionListener(e -> recomputeIva());
+        periodPanel.add(recalcBtn);
+
         mz.multicore.erp.gui.components.ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos")
                 .addAction("Imprimir Declaração IVA", UIHelper.icon("fas-print", 14), this::printIvaDeclaration)
                 .addAction("Exportar SAF-T (Vendas)", UIHelper.icon("fas-file-export", 14), this::exportSaft)
                 .addAction("Validar SAF-T", UIHelper.icon("fas-check-circle", 14), this::validateSaft);
-        periodPanel.add(Box.createRigidArea(new Dimension(20, 0)));
+        periodPanel.add(Box.createRigidArea(new Dimension(16, 0)));
         periodPanel.add(documentsBtn);
 
         topRow.add(periodPanel, BorderLayout.WEST);
@@ -207,24 +225,26 @@ public class FiscalPanel extends JPanel {
         JPanel center = new JPanel(new BorderLayout(0, 12));
         center.setOpaque(false);
 
-        // KPI cards
-        JPanel kpis = new JPanel(new GridLayout(1, 3, 12, 0));
+        // Standardized KPI cards (4 columns)
+        JPanel kpis = new JPanel(new GridLayout(1, 4, 12, 0));
         kpis.setOpaque(false);
-        ivaSalesBaseLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
-        ivaOutputLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
-        ivaInputLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
-        ivaPurchasesBaseLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
-        ivaNetLbl = new JLabel("0.00 MT", SwingConstants.LEFT);
-        for (JLabel l : new JLabel[]{ivaSalesBaseLbl, ivaOutputLbl, ivaInputLbl, ivaPurchasesBaseLbl, ivaNetLbl}) {
-            l.setFont(new Font(UIHelper.FONT, Font.BOLD, 19));
-            l.setForeground(Color.WHITE);
-        }
-        kpis.add(kpiCard("IVA LIQUIDADO (VENDAS)", ivaOutputLbl,
-                "Base: ", ivaSalesBaseLbl, UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END));
-        kpis.add(kpiCard("IVA DEDUZIDO (COMPRAS)", ivaInputLbl,
-                "Base: ", ivaPurchasesBaseLbl, UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
-        kpis.add(kpiCard("IVA LÍQUIDO", ivaNetLbl,
-                null, null, UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN));
+        ivaOutputLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
+        ivaSalesSubLbl = new JLabel("Base: 0,00 MT", SwingConstants.LEFT);
+        ivaInputLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
+        ivaPurchasesSubLbl = new JLabel("Base: 0,00 MT", SwingConstants.LEFT);
+        ivaPreviousCreditLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
+        ivaPrevCreditSubLbl = new JLabel("Reporte anterior", SwingConstants.LEFT);
+        ivaNetLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
+        ivaStatusSubLbl = new JLabel("A calcular...", SwingConstants.LEFT);
+
+        kpis.add(KpiCard.createMetricCard("IVA LIQUIDADO (VENDAS)", ivaOutputLbl, ivaSalesSubLbl,
+                "fas-arrow-trend-up", UIHelper.KPI_PURPLE_DARK));
+        kpis.add(KpiCard.createMetricCard("IVA DEDUZIDO (COMPRAS)", ivaInputLbl, ivaPurchasesSubLbl,
+                "fas-arrow-trend-down", UIHelper.KPI_INFO_DARK));
+        kpis.add(KpiCard.createMetricCard("CRÉDITO ANTERIOR", ivaPreviousCreditLbl, ivaPrevCreditSubLbl,
+                "fas-history", UIHelper.TEXT_MUTED));
+        kpis.add(KpiCard.createMetricCard("SALDO FISCAL LÍQUIDO", ivaNetLbl, ivaStatusSubLbl,
+                "fas-scale-balanced", UIHelper.APPROVED_GREEN));
         center.add(kpis, BorderLayout.NORTH);
 
         // Split tables (sales / purchases)
@@ -256,32 +276,6 @@ public class FiscalPanel extends JPanel {
         return tab;
     }
 
-    private ModernPanel kpiCard(String title, JLabel value, String subPrefix, JLabel subValue,
-                                 Color start, Color end) {
-        ModernPanel card = new ModernPanel(12, start, end);
-        card.setLayout(new BorderLayout(6, 4));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
-        titleLbl.setForeground(UIHelper.KPI_INFO_SOFT);
-        card.add(titleLbl, BorderLayout.NORTH);
-        card.add(value, BorderLayout.CENTER);
-        if (subValue != null) {
-            JPanel sub = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-            sub.setOpaque(false);
-            JLabel pre = new JLabel(subPrefix);
-            pre.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-            pre.setForeground(UIHelper.KPI_INFO_SOFT);
-            subValue.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-            subValue.setForeground(UIHelper.KPI_INFO_SOFT);
-            sub.add(pre);
-            sub.add(subValue);
-            card.add(sub, BorderLayout.SOUTH);
-        }
-        return card;
-    }
-
     private JPanel wrapTable(String title, JTable table) {
         JPanel wrap = new JPanel(new BorderLayout(0, 6));
         wrap.setOpaque(false);
@@ -296,22 +290,41 @@ public class FiscalPanel extends JPanel {
         return wrap;
     }
 
+    private BigDecimal getPreviousCreditInput() {
+        if (ivaPreviousCreditField == null) return BigDecimal.ZERO;
+        try {
+            BigDecimal val = ivaPreviousCreditField.optionalValue();
+            return val != null && val.compareTo(BigDecimal.ZERO) > 0 ? val : BigDecimal.ZERO;
+        } catch (Exception ignored) {
+            return BigDecimal.ZERO;
+        }
+    }
+
     private void recomputeIva() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         int year = (Integer) ivaYearSpinner.getValue();
         int month = (Integer) ivaMonthSpinner.getValue();
-        UIHelper.loadAsync(this, () -> fiscalApiClient.ivaSummary(companyId, year, month),
+        BigDecimal prevCredit = getPreviousCreditInput();
+        UIHelper.loadAsync(this, () -> fiscalApiClient.ivaSummary(companyId, year, month, prevCredit),
                 this::applyIvaSummary, error -> showLoadError("apuramento do IVA", error));
     }
 
     private void applyIvaSummary(IvaSummaryDTO s) {
-        ivaSalesBaseLbl.setText(String.format("%,.2f MT", s.salesBase()));
-        ivaPurchasesBaseLbl.setText(String.format("%,.2f MT", s.purchasesBase()));
+        ivaSalesSubLbl.setText(String.format("Base: %,.2f MT", s.salesBase()));
+        ivaPurchasesSubLbl.setText(String.format("Base: %,.2f MT", s.purchasesBase()));
         ivaOutputLbl.setText(String.format("%,.2f MT", s.outputTax()));
         ivaInputLbl.setText(String.format("%,.2f MT", s.inputTax()));
-        BigDecimal net = s.netDue();
-        String prefix = net.compareTo(BigDecimal.ZERO) >= 0 ? "A pagar: " : "A recuperar: ";
-        ivaNetLbl.setText(prefix + String.format("%,.2f MT", net.abs()));
+        ivaPreviousCreditLbl.setText(String.format("%,.2f MT", s.previousCredit() != null ? s.previousCredit() : BigDecimal.ZERO));
+
+        if ("A_PAGAR".equals(s.fiscalStatus())) {
+            ivaNetLbl.setText(String.format("%,.2f MT", s.payableAmount()));
+            ivaStatusSubLbl.setText("A entregar ao Estado");
+            ivaStatusSubLbl.setForeground(UIHelper.PENDING_YELLOW);
+        } else {
+            ivaNetLbl.setText(String.format("%,.2f MT", s.creditToCarry()));
+            ivaStatusSubLbl.setText("Crédito a reportar");
+            ivaStatusSubLbl.setForeground(UIHelper.APPROVED_GREEN);
+        }
 
         ivaSalesModel.setRowCount(0);
         for (var l : s.sales()) {
@@ -332,9 +345,10 @@ public class FiscalPanel extends JPanel {
     private void printIvaDeclaration() {
         int year = (Integer) ivaYearSpinner.getValue();
         int month = (Integer) ivaMonthSpinner.getValue();
+        BigDecimal prevCredit = getPreviousCreditInput();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.runWithProgress(this, "A gerar declaração de IVA…",
-                () -> fiscalApiClient.renderIvaDeclaration(companyId, year, month),
+                () -> fiscalApiClient.renderIvaDeclaration(companyId, year, month, prevCredit),
                 pdf -> PdfFileSaver.saveAndOpen(pdf,
                         "declaracao-iva-" + year + "-" + String.format("%02d", month)),
                 this::showActionError);

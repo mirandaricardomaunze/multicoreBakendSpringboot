@@ -7,6 +7,7 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.CreateQuotationLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
@@ -72,13 +73,11 @@ public final class QuotationEditorDialog {
     /** Abre o formulário. Devolve a cotação criada, ou {@code null} se o operador desistiu. */
     public QuotationDTO open() {
         if (warehouses.isEmpty()) {
-            JOptionPane.showMessageDialog(parent, "Nenhum armazém disponível para a empresa atual.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Sem armazém disponível", "Registe ou active um armazém antes de emitir a cotação.");
             return null;
         }
         if (products.isEmpty()) {
-            JOptionPane.showMessageDialog(parent, "Nenhum produto disponível para cotar.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Sem produtos disponíveis", "Registe produtos antes de emitir a cotação.");
             return null;
         }
 
@@ -225,8 +224,7 @@ public final class QuotationEditorDialog {
             qty = quantityField.value();
             if (qty.signum() <= 0) throw new NumberFormatException();
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(parent, "A quantidade deve ser um número superior a zero.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.ERROR, "Quantidade inválida", "A quantidade deve ser um número superior a zero.");
             return;
         }
 
@@ -237,8 +235,7 @@ public final class QuotationEditorDialog {
                 throw new NumberFormatException();
             }
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(parent, "O desconto deve ser um número entre 0 e 100.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(FeedbackType.ERROR, "Desconto inválido", "O desconto deve ser um número entre 0 e 100.");
             return;
         }
 
@@ -265,14 +262,17 @@ public final class QuotationEditorDialog {
     private void removeSelectedLine() {
         int row = linesTable.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(parent, "Selecione uma linha para remover.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            showNotice(FeedbackType.WARNING, "Seleccione uma linha", "Escolha uma linha da cotação para remover.");
             return;
         }
         int modelRow = linesTable.convertRowIndexToModel(row);
         draftLines.remove(modelRow);
         linesModel.removeRow(modelRow);
         recomputeDraftTotal();
+    }
+
+    private void showNotice(FeedbackType type, String title, String message) {
+        if (parent instanceof QuotationsPanel panel) panel.showNotice(type, title, message);
     }
 
     private void recomputeDraftTotal() {

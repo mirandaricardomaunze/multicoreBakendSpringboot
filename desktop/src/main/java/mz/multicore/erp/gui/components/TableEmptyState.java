@@ -1,6 +1,8 @@
 package mz.multicore.erp.gui.components;
 
+import javax.swing.BoxLayout;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JViewport;
@@ -15,18 +17,20 @@ import java.awt.Font;
 import java.awt.Rectangle;
 
 /**
- * Estado vazio das tabelas: quando o modelo não tem linhas, mostra uma mensagem centrada em vez de
- * uma grelha em branco. Texto por omissão "Sem registos."; personalizável por tabela via
- * {@code table.putClientProperty("emptyText", "Sem encomendas.")}.
+ * Estado vazio das tabelas: quando o modelo não tem linhas, mostra um painel composto centrado
+ * com ícone + título + subtítulo. Texto por omissão "Sem registos."; personalizável por tabela
+ * via {@code table.putClientProperty("emptyText", "Sem encomendas.")} e
+ * {@code table.putClientProperty("emptySubtext", "Crie a primeira encomenda para começar.")}.
  *
- * <p>Instalado centralmente por {@link UIHelper#styleScrollPane(JScrollPane)}. A mensagem é um
+ * <p>Instalado centralmente por {@link UIHelper#styleScrollPane(JScrollPane)}. O painel é um
  * overlay centrado sobre o viewport, só visível quando a tabela está vazia (não tapa dados). Ver
  * docs/UI_TABELAS_UX_SPEC.md.</p>
  */
 public final class TableEmptyState {
 
-    private static final String INSTALLED = "tableEmptyState.installed";
-    private static final String EMPTY_TEXT = "emptyText";
+    private static final String INSTALLED     = "tableEmptyState.installed";
+    private static final String EMPTY_TEXT    = "emptyText";
+    private static final String EMPTY_SUBTEXT = "emptySubtext";
 
     private TableEmptyState() {}
 
@@ -36,24 +40,22 @@ public final class TableEmptyState {
         if (Boolean.TRUE.equals(scroll.getClientProperty(INSTALLED))) return;
         scroll.putClientProperty(INSTALLED, Boolean.TRUE);
 
-        JLabel label = new JLabel("", SwingConstants.CENTER);
-        label.setForeground(UIHelper.TEXT_MUTED);
-        label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
-        label.setFocusable(false);
-        label.setVisible(false);
+        // Painel composto: ícone + título + subtítulo
+        JPanel overlay = buildOverlayPanel(table);
+        overlay.setVisible(false);
 
-        OverlayScrollLayout layout = new OverlayScrollLayout(label);
+        OverlayScrollLayout layout = new OverlayScrollLayout(overlay);
         scroll.setLayout(layout);
         layout.syncWithScrollPane(scroll);
-        scroll.add(label);
-        scroll.setComponentZOrder(label, 0);
+        scroll.add(overlay);
+        scroll.setComponentZOrder(overlay, 0);
 
         Runnable refresh = () -> {
             boolean empty = table.getRowCount() == 0;
-            if (empty) label.setText(resolveText(table));
+            if (empty) updateOverlayText(overlay, table);
             // Aplicar sempre o estado calculado. Evita que um overlay visível de um estado
             // anterior sobreviva a actualizações consecutivas do modelo/sorter.
-            label.setVisible(empty);
+            overlay.setVisible(empty);
             scroll.revalidate();
             scroll.repaint();
         };
@@ -77,10 +79,65 @@ public final class TableEmptyState {
         refresh.run();
     }
 
-    /** Texto do estado vazio: client-property {@code emptyText} da tabela, ou "Sem registos.". */
+    /** Constrói o painel composto (ícone + título + subtítulo). */
+    private static JPanel buildOverlayPanel(JTable table) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setFocusable(false);
+
+        // Ícone grande (fas-inbox, 48px)
+        JLabel iconLbl = new JLabel(UIHelper.icon("fas-inbox", UIHelper.ICON_HERO, UIHelper.TEXT_MUTED));
+        iconLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 14, 0));
+        panel.add(iconLbl);
+
+        // Título em negrito
+        JLabel titleLbl = new JLabel(resolveText(table));
+        titleLbl.setForeground(UIHelper.TEXT_LIGHT);
+        titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
+        titleLbl.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(titleLbl);
+
+        // Subtítulo em muted
+        JLabel subLbl = new JLabel(resolveSubtext(table));
+        subLbl.setForeground(UIHelper.TEXT_MUTED);
+        subLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        subLbl.setHorizontalAlignment(SwingConstants.CENTER);
+        subLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        subLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        panel.add(subLbl);
+
+        // Guardar referências para actualização posterior
+        panel.putClientProperty("titleLabel", titleLbl);
+        panel.putClientProperty("subLabel",   subLbl);
+        return panel;
+    }
+
+    /** Actualiza os textos do painel quando o estado vazio muda de tabela/filtro. */
+    private static void updateOverlayText(JPanel overlay, JTable table) {
+        Object titleRef = overlay.getClientProperty("titleLabel");
+        Object subRef   = overlay.getClientProperty("subLabel");
+        if (titleRef instanceof JLabel title) title.setText(resolveText(table));
+        if (subRef   instanceof JLabel sub)   sub.setText(resolveSubtext(table));
+    }
+
+    /** Título do estado vazio: client-property {@code emptyText} da tabela, ou "Sem registos.". */
     static String resolveText(JTable table) {
         Object v = table.getClientProperty(EMPTY_TEXT);
         return (v instanceof String s && !s.isBlank()) ? s : "Sem registos.";
+    }
+
+    /**
+     * Subtítulo do estado vazio: client-property {@code emptySubtext}, ou dica contextual quando
+     * há um filtro activo ({@code TableRowSorter} instalado), ou string vazia.
+     */
+    static String resolveSubtext(JTable table) {
+        Object v = table.getClientProperty(EMPTY_SUBTEXT);
+        if (v instanceof String s && !s.isBlank()) return s;
+        if (table.getRowSorter() != null) return "Tente alterar ou limpar o filtro de pesquisa.";
+        return "";
     }
 
     /** {@link ScrollPaneLayout} que, além do normal, centra um overlay sobre o viewport. */

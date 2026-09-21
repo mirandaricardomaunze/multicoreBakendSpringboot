@@ -22,11 +22,13 @@ import java.awt.*;
  */
 public class ModernFormDialog {
 
+    private final Window parent;
     private final JDialog dialog;
     private final JPanel contentPanel;
     private final ModernButton saveBtn;
     private final ModernButton cancelBtn;
     private final JPanel buttonRow;
+    private final InlineFeedbackPanel feedbackPanel;
     private Runnable onSave;
     private java.util.function.Supplier<java.util.concurrent.Callable<?>> asyncSaveFactory;
     private boolean saved = false;
@@ -49,6 +51,7 @@ public class ModernFormDialog {
      * Variante premium completa: ícone (ou deduzido do título) + subtítulo opcional no cabeçalho.
      */
     public ModernFormDialog(Window parent, String title, String iconCode, String subtitle, JComponent content) {
+        this.parent = parent;
         this.dialog = new JDialog(parent, title, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
         String code = iconCode != null ? iconCode : UIHelper.iconForTitle(title);
@@ -63,8 +66,10 @@ public class ModernFormDialog {
 
         // Content — sempre dentro de scroll vertical (modal responsivo: a tabela/campos
         // nunca empurram o diálogo para fora do ecrã; aparece scroll quando necessário).
-        contentPanel = new JPanel(new BorderLayout());
+        contentPanel = new JPanel(new BorderLayout(0, 10));
         contentPanel.setBackground(UIHelper.BG_DARK);
+        feedbackPanel = new InlineFeedbackPanel();
+        contentPanel.add(feedbackPanel, BorderLayout.NORTH);
         JScrollPane contentScroll = new JScrollPane(content);
         contentScroll.setBorder(BorderFactory.createEmptyBorder());
         contentScroll.setOpaque(false);
@@ -185,9 +190,48 @@ public class ModernFormDialog {
         return this;
     }
 
+    public Window getParentWindow() {
+        return parent;
+    }
+
+    public JDialog getDialog() {
+        return dialog;
+    }
+
     /** Mostra o diálogo (bloqueia). Devolve true se Gravar foi acionado com sucesso. */
     public boolean showDialog() {
-        dialog.setVisible(true);
+        Component oldGlassPane = null;
+        boolean oldGlassVisible = false;
+        RootPaneContainer rpc = (parent instanceof RootPaneContainer r) ? r : null;
+
+        if (rpc != null) {
+            oldGlassPane = rpc.getGlassPane();
+            oldGlassVisible = oldGlassPane != null && oldGlassPane.isVisible();
+            JPanel dimGlass = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    try {
+                        g2.setColor(new Color(0, 0, 0, 95));
+                        g2.fillRect(0, 0, getWidth(), getHeight());
+                    } finally {
+                        g2.dispose();
+                    }
+                }
+            };
+            dimGlass.setOpaque(false);
+            rpc.setGlassPane(dimGlass);
+            dimGlass.setVisible(true);
+        }
+
+        try {
+            dialog.setVisible(true);
+        } finally {
+            if (rpc != null && oldGlassPane != null) {
+                rpc.setGlassPane(oldGlassPane);
+                oldGlassPane.setVisible(oldGlassVisible);
+            }
+        }
         return saved;
     }
 
@@ -202,12 +246,10 @@ public class ModernFormDialog {
                     dialog.dispose();
                 }, error -> {
                     cancelBtn.setEnabled(true);
-                    JOptionPane.showMessageDialog(dialog, error.getMessage(),
-                            "Erro", JOptionPane.ERROR_MESSAGE);
+                    showError(error);
                 });
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(dialog, ex.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE);
+                showError(ex);
             }
             return;
         }
@@ -221,8 +263,16 @@ public class ModernFormDialog {
             saved = true;
             dialog.dispose();
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(dialog, ex.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showError(ex);
         }
+    }
+
+    private void showError(Throwable error) {
+        String message = error == null || error.getMessage() == null || error.getMessage().isBlank()
+                ? "Não foi possível concluir a operação. Tente novamente."
+                : error.getMessage();
+        feedbackPanel.show(FeedbackType.ERROR, "Não foi possível gravar", message, null, null);
+        dialog.revalidate();
+        dialog.repaint();
     }
 }

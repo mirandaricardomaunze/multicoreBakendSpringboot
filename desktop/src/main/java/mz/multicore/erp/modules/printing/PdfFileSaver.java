@@ -18,17 +18,23 @@ public final class PdfFileSaver {
 
     private PdfFileSaver() {}
 
-    public static Path saveAndOpen(byte[] bytes, String baseName) {
+    /** Grava sem abrir o leitor do sistema — usado pelo botão "Guardar PDF" do modal. */
+    public static Path save(byte[] bytes, String baseName) {
         try {
             Files.createDirectories(OUTPUT_DIR);
             String safe = baseName.replaceAll("[^A-Za-z0-9_.-]", "_");
             Path file = OUTPUT_DIR.resolve(safe + "-" + LocalDateTime.now().format(STAMP) + ".pdf");
             Files.write(file, bytes);
-            tryOpen(file);
             return file;
         } catch (IOException e) {
             throw new BusinessRuleException("Não foi possível gravar o PDF: " + e.getMessage());
         }
+    }
+
+    public static Path saveAndOpen(byte[] bytes, String baseName) {
+        Path file = save(bytes, baseName);
+        tryOpen(file);
+        return file;
     }
 
     private static void tryOpen(Path file) {

@@ -7,11 +7,11 @@ import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.hr.dto.CreateContractRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
 import mz.multicore.erp.modules.hr.dto.RenewContractRequest;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -20,6 +20,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 /**
  * Separador de contratos de trabalho. Ver docs/RH_COMPLETO_SPEC.md §B1.
@@ -135,8 +136,7 @@ final class HRContractsPanel {
     private void withSelection(java.util.function.Consumer<EmploymentContractDTO> action) {
         int row = table.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Seleccione um contrato.", "Contratos",
-                    JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um contrato", "Escolha um contrato na tabela para continuar.");
             return;
         }
         action.accept(loaded.get(table.convertRowIndexToModel(row)));
@@ -145,7 +145,7 @@ final class HRContractsPanel {
     private void printContract(EmploymentContractDTO contract) {
         UIHelper.runWithProgress(owner, "A gerar contrato…",
                 () -> owner.hrApiClient.renderContract(contract.id()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "contrato-" + contract.contractNumber()),
+                pdf -> PrintPreviewDialog.show(owner, pdf, "contrato-" + contract.contractNumber()),
                 owner::showActionError);
     }
 
@@ -163,8 +163,7 @@ final class HRContractsPanel {
     private void createContract() {
         List<EmployeeDTO> employees = owner.hrApiClient.getAllEmployees();
         if (employees.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Registe primeiro um colaborador.", "Contratos",
-                    JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe primeiro um colaborador.");
             return;
         }
         JComboBox<EmployeeDTO> employeeCombo = new JComboBox<>(employees.toArray(new EmployeeDTO[0]));
@@ -175,13 +174,13 @@ final class HRContractsPanel {
 
         JTextField jobField = new JTextField();
         DateField startField = new DateField(LocalDate.now());
-        JTextField endField = new JTextField();
-        JTextField probationField = new JTextField();
+        DateField endField = new DateField();
+        DateField probationField = new DateField();
         MoneyField salaryField = new MoneyField("0");
         JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(40, 1, 80, 1));
         JTextField locationField = new JTextField();
         JTextField reasonField = new JTextField();
-        for (JTextField f : new JTextField[]{jobField, endField, probationField, locationField, reasonField}) {
+        for (JTextField f : new JTextField[]{jobField, locationField, reasonField}) {
             UIHelper.styleTextField(f);
         }
 
@@ -217,9 +216,7 @@ final class HRContractsPanel {
                     () -> owner.hrApiClient.createContract(request),
                     ignored -> {
                         load();
-                        JOptionPane.showMessageDialog(owner,
-                                "Contrato criado em rascunho. Use \"Activar\" para o pôr a vigorar.",
-                                "Contratos", JOptionPane.INFORMATION_MESSAGE);
+                        owner.showSuccess("Contrato criado em rascunho; use Activar para o pôr a vigorar.");
                     }, owner::showActionError);
         } catch (RuntimeException ex) {
             owner.showActionError(ex);
@@ -229,9 +226,8 @@ final class HRContractsPanel {
     private void renewContract(EmploymentContractDTO contract) {
         DateField startField = new DateField(contract.endDate() == null
                 ? LocalDate.now() : contract.endDate().plusDays(1));
-        JTextField endField = new JTextField();
+        DateField endField = new DateField();
         MoneyField salaryField = new MoneyField(contract.agreedSalary().toPlainString());
-        UIHelper.styleTextField(endField);
 
         JPanel form = UIHelper.createDialogForm(
                 "Novo início (yyyy-MM-dd):", startField,

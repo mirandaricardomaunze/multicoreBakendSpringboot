@@ -47,7 +47,9 @@ public class POSZReportPrintService {
             doc.add(CompanyHeaderRenderer.build(company, "Fecho de Caixa (Z)", "Z-" + z.sessionId()));
             doc.add(buildMetaBlock(z));
             doc.add(buildReconciliationTable(z));
-            doc.add(PdfDocumentBuilder.spacer(26f));
+            doc.add(PdfDocumentBuilder.spacer(10f));
+            doc.add(buildPaymentBreakdownTable(z));
+            doc.add(PdfDocumentBuilder.spacer(20f));
             doc.add(buildSignatureBlock());
         });
     }
@@ -90,6 +92,24 @@ public class POSZReportPrintService {
         row(table, "= Esperado na gaveta", z.expectedCash(), true);
         row(table, "Contado (saldo físico)", z.countedCash(), false);
         row(table, "= Diferença", z.difference(), true);
+        return table;
+    }
+
+    private PdfPTable buildPaymentBreakdownTable(PosZReportDTO z) {
+        PdfPTable table = new PdfPTable(new float[]{65f, 35f});
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(6f);
+        table.setSpacingAfter(6f);
+
+        header(table, "Vendas por Meio de Pagamento", Element.ALIGN_LEFT);
+        header(table, "Montante Total", Element.ALIGN_RIGHT);
+
+        row(table, "Numerário (Gaveta)", z.cashSales(), false);
+        row(table, "Cartão de Débito/Crédito", z.cardSales(), false);
+        row(table, "M-Pesa / E-Mola", z.mpesaSales(), false);
+        row(table, "Transferência Bancária", z.chequeSales(), false);
+        row(table, "Vendas a Crédito (Fiado)", z.creditSales(), false);
+        row(table, "= Total Geral de Vendas", z.totalSales(), true);
         return table;
     }
 

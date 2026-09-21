@@ -116,7 +116,7 @@ final class StockCategoriesPanel {
     private mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO selectedCategory() {
         int row = owner.categoriesTable.getSelectedRow();
         if (row < 0 || row >= owner.categoriesFiltered.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma categoria.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma categoria", "Escolha uma categoria na tabela para continuar.");
             return null;
         }
         return owner.categoriesFiltered.get(row);

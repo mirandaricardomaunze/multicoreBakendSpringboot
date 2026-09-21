@@ -8,62 +8,66 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Os dois vocabulários de período — e porque é que não podem ser um só.
+ * O vocabulário de período olha para <b>trás</b> — e é preciso que se saiba.
  *
- * <p>Uma coluna de <b>emissão</b> olha para trás: "Últimos 30 dias". Uma coluna de <b>validade</b>
- * olha para a frente: "Vence em 30 dias". Usar o primeiro na segunda não é uma imprecisão — é a
- * pergunta ao contrário. Numa tabela de lotes mostraria o que <i>já</i> venceu e esconderia
- * exactamente aquilo que quem gere validades procura.
+ * <p>{@code periodCombo()} serve colunas de datas passadas: emissão, pagamento, movimento. Aplicá-lo
+ * a uma coluna de <b>validade</b> seria pior do que não ter filtro: "Últimos 30 dias" mostraria o
+ * que <i>já</i> venceu no mês passado e esconderia exactamente o que quem gere lotes procura.
  *
- * <p>A lógica é pura ({@code matchesPeriod}), por isso testa-se sem abrir um ecrã. É a parte onde
- * um engano custa caro: um lote a vencer que não aparece na lista é um lote que se perde.
+ * <p>É por isso que o separador <i>Lotes &amp; Validades</i> tem filtro próprio, com vocabulário
+ * para a frente ({@code Vence em ≤ 30 dias}, {@code Válidos (> 90 dias)}) — ver
+ * docs/FILTRO_DATA_TABELAS_SPEC.md §4.
+ *
+ * <p>A lógica é pura, por isso testa-se sem abrir um ecrã. É onde um engano custa caro: uma linha
+ * que devia aparecer e não aparece não dá erro nenhum.
  */
 class PeriodFilterVocabularyTest {
 
     private static final LocalDate HOJE = LocalDate.of(2026, 8, 30);
-
-    // ─── Passado: emissão, pagamento, movimento ──────────────────────────────
 
     @Test
     void backwardVocabularyLooksBackwards() {
         assertTrue(TableFilter.matchesPeriod(HOJE, "Hoje", HOJE));
         assertTrue(TableFilter.matchesPeriod(HOJE.minusDays(6), "Últimos 7 dias", HOJE));
         assertFalse(TableFilter.matchesPeriod(HOJE.minusDays(7), "Últimos 7 dias", HOJE));
-        assertFalse(TableFilter.matchesPeriod(HOJE.plusDays(1), "Últimos 7 dias", HOJE),
-                "uma data futura não pertence aos últimos 7 dias");
     }
 
-    // ─── Futuro: validade ────────────────────────────────────────────────────
-
+    /** Um documento pós-datado não pode aparecer como recente. */
     @Test
-    void expiryVocabularyLooksForwards() {
-        assertTrue(TableFilter.matchesPeriod(HOJE, "Vence em 7 dias", HOJE),
-                "o que vence hoje é o mais urgente de todos");
-        assertTrue(TableFilter.matchesPeriod(HOJE.plusDays(7), "Vence em 7 dias", HOJE));
-        assertFalse(TableFilter.matchesPeriod(HOJE.plusDays(8), "Vence em 7 dias", HOJE));
-        assertTrue(TableFilter.matchesPeriod(HOJE.plusDays(89), "Vence em 90 dias", HOJE));
+    void futureDatesDoNotBelongToPastRanges() {
+        assertFalse(TableFilter.matchesPeriod(HOJE.plusDays(1), "Últimos 7 dias", HOJE));
+        assertFalse(TableFilter.matchesPeriod(HOJE.plusDays(1), "Últimos 30 dias", HOJE));
+        assertFalse(TableFilter.matchesPeriod(HOJE.plusDays(1), "Hoje", HOJE));
     }
 
-    /** Já vencido é outra pergunta e outra urgência — por isso tem opção própria. */
     @Test
-    void alreadyExpiredIsItsOwnQuestion() {
-        assertTrue(TableFilter.matchesPeriod(HOJE.minusDays(1), "Já vencidos", HOJE));
-        assertFalse(TableFilter.matchesPeriod(HOJE, "Já vencidos", HOJE),
-                "o que vence hoje ainda não venceu");
-        assertFalse(TableFilter.matchesPeriod(HOJE.minusDays(1), "Vence em 30 dias", HOJE),
-                "o que já venceu não conta como 'a vencer'");
+    void thisMonthIsCalendarMonthAndNotThirtyDays() {
+        LocalDate primeiroDoMes = LocalDate.of(2026, 8, 1);
+        assertTrue(TableFilter.matchesPeriod(primeiroDoMes, "Este mês", HOJE));
+        assertFalse(TableFilter.matchesPeriod(LocalDate.of(2026, 7, 31), "Este mês", HOJE),
+                "31 de Julho está dentro dos últimos 30 dias, mas não é 'este mês'");
+    }
+
+    /** "Todo o período" não filtra nada — nem sequer linhas com data ilegível. */
+    @Test
+    void everythingPassesWhenNoPeriodIsChosen() {
+        assertTrue(TableFilter.matchesPeriod(null, "Todo o período", HOJE));
+        assertTrue(TableFilter.matchesPeriod(HOJE.minusYears(5), "Todo o período", HOJE));
+    }
+
+    /** Mas com período escolhido, uma data que não se leu não pode passar por engano. */
+    @Test
+    void unreadableDateIsExcludedWhenAPeriodIsChosen() {
+        assertFalse(TableFilter.matchesPeriod(null, "Hoje", HOJE));
     }
 
     /**
-     * O erro que este vocabulário existe para evitar: um lote que vence daqui a uma semana
-     * <b>desaparecia</b> de um filtro construído para o passado.
+     * A razão de o separador de lotes não usar este vocabulário: um lote a vencer daqui a uma
+     * semana <b>desapareceria</b> da lista.
      */
     @Test
     void theBackwardVocabularyWouldHideABatchAboutToExpire() {
-        LocalDate venceDaquiAUmaSemana = HOJE.plusDays(7);
-
-        assertFalse(TableFilter.matchesPeriod(venceDaquiAUmaSemana, "Últimos 30 dias", HOJE),
-                "com o vocabulário do passado, um lote a vencer sai da lista — e é o que se procura");
-        assertTrue(TableFilter.matchesPeriod(venceDaquiAUmaSemana, "Vence em 7 dias", HOJE));
+        assertFalse(TableFilter.matchesPeriod(HOJE.plusDays(7), "Últimos 30 dias", HOJE),
+                "por isso as validades têm filtro próprio, e não este");
     }
 }

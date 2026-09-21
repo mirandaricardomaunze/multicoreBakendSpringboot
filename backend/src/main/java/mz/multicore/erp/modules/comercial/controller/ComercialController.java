@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -128,8 +129,18 @@ public class ComercialController {
     public ResponseEntity<PageResponse<InvoiceDTO>> getPOSSalesPage(
             @RequestParam Long companyId,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        return ResponseEntity.ok(comercialService.getPOSSalesPage(companyId, page, size));
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to) {
+        return ResponseEntity.ok(comercialService.getPOSSalesPage(companyId, page, size, from, to));
+    }
+
+    @GetMapping("/pos-sales/summary")
+    public ResponseEntity<POSSalesSummaryDTO> getPOSSalesSummary(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to) {
+        return ResponseEntity.ok(comercialService.getPOSSalesSummary(companyId, from, to));
     }
 
     @GetMapping("/invoices/search")

@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 
 import javax.swing.*;
@@ -66,10 +67,8 @@ final class PosBarcodeActions {
             return;
         }
         if (!"WEIGHT".equalsIgnoreCase(product.saleType())) {
-            JOptionPane.showMessageDialog(owner,
-                    "O artigo '" + product.name() + "' não é vendido ao peso.\n"
-                            + "Defina o Tipo de Venda = Peso no cadastro do produto.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPosNotice(FeedbackType.WARNING, "Artigo sem venda ao peso",
+                    "Defina o Tipo de Venda = Peso no cadastro de '" + product.name() + "'.");
             owner.barcodeField.setText("");
             owner.barcodeField.requestFocusInWindow();
             return;
@@ -79,9 +78,8 @@ final class PosBarcodeActions {
         if (owner.scaleBarcodeParser.embedsPrice()) {
             BigDecimal unit = product.unitPrice();
             if (unit == null || unit.signum() <= 0) {
-                JOptionPane.showMessageDialog(owner,
-                        "O artigo '" + product.name() + "' não tem preço/kg definido.",
-                        "Aviso", JOptionPane.WARNING_MESSAGE);
+                owner.showPosNotice(FeedbackType.WARNING, "Preço por quilo em falta",
+                        "O artigo '" + product.name() + "' não tem preço/kg definido.");
                 owner.barcodeField.setText("");
                 owner.barcodeField.requestFocusInWindow();
                 return;
@@ -93,9 +91,8 @@ final class PosBarcodeActions {
         }
 
         if (qtyKg.signum() <= 0) {
-            JOptionPane.showMessageDialog(owner,
-                    "Peso inválido (zero) na etiqueta da balança.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPosNotice(FeedbackType.WARNING, "Peso inválido",
+                    "A etiqueta da balança indica peso zero.");
             owner.barcodeField.setText("");
             owner.barcodeField.requestFocusInWindow();
             return;
@@ -125,15 +122,13 @@ final class PosBarcodeActions {
      */
     private void addWeighedProductToCart(ProductDTO product, BigDecimal qtyKg) {
         if (!owner.isProductSellable(product)) {
-            JOptionPane.showMessageDialog(owner,
-                    "O artigo '" + product.name() + "' está esgotado e não pode ser adicionado.",
-                    "Sem Stock", JOptionPane.WARNING_MESSAGE);
+            owner.showPosNotice(FeedbackType.WARNING, "Sem stock",
+                    "O artigo '" + product.name() + "' está esgotado e não pode ser adicionado.");
             return;
         }
         if (owner.activeSession == null) {
-            JOptionPane.showMessageDialog(owner,
-                    "Não é possível adicionar artigos sem caixa aberta.\nClique em \"Abrir Caixa\" primeiro.",
-                    "Caixa Fechada", JOptionPane.WARNING_MESSAGE);
+            owner.showPosNotice(FeedbackType.WARNING, "Caixa fechado",
+                    "Abra o caixa antes de adicionar artigos.");
             return;
         }
         for (POSPanel.CartItem it : owner.cartItems) {
@@ -153,30 +148,27 @@ final class PosBarcodeActions {
                     item.note = promo.map(p -> "Promo: " + p.name()).orElse("-");
                     owner.cartItems.add(item);
                     owner.updateCartTotal();
-                }, error -> JOptionPane.showMessageDialog(owner,
-                        "Não foi possível consultar promoções: " + error.getMessage(),
-                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+                }, error -> owner.showPosNotice(FeedbackType.ERROR,
+                        "Não foi possível consultar promoções", error.getMessage()));
     }
 
     private void showProductNotFound(String code) {
-        JOptionPane.showMessageDialog(owner, "Produto com código de barras '" + code + "' não encontrado.",
-                "Aviso", JOptionPane.WARNING_MESSAGE);
+        owner.showPosNotice(FeedbackType.WARNING, "Produto não encontrado",
+                "Não existe produto com o código de barras '" + code + "'.");
         owner.barcodeField.selectAll();
         owner.barcodeField.requestFocusInWindow();
     }
 
     private void showWeighedProductNotFound(String code) {
-        JOptionPane.showMessageDialog(owner,
-                "Artigo pesado com código (PLU) '" + code + "' não encontrado.\n"
-                        + "Registe o PLU da balança no campo \"Código de barras\" do produto.",
-                "Aviso", JOptionPane.WARNING_MESSAGE);
+        owner.showPosNotice(FeedbackType.WARNING, "Artigo pesado não encontrado",
+                "Registe o PLU '" + code + "' no campo Código de barras do produto.");
         owner.barcodeField.selectAll();
         owner.barcodeField.requestFocusInWindow();
     }
 
     private void showOutOfStock(ProductDTO product) {
-        JOptionPane.showMessageDialog(owner, "O artigo '" + product.name() + "' está esgotado.",
-                "Sem Stock", JOptionPane.WARNING_MESSAGE);
+        owner.showPosNotice(FeedbackType.WARNING, "Sem stock",
+                "O artigo '" + product.name() + "' está esgotado.");
         clearAndRefocus();
     }
 

@@ -4,7 +4,6 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.inventory.dto.*;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -20,16 +19,14 @@ final class StockTransferActions {
 
     public void createTransferDialog() {
         if (owner.warehousesList.size() < 2) {
-            JOptionPane.showMessageDialog(owner,
-                    "É necessário pelo menos 2 armazéns para realizar uma transferência.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Armazéns insuficientes",
+                    "Registe pelo menos dois armazéns para realizar uma transferência.");
             return;
         }
         List<ProductDTO> products = new ArrayList<>(owner.catalogProducts);
         if (products.isEmpty()) {
-            JOptionPane.showMessageDialog(owner,
-                    "É necessário registar produtos antes de transferir.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Produto necessário",
+                    "Registe produtos antes de realizar uma transferência.");
             return;
         }
 
@@ -157,14 +154,14 @@ final class StockTransferActions {
         int originIdx = originCombo.getSelectedIndex();
         int destIdx = destinationCombo.getSelectedIndex();
         if (originIdx == destIdx) {
-            JOptionPane.showMessageDialog(owner, "Armazém de origem e destino devem ser diferentes.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.ERROR, "Armazéns inválidos",
+                    "O armazém de origem e o de destino devem ser diferentes.");
             return;
         }
         if (linesTable.isEditing()) linesTable.getCellEditor().stopCellEditing();
         if (linesModel.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(owner, "Adicione pelo menos uma linha.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Transferência vazia",
+                    "Adicione pelo menos um produto à transferência.");
             return;
         }
 
@@ -184,11 +181,10 @@ final class StockTransferActions {
                 lines.add(new CreateStockTransferLineRequest(product.id(), qty));
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(owner, "Quantidade inválida: " + ex.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida", ex.getMessage());
             return;
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showStockNotice(FeedbackType.ERROR, "Não foi possível preparar a transferência", ex.getMessage());
             return;
         }
 
@@ -220,8 +216,8 @@ final class StockTransferActions {
     public void approveSelectedTransfer() {
         int row = TableFilter.selectedModelRow(owner.transferTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma guia na tabela primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma guia",
+                    "Escolha uma guia na tabela para continuar.");
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
@@ -233,17 +229,15 @@ final class StockTransferActions {
         if (confirm != JOptionPane.YES_OPTION) return;
         UIHelper.runWithProgress(owner, "A aprovar transferência…", () -> owner.stockTransferApiClient.approve(selected.id()), ignored -> {
             owner.onPanelSelected();
-            JOptionPane.showMessageDialog(owner,
-                    "Guia " + selected.transferNumber() + " aprovada. Stock movido — ver aba Movimentos.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showStockSuccess("Guia " + selected.transferNumber() + " aprovada · stock movimentado.");
         }, owner::showStockError);
     }
 
     public void rejectSelectedTransfer() {
         int row = TableFilter.selectedModelRow(owner.transferTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma guia na tabela primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma guia",
+                    "Escolha uma guia na tabela para continuar.");
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
@@ -252,17 +246,15 @@ final class StockTransferActions {
         if (reason == null) return;
         UIHelper.runWithProgress(owner, "A rejeitar transferência…", () -> owner.stockTransferApiClient.reject(selected.id(), reason), ignored -> {
             owner.onPanelSelected();
-            JOptionPane.showMessageDialog(owner,
-                    "Guia " + selected.transferNumber() + " rejeitada. Nenhum stock foi movido.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showStockSuccess("Guia " + selected.transferNumber() + " rejeitada · nenhum stock movimentado.");
         }, owner::showStockError);
     }
 
     public void printSelectedTransfer() {
         int row = TableFilter.selectedModelRow(owner.transferTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma transferência na tabela primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma transferência",
+                    "Escolha uma transferência na tabela para continuar.");
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
@@ -279,16 +271,15 @@ final class StockTransferActions {
     public void recordOrderForSelectedTransfer() {
         int row = TableFilter.selectedModelRow(owner.transferTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma transferência na tabela primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma transferência",
+                    "Escolha uma transferência na tabela para continuar.");
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
         if (selected.orderId() != null) {
-            JOptionPane.showMessageDialog(owner,
+            owner.showStockNotice(FeedbackType.INFO, "Encomenda já registada",
                     "A transferência " + selected.transferNumber() + " já tem a encomenda "
-                            + selected.orderNumber() + " registada.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+                            + selected.orderNumber() + " registada.");
             return;
         }
         int confirm = JOptionPane.showConfirmDialog(owner,
@@ -301,17 +292,15 @@ final class StockTransferActions {
         UIHelper.runWithProgress(owner, "A registar encomenda…",
                 () -> owner.stockTransferApiClient.recordOrder(selected.id()), order -> {
                     owner.onPanelSelected();
-                    JOptionPane.showMessageDialog(owner,
-                            "Encomenda " + order.orderNumber() + " registada para a transferência "
-                                    + selected.transferNumber() + ".",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    owner.showStockSuccess("Encomenda " + order.orderNumber() + " registada para a transferência "
+                            + selected.transferNumber() + ".");
                 }, owner::showStockError);
     }
 
     private void printTransfer(Long transferId, String transferNumber) {
         UIHelper.runWithProgress(owner, "A gerar guia de transferência…",
                 () -> owner.stockTransferApiClient.renderTransfer(transferId),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "transferencia-" + transferNumber),
+                pdf -> PrintPreviewDialog.show(owner, pdf, "transferencia-" + transferNumber),
                 owner::showStockError);
     }
 

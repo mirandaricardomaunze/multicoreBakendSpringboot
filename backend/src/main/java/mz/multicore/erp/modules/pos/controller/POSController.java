@@ -19,12 +19,15 @@ public class POSController {
     private final POSService posService;
     private final ComercialService comercialService;
     private final ConcurrencyRetry concurrencyRetry;
+    private final mz.multicore.erp.modules.printing.POSZReportPrintService poszReportPrintService;
 
     public POSController(POSService posService, ComercialService comercialService,
-                         ConcurrencyRetry concurrencyRetry) {
+                         ConcurrencyRetry concurrencyRetry,
+                         mz.multicore.erp.modules.printing.POSZReportPrintService poszReportPrintService) {
         this.posService = posService;
         this.comercialService = comercialService;
         this.concurrencyRetry = concurrencyRetry;
+        this.poszReportPrintService = poszReportPrintService;
     }
 
     @GetMapping("/sessions/active")
@@ -91,5 +94,28 @@ public class POSController {
                                                     @RequestBody @Valid PosPaymentRequest request) {
         posService.registerLatePayment(invoiceId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/sessions/{sessionId}/z-report")
+    public ResponseEntity<PosZReportDTO> getZReport(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(posService.buildZReport(sessionId));
+    }
+
+    @GetMapping("/sessions/{sessionId}/z-report/pdf")
+    public ResponseEntity<byte[]> getZReportPdf(@PathVariable Long sessionId) {
+        byte[] pdf = poszReportPrintService.render(sessionId);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/pdf")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"relatorio_z_" + sessionId + ".pdf\"")
+                .body(pdf);
+    }
+
+    @GetMapping("/sessions/history")
+    public ResponseEntity<List<mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO>> getSessionsHistory(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime to
+    ) {
+        return ResponseEntity.ok(posService.getSessionsHistory(companyId, from, to));
     }
 }

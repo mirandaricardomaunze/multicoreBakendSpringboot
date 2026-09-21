@@ -11,17 +11,25 @@ import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
 import mz.multicore.erp.modules.hr.dto.OccupationalHealthExamDTO;
 import mz.multicore.erp.modules.hr.dto.MissingHealthExamDTO;
+import mz.multicore.erp.desktop.client.CreditRiskApiClient;
+import mz.multicore.erp.desktop.client.StockWasteApiClient;
+import mz.multicore.erp.modules.comercial.dto.CreditRiskSummaryDTO;
+import mz.multicore.erp.modules.inventory.dto.StockWasteDTO;
+import mz.multicore.erp.modules.inventory.model.WasteStatus;
 import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /** Agrega alertas operacionais existentes para o bell e a página de notificações. */
 public class NotificationFeed {
@@ -30,25 +38,52 @@ public class NotificationFeed {
     private static final long SUBSCRIPTION_ALERT_DAYS = 7;
     private static final BigDecimal DEFAULT_LOW_STOCK = BigDecimal.valueOf(5);
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DecimalFormat MZN_FMT = new DecimalFormat("#,##0.00 MT", new DecimalFormatSymbols(new Locale("pt", "MZ")));
 
     private final ApprovalApiClient approvalApiClient;
     private final InventoryApiClient inventoryApiClient;
     private final MySubscriptionApiClient subscriptionApiClient;
     private final HRApiClient hrApiClient;
+    private final mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient;
+    private final CreditRiskApiClient creditRiskApiClient;
+    private final StockWasteApiClient stockWasteApiClient;
 
     public NotificationFeed(ApprovalApiClient approvalApiClient,
                             InventoryApiClient inventoryApiClient,
                             MySubscriptionApiClient subscriptionApiClient,
                             HRApiClient hrApiClient) {
+        this(approvalApiClient, inventoryApiClient, subscriptionApiClient, hrApiClient, null, null, null);
+    }
+
+    public NotificationFeed(ApprovalApiClient approvalApiClient,
+                            InventoryApiClient inventoryApiClient,
+                            MySubscriptionApiClient subscriptionApiClient,
+                            HRApiClient hrApiClient,
+                            mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient) {
+        this(approvalApiClient, inventoryApiClient, subscriptionApiClient, hrApiClient, performanceApiClient, null, null);
+    }
+
+    public NotificationFeed(ApprovalApiClient approvalApiClient,
+                            InventoryApiClient inventoryApiClient,
+                            MySubscriptionApiClient subscriptionApiClient,
+                            HRApiClient hrApiClient,
+                            mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient,
+                            CreditRiskApiClient creditRiskApiClient,
+                            StockWasteApiClient stockWasteApiClient) {
         this.approvalApiClient = approvalApiClient;
         this.inventoryApiClient = inventoryApiClient;
         this.subscriptionApiClient = subscriptionApiClient;
         this.hrApiClient = hrApiClient;
+        this.performanceApiClient = performanceApiClient;
+        this.creditRiskApiClient = creditRiskApiClient;
+        this.stockWasteApiClient = stockWasteApiClient;
     }
 
     public List<NotificationItem> load(Long companyId) {
         List<NotificationItem> items = new ArrayList<>();
         addApprovals(items);
+        addCreditRiskAlerts(items);
+        addStockWasteAlerts(items, companyId);
         addLowStock(items, companyId);
         addExpiries(items, companyId);
         addSubscription(items);
@@ -56,6 +91,7 @@ public class NotificationFeed {
         addPayrollLiabilities(items);
         addEmployeeDocuments(items);
         addOccupationalHealth(items);
+        addGoals(items, companyId);
         items.sort(Comparator.comparingInt(NotificationItem::priority).reversed()
                 .thenComparing(NotificationItem::type)
                 .thenComparing(NotificationItem::title));
@@ -236,6 +272,37 @@ public class NotificationFeed {
         }
     }
 
+    private void addGoals(List<NotificationItem> items, Long companyId) {
+        if (performanceApiClient == null || companyId == null) return;
+        try {
+            List<mz.multicore.erp.modules.performance.dto.SalesGoalProgressDTO> list = performanceApiClient.getActiveGoalsSummary(companyId);
+            if (list == null) return;
+            for (var p : list) {
+                if (p.alertLevel() == mz.multicore.erp.modules.performance.model.AlertLevel.CRITICAL) {
+                    items.add(new NotificationItem(
+                            "Meta Comercial",
+                            "Meta em Risco Crítico: " + p.goalName(),
+                            "Progresso: " + p.progressPct() + "% · Alvo: " + (p.targetRevenue() != null ? p.targetRevenue() : "—") + " MZN",
+                            null,
+                            "desempenho",
+                            3
+                    ));
+                } else if (p.alertLevel() == mz.multicore.erp.modules.performance.model.AlertLevel.LATE) {
+                    items.add(new NotificationItem(
+                            "Meta Comercial",
+                            "Meta Atrasada: " + p.goalName(),
+                            "Progresso: " + p.progressPct() + "% · Alvo: " + (p.targetRevenue() != null ? p.targetRevenue() : "—") + " MZN",
+                            null,
+                            "desempenho",
+                            2
+                    ));
+                }
+            }
+        } catch (Exception ignored) {
+            // Degrada suavemente se serviço de desempenho estiver temporariamente indisponível
+        }
+    }
+
     private static String fitnessLabel(String result) {
         return switch (result) {
             case "FIT" -> "Apto";
@@ -254,6 +321,55 @@ public class NotificationFeed {
             case "EXPENSE" -> "Despesa";
             default -> type.replace('_', ' ');
         };
+    }
+
+    private void addCreditRiskAlerts(List<NotificationItem> items) {
+        if (creditRiskApiClient == null) return;
+        try {
+            CreditRiskSummaryDTO summary = creditRiskApiClient.getSummary(LocalDate.now());
+            if (summary == null) return;
+            int criticalCount = summary.criticalRiskCount();
+            int blockedCount = summary.blockedClientsCount();
+            int highCount = summary.highRiskCount();
+            BigDecimal overdue = summary.totalOverdue();
+
+            if (criticalCount > 0 || blockedCount > 0) {
+                int totalAffected = criticalCount + blockedCount;
+                String title = String.format("Risco Crítico: %d cliente(s) bloqueado(s) ou em incumprimento", totalAffected);
+                String detail = String.format("Total vencido em mora: %s. Ação de cobrança requerida.",
+                        formatMoney(overdue != null ? overdue : BigDecimal.ZERO));
+                items.add(new NotificationItem("Risco de Crédito", title, detail, "Cobrança urgente", "risco_credito", 3));
+            } else if (highCount > 0 && overdue != null && overdue.signum() > 0) {
+                String title = String.format("Risco Elevado: %d cliente(s) com faturas em mora", highCount);
+                String detail = String.format("Total vencido em mora: %s.", formatMoney(overdue));
+                items.add(new NotificationItem("Risco de Crédito", title, detail, "Acompanhar", "risco_credito", 2));
+            }
+        } catch (Exception ignored) {
+            // Degrada suavemente se API estiver indisponível
+        }
+    }
+
+    private void addStockWasteAlerts(List<NotificationItem> items, Long companyId) {
+        if (stockWasteApiClient == null || companyId == null) return;
+        try {
+            List<StockWasteDTO> pending = stockWasteApiClient.findByCompany(companyId, WasteStatus.PENDING_APPROVAL);
+            if (pending != null && !pending.isEmpty()) {
+                BigDecimal totalLoss = pending.stream()
+                        .map(StockWasteDTO::totalCost)
+                        .filter(v -> v != null)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                String title = String.format("%d Quebra(s) de Stock pendente(s) de validação", pending.size());
+                String detail = String.format("Perda estimada: %s. Alçada gerencial requerida.", formatMoney(totalLoss));
+                items.add(new NotificationItem("Quebras de Stock", title, detail, "Aprovação pendente", "stock_waste", 2));
+            }
+        } catch (Exception ignored) {
+            // Degrada suavemente se API estiver indisponível
+        }
+    }
+
+    private static String formatMoney(BigDecimal val) {
+        if (val == null) return "0,00 MT";
+        return MZN_FMT.format(val.setScale(2, java.math.RoundingMode.HALF_UP));
     }
 
     public record NotificationItem(

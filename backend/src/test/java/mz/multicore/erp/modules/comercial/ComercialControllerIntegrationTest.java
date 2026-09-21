@@ -70,6 +70,101 @@ class ComercialControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalPages").isNumber());
     }
 
+    @Test
+    void authenticatedDesktopCanFilterPaginatedPOSSalesByDate() throws Exception {
+        JsonNode login = login();
+        String token = login.get("token").asText();
+        String companyId = login.get("companies").get(0).get("id").asText();
+
+        mockMvc.perform(get("/api/comercial/pos-sales/page")
+                        .param("companyId", companyId)
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-12-31")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.totalElements").isNumber());
+    }
+
+    @Test
+    void authenticatedDesktopCanLoadPOSSalesSummaryWithVariation() throws Exception {
+        JsonNode login = login();
+        String token = login.get("token").asText();
+        String companyId = login.get("companies").get(0).get("id").asText();
+
+        mockMvc.perform(get("/api/comercial/pos-sales/summary")
+                        .param("companyId", companyId)
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-01-31")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").isNumber())
+                .andExpect(jsonPath("$.totalAmount").isNumber())
+                .andExpect(jsonPath("$.previousCount").isNumber())
+                .andExpect(jsonPath("$.previousTotalAmount").isNumber());
+    }
+
+    @Test
+    void authenticatedDesktopCanUpdateProduct() throws Exception {
+        JsonNode login = login();
+        String token = login.get("token").asText();
+        String companyId = login.get("companies").get(0).get("id").asText();
+
+        String productsJson = mockMvc.perform(get("/api/comercial/products")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode products = objectMapper.readTree(productsJson);
+        org.junit.jupiter.api.Assertions.assertFalse(products.isEmpty());
+        JsonNode first = products.get(0);
+        long id = first.get("id").asLong();
+        String name = first.get("name").asText() + " Alterado";
+
+        String updatePayload = """
+                {
+                    "sku": "%s",
+                    "reference": %s,
+                    "barcode": %s,
+                    "name": "%s",
+                    "unitPrice": 120.50,
+                    "purchasePrice": 80.00,
+                    "minStock": 5,
+                    "unitsPerBox": 1,
+                    "categoryId": %s,
+                    "saleType": "UNIT",
+                    "stockTracked": true,
+                    "taxRateId": %s,
+                    "description": "Atualizacao de teste",
+                    "wholesalePrice": null,
+                    "wholesaleMinQty": null,
+                    "netUnitWeightKg": null,
+                    "grossUnitWeightKg": null
+                }
+                """.formatted(
+                        first.hasNonNull("sku") ? first.get("sku").asText() : "SKU-1",
+                        first.hasNonNull("reference") ? "\"" + first.get("reference").asText() + "\"" : "null",
+                        first.hasNonNull("barcode") ? "\"" + first.get("barcode").asText() + "\"" : "null",
+                        name,
+                        first.hasNonNull("categoryId") ? first.get("categoryId").asText() : "null",
+                        first.hasNonNull("taxRateId") ? first.get("taxRateId").asText() : "null"
+                );
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/comercial/products/" + id)
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updatePayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value(name));
+    }
+
     private JsonNode login() throws Exception {
         String body = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

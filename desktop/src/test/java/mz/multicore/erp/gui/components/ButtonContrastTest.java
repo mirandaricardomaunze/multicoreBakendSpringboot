@@ -62,4 +62,49 @@ class ButtonContrastTest {
                 "ao passar a inactivo com fundo claro, o texto tem de escurecer");
         assertTrue(UIHelper.contrastRatio(Theme.LIGHT.card, button.getForeground()) >= AA);
     }
+
+    @Test // BC-05
+    void modernButton_impedeTextoBrancoSobreFundoClaroMesmoComSetForegroundExplicito() {
+        ModernButton btn = new ModernButton("Teste");
+        btn.setBackground(Color.WHITE);
+        btn.setForeground(Color.WHITE);
+
+        assertNotEquals(Color.WHITE, btn.getForeground(), "ModernButton não pode aceitar texto branco sobre fundo branco");
+        assertTrue(UIHelper.contrastRatio(Color.WHITE, btn.getForeground()) >= 3.0);
+    }
+
+    @Test // BC-06
+    void botoesDePeriodoNoDashboard_temContrasteValidoEmAmbosOsTemas() {
+        for (Theme theme : new Theme[]{Theme.LIGHT, Theme.DARK}) {
+            UIHelper.applyTheme(theme);
+            mz.multicore.erp.gui.DashboardPanel panel = new mz.multicore.erp.gui.DashboardPanel(null, null, null, null, null, null);
+            for (mz.multicore.erp.gui.DashboardPanel.PeriodFilter period : mz.multicore.erp.gui.DashboardPanel.PeriodFilter.values()) {
+                panel.selectPeriod(period);
+                // Percorre todos os botões do bar de períodos
+                for (java.awt.Component comp : panel.getComponents()) {
+                    assertNoWhiteOnWhiteButtons(comp);
+                }
+            }
+        }
+        UIHelper.applyTheme(Theme.DARK); // restaura
+    }
+
+    private void assertNoWhiteOnWhiteButtons(java.awt.Component comp) {
+        if (comp instanceof ModernButton btn) {
+            Color bg = btn.getBackground();
+            Color fg = btn.getForeground();
+            if (bg != null && fg != null) {
+                assertFalse(Color.WHITE.equals(bg) && Color.WHITE.equals(fg),
+                        "Botão '" + btn.getText() + "' tem fundo branco e texto branco!");
+                assertTrue(UIHelper.contrastRatio(bg, fg) >= 3.0,
+                        "Contraste insuficiente no botão '" + btn.getText() + "': " + UIHelper.contrastRatio(bg, fg));
+            }
+        }
+        if (comp instanceof java.awt.Container container) {
+            for (java.awt.Component child : container.getComponents()) {
+                assertNoWhiteOnWhiteButtons(child);
+            }
+        }
+    }
 }
+

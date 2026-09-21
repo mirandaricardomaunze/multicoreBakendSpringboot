@@ -6,6 +6,9 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.FinanceApiClient;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
@@ -25,6 +28,10 @@ public class FinanceiroPanel extends JPanel {
 
     private final FinanceApiClient financeApiClient;
     private final ComercialApiClient comercialApiClient;
+    private final mz.multicore.erp.desktop.client.BankReconciliationApiClient bankReconciliationApiClient;
+    private final BankReconciliationPanel reconciliationPanel;
+    private final CashFlowForecastPanel forecastPanel;
+    private final JTabbedPane tabbedPane;
 
     // Accounts List Elements
     private DefaultTableModel accountsModel;
@@ -36,23 +43,46 @@ public class FinanceiroPanel extends JPanel {
 
     private List<InvoiceDTO> approvedInvoicesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
-    public FinanceiroPanel(FinanceApiClient financeApiClient, ComercialApiClient comercialApiClient) {
+    public FinanceiroPanel(FinanceApiClient financeApiClient,
+                           ComercialApiClient comercialApiClient,
+                           mz.multicore.erp.desktop.client.BankReconciliationApiClient bankReconciliationApiClient) {
+        this(financeApiClient, comercialApiClient, bankReconciliationApiClient, null);
+    }
+
+    public FinanceiroPanel(FinanceApiClient financeApiClient,
+                           ComercialApiClient comercialApiClient,
+                           mz.multicore.erp.desktop.client.BankReconciliationApiClient bankReconciliationApiClient,
+                           mz.multicore.erp.desktop.client.CashFlowForecastApiClient forecastApiClient) {
         this.financeApiClient = financeApiClient;
         this.comercialApiClient = comercialApiClient;
+        this.bankReconciliationApiClient = bankReconciliationApiClient;
 
-        setLayout(new BorderLayout(0, 15));
+        setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(25, 25, 25, 25));
+        setBorder(new EmptyBorder(12, 16, 12, 16));
 
-        add(UIHelper.createHeading("Tesouraria"), BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        JComponent heading = UIHelper.createHeading("Tesouraria & Conciliação Bancária");
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(heading); north.add(feedback); add(north, BorderLayout.NORTH);
 
-        // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
-        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
         tabbedPane.addTab("Contas", UIHelper.icon("fas-wallet", 16, UIHelper.TEXT_LIGHT), createAccountsTab());
         tabbedPane.addTab("Fluxo de Caixa", UIHelper.icon("fas-exchange-alt", 16, UIHelper.TEXT_LIGHT),
                 createMovementsTab());
+        reconciliationPanel = new BankReconciliationPanel(bankReconciliationApiClient, financeApiClient);
+        tabbedPane.addTab("Reconciliação Bancária", UIHelper.icon("fas-university", 16, UIHelper.TEXT_LIGHT),
+                reconciliationPanel);
+        if (forecastApiClient != null) {
+            this.forecastPanel = new CashFlowForecastPanel(forecastApiClient);
+            tabbedPane.addTab("Projeção Previsional", UIHelper.icon("fas-chart-line", 16, UIHelper.TEXT_LIGHT), forecastPanel);
+        } else {
+            this.forecastPanel = null;
+        }
         add(tabbedPane, BorderLayout.CENTER);
 
         // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate), não no
@@ -69,14 +99,15 @@ public class FinanceiroPanel extends JPanel {
         accountsCard.setLayout(new BorderLayout());
         accountsCard.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] accountCols = {"Conta de Tesouraria", "IBAN / Nº Conta", "Saldo Atual"};
+        String[] accountCols = {"Conta de Tesouraria", "Tipo", "IBAN / Nº Conta", "Saldo Atual"};
         accountsModel = new DefaultTableModel(accountCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         accountsTable = new JTable(accountsModel);
         UIHelper.styleTable(accountsTable);
-        accountsTable.getColumnModel().getColumn(2).setCellRenderer(TableCellRenderers.money());
+        accountsTable.getColumnModel().getColumn(1).setCellRenderer(TableCellRenderers.status());
+        accountsTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         JScrollPane accScroll = new JScrollPane(accountsTable);
         UIHelper.styleScrollPane(accScroll);
         JTextField aSearch = TableFilter.searchField("Conta ou IBAN…");
@@ -142,9 +173,8 @@ public class FinanceiroPanel extends JPanel {
                 () -> new FinanceData(financeApiClient.getAllAccounts(), financeApiClient.getAllTransactions(),
                         comercialApiClient.getAllInvoices()),
                 this::applyData,
-                error -> JOptionPane.showMessageDialog(this,
-                        "Não foi possível carregar a tesouraria: " + error.getMessage(),
-                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar a tesouraria",
+                        error.getMessage(), "Tentar novamente", this::refreshData));
     }
 
     private void applyData(FinanceData data) {
@@ -153,6 +183,8 @@ public class FinanceiroPanel extends JPanel {
         for (TreasuryAccountDTO acc : accountsList) {
             accountsModel.addRow(new Object[]{
                     acc.name(),
+                    acc.accountType() == mz.multicore.erp.modules.financeira.model.TreasuryAccountType.CASH
+                            ? "CAIXA" : "BANCO",
                     acc.accountNumber(),
                     acc.balance()
             });
@@ -183,11 +215,13 @@ public class FinanceiroPanel extends JPanel {
     /** Registo de recebimento (liquidação de fatura aprovada) em modal profissional. */
     private void registerReceipt() {
         if (approvedInvoicesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Não existem faturas aprovadas pendentes de recebimento.", "Informação", JOptionPane.WARNING_MESSAGE);
+            feedback.show(FeedbackType.INFO, "Sem recebimentos pendentes",
+                    "Não existem faturas aprovadas pendentes de recebimento.", null, null);
             return;
         }
         if (accountsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhuma conta de tesouraria configurada.", "Erro", JOptionPane.ERROR_MESSAGE);
+            feedback.show(FeedbackType.WARNING, "Sem contas de tesouraria",
+                    "Configure uma conta de tesouraria antes de registar o recebimento.", null, null);
             return;
         }
 
@@ -220,13 +254,34 @@ public class FinanceiroPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Recebimento registado com sucesso.\nSaldo da conta atualizado.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Recebimento registado; saldo da conta actualizado.");
             refreshData();
         }
     }
 
+    public void showReconciliationTab() {
+        if (tabbedPane != null && tabbedPane.getTabCount() >= 3) {
+            tabbedPane.setSelectedIndex(2);
+        }
+    }
+
+    public void showForecastTab() {
+        if (tabbedPane != null && tabbedPane.getTabCount() >= 4) {
+            tabbedPane.setSelectedIndex(3);
+        }
+    }
+
+    public CashFlowForecastPanel getForecastPanel() {
+        return forecastPanel;
+    }
+
     public void onPanelSelected() {
         refreshData();
+        if (reconciliationPanel != null) {
+            reconciliationPanel.refreshData();
+        }
+        if (forecastPanel != null) {
+            forecastPanel.loadForecast();
+        }
     }
 }

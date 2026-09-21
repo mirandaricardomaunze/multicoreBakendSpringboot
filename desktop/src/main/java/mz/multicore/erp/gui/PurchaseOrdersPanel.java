@@ -171,9 +171,14 @@ final class PurchaseOrdersPanel {
         return tab;
     }
 
-    private void openPurchaseOrderFormDialog() {
+    void openPurchaseOrderFormDialog() {
+        openPurchaseOrderForSuggestion(null, null, null, null);
+    }
+
+    void openPurchaseOrderForSuggestion(Long supplierId, Long productId, BigDecimal quantity, BigDecimal unitPrice) {
         if (owner.supplierComboList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre um fornecedor activo primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Fornecedor necessário",
+                    "Registe um fornecedor activo antes de criar a encomenda.");
             return;
         }
         // Reset do rascunho ao abrir.
@@ -181,6 +186,35 @@ final class PurchaseOrdersPanel {
         if (owner.poLinesModel != null) owner.poLinesModel.setRowCount(0);
         recomputePoTotal();
         poExpectedField.setText("");
+
+        // Pré-selecionar fornecedor se fornecido
+        if (supplierId != null) {
+            for (int i = 0; i < owner.supplierComboList.size(); i++) {
+                if (supplierId.equals(owner.supplierComboList.get(i).id())) {
+                    owner.poSupplierCombo.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+
+        // Pré-selecionar produto e pré-adicionar linha se fornecido
+        if (productId != null) {
+            for (int i = 0; i < owner.productsList.size(); i++) {
+                if (productId.equals(owner.productsList.get(i).id())) {
+                    owner.poProductCombo.setSelectedIndex(i);
+                    refreshPackagingFactor();
+                    if (quantity != null && quantity.signum() > 0) {
+                        poQtyField.setText(quantity.toPlainString());
+                    }
+                    if (unitPrice != null && unitPrice.signum() >= 0) {
+                        owner.poPriceField.setText(unitPrice.toPlainString());
+                    }
+                    addPoDraftLine();
+                    break;
+                }
+            }
+        }
+
         Window parent = SwingUtilities.getWindowAncestor(owner);
         ModernFormDialog dlg = new ModernFormDialog(parent, "Nova Encomenda a Fornecedor", owner.poFormContent);
         dlg.setSize(880, 640);
@@ -194,9 +228,9 @@ final class PurchaseOrdersPanel {
             if (owner.poLinesModel != null) owner.poLinesModel.setRowCount(0);
             recomputePoTotal();
             poExpectedField.setText("");
-            JOptionPane.showMessageDialog(owner, "Encomenda " + created[0].orderNumber() + " criada.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showPurchaseSuccess("Encomenda " + created[0].orderNumber() + " criada.");
             refresh();
+            owner.reorderPanel.refresh();
         }
     }
 
@@ -209,7 +243,7 @@ final class PurchaseOrdersPanel {
     private void addPoDraftLine() {
         int prodIdx = owner.poProductCombo.getSelectedIndex();
         if (prodIdx < 0 || prodIdx >= owner.productsList.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione um produto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Produto necessário", "Seleccione um produto para adicionar.");
             return;
         }
         try {
@@ -225,8 +259,8 @@ final class PurchaseOrdersPanel {
                     String.format("%,.2f MT", qty.multiply(price))});
             recomputePoTotal();
             poPackageEditor.reset(); owner.poPriceField.setText("0");
-        } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ignored) {
+            // Os campos canónicos já apresentam o estado inválido no formulário activo.
         }
     }
 
@@ -296,7 +330,8 @@ final class PurchaseOrdersPanel {
     private PurchaseOrderDTO selectedPO() {
         int row = TableFilter.selectedModelRow(poListTable);
         if (row < 0 || row >= owner.poList.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma encomenda.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Seleccione uma encomenda",
+                    "Escolha uma encomenda na tabela para continuar.");
             return null;
         }
         return owner.poList.get(row);
@@ -305,13 +340,12 @@ final class PurchaseOrdersPanel {
     private void receiveSelectedPO() {
         PurchaseOrderDTO sel = selectedPO();
         if (sel == null) return;
-        int opt = JOptionPane.showConfirmDialog(owner,
+        if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner), FeedbackType.WARNING,
+                "Confirmar recepção",
                 "Receber a encomenda " + sel.orderNumber() + "? O stock do armazém será actualizado.",
-                "Confirmar Recepção", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
+                "Receber encomenda")) return;
         UIHelper.runWithProgress(owner, "A receber encomenda…", () -> owner.purchaseApiClient.receiveOrder(sel.id()), ignored -> {
-            JOptionPane.showMessageDialog(owner, "Encomenda recebida e stock actualizado.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showPurchaseSuccess("Encomenda recebida e stock actualizado.");
             refresh();
             owner.loadPurchasesHistory();
         }, owner::showPurchaseError);
@@ -321,8 +355,8 @@ final class PurchaseOrdersPanel {
         PurchaseOrderDTO sel = selectedPO();
         if (sel == null) return;
         if (!"ORDERED".equals(sel.status()) && !"PARTIALLY_RECEIVED".equals(sel.status())) {
-            JOptionPane.showMessageDialog(owner, "Só encomendas por receber podem ser recebidas.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Recepção indisponível",
+                    "Só encomendas por receber podem ser recebidas.");
             return;
         }
 
@@ -369,20 +403,19 @@ final class PurchaseOrdersPanel {
                 }
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(owner, "Quantidade inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.ERROR, "Quantidade inválida",
+                    "Corrija as quantidades a receber e tente novamente.");
             return;
         }
         if (toReceive.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Indique pelo menos uma quantidade a receber.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Quantidade necessária",
+                    "Indique pelo menos uma quantidade a receber.");
             return;
         }
         ReceivePurchaseOrderRequest request = new ReceivePurchaseOrderRequest(toReceive);
         UIHelper.runWithProgress(owner, "A registar recepção parcial…",
                 () -> owner.purchaseApiClient.receivePartial(sel.id(), request), updated -> {
-            JOptionPane.showMessageDialog(owner,
-                    "Recepção registada. Estado da encomenda: " + updated.status() + ".",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showPurchaseSuccess("Recepção registada · " + UIHelper.humanStatus(updated.status()) + ".");
             refresh();
             owner.loadPurchasesHistory();
         }, owner::showPurchaseError);

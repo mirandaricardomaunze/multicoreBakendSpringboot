@@ -7,6 +7,7 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.hr.dto.CreateTimeEntryRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.TimeSheetDTO;
@@ -166,8 +167,7 @@ final class HRTimeSheetPanel {
 
     private void recordEntry() {
         if (owner.employeesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre colaboradores primeiro.", "Aviso",
-                    JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe colaboradores primeiro.");
             return;
         }
         JComboBox<String> empCombo = new JComboBox<>();
@@ -205,8 +205,7 @@ final class HRTimeSheetPanel {
                     () -> owner.hrApiClient.recordTimeEntry(request),
                     ignored -> load(), owner::showActionError);
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(owner, "Hora inválida. Use o formato HH:mm.", "Erro",
-                    JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.ERROR, "Hora inválida", "Use o formato HH:mm.");
         }
     }
 
@@ -267,14 +266,10 @@ final class HRTimeSheetPanel {
                     basisField.getText().trim().isEmpty() ? null : basisField.getText().trim());
             UIHelper.runWithProgress(owner, "A gravar acréscimos…",
                     () -> owner.hrApiClient.saveOvertimeRates(request),
-                    ignored -> JOptionPane.showMessageDialog(owner,
-                            "Acréscimos gravados. Os recibos passam a valorizar horas extra por eles.",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE),
+                    ignored -> owner.showSuccess("Acréscimos gravados; os recibos passam a valorizar horas extra por eles."),
                     owner::showActionError);
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(owner,
-                    "Os multiplicadores têm de ser números (ex.: 1.50).", "Erro",
-                    JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.ERROR, "Multiplicadores inválidos", "Introduza números, por exemplo 1.50.");
         }
     }
 }

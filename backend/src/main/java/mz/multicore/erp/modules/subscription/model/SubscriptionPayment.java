@@ -46,6 +46,12 @@ public class SubscriptionPayment extends BaseEntity {
     @Column(name = "period_end")
     private LocalDate periodEnd;
 
+    @Column(name = "reference", length = 100)
+    private String reference;
+
+    @Column(name = "payment_details", length = 500)
+    private String paymentDetails;
+
     @Column(name = "note")
     private String note;
 }

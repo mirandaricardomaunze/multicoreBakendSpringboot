@@ -1,7 +1,8 @@
 # Actualizações do desktop e compatibilidade com o servidor — especificação
 
 **Criado em:** 2026-08-16
-**Estado:** aperto de mão de versão implementado (AC-01..AC-16); instalador **por fazer**
+**Estado:** aperto de mão de versão e instalador por utilizador implementados; descarga/instalação
+automática e assinatura de código dependem da infraestrutura de distribuição.
 **Origem:** pergunta do utilizador — *"como fazer actualizações depois de instalador
 profissional"*.
 
@@ -101,23 +102,25 @@ Subir `min-version` é o último recurso, não a ferramenta do dia-a-dia.
 
 ---
 
-## 6. O instalador — por fazer
+## 6. O instalador
 
-Nada disto está implementado. Fica o desenho decidido:
+Implementado em `scripts/build-windows-installer.ps1`:
 
 1. **`jpackage`** (vem no JDK 21) gera o *app-image* Windows a partir de um jar com
    `DesktopApplication` como main — hoje o `pom` fixa `mainClass` no **backend**, pelo que é
    preciso um perfil Maven próprio.
-2. **Instalar em `%LOCALAPPDATA%`, não em `Program Files`.** Em Program Files cada actualização
+2. **Instalar em `%LOCALAPPDATA%`, não em `Program Files`.** `--win-per-user-install` evita que cada actualização
    pede administrador — e na loja ninguém sabe a password. Este detalhe sozinho decide se as
    actualizações acontecem ou ficam por fazer durante um ano.
-3. **A configuração tem de sobreviver à actualização.** `desktop.api.base-url` é o que aponta a
+3. **A configuração sobrevive à actualização.** `desktop.api.base-url` pode viver em
+   `%LOCALAPPDATA%\Multicore\desktop.properties`, fora da pasta instalada. A variável de ambiente/
+   configuração explícita mantém precedência. O instalador nunca substitui esse ficheiro.
+   `desktop.api.base-url` é o que aponta a
    loja ao servidor; se o instalador o reescrever, a loja fica a apontar para `localhost` e pára.
    Guardar fora da pasta da aplicação.
-4. **Assinatura de código**, senão o SmartScreen do Windows apresenta o programa como não
-   reconhecido.
-5. **Actualização automática**: o desktop consulta `/api/version`, compara com a sua, e propõe
-   descarregar/instalar ao fechar.
+4. **Assinatura de código** continua dependente de certificado de code signing.
+5. **Actualização automática** continua dependente de um canal HTTPS autenticado para publicar e
+   descarregar versões. O aviso e a compatibilidade já existem; não se aceita URL arbitrário do servidor.
 
 ---
 

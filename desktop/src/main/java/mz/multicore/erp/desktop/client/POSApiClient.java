@@ -75,6 +75,20 @@ public class POSApiClient {
         return clientFactory.authenticatedClient().getBytes("/api/print/pos-z-report/" + sessionId);
     }
 
+    /** Dados calculados do Relatório Z de uma sessão. */
+    public mz.multicore.erp.modules.pos.dto.PosZReportDTO getZReport(Long sessionId) {
+        return clientFactory.authenticatedClient().get("/api/pos/sessions/" + sessionId + "/z-report",
+                mz.multicore.erp.modules.pos.dto.PosZReportDTO.class);
+    }
+
+    /** Histórico de sessões de caixa da empresa. */
+    public java.util.List<mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO> getSessionsHistory(Long companyId) {
+        mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO[] arr = clientFactory.authenticatedClient().get(
+                "/api/pos/sessions/history?companyId=" + companyId,
+                mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO[].class);
+        return arr != null ? java.util.Arrays.asList(arr) : java.util.Collections.emptyList();
+    }
+
     private static String enc(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }

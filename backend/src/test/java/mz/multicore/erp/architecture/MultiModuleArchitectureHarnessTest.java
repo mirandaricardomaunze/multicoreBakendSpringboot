@@ -73,6 +73,28 @@ class MultiModuleArchitectureHarnessTest {
                 List.of("PermissionGuard.requireManagerOrAdmin", "PermissionGuard.isManagerOrAdmin"));
     }
 
+    /**
+     * <b>Quem desenha um documento é o servidor.</b>
+     *
+     * <p>O desktop chegou a ter uma cópia própria do {@code TablePdfExporter} e a exportar
+     * listagens sozinho. Saíam folhas <b>sem nome de empresa, sem NUIT e sem morada</b> — a
+     * empresa vive na base de dados, e o cliente fino não a conhece. Duas cópias do mesmo
+     * desenho também divergem: corrigir o cabeçalho num sítio deixava o outro por corrigir.</p>
+     *
+     * <p>O desktop <i>lê</i> e <i>imprime</i> PDF (PDFBox); não o compõe. Se o OpenPDF voltar ao
+     * código de produção do cliente, isto parte.</p>
+     */
+    @Test
+    void desktopDoesNotDrawPdfDocuments() throws Exception {
+        assertSourcesDoNotContain(ROOT.resolve(Path.of("desktop", "src", "main", "java")),
+                List.of("com.lowagie", "TablePdfExporter"));
+        String pom = Files.readString(ROOT.resolve(Path.of("desktop", "pom.xml")));
+        assertThat(pom)
+                .as("o OpenPDF só serve os testes do desktop — o documento nasce no servidor")
+                .contains("<artifactId>openpdf</artifactId><version>${openpdf.version}</version>"
+                        + "<scope>test</scope>");
+    }
+
     @Test
     void contractsRemainFrameworkFree() throws Exception {
         assertSourcesDoNotContain(ROOT.resolve(Path.of("contracts", "src", "main", "java")), List.of(

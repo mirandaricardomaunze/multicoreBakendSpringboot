@@ -1,40 +1,19 @@
 @echo off
-REM ============================================================
-REM  Multicore ERP - arranque do cliente desktop (Swing)
-REM  Faz duplo-clique neste ficheiro no Explorador de Ficheiros.
-REM  Liberta a porta 8080, arranca o backend e abre a janela de login.
-REM ============================================================
-title Multicore ERP - Desktop
+title Multicore Desktop ERP
 cd /d "%~dp0"
 
-echo.
-echo  [1/3] A libertar a porta 8080 (se estiver ocupada)...
-for /f "tokens=5" %%P in ('netstat -ano ^| findstr ":8080" ^| findstr "LISTENING"') do (
-    echo        a terminar processo %%P que ocupava a porta 8080
-    taskkill /F /PID %%P >nul 2>&1
+set "JAVA_EXE=C:\Users\miran\.jdks\ms-21.0.10\bin\javaw.exe"
+if not exist "%JAVA_EXE%" set "JAVA_EXE=javaw"
+
+set "JAR_PATH=%~dp0desktop\target\multicore-desktop-1.0.0.jar"
+
+if exist "%JAR_PATH%" (
+    start "" "%JAVA_EXE%" -jar "%JAR_PATH%"
+    exit /b 0
 )
 
-echo  [2/3] A verificar o Maven...
-where mvn >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo  ERRO: 'mvn' nao foi encontrado no PATH.
-    echo  Abre um terminal e confirma com:  mvn -version
-    echo.
-    goto fim
-)
-
-echo  [3/3] A arrancar o Multicore ERP...
-echo        Aguarde por "Started MulticoreApplication" — a janela de login abre a seguir (~15s).
-echo.
-
-call mvn spring-boot:run "-Dspring-boot.run.main-class=mz.multicore.erp.desktop.DesktopApplication"
-
-echo.
-echo  ============================================================
-echo  A app terminou (ou ocorreu um erro acima).
-echo  Se viste um erro, copia as ultimas linhas e mostra ao Claude.
-echo  ============================================================
-:fim
-echo.
-pause
+rem Fallback Maven se o JAR nao existir
+set "JAVA_HOME=C:\Users\miran\.jdks\ms-21.0.10"
+set "PATH=C:\Program Files\apache-maven-3.9.14\bin;%JAVA_HOME%\bin;%PATH%"
+cd /d "%~dp0\desktop"
+call mvn spring-boot:run

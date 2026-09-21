@@ -74,4 +74,17 @@ public class AccountingController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(accountingReportService.getLedger(accountCode, from, to));
     }
+
+    @GetMapping("/income-statement")
+    public ResponseEntity<IncomeStatementDTO> getIncomeStatement(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(accountingReportService.getIncomeStatement(from, to));
+    }
+
+    @GetMapping("/balance-sheet")
+    public ResponseEntity<BalanceSheetDTO> getBalanceSheet(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf) {
+        return ResponseEntity.ok(accountingReportService.getBalanceSheet(asOf));
+    }
 }

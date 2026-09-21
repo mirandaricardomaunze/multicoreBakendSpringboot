@@ -31,6 +31,7 @@ import mz.multicore.erp.modules.hr.dto.PayrollDeductionDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollPeriodDTO;
 import mz.multicore.erp.modules.hr.dto.SaveEmployeeDocumentRequest;
 import mz.multicore.erp.modules.hr.dto.TerminationDTO;
+import mz.multicore.erp.modules.hr.dto.ThirteenthMonthDTO;
 import mz.multicore.erp.modules.hr.dto.OvertimeRateConfigDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollCostDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
@@ -41,6 +42,7 @@ import mz.multicore.erp.modules.hr.dto.SaveHrPolicyConfigRequest;
 import mz.multicore.erp.modules.hr.dto.SaveOvertimeRateConfigRequest;
 import mz.multicore.erp.modules.hr.dto.UpsertEmployeeRequest;
 import mz.multicore.erp.modules.hr.dto.VacationDTO;
+import mz.multicore.erp.modules.hr.dto.VacationAllowanceDTO;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -298,6 +300,31 @@ public class HRApiClient {
 
     public void deactivateOvertimeRates(Long id) {
         clientFactory.authenticatedClient().delete("/api/hr/overtime-rates/" + id);
+    }
+
+    // ─── Subsídios legais ───────────────────────────────────────────────────
+
+    public ThirteenthMonthDTO getThirteenthMonth(int year) {
+        return clientFactory.authenticatedClient()
+                .get("/api/hr/payroll/thirteenth-month/" + year, ThirteenthMonthDTO.class);
+    }
+
+    public ThirteenthMonthDTO payThirteenthMonth(int year) {
+        return clientFactory.authenticatedClient()
+                .post("/api/hr/payroll/thirteenth-month/" + year + "/pay", null,
+                        ThirteenthMonthDTO.class);
+    }
+
+    public VacationAllowanceDTO getVacationAllowance(Long vacationId) {
+        return clientFactory.authenticatedClient()
+                .get("/api/hr/payroll/vacation-allowance/" + vacationId,
+                        VacationAllowanceDTO.class);
+    }
+
+    public VacationAllowanceDTO payVacationAllowance(Long vacationId) {
+        return clientFactory.authenticatedClient()
+                .post("/api/hr/payroll/vacation-allowance/" + vacationId + "/pay", null,
+                        VacationAllowanceDTO.class);
     }
 
     // ─── Retenções por entregar e valores legais (§B5 e §6) ──────────────────

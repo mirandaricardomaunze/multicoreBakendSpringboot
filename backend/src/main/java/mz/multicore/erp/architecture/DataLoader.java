@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.crm.service.CRMService;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -114,6 +115,33 @@ public class DataLoader implements CommandLineRunner {
         appUserRepository.save(superAdmin);
     }
 
+    private void seedDefaultAdmin(Company... companies) {
+        AppUser admin = appUserRepository.findByUsername("admin").orElseGet(() -> {
+            AppUser u = new AppUser();
+            u.setUsername("admin");
+            u.setName("Administrador Geral");
+            u.setPassword("admin");
+            u.setRole("ADMIN");
+            u.setActive(true);
+            u.setCreatedBy("SYSTEM");
+            return appUserRepository.save(u);
+        });
+        if (companies != null && companies.length > 0) {
+            for (Company c : companies) {
+                if (c != null && admin.findCompanyAccess(c.getId()).isEmpty()) {
+                    admin.grantCompany(c, "ADMIN");
+                }
+            }
+        } else {
+            companyRepository.findAll().forEach(c -> {
+                if (admin.findCompanyAccess(c.getId()).isEmpty()) {
+                    admin.grantCompany(c, "ADMIN");
+                }
+            });
+        }
+        appUserRepository.save(admin);
+    }
+
     private void seedProductCategories() {
         if (productCategoryRepository.count() > 0) return;
         seedCategory("ALIMENT", "Alimentação", "#F59E0B");
@@ -178,6 +206,7 @@ public class DataLoader implements CommandLineRunner {
         // Guarda de idempotência: numa BD persistente (PostgreSQL) o seed de demo só corre uma vez.
         // Sem isto, cada arranque tentava recriar empresas/utilizadores e falhava na chave única de username.
         if (companyRepository.count() > 0) {
+            seedDefaultAdmin();
             return;
         }
         // 0. Seed Companies
@@ -194,6 +223,8 @@ public class DataLoader implements CommandLineRunner {
         mzCompany.setEmail("contacto@multicore.co.mz");
         mzCompany.setAddress("Avenida 24 de Julho 1500, Maputo");
         mzCompany = companyRepository.save(mzCompany);
+
+        seedDefaultAdmin(ptCompany, mzCompany);
 
         Company seededPtCompany = ptCompany;
         Company seededMzCompany = mzCompany;
@@ -427,52 +458,25 @@ public class DataLoader implements CommandLineRunner {
 
 
         // 3.1 Seed Stocks
-        Stock stLisboa1 = new Stock();
-        stLisboa1.setProduct(erpLic);
-        stLisboa1.setWarehouse(whLisboa);
-        stLisboa1.setQuantity(new BigDecimal("85.000"));
-        stockRepository.save(stLisboa1);
+        seedStock(erpLic, whLisboa, "85.000");
+        seedStock(support, whLisboa, "120.000");
+        seedStock(techServ, whLisboa, "45.000");
+        seedStock(partsProduct, whLisboa, "70.000");
+        seedStock(feijao, whLisboa, "30.000");
+        seedStock(massa, whLisboa, "160.000");
 
-        Stock stLisboa2 = new Stock();
-        stLisboa2.setProduct(support);
-        stLisboa2.setWarehouse(whLisboa);
-        stLisboa2.setQuantity(new BigDecimal("120.000"));
-        stockRepository.save(stLisboa2);
-
-        Stock stLisboa3 = new Stock();
-        stLisboa3.setProduct(techServ);
-        stLisboa3.setWarehouse(whLisboa);
-        stLisboa3.setQuantity(new BigDecimal("45.000"));
-        stockRepository.save(stLisboa3);
-
-        Stock stMaputo1 = new Stock();
-        stMaputo1.setProduct(partsProduct);
-        stMaputo1.setWarehouse(whMaputo);
-        stMaputo1.setQuantity(new BigDecimal("70.000"));
-        stockRepository.save(stMaputo1);
-
-        Stock stMaputo2 = new Stock();
-        stMaputo2.setProduct(support);
-        stMaputo2.setWarehouse(whMaputo);
-        stMaputo2.setQuantity(new BigDecimal("95.000"));
-        stockRepository.save(stMaputo2);
-
-        Stock stMaputo3 = new Stock();
-        stMaputo3.setProduct(feijao);
-        stMaputo3.setWarehouse(whMaputo);
-        stMaputo3.setQuantity(new BigDecimal("30.000"));
-        stockRepository.save(stMaputo3);
-
-        Stock stMaputo4 = new Stock();
-        stMaputo4.setProduct(massa);
-        stMaputo4.setWarehouse(whMaputo);
-        stMaputo4.setQuantity(new BigDecimal("160.000"));
-        stockRepository.save(stMaputo4);
+        seedStock(erpLic, whMaputo, "85.000");
+        seedStock(support, whMaputo, "95.000");
+        seedStock(techServ, whMaputo, "45.000");
+        seedStock(partsProduct, whMaputo, "70.000");
+        seedStock(feijao, whMaputo, "30.000");
+        seedStock(massa, whMaputo, "160.000");
 
         // 4. Seed Treasury Accounts
         TreasuryAccount cgd = new TreasuryAccount();
         cgd.setName("Caixa Geral de Depósitos - Conta à Ordem");
         cgd.setAccountNumber("PT50 0035 0123 4567 8901 23");
+        cgd.setAccountType(TreasuryAccountType.BANK);
         cgd.setBalance(new BigDecimal("18500.00"));
         cgd.setCompany(ptCompany);
         accountRepository.save(cgd);
@@ -480,6 +484,7 @@ public class DataLoader implements CommandLineRunner {
         TreasuryAccount bcp = new TreasuryAccount();
         bcp.setName("Millennium BCP - Investimentos");
         bcp.setAccountNumber("PT50 0033 0987 6543 2101 24");
+        bcp.setAccountType(TreasuryAccountType.BANK);
         bcp.setBalance(new BigDecimal("45000.00"));
         bcp.setCompany(mzCompany);
         accountRepository.save(bcp);
@@ -563,5 +568,13 @@ public class DataLoader implements CommandLineRunner {
 
     private void shareProduct(Product product, Company... companies) {
         product.getCompanies().addAll(java.util.List.of(companies));
+    }
+
+    private void seedStock(Product product, Warehouse warehouse, String quantity) {
+        Stock stock = new Stock();
+        stock.setProduct(product);
+        stock.setWarehouse(warehouse);
+        stock.setQuantity(new BigDecimal(quantity));
+        stockRepository.save(stock);
     }
 }

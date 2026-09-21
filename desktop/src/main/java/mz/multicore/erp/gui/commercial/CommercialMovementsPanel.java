@@ -7,6 +7,8 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 
 import javax.swing.*;
@@ -31,6 +33,7 @@ public final class CommercialMovementsPanel extends JPanel {
     private final JComboBox<String> period;
     private final JLabel footer;
     private List<MovimentoDTO> data = List.of();
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public CommercialMovementsPanel(MovimentosApiClient apiClient) {
         this.apiClient = apiClient;
@@ -48,7 +51,10 @@ public final class CommercialMovementsPanel extends JPanel {
         actions.setOpaque(false);
         actions.add(refresh);
         header.add(actions, BorderLayout.EAST);
-        add(header, BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -83,9 +89,8 @@ public final class CommercialMovementsPanel extends JPanel {
     public void refresh() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.loadAsync(this, () -> apiClient.listar(companyId, "", null, null), this::apply,
-                error -> JOptionPane.showMessageDialog(this,
-                        "Não foi possível carregar movimentos comerciais: " + error.getMessage(),
-                        "Erro", JOptionPane.ERROR_MESSAGE));
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar movimentos comerciais",
+                        error.getMessage(), "Tentar novamente", this::refresh));
     }
 
     private void apply(List<MovimentoDTO> loaded) {

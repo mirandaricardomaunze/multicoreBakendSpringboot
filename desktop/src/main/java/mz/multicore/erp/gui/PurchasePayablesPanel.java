@@ -97,12 +97,12 @@ final class PurchasePayablesPanel {
     private void openSupplierPaymentDialog() {
         int row = TableFilter.selectedModelRow(owner.payablesTable);
         if (row < 0 || row >= owner.payablesList.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma conta a pagar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Seleccione uma conta a pagar", "Escolha uma conta na tabela para continuar.");
             return;
         }
         var pa = owner.payablesList.get(row);
         if (owner.accountsList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Falta registar contas de tesouraria.", "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Sem contas de tesouraria", "Registe uma conta de tesouraria antes do pagamento.");
             return;
         }
         JComboBox<String> accCombo = new JComboBox<>();
@@ -136,15 +136,15 @@ final class PurchasePayablesPanel {
                 owner.purchaseApiClient.registerSupplierPayment(pa.purchaseId(), amount, accountId, reference);
                 return null;
             }, ignored -> {
-                JOptionPane.showMessageDialog(owner, "Pagamento registado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                owner.showPurchaseSuccess("Pagamento registado.");
                 refresh();
                 owner.loadPurchasesHistory();
                 owner.loadAccounts();
             }, owner::showPurchaseError);
         } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.ERROR, "Dados de pagamento inválidos", ex.getMessage());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.ERROR, "Não foi possível registar o pagamento", ex.getMessage());
         }
     }
 

@@ -121,8 +121,12 @@ public class PayslipPrintService {
         line(table, "Salário Base",            p.getBaseSalary());
         line(table, "Subsídios / Abonos",      p.getAllowances());
         line(table, "Horas Extras",            p.getOvertime());
+        if (p.getSalesBonus() != null && p.getSalesBonus().compareTo(BigDecimal.ZERO) > 0) {
+            line(table, "Prémio de Desempenho", p.getSalesBonus());
+        }
 
-        BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime());
+        BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime())
+                .add(p.getSalesBonus() != null ? p.getSalesBonus() : BigDecimal.ZERO);
         totalLine(table, "Vencimentos Brutos", gross);
         return table;
     }

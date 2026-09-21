@@ -15,6 +15,15 @@ public enum JournalSource {
     /** Compra a fornecedor. */
     PURCHASE("Compra"),
 
+    /** Pagamento que liquida uma compra a fornecedor. */
+    SUPPLIER_PAYMENT("Pagamento a fornecedor"),
+
+    /** Nota de crédito aprovada. */
+    CREDIT_NOTE("Nota de crédito"),
+
+    /** Nota de débito aprovada. */
+    DEBIT_NOTE("Nota de débito"),
+
     /** Processamento salarial. */
     PAYROLL("Salários"),
 

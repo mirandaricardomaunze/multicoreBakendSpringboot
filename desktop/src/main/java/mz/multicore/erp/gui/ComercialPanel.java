@@ -12,6 +12,9 @@ import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.PackageQuantityEditor;
 import mz.multicore.erp.gui.components.DecimalField;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.commercial.CommercialMovementsPanel;
 import mz.multicore.erp.gui.commercial.OutstandingAccountsPanel;
 import mz.multicore.erp.gui.commercial.CommercialNotesPanel;
@@ -43,13 +46,18 @@ import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
+import mz.multicore.erp.desktop.client.PrintApiClient;
+import mz.multicore.erp.gui.components.TableExportAction;
 
 public class ComercialPanel extends JPanel {
 
     private final ComercialApiClient comercialApiClient;
+    private final PrintApiClient printApiClient;
     private final InventoryApiClient inventoryApiClient;
     private final FinanceApiClient financeApiClient;
     private final JTabbedPane commercialTabs;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     // TAB 1: FATURAÇÃO ELEMENTS
     JComboBox<String> clientCombo;
@@ -145,6 +153,7 @@ public class ComercialPanel extends JPanel {
     private final BillOrderDialog billOrderDialog;
     private final CancelOrderDialog cancelOrderDialog;
     private final OrderDetailsDialog orderDetailsDialog;
+    private final PromotionsPanel promotionsPanel;
 
     public ComercialPanel(
             ComercialApiClient comercialApiClient,
@@ -155,10 +164,12 @@ public class ComercialPanel extends JPanel {
             POSApiClient posApiClient,
             MovimentosApiClient movimentosApiClient,
             PromotionApiClient promotionApiClient,
+            PrintApiClient printApiClient,
             /** Atalho para as transferências entre armazéns (Stock); {@code null} desliga-o. */
             Runnable openWarehouseTransfers
     ) {
         this.comercialApiClient = comercialApiClient;
+        this.printApiClient = printApiClient;
         this.inventoryApiClient = inventoryApiClient;
         this.financeApiClient = financeApiClient;
         this.posApiClient = posApiClient;
@@ -176,6 +187,7 @@ public class ComercialPanel extends JPanel {
                 this::loadInvoicesTable, this::loadOrdersTable);
         this.cancelOrderDialog = new CancelOrderDialog(this, comercialApiClient, this::loadOrdersTable);
         this.orderDetailsDialog = new OrderDetailsDialog(this, comercialApiClient, this::loadOrdersTable);
+        this.promotionsPanel = new PromotionsPanel(promotionApiClient, comercialApiClient);
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -212,15 +224,13 @@ public class ComercialPanel extends JPanel {
         tabbedPane.addTab("Contas Correntes", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), outstandingAccountsPanel);
 
         // TAB 9: PROMOÇÕES
-        tabbedPane.addTab("Promoções", UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),
-                new PromotionsPanel(promotionApiClient, comercialApiClient));
+        tabbedPane.addTab("Promoções", UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT), promotionsPanel);
 
         // TAB 10: MOVIMENTOS (vista unificada de todos os documentos comerciais)
         tabbedPane.addTab("Movimentos", UIHelper.icon("fas-list-alt", 16, UIHelper.TEXT_LIGHT), movementsPanel);
 
+        add(feedback, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
-
-        onPanelSelected();
     }
 
     public void showCustomerOrders() {
@@ -238,12 +248,12 @@ public class ComercialPanel extends JPanel {
     }
     void openInvoiceEditor() {
         if (clientsList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum cliente disponível.", "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Cliente necessário", "Registe um cliente antes de emitir a fatura.");
             return;
         }
         if (warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Armazém necessário",
+                    "Registe um armazém para a empresa actual antes de emitir a fatura.");
             return;
         }
         resetInvoiceDraft();
@@ -267,19 +277,18 @@ public class ComercialPanel extends JPanel {
             lastCreatedInvoice = created;
             resetInvoiceDraft();
             if (created.status() == InvoiceStatus.PENDING_DISCOUNT_APPROVAL) {
-                JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida!\n"
-                        + "Bloqueada para Aprovação de Desconto (superior a 10%).\n"
-                        + "Valor: " + created.totalAmount() + " MT.", "Bloqueio de Desconto", JOptionPane.WARNING_MESSAGE);
+                showCommercialNotice(FeedbackType.WARNING, "Fatura aguarda aprovação",
+                        "Fatura " + created.invoiceNumber() + " emitida com desconto superior a 10%. Valor: "
+                                + created.totalAmount() + " MT.");
             } else {
-                JOptionPane.showMessageDialog(this, "Fatura " + created.invoiceNumber() + " emitida com sucesso!\n"
-                        + "Valor: " + created.totalAmount() + " MT.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                ToastManager.success(this, "Fatura " + created.invoiceNumber() + " emitida · " + created.totalAmount() + " MT.");
             }
             loadInvoicesTable();
             backToInvoicesList();
             }, error -> showCommercialError("emitir fatura", error));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage() == null ? "Falha ao emitir fatura." : ex.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.ERROR, "Não foi possível emitir a fatura",
+                    ex.getMessage() == null ? "Tente novamente." : ex.getMessage());
         }
     }
 
@@ -294,6 +303,7 @@ public class ComercialPanel extends JPanel {
         notesPanel.refresh();
         outstandingAccountsPanel.refresh();
         movementsPanel.refresh();
+        promotionsPanel.reload();
     }
 
     private void loadClientsAndProducts() {
@@ -378,7 +388,7 @@ public class ComercialPanel extends JPanel {
             qty = quantityField.value().intValueExact();
             if (qty <= 0) throw new NumberFormatException();
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(this, "A quantidade deve ser um número inteiro superior a zero.", "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.ERROR, "Quantidade inválida", "Indique uma quantidade superior a zero.");
             return;
         }
 
@@ -389,7 +399,7 @@ public class ComercialPanel extends JPanel {
                 throw new NumberFormatException();
             }
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(this, "O desconto deve ser um número decimal entre 0 e 100.", "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.ERROR, "Desconto inválido", "Indique um desconto entre 0 e 100.");
             return;
         }
 
@@ -482,7 +492,7 @@ public class ComercialPanel extends JPanel {
     void cancelSelectedInvoice() {
         int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela para anular.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma fatura", "Escolha na tabela a fatura que pretende anular.");
             return;
         }
 
@@ -497,7 +507,7 @@ public class ComercialPanel extends JPanel {
             comercialApiClient.cancelInvoice(invoiceId, reason);
             return null;
         }, ignored -> {
-            JOptionPane.showMessageDialog(this, "Fatura " + invoiceNum + " anulada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Fatura " + invoiceNum + " anulada com sucesso.");
             loadInvoicesTable();
             receiptsPanel.refresh();
         }, error -> showCommercialError("anular fatura", error));
@@ -506,18 +516,19 @@ public class ComercialPanel extends JPanel {
     void paySelectedInvoice() {
         int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela para liquidar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma fatura", "Escolha na tabela a fatura que pretende liquidar.");
             return;
         }
 
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = (String) invoicesTableModel.getValueAt(row, 1);
-        String statusStr = (String) invoicesTableModel.getValueAt(row, 3);
-        BigDecimal invoiceTotal = (BigDecimal) invoicesTableModel.getValueAt(row, 5);
+        String statusStr = (String) invoicesTableModel.getValueAt(row, 4);
+        BigDecimal invoiceTotal = (BigDecimal) invoicesTableModel.getValueAt(row, 6);
 
         // Uma fatura parcialmente paga continua a receber recibos até o saldo chegar a zero.
         if (!"APPROVED".equalsIgnoreCase(statusStr) && !"PARTIALLY_PAID".equalsIgnoreCase(statusStr)) {
-            JOptionPane.showMessageDialog(this, "Apenas faturas por cobrar podem receber recibo. Estado atual: " + statusStr, "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Fatura não liquidável",
+                    "Apenas faturas por cobrar podem receber recibo. Estado actual: " + UIHelper.humanStatus(statusStr) + ".");
             return;
         }
 
@@ -544,13 +555,18 @@ public class ComercialPanel extends JPanel {
                 error -> showCommercialLoadError("faturas", error));
     }
 
+    private static final java.time.format.DateTimeFormatter INVOICE_DATE_FMT =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
     private void applyInvoices(List<InvoiceDTO> invoices) {
         invoicesTableModel.setRowCount(0);
         for (InvoiceDTO invoice : invoices) {
+            String dateStr = invoice.createdAt() != null ? invoice.createdAt().format(INVOICE_DATE_FMT) : "—";
             invoicesTableModel.addRow(new Object[]{
                     invoice.id(),
                     invoice.invoiceNumber(),
                     invoice.clientName(),
+                    dateStr,
                     invoice.status().name(),
                     invoice.totalAmount(), invoice.outstandingAmount()
             });
@@ -563,8 +579,7 @@ public class ComercialPanel extends JPanel {
     /** Abre o editor de nova encomenda (painel completo, substitui o modal). */
     void openOrderEditor() {
         if (warehousesList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum armazém disponível para a empresa atual.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Armazém necessário", "Registe um armazém para a empresa actual.");
             return;
         }
         resetOrderDraft();
@@ -597,7 +612,7 @@ public class ComercialPanel extends JPanel {
             qty = orderQuantityField.value().intValueExact();
             if (qty <= 0) throw new NumberFormatException();
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(this, "A quantidade deve ser um número inteiro superior a zero.", "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.ERROR, "Quantidade inválida", "Indique uma quantidade superior a zero.");
             return;
         }
 
@@ -608,7 +623,7 @@ public class ComercialPanel extends JPanel {
                 throw new NumberFormatException();
             }
         } catch (RuntimeException e) {
-            JOptionPane.showMessageDialog(this, "O desconto deve ser um número decimal entre 0 e 100.", "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.ERROR, "Desconto inválido", "Indique um desconto entre 0 e 100.");
             return;
         }
 
@@ -733,7 +748,7 @@ public class ComercialPanel extends JPanel {
     void billSelectedOrder() {
         int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela para faturar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma encomenda", "Escolha na tabela a encomenda que pretende faturar.");
             return;
         }
 
@@ -742,14 +757,14 @@ public class ComercialPanel extends JPanel {
         String statusStr = (String) ordersTableModel.getValueAt(row, 3);
 
         if (!"SEPARATED".equalsIgnoreCase(statusStr)) {
-            JOptionPane.showMessageDialog(this, "Apenas pedidos no estado SEPARATED podem ser faturados. Estado atual: " + statusStr, "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Encomenda ainda não separada",
+                    "Apenas pedidos separados podem ser faturados. Estado actual: " + UIHelper.humanStatus(statusStr) + ".");
             return;
         }
 
         UIHelper.runWithProgress(this, "A faturar pedido separado…",
                 () -> comercialApiClient.billFulfillmentOrder(orderId, CustomerOrderFulfillmentActions.terminalName()), invoice -> {
-            JOptionPane.showMessageDialog(this, "Encomenda " + orderNum + " faturada com sucesso!\n" +
-                    "Fatura " + invoice.invoiceNumber() + " gerada com o mesmo número de sequência.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Encomenda " + orderNum + " faturada · fatura " + invoice.invoiceNumber() + ".");
 
             loadOrdersTable();
             loadInvoicesTable();
@@ -759,8 +774,8 @@ public class ComercialPanel extends JPanel {
     void convertSelectedOrderToGuide() {
         int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela para converter em guia.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma encomenda",
+                    "Escolha na tabela a encomenda que pretende converter em guia.");
             return;
         }
 
@@ -779,9 +794,8 @@ public class ComercialPanel extends JPanel {
         }
 
         if (!"PENDING".equals(status)) {
-            JOptionPane.showMessageDialog(this,
-                    "Apenas encomendas aprovadas no estado PENDING podem ser convertidas em guia. Estado atual: " + status,
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Encomenda indisponível para guia",
+                    "A encomenda deve estar pendente e aprovada. Estado actual: " + UIHelper.humanStatus(status) + ".");
             return;
         }
 
@@ -834,10 +848,7 @@ public class ComercialPanel extends JPanel {
                 });
 
         if (dialog.showDialog() && created[0] != null) {
-            JOptionPane.showMessageDialog(this,
-                    "Guia " + created[0].guideNumber() + " criada e submetida para aprovação.\n"
-                            + "O stock só será movimentado quando a guia for aprovada.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Guia " + created[0].guideNumber() + " criada e submetida para aprovação.");
             loadOrdersTable();
             deliveryGuidesPanel.refresh();
         }
@@ -909,36 +920,31 @@ public class ComercialPanel extends JPanel {
     void printSelectedInvoice() {
         int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma fatura", "Escolha uma fatura na tabela para continuar.");
             return;
         }
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
         UIHelper.runWithProgress(this, "A gerar fatura em PDF…", () -> comercialApiClient.renderInvoice(invoiceId),
-                pdf -> mz.multicore.erp.modules.printing.PdfFileSaver.saveAndOpen(pdf, "fatura-" + invoiceNum),
+                pdf -> PrintPreviewDialog.show(this, pdf, "fatura-" + invoiceNum),
                 error -> showCommercialError("gerar fatura em PDF", error));
     }
 
     void printSelectedGuide() {
         int row = TableFilter.selectedModelRow(invoicesTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma fatura na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma fatura", "Escolha uma fatura na tabela para continuar.");
             return;
         }
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
         UIHelper.runWithProgress(this, "A gerar guia em PDF…", () -> comercialApiClient.renderGuide(invoiceId),
-                pdf -> mz.multicore.erp.modules.printing.PdfFileSaver.saveAndOpen(pdf, "guia-remessa-" + invoiceNum),
+                pdf -> PrintPreviewDialog.show(this, pdf, "guia-remessa-" + invoiceNum),
                 error -> showCommercialError("gerar guia em PDF", error));
     }
 
     void exportInvoicesTable() {
-        try {
-            byte[] pdf = mz.multicore.erp.modules.printing.TablePdfExporter.renderFromSwing("Faturas Emitidas", invoicesTable);
-            mz.multicore.erp.modules.printing.PdfFileSaver.saveAndOpen(pdf, "faturas-export");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao exportar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        TableExportAction.export(this, printApiClient, invoicesTable, "Faturas Emitidas", "faturas");
     }
 
     void printSelectedOrder() {
@@ -956,30 +962,30 @@ public class ComercialPanel extends JPanel {
     void openSelectedOrderDetails() {
         int row = TableFilter.selectedModelRow(ordersTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma encomenda na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma encomenda", "Escolha uma encomenda na tabela para continuar.");
             return;
         }
         orderDetailsDialog.open((Long) ordersTableModel.getValueAt(row, 0));
     }
 
     void exportOrdersTable() {
-        try {
-            byte[] pdf = mz.multicore.erp.modules.printing.TablePdfExporter.renderFromSwing("Encomendas", ordersTable);
-            mz.multicore.erp.modules.printing.PdfFileSaver.saveAndOpen(pdf, "encomendas-export");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao exportar: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
+        TableExportAction.export(this, printApiClient, ordersTable, "Encomendas", "encomendas");
     }
 
     private void showCommercialLoadError(String area, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível carregar " + area + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area,
+                error.getMessage(), "Tentar novamente", this::onPanelSelected);
     }
 
     void showCommercialError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        showCommercialNotice(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
     }
+
+    public void showCommercialNotice(FeedbackType type, String title, String message) {
+        feedback.show(type, title, message, null, null);
+    }
+
+    public void showCommercialSuccess(String message) { ToastManager.success(this, message); }
 
     private record CommercialMetadata(List<ClientDTO> clients, List<ProductDTO> products) {}
 }

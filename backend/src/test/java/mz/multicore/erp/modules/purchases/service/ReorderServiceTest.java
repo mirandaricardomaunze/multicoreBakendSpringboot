@@ -26,13 +26,17 @@ class ReorderServiceTest {
 
     private StockRepository stockRepository;
     private ProductRepository productRepository;
+    private mz.multicore.erp.modules.comercial.repository.InvoiceRepository invoiceRepository;
+    private mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository purchaseLineRepository;
     private ReorderService service;
 
     @BeforeEach
     void setUp() {
         stockRepository = mock(StockRepository.class);
         productRepository = mock(ProductRepository.class);
-        service = new ReorderService(stockRepository, productRepository);
+        invoiceRepository = mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class);
+        purchaseLineRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository.class);
+        service = new ReorderService(stockRepository, productRepository, invoiceRepository, purchaseLineRepository);
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
     }

@@ -23,15 +23,23 @@ public class SearchField extends JTextField {
     public SearchField(String hint) {
         this.hint = hint == null ? "" : hint;
         UIHelper.styleTextField(this);
-        // Empurra o texto para a direita da lupa, sem substituir a borda (foco continua a funcionar).
-        Insets m = getMargin();
-        setMargin(new Insets(m == null ? 0 : m.top, PAD_LEFT, m == null ? 0 : m.bottom, m == null ? 8 : m.right));
+        putClientProperty("JTextField.placeholderText", this.hint);
+        putClientProperty("JTextField.leadingIcon", icon);
+        putClientProperty("JTextField.showClearButton", Boolean.TRUE);
+        if (!(javax.swing.UIManager.getLookAndFeel() instanceof com.formdev.flatlaf.FlatLaf)) {
+            // Empurra o texto para a direita da lupa, sem substituir a borda (foco continua a funcionar).
+            Insets m = getMargin();
+            setMargin(new Insets(m == null ? 0 : m.top, PAD_LEFT, m == null ? 0 : m.bottom, m == null ? 8 : m.right));
+        }
         setColumns(18);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        if (javax.swing.UIManager.getLookAndFeel() instanceof com.formdev.flatlaf.FlatLaf) {
+            return; // FlatLaf desenha leadingIcon, placeholderText e clearButton nativamente
+        }
         int iconY = (getHeight() - icon.getIconHeight()) / 2;
         icon.paintIcon(this, g, 7, iconY);
         if (getText().isEmpty() && !hint.isEmpty()) {

@@ -52,6 +52,7 @@ final class ConfigSupportPanel {
         };
         owner.supportTable = new JTable(owner.supportModel);
         UIHelper.styleTable(owner.supportTable);
+        owner.supportTable.putClientProperty("noRowInspector", Boolean.TRUE);
         owner.supportTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {

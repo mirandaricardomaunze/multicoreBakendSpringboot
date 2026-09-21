@@ -39,6 +39,15 @@ import org.springframework.context.annotation.Profile;
 public class DesktopApplication {
 
     public static void main(String[] args) {
+        // Handler global para excepções silenciosas no EDT (Event Dispatch Thread).
+        // Sem isto, erros no invokeLater são engolidos sem aparecer nos logs.
+        System.setProperty("sun.awt.exception.handler", java.awt.EventQueue.class.getName());
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            System.err.println("[FATAL] Excepção não tratada em thread '" + thread.getName() + "':");
+            throwable.printStackTrace(System.err);
+            System.exit(1);
+        });
+
         ConfigurableApplicationContext context = new SpringApplicationBuilder(DesktopApplication.class)
                 .web(WebApplicationType.NONE)   // sem servidor embutido: a UI é cliente HTTP, não servidor
                 .headless(false)

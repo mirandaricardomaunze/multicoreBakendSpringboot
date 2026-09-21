@@ -82,6 +82,26 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void recordPayment_comReferenciaEDetalhes_persisteEMapeia() {
+        when(companyRepository.findById(5L)).thenReturn(Optional.of(company(5L)));
+        Subscription sub = new Subscription();
+        sub.setCompanyId(5L);
+        when(subscriptionRepository.findByCompanyId(5L)).thenReturn(Optional.of(sub));
+        when(paymentRepository.save(any(SubscriptionPayment.class))).thenAnswer(i -> i.getArgument(0));
+
+        LocalDate newEnd = LocalDate.now().plusMonths(1);
+        SubscriptionPaymentDTO dto = service.recordPayment(5L, new RecordPaymentRequest(
+                new BigDecimal("5000"), "TRANSFERENCIA", LocalDate.now(), LocalDate.now(), newEnd,
+                "TRF-BIM-9921", "Banco: Millennium BIM | Titular: Exemplo Lda", "Pagamento de anuidade"));
+
+        assertEquals("TRANSFERENCIA", dto.method());
+        assertEquals("Transferência bancária", dto.methodLabel());
+        assertEquals("TRF-BIM-9921", dto.reference());
+        assertEquals("Banco: Millennium BIM | Titular: Exemplo Lda", dto.paymentDetails());
+        assertEquals("Pagamento de anuidade", dto.note());
+    }
+
+    @Test
     void recordPayment_valorNaoPositivo_rejeita() { // SB-02
         when(companyRepository.findById(5L)).thenReturn(Optional.of(company(5L)));
         assertThrows(BusinessRuleException.class, () -> service.recordPayment(5L,

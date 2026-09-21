@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.events.CreditNoteApprovedEvent;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -23,6 +24,7 @@ import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -43,6 +45,7 @@ public class CreditNoteService {
     private final InventoryService inventoryService;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CreditNoteService(
             CreditNoteRepository creditNoteRepository,
@@ -50,7 +53,8 @@ public class CreditNoteService {
             WarehouseRepository warehouseRepository,
             InventoryService inventoryService,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.creditNoteRepository = creditNoteRepository;
         this.invoiceRepository = invoiceRepository;
@@ -58,6 +62,7 @@ public class CreditNoteService {
         this.inventoryService = inventoryService;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -174,6 +179,17 @@ public class CreditNoteService {
         note.setApprovedBy(CurrentUserContext.getUsername());
         note.setApprovedAt(LocalDateTime.now());
         CreditNote saved = creditNoteRepository.save(note);
+        BigDecimal returnedCost = saved.getReason() == CreditNoteReason.RETURN
+                ? saved.getLines().stream()
+                    .map(line -> line.getInvoiceLine() == null || line.getInvoiceLine().getUnitCost() == null
+                            ? BigDecimal.ZERO
+                            : line.getInvoiceLine().getUnitCost().multiply(line.getQuantity()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                : BigDecimal.ZERO;
+        eventPublisher.publishEvent(new CreditNoteApprovedEvent(
+                saved.getCompany().getId(), saved.getId(), saved.getNoteNumber(),
+                saved.getIssueDate().toLocalDate(), saved.getTotalBeforeTax(),
+                saved.getTaxAmount(), saved.getTotalAmount(), returnedCost));
         auditLogService.logCurrent("CREDIT_NOTE_APPROVE",
                 "Nota de crédito " + saved.getNoteNumber() + " aprovada.");
         return toDTO(saved);

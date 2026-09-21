@@ -33,6 +33,9 @@ import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.repository.ExpenseClaimRepository;
 import mz.multicore.erp.modules.hr.repository.PayslipRepository;
 import mz.multicore.erp.modules.hr.repository.VacationRepository;
+import mz.multicore.erp.modules.performance.model.BonusStatus;
+import mz.multicore.erp.modules.performance.model.SalesGoalBonus;
+import mz.multicore.erp.modules.performance.repository.SalesGoalBonusRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -84,6 +87,7 @@ public class HRService {
     private final HrPolicyService hrPolicyService;
     private final PayrollPeriodService payrollPeriodService;
     private final ApplicationEventPublisher eventPublisher;
+    private final SalesGoalBonusRepository salesGoalBonusRepository;
 
     public HRService(
             EmployeeRepository employeeRepository,
@@ -93,7 +97,7 @@ public class HRService {
             VacationRepository vacationRepository,
             HrAccessGuard guard,
             PayrollTaxService payrollTaxService,
-            @Lazy ApprovalService approvalService, // Lazy injection to break potential cycles
+            @Lazy ApprovalService approvalService,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             @Lazy FinanceService financeService,
@@ -107,6 +111,38 @@ public class HRService {
             HrPolicyService hrPolicyService,
             PayrollPeriodService payrollPeriodService,
             ApplicationEventPublisher eventPublisher
+    ) {
+        this(employeeRepository, expenseClaimRepository, payslipRepository, absenceRepository,
+                vacationRepository, guard, payrollTaxService, approvalService, documentNumberService,
+                auditLogService, financeService, appUserService, contractService, timeSheetService,
+                overtimeValuationService, salaryHistoryService, payrollLiabilityService,
+                payrollDeductionService, hrPolicyService, payrollPeriodService, eventPublisher, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public HRService(
+            EmployeeRepository employeeRepository,
+            ExpenseClaimRepository expenseClaimRepository,
+            PayslipRepository payslipRepository,
+            AbsenceRepository absenceRepository,
+            VacationRepository vacationRepository,
+            HrAccessGuard guard,
+            PayrollTaxService payrollTaxService,
+            @Lazy ApprovalService approvalService,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            @Lazy FinanceService financeService,
+            AppUserService appUserService,
+            EmploymentContractService contractService,
+            @Lazy TimeSheetService timeSheetService,
+            @Lazy OvertimeValuationService overtimeValuationService,
+            SalaryHistoryService salaryHistoryService,
+            @Lazy PayrollLiabilityService payrollLiabilityService,
+            @Lazy PayrollDeductionService payrollDeductionService,
+            HrPolicyService hrPolicyService,
+            PayrollPeriodService payrollPeriodService,
+            ApplicationEventPublisher eventPublisher,
+            @Lazy SalesGoalBonusRepository salesGoalBonusRepository
     ) {
         this.employeeRepository = employeeRepository;
         this.expenseClaimRepository = expenseClaimRepository;
@@ -129,6 +165,7 @@ public class HRService {
         this.hrPolicyService = hrPolicyService;
         this.payrollPeriodService = payrollPeriodService;
         this.eventPublisher = eventPublisher;
+        this.salesGoalBonusRepository = salesGoalBonusRepository;
     }
 
     @Transactional
@@ -271,12 +308,29 @@ public class HRService {
         p.setTaxLegalBasis(tax.legalBasis());
         p.setOtherDeductions(orZero(request.otherDeductions()));
         p.setAbsenceDeduction(calculateAbsenceDeduction(employee, request.year(), request.month()));
+
+        List<SalesGoalBonus> approvedBonuses = salesGoalBonusRepository != null
+                ? salesGoalBonusRepository.findByCompanyIdAndEmployeeIdAndStatus(employee.getCompany().getId(), employee.getId(), BonusStatus.APPROVED)
+                        .stream().filter(b -> b.getPayslip() == null).toList()
+                : List.of();
+        BigDecimal totalSalesBonus = approvedBonuses.stream()
+                .map(SalesGoalBonus::getApprovedAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        p.setSalesBonus(totalSalesBonus);
+
         p.setNetPay(calculateNet(p));
         p.setStatus("DRAFT");
         p.setNotes(request.notes());
         p.setPayslipNumber(documentNumberService.next(DocumentSeries.PAYSLIP));
 
         Payslip saved = payslipRepository.save(p);
+        if (salesGoalBonusRepository != null) {
+            for (SalesGoalBonus bonus : approvedBonuses) {
+                bonus.setPayslip(saved);
+                bonus.setStatus(BonusStatus.PAID);
+                salesGoalBonusRepository.save(bonus);
+            }
+        }
         saved = applyCommittedDeductions(saved);
         auditLogService.logCurrent("PAYSLIP_ISSUE", String.format(
                 "Recibo %s emitido para %s (%d/%d), líquido %s",
@@ -293,7 +347,7 @@ public class HRService {
      * dívida — não é erro, é a única coisa honesta a fazer com um líquido que não chega.
      */
     private Payslip applyCommittedDeductions(Payslip payslip) {
-        BigDecimal gross = payslip.getBaseSalary().add(payslip.getAllowances()).add(payslip.getOvertime());
+        BigDecimal gross = payslip.getBaseSalary().add(payslip.getAllowances()).add(payslip.getOvertime()).add(orZero(payslip.getSalesBonus()));
         BigDecimal room = gross
                 .subtract(payslip.getIrpsDeduction())
                 .subtract(payslip.getInssDeduction())
@@ -473,7 +527,7 @@ public class HRService {
         eventPublisher.publishEvent(new PayslipPaidEvent(
                 guard.currentCompanyId(), saved.getId(), saved.getPayslipNumber(),
                 saved.getEmployee().getName(), saved.getPaymentDate(),
-                saved.getBaseSalary().add(saved.getAllowances()).add(saved.getOvertime()),
+                saved.getBaseSalary().add(saved.getAllowances()).add(saved.getOvertime()).add(orZero(saved.getSalesBonus())),
                 saved.getAbsenceDeduction(), saved.getIrpsDeduction(), saved.getInssDeduction(),
                 saved.getEmployerInss(), saved.getOtherDeductions(), saved.getNetPay()));
 
@@ -527,7 +581,7 @@ public class HRService {
     }
 
     private BigDecimal calculateNet(Payslip p) {
-        BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime());
+        BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime()).add(orZero(p.getSalesBonus()));
         BigDecimal deductions = p.getIrpsDeduction().add(p.getInssDeduction())
                 .add(p.getOtherDeductions()).add(p.getAbsenceDeduction());
         return gross.subtract(deductions);
@@ -565,7 +619,7 @@ public class HRService {
     }
 
     private PayslipDTO payslipToDTO(Payslip p) {
-        BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime());
+        BigDecimal gross = p.getBaseSalary().add(p.getAllowances()).add(p.getOvertime()).add(orZero(p.getSalesBonus()));
         BigDecimal totalDeductions = p.getIrpsDeduction().add(p.getInssDeduction())
                 .add(p.getOtherDeductions()).add(p.getAbsenceDeduction());
         return new PayslipDTO(
@@ -579,6 +633,7 @@ public class HRService {
                 p.getBaseSalary(),
                 p.getAllowances(),
                 p.getOvertime(),
+                orZero(p.getSalesBonus()),
                 p.getIrpsDeduction(),
                 p.getInssDeduction(),
                 p.getEmployerInss(),

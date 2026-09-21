@@ -7,7 +7,12 @@
     <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId></dependency><dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>
     <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jsr310</artifactId></dependency>
     <dependency><groupId>org.kordamp.ikonli</groupId><artifactId>ikonli-swing</artifactId><version>${ikonli.version}</version></dependency><dependency><groupId>org.kordamp.ikonli</groupId><artifactId>ikonli-fontawesome5-pack</artifactId><version>${ikonli.version}</version></dependency>
-    <dependency><groupId>com.github.librepdf</groupId><artifactId>openpdf</artifactId><version>${openpdf.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+    <!-- OpenPDF so em testes: quem *desenha* PDF e o servidor. O desktop recebe-o feito. -->
+    <dependency><groupId>com.github.librepdf</groupId><artifactId>openpdf</artifactId><version>${openpdf.version}</version><scope>test</scope></dependency>
+    <!-- FlatLaf: Look and Feel moderno com cantos arredondados, HiDPI e foco elegante -->
+    <dependency><groupId>com.formdev</groupId><artifactId>flatlaf</artifactId><version>3.7.2</version></dependency>
+    <!-- Render e spool de PDF no cliente: pre-visualizacao e envio para a impressora seleccionada. -->
+    <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>${pdfbox.version}</version></dependency><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   </dependencies>
   <build><plugins>
     <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId><configuration><mainClass>mz.multicore.erp.desktop.DesktopApplication</mainClass></configuration></plugin>

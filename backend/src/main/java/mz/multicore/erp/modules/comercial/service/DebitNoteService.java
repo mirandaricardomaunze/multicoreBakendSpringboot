@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.events.DebitNoteApprovedEvent;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -19,6 +20,7 @@ import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -36,17 +38,20 @@ public class DebitNoteService {
     private final InvoiceRepository invoiceRepository;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public DebitNoteService(
             DebitNoteRepository debitNoteRepository,
             InvoiceRepository invoiceRepository,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.debitNoteRepository = debitNoteRepository;
         this.invoiceRepository = invoiceRepository;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -113,6 +118,10 @@ public class DebitNoteService {
         note.setApprovedBy(CurrentUserContext.getUsername());
         note.setApprovedAt(LocalDateTime.now());
         DebitNote saved = debitNoteRepository.save(note);
+        eventPublisher.publishEvent(new DebitNoteApprovedEvent(
+                saved.getCompany().getId(), saved.getId(), saved.getNoteNumber(),
+                saved.getIssueDate().toLocalDate(), saved.getTotalBeforeTax(),
+                saved.getTaxAmount(), saved.getTotalAmount()));
         auditLogService.logCurrent("DEBIT_NOTE_APPROVE",
                 "Nota de débito " + saved.getNoteNumber() + " aprovada.");
         return toDTO(saved);

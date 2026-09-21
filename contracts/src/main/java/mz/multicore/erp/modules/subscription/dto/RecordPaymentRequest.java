@@ -13,5 +13,11 @@ public record RecordPaymentRequest(
         LocalDate paidAt,
         LocalDate periodStart,
         LocalDate periodEnd,
+        String reference,
+        String paymentDetails,
         String note
-) {}
+) {
+    public RecordPaymentRequest(BigDecimal amount, String method, LocalDate paidAt, LocalDate periodStart, LocalDate periodEnd, String note) {
+        this(amount, method, paidAt, periodStart, periodEnd, null, null, note);
+    }
+}

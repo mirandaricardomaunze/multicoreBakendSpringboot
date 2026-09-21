@@ -42,16 +42,13 @@ final class CommercialOrderSubmission {
                             "Enviado para separação e stock reservado (" + created.totalAmount() + " MT)."),
                     error -> owner.showCommercialError("criar encomenda", error));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(owner,
-                    ex.getMessage() == null ? "Falha ao criar encomenda." : ex.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showCommercialError("criar encomenda", ex);
         }
     }
 
     private static void announce(ComercialPanel owner, OrderDTO created, String estado) {
         owner.lastCreatedOrder = created;
-        JOptionPane.showMessageDialog(owner, "Encomenda " + created.orderNumber() + " criada!\n" + estado,
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        owner.showCommercialSuccess("Encomenda " + created.orderNumber() + " criada. " + estado);
         owner.loadOrdersTable();
         owner.backToOrdersList();
     }

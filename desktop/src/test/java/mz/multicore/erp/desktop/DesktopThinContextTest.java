@@ -41,4 +41,19 @@ class DesktopThinContextTest {
         assertThat(context.containsBean("POSService")).isFalse();
         assertThat(context.containsBean("productRepository")).isFalse();
     }
+
+    @Test
+    void mainFrameInstantiatesCleanlyForNormalUserAndSuperAdmin() throws Exception {
+        mz.multicore.erp.desktop.session.DesktopSessionStore store = context.getBean(mz.multicore.erp.desktop.session.DesktopSessionStore.class);
+        store.setSession(new mz.multicore.erp.desktop.session.DesktopSession(
+                "token-123", java.time.Instant.now().plusSeconds(3600), "admin", "Administrador Geral",
+                false, java.util.List.of(new mz.multicore.erp.desktop.session.DesktopSession.CompanyAccess(1L, "Multicore Lda", "ADMIN"))
+        ));
+
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            mz.multicore.erp.gui.MainFrame frame = context.getBean(mz.multicore.erp.gui.MainFrame.class);
+            assertThat(frame).isNotNull();
+            frame.dispose();
+        });
+    }
 }

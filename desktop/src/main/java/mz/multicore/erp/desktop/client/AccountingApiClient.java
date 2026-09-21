@@ -60,4 +60,15 @@ public class AccountingApiClient {
         return clientFactory.authenticatedClient().get(
                 "/api/accounting/ledger/" + accountCode + "?from=" + from + "&to=" + to, LedgerDTO.class);
     }
+
+    public IncomeStatementDTO getIncomeStatement(LocalDate from, LocalDate to) {
+        return clientFactory.authenticatedClient().get(
+                "/api/accounting/income-statement?from=" + from + "&to=" + to,
+                IncomeStatementDTO.class);
+    }
+
+    public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
+        return clientFactory.authenticatedClient().get(
+                "/api/accounting/balance-sheet?asOf=" + asOf, BalanceSheetDTO.class);
+    }
 }

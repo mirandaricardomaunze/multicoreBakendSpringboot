@@ -1,6 +1,8 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
+import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
@@ -11,6 +13,8 @@ import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
+import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -29,6 +33,7 @@ import mz.multicore.erp.modules.purchases.model.Supplier;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -48,6 +53,7 @@ public class PurchaseService {
     private final FinanceService financeService;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PurchaseService(
             SupplierRepository supplierRepository,
@@ -58,7 +64,8 @@ public class PurchaseService {
             InventoryService inventoryService,
             FinanceService financeService,
             DocumentNumberService documentNumberService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
@@ -69,6 +76,7 @@ public class PurchaseService {
         this.financeService = financeService;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -186,10 +194,18 @@ public class PurchaseService {
         purchase = purchaseRepository.save(purchase);
 
         // Pagamento imediato → saída de tesouraria (CREDIT). Sem conta → fica a crédito (conta a pagar).
+        boolean cashPayment = false;
         if (payNow) {
             String description = "Pagamento Compra " + purchase.getPurchaseNumber() + " - Fornecedor " + supplier.getName();
             financeService.registerTransaction(request.financeAccountId(), "CREDIT", total, description);
+            cashPayment = financeService.accountType(request.financeAccountId()) == TreasuryAccountType.CASH;
         }
+
+        eventPublisher.publishEvent(new PurchaseRegisteredEvent(
+                request.companyId(), purchase.getId(), purchase.getPurchaseNumber(),
+                purchase.getPurchaseDate().toLocalDate(),
+                purchase.getTotalAmount().subtract(purchase.getTaxAmount()),
+                purchase.getTaxAmount(), purchase.getTotalAmount(), purchase.getAmountPaid(), cashPayment));
 
         return purchase;
     }
@@ -362,7 +378,12 @@ public class PurchaseService {
         String desc = "Pagamento a fornecedor " + purchase.getSupplier().getName()
                 + " — Compra " + purchase.getPurchaseNumber()
                 + (reference != null && !reference.isBlank() ? " (ref. " + reference + ")" : "");
-        financeService.registerTransaction(financeAccountId, "CREDIT", amount, desc);
+        TreasuryTransactionDTO transaction = financeService.registerTransaction(
+                financeAccountId, "CREDIT", amount, desc);
+        eventPublisher.publishEvent(new SupplierPaymentRegisteredEvent(
+                purchase.getCompany().getId(), transaction.id(), purchase.getPurchaseNumber(),
+                transaction.transactionDate().toLocalDate(), amount,
+                financeService.accountType(financeAccountId) == TreasuryAccountType.CASH));
         auditLogService.logCurrent("SUPPLIER_PAYMENT",
                 "Compra " + purchase.getPurchaseNumber() + " pagamento " + amount.toPlainString()
                         + " MT (saldo " + purchase.getOutstanding().toPlainString() + " MT)");

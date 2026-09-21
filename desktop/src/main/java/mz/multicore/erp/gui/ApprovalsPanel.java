@@ -6,6 +6,9 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
@@ -31,6 +34,7 @@ public class ApprovalsPanel extends JPanel {
 
     // Toolbar
     private ModernButton openBtn;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     // Data lists
     private List<ApprovalRequestDTO> pendingList = new ArrayList<>();
@@ -61,7 +65,11 @@ public class ApprovalsPanel extends JPanel {
                 createPendingTab());
         tabbedPane.addTab("Histórico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.TEXT_LIGHT),
                 createHistoryTab());
-        add(tabbedPane, BorderLayout.CENTER);
+        JPanel body = new JPanel(new BorderLayout(0, 10));
+        body.setOpaque(false);
+        body.add(feedback, BorderLayout.NORTH);
+        body.add(tabbedPane, BorderLayout.CENTER);
+        add(body, BorderLayout.CENTER);
 
         // LISTENERS
         pendingTable.getSelectionModel().addListSelectionListener(e -> {
@@ -84,9 +92,8 @@ public class ApprovalsPanel extends JPanel {
         UIHelper.loadAsync(this,
                 () -> new ApprovalData(approvalApiClient.getPendingRequests(), approvalApiClient.getAllRequests()),
                 this::applyData,
-                error -> JOptionPane.showMessageDialog(this,
-                        "Não foi possível carregar as aprovações: " + error.getMessage(),
-                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar as aprovações",
+                        error.getMessage(), "Tentar novamente", this::refreshData));
     }
 
     /** Aba dos pedidos pendentes (cabeçalho com acção + tabela a ocupar toda a aba). */
@@ -269,10 +276,9 @@ public class ApprovalsPanel extends JPanel {
                 return null;
             }, ignored -> {
                 dlg.close();
-                JOptionPane.showMessageDialog(this, "Documento rejeitado com sucesso.",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            }, error -> JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + error.getMessage(),
-                    "Erro de autorização", JOptionPane.ERROR_MESSAGE));
+                ToastManager.success(this, "Documento rejeitado com sucesso.");
+            }, error -> feedback.show(FeedbackType.ERROR, "Não foi possível rejeitar o documento",
+                    error.getMessage(), null, null));
         });
         dlg.addActionButton(rejectBtn);
         dlg.setConfirmButton("Aprovar", "fas-check");
@@ -283,7 +289,7 @@ public class ApprovalsPanel extends JPanel {
 
         boolean approved = dlg.showDialog();
         if (approved) {
-            JOptionPane.showMessageDialog(this, "Documento aprovado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Documento aprovado com sucesso.");
         }
         refreshData();
     }

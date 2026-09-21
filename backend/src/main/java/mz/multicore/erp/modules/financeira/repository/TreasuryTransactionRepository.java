@@ -10,4 +10,6 @@ import java.util.List;
 public interface TreasuryTransactionRepository extends JpaRepository<TreasuryTransaction, Long> {
     List<TreasuryTransaction> findAllByOrderByTransactionDateDesc();
     List<TreasuryTransaction> findByTreasuryAccountCompanyIdOrderByTransactionDateDesc(Long companyId);
+    List<TreasuryTransaction> findByTreasuryAccountIdOrderByTransactionDateDesc(Long treasuryAccountId);
+    List<TreasuryTransaction> findByTreasuryAccountIdAndTransactionDateBetween(Long treasuryAccountId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

@@ -4,7 +4,32 @@
 > [BACKUP_RESTORE_SPEC.md](BACKUP_RESTORE_SPEC.md). Os BR-0x/1x são **automáticos**
 > (`DatabaseBackupServiceTest`); os BR-5x são **manuais** (exigem PostgreSQL + `pg_dump`/`pg_restore`).
 
-**Última actualização:** 2026-06-30
+**Última actualização:** 2026-09-07
+
+## Verificação repetível em PostgreSQL isolado
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-backup-restore.ps1 -PgBinDir "C:/Program Files/PostgreSQL/18/bin"
+```
+
+O guião cria um cluster novo em `data/restore-validation/<id>/cluster`, limitado a loopback,
+numa porta temporária. Não lê credenciais nem usa a instância habitual. Pára exclusivamente esse
+cluster no fim, preservando o dump, logs e `evidence.txt`. A autenticação trust é exclusiva deste
+cluster com dados de demonstração; não serve como configuração de produção.
+
+`DatabaseBackupRoundTripTest` verifica o directório do servidor antes de criar duas BDs novas.
+Aplica as migrações e valida o schema com Hibernate; usa `DatabaseBackupService` para gerar e
+restaurar o dump; compara o conteúdo completo de todas as tabelas públicas, constraints e
+sequências. Verifica ainda bytes, precisão decimal, FK activa, próximo ID e login HTTP no backend
+restaurado. Sem as variáveis definidas pelo guião, o teste fica ignorado na suite normal.
+
+Esta prova técnica complementa BR-50..BR-54: não substitui a observação do botão no desktop,
+a conferência visual de documentos nem um ensaio com uma cópia autorizada dos dados de produção.
+
+Execução de 2026-09-07 em PostgreSQL 18.2: **13 testes aprovados**, 87 tabelas comparadas
+(inclui `restore_probe`), 81 sequências e 923 registos de estrutura de constraints iguais.
+Login HTTP na base restaurada: **200**, com token e empresa acessível. Evidência local em
+`data/restore-validation/77a30d84219c409798312d55b25721f7/evidence.txt`. Instância temporária encerrada.
 
 ---
 
@@ -41,7 +66,7 @@ binários `pg_dump`/`pg_restore` no `PATH` (ou `backup.pg-bin-dir` configurado).
 | BR-51 | Inspeccionar o `.dump` (`pg_restore --list ficheiro.dump`) | Lista as tabelas (`invoices`, `products`, `stock_movements`, …) |
 | BR-52 | **Round-trip:** criar uma 2.ª BD limpa `multicore_restore`; `pg_restore -d multicore_restore ficheiro.dump` | Restaura sem erros de FK/constraint |
 | BR-53 | Comparar contagens nas duas BDs (`SELECT count(*)` por tabela-chave) | Contagens **idênticas** entre origem e restaurada |
-| BR-54 | Apontar o desktop à BD restaurada (`DB_URL=…/multicore_restore`) e entrar | Login OK, faturas/stock/movimentos visíveis e íntegros |
+| BR-54 | Configurar um backend isolado com `DB_URL=…/multicore_restore` e apontar o desktop à API desse backend | Login OK, faturas/stock/movimentos visíveis e íntegros |
 
 > ⚠️ **BR-52 deve correr numa BD/instância separada**, nunca por cima da BD de produção. O
 > `restorePhysicalBackup` da app usa `--clean` e **apaga** o conteúdo do alvo — só usar em

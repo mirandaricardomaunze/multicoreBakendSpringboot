@@ -46,6 +46,7 @@ final class StockWarehousesPanel {
         };
         owner.warehousesTable = new JTable(owner.warehousesModel);
         UIHelper.styleTable(owner.warehousesTable);
+        owner.warehousesTable.putClientProperty("noRowInspector", Boolean.TRUE);
         owner.warehousesTable.getColumnModel().getColumn(8).setCellRenderer(TableCellRenderers.status());
         owner.warehousesTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -99,7 +100,7 @@ final class StockWarehousesPanel {
     private WarehouseDTO selectedManagedWarehouse() {
         int row = owner.warehousesTable == null ? -1 : owner.warehousesTable.getSelectedRow();
         if (row < 0 || row >= owner.warehousesFullList.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione um armazém.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione um armazém", "Escolha um armazém na tabela para continuar.");
             return null;
         }
         return owner.warehousesFullList.get(owner.warehousesTable.convertRowIndexToModel(row));
@@ -157,14 +158,14 @@ final class StockWarehousesPanel {
             String location = locField.getText().trim();
 
             if (name.isEmpty() || warehouseNumber.isEmpty()) {
-                JOptionPane.showMessageDialog(owner, "Nome e numero do armazem sao obrigatorios.", "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showStockNotice(FeedbackType.ERROR, "Campos obrigatórios", "Nome e número do armazém são obrigatórios.");
                 return;
             }
 
             try {
                 BigDecimal capacity = capacityStr.isEmpty() ? BigDecimal.ZERO : new BigDecimal(capacityStr);
                 if (capacity.compareTo(BigDecimal.ZERO) < 0) {
-                    JOptionPane.showMessageDialog(owner, "A capacidade deve ser zero ou superior.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    owner.showStockNotice(FeedbackType.ERROR, "Capacidade inválida", "A capacidade deve ser zero ou superior.");
                     return;
                 }
                 mz.multicore.erp.modules.inventory.model.WarehouseType type =
@@ -182,16 +183,14 @@ final class StockWarehousesPanel {
                     return owner.inventoryApiClient.createWarehouse(new CreateWarehouseRequest(
                             name, warehouseNumber, capacity, location, companyId, type, allowsSales, manager, phone));
                 }, ignored -> {
-                    JOptionPane.showMessageDialog(owner,
-                            editing ? "Armazém '" + name + "' actualizado."
-                                    : "Armazém '" + name + "' criado com sucesso!",
-                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    owner.showStockSuccess(editing ? "Armazém '" + name + "' actualizado."
+                            : "Armazém '" + name + "' criado com sucesso.");
                     owner.onPanelSelected();
                 }, owner::showStockError);
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(owner, "A capacidade deve ser um valor numerico.", "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showStockNotice(FeedbackType.ERROR, "Capacidade inválida", "A capacidade deve ser um valor numérico.");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(owner, "Erro ao gravar armazem: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showStockNotice(FeedbackType.ERROR, "Não foi possível gravar o armazém", ex.getMessage());
             }
         }
     }

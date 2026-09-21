@@ -83,11 +83,12 @@ intencional e está documentada para não se confundir granularidades.
 
 ## 5. Limites conhecidos (honestos)
 
-- O ciclo *backup → wipe → restore → diff* **não é automatizável em CI** (precisa de PostgreSQL +
-  binários `pg_dump`/`pg_restore` instalados). É um item de **harness manual** (BR-50..BR-54).
+- O ciclo *backup → restore → diff* tem teste opt-in com PostgreSQL real, através de
+  `scripts/verify-backup-restore.ps1`. Exige os binários locais e cria uma instância isolada;
+  não é executado pela CI habitual. A observação do desktop continua no harness manual.
 - Os testes automáticos cobrem o que é determinístico e sem ambiente: **parsing do JDBC URL**,
   **construção dos comandos**, **guardas de permissão** e **validação de ficheiro**. A execução real
-  do subprocesso é coberta pelo harness manual.
+  do subprocesso é coberta por `DatabaseBackupRoundTripTest`, além do harness manual.
 - Tornar o JSON lógico *full-fidelity* e restaurá-lo continua a ser possível no futuro, mas é
   trabalho à parte e de maior risco; **não** é o caminho de DR recomendado.
 

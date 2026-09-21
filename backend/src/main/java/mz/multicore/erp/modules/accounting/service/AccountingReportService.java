@@ -112,6 +112,72 @@ public class AccountingReportService {
                 running.setScale(2, RoundingMode.HALF_UP));
     }
 
+    @Transactional(readOnly = true)
+    public IncomeStatementDTO getIncomeStatement(LocalDate from, LocalDate to) {
+        validatePeriod(from, to);
+        Map<String, Totals> totals = totalsBetween(from, to);
+        List<FinancialStatementLineDTO> revenues = statementLines(totals, "7");
+        List<FinancialStatementLineDTO> expenses = statementLines(totals, "6");
+        BigDecimal totalRevenue = sum(revenues);
+        BigDecimal totalExpense = sum(expenses);
+        return new IncomeStatementDTO(from, to, revenues, expenses, totalRevenue, totalExpense,
+                totalRevenue.subtract(totalExpense).setScale(2, RoundingMode.HALF_UP));
+    }
+
+    @Transactional(readOnly = true)
+    public BalanceSheetDTO getBalanceSheet(LocalDate asOf) {
+        if (asOf == null) throw new BusinessRuleException("A data do balanço é obrigatória.");
+        Map<String, Totals> totals = totalsBetween(LocalDate.of(1970, 1, 1), asOf);
+        List<FinancialStatementLineDTO> assets = totals.values().stream()
+                .filter(t -> t.account.getNature() == mz.multicore.erp.modules.accounting.model.AccountNature.DEVEDORA)
+                .filter(t -> "1234".contains(t.account.getCode().substring(0, 1)))
+                .map(Totals::toStatementLine).filter(l -> l.amount().signum() != 0)
+                .sorted(Comparator.comparing(FinancialStatementLineDTO::accountCode)).toList();
+        List<FinancialStatementLineDTO> liabilities = totals.values().stream()
+                .filter(t -> t.account.getNature() == mz.multicore.erp.modules.accounting.model.AccountNature.CREDORA)
+                .filter(t -> t.account.getCode().startsWith("2"))
+                .map(Totals::toStatementLine).filter(l -> l.amount().signum() != 0)
+                .sorted(Comparator.comparing(FinancialStatementLineDTO::accountCode)).toList();
+        List<FinancialStatementLineDTO> equity = statementLines(totals, "5");
+        BigDecimal currentResult = sum(statementLines(totals, "7"))
+                .subtract(sum(statementLines(totals, "6"))).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalAssets = sum(assets);
+        BigDecimal totalLiabilities = sum(liabilities);
+        BigDecimal totalEquityAndLiabilities = totalLiabilities.add(sum(equity)).add(currentResult)
+                .setScale(2, RoundingMode.HALF_UP);
+        return new BalanceSheetDTO(asOf, assets, liabilities, equity, currentResult, totalAssets,
+                totalLiabilities, totalEquityAndLiabilities,
+                totalAssets.compareTo(totalEquityAndLiabilities) == 0);
+    }
+
+    private Map<String, Totals> totalsBetween(LocalDate from, LocalDate to) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Map<String, Totals> totals = new LinkedHashMap<>();
+        for (JournalEntry entry : journalService.findEntriesBetween(companyId, from, to)) {
+            for (JournalLine line : entry.getLines()) {
+                totals.computeIfAbsent(line.getAccount().getCode(), ignored -> new Totals(line.getAccount()))
+                        .add(line.safeDebit(), line.safeCredit());
+            }
+        }
+        return totals;
+    }
+
+    private List<FinancialStatementLineDTO> statementLines(Map<String, Totals> totals, String accountPrefix) {
+        return totals.values().stream().filter(t -> t.account.getCode().startsWith(accountPrefix))
+                .map(Totals::toStatementLine).filter(line -> line.amount().signum() != 0)
+                .sorted(Comparator.comparing(FinancialStatementLineDTO::accountCode)).toList();
+    }
+
+    private BigDecimal sum(List<FinancialStatementLineDTO> lines) {
+        return lines.stream().map(FinancialStatementLineDTO::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void validatePeriod(LocalDate from, LocalDate to) {
+        if (from == null || to == null) throw new BusinessRuleException("O período é obrigatório.");
+        if (to.isBefore(from)) throw new BusinessRuleException("A data final não pode ser anterior à inicial.");
+    }
+
     private BigDecimal balanceOf(Account account, LocalDate from, LocalDate to, Long companyId) {
         if (to.isBefore(from)) return BigDecimal.ZERO;
         BigDecimal debit = BigDecimal.ZERO;
@@ -149,6 +215,11 @@ public class AccountingReportService {
                     account.getNature(),
                     debit.setScale(2, RoundingMode.HALF_UP),
                     credit.setScale(2, RoundingMode.HALF_UP),
+                    account.getNature().balanceOf(debit, credit).setScale(2, RoundingMode.HALF_UP));
+        }
+
+        private FinancialStatementLineDTO toStatementLine() {
+            return new FinancialStatementLineDTO(account.getCode(), account.getName(),
                     account.getNature().balanceOf(debit, credit).setScale(2, RoundingMode.HALF_UP));
         }
     }

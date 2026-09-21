@@ -23,4 +23,6 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     List<Stock> findByWarehouseCompanyId(@Param("companyId") Long companyId);
     
     List<Stock> findByWarehouseId(Long warehouseId);
+
+    List<Stock> findByProductId(Long productId);
 }

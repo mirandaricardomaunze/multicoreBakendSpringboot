@@ -7,6 +7,7 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.hr.dto.HrPolicyConfigDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollCostDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
@@ -203,14 +204,12 @@ final class HRLiabilitiesPanel {
     private void deliver() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione uma retenção na tabela.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione uma retenção", "Escolha uma retenção na tabela para continuar.");
             return;
         }
         PayrollLiabilityDTO sel = liabilities.get(row);
         if (!"POR_ENTREGAR".equals(sel.status())) {
-            JOptionPane.showMessageDialog(owner, "Esta retenção já foi entregue.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.INFO, "Retenção entregue", "Esta retenção já foi entregue.");
             return;
         }
         String reference = JOptionPane.showInputDialog(owner, String.format(
@@ -285,9 +284,7 @@ final class HRLiabilitiesPanel {
         UIHelper.runWithProgress(owner, "A gravar valores legais…",
                 () -> owner.hrApiClient.createHrPolicy(request),
                 ignored -> {
-                    JOptionPane.showMessageDialog(owner,
-                            "Valores legais gravados. As retenções passam a ter prazo a partir do "
-                                    + "próximo apuramento.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                    owner.showSuccess("Valores legais gravados; as retenções passam a ter prazo a partir do próximo apuramento.");
                     load();
                 }, owner::showActionError);
     }

@@ -114,6 +114,8 @@ public class SubscriptionService {
         payment.setPaidAt(request.paidAt() == null ? LocalDate.now() : request.paidAt());
         payment.setPeriodStart(request.periodStart());
         payment.setPeriodEnd(request.periodEnd());
+        payment.setReference(request.reference() != null && !request.reference().isBlank() ? request.reference().trim() : null);
+        payment.setPaymentDetails(request.paymentDetails() != null && !request.paymentDetails().isBlank() ? request.paymentDetails().trim() : null);
         payment.setNote(request.note());
         payment.setCreatedBy(CurrentUserContext.getUsername());
         paymentRepository.save(payment);
@@ -128,9 +130,10 @@ public class SubscriptionService {
         sub.setStatus(SubscriptionStatus.ACTIVE);
         subscriptionRepository.save(sub);
 
+        String refPart = payment.getReference() != null ? " [Ref: " + payment.getReference() + "]" : "";
         auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "SUBSCRIPTION_PAYMENT",
-                String.format("Pagamento de %s (%s) para '%s'.",
-                        payment.getAmount(), payment.getMethod().label(), company.getName()));
+                String.format("Pagamento de %s (%s%s) para '%s'.",
+                        payment.getAmount(), payment.getMethod().label(), refPart, company.getName()));
         return toPaymentDto(payment);
     }
 
@@ -148,12 +151,12 @@ public class SubscriptionService {
                     company.getName(), false, null, "—", null, "Sem assinatura", null, null, null, null);
         }
         SubscriptionStatus effective = sub.effectiveStatus();
-        Long daysRemaining = sub.getValidUntil() == null ? null
-                : java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), sub.getValidUntil());
+        Long days = sub.getValidUntil() == null ? null
+                : java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), sub.getValidUntil());
         return new mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO(
                 company.getName(), true, sub.getPlan().name(), sub.getPlan().label(),
                 effective.name(), effective.label(), sub.getStartDate(), sub.getValidUntil(),
-                daysRemaining, sub.getMonthlyPrice());
+                days, sub.getMonthlyPrice());
     }
 
     /**
@@ -195,7 +198,8 @@ public class SubscriptionService {
 
     private SubscriptionPaymentDTO toPaymentDto(SubscriptionPayment p) {
         return new SubscriptionPaymentDTO(p.getId(), p.getAmount(), p.getMethod().name(),
-                p.getMethod().label(), p.getPaidAt(), p.getPeriodStart(), p.getPeriodEnd(), p.getNote());
+                p.getMethod().label(), p.getPaidAt(), p.getPeriodStart(), p.getPeriodEnd(),
+                p.getReference(), p.getPaymentDetails(), p.getNote());
     }
 
     private PlanType parsePlan(String value) {

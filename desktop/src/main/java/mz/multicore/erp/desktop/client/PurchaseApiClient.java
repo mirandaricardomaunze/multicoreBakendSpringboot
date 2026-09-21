@@ -1,5 +1,6 @@
 package mz.multicore.erp.desktop.client;
 
+import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseRequest;
 import mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest;
@@ -46,6 +47,11 @@ public class PurchaseApiClient {
     public List<SupplierDTO> getSuppliersByCompany(Long companyId) {
         return clientFactory.authenticatedClient()
                 .getList("/api/purchases/suppliers?companyId=" + companyId, SupplierDTO.class);
+    }
+
+    public List<SupplierDTO> getSuppliers() {
+        Long companyId = CurrentUserContext.findCurrentCompanyId();
+        return companyId != null ? getSuppliersByCompany(companyId) : List.of();
     }
 
     public SupplierDTO createSupplier(CreateSupplierRequest request) {

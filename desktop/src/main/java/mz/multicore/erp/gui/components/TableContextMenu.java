@@ -6,6 +6,7 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 
+import java.awt.Color;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
@@ -48,7 +49,7 @@ public final class TableContextMenu {
         });
     }
 
-    private static JPopupMenu buildMenu(JTable table, JScrollBar sb, int row, int col) {
+    static JPopupMenu buildMenu(JTable table, JScrollBar sb, int row, int col) {
         JPopupMenu menu = new JPopupMenu();
         JMenuItem details = item("Ver detalhes", "fas-info-circle", () -> RowDetailsInspector.open(table));
         details.setEnabled(row >= 0 && !Boolean.TRUE.equals(table.getClientProperty("noRowInspector")));
@@ -62,6 +63,11 @@ public final class TableContextMenu {
         copyCell.setEnabled(row >= 0 && col >= 0);
         menu.add(copyRow);
         menu.add(copyCell);
+        menu.addSeparator();
+        JMenuItem exportCsv = item("Exportar para CSV", "fas-file-csv",
+                () -> TableCsvExporter.exportWithDialog(table, table, "export_tabela"));
+        exportCsv.setEnabled(table.getRowCount() > 0);
+        menu.add(exportCsv);
         menu.addSeparator();
         menu.add(item("Ir para o topo", "fas-angle-double-up", () -> TableNavigator.top(sb)));
         menu.add(item("Ir para o fundo", "fas-angle-double-down", () -> TableNavigator.bottom(sb)));
@@ -105,7 +111,8 @@ public final class TableContextMenu {
     }
 
     private static JMenuItem item(String text, String iconCode, Runnable action) {
-        JMenuItem mi = new JMenuItem(text, UIHelper.icon(iconCode, 13, UIHelper.TEXT_LIGHT));
+        JMenuItem mi = new JMenuItem(text, UIHelper.icon(iconCode, 13, Color.WHITE));
+        mi.setForeground(Color.WHITE);
         mi.addActionListener(e -> action.run());
         return mi;
     }

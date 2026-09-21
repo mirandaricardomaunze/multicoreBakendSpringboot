@@ -7,6 +7,9 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.PackageQuantityEditor;
@@ -44,10 +47,11 @@ public class ComprasPanel extends JPanel {
 
     final PurchaseApiClient purchaseApiClient;
     private final PurchaseSuppliersPanel suppliersPanel;
-    private final PurchaseReorderPanel reorderPanel;
+    final PurchaseReorderPanel reorderPanel;
     private final PurchasePayablesPanel payablesPanel;
-    private final PurchaseOrdersPanel purchaseOrdersPanel;
+    final PurchaseOrdersPanel purchaseOrdersPanel;
     private final InventoryApiClient inventoryApiClient;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     // Reposição automática
     JTabbedPane tabbedPane;
@@ -121,11 +125,23 @@ public class ComprasPanel extends JPanel {
     private final List<CreatePurchaseLineRequest> draftLines = new ArrayList<>();
     private BigDecimal draftTotal = BigDecimal.ZERO;
 
+    private final SupplierStatementPanel supplierStatementPanel;
+
     public ComprasPanel(
             PurchaseApiClient purchaseApiClient,
             InventoryApiClient inventoryApiClient,
             ComercialApiClient comercialApiClient,
             FinanceApiClient financeApiClient
+    ) {
+        this(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, null);
+    }
+
+    public ComprasPanel(
+            PurchaseApiClient purchaseApiClient,
+            InventoryApiClient inventoryApiClient,
+            ComercialApiClient comercialApiClient,
+            FinanceApiClient financeApiClient,
+            mz.multicore.erp.desktop.client.AccountStatementApiClient statementApiClient
     ) {
         this.purchaseApiClient = purchaseApiClient;
         this.inventoryApiClient = inventoryApiClient;
@@ -135,6 +151,7 @@ public class ComprasPanel extends JPanel {
         this.reorderPanel = new PurchaseReorderPanel(this);
         this.payablesPanel = new PurchasePayablesPanel(this);
         this.purchaseOrdersPanel = new PurchaseOrdersPanel(this);
+        this.supplierStatementPanel = statementApiClient != null ? new SupplierStatementPanel(statementApiClient, purchaseApiClient) : null;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -160,6 +177,17 @@ public class ComprasPanel extends JPanel {
         JPanel tabFornecedores = createFornecedoresTab();
         tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.TEXT_LIGHT), tabFornecedores);
 
+        if (supplierStatementPanel != null) {
+            tabbedPane.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.TEXT_LIGHT), supplierStatementPanel);
+        }
+
+        tabbedPane.addChangeListener(e -> {
+            if (tabbedPane.getSelectedComponent() == supplierStatementPanel && supplierStatementPanel != null) {
+                supplierStatementPanel.refreshData();
+            }
+        });
+
+        add(feedback, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
 
         // Carregamento preguiçoso: os dados vêm por HTTP em onPanelSelected() (via navigate), não no
@@ -400,7 +428,8 @@ public class ComprasPanel extends JPanel {
 
     private void openPurchaseFormDialog() {
         if (supplierComboList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Cadastre um fornecedor activo primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            showPurchaseNotice(FeedbackType.WARNING, "Fornecedor necessário",
+                    "Registe um fornecedor activo antes de lançar a compra.");
             return;
         }
         // Reset do rascunho ao abrir.
@@ -419,10 +448,8 @@ public class ComprasPanel extends JPanel {
         });
         if (dlg.showDialog()) {
             PurchaseDTO purchase = created[0];
-            JOptionPane.showMessageDialog(this, "Compra " + purchase.purchaseNumber() + " registada com sucesso!\n" +
-                            (onCredit[0] ? "Stock atualizado. Compra a crédito — ver tab Contas a Pagar."
-                                    : "Stock atualizado e saldo deduzido de " + purchase.totalAmount() + " MT."),
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Compra " + purchase.purchaseNumber() + " registada · "
+                    + (onCredit[0] ? "a crédito" : purchase.totalAmount() + " MT") + ".");
             clearPurchaseDraft();
             loadPurchasesHistory();
             loadAccounts();
@@ -580,18 +607,22 @@ public class ComprasPanel extends JPanel {
         BigDecimal qty;
         try {
             qty = quantityField.value();
-            if (qty.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
+            if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                UIHelper.markFieldInvalid(quantityField, "A quantidade deve ser maior que zero.");
+                throw new IllegalArgumentException("A quantidade deve ser maior que zero.");
+            }
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         BigDecimal price;
         try {
             price = priceField.value();
-            if (price.compareTo(BigDecimal.ZERO) < 0) throw new NumberFormatException();
+            if (price.compareTo(BigDecimal.ZERO) < 0) {
+                UIHelper.markFieldInvalid(priceField, "O preço não pode ser negativo.");
+                throw new IllegalArgumentException("O preço não pode ser negativo.");
+            }
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -605,7 +636,6 @@ public class ComprasPanel extends JPanel {
         try {
             expirationDate = expirationField.value();
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -613,10 +643,10 @@ public class ComprasPanel extends JPanel {
         BigDecimal invoiceTaxRate;
         try {
             invoiceTaxRate = parsePercentageOrNull(purchaseVatField.getText());
+            UIHelper.clearFieldInvalid(purchaseVatField);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this,
-                    "IVA da factura inválido. Indique a percentagem (ex.: 16) ou deixe vazio para usar a taxa do artigo.",
-                    "Erro", JOptionPane.ERROR_MESSAGE);
+            UIHelper.markFieldInvalid(purchaseVatField,
+                    "Indique a percentagem de IVA (ex.: 16) ou deixe o campo vazio.");
             return;
         }
 
@@ -738,12 +768,20 @@ public class ComprasPanel extends JPanel {
     }
 
     void showPurchaseLoadError(String area, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível carregar " + area + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area,
+                error.getMessage(), "Tentar novamente", this::onPanelSelected);
     }
 
     void showPurchaseError(Throwable error) {
-        JOptionPane.showMessageDialog(this, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        showPurchaseNotice(FeedbackType.ERROR, "Não foi possível concluir a operação", error.getMessage());
+    }
+
+    void showPurchaseNotice(FeedbackType type, String title, String message) {
+        feedback.show(type, title, message, null, null);
+    }
+
+    void showPurchaseSuccess(String message) {
+        ToastManager.success(this, message);
     }
 
     /** Nome do armazém a partir do id, via lista de armazéns carregada (o PurchaseDTO só traz o id). */

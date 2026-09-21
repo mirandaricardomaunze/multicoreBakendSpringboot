@@ -68,9 +68,9 @@ final class HRPayrollActions {
         }
         UIHelper.runWithProgress(owner, "A fechar o mês…",
                 () -> owner.hrApiClient.closePayrollPeriod(period[0], period[1]),
-                dto -> JOptionPane.showMessageDialog(owner, String.format(
-                        "Folha de %02d/%d fechada. Emitir recibos nesse mês passa a exigir reabertura.",
-                        dto.month(), dto.year()), "Sucesso", JOptionPane.INFORMATION_MESSAGE),
+                dto -> owner.showSuccess(String.format(
+                        "Folha de %02d/%d fechada; emitir recibos nesse mês passa a exigir reabertura.",
+                        dto.month(), dto.year())),
                 owner::showActionError);
     }
 
@@ -87,8 +87,7 @@ final class HRPayrollActions {
         }
         UIHelper.runWithProgress(owner, "A reabrir o mês…",
                 () -> owner.hrApiClient.reopenPayrollPeriod(period[0], period[1], reason),
-                ignored -> JOptionPane.showMessageDialog(owner, "Mês reaberto.",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE),
+                ignored -> owner.showSuccess("Mês reaberto."),
                 owner::showActionError);
     }
 

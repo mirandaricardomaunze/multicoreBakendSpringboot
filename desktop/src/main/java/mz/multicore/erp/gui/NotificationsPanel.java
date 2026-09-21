@@ -6,6 +6,8 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -45,6 +47,7 @@ public class NotificationsPanel extends JPanel {
     private final ModernButton markAllButton;
     private List<NotificationItem> items = new ArrayList<>();
     private int refreshVersion;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     /**
      * @param onUnreadCountChanged recebe o número de não-lidas sempre que a lista ou o estado muda
@@ -72,7 +75,9 @@ public class NotificationsPanel extends JPanel {
         titles.add(title);
         titles.add(summaryLabel);
         header.add(titles, BorderLayout.WEST);
-        add(header, BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new javax.swing.BoxLayout(north, javax.swing.BoxLayout.Y_AXIS));
+        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
@@ -161,9 +166,8 @@ public class NotificationsPanel extends JPanel {
                     refreshButton.setEnabled(true);
                     if (version != refreshVersion) return;
                     summaryLabel.setText("Não foi possível carregar as notificações.");
-                    JOptionPane.showMessageDialog(NotificationsPanel.this,
-                            "Erro ao carregar notificações: " + rootMessage(error),
-                            "Erro", JOptionPane.ERROR_MESSAGE);
+                    feedback.show(FeedbackType.ERROR, "Não foi possível carregar as notificações",
+                            rootMessage(error), "Tentar novamente", NotificationsPanel.this::refreshData);
                 });
     }
 
@@ -200,8 +204,8 @@ public class NotificationsPanel extends JPanel {
     private void markSelectedRead() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma notificação para marcar como lida.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            feedback.show(FeedbackType.WARNING, "Seleccione uma notificação",
+                    "Escolha uma notificação para marcar como lida.", null, null);
             return;
         }
         readStore.markRead(items.get(row));
@@ -217,8 +221,8 @@ public class NotificationsPanel extends JPanel {
     private void openSelectedModule() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma notificação para abrir o respetivo módulo.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            feedback.show(FeedbackType.WARNING, "Seleccione uma notificação",
+                    "Escolha uma notificação para abrir o respectivo módulo.", null, null);
             return;
         }
         navigator.accept(items.get(row).moduleCard());

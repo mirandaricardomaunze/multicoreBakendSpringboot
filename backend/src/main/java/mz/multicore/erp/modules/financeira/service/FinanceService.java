@@ -38,7 +38,8 @@ public class FinanceService {
     @Transactional(readOnly = true)
     public List<TreasuryAccountDTO> getAllAccounts() {
         return accountRepository.findByCompanyIdOrderByName(CurrentUserContext.getCurrentCompanyId()).stream()
-                .map(a -> new TreasuryAccountDTO(a.getId(), a.getName(), a.getAccountNumber(), a.getBalance()))
+                .map(a -> new TreasuryAccountDTO(a.getId(), a.getName(), a.getAccountNumber(),
+                        a.getAccountType(), a.getBalance()))
                 .collect(Collectors.toList());
     }
 
@@ -82,6 +83,13 @@ public class FinanceService {
         tx = transactionRepository.save(tx);
 
         return toDTO(tx);
+    }
+
+    @Transactional(readOnly = true)
+    public TreasuryAccountType accountType(Long accountId) {
+        return accountRepository.findByIdAndCompanyId(accountId, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."))
+                .getAccountType();
     }
 
     @Transactional

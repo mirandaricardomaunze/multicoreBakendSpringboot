@@ -51,17 +51,18 @@ public class TopNavBar extends JPanel {
     public TopNavBar(String brand, String subBrand) {
         setLayout(new BorderLayout(12, 0));
         setBackground(barBg());
-        setBorder(new EmptyBorder(6, 14, 6, 14));
+        setBorder(new EmptyBorder(8, 16, 8, 16));
 
-        // ---- Brand block (left)
-        brandLabel = new JLabel(brand);
-        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        // ---- Brand / Active title block (left)
+        brandLabel = new JLabel(brand != null && !brand.isBlank() ? brand : "Painel Inicial");
+        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
         brandLabel.setForeground(headerText());
 
-        brandSubLabel = new JLabel(subBrand);
+        brandSubLabel = new JLabel(subBrand != null ? subBrand : "");
         brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         brandSubLabel.setForeground(subText());
         brandSubLabel.setToolTipText("Empresa ativa");
+        brandSubLabel.setVisible(subBrand != null && !subBrand.isBlank());
 
         JPanel brandStack = new JPanel();
         brandStack.setOpaque(false);
@@ -69,7 +70,6 @@ public class TopNavBar extends JPanel {
         brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         brandStack.add(brandLabel);
-        brandStack.add(Box.createRigidArea(new Dimension(0, 1)));
         brandStack.add(brandSubLabel);
 
         JPanel brandWrapper = new JPanel(new BorderLayout());
@@ -89,9 +89,18 @@ public class TopNavBar extends JPanel {
         add(trailingPanel, BorderLayout.EAST);
     }
 
+    /** Update the title shown on the left of the top bar. */
+    public void setTitle(String text) {
+        if (text != null && !text.isBlank()) {
+            brandLabel.setText(text);
+        }
+    }
+
     /** Update the sub-brand line (active company name shown under the brand). */
     public void setSubBrand(String text) {
-        brandSubLabel.setText(text == null || text.isBlank() ? "" : text);
+        boolean hasText = text != null && !text.isBlank();
+        brandSubLabel.setText(hasText ? text : "");
+        brandSubLabel.setVisible(hasText);
     }
 
     /** Add an icon-only module button. Returns it so the caller can wire active-state. */
@@ -134,13 +143,69 @@ public class TopNavBar extends JPanel {
         return menuItem;
     }
 
+    private JPanel searchPill;
+
+    /** Define a ação executada ao clicar na pílula de pesquisa global da barra superior. */
+    public void setSearchAction(Runnable onSearchClick) {
+        if (searchPill != null) {
+            navPanel.remove(searchPill);
+            searchPill = null;
+        }
+        if (onSearchClick == null) return;
+
+        searchPill = new JPanel(new BorderLayout(8, 0));
+        searchPill.setOpaque(false);
+        searchPill.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        searchPill.setToolTipText("Pesquisar módulos ou ações (Ctrl+K)");
+        searchPill.putClientProperty("search.action", onSearchClick);
+        searchPill.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1),
+                new EmptyBorder(5, 12, 5, 10)
+        ));
+
+        JLabel icon = new JLabel(UIHelper.icon("fas-search", 13, UIHelper.TEXT_MUTED));
+        JLabel text = new JLabel("Pesquisar módulos ou ações...");
+        text.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        text.setForeground(UIHelper.TEXT_MUTED);
+
+        JLabel badge = new JLabel("Ctrl+K");
+        badge.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        badge.setForeground(UIHelper.TEXT_MUTED);
+        badge.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(71, 85, 105), 1),
+                new EmptyBorder(1, 4, 1, 4)
+        ));
+
+        searchPill.add(icon, BorderLayout.WEST);
+        searchPill.add(text, BorderLayout.CENTER);
+        searchPill.add(badge, BorderLayout.EAST);
+
+        searchPill.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                onSearchClick.run();
+            }
+        });
+
+        navPanel.add(searchPill);
+        navPanel.revalidate();
+        navPanel.repaint();
+    }
+
+    public JPanel getSearchPill() {
+        return searchPill;
+    }
+
     /** Add a component to the trailing (right) area, e.g. company combo or user chip. */
     public void addTrailing(JComponent component) {
         trailingPanel.add(component);
     }
 
-    /** Highlight the nav item whose label matches the given key. */
+    /** Highlight the nav item whose label matches the given key and update title. */
     public void setActive(String activeKey) {
+        if (activeKey != null && !activeKey.startsWith("__")) {
+            setTitle(activeKey);
+        }
         TopNavItem groupedActive = groupedItems.get(activeKey);
         for (TopNavItem item : navItems) {
             item.setActive(item == groupedActive || (item.key() != null && item.key().equals(activeKey)));

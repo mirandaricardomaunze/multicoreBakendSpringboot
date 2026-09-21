@@ -36,6 +36,11 @@ public class FiscalSummaryService {
 
     @Transactional(readOnly = true)
     public IvaSummaryDTO computeMonth(Long companyId, int year, int month) {
+        return computeMonth(companyId, year, month, BigDecimal.ZERO);
+    }
+
+    @Transactional(readOnly = true)
+    public IvaSummaryDTO computeMonth(Long companyId, int year, int month, BigDecimal previousCredit) {
         CurrentUserContext.requireCompany(companyId);
         YearMonth ym = YearMonth.of(year, month);
         LocalDateTime start = ym.atDay(1).atStartOfDay();
@@ -82,9 +87,17 @@ public class FiscalSummaryService {
                     base, tax, total));
         }
 
-        BigDecimal netDue = outputTax.subtract(inputTax);
+        BigDecimal prevCredit = previousCredit != null && previousCredit.compareTo(BigDecimal.ZERO) > 0
+                ? previousCredit : BigDecimal.ZERO;
+        BigDecimal rawPeriodDiff = outputTax.subtract(inputTax);
+        BigDecimal netDue = rawPeriodDiff.subtract(prevCredit);
+        BigDecimal payableAmount = netDue.compareTo(BigDecimal.ZERO) > 0 ? netDue : BigDecimal.ZERO;
+        BigDecimal creditToCarry = netDue.compareTo(BigDecimal.ZERO) < 0 ? netDue.abs() : BigDecimal.ZERO;
+        String fiscalStatus = payableAmount.compareTo(BigDecimal.ZERO) > 0 ? "A_PAGAR" : "CREDITO_A_TRANSPORTAR";
+
         return new IvaSummaryDTO(year, month, companyId,
                 salesBase, outputTax, purchasesBase, inputTax, netDue,
+                prevCredit, payableAmount, creditToCarry, fiscalStatus,
                 sales, purchases);
     }
 
@@ -94,6 +107,6 @@ public class FiscalSummaryService {
 
     /** Convenience for callers using {@link LocalDate}. */
     public IvaSummaryDTO computeMonth(Long companyId, LocalDate anyDayInMonth) {
-        return computeMonth(companyId, anyDayInMonth.getYear(), anyDayInMonth.getMonthValue());
+        return computeMonth(companyId, anyDayInMonth.getYear(), anyDayInMonth.getMonthValue(), BigDecimal.ZERO);
     }
 }

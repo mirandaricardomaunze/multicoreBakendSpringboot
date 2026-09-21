@@ -4,7 +4,6 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,6 +18,7 @@ public final class DeliveryGuidesPanel extends JPanel {
     private final Runnable ordersRefresh;
     private final DefaultTableModel model;
     private final JTable table;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public DeliveryGuidesPanel(ComercialApiClient apiClient, Runnable ordersRefresh) {
         this(apiClient, ordersRefresh, null);
@@ -50,7 +50,10 @@ public final class DeliveryGuidesPanel extends JPanel {
             headerActions.add(transfersBtn);
             header.add(headerActions, BorderLayout.EAST);
         }
-        add(header, BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -118,8 +121,7 @@ public final class DeliveryGuidesPanel extends JPanel {
                 "Confirmar Aprovação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         Long id = (Long) model.getValueAt(row, 0);
         UIHelper.runWithProgress(this, "A aprovar guia…", () -> apiClient.approveDeliveryGuide(id), ignored -> {
-            JOptionPane.showMessageDialog(this, "Guia " + number + " aprovada. O stock foi atualizado.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Guia " + number + " aprovada; o stock foi actualizado.");
             refreshBoth();
         }, error -> showError("aprovar guia", error));
     }
@@ -133,8 +135,7 @@ public final class DeliveryGuidesPanel extends JPanel {
         if (reason == null) return;
         Long id = (Long) model.getValueAt(row, 0);
         UIHelper.runWithProgress(this, "A rejeitar guia…", () -> apiClient.rejectDeliveryGuide(id, reason), ignored -> {
-            JOptionPane.showMessageDialog(this, "Guia " + number + " rejeitada. A encomenda voltou a ficar disponível.",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Guia " + number + " rejeitada; a encomenda voltou a ficar disponível.");
             refreshBoth();
         }, error -> showError("rejeitar guia", error));
     }
@@ -148,7 +149,7 @@ public final class DeliveryGuidesPanel extends JPanel {
                 "Confirmar Cancelamento", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         Long id = (Long) model.getValueAt(row, 0);
         UIHelper.runWithProgress(this, "A cancelar guia…", () -> apiClient.cancelDeliveryGuide(id), ignored -> {
-            JOptionPane.showMessageDialog(this, "Guia " + number + " cancelada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Guia " + number + " cancelada.");
             refreshBoth();
         }, error -> showError("cancelar guia", error));
     }
@@ -159,7 +160,8 @@ public final class DeliveryGuidesPanel extends JPanel {
         Long id = (Long) model.getValueAt(row, 0);
         String number = String.valueOf(model.getValueAt(row, 1));
         UIHelper.runWithProgress(this, "A gerar guia em PDF…", () -> apiClient.renderDeliveryGuide(id),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "guia-remessa-" + number), error -> showError("gerar guia", error));
+                pdf -> PrintPreviewDialog.show(this, pdf, "guia-remessa-" + number),
+                error -> showError("gerar guia", error));
     }
 
     private void showPackages() {
@@ -189,15 +191,15 @@ public final class DeliveryGuidesPanel extends JPanel {
 
     private int selected(String action) {
         int row = TableFilter.selectedModelRow(table);
-        if (row < 0) JOptionPane.showMessageDialog(this, "Selecione uma guia na tabela para " + action + ".",
-                "Aviso", JOptionPane.WARNING_MESSAGE);
+        if (row < 0) feedback.show(FeedbackType.WARNING, "Seleccione uma guia",
+                "Escolha uma guia na tabela para " + action + ".", null, null);
         return row;
     }
 
     private boolean pending(int row) {
         if ("PENDING_APPROVAL".equals(String.valueOf(model.getValueAt(row, 9)))) return true;
-        JOptionPane.showMessageDialog(this, "Esta ação só é permitida para guias pendentes de aprovação.",
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        feedback.show(FeedbackType.WARNING, "Acção indisponível",
+                "Esta acção só é permitida para guias pendentes de aprovação.", null, null);
         return false;
     }
 
@@ -209,7 +211,6 @@ public final class DeliveryGuidesPanel extends JPanel {
     }
     private static String blank(String value) { return value == null || value.isBlank() ? "—" : value; }
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        feedback.show(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage(), null, null);
     }
 }

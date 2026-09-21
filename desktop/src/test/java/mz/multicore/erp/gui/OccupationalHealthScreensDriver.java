@@ -79,7 +79,9 @@ public final class OccupationalHealthScreensDriver {
             UIHelper.loadAndApplySavedTheme();
             JFrame frame = new JFrame("Driver Saúde Ocupacional");
             UIHelper.registerMainWindow(frame);
-            HRPanel panel = new HRPanel(hr);
+            // O driver fotografa ecrãs; não imprime. Sem cliente de impressão, o botão
+            // "Exportar PDF" diz-lhe isso em vez de estoirar.
+            HRPanel panel = new HRPanel(hr, null);
             frame.setContentPane(panel);
             frame.setSize(1382, 736);
             frame.setVisible(true);

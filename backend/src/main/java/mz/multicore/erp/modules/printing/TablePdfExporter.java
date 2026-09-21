@@ -14,8 +14,12 @@ public final class TablePdfExporter {
 
     private TablePdfExporter() {}
 
+    /**
+     * Listagens são largas — muitas colunas, valores curtos — e em retrato saem espremidas.
+     * Por isso este é o único documento do sistema que nasce deitado.
+     */
     public static byte[] render(Company company, String title, String[] headers, String[][] rows) {
-        return PdfDocumentBuilder.buildA4(doc -> {
+        return PdfDocumentBuilder.build(com.lowagie.text.PageSize.A4.rotate(), doc -> {
             doc.add(CompanyHeaderRenderer.build(company, "Relatório", title));
             doc.add(buildTable(headers, rows));
             doc.add(PdfDocumentBuilder.spacer(8f));

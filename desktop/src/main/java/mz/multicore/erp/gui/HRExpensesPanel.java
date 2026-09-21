@@ -89,7 +89,7 @@ final class HRExpensesPanel {
 
     private void submitExpense() {
         if (owner.employeesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre colaboradores primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe colaboradores primeiro.");
             return;
         }
 
@@ -122,20 +122,20 @@ final class HRExpensesPanel {
             if (amount.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
             String desc = descField.getText().trim();
             if (desc.isEmpty()) {
-                JOptionPane.showMessageDialog(owner, "Indique uma descrição.", "Erro", JOptionPane.ERROR_MESSAGE);
+                owner.showNotice(FeedbackType.ERROR, "Descrição obrigatória", "Indique uma descrição.");
                 return;
             }
             EmployeeDTO emp = owner.employeesList.get(empCombo.getSelectedIndex());
             String cat = categoryCombo.getSelectedItem().toString().split(" ")[0];
             CreateExpenseClaimRequest request = new CreateExpenseClaimRequest(emp.id(), amount, cat, desc);
             UIHelper.runWithProgress(owner, "A submeter despesa…", () -> owner.hrApiClient.submitExpense(request), ignored -> {
-                JOptionPane.showMessageDialog(owner, "Despesa submetida.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                owner.showSuccess("Despesa submetida.");
                 refresh();
             }, owner::showActionError);
         } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.ERROR, "Dados da despesa inválidos", ex.getMessage());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            owner.showNotice(FeedbackType.ERROR, "Não foi possível submeter a despesa", ex.getMessage());
         }
     }
 

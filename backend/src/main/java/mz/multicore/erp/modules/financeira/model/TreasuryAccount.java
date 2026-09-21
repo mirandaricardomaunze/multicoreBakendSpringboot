@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 
 @Entity
 @Table(name = "treasury_accounts")
@@ -28,6 +29,10 @@ public class TreasuryAccount extends BaseEntity {
 
     @Column(name = "account_number")
     private String accountNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_type", nullable = false, length = 16)
+    private TreasuryAccountType accountType = TreasuryAccountType.CASH;
 
     @Column(name = "balance", nullable = false)
     private BigDecimal balance = BigDecimal.ZERO;

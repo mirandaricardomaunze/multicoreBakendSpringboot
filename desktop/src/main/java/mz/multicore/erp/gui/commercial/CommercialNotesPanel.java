@@ -7,7 +7,6 @@ import mz.multicore.erp.desktop.client.DebitNoteApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -37,6 +36,8 @@ public final class CommercialNotesPanel {
     private final DefaultTableModel debitModel;
     private final JTable creditTable;
     private final JTable debitTable;
+    private final InlineFeedbackPanel creditFeedback = new InlineFeedbackPanel();
+    private final InlineFeedbackPanel debitFeedback = new InlineFeedbackPanel();
     private List<CreditNoteDTO> creditNotes = new ArrayList<>();
     private List<DebitNoteDTO> debitNotes = new ArrayList<>();
 
@@ -118,7 +119,11 @@ public final class CommercialNotesPanel {
         actions.setOpaque(false);
         for (ModernButton button : buttons) actions.add(button);
         header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        InlineFeedbackPanel feedback = table == creditTable ? creditFeedback : debitFeedback;
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(header); north.add(feedback); tab.add(north, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -174,8 +179,8 @@ public final class CommercialNotesPanel {
         return debitNotes.get(row);
     }
 
-    private static void warn(Component owner) {
-        JOptionPane.showMessageDialog(owner, "Selecione uma nota na tabela.", "Aviso", JOptionPane.WARNING_MESSAGE);
+    private void warn(Component owner) {
+        showNotice(owner, FeedbackType.WARNING, "Seleccione uma nota", "Escolha uma nota na tabela para continuar.");
     }
 
     private void approveCredit() {
@@ -184,7 +189,7 @@ public final class CommercialNotesPanel {
         UIHelper.runWithProgress(creditTab, "A aprovar nota de crédito…", () -> creditApiClient.approve(selected.id()), approved -> {
             String message = "Nota " + approved.noteNumber() + " aprovada.";
             if ("RETURN".equals(approved.reason())) message += "\nStock devolvido ao armazém " + approved.warehouseName() + ".";
-            JOptionPane.showMessageDialog(creditTab, message, "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(creditTab, message);
             loadCredits();
         }, error -> showError(creditTab, "aprovar nota de crédito", error));
     }
@@ -203,7 +208,7 @@ public final class CommercialNotesPanel {
         CreditNoteDTO selected = selectedCredit();
         if (selected == null) return;
         UIHelper.runWithProgress(creditTab, "A gerar nota de crédito…", () -> creditApiClient.renderCreditNote(selected.id()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "nota-credito-" + selected.noteNumber()),
+                pdf -> PrintPreviewDialog.show(creditTab, pdf, "nota-credito-" + selected.noteNumber()),
                 error -> showError(creditTab, "gerar nota de crédito", error));
     }
 
@@ -211,7 +216,7 @@ public final class CommercialNotesPanel {
         DebitNoteDTO selected = selectedDebit();
         if (selected == null) return;
         UIHelper.runWithProgress(debitTab, "A aprovar nota de débito…", () -> debitApiClient.approve(selected.id()), ignored -> {
-            JOptionPane.showMessageDialog(debitTab, "Nota " + selected.noteNumber() + " aprovada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(debitTab, "Nota " + selected.noteNumber() + " aprovada.");
             loadDebits();
         }, error -> showError(debitTab, "aprovar nota de débito", error));
     }
@@ -230,15 +235,15 @@ public final class CommercialNotesPanel {
         DebitNoteDTO selected = selectedDebit();
         if (selected == null) return;
         UIHelper.runWithProgress(debitTab, "A gerar nota de débito…", () -> debitApiClient.renderDebitNote(selected.id()),
-                pdf -> PdfFileSaver.saveAndOpen(pdf, "nota-debito-" + selected.noteNumber()),
+                pdf -> PrintPreviewDialog.show(debitTab, pdf, "nota-debito-" + selected.noteNumber()),
                 error -> showError(debitTab, "gerar nota de débito", error));
     }
 
     private void loadInvoices(java.util.function.Consumer<List<InvoiceDTO>> consumer) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.loadAsync(creditTab, () -> comercialApiClient.getInvoicesByCompany(companyId), loaded -> {
-            if (loaded.isEmpty()) JOptionPane.showMessageDialog(creditTab,
-                    "Precisa de pelo menos uma fatura cadastrada.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            if (loaded.isEmpty()) showNotice(creditTab, FeedbackType.WARNING,
+                    "Sem faturas", "Registe pelo menos uma fatura antes de emitir uma nota.");
             else consumer.accept(new ArrayList<>(loaded));
         }, error -> showError(creditTab, "carregar faturas", error));
     }
@@ -285,12 +290,11 @@ public final class CommercialNotesPanel {
                     String.valueOf(reason.getSelectedItem()), available.isEmpty() ? null : available.get(warehouse.getSelectedIndex()).id(),
                     blank(description.getText()), requestedLines);
             UIHelper.runWithProgress(creditTab, "A emitir nota de crédito…", () -> creditApiClient.create(request), created -> {
-                JOptionPane.showMessageDialog(creditTab, "Nota " + created.noteNumber() + " emitida (pendente de aprovação).",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                ToastManager.success(creditTab, "Nota " + created.noteNumber() + " emitida; pendente de aprovação.");
                 loadCredits();
             }, error -> showError(creditTab, "emitir nota de crédito", error));
         } catch (RuntimeException error) {
-            JOptionPane.showMessageDialog(creditTab, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(creditTab, FeedbackType.ERROR, "Dados da nota de crédito inválidos", error.getMessage());
         }
     }
 
@@ -348,12 +352,11 @@ public final class CommercialNotesPanel {
             CreateDebitNoteRequest request = new CreateDebitNoteRequest(invoices.get(invoice.getSelectedIndex()).id(),
                     String.valueOf(reason.getSelectedItem()), blank(description.getText()), requestedLines);
             UIHelper.runWithProgress(debitTab, "A emitir nota de débito…", () -> debitApiClient.create(request), created -> {
-                JOptionPane.showMessageDialog(debitTab, "Nota " + created.noteNumber() + " emitida (pendente de aprovação).",
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                ToastManager.success(debitTab, "Nota " + created.noteNumber() + " emitida; pendente de aprovação.");
                 loadDebits();
             }, error -> showError(debitTab, "emitir nota de débito", error));
         } catch (RuntimeException error) {
-            JOptionPane.showMessageDialog(debitTab, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            showNotice(debitTab, FeedbackType.ERROR, "Dados da nota de débito inválidos", error.getMessage());
         }
     }
 
@@ -379,8 +382,11 @@ public final class CommercialNotesPanel {
 
     private static String blank(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 
-    private static void showError(Component owner, String action, Throwable error) {
-        JOptionPane.showMessageDialog(owner, "Não foi possível " + action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+    private void showError(Component owner, String action, Throwable error) {
+        showNotice(owner, FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
+    }
+
+    private void showNotice(Component owner, FeedbackType type, String title, String message) {
+        (owner == debitTab ? debitFeedback : creditFeedback).show(type, title, message, null, null);
     }
 }

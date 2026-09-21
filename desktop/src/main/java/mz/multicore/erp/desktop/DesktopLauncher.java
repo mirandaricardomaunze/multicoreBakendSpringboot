@@ -13,6 +13,7 @@ import mz.multicore.erp.gui.MainFrame;
 import mz.multicore.erp.gui.components.UIHelper;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import javax.swing.JFrame;
 import java.awt.EventQueue;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -31,6 +32,8 @@ public class DesktopLauncher {
 
     public void launch() {
         EventQueue.invokeLater(() -> {
+            JFrame.setDefaultLookAndFeelDecorated(true);
+            javax.swing.JDialog.setDefaultLookAndFeelDecorated(true);
             UIHelper.loadAndApplySavedTheme();
 
             apiConfig = DesktopApiConfig.from(context.getEnvironment());
@@ -41,16 +44,21 @@ public class DesktopLauncher {
             // Assinatura expirada com a app aberta → volta ao ecrã de login (re-login bloqueado).
             UIHelper.onForcedLogout = () -> EventQueue.invokeLater(this::logoutToLogin);
 
-            loginAndShow();
+            showLogin();
         });
     }
 
-    /** Mostra o login e, autenticado, prepara o contexto e abre a janela principal. */
-    private void loginAndShow() {
-        LoginDialog login = new LoginDialog(authApiClient);
+    /** Mostra a janela de login e, autenticado, prepara o contexto e abre a janela principal. */
+    private void showLogin() {
+        LoginDialog login = new LoginDialog(authApiClient, this::onAuthenticated);
+        login.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         login.setVisible(true);
+        login.toFront();
+        login.requestFocus();
+    }
 
-        session = login.getAuthenticatedSession();
+    private void onAuthenticated(DesktopSession authenticatedSession) {
+        this.session = authenticatedSession;
         if (session == null) {
             context.close();
             System.exit(0);
@@ -77,8 +85,9 @@ public class DesktopLauncher {
             } finally {
                 context.getBean(DesktopSessionStore.class).clear();
                 CurrentUserContext.clear();
-                context.close();
             }
+            session = null;
+            showLogin();
             return;
         }
 
@@ -87,9 +96,18 @@ public class DesktopLauncher {
     }
 
     private boolean ensureLicenseAccepted() {
-        LicenseAcceptanceDialog dialog = new LicenseAcceptanceDialog(new LicenseApiClient(apiConfig, session));
-        dialog.setVisible(true);
-        return dialog.isAccepted();
+        try {
+            LicenseApiClient client = new LicenseApiClient(apiConfig, session);
+            mz.multicore.erp.modules.licensing.dto.LicenseTermsDTO terms = client.currentTerms();
+            if (terms != null && terms.accepted()) {
+                return true;
+            }
+            LicenseAcceptanceDialog dialog = new LicenseAcceptanceDialog(client);
+            dialog.setVisible(true);
+            return dialog.isAccepted();
+        } catch (Exception ignore) {
+            return true;
+        }
     }
 
     /**
@@ -109,7 +127,7 @@ public class DesktopLauncher {
             currentFrame = null;
         }
         session = null;
-        loginAndShow();
+        showLogin();
     }
 
     private void rebuildMainFrame() {
@@ -143,6 +161,8 @@ public class DesktopLauncher {
         mainFrame.setExtendedState(extendedState); // maximizado no arranque; estado preservado na reconstrução
         currentFrame = mainFrame;
         mainFrame.setVisible(true);
+        mainFrame.toFront();
+        mainFrame.requestFocus();
         // Aviso de assinatura só no primeiro arranque (bounds == null), não na reconstrução por tema.
         if (bounds == null) {
             java.awt.EventQueue.invokeLater(mainFrame::checkSubscriptionOnStartup);

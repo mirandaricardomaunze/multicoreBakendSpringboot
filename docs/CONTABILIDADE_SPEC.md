@@ -1,7 +1,7 @@
 # Contabilidade (PGC-NIRF) — especificação
 
 **Criado em:** 2026-08-15
-**Estado:** v1 implementada (backend + desktop), automatizada em CT-01..CT-46
+**Estado:** v2 implementada (backend + desktop), automatizada em CT-01..CT-46 e CT-30..CT-33
 **Origem:** lacuna levantada na auditoria de gestão de 2026-08-09 (`tasks/current.md`): *"**sem
 contabilidade** (nem plano de contas, nem razão, nem balancete). Esta última é a maior ausência
 para um ERP de gestão."*
@@ -104,6 +104,24 @@ C  Clientes 2101    valor
 **Só o movimento de saldo.** O proveito já foi lançado na emissão da fatura; lançá-lo outra vez
 aqui contaria a mesma venda duas vezes — o erro clássico deste tipo de integração.
 
+### Compra e pagamento a fornecedor
+```
+D  Mercadorias 3201       líquido
+D  IVA dedutível 2432     imposto
+C  Fornecedores 2201      total
+```
+Quando a compra é paga no acto, o mesmo lançamento acrescenta D Fornecedores e C Caixa/Banco.
+Pagamentos posteriores geram uma fonte independente (`SUPPLIER_PAYMENT`) e liquidam 2201 sem
+voltar a reconhecer mercadoria ou imposto. A conta de tesouraria tem `account_type` explícito;
+contas antigas com número bancário migram para `BANK`, e contas sem número para `CASH`.
+
+### Notas comerciais aprovadas
+
+- Nota de crédito: D Vendas, D IVA liquidado, C Clientes. Quando é devolução física, acrescenta
+  D Mercadorias e C CMVMC pelo custo histórico da linha original.
+- Nota de débito: D Clientes, C Outros proveitos operacionais 7501 e C IVA liquidado.
+- Rascunhos, notas pendentes, rejeitadas ou canceladas não chegam ao razão.
+
 ### Duas travas
 - **Sem plano de contas, não lança e não estoira.** Uma empresa que ainda não semeou o plano tem
   de poder continuar a vender; a contabilidade é opcional até alguém a ligar.
@@ -125,21 +143,21 @@ não é venda.
   abertura** (tudo o que foi lançado antes do período) e saldo acumulado por movimento. Sem o
   saldo de abertura, o extracto de Março começaria do zero e ninguém saberia quanto o cliente já
   devia a 1 de Março.
+- **Demonstração de resultados**: agrega classes 7 e 6 no período e apresenta proveitos, custos e
+  resultado líquido, sem depender de cálculos no desktop.
+- **Balanço**: agrega saldos desde a origem até à data escolhida; separa activo, passivo e capital,
+  incorpora o resultado corrente e declara explicitamente se Activo = Capital + Passivo.
 
 ---
 
 ## 7. Limites conhecidos (v1)
 
-- **Salários não lançam automaticamente.** O evento de folha salarial ainda não é publicado; o
-  processamento lança-se à mão (D 6301 / C 2601). É o próximo a ligar.
-- **Compras não lançam automaticamente.** Mesma razão; o plano já tem as contas (2201, 2432,
-  3201).
-- **Notas de crédito/débito** não geram estorno contabilístico automático.
+- Salários, retenções, compras e pagamentos a fornecedor já lançam automaticamente.
+- Notas de crédito e débito aprovadas já geram lançamento contabilístico automático.
 - **Sem fecho de exercício**: não há apuramento de resultados nem transporte de saldos para o ano
   seguinte (classe 8 existe no plano mas não é movimentada automaticamente).
-- **Sem balanço nem demonstração de resultados** formatados — o balancete é a base para os
-  construir.
-- O par Caixa/Banco escolhe-se por um booleano (`cashPayment`): numa venda com métodos mistos,
+- Balanço e demonstração de resultados estão disponíveis no backend e no desktop.
+- O par Caixa/Banco da tesouraria é classificado explicitamente. Numa venda com métodos mistos,
   considera-se caixa se **algum** dos pagamentos for numerário. Repartir por método é v2.
 
 ---

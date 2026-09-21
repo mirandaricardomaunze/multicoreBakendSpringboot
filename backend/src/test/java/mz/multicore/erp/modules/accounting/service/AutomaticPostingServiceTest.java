@@ -154,6 +154,85 @@ class AutomaticPostingServiceTest {
         assertEquals(JournalSource.RECEIPT, entry.getSource());
     }
 
+    @Test // CT-30
+    void compra_debitaMercadoriasEIva_creditaFornecedor() {
+        service.onPurchaseRegistered(new mz.multicore.erp.architecture.events.PurchaseRegisteredEvent(
+                COMPANY_ID, 88L, "V/FT-2026/8", HOJE,
+                new BigDecimal("100.00"), new BigDecimal("16.00"), new BigDecimal("116.00"),
+                BigDecimal.ZERO, false));
+
+        JournalEntry entry = captureEntry();
+        assertTrue(entry.isBalanced());
+        assertEquals(new BigDecimal("100.00"), debitOf(entry, PgcNirfChart.MERCADORIAS));
+        assertEquals(new BigDecimal("16.00"), debitOf(entry, PgcNirfChart.IVA_DEDUTIVEL));
+        assertEquals(new BigDecimal("116.00"), creditOf(entry, PgcNirfChart.FORNECEDORES));
+        assertEquals(JournalSource.PURCHASE, entry.getSource());
+    }
+
+    @Test // CT-31
+    void compraJaLancada_naoDuplica() {
+        when(journalService.findByDocument(COMPANY_ID, JournalSource.PURCHASE, 88L))
+                .thenReturn(Optional.of(new JournalEntry()));
+        service.onPurchaseRegistered(new mz.multicore.erp.architecture.events.PurchaseRegisteredEvent(
+                COMPANY_ID, 88L, "V/FT-2026/8", HOJE,
+                new BigDecimal("100.00"), new BigDecimal("16.00"), new BigDecimal("116.00"),
+                BigDecimal.ZERO, false));
+        verify(journalService, never()).save(any(), any());
+    }
+
+    @Test // CT-32
+    void compraPagaNoActo_liquidaFornecedorContraBanco() {
+        service.onPurchaseRegistered(new mz.multicore.erp.architecture.events.PurchaseRegisteredEvent(
+                COMPANY_ID, 89L, "V/FT-2026/9", HOJE,
+                new BigDecimal("100.00"), new BigDecimal("16.00"), new BigDecimal("116.00"),
+                new BigDecimal("116.00"), false));
+        JournalEntry entry = captureEntry();
+        assertEquals(new BigDecimal("116.00"), debitOf(entry, PgcNirfChart.FORNECEDORES));
+        assertEquals(new BigDecimal("116.00"), creditOf(entry, PgcNirfChart.BANCO));
+        assertTrue(entry.isBalanced());
+    }
+
+    @Test // CT-33
+    void pagamentoPosterior_liquidaFornecedorContraCaixa() {
+        service.onSupplierPaymentRegistered(
+                new mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent(
+                        COMPANY_ID, 90L, "V/FT-2026/8", HOJE, new BigDecimal("50.00"), true));
+        JournalEntry entry = captureEntry();
+        assertEquals(new BigDecimal("50.00"), debitOf(entry, PgcNirfChart.FORNECEDORES));
+        assertEquals(new BigDecimal("50.00"), creditOf(entry, PgcNirfChart.CAIXA));
+        assertEquals(JournalSource.SUPPLIER_PAYMENT, entry.getSource());
+        assertTrue(entry.isBalanced());
+    }
+
+    @Test // CT-34
+    void notaCredito_estornaVendaIvaClienteECustoDaDevolucao() {
+        service.onCreditNoteApproved(new mz.multicore.erp.architecture.events.CreditNoteApprovedEvent(
+                COMPANY_ID, 101L, "NC-2026/1", HOJE, new BigDecimal("100.00"),
+                new BigDecimal("16.00"), new BigDecimal("116.00"), new BigDecimal("60.00")));
+        JournalEntry entry = captureEntry();
+        assertEquals(new BigDecimal("100.00"), debitOf(entry, PgcNirfChart.VENDAS));
+        assertEquals(new BigDecimal("16.00"), debitOf(entry, PgcNirfChart.IVA_LIQUIDADO));
+        assertEquals(new BigDecimal("116.00"), creditOf(entry, PgcNirfChart.CLIENTES));
+        assertEquals(new BigDecimal("60.00"), debitOf(entry, PgcNirfChart.MERCADORIAS));
+        assertEquals(new BigDecimal("60.00"), creditOf(entry, PgcNirfChart.CMVMC));
+        assertEquals(JournalSource.CREDIT_NOTE, entry.getSource());
+        assertTrue(entry.isBalanced());
+    }
+
+    @Test // CT-35
+    void notaDebito_aumentaClienteEReconheceOutroProveitoEIva() {
+        service.onDebitNoteApproved(new mz.multicore.erp.architecture.events.DebitNoteApprovedEvent(
+                COMPANY_ID, 102L, "ND-2026/1", HOJE, new BigDecimal("50.00"),
+                new BigDecimal("8.00"), new BigDecimal("58.00")));
+        JournalEntry entry = captureEntry();
+        assertEquals(new BigDecimal("58.00"), debitOf(entry, PgcNirfChart.CLIENTES));
+        assertEquals(new BigDecimal("50.00"),
+                creditOf(entry, PgcNirfChart.OUTROS_PROVEITOS_OPERACIONAIS));
+        assertEquals(new BigDecimal("8.00"), creditOf(entry, PgcNirfChart.IVA_LIQUIDADO));
+        assertEquals(JournalSource.DEBIT_NOTE, entry.getSource());
+        assertTrue(entry.isBalanced());
+    }
+
     @Test // CT-27
     void semPlanoDeContas_naoLancaEnaoEstoira() {
         when(chartOfAccountsService.hasChart(COMPANY_ID)).thenReturn(false);

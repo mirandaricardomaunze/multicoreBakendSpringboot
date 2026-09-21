@@ -83,6 +83,10 @@ public class Invoice extends BaseEntity {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    /** Referência única de contingência (ex.: CONT-20260917-192000-A1B2) gravada quando emitida offline. */
+    @Column(name = "contingency_reference", length = 60)
+    private String contingencyReference;
+
     public void addLine(InvoiceLine line) {
         lines.add(line);
         line.setInvoice(this);

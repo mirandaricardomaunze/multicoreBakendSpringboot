@@ -99,5 +99,8 @@ chamada ao `sendError` — que era o que os deixava passar com o defeito present
 | AC-54 | O mesmo endpoint com utilizador normal (não superadmin) | recusado |
 | AC-57 | Duas lojas em versões diferentes | o rodapé diz "2 versões diferentes em uso: 1.4.0, 1.5.0" |
 | AC-58 | Sistema sem avistamentos ainda | "Ainda não foi registada nenhuma versão." |
-| AC-55 | Instalador `jpackage` + Inno Setup por utilizador | **não implementado** — ver spec §6 |
-| AC-56 | Actualização preserva `desktop.api.base-url` | **não implementado** |
+| AC-55 | Instalador `jpackage` por utilizador | ✅ `--win-per-user-install`; `WindowsInstallerHarnessTest` |
+| AC-56 | Actualização preserva `desktop.api.base-url` | ✅ ficheiro externo em `%LOCALAPPDATA%`; instalador não o substitui |
+
+Ainda externos: gerar o `.exe` numa máquina com WiX 3, assinar com certificado de code signing e
+publicá-lo num canal HTTPS confiável. Estes passos não devem ser simulados sem certificado e destino.

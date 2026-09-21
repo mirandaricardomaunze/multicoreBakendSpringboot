@@ -11,6 +11,7 @@ do projeto). Cobertura = compilação + testes tocados verdes + verificação **
 | DE-01 | `mvn -o compile` após entidade/migração/renderer/serviço | BUILD SUCCESS |
 | DE-02 | Suite tocada (Platform/Comercial/POS) | verde |
 | DE-03 | `V33` aplica em PostgreSQL real | Flyway success; `companies` tem `phone` + `logo` |
+| DE-04 | `TableExportPrintServiceTest` — listagem exportada do desktop | O texto do PDF traz nome, NUIT, morada, telefone e email da empresa (TE-01..TE-06) |
 
 ## Manuais (ao vivo)
 | ID | Passos | Esperado |
@@ -35,6 +36,21 @@ do projeto). Cobertura = compilação + testes tocados verdes + verificação **
 - **Verificação determinística:** `scratchpad/PdfVerify.java` (OpenPDF `PdfTextExtractor` + deteção de
   `/Image`) em vez de screenshot — o texto do PDF é a prova.
 - Dados de teste (telefone/logo de PT e MZ) repostos a nulo no fim.
+
+## Evidência (execução 2026-08-30, exportação de listagens)
+
+- **A última folha sem cabeçalho fechou-se.** As listagens (*Exportar PDF* em Clientes, Faturas,
+  Encomendas, Lotes & Validades e nos separadores do RH) eram desenhadas **pelo desktop**, com uma
+  cópia própria do `TablePdfExporter`: saíam com título e tabela, e mais nada — sem nome, sem NUIT,
+  sem morada. O desktop é um cliente fino e não tem a empresa; tem-na o servidor.
+- A listagem passou a subir para `POST /api/print/table` (`TableExportPrintService`) e a descer em
+  PDF pelo mesmo `CompanyHeaderRenderer` da factura e da guia. A cópia do desktop foi apagada e o
+  OpenPDF ficou em `scope=test` no `desktop/pom.xml` — o cliente lê e imprime PDF, não o compõe.
+- **DE-04:** `TableExportPrintServiceTest` extrai o texto do PDF e exige lá os cinco campos da
+  empresa; cobre também linhas curtas/compridas, listagem vazia e os tectos de 20 000 linhas /
+  40 colunas. `MultiModuleArchitectureHarnessTest.desktopDoesNotDrawPdfDocuments` impede o regresso.
+- **Por confirmar na loja, e não é da IA:** a exportação nunca foi vista contra um backend a correr
+  — o PDF de uma listagem real, com o logótipo da empresa, ainda não saiu no papel.
 
 **Nota:** limpar um logótipo pelo endpoint (POST com corpo vazio) devolve 500 — a UI nunca envia vazio,
 por isso fica fora de âmbito (substituir funciona; para limpar, actualizar via BD ou um futuro DELETE).

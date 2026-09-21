@@ -3,6 +3,8 @@ package mz.multicore.erp.gui.commercial;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.ComercialPanel;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 
 import javax.swing.*;
@@ -11,6 +13,7 @@ import java.awt.*;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 /** Apresentação e impressão de uma encomenda, sem regras de negócio locais. */
 public final class OrderDetailsDialog {
@@ -116,13 +119,12 @@ public final class OrderDetailsDialog {
             apiClient.markOrderPrinted(order.id(), username);
             return pdf;
         }, pdf -> {
-            mz.multicore.erp.modules.printing.PdfFileSaver.saveAndOpen(pdf, "encomenda-" + order.orderNumber());
+            PrintPreviewDialog.show(owner, pdf, "encomenda-" + order.orderNumber());
             afterPrint.run();
         }, error -> showError("Não foi possível gerar a encomenda em PDF", error));
     }
 
     private void showError(String action, Throwable error) {
-        JOptionPane.showMessageDialog(owner, action + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        if (owner instanceof ComercialPanel panel) panel.showCommercialNotice(FeedbackType.ERROR, action, error.getMessage());
     }
 }

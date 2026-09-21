@@ -39,6 +39,7 @@ public final class PgcNirfChart {
     public static final String CUSTOS_PESSOAL = "6301";
     public static final String ENCARGOS_PESSOAL = "6302";   // INSS patronal: custo da empresa
     public static final String VENDAS = "7101";
+    public static final String OUTROS_PROVEITOS_OPERACIONAIS = "7501";
 
     public static List<Seed> accounts() {
         return List.of(
@@ -94,6 +95,9 @@ public final class PgcNirfChart {
                 new Seed(VENDAS, "Vendas de mercadorias", AccountNature.CREDORA, true),
                 new Seed("72", "Prestações de serviços", AccountNature.CREDORA, false),
                 new Seed("7201", "Prestações de serviços", AccountNature.CREDORA, true),
+                new Seed("75", "Outros proveitos operacionais", AccountNature.CREDORA, false),
+                new Seed(OUTROS_PROVEITOS_OPERACIONAIS, "Outros proveitos operacionais",
+                        AccountNature.CREDORA, true),
 
                 // Classe 8 — Resultados
                 new Seed("8", "Resultados", AccountNature.CREDORA, false),

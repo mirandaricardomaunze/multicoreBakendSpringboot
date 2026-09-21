@@ -6,9 +6,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Repository
 public interface TillSessionRepository extends JpaRepository<TillSession, Long> {
     Optional<TillSession> findByOperatorAndStatusAndCompanyId(String operator, String status, Long companyId);
     List<TillSession> findByCompanyId(Long companyId);
+    List<TillSession> findByCompanyIdOrderByOpenDateDesc(Long companyId);
+    List<TillSession> findByCompanyIdAndOpenDateBetweenOrderByOpenDateDesc(Long companyId, LocalDateTime from, LocalDateTime to);
 }

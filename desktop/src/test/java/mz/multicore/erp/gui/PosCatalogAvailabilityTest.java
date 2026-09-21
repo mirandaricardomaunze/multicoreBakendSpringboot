@@ -11,9 +11,9 @@ class PosCatalogAvailabilityTest {
     void catalogCardsKeepCompactProfessionalDimensions() {
         assertTrue(PosCatalogController.CARD_IMAGE_WIDTH <= 100);
         assertTrue(PosCatalogController.CARD_IMAGE_HEIGHT <= 64);
-        assertTrue(PosCatalogController.CARD_IMAGE_HEIGHT >= 56);
-        assertTrue(PosCatalogController.CARD_PADDING >= 6);
-        assertTrue(PosCatalogController.CARD_CONTENT_GAP >= 4);
+        assertTrue(PosCatalogController.CARD_IMAGE_HEIGHT >= 40);
+        assertTrue(PosCatalogController.CARD_PADDING >= 4);
+        assertTrue(PosCatalogController.CARD_CONTENT_GAP >= 2);
     }
 
     @Test

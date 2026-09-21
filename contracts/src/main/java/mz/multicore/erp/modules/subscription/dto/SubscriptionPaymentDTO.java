@@ -11,5 +11,11 @@ public record SubscriptionPaymentDTO(
         LocalDate paidAt,
         LocalDate periodStart,
         LocalDate periodEnd,
+        String reference,
+        String paymentDetails,
         String note
-) {}
+) {
+    public SubscriptionPaymentDTO(Long id, BigDecimal amount, String method, String methodLabel, LocalDate paidAt, LocalDate periodStart, LocalDate periodEnd, String note) {
+        this(id, amount, method, methodLabel, paidAt, periodStart, periodEnd, null, null, note);
+    }
+}

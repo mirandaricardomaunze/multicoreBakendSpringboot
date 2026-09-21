@@ -5,6 +5,11 @@ import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.DateField;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
@@ -16,6 +21,8 @@ import mz.multicore.erp.modules.subscription.dto.RecordPaymentRequest;
 import mz.multicore.erp.modules.subscription.dto.SaveSubscriptionRequest;
 import mz.multicore.erp.modules.subscription.dto.SubscriptionDTO;
 import mz.multicore.erp.modules.subscription.dto.SubscriptionPaymentDTO;
+import mz.multicore.erp.gui.components.KpiCard;
+import mz.multicore.erp.gui.components.SimplePieChart;
 import mz.multicore.erp.modules.support.dto.SupportMessageDTO;
 import mz.multicore.erp.modules.support.dto.SupportTicketDTO;
 
@@ -26,7 +33,9 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Consola da plataforma (superadmin). Fase 1: gestão de empresas (listar, activar/desactivar,
@@ -55,6 +64,13 @@ public class PlataformaPanel extends JPanel {
     private DefaultTableModel versionsModel;
     private JTable versionsTable;
     private JLabel versionsSummary;
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+
+    private JLabel subMrrLabel;
+    private JLabel subActiveLabel;
+    private JLabel subRiskLabel;
+    private JLabel subPaymentsLabel;
+    private SimplePieChart subPlansChart;
 
     public PlataformaPanel(PlatformApiClient platformApiClient) {
         this.platformApiClient = platformApiClient;
@@ -72,6 +88,7 @@ public class PlataformaPanel extends JPanel {
         tabbedPane.addTab("Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), createSupportTab());
         tabbedPane.addTab("Versões dos Clientes", UIHelper.icon("fas-code-branch", 16, UIHelper.TEXT_LIGHT),
                 createVersionsTab());
+        add(feedback, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
 
         // Carregamento preguiçoso: dados por HTTP em onPanelSelected() (via navigate no arranque do
@@ -201,6 +218,7 @@ public class PlataformaPanel extends JPanel {
         };
         companiesTable = new JTable(companiesModel);
         UIHelper.styleTable(companiesTable);
+        companiesTable.putClientProperty("noRowInspector", Boolean.TRUE);
         companiesTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -240,8 +258,7 @@ public class PlataformaPanel extends JPanel {
     private PlatformCompanyDTO selectedCompany() {
         int row = TableFilter.selectedModelRow(companiesTable);
         if (row < 0 || row >= companies.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione uma empresa na lista.", "Empresas",
-                    JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Seleccione uma empresa", "Escolha uma empresa na lista para continuar.");
             return null;
         }
         return companies.get(row);
@@ -288,8 +305,7 @@ public class PlataformaPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Empresa criada com sucesso!", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Empresa criada com sucesso.");
             loadCompanies();
         }
     }
@@ -334,8 +350,7 @@ public class PlataformaPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Empresa actualizada.", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Empresa actualizada.");
             loadCompanies();
         }
     }
@@ -350,7 +365,7 @@ public class PlataformaPanel extends JPanel {
             if (fc.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
                 byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
                 if (bytes == null) {
-                    JOptionPane.showMessageDialog(this, "Imagem inválida.", "Logótipo", JOptionPane.WARNING_MESSAGE);
+                    showPlatformNotice(FeedbackType.WARNING, "Imagem inválida", "Seleccione uma imagem válida para o logótipo.");
                     return;
                 }
                 holder[0] = bytes;
@@ -371,11 +386,12 @@ public class PlataformaPanel extends JPanel {
 
         boolean newState = !company.active();
         String verb = newState ? "activar" : "suspender";
-        int confirm = JOptionPane.showConfirmDialog(this,
+        if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(this),
+                newState ? FeedbackType.INFO : FeedbackType.WARNING,
+                newState ? "Activar empresa" : "Suspender empresa",
                 "Deseja " + verb + " a empresa '" + company.name() + "'?"
                         + (newState ? "" : "\nOs utilizadores desta empresa deixam de poder iniciar sessão."),
-                "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
+                newState ? "Activar" : "Suspender")) return;
 
         UIHelper.runWithProgress(this, "A actualizar estado da empresa…",
                 () -> platformApiClient.setCompanyActive(company.id(), newState), ignored -> loadCompanies(),
@@ -408,7 +424,25 @@ public class PlataformaPanel extends JPanel {
         actions.add(payBtn);
         actions.add(planBtn);
         header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
+
+        // Barra Executiva de KPIs de Subscrições
+        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 12, 0));
+        kpiGrid.setOpaque(false);
+        subMrrLabel = new JLabel("0,00 MT");
+        subActiveLabel = new JLabel("0");
+        subRiskLabel = new JLabel("0");
+        subPaymentsLabel = new JLabel("0");
+
+        kpiGrid.add(KpiCard.createMetricCard("Receita Recorrente (MRR)", subMrrLabel, "Faturação mensal das assinaturas", "fas-money-bill-wave", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createMetricCard("Assinaturas Activas", subActiveLabel, "Empresas regularizadas", "fas-check-circle", UIHelper.ACCENT_BLUE));
+        kpiGrid.add(KpiCard.createMetricCard("Em Risco / Expiradas", subRiskLabel, "≤ 7 dias ou vencidas", "fas-exclamation-triangle", UIHelper.REJECTED_RED));
+        kpiGrid.add(KpiCard.createMetricCard("Pagamentos Registados", subPaymentsLabel, "Histórico liquidado", "fas-receipt", UIHelper.PENDING_YELLOW));
+
+        JPanel topArea = new JPanel(new BorderLayout(0, 12));
+        topArea.setOpaque(false);
+        topArea.add(header, BorderLayout.NORTH);
+        topArea.add(kpiGrid, BorderLayout.CENTER);
+        panel.add(topArea, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -445,7 +479,21 @@ public class PlataformaPanel extends JPanel {
         sBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         listCard.add(sBar, BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
-        panel.add(listCard, BorderLayout.CENTER);
+
+        // Gráfico Donut de Planos
+        ModernPanel chartCard = new ModernPanel(16);
+        chartCard.setLayout(new BorderLayout());
+        chartCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        chartCard.setPreferredSize(new Dimension(320, 0));
+        subPlansChart = new SimplePieChart("Distribuição por Plano", true);
+        chartCard.add(subPlansChart, BorderLayout.CENTER);
+
+        JPanel centerSplit = new JPanel(new BorderLayout(12, 0));
+        centerSplit.setOpaque(false);
+        centerSplit.add(listCard, BorderLayout.CENTER);
+        centerSplit.add(chartCard, BorderLayout.EAST);
+
+        panel.add(centerSplit, BorderLayout.CENTER);
 
         planBtn.addActionListener(e -> defineSubscription());
         payBtn.addActionListener(e -> recordPayment());
@@ -457,6 +505,18 @@ public class PlataformaPanel extends JPanel {
         UIHelper.loadAsync(this, platformApiClient::listOverview, loaded -> {
             subscriptions = loaded;
             subsModel.setRowCount(0);
+            BigDecimal totalMrr = BigDecimal.ZERO;
+            int activeCount = 0;
+            int riskCount = 0;
+            long totalPayments = 0;
+
+            Map<String, BigDecimal> planCountMap = new LinkedHashMap<>();
+            planCountMap.put("TRIAL", BigDecimal.ZERO);
+            planCountMap.put("BASIC", BigDecimal.ZERO);
+            planCountMap.put("PRO", BigDecimal.ZERO);
+            planCountMap.put("ENTERPRISE", BigDecimal.ZERO);
+            planCountMap.put("Sem Plano", BigDecimal.ZERO);
+
             for (SubscriptionDTO s : subscriptions) {
                 subsModel.addRow(new Object[]{
                         s.companyName(),
@@ -466,6 +526,51 @@ public class PlataformaPanel extends JPanel {
                         s.monthlyPrice() == null ? "—" : s.monthlyPrice().toPlainString(),
                         s.paymentCount()
                 });
+
+                if (s.hasSubscription()) {
+                    if ("ACTIVE".equals(s.status())) {
+                        activeCount++;
+                        if (s.monthlyPrice() != null) {
+                            totalMrr = totalMrr.add(s.monthlyPrice());
+                        }
+                    }
+                    int sev = subSeverity(s);
+                    if (sev <= 0) {
+                        riskCount++;
+                    }
+                    totalPayments += s.paymentCount();
+
+                    String pKey = s.plan() != null ? s.plan() : "Sem Plano";
+                    planCountMap.put(pKey, planCountMap.getOrDefault(pKey, BigDecimal.ZERO).add(BigDecimal.ONE));
+                } else {
+                    planCountMap.put("Sem Plano", planCountMap.getOrDefault("Sem Plano", BigDecimal.ZERO).add(BigDecimal.ONE));
+                }
+            }
+
+            if (subMrrLabel != null) {
+                subMrrLabel.setText(String.format("%,.2f MT", totalMrr));
+            }
+            if (subActiveLabel != null) {
+                subActiveLabel.setText(activeCount + " / " + subscriptions.size());
+            }
+            if (subRiskLabel != null) {
+                subRiskLabel.setText(String.valueOf(riskCount));
+                subRiskLabel.setForeground(riskCount > 0 ? UIHelper.REJECTED_RED : UIHelper.APPROVED_GREEN);
+            }
+            if (subPaymentsLabel != null) {
+                subPaymentsLabel.setText(String.valueOf(totalPayments));
+            }
+
+            if (subPlansChart != null) {
+                List<String> pLabels = new ArrayList<>();
+                List<BigDecimal> pValues = new ArrayList<>();
+                for (Map.Entry<String, BigDecimal> entry : planCountMap.entrySet()) {
+                    if (entry.getValue().compareTo(BigDecimal.ZERO) > 0) {
+                        pLabels.add(entry.getKey());
+                        pValues.add(entry.getValue());
+                    }
+                }
+                subPlansChart.setData(pLabels.toArray(new String[0]), pValues.toArray(new BigDecimal[0]), null);
             }
         }, error -> showPlatformError("assinaturas", error));
     }
@@ -484,8 +589,7 @@ public class PlataformaPanel extends JPanel {
     private SubscriptionDTO selectedSubscription() {
         int row = TableFilter.selectedModelRow(subsTable);
         if (row < 0 || row >= subscriptions.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione uma empresa na lista.", "Assinaturas",
-                    JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Seleccione uma empresa", "Escolha uma empresa na lista para continuar.");
             return null;
         }
         return subscriptions.get(row);
@@ -499,9 +603,8 @@ public class PlataformaPanel extends JPanel {
         UIHelper.styleComboBox(planCombo);
         if (sub.plan() != null) planCombo.setSelectedItem(sub.plan());
         JTextField priceField = new JTextField(sub.monthlyPrice() == null ? "" : sub.monthlyPrice().toPlainString());
-        JTextField validField = new JTextField(sub.validUntil() == null ? "" : sub.validUntil().toString());
+        DateField validField = new DateField(sub.validUntil());
         UIHelper.styleTextField(priceField);
-        UIHelper.styleTextField(validField);
 
         JPanel form = UIHelper.createDialogForm(
                 "Plano:", planCombo,
@@ -518,8 +621,7 @@ public class PlataformaPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Assinatura actualizada.", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Assinatura actualizada.");
             loadSubscriptions();
         }
     }
@@ -529,40 +631,152 @@ public class PlataformaPanel extends JPanel {
         if (sub == null) return;
 
         JTextField amountField = new JTextField();
-        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"DINHEIRO", "MPESA", "EMOLA", "TRANSFERENCIA", "OUTRO"});
+        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"TRANSFERENCIA", "DINHEIRO", "MPESA", "EMOLA", "OUTRO"});
         UIHelper.styleComboBox(methodCombo);
-        JTextField paidAtField = new JTextField(LocalDate.now().toString());
-        JTextField startField = new JTextField();
-        JTextField endField = new JTextField();
+        methodCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if ("TRANSFERENCIA".equals(value)) setText("Transferência Bancária");
+                else if ("DINHEIRO".equals(value)) setText("Numerário / Dinheiro");
+                else if ("MPESA".equals(value)) setText("M-Pesa");
+                else if ("EMOLA".equals(value)) setText("e-Mola");
+                else if ("OUTRO".equals(value)) setText("Outro Meio");
+                return this;
+            }
+        });
+
+        JTextField referenceField = new JTextField();
+        referenceField.setToolTipText("Ex: Nº talão de depósito, ID de transação M-Pesa/e-Mola, Nº de recibo...");
+        UIHelper.styleTextField(referenceField);
+
+        // Campos contextuais para Transferência
+        JComboBox<String> bankCombo = new JComboBox<>(new String[]{
+                "Millennium BIM", "BCI", "Standard Bank", "Moza Banco", "Absa Bank", "Nedbank", "FNB", "Outro Banco"
+        });
+        UIHelper.styleComboBox(bankCombo);
+        JTextField transferHolderField = new JTextField();
+        transferHolderField.setToolTipText("Titular da conta ou Nº de conta bancária de origem");
+        UIHelper.styleTextField(transferHolderField);
+        JPanel transferPanel = UIHelper.createDialogForm(
+                "Banco:", bankCombo,
+                "Titular / Conta de Origem:", transferHolderField
+        );
+
+        // Campos contextuais para Dinheiro / Numerário
+        JComboBox<String> cashLocationCombo = new JComboBox<>(new String[]{
+                "Sede / Escritório Principal", "Balcão Comercial", "Cobrança Externa / Caixa", "Outro Local"
+        });
+        UIHelper.styleComboBox(cashLocationCombo);
+        JTextField manualReceiptField = new JTextField();
+        manualReceiptField.setToolTipText("Nº do recibo manual ou talão físico entregue ao cliente");
+        UIHelper.styleTextField(manualReceiptField);
+        JPanel cashPanel = UIHelper.createDialogForm(
+                "Local / Caixa de Recebimento:", cashLocationCombo,
+                "Nº Recibo Físico / Manual:", manualReceiptField
+        );
+
+        // Campos contextuais para Carteiras Móveis (M-Pesa / e-Mola)
+        JTextField mobileNumberField = new JTextField();
+        mobileNumberField.setToolTipText("Ex: 841234567 ou 851234567");
+        UIHelper.styleTextField(mobileNumberField);
+        JTextField mobileHolderField = new JTextField();
+        mobileHolderField.setToolTipText("Nome do titular da conta móvel");
+        UIHelper.styleTextField(mobileHolderField);
+        JPanel mobilePanel = UIHelper.createDialogForm(
+                "Nº de Telemóvel:", mobileNumberField,
+                "Titular da Conta Móvel:", mobileHolderField
+        );
+
+        // Campos contextuais para Outro Meio
+        JTextField otherDetailField = new JTextField();
+        otherDetailField.setToolTipText("Descreva os detalhes e comprovativo do meio de pagamento");
+        UIHelper.styleTextField(otherDetailField);
+        JPanel otherPanel = UIHelper.createDialogForm(
+                "Descrição do Meio:", otherDetailField
+        );
+
+        // Painel CardLayout para trocar dinamicamente
+        CardLayout cardLayout = new CardLayout();
+        JPanel detailsCardPanel = new JPanel(cardLayout);
+        detailsCardPanel.setOpaque(false);
+        detailsCardPanel.add(transferPanel, "TRANSFERENCIA");
+        detailsCardPanel.add(cashPanel, "DINHEIRO");
+        detailsCardPanel.add(mobilePanel, "MPESA");
+        detailsCardPanel.add(mobilePanel, "EMOLA");
+        detailsCardPanel.add(otherPanel, "OUTRO");
+
+        methodCombo.addActionListener(e -> {
+            String sel = (String) methodCombo.getSelectedItem();
+            cardLayout.show(detailsCardPanel, sel != null ? sel : "TRANSFERENCIA");
+            detailsCardPanel.revalidate();
+            detailsCardPanel.repaint();
+        });
+
+        DateField paidAtField = new DateField(LocalDate.now());
+        DateField startField = new DateField();
+        DateField endField = new DateField();
         JTextField noteField = new JTextField();
         UIHelper.styleTextField(amountField);
-        UIHelper.styleTextField(paidAtField);
-        UIHelper.styleTextField(startField);
-        UIHelper.styleTextField(endField);
         UIHelper.styleTextField(noteField);
 
-        JPanel form = UIHelper.createDialogForm(
-                "Valor (MT):", amountField,
-                "Método:", methodCombo,
-                "Pago em (AAAA-MM-DD):", paidAtField,
+        JPanel mainFields = UIHelper.createDialogForm(
+                "Valor (MT) *:", amountField,
+                "Método de Pagamento *:", methodCombo,
+                "Referência (Opcional):", referenceField,
+                "Pago em (AAAA-MM-DD) *:", paidAtField,
                 "Período de (AAAA-MM-DD):", startField,
                 "Período até (AAAA-MM-DD):", endField,
-                "Nota:", noteField
+                "Observações:", noteField
         );
+
+        JPanel form = new JPanel(new BorderLayout(0, 10));
+        form.setOpaque(false);
+        form.add(mainFields, BorderLayout.NORTH);
+        form.add(detailsCardPanel, BorderLayout.CENTER);
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Registar Pagamento",
                 "fas-money-bill-wave", sub.companyName() + " — o período até estende a validade", form)
                 .setConfirmButton("Registar", "fas-check");
+        dlg.setSize(580, 520);
         dlg.setOnSaveAsync(() -> {
-            RecordPaymentRequest request = new RecordPaymentRequest(parseAmount(amountField.getText(), "valor"),
-                    (String) methodCombo.getSelectedItem(), parseDate(paidAtField.getText()),
-                    parseDate(startField.getText()), parseDate(endField.getText()), noteField.getText().trim());
+            String method = (String) methodCombo.getSelectedItem();
+            String details = switch (method != null ? method : "OUTRO") {
+                case "TRANSFERENCIA" -> {
+                    String bank = (String) bankCombo.getSelectedItem();
+                    String holder = transferHolderField.getText().trim();
+                    yield "Banco: " + bank + (holder.isEmpty() ? "" : " | Titular/Conta: " + holder);
+                }
+                case "DINHEIRO" -> {
+                    String loc = (String) cashLocationCombo.getSelectedItem();
+                    String rec = manualReceiptField.getText().trim();
+                    yield "Local: " + loc + (rec.isEmpty() ? "" : " | Recibo: " + rec);
+                }
+                case "MPESA", "EMOLA" -> {
+                    String phone = mobileNumberField.getText().trim();
+                    String holder = mobileHolderField.getText().trim();
+                    yield (phone.isEmpty() ? "" : "Telemóvel: " + phone)
+                            + (holder.isEmpty() ? "" : (phone.isEmpty() ? "" : " | ") + "Titular: " + holder);
+                }
+                default -> otherDetailField.getText().trim();
+            };
+
+            String ref = referenceField.getText().trim();
+            RecordPaymentRequest request = new RecordPaymentRequest(
+                    parseAmount(amountField.getText(), "valor"),
+                    method,
+                    parseDate(paidAtField.getText()),
+                    parseDate(startField.getText()),
+                    parseDate(endField.getText()),
+                    ref.isEmpty() ? null : ref,
+                    details.isEmpty() ? null : details,
+                    noteField.getText().trim()
+            );
             return () -> platformApiClient.recordPayment(sub.companyId(), request);
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Pagamento registado.", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Pagamento registado.");
             loadSubscriptions();
         }
     }
@@ -576,7 +790,7 @@ public class PlataformaPanel extends JPanel {
     }
 
     private void showPaymentsDialog(SubscriptionDTO sub, List<SubscriptionPaymentDTO> payments) {
-        String[] cols = {"Pago em", "Valor", "Método", "Período", "Nota"};
+        String[] cols = {"Pago em", "Valor", "Método", "Referência", "Detalhes", "Período", "Nota"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -584,10 +798,16 @@ public class PlataformaPanel extends JPanel {
         for (SubscriptionPaymentDTO p : payments) {
             String period = (p.periodStart() == null ? "—" : p.periodStart().toString())
                     + " a " + (p.periodEnd() == null ? "—" : p.periodEnd().toString());
+            String ref = p.reference() == null || p.reference().isBlank() ? "—" : p.reference();
+            String details = p.paymentDetails() == null || p.paymentDetails().isBlank() ? "—" : p.paymentDetails();
             model.addRow(new Object[]{
                     p.paidAt() == null ? "" : p.paidAt().toString(),
                     p.amount(),
-                    p.methodLabel(), period, p.note() == null ? "" : p.note()
+                    p.methodLabel(),
+                    ref,
+                    details,
+                    period,
+                    p.note() == null ? "" : p.note()
             });
         }
         JTable table = new JTable(model);
@@ -595,29 +815,31 @@ public class PlataformaPanel extends JPanel {
         table.getColumnModel().getColumn(1).setCellRenderer(mz.multicore.erp.gui.components.TableCellRenderers.money());
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        scroll.setMinimumSize(new Dimension(560, 260));
+        scroll.setMinimumSize(new Dimension(720, 280));
 
-        JOptionPane.showMessageDialog(this, scroll, "Pagamentos — " + sub.companyName(),
-                JOptionPane.PLAIN_MESSAGE);
+        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Histórico de Pagamentos",
+                "fas-receipt", sub.companyName(), scroll).asReadOnly("Fechar");
+        dlg.setSize(820, 460);
+        dlg.showDialog();
     }
 
     private void toggleSubscriptionStatus() {
         SubscriptionDTO sub = selectedSubscription();
         if (sub == null) return;
         if (!sub.hasSubscription()) {
-            JOptionPane.showMessageDialog(this, "Defina primeiro a assinatura desta empresa.",
-                    "Assinaturas", JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Assinatura necessária", "Defina primeiro a assinatura desta empresa.");
             return;
         }
 
         boolean suspended = "SUSPENDED".equals(sub.status());
         String target = suspended ? "ACTIVE" : "SUSPENDED";
         String verb = suspended ? "reactivar" : "suspender";
-        int confirm = JOptionPane.showConfirmDialog(this,
+        if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(this),
+                suspended ? FeedbackType.INFO : FeedbackType.WARNING,
+                suspended ? "Reactivar assinatura" : "Suspender assinatura",
                 "Deseja " + verb + " a assinatura de '" + sub.companyName() + "'?"
                         + (suspended ? "" : "\nOs utilizadores desta empresa deixam de poder iniciar sessão."),
-                "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
+                suspended ? "Reactivar" : "Suspender")) return;
 
         UIHelper.runWithProgress(this, "A actualizar assinatura…",
                 () -> platformApiClient.changeSubscriptionStatus(sub.companyId(), target),
@@ -687,6 +909,7 @@ public class PlataformaPanel extends JPanel {
         };
         usersTable = new JTable(usersModel);
         UIHelper.styleTable(usersTable);
+        usersTable.putClientProperty("noRowInspector", Boolean.TRUE);
         usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -737,8 +960,7 @@ public class PlataformaPanel extends JPanel {
     private PlatformUserDTO selectedUser() {
         int row = TableFilter.selectedModelRow(usersTable);
         if (row < 0 || row >= users.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Utilizadores",
-                    JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Seleccione um utilizador", "Escolha um utilizador na lista para continuar.");
             return null;
         }
         return users.get(row);
@@ -761,15 +983,14 @@ public class PlataformaPanel extends JPanel {
             return () -> platformApiClient.updateUser(user.username(), name);
         });
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Utilizador actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Utilizador actualizado.");
             loadUsers();
         }
     }
 
     private void createPlatformUser() {
         if (companies.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Crie primeiro uma empresa.", "Utilizadores",
-                    JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Empresa necessária", "Crie primeiro uma empresa.");
             return;
         }
         JTextField usernameField = new JTextField();
@@ -808,7 +1029,7 @@ public class PlataformaPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Utilizador criado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Utilizador criado.");
             loadUsers();
         }
     }
@@ -817,7 +1038,7 @@ public class PlataformaPanel extends JPanel {
         PlatformUserDTO user = selectedUser();
         if (user == null) return;
         if (companies.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Não há empresas.", "Utilizadores", JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Sem empresas", "Crie uma empresa antes de conceder acesso.");
             return;
         }
         JComboBox<CompanyItem> companyCombo = companyCombo();
@@ -836,7 +1057,7 @@ public class PlataformaPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Acesso actualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Acesso actualizado.");
             loadUsers();
         }
     }
@@ -845,8 +1066,7 @@ public class PlataformaPanel extends JPanel {
         PlatformUserDTO user = selectedUser();
         if (user == null) return;
         if (user.companies().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O utilizador não tem acessos a revogar.", "Utilizadores",
-                    JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.INFO, "Sem acessos", "O utilizador não tem acessos a revogar.");
             return;
         }
         CompanyItem[] items = user.companies().stream()
@@ -867,7 +1087,7 @@ public class PlataformaPanel extends JPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Acesso revogado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Acesso revogado.");
             loadUsers();
         }
     }
@@ -891,7 +1111,7 @@ public class PlataformaPanel extends JPanel {
             };
         });
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Senha reposta.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            showPlatformSuccess("Senha reposta.");
         }
     }
 
@@ -954,6 +1174,7 @@ public class PlataformaPanel extends JPanel {
         };
         ticketsTable = new JTable(ticketsModel);
         UIHelper.styleTable(ticketsTable);
+        ticketsTable.putClientProperty("noRowInspector", Boolean.TRUE);
         ticketsTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -996,8 +1217,7 @@ public class PlataformaPanel extends JPanel {
     private SupportTicketDTO selectedTicket() {
         int row = TableFilter.selectedModelRow(ticketsTable);
         if (row < 0 || row >= tickets.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione um pedido na lista.", "Assistência",
-                    JOptionPane.WARNING_MESSAGE);
+            showPlatformNotice(FeedbackType.WARNING, "Seleccione um pedido", "Escolha um pedido de assistência na lista.");
             return null;
         }
         return tickets.get(row);
@@ -1074,7 +1294,15 @@ public class PlataformaPanel extends JPanel {
     }
 
     private void showPlatformError(String area, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível processar " + area + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        feedback.show(FeedbackType.ERROR, "Não foi possível processar " + area,
+                error.getMessage(), "Tentar novamente", this::onPanelSelected);
+    }
+
+    private void showPlatformNotice(FeedbackType type, String title, String message) {
+        feedback.show(type, title, message, null, null);
+    }
+
+    private void showPlatformSuccess(String message) {
+        ToastManager.success(this, message);
     }
 }

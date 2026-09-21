@@ -193,16 +193,17 @@ final class CommercialInvoicesView {
         listCard.setLayout(new BorderLayout(0, 10));
         listCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        String[] invoicesCols = {"ID", "Nº Fatura", "Cliente", "Estado", "Total", "Em Dívida"};
+        String[] invoicesCols = {"ID", "Nº Fatura", "Cliente", "Data", "Estado", "Total", "Em Dívida"};
         owner.invoicesTableModel = new DefaultTableModel(invoicesCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.invoicesTable = new JTable(owner.invoicesTableModel);
+        owner.invoicesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(owner.invoicesTable);
-        owner.invoicesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
-        owner.invoicesTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
+        owner.invoicesTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
         owner.invoicesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
+        owner.invoicesTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.money());
         
         // Hide ID column
         owner.invoicesTable.getColumnModel().getColumn(0).setMinWidth(0);
@@ -215,8 +216,13 @@ final class CommercialInvoicesView {
         JComboBox<String> invEstado = TableFilter.combo("Todos os estados",
                 "DRAFT", "PENDING_APPROVAL", "PENDING_DISCOUNT_APPROVAL", "APPROVED",
                 "PARTIALLY_PAID", "REJECTED", "PAID", "CANCELLED");
-        TableFilter.install(owner.invoicesTable, invSearch, new TableFilter.ColumnFilter(invEstado, 3));
-        JPanel invBar = TableFilter.bar(invSearch, TableFilter.label("Estado:"), invEstado);
+        JComboBox<String> invPeriodo = TableFilter.periodCombo();
+        TableFilter.install(owner.invoicesTable, invSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(invEstado, 4)),
+                java.util.List.of(new TableFilter.PeriodFilter(invPeriodo, 3)));
+        JPanel invBar = TableFilter.bar(invSearch,
+                TableFilter.label("Estado:"), invEstado,
+                TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo);
         invBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         listCard.add(invBar, BorderLayout.NORTH);
         listCard.add(invoicesScroll, BorderLayout.CENTER);

@@ -1,7 +1,10 @@
 package mz.multicore.erp.gui.components;
 
+import javax.swing.AbstractAction;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
+import javax.accessibility.AccessibleContext;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -10,25 +13,30 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Single navigation item in the sidebar.
- * Responsibility: render one icon + label row, react to hover / active state,
- * and adapt layout when the sidebar collapses.
+ * Item de navegação individual da barra lateral.
+ * Suporta renderização de ícone + rótulo, foco por teclado, acessibilidade,
+ * badge numérico de notificações, estados hover/ativo e adaptação fluida
+ * a temas claro e escuro.
  */
 public class SidebarNavItem extends JComponent {
 
-    private static final int ITEM_HEIGHT = 44;
-    private static final int ICON_COLUMN = 56;
+    public static final int ITEM_HEIGHT = 42;
+    public static final int ICON_COLUMN = 56;
     private static final int CORNER = 10;
-    private static final int LEFT_INSET = 10;
+    private static final int LEFT_INSET = 8;
     private static final int RIGHT_INSET = 10;
 
-    private static final Color TEXT_ACTIVE = Color.WHITE;
-    private static final Color TEXT_INACTIVE = new Color(209, 213, 219);
-    private static final Color HOVER_OVERLAY = new Color(255, 255, 255, 16);
+    private static Color textActive()   { return UIHelper.isLight() ? new Color(15, 23, 42) : Color.WHITE; }
+    private static Color textInactive() { return UIHelper.isLight() ? new Color(71, 85, 105) : Color.WHITE; }
+    private static Color hoverOverlay() { return UIHelper.isLight() ? new Color(0, 0, 0, 14) : new Color(255, 255, 255, 16); }
 
     private final String iconGlyph;
     private final Icon icon;
@@ -39,6 +47,8 @@ public class SidebarNavItem extends JComponent {
     private boolean active = false;
     private boolean collapsed = false;
     private boolean hover = false;
+    private boolean focused = false;
+    private int badgeCount = 0;
 
     public SidebarNavItem(String iconGlyph, String label, Color accent, Runnable onClick) {
         this(iconGlyph, null, label, accent, onClick);
@@ -52,12 +62,14 @@ public class SidebarNavItem extends JComponent {
         this.iconGlyph = iconGlyph;
         this.icon = icon;
         this.label = label;
-        this.accent = accent;
+        this.accent = accent != null ? accent : UIHelper.ACCENT_BLUE;
         this.onClick = onClick;
 
         setOpaque(false);
+        setFocusable(true);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         setToolTipText(label);
+        getAccessibleContext().setAccessibleName(label);
         applySize();
 
         addMouseListener(new MouseAdapter() {
@@ -67,6 +79,42 @@ public class SidebarNavItem extends JComponent {
                 if (onClick != null) onClick.run();
             }
         });
+
+        addFocusListener(new FocusListener() {
+            @Override public void focusGained(FocusEvent e) { focused = true; repaint(); }
+            @Override public void focusLost(FocusEvent e)   { focused = false; repaint(); }
+        });
+
+        getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "activate");
+        getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "activate");
+        getActionMap().put("activate", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) {
+                if (onClick != null) onClick.run();
+            }
+        });
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public boolean isCollapsed() {
+        return collapsed;
+    }
+
+    public int getBadgeCount() {
+        return badgeCount;
+    }
+
+    public void setBadgeCount(int count) {
+        if (this.badgeCount != count) {
+            this.badgeCount = count;
+            repaint();
+        }
     }
 
     public void setActive(boolean active) {
@@ -86,7 +134,7 @@ public class SidebarNavItem extends JComponent {
     }
 
     private void applySize() {
-        int width = collapsed ? ICON_COLUMN : 220;
+        int width = collapsed ? ICON_COLUMN : 224;
         Dimension d = new Dimension(width, ITEM_HEIGHT);
         setMaximumSize(new Dimension(Integer.MAX_VALUE, ITEM_HEIGHT));
         setPreferredSize(d);
@@ -109,26 +157,32 @@ public class SidebarNavItem extends JComponent {
             if (!collapsed) {
                 paintLabel(g2, h);
             }
+            paintBadge(g2, w, h);
         } finally {
             g2.dispose();
         }
     }
 
     private void paintBackground(Graphics2D g2, int w, int h) {
-        int padX = 8;
+        int padX = 6;
         int rectW = Math.max(0, w - padX * 2);
-        int rectH = h - 8;
-        int rectY = 4;
+        int rectH = h - 6;
+        int rectY = 3;
 
         if (active) {
-            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 48));
+            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), UIHelper.isLight() ? 32 : 48));
             g2.fillRoundRect(padX, rectY, rectW, rectH, CORNER, CORNER);
-            // Accent left bar
+            // Barra de acento lateral
             g2.setColor(accent);
-            g2.fillRoundRect(padX, rectY + 6, 3, rectH - 12, 3, 3);
+            g2.fillRoundRect(padX + 2, rectY + 5, 3, rectH - 10, 3, 3);
         } else if (hover) {
-            g2.setColor(HOVER_OVERLAY);
+            g2.setColor(hoverOverlay());
             g2.fillRoundRect(padX, rectY, rectW, rectH, CORNER, CORNER);
+        }
+
+        if (focused) {
+            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 90));
+            g2.drawRoundRect(padX, rectY, rectW - 1, rectH - 1, CORNER, CORNER);
         }
     }
 
@@ -139,12 +193,12 @@ public class SidebarNavItem extends JComponent {
             icon.paintIcon(this, g2, iconX, iconY);
             return;
         }
-        g2.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 17));
+        g2.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 16));
         FontMetrics fm = g2.getFontMetrics();
         int iconWidth = fm.stringWidth(iconGlyph);
         int iconX = (ICON_COLUMN - iconWidth) / 2 + LEFT_INSET;
         int iconY = (h + fm.getAscent() - fm.getDescent()) / 2;
-        g2.setColor(active ? TEXT_ACTIVE : new Color(229, 231, 235));
+        g2.setColor(active ? textActive() : textInactive());
         g2.drawString(iconGlyph, iconX, iconY);
     }
 
@@ -152,11 +206,39 @@ public class SidebarNavItem extends JComponent {
         g2.setFont(new Font(UIHelper.FONT, active ? Font.BOLD : Font.PLAIN, 13));
         FontMetrics fm = g2.getFontMetrics();
         int labelY = (h + fm.getAscent() - fm.getDescent()) / 2;
-        g2.setColor(active ? TEXT_ACTIVE : TEXT_INACTIVE);
-        int labelX = ICON_COLUMN + LEFT_INSET;
-        int available = getWidth() - labelX - RIGHT_INSET;
-        String drawn = fitToWidth(label, fm, available);
+        g2.setColor(active ? textActive() : textInactive());
+        int labelX = ICON_COLUMN + LEFT_INSET + 2;
+        int badgeReserve = (badgeCount > 0) ? 36 : 0;
+        int available = getWidth() - labelX - RIGHT_INSET - badgeReserve;
+        String drawn = fitToWidth(label, fm, Math.max(20, available));
         g2.drawString(drawn, labelX, labelY);
+    }
+
+    private void paintBadge(Graphics2D g2, int w, int h) {
+        if (badgeCount <= 0) return;
+        String badgeText = badgeCount > 99 ? "99+" : String.valueOf(badgeCount);
+        g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        FontMetrics fm = g2.getFontMetrics();
+        int textW = fm.stringWidth(badgeText);
+        int badgeH = 16;
+        int badgeW = Math.max(16, textW + 8);
+
+        int bx;
+        int by;
+        if (collapsed) {
+            bx = w - badgeW - 6;
+            by = 4;
+        } else {
+            bx = w - badgeW - RIGHT_INSET;
+            by = (h - badgeH) / 2;
+        }
+
+        g2.setColor(UIHelper.REJECTED_RED);
+        g2.fillRoundRect(bx, by, badgeW, badgeH, 10, 10);
+        g2.setColor(Color.WHITE);
+        int tx = bx + (badgeW - textW) / 2;
+        int ty = by + (badgeH + fm.getAscent() - fm.getDescent()) / 2 - 1;
+        g2.drawString(badgeText, tx, ty);
     }
 
     private String fitToWidth(String text, FontMetrics fm, int available) {
@@ -172,5 +254,17 @@ public class SidebarNavItem extends JComponent {
             used += cw;
         }
         return sb.append(ellipsis).toString();
+    }
+
+    @Override
+    public AccessibleContext getAccessibleContext() {
+        if (accessibleContext == null) {
+            accessibleContext = new AccessibleSidebarNavItem();
+        }
+        return accessibleContext;
+    }
+
+    protected class AccessibleSidebarNavItem extends AccessibleJComponent {
+        private static final long serialVersionUID = 1L;
     }
 }

@@ -84,8 +84,7 @@ final class PurchaseSuppliersPanel {
     private SupplierDTO selectedSupplier() {
         int row = TableFilter.selectedModelRow(owner.suppliersTable);
         if (row < 0 || row >= owner.suppliersList.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione um fornecedor na tabela.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Seleccione um fornecedor", "Escolha um fornecedor na tabela para continuar.");
             return null;
         }
         return owner.suppliersList.get(row);
@@ -140,9 +139,8 @@ final class PurchaseSuppliersPanel {
         });
 
         if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(owner,
-                    "Fornecedor '" + nameField.getText().trim() + (editing ? "' actualizado." : "' registado."),
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            owner.showPurchaseSuccess("Fornecedor '" + nameField.getText().trim()
+                    + (editing ? "' actualizado." : "' registado."));
             owner.loadSuppliers();
         }
     }

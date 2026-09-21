@@ -11,6 +11,9 @@ import mz.multicore.erp.gui.components.FormField;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PromotionApiClient;
 import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
@@ -45,6 +48,7 @@ public class PromotionsPanel extends JPanel {
     private final JTable table;
     private final ModernButton toggleBtn;
     private List<PromotionDTO> promotions = new ArrayList<>();
+    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public PromotionsPanel(PromotionApiClient promotionApiClient, ComercialApiClient comercialApiClient) {
         this.promotionApiClient = promotionApiClient;
@@ -74,7 +78,10 @@ public class PromotionsPanel extends JPanel {
         actions.add(toggleBtn);
         actions.add(newBtn);
         header.add(actions, BorderLayout.EAST);
-        add(header, BorderLayout.NORTH);
+        JPanel north = new JPanel(); north.setOpaque(false);
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
 
         String[] cols = {"Nome", "Tipo", "Alcance", "Benefício", "Início", "Fim", "Estado"};
         model = new DefaultTableModel(cols, 0) {
@@ -103,16 +110,16 @@ public class PromotionsPanel extends JPanel {
         card.add(promoBar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
-
-        reload();
     }
 
-    private void reload() {
+    public void reload() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (companyId == null) {
+            return;
+        }
         UIHelper.loadAsync(this, () -> promotionApiClient.findByCompany(companyId), this::applyPromotions,
-                error -> JOptionPane.showMessageDialog(this,
-                        "Não foi possível carregar as promoções: " + error.getMessage(),
-                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar as promoções",
+                        error.getMessage(), "Tentar novamente", this::reload));
     }
 
     private void applyPromotions(List<PromotionDTO> loaded) {
@@ -142,15 +149,16 @@ public class PromotionsPanel extends JPanel {
     private void toggleSelected() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= promotions.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione uma promoção primeiro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            feedback.show(FeedbackType.WARNING, "Seleccione uma promoção",
+                    "Escolha uma promoção na tabela para continuar.", null, null);
             return;
         }
         PromotionDTO selected = promotions.get(row);
         UIHelper.submitAsync(toggleBtn, () -> {
             promotionApiClient.setActive(selected.id(), !selected.active());
             return null;
-        }, ignored -> reload(), error -> JOptionPane.showMessageDialog(this,
-                error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+        }, ignored -> reload(), error -> feedback.show(FeedbackType.ERROR,
+                "Não foi possível actualizar a promoção", error.getMessage(), null, null));
     }
 
     private void createPromotionDialog() {
@@ -158,9 +166,8 @@ public class PromotionsPanel extends JPanel {
                 () -> new PromotionOptions(comercialApiClient.getAllProducts(),
                         comercialApiClient.getActiveCategories()),
                 this::openPromotionDialog,
-                error -> JOptionPane.showMessageDialog(this,
-                        "Não foi possível carregar produtos e categorias: " + error.getMessage(),
-                        "Erro de ligação", JOptionPane.ERROR_MESSAGE));
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar produtos e categorias",
+                        error.getMessage(), "Tentar novamente", this::createPromotionDialog));
     }
 
     private void openPromotionDialog(PromotionOptions options) {
@@ -246,7 +253,7 @@ public class PromotionsPanel extends JPanel {
         });
         if (dialog.showDialog()) {
             reload();
-            JOptionPane.showMessageDialog(this, "Promoção criada.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Promoção criada.");
         }
     }
 

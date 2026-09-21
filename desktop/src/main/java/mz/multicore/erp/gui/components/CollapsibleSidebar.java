@@ -26,30 +26,36 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Collapsible left-rail sidebar. Holds a brand header, section dividers,
- * navigation items, and a footer. Responsibility: layout + collapse animation
- * + active-item tracking. Does not own any business logic.
+ * Barra lateral retrátil (Collapsible Sidebar).
+ * Organiza a navegação em categorias semânticas funcionais, suporta modo
+ * expandido (240px) e modo recolhido/rail (64px), integra badges e adapta-se
+ * fluidamente aos temas claro e escuro.
  */
 public class CollapsibleSidebar extends JPanel {
 
     public static final int EXPANDED_WIDTH = 240;
     public static final int COLLAPSED_WIDTH = 64;
 
-    private static final int ANIMATION_DURATION_MS = 160;
+    private static final int ANIMATION_DURATION_MS = 140;
     private static final int ANIMATION_TICK_MS = 14;
-    private static final Color HEADER_TEXT = new Color(243, 244, 246);
-    private static final Color SECTION_LABEL = new Color(107, 114, 128);
-    private static final Color TOGGLE_BG = new Color(55, 65, 81);
-    private static final Color TOGGLE_BG_HOVER = new Color(75, 85, 99);
-    private static final Color BG = new Color(24, 32, 47);
-    private static final Color BORDER_RIGHT = new Color(45, 55, 72);
+
+    private static Color sidebarBg()     { return UIHelper.isLight() ? new Color(255, 255, 255) : new Color(24, 32, 47); }
+    private static Color sidebarBorder() { return UIHelper.isLight() ? new Color(226, 232, 240) : new Color(45, 55, 72); }
+    private static Color headerText()    { return UIHelper.isLight() ? new Color(31, 41, 55)    : new Color(243, 244, 246); }
+    private static Color subText()       { return UIHelper.isLight() ? new Color(100, 116, 139) : new Color(203, 213, 225); }
+    private static Color sectionText()   { return UIHelper.isLight() ? new Color(148, 163, 184) : new Color(156, 163, 175); }
+    private static Color toggleBg()      { return UIHelper.isLight() ? new Color(241, 245, 249) : new Color(55, 65, 81); }
+    private static Color toggleBgHover() { return UIHelper.isLight() ? new Color(226, 232, 240) : new Color(75, 85, 99); }
+    private static Color toggleGlyph()   { return UIHelper.isLight() ? new Color(71, 85, 105)   : Color.WHITE; }
 
     private final JPanel body;
     private final JPanel headerPanel;
     private final JLabel brandLabel;
     private final JLabel brandSubLabel;
     private final ToggleButton toggleButton;
-    private final JLabel footerLabel;
+    private final JPanel footerPanel;
+    private final JLabel footerVersionLabel;
+    private final JLabel footerUserLabel;
 
     private final List<SidebarNavItem> navItems = new ArrayList<>();
     private final List<JComponent> expandedOnlyComponents = new ArrayList<>();
@@ -58,23 +64,22 @@ public class CollapsibleSidebar extends JPanel {
     private boolean collapsed = false;
     private int currentWidth = EXPANDED_WIDTH;
     private Timer animator;
-
     private Consumer<Boolean> collapseListener;
 
     public CollapsibleSidebar(String brand, String subBrand) {
         setLayout(new BorderLayout());
-        setBackground(BG);
+        setBackground(sidebarBg());
         setBorder(null);
         setPreferredSize(new Dimension(EXPANDED_WIDTH, 800));
 
-        // ---- Header (brand + toggle)
+        // ---- Header (Marca + Toggle)
         brandLabel = new JLabel(brand);
-        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
-        brandLabel.setForeground(HEADER_TEXT);
+        brandLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+        brandLabel.setForeground(headerText());
 
-        brandSubLabel = new JLabel(subBrand);
-        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        brandSubLabel.setForeground(new Color(203, 213, 225)); // Slate-300 — legível sob a marca
+        brandSubLabel = new JLabel(subBrand != null && !subBrand.isBlank() ? subBrand : "ERP Profissional");
+        brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
+        brandSubLabel.setForeground(subText());
         brandSubLabel.setToolTipText("Empresa ativa");
 
         JPanel brandStack = new JPanel();
@@ -89,21 +94,19 @@ public class CollapsibleSidebar extends JPanel {
         toggleButton = new ToggleButton();
         toggleButton.addActionListener(e -> toggle());
 
-        headerPanel = new JPanel(new BorderLayout());
+        headerPanel = new JPanel(new BorderLayout(8, 0));
         headerPanel.setOpaque(false);
-        headerPanel.setBorder(new EmptyBorder(20, 18, 14, 14));
+        headerPanel.setBorder(new EmptyBorder(16, 14, 12, 12));
         headerPanel.add(brandStack, BorderLayout.CENTER);
         headerPanel.add(toggleButton, BorderLayout.EAST);
-
         add(headerPanel, BorderLayout.NORTH);
 
-        // ---- Body (sections + nav items, vertically stacked)
+        // ---- Body (seções e itens de navegação num scroll vertical suave)
         body = new JPanel();
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setBorder(new EmptyBorder(6, 10, 10, 10));
+        body.setBorder(new EmptyBorder(4, 6, 10, 6));
 
-        // Wrap in a scroll pane so the bottom items remain reachable on small screens.
         JScrollPane bodyScroll = new JScrollPane(body);
         bodyScroll.setBorder(BorderFactory.createEmptyBorder());
         bodyScroll.setOpaque(false);
@@ -111,37 +114,58 @@ public class CollapsibleSidebar extends JPanel {
         bodyScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         bodyScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         bodyScroll.getVerticalScrollBar().setUnitIncrement(16);
-        bodyScroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
+        bodyScroll.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
         add(bodyScroll, BorderLayout.CENTER);
 
-        // ---- Footer
-        footerLabel = new JLabel("v1.0.0");
-        footerLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        footerLabel.setForeground(SECTION_LABEL);
-        footerLabel.setBorder(new EmptyBorder(10, 18, 16, 14));
-        add(footerLabel, BorderLayout.SOUTH);
+        // ---- Footer (versão e utilizador ativo)
+        footerPanel = new JPanel();
+        footerPanel.setOpaque(false);
+        footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
+        footerPanel.setBorder(new EmptyBorder(8, 14, 12, 14));
+
+        footerUserLabel = new JLabel("");
+        footerUserLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        footerUserLabel.setForeground(headerText());
+        footerUserLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        footerVersionLabel = new JLabel("MULTICORE v1.0.0");
+        footerVersionLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        footerVersionLabel.setForeground(subText());
+        footerVersionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        footerPanel.add(footerUserLabel);
+        footerPanel.add(Box.createRigidArea(new Dimension(0, 2)));
+        footerPanel.add(footerVersionLabel);
+        add(footerPanel, BorderLayout.SOUTH);
     }
 
-    /** Update the sub-brand line (e.g. the active company name shown under the brand). */
     public void setSubBrand(String text) {
-        brandSubLabel.setText(text == null || text.isBlank() ? "" : text);
+        brandSubLabel.setText(text == null || text.isBlank() ? "ERP Profissional" : text);
     }
 
-    /** Add a section header label. Hidden in collapsed mode. */
+    public void setUserProfile(String displayName, String role) {
+        if (displayName != null && !displayName.isBlank()) {
+            footerUserLabel.setText(displayName + (role != null && !role.isBlank() ? " (" + role + ")" : ""));
+            footerUserLabel.setToolTipText(displayName + " — " + role);
+        } else {
+            footerUserLabel.setText("");
+        }
+    }
+
+    /** Adiciona título de seção funcional (OPERAÇÕES, GESTÃO, etc.). */
     public void addSection(String title) {
         if (!sectionLabels.isEmpty() || !navItems.isEmpty()) {
-            body.add(Box.createRigidArea(new Dimension(0, 14)));
+            body.add(Box.createRigidArea(new Dimension(0, 10)));
         }
         JLabel section = new JLabel(title.toUpperCase());
         section.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
-        section.setForeground(SECTION_LABEL);
+        section.setForeground(sectionText());
         section.setAlignmentX(Component.LEFT_ALIGNMENT);
-        section.setBorder(new EmptyBorder(0, 14, 6, 0));
+        section.setBorder(new EmptyBorder(4, 12, 4, 0));
         body.add(section);
         sectionLabels.add(section);
     }
 
-    /** Add a navigation item using a text glyph. Returns it so the caller can wire active-state. */
     public SidebarNavItem addItem(String iconGlyph, String label, Color accent, Runnable onClick) {
         SidebarNavItem item = new SidebarNavItem(iconGlyph, label, accent, () -> {
             setActive(label);
@@ -150,7 +174,6 @@ public class CollapsibleSidebar extends JPanel {
         return registerItem(item);
     }
 
-    /** Add a navigation item using a Swing Icon (preferred — Ikonli / FontAwesome). */
     public SidebarNavItem addItem(javax.swing.Icon icon, String label, Color accent, Runnable onClick) {
         SidebarNavItem item = new SidebarNavItem(icon, label, accent, () -> {
             setActive(label);
@@ -167,22 +190,32 @@ public class CollapsibleSidebar extends JPanel {
         return item;
     }
 
-    /** Add an expanded-only component (e.g. company/user combos). */
+    public void setBadge(String label, int count) {
+        for (SidebarNavItem item : navItems) {
+            if (matchesLabel(item, label)) {
+                item.setBadgeCount(count);
+                break;
+            }
+        }
+    }
+
     public void addExpandedOnly(JComponent component) {
         component.setAlignmentX(Component.LEFT_ALIGNMENT);
         expandedOnlyComponents.add(component);
         body.add(component);
-        body.add(Box.createRigidArea(new Dimension(0, 8)));
+        body.add(Box.createRigidArea(new Dimension(0, 6)));
     }
 
-    /** Highlight the nav item whose label matches the given key. */
     public void setActive(String activeLabel) {
         for (SidebarNavItem item : navItems) {
             item.setActive(matchesLabel(item, activeLabel));
         }
     }
 
-    /** Listener invoked after the sidebar finishes a collapse/expand transition. */
+    public List<SidebarNavItem> getNavItems() {
+        return List.copyOf(navItems);
+    }
+
     public void onCollapsedChanged(Consumer<Boolean> listener) {
         this.collapseListener = listener;
     }
@@ -206,7 +239,6 @@ public class CollapsibleSidebar extends JPanel {
         final int endW = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
         final long startTime = System.currentTimeMillis();
 
-        // Update fixed-state widgets immediately for crisp visual feedback.
         applyChromeForState();
 
         animator = new Timer(ANIMATION_TICK_MS, e -> {
@@ -216,10 +248,12 @@ public class CollapsibleSidebar extends JPanel {
             currentWidth = Math.round(startW + (endW - startW) * eased);
             setPreferredSize(new Dimension(currentWidth, getHeight()));
             revalidate();
-            getParent().repaint();
+            if (getParent() != null) getParent().repaint();
             if (t >= 1f) {
                 ((Timer) e.getSource()).stop();
                 currentWidth = endW;
+                setPreferredSize(new Dimension(endW, getHeight()));
+                revalidate();
                 if (collapseListener != null) collapseListener.accept(collapsed);
             }
         });
@@ -230,22 +264,22 @@ public class CollapsibleSidebar extends JPanel {
         toggleButton.setCollapsed(collapsed);
         brandLabel.setVisible(!collapsed);
         brandSubLabel.setVisible(!collapsed);
-        footerLabel.setVisible(!collapsed);
+        footerPanel.setVisible(!collapsed);
         for (JLabel s : sectionLabels) s.setVisible(!collapsed);
         for (JComponent c : expandedOnlyComponents) c.setVisible(!collapsed);
         for (SidebarNavItem item : navItems) item.setCollapsed(collapsed);
         headerPanel.setBorder(collapsed
-                ? new EmptyBorder(18, 8, 14, 8)
-                : new EmptyBorder(20, 18, 14, 14));
+                ? new EmptyBorder(14, 6, 12, 6)
+                : new EmptyBorder(16, 14, 12, 12));
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         try {
-            g2.setColor(BG);
+            g2.setColor(sidebarBg());
             g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.setColor(BORDER_RIGHT);
+            g2.setColor(sidebarBorder());
             g2.fillRect(getWidth() - 1, 0, 1, getHeight());
         } finally {
             g2.dispose();
@@ -254,14 +288,15 @@ public class CollapsibleSidebar extends JPanel {
 
     private boolean matchesLabel(SidebarNavItem item, String activeLabel) {
         String tooltip = item.getToolTipText();
-        return tooltip != null && tooltip.equals(activeLabel);
+        return (tooltip != null && tooltip.equalsIgnoreCase(activeLabel))
+                || (item.getLabel() != null && item.getLabel().equalsIgnoreCase(activeLabel));
     }
 
     private float easeInOut(float t) {
         return t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t;
     }
 
-    /** Minimal flat toggle button. Shows « when expanded, » when collapsed. */
+    /** Botão de alternância estilizado e acessível. */
     private static final class ToggleButton extends JButton {
         private boolean collapsed = false;
         private boolean hover = false;
@@ -273,7 +308,9 @@ public class CollapsibleSidebar extends JPanel {
             setContentAreaFilled(false);
             setOpaque(false);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setToolTipText("Recolher / Expandir menu");
+            setToolTipText("Recolher menu lateral (Ctrl+B)");
+            getAccessibleContext().setAccessibleName("Recolher menu lateral");
+
             addMouseListener(new MouseAdapter() {
                 @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
                 @Override public void mouseExited(MouseEvent e)  { hover = false; repaint(); }
@@ -282,6 +319,8 @@ public class CollapsibleSidebar extends JPanel {
 
         void setCollapsed(boolean collapsed) {
             this.collapsed = collapsed;
+            setToolTipText(collapsed ? "Expandir menu lateral (Ctrl+B)" : "Recolher menu lateral (Ctrl+B)");
+            getAccessibleContext().setAccessibleName(collapsed ? "Expandir menu lateral" : "Recolher menu lateral");
             repaint();
         }
 
@@ -294,15 +333,15 @@ public class CollapsibleSidebar extends JPanel {
 
                 int w = getWidth();
                 int h = getHeight();
-                g2.setColor(hover ? TOGGLE_BG_HOVER : TOGGLE_BG);
+                g2.setColor(hover ? toggleBgHover() : toggleBg());
                 g2.fillRoundRect(0, 0, w, h, 8, 8);
 
                 String glyph = collapsed ? "›" : "‹";
-                g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
+                g2.setFont(new Font(UIHelper.FONT, Font.BOLD, 17));
                 int tw = g2.getFontMetrics().stringWidth(glyph);
                 int tx = (w - tw) / 2;
                 int ty = (h + g2.getFontMetrics().getAscent() - g2.getFontMetrics().getDescent()) / 2 - 1;
-                g2.setColor(Color.WHITE);
+                g2.setColor(toggleGlyph());
                 g2.drawString(glyph, tx, ty);
             } finally {
                 g2.dispose();

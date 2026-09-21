@@ -314,8 +314,12 @@ final class CommercialOrdersView {
         JComboBox<String> ecEstado = TableFilter.combo("Todos os estados",
                 "AWAITING_SEPARATION", "IN_SEPARATION", "SEPARATED", "INVOICED",
                 "PENDING", "PENDING_APPROVAL", "GUIDE_PENDING", "GUIDED", "BILLED", "CANCELLED");
-        TableFilter.install(owner.ordersTable, ecSearch, new TableFilter.ColumnFilter(ecEstado, 3));
-        JPanel ecBar = TableFilter.bar(ecSearch, TableFilter.label("Estado:"), ecEstado);
+        JComboBox<String> ecPeriodo = TableFilter.periodCombo();
+        TableFilter.install(owner.ordersTable, ecSearch,
+                java.util.List.of(new TableFilter.ColumnFilter(ecEstado, 3)),
+                java.util.List.of(new TableFilter.PeriodFilter(ecPeriodo, ComercialPanel.ORDERS_COL_DELIVERY)));
+        JPanel ecBar = TableFilter.bar(ecSearch, TableFilter.label("Estado:"), ecEstado,
+                TableFilter.label("Entrega:", "fas-calendar-alt"), ecPeriodo);
         ecBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         listCard.add(ecBar, BorderLayout.NORTH);
         listCard.add(ordersScroll, BorderLayout.CENTER);
