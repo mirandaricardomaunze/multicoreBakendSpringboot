@@ -12,6 +12,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -19,8 +20,12 @@ import java.util.Locale;
  * Painel analítico de Reposição Inteligente de Stock:
  * Apresenta previsão de rutura em dias, velocidade de rotação diária (últimos 30 dias),
  * fornecedor habitual, custo estimado e geração de encomendas a fornecedor em 1 clique.
+ * Segue o padrão canónico do sistema: KPIs {@link KpiCard} interactivos, card único
+ * {@link ModernPanel}(16) com título, acções e filtros no topo, e «Quick Peek» por Espaço.
  */
 final class PurchaseReorderPanel {
+
+    private static final String ALL_URGENCIES = "Todas as urgências";
 
     private final ComprasPanel owner;
     private JTable reorderTable;
@@ -32,7 +37,8 @@ final class PurchaseReorderPanel {
     private final JLabel kpiTotalRepor = new JLabel("0");
     private final JLabel kpiCustoTotal = new JLabel("0,00 MT");
 
-    private JComboBox<String> supplierFilterCombo;
+    JComboBox<String> urgencyFilterCombo;
+    JComboBox<String> supplierFilterCombo;
 
     PurchaseReorderPanel(ComprasPanel owner) {
         this.owner = owner;
@@ -43,48 +49,22 @@ final class PurchaseReorderPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(12, 5, 5, 5));
 
-        // 1. Cabeçalho com Título, Subtítulo e Ações
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
+        // 1. KPIs canónicos (altura uniforme) com drilldown por urgência
+        JPanel kpiGrid = KpiCard.createGrid(4);
+        kpiGrid.add(KpiCard.createInteractiveCard("Produtos Esgotados", kpiEsgotados, "Sem stock disponível",
+                "fas-exclamation-triangle", UIHelper.REJECTED_RED,
+                "Filtrar produtos esgotados", () -> filterUrgency("ESGOTADO")));
+        kpiGrid.add(KpiCard.createInteractiveCard("Ruptura Iminente", kpiCriticos, "Cobertura até 7 dias",
+                "fas-fire", UIHelper.PENDING_YELLOW,
+                "Filtrar produtos em ruptura iminente", () -> filterUrgency("CRÍTICO")));
+        kpiGrid.add(KpiCard.createInteractiveCard("Total a Repor", kpiTotalRepor, "Produtos com sugestão",
+                "fas-boxes", UIHelper.ACCENT_BLUE,
+                "Mostrar todos os produtos a repor", () -> filterUrgency(null)));
+        kpiGrid.add(KpiCard.createCard("Custo Estimado", kpiCustoTotal, "Investimento sugerido",
+                "fas-coins", UIHelper.APPROVED_GREEN));
+        tab.add(kpiGrid, BorderLayout.NORTH);
 
-        JPanel titleBox = new JPanel(new GridLayout(2, 1, 0, 2));
-        titleBox.setOpaque(false);
-        titleBox.add(UIHelper.createHeading("Reposição Inteligente & Previsão de Rutura"));
-        JLabel subtitle = new JLabel("Previsão automática de rutura com base nas vendas dos últimos 30 dias e sugestão a caixas inteiras.");
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        titleBox.add(subtitle);
-        header.add(titleBox, BorderLayout.WEST);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
-
-        ModernButton orderBtn = UIHelper.createSuccessButton("Criar Encomenda");
-        orderBtn.setIcon(UIHelper.icon("fas-cart-plus", 14));
-        orderBtn.setToolTipText("Cria encomenda preenchida com o produto selecionado ou abre nova encomenda.");
-        orderBtn.addActionListener(e -> orderSelectedOrOpen());
-
-        actions.add(refreshBtn);
-        actions.add(orderBtn);
-        header.add(actions, BorderLayout.EAST);
-
-        // 2. Banner com 4 KPI Cards
-        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 10, 0));
-        kpiGrid.setOpaque(false);
-        kpiGrid.add(createKpiCard("Produtos Esgotados", kpiEsgotados, "fas-exclamation-triangle", UIHelper.REJECTED_RED));
-        kpiGrid.add(createKpiCard("Ruptura Iminente (≤ 7d)", kpiCriticos, "fas-fire", UIHelper.PENDING_YELLOW));
-        kpiGrid.add(createKpiCard("Total a Repor", kpiTotalRepor, "fas-boxes", UIHelper.ACCENT_BLUE));
-        kpiGrid.add(createKpiCard("Custo Estimado", kpiCustoTotal, "fas-coins", UIHelper.APPROVED_GREEN));
-
-        JPanel northPanel = new JPanel(new BorderLayout(0, 10));
-        northPanel.setOpaque(false);
-        northPanel.add(header, BorderLayout.NORTH);
-        northPanel.add(kpiGrid, BorderLayout.SOUTH);
-        tab.add(northPanel, BorderLayout.NORTH);
-
-        // 3. Card Principal com Barra de Filtro e Tabela
+        // 2. Card principal único: título + acções + filtros + tabela
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
@@ -101,8 +81,13 @@ final class PurchaseReorderPanel {
         UIHelper.styleTable(reorderTable);
         reorderTable.putClientProperty("noRowInspector", Boolean.TRUE);
 
+        int[] widths = {200, 90, 90, 80, 100, 90, 70, 100, 110, 160, 100, 110, 100};
+        for (int i = 0; i < widths.length; i++) {
+            reorderTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+        }
+        UIHelper.ensureHeadersFit(reorderTable);
+
         // Renderers especializados
-        reorderTable.getColumnModel().getColumn(9).setPreferredWidth(140);
         reorderTable.getColumnModel().getColumn(10).setCellRenderer(TableCellRenderers.money());
         reorderTable.getColumnModel().getColumn(11).setCellRenderer(TableCellRenderers.money());
         reorderTable.getColumnModel().getColumn(12).setCellRenderer(TableCellRenderers.status());
@@ -120,41 +105,40 @@ final class PurchaseReorderPanel {
         JScrollPane scroll = new JScrollPane(reorderTable);
         UIHelper.styleScrollPane(scroll);
 
-        // Barra de Filtros
+        // Barra de filtros numa única linha horizontal
         JTextField reorderSearch = TableFilter.searchField("Pesquisar produto, SKU ou fornecedor…");
-        JComboBox<String> reorderUrgencia = TableFilter.combo("Todas as urgências", "ESGOTADO", "CRÍTICO", "BAIXO");
-        UIHelper.styleComboBox(reorderUrgencia);
-        reorderUrgencia.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
-
+        urgencyFilterCombo = TableFilter.combo(ALL_URGENCIES, "ESGOTADO", "CRÍTICO", "BAIXO");
         supplierFilterCombo = TableFilter.combo("Todos os fornecedores");
-        UIHelper.styleComboBox(supplierFilterCombo);
-        supplierFilterCombo.setPreferredSize(new Dimension(220, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(reorderTable, reorderSearch,
-                new TableFilter.ColumnFilter(reorderUrgencia, 12),
+                new TableFilter.ColumnFilter(urgencyFilterCombo, 12),
                 new TableFilter.ColumnFilter(supplierFilterCombo, 9));
 
-        JPanel reorderFilters = new JPanel(new GridBagLayout());
-        reorderFilters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
+        JPanel reorderFilters = TableFilter.bar(
+                reorderSearch,
+                TableFilter.label("Urgência:"), urgencyFilterCombo,
+                TableFilter.label("Fornecedor:"), supplierFilterCombo);
 
-        g.gridx = 0; g.weightx = 0; reorderFilters.add(filterLabel("Urgência"), g);
-        g.gridx = 1; g.weightx = 0; reorderFilters.add(filterLabel("Fornecedor"), g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        reorderFilters.add(filterLabel("Pesquisa"), g);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da linha seleccionada (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes da linha");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; reorderFilters.add(reorderUrgencia, g);
-        g.gridx = 1; g.weightx = 0; reorderFilters.add(supplierFilterCombo, g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        reorderFilters.add(reorderSearch, g);
+        JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
+        filtersRow.setOpaque(false);
+        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.add(reorderFilters, BorderLayout.WEST);
+        filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
-        reorderFilters.setBorder(new EmptyBorder(0, 0, 6, 0));
-        card.add(UIHelper.tableCardTop("Reposição Inteligente & Previsão de Rutura", reorderFilters,
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
+
+        ModernButton orderBtn = UIHelper.createSuccessButton("Criar Encomenda");
+        orderBtn.setIcon(UIHelper.icon("fas-cart-plus", 14));
+        orderBtn.setToolTipText("Cria encomenda preenchida com o produto selecionado ou abre nova encomenda.");
+        orderBtn.addActionListener(e -> orderSelectedOrOpen());
+
+        card.add(UIHelper.tableCardTop("Reposição Inteligente & Previsão de Rutura", filtersRow,
                 refreshBtn, orderBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
@@ -167,31 +151,58 @@ final class PurchaseReorderPanel {
         reorderSouth.add(reorderFooter, BorderLayout.SOUTH);
         card.add(reorderSouth, BorderLayout.SOUTH);
 
+        // 3. Quick Peek silencioso (tecla Espaço)
+        TableQuickPeekController peek = TableQuickPeekController.install(reorderTable, card, this::populatePeek);
+        peekToggleBtn.addActionListener(e -> peek.toggle());
+
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
 
-    private ModernPanel createKpiCard(String title, JLabel valLabel, String icon, Color accent) {
-        ModernPanel card = new ModernPanel(10);
-        card.setLayout(new BorderLayout(0, 4));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+    private void filterUrgency(String urgency) {
+        if (urgencyFilterCombo == null) return;
+        if (urgency == null) {
+            urgencyFilterCombo.setSelectedIndex(0);
+        } else {
+            urgencyFilterCombo.setSelectedItem(urgency);
+        }
+    }
 
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(titleLbl.getFont().deriveFont(Font.PLAIN, 11f));
-        titleLbl.setForeground(UIHelper.TEXT_MUTED);
-        top.add(titleLbl, BorderLayout.WEST);
+    private void populatePeek(QuickPeekPanel peek, int modelRow) {
+        if (owner.reorderList == null || modelRow < 0 || modelRow >= owner.reorderList.size()) return;
+        ReorderSuggestionDTO s = owner.reorderList.get(modelRow);
+        String status = s.urgencyStatus() != null ? s.urgencyStatus()
+                : (s.currentStock().signum() <= 0 ? "ESGOTADO" : "BAIXO");
+        Color statusColor = "ESGOTADO".equalsIgnoreCase(status) ? UIHelper.REJECTED_RED
+                : (status.toUpperCase(Locale.ROOT).startsWith("CR") ? UIHelper.PENDING_YELLOW : UIHelper.ACCENT_BLUE);
 
-        JLabel iconLbl = new JLabel(UIHelper.icon(icon, 14, accent));
-        top.add(iconLbl, BorderLayout.EAST);
-        card.add(top, BorderLayout.NORTH);
+        peek.setHeaderIcon("fas-cart-plus", UIHelper.ACCENT_BLUE);
+        peek.setTitle(s.name());
+        peek.setSubtitle("SKU " + (s.sku() != null ? s.sku() : "—"));
+        peek.setStatus(status, statusColor);
 
-        valLabel.setFont(valLabel.getFont().deriveFont(Font.BOLD, 15f));
-        valLabel.setForeground(accent);
-        card.add(valLabel, BorderLayout.CENTER);
+        String supplier = (s.supplierName() != null && !s.supplierName().isBlank()) ? s.supplierName() : "—";
+        BigDecimal rate = s.dailySalesRate() != null ? s.dailySalesRate() : BigDecimal.ZERO;
+        BigDecimal unitPrice = s.estimatedUnitPrice() != null ? s.estimatedUnitPrice() : BigDecimal.ZERO;
+        BigDecimal totalCost = s.estimatedTotalCost() != null ? s.estimatedTotalCost() : BigDecimal.ZERO;
 
-        return card;
+        List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
+        items.add(new QuickPeekPanel.PeekItem("Fornecedor habitual", supplier, false));
+        items.add(new QuickPeekPanel.PeekItem("Stock actual / mínimo",
+                String.format(Locale.ROOT, "%,.2f / %,.2f", s.currentStock(), s.minStock()), false));
+        items.add(new QuickPeekPanel.PeekItem("Venda média diária",
+                String.format(Locale.ROOT, "%,.2f /dia", rate), false));
+        items.add(new QuickPeekPanel.PeekItem("Cobertura restante",
+                s.daysRemaining() != null ? s.daysRemaining() + (s.daysRemaining() == 1 ? " dia" : " dias") : "—", false));
+        items.add(new QuickPeekPanel.PeekItem("Embalagem",
+                s.unitsPerBox() + " und/cx — sugerido " + String.format(Locale.ROOT, "%,.0f cx (%,.0f und)",
+                        s.suggestedBoxes(), s.suggestedUnits()), false));
+        items.add(new QuickPeekPanel.PeekItem("Preço unitário estimado",
+                String.format(Locale.ROOT, "%,.2f MT", unitPrice), false));
+        items.add(new QuickPeekPanel.PeekItem("Custo total previsto",
+                String.format(Locale.ROOT, "%,.2f MT", totalCost), true));
+        peek.setItems(items);
+        peek.setOnOpenFullAction(ignored -> orderSelectedOrOpen());
     }
 
     public void refresh() {
@@ -292,11 +303,5 @@ final class PurchaseReorderPanel {
         }
         // Se nenhuma linha selecionada, abre o diálogo de nova encomenda normal
         owner.purchaseOrdersPanel.openPurchaseOrderFormDialog();
-    }
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        label.setForeground(UIHelper.TEXT_MUTED);
-        return label;
     }
 }

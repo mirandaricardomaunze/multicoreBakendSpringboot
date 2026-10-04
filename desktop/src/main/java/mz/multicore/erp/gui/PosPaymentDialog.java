@@ -182,7 +182,7 @@ final class PosPaymentDialog {
         ModernButton[] methodButtons = new ModernButton[methodNames.length];
         for (int i = 0; i < methodNames.length; i++) {
             final int idx = i;
-            ModernButton btn = new ModernButton(methodNames[i], UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+            ModernButton btn = new ModernButton(methodNames[i], UIHelper.ACCENT, UIHelper.ACCENT_HOVER);
             btn.setIcon(UIHelper.icon(methodIcons[i], 12, Color.WHITE));
             btn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
             btn.setForeground(Color.WHITE);
@@ -204,7 +204,7 @@ final class PosPaymentDialog {
                     methodButtons[i].setBackground(UIHelper.ACCENT_BLUE);
                     methodButtons[i].setForeground(Color.WHITE);
                 } else {
-                    methodButtons[i].setBackground(UIHelper.BUTTON_NEUTRAL);
+                    methodButtons[i].setBackground(UIHelper.ACCENT);
                     methodButtons[i].setForeground(Color.WHITE);
                 }
             }
