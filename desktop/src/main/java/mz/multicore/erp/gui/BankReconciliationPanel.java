@@ -189,7 +189,7 @@ public class BankReconciliationPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
         scroll.setPreferredSize(new Dimension(0, 480));
 
-        // 1. Linha Superior: Seletores à esquerda e Ações à direita dentro do Card
+        // 1. Linha Superior: Seletores de Conta/Extracto à esquerda e Ações Primárias à direita
         JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
         cardHeader.setOpaque(false);
 
@@ -202,7 +202,7 @@ public class BankReconciliationPanel extends JPanel {
         selectors.add(accLbl);
 
         UIHelper.styleComboBox(accountCombo);
-        accountCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        accountCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         accountCombo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -224,7 +224,7 @@ public class BankReconciliationPanel extends JPanel {
         selectors.add(stLbl);
 
         UIHelper.styleComboBox(statementCombo);
-        statementCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        statementCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
         statementCombo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -240,13 +240,14 @@ public class BankReconciliationPanel extends JPanel {
         statementCombo.addActionListener(e -> onStatementChanged());
         selectors.add(statementCombo);
 
-        cardHeader.add(selectors, BorderLayout.WEST);
-
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
+        selectors.add(refreshBtn);
+
+        cardHeader.add(selectors, BorderLayout.WEST);
 
         ModernButton importBtn = UIHelper.createPrimaryButton("Importar Extracto");
         importBtn.setIcon(UIHelper.icon("fas-file-import", 14));
-        importBtn.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        importBtn.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         importBtn.addActionListener(e -> openImportDialog());
 
         operationsMenu = UIHelper.createActionMenuButton("Operações")
@@ -274,14 +275,12 @@ public class BankReconciliationPanel extends JPanel {
 
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         headerActions.setOpaque(false);
-        headerActions.add(refreshBtn);
         headerActions.add(importBtn);
         headerActions.add(operationsMenu);
-        headerActions.add(closeBtn);
 
         cardHeader.add(headerActions, BorderLayout.EAST);
 
-        // 2. Filtros e Pesquisa
+        // 2. Filtros, Pesquisa e Ações de Fecho
         JTextField searchField = TableFilter.searchField("Filtrar descrição ou referência…");
         statusFilter = TableFilter.combo("Todos os estados", "APROVADO", "PENDENTE", "INACTIVO");
         JComboBox<String> periodFilter = TableFilter.periodCombo();
@@ -301,10 +300,15 @@ public class BankReconciliationPanel extends JPanel {
         peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes da linha");
         peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JPanel searchRow = new JPanel(new BorderLayout());
+        JPanel filterRightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        filterRightActions.setOpaque(false);
+        filterRightActions.add(closeBtn);
+        filterRightActions.add(peekToggleBtn);
+
+        JPanel searchRow = new JPanel(new BorderLayout(8, 0));
         searchRow.setOpaque(false);
         searchRow.add(searchBar, BorderLayout.WEST);
-        searchRow.add(peekToggleBtn, BorderLayout.EAST);
+        searchRow.add(filterRightActions, BorderLayout.EAST);
 
         JPanel cardTop = new JPanel(new BorderLayout(0, 6));
         cardTop.setOpaque(false);
