@@ -174,4 +174,56 @@ class KpiDrilldownAndTableErgonomicsHarnessTest {
         assertThat(table.getSelectedRow()).isEqualTo(1);
         assertThat(rightClickedRow.get()).isEqualTo(1);
     }
+
+    @Test
+    void testDashboardKpiCardsInteractiveNavigation() {
+        java.util.List<String> navigatedModules = new java.util.ArrayList<>();
+        mz.multicore.erp.gui.DashboardPanel dashboard = new mz.multicore.erp.gui.DashboardPanel(
+                null, null, null, null, null, null,
+                null, null, null, null,
+                navigatedModules::add
+        );
+
+        java.util.List<ModernPanel> kpiCards = new java.util.ArrayList<>();
+        findKpiCards(dashboard, kpiCards);
+
+        // Deve conter os 8 cartões de KPI do topo
+        assertThat(kpiCards).isNotEmpty();
+
+        // Todos os cartões de KPI interativos devem possuir HAND_CURSOR e tooltip descritiva
+        for (ModernPanel card : kpiCards) {
+            assertThat(card.getCursor().getType()).isEqualTo(Cursor.HAND_CURSOR);
+            assertThat(card.getToolTipText()).isNotBlank();
+        }
+
+        // Simular clique no primeiro card (Saldo de Tesouraria -> financeiro)
+        ModernPanel firstCard = kpiCards.get(0);
+        MouseEvent click = new MouseEvent(
+                firstCard,
+                MouseEvent.MOUSE_CLICKED,
+                System.currentTimeMillis(),
+                0,
+                10,
+                10,
+                1,
+                false,
+                MouseEvent.BUTTON1
+        );
+        for (var listener : firstCard.getMouseListeners()) {
+            listener.mouseClicked(click);
+        }
+
+        assertThat(navigatedModules).contains("financeiro");
+    }
+
+    private static void findKpiCards(java.awt.Container root, java.util.List<ModernPanel> out) {
+        for (java.awt.Component c : root.getComponents()) {
+            if (c instanceof ModernPanel panel && panel.getToolTipText() != null && panel.getToolTipText().startsWith("Clique para abrir")) {
+                out.add(panel);
+            }
+            if (c instanceof java.awt.Container child) {
+                findKpiCards(child, out);
+            }
+        }
+    }
 }

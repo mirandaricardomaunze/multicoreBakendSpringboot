@@ -78,6 +78,7 @@ public class DashboardPanel extends JPanel {
     private final CRMApiClient crmApiClient;
     private final PurchaseApiClient purchaseApiClient;
     private final InventoryApiClient inventoryApiClient;
+    private final Consumer<String> navigationHandler;
 
     private PeriodFilter currentPeriod = PeriodFilter.HOJE;
     private final Map<PeriodFilter, ModernButton> periodButtons = new HashMap<>();
@@ -140,6 +141,7 @@ public class DashboardPanel extends JPanel {
         this.crmApiClient = crmApiClient;
         this.purchaseApiClient = purchaseApiClient;
         this.inventoryApiClient = inventoryApiClient;
+        this.navigationHandler = navigationHandler;
         this.strategicPulseWidget = new StrategicPulseWidget(
                 forensicAuditApiClient,
                 cashFlowForecastApiClient,
@@ -187,7 +189,8 @@ public class DashboardPanel extends JPanel {
         gridPanel.add(buildKpiCard(
                 "SALDO DE TESOURARIA", "fas-piggy-bank", UIHelper.KPI_INFO_SOFT,
                 balanceValLabel, null,
-                UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
+                UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
+                "Clique para abrir módulo Financeiro / Tesouraria", "financeiro"));
 
         salesValLabel = newValueLabel("0.00 MT", 19);
         salesTrendBadge = new KpiCard.TrendBadge(null);
@@ -197,7 +200,8 @@ public class DashboardPanel extends JPanel {
         gridPanel.add(buildKpiCard(
                 "FATURAÇÃO TOTAL", "fas-file-invoice-dollar", UIHelper.KPI_PURPLE_SOFT,
                 salesValLabel, salesTrendBadge, salesSubLabel,
-                UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END));
+                UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END,
+                "Clique para abrir módulo Comercial / Faturação", "comercial"));
 
         posSalesValLabel = newValueLabel("0.00 MT", 19);
         posTrendBadge = new KpiCard.TrendBadge(null);
@@ -207,7 +211,8 @@ public class DashboardPanel extends JPanel {
         gridPanel.add(buildKpiCard(
                 "VENDAS POS", "fas-cash-register", UIHelper.KPI_SUCCESS_SOFT,
                 posSalesValLabel, posTrendBadge, posSalesCountSub,
-                UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN));
+                UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN,
+                "Clique para abrir Ponto de Venda (POS)", "pos"));
 
         taxSummaryLabel = newValueLabel("0.00 MT", 19);
         taxDetailLabel = new JLabel("IVA Liquidado / Deduzido");
@@ -216,19 +221,22 @@ public class DashboardPanel extends JPanel {
         gridPanel.add(buildKpiCard(
                 "RESUMO FISCAL DO IVA", "fas-percentage", UIHelper.KPI_SUCCESS_SOFT,
                 taxSummaryLabel, taxDetailLabel,
-                UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
+                UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
+                "Clique para abrir Área Fiscal", "fiscal"));
 
         approvalsValLabel = newValueLabel("0 Pedidos", 19);
         gridPanel.add(buildKpiCard(
                 "APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,
                 approvalsValLabel, null,
-                UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END));
+                UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END,
+                "Clique para abrir Aprovações", "approvals"));
 
         ticketsValLabel = newValueLabel("0 Tickets", 19);
         gridPanel.add(buildKpiCard(
                 "SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", UIHelper.KPI_NEUTRAL_SOFT,
                 ticketsValLabel, null,
-                UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END));
+                UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END,
+                "Clique para abrir CRM & Assistência", "crm"));
 
         stockAlertsLabel = newValueLabel("0 Artigos", 19);
         JLabel stockAlertsSub = new JLabel("Qtd < 5 un no armazém");
@@ -237,7 +245,8 @@ public class DashboardPanel extends JPanel {
         gridPanel.add(buildKpiCard(
                 "ALERTAS DE STOCK", "fas-exclamation-triangle", UIHelper.KPI_DANGER_SOFT,
                 stockAlertsLabel, stockAlertsSub,
-                UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END));
+                UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END,
+                "Clique para abrir Gestão de Stock", "stock"));
 
         expiryAlertsLabel = newValueLabel("0 Lotes", 19);
         expiryAlertsSub = new JLabel("Vencimento ≤ " + EXPIRY_ALERT_DAYS + " dias");
@@ -246,7 +255,8 @@ public class DashboardPanel extends JPanel {
         gridPanel.add(buildKpiCard(
                 "ALERTAS DE VALIDADE", "fas-calendar-times", UIHelper.KPI_ORANGE_SOFT,
                 expiryAlertsLabel, expiryAlertsSub,
-                UIHelper.KPI_ORANGE_DARK, UIHelper.KPI_ORANGE_END));
+                UIHelper.KPI_ORANGE_DARK, UIHelper.KPI_ORANGE_END,
+                "Clique para abrir Gestão de Lotes / Stock", "stock"));
 
         dashboardContent.add(gridPanel, BorderLayout.NORTH);
 
@@ -353,13 +363,35 @@ public class DashboardPanel extends JPanel {
     private ModernPanel buildKpiCard(String title, String iconCode, Color titleColor,
                                       JLabel valueLabel, JLabel subLabel,
                                       Color gradientStart, Color gradientEnd) {
-        return KpiCard.create(title, iconCode, titleColor, valueLabel, subLabel, gradientStart, gradientEnd);
+        return buildKpiCard(title, iconCode, titleColor, valueLabel, subLabel, gradientStart, gradientEnd, null, null);
+    }
+
+    private ModernPanel buildKpiCard(String title, String iconCode, Color titleColor,
+                                      JLabel valueLabel, JLabel subLabel,
+                                      Color gradientStart, Color gradientEnd,
+                                      String tooltip, String targetModule) {
+        ModernPanel card = KpiCard.create(title, iconCode, titleColor, valueLabel, subLabel, gradientStart, gradientEnd);
+        if (navigationHandler != null && targetModule != null) {
+            KpiCard.makeInteractive(card, tooltip, () -> navigationHandler.accept(targetModule));
+        }
+        return card;
     }
 
     private ModernPanel buildKpiCard(String title, String iconCode, Color titleColor,
                                       JLabel valueLabel, KpiCard.TrendBadge trendBadge, JLabel subLabel,
                                       Color gradientStart, Color gradientEnd) {
-        return KpiCard.create(title, iconCode, titleColor, valueLabel, trendBadge, subLabel, gradientStart, gradientEnd);
+        return buildKpiCard(title, iconCode, titleColor, valueLabel, trendBadge, subLabel, gradientStart, gradientEnd, null, null);
+    }
+
+    private ModernPanel buildKpiCard(String title, String iconCode, Color titleColor,
+                                      JLabel valueLabel, KpiCard.TrendBadge trendBadge, JLabel subLabel,
+                                      Color gradientStart, Color gradientEnd,
+                                      String tooltip, String targetModule) {
+        ModernPanel card = KpiCard.create(title, iconCode, titleColor, valueLabel, trendBadge, subLabel, gradientStart, gradientEnd);
+        if (navigationHandler != null && targetModule != null) {
+            KpiCard.makeInteractive(card, tooltip, () -> navigationHandler.accept(targetModule));
+        }
+        return card;
     }
 
     private ModernPanel createChartCard(JComponent chart) {
