@@ -11,6 +11,7 @@ import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.DocumentEditorHost;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
@@ -20,6 +21,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -52,6 +55,9 @@ public final class QuotationsPanel extends JPanel {
     private final DefaultTableModel model;
     private final JTable table;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+    private final CardLayout pages = new CardLayout();
+    private final QuotationEditorForm editorForm;
+    private final DocumentEditorHost editorHost;
 
     public QuotationsPanel(ComercialApiClient apiClient,
                            Supplier<List<ClientDTO>> clients,
@@ -64,28 +70,17 @@ public final class QuotationsPanel extends JPanel {
         this.warehouses = warehouses;
         this.ordersRefresh = ordersRefresh;
 
-        setLayout(new BorderLayout(0, 15));
+        setLayout(pages);
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout(8, 0));
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Cotações"), BorderLayout.WEST);
+        JPanel listPage = new JPanel(new BorderLayout(0, 15));
+        listPage.setOpaque(false);
+
         ModernButton newBtn = UIHelper.createPrimaryButton("Nova Cotação");
         newBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newBtn.addActionListener(e -> openEditor());
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        headerActions.setOpaque(false);
-        headerActions.add(newBtn);
-        header.add(headerActions, BorderLayout.EAST);
-        JPanel north = new JPanel();
-        north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
-        feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(header);
-        north.add(feedback);
-        add(north, BorderLayout.NORTH);
+        listPage.add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
@@ -97,6 +92,11 @@ public final class QuotationsPanel extends JPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        table.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) openSelectedEditor();
+            }
+        });
         table.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(COL_STATUS).setCellRenderer(TableCellRenderers.status());
         hideColumn(COL_ID);
@@ -108,32 +108,37 @@ public final class QuotationsPanel extends JPanel {
         TableFilter.install(table, search,
                 java.util.List.of(new TableFilter.ColumnFilter(status, COL_STATUS)),
                 java.util.List.of(new TableFilter.PeriodFilter(periodo, 2)));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status,
-                TableFilter.label("Data:", "fas-calendar-alt"), periodo);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
+        ActionMenuButton more = UIHelper.createActionMenuButton("Operações")
+                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
+                .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), this::openSelectedEditor)
+                .addAction("Marcar como enviada", UIHelper.icon("fas-paper-plane", 14), this::send)
+                .addAction("Estender validade", UIHelper.icon("fas-calendar-plus", 14), this::extendValidity);
+        ActionMenuButton decision = UIHelper.createActionMenuButton("Decisão")
+                .addAction("Recusada pelo cliente", UIHelper.icon("fas-times", 14), this::reject)
+                .addAction("Aceite pelo cliente", UIHelper.icon("fas-check", 14), this::accept)
+                .addAction("Cancelar cotação", UIHelper.icon("fas-ban", 14), this::cancel)
+                .addAction("Converter em Encomenda", UIHelper.icon("fas-exchange-alt", 14, UIHelper.ACCENT_BLUE), this::convert)
+                .addAction("Converter em Factura", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.APPROVED_GREEN), this::convertToInvoice);
+        JPanel filters = UIHelper.filterBar(
+                new JComponent[]{search, TableFilter.label("Estado:"), status,
+                        TableFilter.label("Data:", "fas-calendar-alt"), periodo},
+                null);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Cotações", filters, refreshBtn, more, decision, newBtn), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
-        ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
-                .addAction("Ver linhas", UIHelper.icon("fas-list", 14), this::showLines)
-                .addAction("Marcar como enviada", UIHelper.icon("fas-paper-plane", 14), this::send)
-                .addAction("Estender validade", UIHelper.icon("fas-calendar-plus", 14), this::extendValidity)
-                .addAction("Cancelar cotação", UIHelper.icon("fas-ban", 14), this::cancel);
-        actions.add(UIHelper.createRefreshButton(this::refresh));
-        actions.add(more);
-        actions.add(button("Recusada pelo cliente", "fas-times", UIHelper.createDangerButton(""), this::reject));
-        actions.add(button("Aceite pelo cliente", "fas-check", UIHelper.createSuccessButton(""), this::accept));
-        actions.add(button("Converter em Encomenda", "fas-exchange-alt",
-                UIHelper.createPrimaryButton(""), this::convert));
-        card.add(actions, BorderLayout.SOUTH);
+        listPage.add(card, BorderLayout.CENTER);
 
-        add(card, BorderLayout.CENTER);
+        editorForm = new QuotationEditorForm(this);
+        editorHost = new DocumentEditorHost("Nova Cotação", editorForm.component(),
+                this::saveEditor, this::showList, editorForm::isDirty);
+        add(listPage, "LIST");
+        add(editorHost, "EDITOR");
+        pages.show(this, "LIST");
     }
 
     private ModernButton button(String text, String icon, ModernButton button, Runnable action) {
@@ -157,7 +162,7 @@ public final class QuotationsPanel extends JPanel {
                         q.totalAmount(),
                         q.statusLabel(),
                         validityLabel(q),
-                        blank(q.orderNumber())});
+                        blank(q.invoiceNumber() != null ? q.invoiceNumber() : q.orderNumber())});
             }
         }, error -> showError("carregar cotações", error));
     }
@@ -178,12 +183,68 @@ public final class QuotationsPanel extends JPanel {
     }
 
     private void openEditor() {
-        QuotationDTO created = new QuotationEditorDialog(this, apiClient,
-                clients.get(), products.get(), warehouses.get()).open();
-        if (created == null) return;
-        showSuccess("Cotação " + created.quotationNumber() + " emitida; total "
-                + created.totalAmount() + " MT, válida até " + created.validUntil().format(DATE) + ".");
+        if (warehouses.get().isEmpty() || products.get().isEmpty()) {
+            showNotice(FeedbackType.WARNING, "Dados necessários",
+                    "Registe um armazém e pelo menos um produto antes de criar a cotação.");
+            return;
+        }
+        editorForm.setOptions(clients.get(), products.get(), warehouses.get());
+        editorForm.prepareCreate();
+        editorHost.setEditorTitle("Nova Cotação");
+        editorHost.setSaveText("Emitir Cotação");
+        editorHost.setSaveEnabled(true);
+        pages.show(this, "EDITOR");
+    }
+
+    private void openSelectedEditor() {
+        int row = selected("editar ou consultar");
+        if (row < 0) return;
+        Long id = (Long) model.getValueAt(row, COL_ID);
+        UIHelper.loadAsync(this, () -> apiClient.getQuotationById(id), quotation -> {
+            editorForm.setOptions(clients.get(), products.get(), warehouses.get());
+            editorForm.load(quotation);
+            boolean editable = "DRAFT".equals(quotation.status());
+            editorHost.setEditorTitle((editable ? "Editar Cotação " : "Consultar Cotação ")
+                    + quotation.quotationNumber());
+            editorHost.setSaveText("Guardar alterações");
+            editorHost.setSaveEnabled(editable);
+            pages.show(this, "EDITOR");
+            if (!editable) {
+                showNotice(FeedbackType.INFO, "Cotação protegida",
+                        "Depois do envio, a cotação fica apenas para consulta. Use as operações próprias do estado.");
+            }
+        }, error -> showError("carregar a cotação", error));
+    }
+
+    void saveEditor() {
+        try {
+            QuotationDTO loaded = editorForm.loaded();
+            if (loaded == null) {
+                var request = editorForm.createRequest();
+                UIHelper.runWithProgress(this, "A emitir cotação…", () -> apiClient.createQuotation(request),
+                        saved -> finishSave(saved, "emitida"), error -> showError("emitir a cotação", error));
+            } else {
+                var request = editorForm.updateRequest();
+                UIHelper.runWithProgress(this, "A guardar alterações…",
+                        () -> apiClient.updateQuotation(loaded.id(), request),
+                        saved -> finishSave(saved, "actualizada"),
+                        error -> showError("actualizar a cotação", error));
+            }
+        } catch (RuntimeException error) {
+            showNotice(FeedbackType.ERROR, "Dados incompletos", error.getMessage());
+        }
+    }
+
+    private void finishSave(QuotationDTO saved, String action) {
+        editorForm.markClean();
+        showSuccess("Cotação " + saved.quotationNumber() + " " + action + "; total "
+                + saved.totalAmount() + " MT.");
+        showList();
         refresh();
+    }
+
+    private void showList() {
+        pages.show(this, "LIST");
     }
 
     private void send() {
@@ -286,6 +347,31 @@ public final class QuotationsPanel extends JPanel {
                     refresh();
                     ordersRefresh.run();
                 }, error -> showError("converter a cotação", error));
+    }
+
+    /**
+     * Converte na factura comercial directamente. A factura mantém os preços acordados
+     * na cotação, efectua baixa de stock no armazém e assume o vencimento do cliente.
+     */
+    private void convertToInvoice() {
+        int row = selected("converter em factura");
+        if (row < 0) return;
+        Long id = (Long) model.getValueAt(row, COL_ID);
+        String number = String.valueOf(model.getValueAt(row, COL_NUMBER));
+        if (JOptionPane.showConfirmDialog(this,
+                "Converter a cotação " + number + " directamente numa Factura comercial (FT)?\n\n"
+                        + "A factura mantém exactamente os preços cotados, efectua a baixa de stock e cria a conta a receber.\n"
+                        + "A cotação não poderá ser convertida outra vez.",
+                "Confirmar Emissão de Factura", JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE) != JOptionPane.YES_OPTION) return;
+
+        UIHelper.runWithProgress(this, "A converter em factura…", () -> apiClient.convertQuotationToInvoice(id),
+                invoice -> {
+                    showSuccess("Cotação " + number + " convertida na factura " + invoice.invoiceNumber()
+                            + "; total " + invoice.totalAmount() + " MT.");
+                    refresh();
+                    ordersRefresh.run();
+                }, error -> showError("converter a cotação em factura", error));
     }
 
     private void print() {

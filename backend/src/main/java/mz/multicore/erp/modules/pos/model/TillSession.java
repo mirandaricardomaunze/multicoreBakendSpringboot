@@ -45,4 +45,14 @@ public class TillSession {
 
     @Column(name = "difference", precision = 12, scale = 2)
     private BigDecimal difference;
+
+    /** Operador actual após passagem de turno; null = mesmo que operator. */
+    @Column(name = "current_operator", length = 100)
+    private String currentOperator;
+
+    @Column(name = "closing_notes", length = 500)
+    private String closingNotes;
+
+    @Column(name = "cash_breakdown_json", columnDefinition = "TEXT")
+    private String cashBreakdownJson;
 }

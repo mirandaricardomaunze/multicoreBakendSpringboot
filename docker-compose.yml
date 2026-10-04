@@ -41,6 +41,7 @@ services:
       # Backup físico (Spring relaxed binding: BACKUP_PG_BIN_DIR -> backup.pg-bin-dir).
       BACKUP_PG_BIN_DIR: /usr/bin
       BACKUP_DIR: /app/backups
+      TRUSTED_PROXY_HOST: caddy
     volumes:
       - ./data/backups:/app/backups
     networks: [internal]

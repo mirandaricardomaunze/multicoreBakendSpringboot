@@ -27,7 +27,7 @@ public class CustomerOrderFulfillmentController {
 
     @PostMapping("/{id}/picking-print")
     public ResponseEntity<ByteArrayResource> print(@PathVariable Long id,
-            @RequestBody(required = false) OrderActionRequest request) {
+            @RequestBody(required = false) @Valid OrderActionRequest request) {
         return pdf(service.printForPicking(id, request == null ? null : request.terminalName()), "separacao-" + id);
     }
 
@@ -38,12 +38,12 @@ public class CustomerOrderFulfillmentController {
     }
 
     @PostMapping("/{id}/separate")
-    public ResponseEntity<OrderDTO> separate(@PathVariable Long id, @RequestBody OrderActionRequest request) {
+    public ResponseEntity<OrderDTO> separate(@PathVariable Long id, @RequestBody @Valid OrderActionRequest request) {
         return ResponseEntity.ok(service.completeSeparation(id, request));
     }
 
     @PostMapping("/{id}/fulfillment-bill")
-    public ResponseEntity<InvoiceDTO> bill(@PathVariable Long id, @RequestBody OrderActionRequest request) {
+    public ResponseEntity<InvoiceDTO> bill(@PathVariable Long id, @RequestBody @Valid OrderActionRequest request) {
         return ResponseEntity.ok(service.bill(id, request));
     }
 

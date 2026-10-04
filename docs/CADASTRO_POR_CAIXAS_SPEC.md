@@ -18,7 +18,8 @@ sistema só aceitava a entrada de stock **em unidades** — o operador tinha de 
 - **A unidade interna de stock é a UNIDADE.** Movimentos, reservas, faturação, guia de remessa e POS
   continuam **em unidades** — nada disso muda. A "caixa" é apenas uma **camada de entrada e de
   visualização** (conversão), nunca a unidade persistida.
-- `Product.unitsPerBox` (já existente) é o factor de conversão. `Qtd Caixas = stock ÷ unitsPerBox`
+- `Product.unitsPerBox` é o total derivado de `packagesPerBox × unitsPerPackage`.
+  `Qtd Caixas = stock ÷ unitsPerBox`
   (visualização, já existente).
 - Nos diálogos de **entrada de stock** (stock inicial após cadastro **e** "Adicionar Lote/Validade",
   que são o mesmo método `createBatchEntryDialog`), o operador introduz:

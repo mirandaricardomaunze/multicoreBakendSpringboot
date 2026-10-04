@@ -113,38 +113,14 @@ public class CashFlowForecastPanel extends JPanel {
     }
 
     private JPanel buildSummaryCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 4, 10, 0));
-        grid.setOpaque(false);
+        JPanel grid = KpiCard.createGrid(4);
 
-        grid.add(createKpiCard("Disponível Imediato", lblLiquidityVal, "fas-wallet", UIHelper.ACCENT_BLUE));
-        grid.add(createKpiCard("Contas a Receber", lblReceivablesVal, "fas-arrow-circle-down", UIHelper.APPROVED_GREEN));
-        grid.add(createKpiCard("Contas a Pagar", lblPayablesVal, "fas-arrow-circle-up", UIHelper.REJECTED_RED));
-        grid.add(createKpiCard("Saldo Projetado Líquido", lblNetVal, "fas-chart-line", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createCard("Disponível Imediato", lblLiquidityVal, "fas-wallet", UIHelper.ACCENT_BLUE));
+        grid.add(KpiCard.createCard("Contas a Receber", lblReceivablesVal, "fas-arrow-circle-down", UIHelper.APPROVED_GREEN));
+        grid.add(KpiCard.createCard("Contas a Pagar", lblPayablesVal, "fas-arrow-circle-up", UIHelper.REJECTED_RED));
+        grid.add(KpiCard.createCard("Saldo Projetado Líquido", lblNetVal, "fas-chart-line", UIHelper.TEXT_LIGHT));
 
         return grid;
-    }
-
-    private ModernPanel createKpiCard(String title, JLabel valLabel, String icon, Color accent) {
-        ModernPanel card = new ModernPanel(10);
-        card.setLayout(new BorderLayout(0, 4));
-        card.setBorder(new EmptyBorder(8, 12, 8, 12));
-
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(titleLbl.getFont().deriveFont(Font.PLAIN, 11f));
-        titleLbl.setForeground(UIHelper.TEXT_MUTED);
-        top.add(titleLbl, BorderLayout.WEST);
-
-        JLabel iconLbl = new JLabel(UIHelper.icon(icon, 14, accent));
-        top.add(iconLbl, BorderLayout.EAST);
-        card.add(top, BorderLayout.NORTH);
-
-        valLabel.setFont(valLabel.getFont().deriveFont(Font.BOLD, 15f));
-        valLabel.setForeground(accent);
-        card.add(valLabel, BorderLayout.CENTER);
-
-        return card;
     }
 
     private ModernPanel buildAlertBannerPanel() {
@@ -180,6 +156,8 @@ public class CashFlowForecastPanel extends JPanel {
         };
 
         bucketsTable = new JTable(bucketsTableModel);
+        // Matriz executiva fixa: tem poucos horizontes e deve permanecer integralmente visível.
+        bucketsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(bucketsTable);
 
         // Exibe todas as 5 linhas da matriz temporal de liquidez com altura confortável
@@ -220,12 +198,13 @@ public class CashFlowForecastPanel extends JPanel {
             public boolean isCellEditable(int row, int col) { return false; }
         };
         topReceivablesTable = new JTable(topReceivablesModel);
+        topReceivablesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(topReceivablesTable);
         topReceivablesTable.setPreferredScrollableViewportSize(new Dimension(100, 260));
         topReceivablesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         JScrollPane rScroll = new JScrollPane(topReceivablesTable);
         UIHelper.styleScrollPane(rScroll);
-        tabs.addTab("Maiores Recebimentos Previstos", UIHelper.icon("fas-hand-holding-usd", 13, UIHelper.TEXT_LIGHT), rScroll);
+        tabs.addTab("Maiores Recebimentos Previstos", UIHelper.icon("fas-hand-holding-usd", 13, UIHelper.APPROVED_GREEN), rScroll);
 
         // Aba 2: Maiores Contas a Pagar
         String[] pCols = {"Documento", "Fornecedor", "Vencimento", "Montante Pendente", "Período"};
@@ -234,12 +213,13 @@ public class CashFlowForecastPanel extends JPanel {
             public boolean isCellEditable(int row, int col) { return false; }
         };
         topPayablesTable = new JTable(topPayablesModel);
+        topPayablesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(topPayablesTable);
         topPayablesTable.setPreferredScrollableViewportSize(new Dimension(100, 260));
         topPayablesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         JScrollPane pScroll = new JScrollPane(topPayablesTable);
         UIHelper.styleScrollPane(pScroll);
-        tabs.addTab("Maiores Pagamentos a Fornecedores", UIHelper.icon("fas-file-invoice-dollar", 13, UIHelper.TEXT_LIGHT), pScroll);
+        tabs.addTab("Maiores Pagamentos a Fornecedores", UIHelper.icon("fas-file-invoice-dollar", 13, UIHelper.REJECTED_RED), pScroll);
 
         card.add(tabs, BorderLayout.CENTER);
         card.setPreferredSize(new Dimension(0, 360));

@@ -36,6 +36,7 @@ public class StockWasteService {
     private final InventoryService inventoryService;
     private final InvoiceRepository invoiceRepository;
     private final CompanyRepository companyRepository;
+    private final mz.multicore.erp.modules.audit.service.AuditLogService auditLogService;
 
     public StockWasteService(
             StockWasteRepository wasteRepository,
@@ -46,6 +47,21 @@ public class StockWasteService {
             InvoiceRepository invoiceRepository,
             CompanyRepository companyRepository
     ) {
+        this(wasteRepository, productRepository, warehouseRepository, batchRepository,
+                inventoryService, invoiceRepository, companyRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public StockWasteService(
+            StockWasteRepository wasteRepository,
+            ProductRepository productRepository,
+            WarehouseRepository warehouseRepository,
+            ProductBatchRepository batchRepository,
+            InventoryService inventoryService,
+            InvoiceRepository invoiceRepository,
+            CompanyRepository companyRepository,
+            mz.multicore.erp.modules.audit.service.AuditLogService auditLogService
+    ) {
         this.wasteRepository = wasteRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
@@ -53,6 +69,7 @@ public class StockWasteService {
         this.inventoryService = inventoryService;
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -124,6 +141,12 @@ public class StockWasteService {
         }
 
         StockWaste saved = wasteRepository.save(waste);
+        if (auditLogService != null) {
+            auditLogService.logEvent(saved.getRegisteredBy(), company.getId(), "STOCK_WASTE_REGISTER",
+                    "Registo de quebra de stock #" + saved.getId() + " (" + product.getSku() + " - " + product.getName()
+                            + "): quantidade=" + req.quantity() + ", total=" + totalCost + " MZN, motivo=" + req.reason()
+                            + ", estado=" + saved.getStatus());
+        }
         return toDTO(saved);
     }
 
@@ -166,6 +189,13 @@ public class StockWasteService {
         }
 
         StockWaste saved = wasteRepository.save(waste);
+        if (auditLogService != null) {
+            String action = (req != null && req.approved()) ? "STOCK_WASTE_APPROVE" : "STOCK_WASTE_REJECT";
+            auditLogService.logEvent(approver, saved.getCompany().getId(), action,
+                    "Quebra de stock #" + saved.getId() + " (" + saved.getProduct().getSku() + ") "
+                            + (saved.getStatus() == WasteStatus.APPROVED ? "aprovada" : "rejeitada")
+                            + " por " + approver + ", quantidade=" + saved.getQuantity() + ", valor=" + saved.getTotalCost() + " MZN");
+        }
         return toDTO(saved);
     }
 

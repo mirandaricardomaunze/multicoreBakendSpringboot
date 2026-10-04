@@ -49,12 +49,12 @@ final class PosCatalogController {
     }
 
     JPanel buildPaginationBar() {
-        previousButton = new ModernButton("Anterior", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        previousButton = new ModernButton("Anterior", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
         previousButton.setIcon(UIHelper.icon("fas-chevron-left", 12, Color.WHITE));
         previousButton.setForeground(Color.WHITE);
         previousButton.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
 
-        nextButton = new ModernButton("Próximo", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        nextButton = new ModernButton("Próximo", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
         nextButton.setIcon(UIHelper.icon("fas-chevron-right", 12, Color.WHITE));
         nextButton.setForeground(Color.WHITE);
         nextButton.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
@@ -79,9 +79,10 @@ final class PosCatalogController {
         int page = Math.max(0, requestedPage);
         int sequence = ++requestSequence;
         setNavigationEnabled(false);
-        String query = owner.productSearchField == null ? "" : owner.productSearchField.getText();
+        String query = owner.productSearchField != null ? owner.productSearchField.getText() : "";
+        Long warehouseId = owner.getSelectedWarehouseId();
         UIHelper.loadAsync(owner,
-                () -> owner.comercialApiClient.getPOSCatalogPage(query, !owner.showAllProducts, page, PAGE_SIZE),
+                () -> owner.comercialApiClient.getPOSCatalogPage(query, !owner.showAllProducts, warehouseId, page, PAGE_SIZE),
                 result -> { if (sequence == requestSequence) applyCatalogPage(result); },
                 error -> { if (sequence == requestSequence) {
                     setNavigationEnabled(true);
@@ -94,6 +95,12 @@ final class PosCatalogController {
         owner.filteredProducts = owner.productsList;
         owner.sellableProductIds = page.items().stream().filter(POSCatalogItemDTO::sellable)
                 .map(item -> item.product().id()).collect(Collectors.toSet());
+        owner.productStockQuantities.clear();
+        for (POSCatalogItemDTO item : page.items()) {
+            if (item.stockQuantity() != null && item.product() != null && item.product().id() != null) {
+                owner.productStockQuantities.put(item.product().id(), item.stockQuantity());
+            }
+        }
         if (pageLabel != null) pageLabel.setText(page.totalPages() == 0 ? "Sem resultados"
                 : "Página " + (page.page() + 1) + " de " + page.totalPages() + " · " + page.totalElements() + " produtos");
         if (pageLabel != null) pageLabel.putClientProperty("catalogPage", page.page());
@@ -173,10 +180,25 @@ final class PosCatalogController {
             unavailable.setAlignmentX(Component.CENTER_ALIGNMENT);
             footer.add(Box.createRigidArea(new Dimension(0, 3)));
             footer.add(unavailable);
+        } else if (p.stockTracked()) {
+            BigDecimal stock = owner.getProductStock(p.id());
+            if (stock != null) {
+                JLabel stockLbl = new JLabel(UIHelper.formatQty(stock) + " disp.");
+                stockLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+                stockLbl.setForeground(UIHelper.APPROVED_GREEN);
+                stockLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+                footer.add(Box.createRigidArea(new Dimension(0, 2)));
+                footer.add(stockLbl);
+            }
         }
         card.add(footer, BorderLayout.SOUTH);
 
-        card.setToolTipText(productLabel(p) + (sellable ? "" : " — sem stock disponível para venda"));
+        String whName = owner.getSelectedWarehouseName();
+        BigDecimal stock = owner.getProductStock(p.id());
+        String stockInfo = !p.stockTracked() ? " (serviço/não rastreado)"
+                : (stock != null ? " · " + UIHelper.formatQty(stock) + " disponível" : "");
+        String whInfo = whName != null ? " · Armazém: " + whName : "";
+        card.setToolTipText(productLabel(p) + whInfo + stockInfo + (sellable ? "" : " — sem stock disponível para venda"));
         if (sellable) {
             card.addMouseListener(new MouseAdapter() {
                 @Override public void mouseClicked(MouseEvent e) { addProductToCart(p); }
@@ -226,11 +248,15 @@ final class PosCatalogController {
     /** Legenda (esquerda) do bloco de discriminação Subtotal/IVA. */
     public void addProductToCart(ProductDTO product) {
         if (!owner.isProductSellable(product)) {
+            mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(
+                    mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.ERROR);
             owner.showPosNotice(FeedbackType.WARNING, "Sem stock",
                     "O artigo '" + product.name() + "' está esgotado e não pode ser adicionado.");
             return;
         }
         if (owner.activeSession == null) {
+            mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(
+                    mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.WARNING);
             owner.showPosNotice(FeedbackType.WARNING, "Caixa fechado", "Abra o caixa antes de adicionar artigos.");
             return;
         }
@@ -238,6 +264,8 @@ final class PosCatalogController {
             if (it.serial == null && it.product.id().equals(product.id())) {
                 it.qty = it.qty.add(BigDecimal.ONE);
                 owner.updateCartTotal(owner.cartItems.indexOf(it));
+                mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(
+                        mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.SUCCESS);
                 return;
             }
         }
@@ -251,6 +279,8 @@ final class PosCatalogController {
                     item.note = promo.map(p -> "Promo: " + p.name()).orElse("-");
                     owner.cartItems.add(item);
                     owner.updateCartTotal(owner.cartItems.size() - 1);
+                    mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(
+                            mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.SUCCESS);
                 }, error -> owner.showPosNotice(FeedbackType.ERROR,
                         "Não foi possível consultar promoções", error.getMessage()));
     }

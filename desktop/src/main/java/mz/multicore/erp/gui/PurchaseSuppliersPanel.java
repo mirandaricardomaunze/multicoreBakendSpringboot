@@ -20,27 +20,20 @@ final class PurchaseSuppliersPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // Header: title + action buttons
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Fornecedores Cadastrados"), BorderLayout.WEST);
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações")
+                .addAction("Editar", UIHelper.icon("fas-edit", 14), () -> {
+                    SupplierDTO sel = selectedSupplier();
+                    if (sel != null) openSupplierDialog(sel);
+                })
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedSupplier);
 
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerActions.setOpaque(false);
-        ModernButton editSupBtn = UIHelper.createSecondaryButton("Editar");
-        editSupBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        ModernButton toggleSupBtn = UIHelper.createSecondaryButton("Activar/Desactivar");
-        toggleSupBtn.setIcon(UIHelper.icon("fas-power-off", 14));
         ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshSupsBtn.addActionListener(e -> { supplierSearchField.setText(""); owner.loadSuppliers(); });
+
         ModernButton newSupBtn = UIHelper.createSuccessButton("Novo Fornecedor");
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        headerActions.add(editSupBtn);
-        headerActions.add(toggleSupBtn);
-        headerActions.add(refreshSupsBtn);
-        headerActions.add(newSupBtn);
-        header.add(headerActions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
+        newSupBtn.addActionListener(e -> openSupplierDialog(null));
 
         // Table full-width
         ModernPanel listCard = new ModernPanel(16);
@@ -60,24 +53,35 @@ final class PurchaseSuppliersPanel {
 
         supplierSearchField = TableFilter.searchField("Nome ou NUIT…");
         JComboBox<String> supEstado = TableFilter.combo("Todos os estados", "Activo", "Inactivo");
+        UIHelper.styleComboBox(supEstado);
+        supEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(owner.suppliersTable, supplierSearchField,
                 new TableFilter.ColumnFilter(supEstado, 6));
-        JPanel supBar = TableFilter.bar(supplierSearchField,
-                TableFilter.label("Estado:"), supEstado);
-        supBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(supBar, BorderLayout.NORTH);
+
+        JPanel supFilters = new JPanel(new GridBagLayout());
+        supFilters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; supFilters.add(filterLabel("Estado"), g);
+        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        supFilters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; supFilters.add(supEstado, g);
+        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        supFilters.add(supplierSearchField, g);
+
+        supFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(UIHelper.tableCardTop("Fornecedores Cadastrados", supFilters,
+                refreshSupsBtn, actionsMenu, newSupBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
+        listCard.add(ClientTablePagination.install(owner.suppliersTable), BorderLayout.SOUTH);
         panel.add(listCard, BorderLayout.CENTER);
-
-        // LISTENERS
-        refreshSupsBtn.addActionListener(e -> { supplierSearchField.setText(""); owner.loadSuppliers(); });
-        newSupBtn.addActionListener(e -> openSupplierDialog(null));
-        editSupBtn.addActionListener(e -> {
-            SupplierDTO sel = selectedSupplier();
-            if (sel != null) openSupplierDialog(sel);
-        });
-        toggleSupBtn.addActionListener(e -> toggleSelectedSupplier());
-
         return panel;
     }
 
@@ -145,4 +149,10 @@ final class PurchaseSuppliersPanel {
         }
     }
 
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
+    }
 }

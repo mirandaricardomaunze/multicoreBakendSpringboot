@@ -2,20 +2,23 @@ package mz.multicore.erp.gui.commercial;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.ComercialPanel;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
-/** Apresentação e impressão de uma encomenda, sem regras de negócio locais. */
+/**
+ * Ficha executiva e apresentação detalhada de uma encomenda (Order Detail View).
+ * Utiliza o componente canónico {@link ExecutiveDetailDialog} para uma experiência visual uniforme.
+ */
 public final class OrderDetailsDialog {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_ONLY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -40,67 +43,181 @@ public final class OrderDetailsDialog {
                 error -> showError("Não foi possível carregar a encomenda", error));
     }
 
-    private void show(OrderDTO order) {
-        StringBuilder header = new StringBuilder("<html><body style='font-family:sans-serif;'>")
-                .append("<b>Nº Encomenda:</b> ").append(order.orderNumber()).append("<br>")
-                .append("<b>Cliente:</b> ").append(order.clientName());
+    public void show(OrderDTO order) {
+        ExecutiveDetailDialog dialog = ExecutiveDetailDialog.create(owner, "Detalhes da Encomenda " + order.orderNumber());
+
+        // 1. Cabeçalho
+        String clientInfo = "Cliente: " + order.clientName();
         if (order.walkInName() != null && !order.walkInName().isBlank()) {
-            header.append(" <i>(comprador: ").append(order.walkInName()).append(")</i>");
+            clientInfo += " (comprador: " + order.walkInName() + ")";
         }
-        header.append("<br><b>Data:</b> ")
-                .append(order.createdAt() != null ? order.createdAt().format(DATE_TIME) : "—")
-                // Rótulo PT-MZ vindo do servidor — nunca a constante interna.
-                .append("<br><b>Estado:</b> ").append(order.statusLabel())
-                .append("<br><b>Total:</b> ").append(order.totalAmount()).append(" MT");
-        if (order.quotationNumber() != null && !order.quotationNumber().isBlank()) {
-            header.append("<br><b>Origem:</b> Cotação ").append(order.quotationNumber());
+        if (order.createdAt() != null) {
+            clientInfo += " | Emitida em " + order.createdAt().format(DATE_TIME);
         }
-        if (order.paymentTerms() != null && !order.paymentTerms().isBlank()) {
-            header.append("<br><b>Pagamento:</b> ").append(order.paymentTerms());
-        }
-        if (order.deliveryTerms() != null && !order.deliveryTerms().isBlank()) {
-            header.append("<br><b>Prazo de entrega:</b> ").append(order.deliveryTerms());
-        }
-        if (order.expectedDeliveryDate() != null) {
-            header.append("<br><b>Entrega prevista:</b> ")
-                    .append(order.expectedDeliveryDate().format(DATE_ONLY));
-            if (order.deliveryOverdue()) {
-                header.append(" <b>(em atraso)</b>");
+
+        dialog.setTitle("Encomenda " + order.orderNumber())
+                .setSubtitle(clientInfo)
+                .setHeaderIcon("fas-shopping-bag", 24, UIHelper.ACCENT_BLUE);
+
+        // Status com severidade semântica
+        ExecutiveDetailDialog.StatusSeverity severity = switch (order.status() != null ? order.status() : "") {
+            case "BILLED" -> ExecutiveDetailDialog.StatusSeverity.SUCCESS;
+            case "CONFIRMED", "APPROVED" -> ExecutiveDetailDialog.StatusSeverity.INFO;
+            case "PENDING" -> ExecutiveDetailDialog.StatusSeverity.WARNING;
+            case "CANCELLED" -> ExecutiveDetailDialog.StatusSeverity.DANGER;
+            default -> ExecutiveDetailDialog.StatusSeverity.NEUTRAL;
+        };
+        dialog.setStatusBadge(order.statusLabel() != null ? order.statusLabel() : order.status(), severity);
+
+        // 2. KPIs
+        BigDecimal totalQty = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        if (order.lines() != null) {
+            for (var l : order.lines()) {
+                if (l.quantity() != null) totalQty = totalQty.add(l.quantity());
+                if (l.lineGrossWeightKg() != null) totalWeight = totalWeight.add(l.lineGrossWeightKg());
             }
         }
-        header.append("</body></html>");
+
+        dialog.addKpi("Valor Total", order.totalAmount() + " MT", "Com taxas e impostos", UIHelper.APPROVED_GREEN, "fas-money-bill-wave");
+        dialog.addKpi("Volume de Artigos", totalQty.toPlainString(), order.lines() != null ? order.lines().size() + " produtos distintos" : "—", UIHelper.ACCENT_BLUE, "fas-boxes");
+        dialog.addKpi("Peso Bruto", totalWeight + " kg", "Massa total estimada", UIHelper.ACCENT_ORANGE, "fas-weight-hanging");
+
+        String originText = (order.quotationNumber() != null && !order.quotationNumber().isBlank())
+                ? "Cotação " + order.quotationNumber() : "Venda Direta";
+        dialog.addKpi("Origem / Termos", originText, order.paymentTerms() != null ? order.paymentTerms() : "Pronto Pagamento", UIHelper.ACCENT_CYAN, "fas-file-contract");
+
+        // 3. Abas
+        dialog.addTab("Itens da Encomenda", "fas-list", UIHelper.ACCENT_BLUE, buildLinesTab(order));
+        dialog.addTab("Condições & Entrega", "fas-truck", UIHelper.APPROVED_GREEN, buildLogisticsTab(order));
+        dialog.addTab("Impressão & Rastreabilidade", "fas-history", UIHelper.PENDING_YELLOW, buildPrintAuditTab(order));
+
+        // 4. Ações
+        ModernButton printBtn = new ModernButton("Imprimir PDF", UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
+        printBtn.setIcon(UIHelper.icon("fas-print", 14, Color.WHITE));
+        printBtn.addActionListener(e -> {
+            dialog.dispose();
+            printWithConfirmation(order);
+        });
+        dialog.addLeftAction(printBtn);
+
+        dialog.showDialog();
+    }
+
+    private JComponent buildLinesTab(OrderDTO order) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(UIHelper.BG_DARK);
+        p.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         DefaultTableModel model = new DefaultTableModel(
-                new String[]{"Produto", "Lote", "Qtd / Caixas", "Peso kg", "% Qtd", "% Peso", "Preço", "Total"}, 0) {
+                new String[]{"Produto", "Lote", "Qtd / Caixas", "Peso kg", "% Qtd", "% Peso", "Preço Unit.", "Total"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
-        for (var line : order.lines()) {
-            model.addRow(new Object[]{line.productName(), line.batchNumber() == null ? "—" : line.batchNumber(),
-                    line.quantity() + " (" + mz.multicore.erp.architecture.quantity.PackageQuantity
-                            .label(line.quantity(), line.unitsPerBox()) + ")",
-                    line.lineGrossWeightKg(), line.quantityPercentage() + "%", line.weightPercentage() + "%",
-                    line.unitPrice() + " MT", line.lineTotal() + " MT"});
+
+        if (order.lines() != null) {
+            for (var line : order.lines()) {
+                model.addRow(new Object[]{
+                        line.productName(),
+                        line.batchNumber() == null ? "—" : line.batchNumber(),
+                        line.quantity() + " (" + mz.multicore.erp.architecture.quantity.PackageQuantity
+                                .label(line.quantity(), line.unitsPerBox()) + ")",
+                        line.lineGrossWeightKg(),
+                        line.quantityPercentage() + "%",
+                        line.weightPercentage() + "%",
+                        line.unitPrice() + " MT",
+                        line.lineTotal() + " MT"
+                });
+            }
         }
+
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
         JScrollPane scroll = new JScrollPane(table);
-        scroll.setPreferredSize(new Dimension(660, 200));
+        UIHelper.styleScrollPane(scroll);
+        p.add(scroll, BorderLayout.CENTER);
+        return p;
+    }
 
-        JLabel printStatus = order.printCount() > 0
-                ? new JLabel(String.format("<html><body style='color:#d97706;font-weight:bold;'>Já impressa %d vez(es). Última: %s%s</body></html>",
-                        order.printCount(), order.printedAt() != null ? order.printedAt().format(DATE_TIME) : "—",
-                        order.lastPrintedBy() != null ? " por " + order.lastPrintedBy() : ""))
-                : new JLabel("<html><body style='color:#16a34a;'>Ainda não foi impressa.</body></html>");
+    private JComponent buildLogisticsTab(OrderDTO order) {
+        JPanel p = new JPanel(new GridLayout(2, 2, 14, 14));
+        p.setBackground(UIHelper.BG_DARK);
+        p.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        JPanel content = new JPanel(new BorderLayout(0, 12));
-        content.setOpaque(false);
-        content.add(new JLabel(header.toString()), BorderLayout.NORTH);
-        content.add(scroll, BorderLayout.CENTER);
-        content.add(printStatus, BorderLayout.SOUTH);
-        int choice = JOptionPane.showOptionDialog(owner, content, "Detalhes da Encomenda " + order.orderNumber(),
-                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null,
-                new String[]{"Imprimir", "Fechar"}, "Fechar");
-        if (choice == 0) printWithConfirmation(order);
+        p.add(buildInfoCard("Termos de Pagamento", "fas-credit-card", UIHelper.ACCENT_BLUE,
+                order.paymentTerms() != null ? order.paymentTerms() : "Não especificado"));
+
+        p.add(buildInfoCard("Prazo de Entrega Acordado", "fas-shipping-fast", UIHelper.APPROVED_GREEN,
+                order.deliveryTerms() != null ? order.deliveryTerms() : "Entrega standard"));
+
+        String deliveryDateText = order.expectedDeliveryDate() != null
+                ? order.expectedDeliveryDate().format(DATE_ONLY) : "Não agendada";
+        if (order.deliveryOverdue()) {
+            deliveryDateText += " (EM ATRASO)";
+        }
+        p.add(buildInfoCard("Data de Entrega Prevista", "fas-calendar-alt",
+                order.deliveryOverdue() ? UIHelper.REJECTED_RED : UIHelper.ACCENT_CYAN, deliveryDateText));
+
+        String buyer = (order.walkInName() != null && !order.walkInName().isBlank())
+                ? order.walkInName() : order.clientName();
+        p.add(buildInfoCard("Destinatário / Comprador", "fas-user-check", UIHelper.ACCENT_ORANGE, buyer));
+
+        return p;
+    }
+
+    private JComponent buildPrintAuditTab(OrderDTO order) {
+        JPanel p = new JPanel(new BorderLayout(0, 14));
+        p.setBackground(UIHelper.BG_DARK);
+        p.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        ModernPanel card = new ModernPanel(14);
+        card.setLayout(new GridLayout(3, 1, 0, 8));
+        card.setBorder(new EmptyBorder(16, 18, 16, 18));
+
+        JLabel l1 = new JLabel("Histórico de Impressão Oficial:");
+        l1.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        l1.setForeground(UIHelper.TEXT_LIGHT);
+
+        JLabel l2 = new JLabel(order.printCount() > 0
+                ? "Esta encomenda já foi impressa " + order.printCount() + " vez(es)."
+                : "Esta encomenda ainda não foi impressa.");
+        l2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        l2.setForeground(order.printCount() > 0 ? UIHelper.PENDING_YELLOW : UIHelper.APPROVED_GREEN);
+
+        String printDetails = order.printedAt() != null
+                ? "Última impressão: " + order.printedAt().format(DATE_TIME) + (order.lastPrintedBy() != null ? " por " + order.lastPrintedBy() : "")
+                : "Sem registo de emissão em papel.";
+        JLabel l3 = new JLabel(printDetails);
+        l3.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        l3.setForeground(UIHelper.TEXT_MUTED);
+
+        card.add(l1);
+        card.add(l2);
+        card.add(l3);
+
+        p.add(card, BorderLayout.NORTH);
+        return p;
+    }
+
+    private ModernPanel buildInfoCard(String title, String icon, Color iconColor, String content) {
+        ModernPanel p = new ModernPanel(12);
+        p.setLayout(new BorderLayout(0, 6));
+        p.setBorder(new EmptyBorder(12, 14, 12, 14));
+
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        top.setOpaque(false);
+        top.add(new JLabel(UIHelper.icon(icon, 15, iconColor)));
+        JLabel t = new JLabel(title);
+        t.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        t.setForeground(UIHelper.TEXT_MUTED);
+        top.add(t);
+
+        JLabel c = new JLabel("<html><body style='width:240px;'>" + content + "</body></html>");
+        c.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        c.setForeground(UIHelper.TEXT_LIGHT);
+
+        p.add(top, BorderLayout.NORTH);
+        p.add(c, BorderLayout.CENTER);
+        return p;
     }
 
     private void printWithConfirmation(OrderDTO order) {

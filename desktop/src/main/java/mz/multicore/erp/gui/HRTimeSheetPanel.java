@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -56,21 +57,13 @@ final class HRTimeSheetPanel {
         statusLabel = new JLabel(" ");
         statusLabel.setForeground(UIHelper.TEXT_LIGHT);
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
-        left.add(UIHelper.createSubheading("Folha de Ponto"));
-        left.add(new JLabel("Ano:"));
-        left.add(yearSpinner);
-        left.add(new JLabel("Mês:"));
-        left.add(monthSpinner);
-        left.add(statusLabel);
-        header.add(left, BorderLayout.WEST);
-
-        ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
-        exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        exportBtn.addActionListener(e -> owner.exportTable("folha-ponto", "Folha de Ponto", table));
+        JPanel periodFilters = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        periodFilters.setOpaque(false);
+        periodFilters.add(new JLabel("Ano:"));
+        periodFilters.add(yearSpinner);
+        periodFilters.add(new JLabel("Mês:"));
+        periodFilters.add(monthSpinner);
+        periodFilters.add(statusLabel);
 
         ModernButton entryBtn = UIHelper.createPrimaryButton("Registar Marcação");
         entryBtn.setIcon(UIHelper.icon("fas-clock", 14));
@@ -80,18 +73,10 @@ final class HRTimeSheetPanel {
         closeBtn.setIcon(UIHelper.icon("fas-lock", 14));
         closeBtn.addActionListener(e -> toggleClose());
 
-        ModernButton ratesBtn = UIHelper.createSecondaryButton("Acréscimos");
-        ratesBtn.setIcon(UIHelper.icon("fas-percentage", 14));
-        ratesBtn.addActionListener(e -> openOvertimeRatesDialog());
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(ratesBtn);
-        actions.add(closeBtn);
-        actions.add(entryBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Opções")
+                .addAction("Configurar Acréscimos", UIHelper.icon("fas-percentage", 14), this::openOvertimeRatesDialog)
+                .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
+                        () -> owner.exportTable("folha-ponto", "Folha de Ponto", table));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -111,7 +96,13 @@ final class HRTimeSheetPanel {
         TableFilter.install(table, search);
         JPanel bar = TableFilter.bar(search);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(bar, BorderLayout.NORTH);
+        JPanel filters = new JPanel(new BorderLayout(0, 8));
+        filters.setOpaque(false);
+        filters.add(periodFilters, BorderLayout.NORTH);
+        filters.add(bar, BorderLayout.CENTER);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+        card.add(UIHelper.tableCardTop("Folha de Ponto", filters,
+                refreshBtn, moreBtn, closeBtn, entryBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
 

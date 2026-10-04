@@ -5,6 +5,8 @@ build/
 dist/
 tools/wix/
 tools/*.zip
+output/
+scratch/
 
 # Runtime data and backups
 backups/

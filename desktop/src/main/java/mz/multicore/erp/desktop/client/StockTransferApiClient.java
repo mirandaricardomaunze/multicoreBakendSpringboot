@@ -2,6 +2,7 @@ package mz.multicore.erp.desktop.client;
 
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
+import mz.multicore.erp.modules.inventory.dto.UpdateStockTransferRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -23,9 +24,24 @@ public class StockTransferApiClient {
                 .getList("/api/inventory/transfers?companyId=" + companyId, StockTransferDTO.class);
     }
 
+    public StockTransferDTO findById(Long id) {
+        return clientFactory.authenticatedClient()
+                .get("/api/inventory/transfers/" + id, StockTransferDTO.class);
+    }
+
     public StockTransferDTO create(CreateStockTransferRequest request) {
         return clientFactory.authenticatedClient()
                 .post("/api/inventory/transfers", request, StockTransferDTO.class);
+    }
+
+    public StockTransferDTO update(Long id, UpdateStockTransferRequest request) {
+        return clientFactory.authenticatedClient()
+                .put("/api/inventory/transfers/" + id, request, StockTransferDTO.class);
+    }
+
+    public StockTransferDTO submit(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/inventory/transfers/" + id + "/submit", null, StockTransferDTO.class);
     }
 
     public StockTransferDTO approve(Long id) {
@@ -36,6 +52,11 @@ public class StockTransferApiClient {
     public StockTransferDTO reject(Long id, String reason) {
         return clientFactory.authenticatedClient()
                 .post("/api/inventory/transfers/" + id + "/reject", new RejectRequest(reason), StockTransferDTO.class);
+    }
+
+    public StockTransferDTO cancel(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/inventory/transfers/" + id + "/cancel", null, StockTransferDTO.class);
     }
 
     /** PDF da guia de transferência ({@code /api/print/stock-transfer/{id}}). */

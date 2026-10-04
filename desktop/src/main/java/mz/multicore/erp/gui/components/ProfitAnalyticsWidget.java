@@ -53,18 +53,17 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         add(top, BorderLayout.NORTH);
 
         // Painel Central com KPIs
-        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 12, 0));
-        kpiGrid.setOpaque(false);
+        JPanel kpiGrid = KpiCard.createGrid(4);
 
         revenueVal = new JLabel("0,00 MT");
         cogsVal = new JLabel("0,00 MT");
         profitVal = new JLabel("0,00 MT");
         ticketVal = new JLabel("0,00 MT");
 
-        kpiGrid.add(createKpiCard("Receita Líquida", revenueVal, UIHelper.ACCENT_BLUE));
-        kpiGrid.add(createKpiCard("CMVMC (Custos)", cogsVal, UIHelper.REJECTED_RED));
-        kpiGrid.add(createKpiCard("Lucro Bruto", profitVal, UIHelper.APPROVED_GREEN));
-        kpiGrid.add(createKpiCard("Ticket Médio", ticketVal, UIHelper.PENDING_YELLOW));
+        kpiGrid.add(KpiCard.createCard("Receita Líquida", revenueVal, "fas-chart-line", UIHelper.ACCENT_BLUE));
+        kpiGrid.add(KpiCard.createCard("CMVMC (Custos)", cogsVal, "fas-arrow-circle-up", UIHelper.REJECTED_RED));
+        kpiGrid.add(KpiCard.createCard("Lucro Bruto", profitVal, "fas-coins", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createCard("Ticket Médio", ticketVal, "fas-receipt", UIHelper.PENDING_YELLOW));
 
         // Secção de Comparativo de Canais
         JPanel channelsPanel = new JPanel(new GridLayout(2, 1, 0, 6));
@@ -102,26 +101,6 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         add(center, BorderLayout.CENTER);
     }
 
-    private JPanel createKpiCard(String label, JLabel valueLabel, Color accentColor) {
-        JPanel card = new JPanel(new BorderLayout(0, 4));
-        card.setOpaque(true);
-        card.setBackground(!UIHelper.isLight() ? new Color(24, 32, 47) : new Color(241, 245, 249));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 3, 0, 0, accentColor),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-
-        JLabel title = new JLabel(label);
-        title.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        title.setForeground(UIHelper.TEXT_MUTED);
-
-        valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
-        valueLabel.setForeground(UIHelper.TEXT_LIGHT);
-
-        card.add(title, BorderLayout.NORTH);
-        card.add(valueLabel, BorderLayout.CENTER);
-        return card;
-    }
 
     private JProgressBar createProgressBar(Color fill) {
         JProgressBar bar = new JProgressBar(0, 100);

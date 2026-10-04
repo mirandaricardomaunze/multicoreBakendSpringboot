@@ -69,66 +69,87 @@ final class PosSalesHistoryPanel {
             }
             Long invoiceId = (Long) owner.salesHistoryModel.getValueAt(row, 0);
             String invNum = String.valueOf(owner.salesHistoryModel.getValueAt(row, 1));
-            UIHelper.runWithProgress(owner, "A gerar recibo…",
+            UIHelper.runWithProgress(owner, "A gerar recibo",
                     () -> owner.posApiClient.renderReceipt(invoiceId),
                     pdf -> PrintPreviewDialog.show(owner, pdf, "recibo-" + invNum),
                     ex -> owner.showPosNotice(FeedbackType.ERROR, "Não foi possível gerar o recibo", ex.getMessage()));
         });
 
-        ModernButton returnBtn = new ModernButton("Devolver / Trocar", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        ModernButton returnBtn = new ModernButton("Devolver / Trocar", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE.darker());
         returnBtn.setIcon(UIHelper.icon("fas-undo", 14, Color.WHITE));
         returnBtn.setForeground(Color.WHITE);
         returnBtn.addActionListener(e -> owner.showReturnDialog());
 
-        ModernButton refreshBtn = new ModernButton("Actualizar", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        ModernButton refreshBtn = UIHelper.createPrimaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14, Color.WHITE));
         refreshBtn.setForeground(Color.WHITE);
         refreshBtn.addActionListener(e -> refresh());
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
-        buttons.setOpaque(false);
-        buttons.add(refreshBtn);
-        buttons.add(returnBtn);
-        buttons.add(reprintBtn);
+        JPanel buttons = UIHelper.actionsBar(refreshBtn, returnBtn, reprintBtn);
 
-        JTextField shSearch = TableFilter.searchField("Nº venda, operador ou cliente…");
+        JTextField shSearch = TableFilter.searchField("Nº venda, operador ou cliente");
         JComboBox<String> shEstado = TableFilter.combo("Todos os estados",
                 "PAID", "APPROVED", "PARTIALLY_PAID", "CANCELLED");
+        UIHelper.styleComboBox(shEstado);
+        shEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         periodCombo = TableFilter.periodCombo();
+        UIHelper.styleComboBox(periodCombo);
+        periodCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(owner.salesHistoryTable, shSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(shEstado, 6)),
                 java.util.List.of());
         periodCombo.addActionListener(e -> {
             if (pager != null) pager.reload();
         });
-        JPanel shBar = TableFilter.bar(shSearch,
-                TableFilter.label("Estado:"), shEstado,
-                TableFilter.label("Data:", "fas-calendar-alt"), periodCombo);
+
+        JPanel shBar = new JPanel(new GridBagLayout());
+        shBar.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; shBar.add(filterLabel("Estado"), g);
+        g.gridx = 1; g.weightx = 0; shBar.add(filterLabel("Período"), g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        shBar.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; shBar.add(shEstado, g);
+        g.gridx = 1; g.weightx = 0; shBar.add(periodCombo, g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        shBar.add(shSearch, g);
+
         shBar.setBorder(new EmptyBorder(0, 0, 8, 0));
 
-        JPanel north = new JPanel(new BorderLayout());
-        north.setOpaque(false);
-        JPanel summaryPanel = new JPanel(new BorderLayout(0, 8));
+        pager = new TablePager(this::loadPage);
+
+        ModernPanel tableCard = new ModernPanel(16);
+        tableCard.setLayout(new BorderLayout(0, 10));
+        tableCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        tableCard.add(shBar, BorderLayout.NORTH);
+        tableCard.add(scroll, BorderLayout.CENTER);
+        tableCard.add(pager, BorderLayout.SOUTH);
+
+        JPanel summaryPanel = new JPanel(new BorderLayout(0, 4));
         summaryPanel.setOpaque(false);
         summaryPanel.add(kpiBar, BorderLayout.NORTH);
         summaryPanel.add(salesHistorySummary, BorderLayout.SOUTH);
-        north.add(summaryPanel, BorderLayout.NORTH);
-        north.add(shBar, BorderLayout.SOUTH);
 
-        // O histórico do POS é a listagem que mais cresce numa loja: vem paginado do servidor.
-        pager = new TablePager(this::loadPage);
-
-        JPanel south = new JPanel(new BorderLayout());
-        south.setOpaque(false);
-        south.add(pager, BorderLayout.NORTH);
-        south.add(buttons, BorderLayout.SOUTH);
+        JPanel topHeader = new JPanel(new BorderLayout(12, 8));
+        topHeader.setOpaque(false);
+        topHeader.setBorder(new EmptyBorder(0, 0, 10, 0));
+        topHeader.add(summaryPanel, BorderLayout.CENTER);
+        topHeader.add(buttons, BorderLayout.EAST);
 
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
-        content.setBorder(new EmptyBorder(15, 5, 5, 5));
-        content.add(north, BorderLayout.NORTH);
-        content.add(scroll, BorderLayout.CENTER);
-        content.add(south, BorderLayout.SOUTH);
+        content.setBorder(new EmptyBorder(15, 15, 15, 15));
+        content.add(topHeader, BorderLayout.NORTH);
+        content.add(tableCard, BorderLayout.CENTER);
         return content;
     }
 
@@ -253,4 +274,10 @@ final class PosSalesHistoryPanel {
             mz.multicore.erp.architecture.paging.PageResponse<InvoiceDTO> page,
             POSSalesSummaryDTO summary) {}
 
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
+    }
 }

@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.comercial.controller;
 
+import jakarta.validation.Valid;
+
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
 import mz.multicore.erp.modules.comercial.dto.ClientCreditRiskDTO;
@@ -73,7 +75,7 @@ public class CreditRiskController {
 
     @PostMapping("/exception-request")
     public ResponseEntity<ApprovalRequestDTO> requestCreditException(
-            @RequestBody CreditExceptionApprovalRequest request) {
+            @RequestBody @Valid CreditExceptionApprovalRequest request) {
         return ResponseEntity.ok(creditRiskService.requestCreditException(request));
     }
 }

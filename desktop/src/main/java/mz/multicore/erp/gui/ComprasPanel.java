@@ -13,6 +13,7 @@ import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.PackageQuantityEditor;
+import mz.multicore.erp.gui.components.ProductSearchComboBox;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
@@ -65,8 +66,7 @@ public class ComprasPanel extends JPanel {
     // TAB ENCOMENDAS A FORNECEDOR
     JComboBox<String> poSupplierCombo;
     JComboBox<String> poWarehouseCombo;
-    JComboBox<String> poProductCombo;
-    private QuantityField poQtyField;
+    ProductSearchComboBox poProductCombo;
     MoneyField poPriceField;
     private JTextField poExpectedField;
     DefaultTableModel poLinesModel;
@@ -77,7 +77,7 @@ public class ComprasPanel extends JPanel {
     JTextField poSearchField;
     final List<CreatePurchaseOrderLineRequest> poDraftLines = new ArrayList<>();
     List<PurchaseOrderDTO> poList = new ArrayList<>();
-    JPanel poFormContent;                   // conteúdo do modal de nova encomenda
+    JPanel poFormContent;                   // área de trabalho tabular da encomenda
     private JPanel purchaseFormContent;             // conteúdo do modal de registar compra
     private JTextField supplierSearchField;
 
@@ -91,7 +91,7 @@ public class ComprasPanel extends JPanel {
     private JComboBox<String> supplierCombo;
     private JComboBox<String> warehouseCombo;
     private JComboBox<String> accountCombo;
-    private JComboBox<String> productCombo;
+    private ProductSearchComboBox productCombo;
     private QuantityField quantityField;
     private PackageQuantityEditor purchasePackageEditor;
     private MoneyField priceField;
@@ -162,23 +162,23 @@ public class ComprasPanel extends JPanel {
 
         // Tab 1: Compras
         JPanel tabCompras = createComprasTab();
-        tabbedPane.addTab("Faturas de Compra (V/FT)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT), tabCompras);
+        tabbedPane.addTab("Faturas de Compra (V/FT)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.MODULE_COMPRAS), tabCompras);
 
         // Tab: Reposição automática (produtos abaixo do mínimo)
-        tabbedPane.addTab("Reposição", UIHelper.icon("fas-cart-arrow-down", 16, UIHelper.TEXT_LIGHT), createReorderTab());
+        tabbedPane.addTab("Reposição", UIHelper.icon("fas-cart-arrow-down", 16, UIHelper.ACCENT_ORANGE), createReorderTab());
 
         // Tab 2: Encomendas a Fornecedor
-        tabbedPane.addTab("Encomendas a Fornecedor (EC-F)", UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT), createPurchaseOrdersTab());
+        tabbedPane.addTab("Encomendas a Fornecedor (EC-F)", UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), createPurchaseOrdersTab());
 
         // Tab 3: Contas a Pagar
-        tabbedPane.addTab("Contas a Pagar", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), createPayablesTab());
+        tabbedPane.addTab("Contas a Pagar", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.REJECTED_RED), createPayablesTab());
 
         // Tab 4: Fornecedores
         JPanel tabFornecedores = createFornecedoresTab();
-        tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.TEXT_LIGHT), tabFornecedores);
+        tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.ACCENT), tabFornecedores);
 
         if (supplierStatementPanel != null) {
-            tabbedPane.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.TEXT_LIGHT), supplierStatementPanel);
+            tabbedPane.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.ACCENT_CYAN), supplierStatementPanel);
         }
 
         tabbedPane.addChangeListener(e -> {
@@ -248,8 +248,7 @@ public class ComprasPanel extends JPanel {
         formCard.add(accountCombo, gbc);
 
         gbc.gridx = 1;
-        productCombo = new JComboBox<>();
-        UIHelper.styleComboBox(productCombo);
+        productCombo = new ProductSearchComboBox();
         productCombo.addActionListener(e -> {
             updateDefaultPrice();
             refreshPurchasePackaging();
@@ -369,18 +368,10 @@ public class ComprasPanel extends JPanel {
         // Conteúdo do formulário vai para o modal responsivo (com scroll).
         this.purchaseFormContent = formCard;
 
-        // TAB: cabeçalho com acção + histórico de compras em ecrã inteiro.
-        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
-        headerBar.setOpaque(false);
-        headerBar.add(UIHelper.createHeading("Faturas de Compra Registadas"), BorderLayout.WEST);
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerActions.setOpaque(false);
-        ModernButton newPurchaseBtn = UIHelper.createSuccessButton("Registar Compra…");
+        // TAB: acções, filtros e histórico dentro do mesmo card.
+        ModernButton newPurchaseBtn = UIHelper.createSuccessButton("Registar Compra");
         newPurchaseBtn.setIcon(UIHelper.icon("fas-download", 14));
         newPurchaseBtn.addActionListener(e -> openPurchaseFormDialog());
-        headerActions.add(newPurchaseBtn);
-        headerBar.add(headerActions, BorderLayout.EAST);
-        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout(0, 10));
@@ -403,26 +394,20 @@ public class ComprasPanel extends JPanel {
         TableFilter.install(purchasesTable, histSearch,
                 java.util.List.of(),
                 java.util.List.of(new TableFilter.PeriodFilter(histPeriodo, 5)));
-        JPanel histBar = TableFilter.bar(histSearch,
-                TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo);
-        histBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        historyCard.add(histBar, BorderLayout.NORTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadPurchasesHistory);
+        JPanel histFilters = UIHelper.filterBar(
+                new JComponent[]{histSearch, TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo},
+                null);
+        histFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        historyCard.add(UIHelper.tableCardTop("Faturas de Compra Registadas", histFilters,
+                refreshBtn, newPurchaseBtn), BorderLayout.NORTH);
         historyCard.add(histScroll, BorderLayout.CENTER);
-
-        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actionRow.setOpaque(false);
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar Compras");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        actionRow.add(refreshBtn);
-        historyCard.add(actionRow, BorderLayout.SOUTH);
 
         // Histórico de compras ocupa a tab inteira; o formulário vive no modal.
         panel.add(historyCard, BorderLayout.CENTER);
 
         // LISTENERS
         addLineBtn.addActionListener(e -> addDraftLine());
-        refreshBtn.addActionListener(e -> loadPurchasesHistory());
-
         return panel;
     }
 
@@ -465,7 +450,6 @@ public class ComprasPanel extends JPanel {
         loadAccounts();
         loadProducts();
         loadPurchasesHistory();
-        refreshPoCombos();
         loadPurchaseOrders();
         loadPayables();
         loadReorderSuggestions();
@@ -537,6 +521,9 @@ public class ComprasPanel extends JPanel {
         for (WarehouseDTO w : warehousesList) {
             warehouseCombo.addItem(w.name());
         }
+
+        // Propagar a lista actualizada para o combo de encomendas a fornecedores.
+        refreshPoCombos();
     }
 
     void loadAccounts() {
@@ -548,7 +535,7 @@ public class ComprasPanel extends JPanel {
         accountCombo.removeAllItems();
         accountsList = loaded;
 
-        accountCombo.addItem("— A crédito (pagar depois) —");
+        accountCombo.addItem("A crédito (pagar depois)");
         for (TreasuryAccountDTO acc : accountsList) {
             accountCombo.addItem(acc.name() + " (" + String.format("%.2f", acc.balance()) + " MT)");
         }
@@ -560,12 +547,9 @@ public class ComprasPanel extends JPanel {
     }
 
     private void applyProducts(List<ProductDTO> loaded) {
-        productCombo.removeAllItems();
         productsList = loaded;
-
-        for (ProductDTO p : productsList) {
-            productCombo.addItem(productLabel(p));
-        }
+        productCombo.setProducts(productsList);
+        if (poProductCombo != null) poProductCombo.setProducts(productsList);
         updateDefaultPrice();
         refreshPurchasePackaging();
     }
@@ -579,11 +563,11 @@ public class ComprasPanel extends JPanel {
     }
 
     private void updateDefaultPrice() {
-        int idx = productCombo.getSelectedIndex();
-        if (idx >= 0 && idx < productsList.size()) {
+        ProductDTO product = productCombo.selectedProduct();
+        if (product != null) {
             // Purchases price is typically empty or less than unit sale price
             // Pre-fill with a reasonable cost (e.g. 60% of unit price)
-            BigDecimal sellPrice = productsList.get(idx).unitPrice();
+            BigDecimal sellPrice = product.unitPrice();
             BigDecimal costPrice = sellPrice.multiply(new BigDecimal("0.60")).setScale(2, RoundingMode.HALF_UP);
             priceField.setText(costPrice.toString());
         }
@@ -591,18 +575,20 @@ public class ComprasPanel extends JPanel {
 
     private void refreshPurchasePackaging() {
         if (purchasePackageEditor == null) return;
-        int index = productCombo.getSelectedIndex();
-        if (index >= 0 && index < productsList.size()) {
-            purchasePackageEditor.setUnitsPerBox(productsList.get(index).unitsPerBox());
+        ProductDTO product = productCombo.selectedProduct();
+        if (product != null) {
+            purchasePackageEditor.setPackaging(product.packagesPerBox(), product.unitsPerPackage());
         }
     }
 
     private void addDraftLine() {
         if (productsList.isEmpty()) return;
-        int prodIdx = productCombo.getSelectedIndex();
-        if (prodIdx < 0) return;
-
-        ProductDTO product = productsList.get(prodIdx);
+        ProductDTO product = productCombo.selectedProduct();
+        if (product == null) {
+            showPurchaseNotice(FeedbackType.WARNING, "Produto necessário",
+                    "Pesquise e seleccione um produto para adicionar.");
+            return;
+        }
         
         BigDecimal qty;
         try {

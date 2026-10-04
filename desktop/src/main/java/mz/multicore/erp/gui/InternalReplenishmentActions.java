@@ -21,20 +21,25 @@ final class InternalReplenishmentActions {
     static void showConvertDialog(ComercialPanel owner, ComercialApiClient api, OrderDTO order) {
         JTextField orderField = new JTextField(order.orderNumber());
         JTextField routeField = new JTextField(route(order));
+        JTextField driverField = new JTextField();
+        JTextField vehiclePlateField = new JTextField();
         JTextField responsibleField = new JTextField();
-        JTextField vehicleField = new JTextField();
         JTextArea notesArea = new JTextArea(3, 28);
-        for (JTextField field : List.of(orderField, routeField, responsibleField, vehicleField)) {
+        for (JTextField field : List.of(orderField, routeField, driverField, vehiclePlateField, responsibleField)) {
             UIHelper.styleTextField(field);
         }
         orderField.setEditable(false);
         routeField.setEditable(false);
+        driverField.putClientProperty("JTextField.placeholderText", "Nome do motorista (obrigatório)");
+        vehiclePlateField.putClientProperty("JTextField.placeholderText", "Matrícula do veículo (obrigatório, Ex: ABC-123-MC)");
+        responsibleField.putClientProperty("JTextField.placeholderText", "Responsável pelo transporte (opcional)");
 
         JPanel form = UIHelper.createDialogForm(
                 "Encomenda", orderField,
                 "Percurso", routeField,
-                "Responsável pelo transporte", responsibleField,
-                "Viatura", vehicleField,
+                "Motorista *", driverField,
+                "Matrícula do Veículo *", vehiclePlateField,
+                "Responsável", responsibleField,
                 "Observações", new JScrollPane(notesArea));
 
         StockTransferDTO[] created = new StockTransferDTO[1];
@@ -43,15 +48,24 @@ final class InternalReplenishmentActions {
                 "A mercadoria só sai do armazém quando a transferência for aprovada", form)
                 .setConfirmButton("Criar Transferência", "fas-truck")
                 .setOnSaveAsync(() -> {
+                    String driver = blankToNull(driverField.getText());
+                    String plate = blankToNull(vehiclePlateField.getText());
                     String responsible = blankToNull(responsibleField.getText());
-                    String vehicle = blankToNull(vehicleField.getText());
                     String notes = blankToNull(notesArea.getText());
-                    return () -> created[0] = api.convertOrderToTransfer(order.id(), responsible, vehicle, notes);
+                    if (driver == null && responsible == null) {
+                        driverField.requestFocusInWindow();
+                        throw new IllegalArgumentException("O nome do motorista é obrigatório para emitir a guia de transferência.");
+                    }
+                    if (plate == null) {
+                        vehiclePlateField.requestFocusInWindow();
+                        throw new IllegalArgumentException("A matrícula do veículo é obrigatória para emitir a guia de transferência.");
+                    }
+                    return () -> created[0] = api.convertOrderToTransfer(order.id(), responsible, plate, notes, driver, plate);
                 });
         if (!dialog.showDialog() || created[0] == null) return;
         owner.loadOrdersTable();
         owner.showCommercialSuccess("Transferência " + created[0].transferNumber() + " criada a partir de "
-                + order.orderNumber() + "; aprove-a em Stock → Transferências entre Armazéns.");
+                + order.orderNumber() + "; reveja e submeta o rascunho em Stock → Transferências entre Armazéns.");
     }
 
     private static String route(OrderDTO order) {

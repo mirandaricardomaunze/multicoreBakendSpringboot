@@ -44,4 +44,11 @@ public record CreateQuotationRequest(
 
         @NotEmpty(message = "A cotação deve conter pelo menos uma linha.") @Valid
         List<CreateQuotationLineRequest> lines
-) {}
+) {
+    public CreateQuotationRequest {
+        walkInName = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeText(walkInName);
+        paymentTerms = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeText(paymentTerms);
+        deliveryTerms = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeText(deliveryTerms);
+        notes = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeNotes(notes, 1000);
+    }
+}

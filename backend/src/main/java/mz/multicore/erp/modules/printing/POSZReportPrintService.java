@@ -14,8 +14,13 @@ import mz.multicore.erp.modules.pos.service.POSService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mz.multicore.erp.modules.pos.dto.CashDenominationDTO;
+
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Documento de <b>Fecho de Caixa (Z)</b>: reconciliação da gaveta de uma sessão (abertura + vendas em
@@ -30,6 +35,7 @@ public class POSZReportPrintService {
 
     private final POSService posService;
     private final CompanyService companyService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public POSZReportPrintService(POSService posService, CompanyService companyService) {
         this.posService = posService;
@@ -47,6 +53,25 @@ public class POSZReportPrintService {
             doc.add(CompanyHeaderRenderer.build(company, "Fecho de Caixa (Z)", "Z-" + z.sessionId()));
             doc.add(buildMetaBlock(z));
             doc.add(buildReconciliationTable(z));
+
+            if (z.shiftReconciliations() != null && !z.shiftReconciliations().isEmpty()) {
+                doc.add(PdfDocumentBuilder.spacer(6f));
+                doc.add(buildShiftHandoversTable(z.shiftReconciliations()));
+            }
+
+            if (z.cashBreakdownJson() != null && !z.cashBreakdownJson().isBlank()) {
+                PdfPTable breakdown = buildCashBreakdownTable(z.cashBreakdownJson());
+                if (breakdown != null) {
+                    doc.add(PdfDocumentBuilder.spacer(6f));
+                    doc.add(breakdown);
+                }
+            }
+
+            if (z.closingNotes() != null && !z.closingNotes().isBlank()) {
+                doc.add(PdfDocumentBuilder.spacer(6f));
+                doc.add(buildNotesBlock(z.closingNotes()));
+            }
+
             doc.add(PdfDocumentBuilder.spacer(10f));
             doc.add(buildPaymentBreakdownTable(z));
             doc.add(PdfDocumentBuilder.spacer(20f));
@@ -63,7 +88,11 @@ public class POSZReportPrintService {
         PdfPCell left = new PdfPCell();
         left.setBorder(PdfPCell.NO_BORDER);
         left.addElement(new Paragraph("Sessão de caixa", PdfTheme.subtitleFont()));
-        left.addElement(new Paragraph("Operador: " + safe(z.operator()), PdfTheme.bodyFont()));
+        String op = safe(z.operator());
+        if (z.currentOperator() != null && !z.currentOperator().isBlank() && !z.currentOperator().equalsIgnoreCase(z.operator())) {
+            op = op + " -> " + safe(z.currentOperator());
+        }
+        left.addElement(new Paragraph("Operador: " + op, PdfTheme.bodyFont()));
         left.addElement(new Paragraph(z.saleCount() + " venda(s) em numerário", PdfTheme.smallFont()));
         table.addCell(left);
 
@@ -164,6 +193,95 @@ public class POSZReportPrintService {
         Paragraph p = new Paragraph(text, PdfTheme.bodyFont());
         p.setAlignment(Element.ALIGN_RIGHT);
         return p;
+    }
+
+    private PdfPTable buildShiftHandoversTable(List<mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO> shifts) {
+        PdfPTable table = new PdfPTable(new float[]{20f, 30f, 17f, 17f, 16f});
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(4f);
+        table.setSpacingAfter(4f);
+
+        header(table, "Hora", Element.ALIGN_LEFT);
+        header(table, "Passagem de Turno", Element.ALIGN_LEFT);
+        header(table, "Esperado", Element.ALIGN_RIGHT);
+        header(table, "Contado", Element.ALIGN_RIGHT);
+        header(table, "Diferença", Element.ALIGN_RIGHT);
+
+        for (mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO s : shifts) {
+            String time = s.reconciledAt() != null ? s.reconciledAt().format(DATE_FMT) : "—";
+            String opTransition = safe(s.outgoingOperator()) + " -> " + safe(s.incomingOperator());
+            table.addCell(bodyCell(time, Element.ALIGN_LEFT));
+            table.addCell(bodyCell(opTransition, Element.ALIGN_LEFT));
+            table.addCell(bodyCell(money(s.expectedCash()), Element.ALIGN_RIGHT));
+            table.addCell(bodyCell(money(s.countedCash()), Element.ALIGN_RIGHT));
+            table.addCell(bodyCell(money(s.difference()), Element.ALIGN_RIGHT));
+        }
+        return table;
+    }
+
+    private PdfPTable buildCashBreakdownTable(String json) {
+        try {
+            List<CashDenominationDTO> items = objectMapper.readValue(json, new TypeReference<List<CashDenominationDTO>>() {});
+            if (items == null || items.isEmpty()) return null;
+
+            boolean hasCount = items.stream().anyMatch(d -> d.count() > 0);
+            if (!hasCount) return null;
+
+            PdfPTable table = new PdfPTable(new float[]{45f, 25f, 30f});
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(4f);
+            table.setSpacingAfter(4f);
+
+            header(table, "Contagem Física da Gaveta (Notas & Moedas)", Element.ALIGN_LEFT);
+            header(table, "Quantidade", Element.ALIGN_RIGHT);
+            header(table, "Subtotal (MT)", Element.ALIGN_RIGHT);
+
+            for (CashDenominationDTO d : items) {
+                if (d.count() > 0) {
+                    table.addCell(bodyCell(formatDenomination(d.denomination()), Element.ALIGN_LEFT));
+                    table.addCell(bodyCell(String.valueOf(d.count()), Element.ALIGN_RIGHT));
+                    table.addCell(bodyCell(money(d.subtotal()), Element.ALIGN_RIGHT));
+                }
+            }
+            return table;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private PdfPTable buildNotesBlock(String notes) {
+        PdfPTable table = new PdfPTable(1);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(4f);
+        table.setSpacingAfter(4f);
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(PdfTheme.ROW_ALT);
+        cell.setBorderColor(PdfTheme.BORDER);
+        cell.setPadding(6f);
+        cell.addElement(new Paragraph("Observações / Justificação do Fecho de Caixa:", PdfTheme.subtitleFont()));
+        cell.addElement(new Paragraph(notes, PdfTheme.bodyFont()));
+        table.addCell(cell);
+        return table;
+    }
+
+    private PdfPCell bodyCell(String text, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.bodyFont()));
+        cell.setBorderColor(PdfTheme.BORDER);
+        cell.setHorizontalAlignment(align);
+        cell.setPadding(4f);
+        return cell;
+    }
+
+    private String formatDenomination(BigDecimal d) {
+        if (d == null) return "—";
+        if (d.compareTo(BigDecimal.valueOf(20)) >= 0) {
+            return String.format("Nota de %,.0f MT", d);
+        } else if (d.compareTo(BigDecimal.ONE) >= 0) {
+            return String.format("Moeda de %,.0f MT", d);
+        } else {
+            return String.format("Moeda de %,.2f MT", d);
+        }
     }
 
     private static String money(BigDecimal v) {

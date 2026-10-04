@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.financeira.controller;
 
+import jakarta.validation.Valid;
+
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.financeira.dto.BankReconciliationSummaryDTO;
 import mz.multicore.erp.modules.financeira.dto.BankStatementDTO;
@@ -39,7 +41,7 @@ public class BankReconciliationController {
     }
 
     @PostMapping("/statements/import")
-    public ResponseEntity<BankStatementDTO> importStatement(@RequestBody ImportBankStatementRequest request) {
+    public ResponseEntity<BankStatementDTO> importStatement(@RequestBody @Valid ImportBankStatementRequest request) {
         return ResponseEntity.ok(reconciliationService.importStatement(request));
     }
 
@@ -66,7 +68,7 @@ public class BankReconciliationController {
     }
 
     @PostMapping("/items/match")
-    public ResponseEntity<BankStatementItemDTO> manualMatch(@RequestBody ManualReconciliationRequest request) {
+    public ResponseEntity<BankStatementItemDTO> manualMatch(@RequestBody @Valid ManualReconciliationRequest request) {
         return ResponseEntity.ok(reconciliationService.manualMatch(request.statementItemId(), request.treasuryTransactionId()));
     }
 
@@ -76,7 +78,7 @@ public class BankReconciliationController {
     }
 
     @PostMapping("/items/expense")
-    public ResponseEntity<BankStatementItemDTO> createAndMatchExpense(@RequestBody CreateBankExpenseAndMatchRequest request) {
+    public ResponseEntity<BankStatementItemDTO> createAndMatchExpense(@RequestBody @Valid CreateBankExpenseAndMatchRequest request) {
         return ResponseEntity.ok(reconciliationService.createAndMatchExpense(
                 request.statementItemId(), request.description(), request.amount()));
     }

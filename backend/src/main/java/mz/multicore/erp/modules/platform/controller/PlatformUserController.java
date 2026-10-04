@@ -46,7 +46,7 @@ public class PlatformUserController {
     }
 
     @PatchMapping("/{username}/active")
-    public PlatformUserDTO setActive(@PathVariable String username, @RequestBody ActiveRequest request) {
+    public PlatformUserDTO setActive(@PathVariable String username, @RequestBody @Valid ActiveRequest request) {
         return platformUserService.setUserActive(username, request.active());
     }
 

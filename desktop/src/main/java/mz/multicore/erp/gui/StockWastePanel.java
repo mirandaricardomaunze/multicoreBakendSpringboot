@@ -32,9 +32,6 @@ import java.util.Map;
  */
 public class StockWastePanel extends JPanel {
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DecimalFormat MZN_FMT = new DecimalFormat("#,##0.00 MT", new DecimalFormatSymbols(new Locale("pt", "MZ")));
 
     private final StockWasteApiClient wasteApiClient;
     private final InventoryApiClient inventoryApiClient;
@@ -60,6 +57,7 @@ public class StockWastePanel extends JPanel {
     DefaultTableModel radarTableModel;
     JTable radarTable;
     JComboBox<String> urgencyFilterCombo;
+    JTextField radarSearchField;
     List<ExpiringBatchAlertDTO> currentRadarList = new ArrayList<>();
 
     // Aba 3: Métricas & PDF
@@ -81,86 +79,48 @@ public class StockWastePanel extends JPanel {
         this.inventoryApiClient = inventoryApiClient;
         this.comercialApiClient = comercialApiClient;
 
-        setLayout(new BorderLayout(0, 16));
-        setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setLayout(new BorderLayout());
+        setOpaque(false);
 
-        add(buildHeader(), BorderLayout.NORTH);
+        JPanel mainContent = new JPanel(new BorderLayout(0, 4));
+        mainContent.setOpaque(false);
+        mainContent.setBorder(new EmptyBorder(2, 2, 2, 2));
 
-        JPanel centerPanel = new JPanel(new BorderLayout(0, 14));
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 4));
         centerPanel.setOpaque(false);
         centerPanel.add(buildKpiBar(), BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
-        tabs.addTab("Registo & Validação de Quebras", UIHelper.icon("fas-clipboard-check", 16, UIHelper.TEXT_LIGHT), buildHistoryTab());
-        tabs.addTab("Radar de Validades & Prevenção", UIHelper.icon("fas-shield-alt", 16, UIHelper.TEXT_LIGHT), buildRadarTab());
-        tabs.addTab("Métricas & Relatório Executivo", UIHelper.icon("fas-chart-pie", 16, UIHelper.TEXT_LIGHT), buildMetricsTab());
+        tabs.addTab("Registo & Validação de Quebras", UIHelper.icon("fas-clipboard-check", 16, UIHelper.REJECTED_RED), buildHistoryTab());
+        tabs.addTab("Radar de Validades & Prevenção", UIHelper.icon("fas-shield-alt", 16, UIHelper.PENDING_YELLOW), buildRadarTab());
+        tabs.addTab("Métricas & Relatório Executivo", UIHelper.icon("fas-chart-pie", 16, UIHelper.ACCENT_BLUE), buildMetricsTab());
         centerPanel.add(tabs, BorderLayout.CENTER);
 
-        add(centerPanel, BorderLayout.CENTER);
-    }
+        mainContent.add(centerPanel, BorderLayout.CENTER);
 
-    private JPanel buildHeader() {
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-
-        JPanel titlePanel = new JPanel(new GridLayout(2, 1, 0, 2));
-        titlePanel.setOpaque(false);
-        titlePanel.add(UIHelper.createHeading("Centro de Gestão de Quebras & Desperdício"));
-        JLabel subtitle = new JLabel("Controlo de quebras operacionais, abate de stock por alçada e radar de prevenção por validade");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-        titlePanel.add(subtitle);
-        header.add(titlePanel, BorderLayout.WEST);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
-
-        ModernButton reloadBtn = UIHelper.createSecondaryButton("Actualizar");
-        reloadBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        reloadBtn.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
-        reloadBtn.addActionListener(e -> reloadData());
-
-        ModernButton registerBtn = UIHelper.createDangerButton("Registar Quebra");
-        registerBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        registerBtn.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
-        registerBtn.addActionListener(e -> openRegisterWasteDialog(null));
-
-        actions.add(reloadBtn);
-        actions.add(registerBtn);
-        header.add(actions, BorderLayout.EAST);
-
-        return header;
+        add(mainContent, BorderLayout.CENTER);
     }
 
     private JPanel buildKpiBar() {
-        JPanel kpiPanel = new JPanel(new GridLayout(1, 4, 14, 0));
-        kpiPanel.setOpaque(false);
+        JPanel kpiRow = KpiCard.createGrid(4);
 
-        kpiPanel.add(KpiCard.createMetricCard("Perda Financeira Total", kpiTotalCost, "Custo acumulado no período", "fas-dollar-sign", UIHelper.REJECTED_RED));
-        kpiPanel.add(KpiCard.createMetricCard("Qtd Total Desperdiçada", kpiTotalQty, "Unidades abatidas de stock", "fas-boxes", UIHelper.PENDING_YELLOW));
-        kpiPanel.add(KpiCard.createMetricCard("Rácio de Quebra s/ Vendas", kpiWasteRate, "Meta recomendada: < 1.5%", "fas-percent", UIHelper.ACCENT_BLUE));
-        kpiPanel.add(KpiCard.createMetricCard("Lotes em Risco Iminente", kpiRiskBatches, "A vencer nos próximos 7 dias", "fas-exclamation-triangle", UIHelper.REJECTED_RED));
+        kpiRow.add(KpiCard.createCard("PERDA FINANCEIRA TOTAL", kpiTotalCost, "Custo acumulado no período", "fas-dollar-sign", UIHelper.REJECTED_RED));
+        kpiRow.add(KpiCard.createCard("QTD TOTAL DESPERDIÇADA", kpiTotalQty, "Unidades abatidas de stock", "fas-boxes", UIHelper.PENDING_YELLOW));
+        kpiRow.add(KpiCard.createCard("RÁCIO DE QUEBRA S/ VENDAS", kpiWasteRate, "Meta recomendada: < 1.5%", "fas-percent", UIHelper.ACCENT_BLUE));
+        kpiRow.add(KpiCard.createCard("LOTES EM RISCO IMINENTE", kpiRiskBatches, "A vencer nos próximos 7 dias", "fas-exclamation-triangle", UIHelper.ACCENT_ORANGE));
 
-        return kpiPanel;
+        return kpiRow;
     }
 
     private JPanel buildHistoryTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(12, 0, 0, 0));
-
-        // Toolbar de Filtros padronizada a 38px
-        JPanel toolbar = new JPanel(new GridBagLayout());
-        toolbar.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 10);
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         statusFilterCombo = new JComboBox<>(new String[]{"Todos os Estados", "Aprovado", "Pendente Aprovação", "Rejeitado"});
         UIHelper.styleComboBox(statusFilterCombo);
-        statusFilterCombo.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
+        statusFilterCombo.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         statusFilterCombo.addActionListener(e -> applyWasteFilters());
 
         reasonFilterCombo = new JComboBox<>(new String[]{
@@ -178,33 +138,44 @@ public class StockWastePanel extends JPanel {
 
         periodFilterCombo = TableFilter.periodCombo();
         UIHelper.styleComboBox(periodFilterCombo);
-        periodFilterCombo.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        periodFilterCombo.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         periodFilterCombo.addActionListener(e -> applyWasteFilters());
 
         wasteSearchField = new SearchField("Pesquisar por produto, armazém, lote ou registador...");
-        wasteSearchField.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        wasteSearchField.setPreferredSize(new Dimension(260, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.onTextChange(wasteSearchField, this::applyWasteFilters);
+
+        ModernButton reloadBtn = UIHelper.createSecondaryButton("Actualizar");
+        reloadBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        reloadBtn.addActionListener(e -> reloadData());
+
+        ModernButton registerBtn = UIHelper.createDangerButton("Registar Quebra");
+        registerBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        registerBtn.addActionListener(e -> openRegisterWasteDialog(null));
 
         approveBtn = UIHelper.createSuccessButton("Aprovar");
         approveBtn.setIcon(UIHelper.icon("fas-check", 14));
-        approveBtn.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
         approveBtn.setEnabled(false);
         approveBtn.addActionListener(e -> handleApproveSelected(true));
 
         rejectBtn = UIHelper.createDangerButton("Rejeitar");
         rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
-        rejectBtn.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
         rejectBtn.setEnabled(false);
         rejectBtn.addActionListener(e -> handleApproveSelected(false));
 
-        g.gridx = 0; g.weightx = 0; toolbar.add(filterGroup("Estado", statusFilterCombo), g);
-        g.gridx = 1; g.weightx = 0; toolbar.add(filterGroup("Motivo", reasonFilterCombo), g);
-        g.gridx = 2; g.weightx = 0; toolbar.add(filterGroup("Período", periodFilterCombo), g);
-        g.gridx = 3; g.weightx = 1.0; toolbar.add(filterGroup("Pesquisa", wasteSearchField), g);
-        g.gridx = 4; g.weightx = 0; toolbar.add(filterGroup(" ", approveBtn), g);
-        g.gridx = 5; g.weightx = 0; g.insets = new Insets(0, 0, 0, 0); toolbar.add(filterGroup(" ", rejectBtn), g);
+        JPanel filters = new JPanel(new GridBagLayout());
+        filters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 8);
 
-        panel.add(toolbar, BorderLayout.NORTH);
+        g.gridx = 0; g.weightx = 0; filters.add(statusFilterCombo, g);
+        g.gridx = 1; g.weightx = 0; filters.add(reasonFilterCombo, g);
+        g.gridx = 2; g.weightx = 0; filters.add(periodFilterCombo, g);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        filters.add(wasteSearchField, g);
+        filters.setBorder(new EmptyBorder(0, 0, 4, 0));
 
         String[] cols = {"ID", "Data", "Produto", "Armazém", "Lote", "Motivo", "Quantidade", "Custo Unit.", "Total Perda", "Estado", "Registado Por", "Aprovado Por"};
         wasteTableModel = new DefaultTableModel(cols, 0) {
@@ -213,6 +184,7 @@ public class StockWastePanel extends JPanel {
         };
         wasteTable = new JTable(wasteTableModel);
         UIHelper.styleTable(wasteTable);
+        wasteTable.setRowHeight(42);
         wasteTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         wasteTable.getSelectionModel().addListSelectionListener(e -> updateApprovalButtonsState());
 
@@ -254,30 +226,27 @@ public class StockWastePanel extends JPanel {
             }
         });
 
+        wasteTable.setPreferredScrollableViewportSize(new Dimension(800, 480));
+
         JScrollPane scroll = new JScrollPane(wasteTable);
         UIHelper.styleScrollPane(scroll);
-        panel.add(scroll, BorderLayout.CENTER);
+        scroll.setMinimumSize(new Dimension(200, 180));
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 6));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.add(UIHelper.tableCardTop("Registo de Quebras & Perdas", filters, reloadBtn, registerBtn, approveBtn, rejectBtn), BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(wasteTable), BorderLayout.SOUTH);
+        panel.add(card, BorderLayout.CENTER);
 
         return panel;
     }
 
     private JPanel buildRadarTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(12, 0, 0, 0));
-
-        ModernPanel banner = new ModernPanel();
-        banner.setLayout(new BorderLayout(12, 0));
-        banner.setBorder(new EmptyBorder(10, 14, 10, 14));
-        JLabel bannerIcon = new JLabel(UIHelper.icon("fas-info-circle", 20, UIHelper.ACCENT_BLUE));
-        JLabel bannerText = new JLabel("Radar de Validades: antecipe-se ao desperdício aplicando liquidações ou registando quebras antes do término de validade.");
-        bannerText.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        bannerText.setForeground(UIHelper.TEXT_LIGHT);
-        banner.add(bannerIcon, BorderLayout.WEST);
-        banner.add(bannerText, BorderLayout.CENTER);
-
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        toolbar.setOpaque(false);
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         urgencyFilterCombo = new JComboBox<>(new String[]{
                 "Todas as Urgências",
@@ -288,22 +257,30 @@ public class StockWastePanel extends JPanel {
                 "Atenção (≤ 30 dias)"
         });
         UIHelper.styleComboBox(urgencyFilterCombo);
-        urgencyFilterCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        urgencyFilterCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
         urgencyFilterCombo.addActionListener(e -> applyRadarFilters());
+
+        radarSearchField = TableFilter.searchField("Pesquisar por lote, produto, armazém…");
+        radarSearchField.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.onTextChange(radarSearchField, this::applyRadarFilters);
+
+        ModernButton reloadRadarBtn = UIHelper.createSecondaryButton("Actualizar");
+        reloadRadarBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        reloadRadarBtn.addActionListener(e -> reloadData());
 
         ModernButton wasteRadarBtn = UIHelper.createDangerButton("Registar Quebra deste Lote");
         wasteRadarBtn.setIcon(UIHelper.icon("fas-trash-alt", 14));
-        wasteRadarBtn.setPreferredSize(new Dimension(230, UIHelper.FORM_CONTROL_HEIGHT));
         wasteRadarBtn.addActionListener(e -> handleWasteFromSelectedBatch());
 
-        toolbar.add(filterGroup("Filtrar por Urgência", urgencyFilterCombo));
-        toolbar.add(filterGroup("Acção Rápida", wasteRadarBtn));
-
-        JPanel northPanel = new JPanel(new BorderLayout(0, 10));
-        northPanel.setOpaque(false);
-        northPanel.add(banner, BorderLayout.NORTH);
-        northPanel.add(toolbar, BorderLayout.SOUTH);
-        panel.add(northPanel, BorderLayout.NORTH);
+        JPanel radarFilters = new JPanel(new GridBagLayout());
+        radarFilters.setOpaque(false);
+        GridBagConstraints rg = new GridBagConstraints();
+        rg.gridy = 0;
+        rg.fill = GridBagConstraints.HORIZONTAL;
+        rg.insets = new Insets(0, 0, 0, 8);
+        rg.gridx = 0; rg.weightx = 0; radarFilters.add(urgencyFilterCombo, rg);
+        rg.gridx = 1; rg.weightx = 1.0; rg.insets = new Insets(0, 0, 0, 0); radarFilters.add(radarSearchField, rg);
+        radarFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
 
         String[] cols = {"Lote", "Produto", "Categoria", "Armazém", "Qtd Disponível", "Custo Unit.", "Perda Estimada", "Data Validade", "Dias Restantes", "Urgência"};
         radarTableModel = new DefaultTableModel(cols, 0) {
@@ -312,6 +289,7 @@ public class StockWastePanel extends JPanel {
         };
         radarTable = new JTable(radarTableModel);
         UIHelper.styleTable(radarTable);
+        radarTable.setRowHeight(42);
         radarTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
@@ -342,9 +320,19 @@ public class StockWastePanel extends JPanel {
             }
         });
 
+        radarTable.setPreferredScrollableViewportSize(new Dimension(800, 480));
+
         JScrollPane scroll = new JScrollPane(radarTable);
         UIHelper.styleScrollPane(scroll);
-        panel.add(scroll, BorderLayout.CENTER);
+        scroll.setMinimumSize(new Dimension(200, 180));
+
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 6));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.add(UIHelper.tableCardTop("Radar de Validades & Prevenção", radarFilters, reloadRadarBtn, wasteRadarBtn), BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(radarTable), BorderLayout.SOUTH);
+        panel.add(card, BorderLayout.CENTER);
 
         return panel;
     }
@@ -352,42 +340,49 @@ public class StockWastePanel extends JPanel {
     private JPanel buildMetricsTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(12, 0, 0, 0));
-
-        JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        filterBar.setOpaque(false);
+        panel.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         LocalDate now = LocalDate.now();
-        dateStartField = new JTextField(now.minusDays(30).format(DAY_FMT));
+        dateStartField = new JTextField(now.minusDays(30).format(UIHelper.DATE_FMT));
         UIHelper.styleTextField(dateStartField);
-        dateStartField.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
+        dateStartField.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
 
-        dateEndField = new JTextField(now.format(DAY_FMT));
+        dateEndField = new JTextField(now.format(UIHelper.DATE_FMT));
         UIHelper.styleTextField(dateEndField);
-        dateEndField.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
+        dateEndField.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
 
         ModernButton filterBtn = UIHelper.createPrimaryButton("Filtrar Período");
         filterBtn.setIcon(UIHelper.icon("fas-filter", 14));
-        filterBtn.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         filterBtn.addActionListener(e -> reloadMetrics());
 
         ModernButton printPdfBtn = UIHelper.createSecondaryButton("Imprimir Relatório Oficial PDF");
         printPdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        printPdfBtn.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
         printPdfBtn.addActionListener(e -> exportPdfReport());
 
-        filterBar.add(filterGroup("Data Início", dateStartField));
-        filterBar.add(filterGroup("Data Fim", dateEndField));
-        filterBar.add(filterGroup(" ", filterBtn));
-        filterBar.add(filterGroup(" ", printPdfBtn));
+        ModernPanel filterCard = new ModernPanel(14);
+        filterCard.setLayout(new BorderLayout());
+        filterCard.setBorder(new EmptyBorder(10, 14, 10, 14));
 
-        panel.add(filterBar, BorderLayout.NORTH);
+        JPanel filterToolbar = TableFilter.toolbar(
+            new JComponent[]{
+                TableFilter.label("Data Início:", "fas-calendar-alt"),
+                dateStartField,
+                TableFilter.label("Data Fim:", "fas-calendar-alt"),
+                dateEndField,
+                filterBtn
+            },
+            new JComponent[]{
+                printPdfBtn
+            }
+        );
+        filterCard.add(filterToolbar, BorderLayout.CENTER);
+        panel.add(filterCard, BorderLayout.NORTH);
 
         JPanel tablesGrid = new JPanel(new GridLayout(1, 2, 14, 0));
         tablesGrid.setOpaque(false);
 
         // Motivos
-        ModernPanel reasonCard = new ModernPanel();
+        ModernPanel reasonCard = new ModernPanel(16);
         reasonCard.setLayout(new BorderLayout(0, 8));
         reasonCard.setBorder(new EmptyBorder(12, 14, 12, 14));
         reasonCard.add(UIHelper.createSubheading("Perdas por Motivo"), BorderLayout.NORTH);
@@ -396,11 +391,16 @@ public class StockWastePanel extends JPanel {
         };
         JTable reasonTable = new JTable(reasonMetricsModel);
         UIHelper.styleTable(reasonTable);
-        reasonCard.add(new JScrollPane(reasonTable), BorderLayout.CENTER);
+        reasonTable.setRowHeight(36);
+        reasonTable.setPreferredScrollableViewportSize(new Dimension(350, 320));
+        JScrollPane reasonScroll = new JScrollPane(reasonTable);
+        UIHelper.styleScrollPane(reasonScroll);
+        reasonScroll.setMinimumSize(new Dimension(200, 220));
+        reasonCard.add(reasonScroll, BorderLayout.CENTER);
         tablesGrid.add(reasonCard);
 
         // Categorias
-        ModernPanel catCard = new ModernPanel();
+        ModernPanel catCard = new ModernPanel(16);
         catCard.setLayout(new BorderLayout(0, 8));
         catCard.setBorder(new EmptyBorder(12, 14, 12, 14));
         catCard.add(UIHelper.createSubheading("Perdas por Categoria de Produto"), BorderLayout.NORTH);
@@ -409,23 +409,17 @@ public class StockWastePanel extends JPanel {
         };
         JTable catTable = new JTable(categoryMetricsModel);
         UIHelper.styleTable(catTable);
-        catCard.add(new JScrollPane(catTable), BorderLayout.CENTER);
+        catTable.setRowHeight(36);
+        catTable.setPreferredScrollableViewportSize(new Dimension(350, 320));
+        JScrollPane catScroll = new JScrollPane(catTable);
+        UIHelper.styleScrollPane(catScroll);
+        catScroll.setMinimumSize(new Dimension(200, 220));
+        catCard.add(catScroll, BorderLayout.CENTER);
         tablesGrid.add(catCard);
 
         panel.add(tablesGrid, BorderLayout.CENTER);
 
         return panel;
-    }
-
-    private JPanel filterGroup(String label, JComponent comp) {
-        JPanel group = new JPanel(new BorderLayout(0, 4));
-        group.setOpaque(false);
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        lbl.setForeground(UIHelper.TEXT_MUTED);
-        group.add(lbl, BorderLayout.NORTH);
-        group.add(comp, BorderLayout.CENTER);
-        return group;
     }
 
     public void reload() {
@@ -507,7 +501,7 @@ public class StockWastePanel extends JPanel {
             protected void done() {
                 try {
                     WasteSummaryDTO s = get();
-                    kpiTotalCost.setText(MZN_FMT.format(s.totalWasteCost()));
+                    kpiTotalCost.setText(UIHelper.formatMzn(s.totalWasteCost()));
                     kpiTotalQty.setText(s.totalWasteQuantity().stripTrailingZeros().toPlainString() + " un");
                     kpiWasteRate.setText(s.wasteRatePercentage().toPlainString() + "%");
 
@@ -516,7 +510,7 @@ public class StockWastePanel extends JPanel {
                         for (Map.Entry<WasteReason, BigDecimal> entry : s.costByReason().entrySet()) {
                             reasonMetricsModel.addRow(new Object[]{
                                     entry.getKey().getDescription(),
-                                    MZN_FMT.format(entry.getValue())
+                                    UIHelper.formatMzn(entry.getValue())
                             });
                         }
                     }
@@ -526,7 +520,7 @@ public class StockWastePanel extends JPanel {
                         for (Map.Entry<String, BigDecimal> entry : s.costByCategory().entrySet()) {
                             categoryMetricsModel.addRow(new Object[]{
                                     entry.getKey(),
-                                    MZN_FMT.format(entry.getValue())
+                                    UIHelper.formatMzn(entry.getValue())
                             });
                         }
                     }
@@ -566,14 +560,14 @@ public class StockWastePanel extends JPanel {
 
             wasteTableModel.addRow(new Object[]{
                     w.id(),
-                    w.createdAt() != null ? w.createdAt().format(DATE_FMT) : "-",
+                    w.createdAt() != null ? w.createdAt().format(UIHelper.DATETIME_FMT) : "-",
                     w.productName(),
                     w.warehouseName(),
                     w.batchNumber() != null ? w.batchNumber() : "-",
                     w.reason().getDescription(),
                     w.quantity().stripTrailingZeros().toPlainString() + " un",
-                    MZN_FMT.format(w.unitCost()),
-                    MZN_FMT.format(w.totalCost()),
+                    UIHelper.formatMzn(w.unitCost()),
+                    UIHelper.formatMzn(w.totalCost()),
                     w.status().getDescription(),
                     w.registeredBy(),
                     w.approvedBy() != null ? w.approvedBy() : "-"
@@ -584,6 +578,7 @@ public class StockWastePanel extends JPanel {
 
     private void applyRadarFilters() {
         String urgencySel = (String) urgencyFilterCombo.getSelectedItem();
+        String query = radarSearchField != null ? radarSearchField.getText().trim().toLowerCase() : "";
         radarTableModel.setRowCount(0);
 
         for (ExpiringBatchAlertDTO b : currentRadarList) {
@@ -593,15 +588,23 @@ public class StockWastePanel extends JPanel {
             if ("Médio (≤ 15 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 15)) continue;
             if ("Atenção (≤ 30 dias)".equals(urgencySel) && (b.daysUntilExpiration() < 0 || b.daysUntilExpiration() > 30)) continue;
 
+            if (!query.isEmpty()) {
+                boolean match = (b.batchNumber() != null && b.batchNumber().toLowerCase().contains(query))
+                        || (b.productName() != null && b.productName().toLowerCase().contains(query))
+                        || (b.categoryName() != null && b.categoryName().toLowerCase().contains(query))
+                        || (b.warehouseName() != null && b.warehouseName().toLowerCase().contains(query));
+                if (!match) continue;
+            }
+
             radarTableModel.addRow(new Object[]{
                     b.batchNumber(),
                     b.productName(),
                     b.categoryName(),
                     b.warehouseName(),
                     b.quantity().stripTrailingZeros().toPlainString() + " un",
-                    MZN_FMT.format(b.unitCost()),
-                    MZN_FMT.format(b.potentialLossValue()),
-                    b.expirationDate() != null ? b.expirationDate().format(DAY_FMT) : "-",
+                    UIHelper.formatMzn(b.unitCost()),
+                    UIHelper.formatMzn(b.potentialLossValue()),
+                    b.expirationDate() != null ? b.expirationDate().format(UIHelper.DATE_FMT) : "-",
                     b.daysUntilExpiration() < 0 ? "Venceu há " + (-b.daysUntilExpiration()) + " dias" : b.daysUntilExpiration() + " dias",
                     b.alertLevel()
             });
@@ -609,7 +612,7 @@ public class StockWastePanel extends JPanel {
     }
 
     void updateApprovalButtonsState() {
-        int row = wasteTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(wasteTable);
         if (row < 0 || row >= wasteTableModel.getRowCount()) {
             approveBtn.setEnabled(false);
             rejectBtn.setEnabled(false);
@@ -623,7 +626,11 @@ public class StockWastePanel extends JPanel {
     }
 
     private void handleApproveSelected(boolean approve) {
-        int row = wasteTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(wasteTable);
+        if (row < 0) {
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma quebra para continuar.");
+            return;
+        }
         Long id = (Long) wasteTableModel.getValueAt(row, 0);
         String actionTitle = approve ? "Aprovar Registo de Quebra" : "Rejeitar Registo de Quebra";
         String prompt = approve
@@ -696,12 +703,16 @@ public class StockWastePanel extends JPanel {
             whCombo.addItem(new WarehouseItem(w.id(), w.name()));
         }
 
-        JComboBox<ProductItem> prdCombo = new JComboBox<>();
-        UIHelper.styleComboBox(prdCombo);
+        SearchableComboBox<ProductItem> prdCombo = new SearchableComboBox<>(
+                "Pesquisar produto por código ou nome", ProductItem::toString,
+                product -> product.sku() + " " + product.name());
         prdCombo.setPreferredSize(new Dimension(320, UIHelper.FORM_CONTROL_HEIGHT));
+        List<ProductItem> productItems = new ArrayList<>();
         for (ProductDTO p : cachedProducts) {
-            prdCombo.addItem(new ProductItem(p.id(), p.sku(), p.name(), p.purchasePrice() != null ? p.purchasePrice() : p.unitPrice()));
+            productItems.add(new ProductItem(p.id(), p.sku(), p.name(),
+                    p.purchasePrice() != null ? p.purchasePrice() : p.unitPrice()));
         }
+        prdCombo.setItems(productItems);
 
         JTextField qtyField = new JTextField("1");
         UIHelper.styleTextField(qtyField);
@@ -737,7 +748,7 @@ public class StockWastePanel extends JPanel {
             try {
                 BigDecimal qty = new BigDecimal(qtyField.getText().trim().replace(",", "."));
                 BigDecimal cost = selProd.cost().multiply(qty).setScale(2, RoundingMode.HALF_UP);
-                costPreviewLabel.setText("Custo Estimado: " + MZN_FMT.format(cost));
+                costPreviewLabel.setText("Custo Estimado: " + UIHelper.formatMzn(cost));
                 if (cost.compareTo(new BigDecimal("2500.00")) > 0) {
                     thresholdWarning.setText("Atenção: Custo excede 2.500 MT. Ficará pendente de aprovação.");
                     thresholdWarning.setForeground(UIHelper.REJECTED_RED);
@@ -851,7 +862,7 @@ public class StockWastePanel extends JPanel {
 
     private LocalDate parseDate(String text, LocalDate fallback) {
         try {
-            return LocalDate.parse(text, DAY_FMT);
+            return LocalDate.parse(text, UIHelper.DATE_FMT);
         } catch (Exception ex) {
             return fallback;
         }
@@ -863,5 +874,11 @@ public class StockWastePanel extends JPanel {
 
     private record ProductItem(Long id, String sku, String name, BigDecimal cost) {
         @Override public String toString() { return sku + " - " + name; }
+    }
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 }

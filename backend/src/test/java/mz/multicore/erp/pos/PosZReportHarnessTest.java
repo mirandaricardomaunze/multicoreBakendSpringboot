@@ -100,6 +100,27 @@ public class PosZReportHarnessTest {
     }
 
     @Test
+    void testZReportBlindCloseWithDenominationsAndNotes() {
+        // Z-03: Blind close with notes and denominations JSON
+        TillSession session = posService.openSession("operador", BigDecimal.valueOf(200), testCompany.getId());
+        addMovement(session, TillMovementType.SALE, BigDecimal.valueOf(800), "Venda cash");
+
+        String notes = "Conferência física da gaveta sem discrepância";
+        String breakdown = "[{\"denomination\":500,\"count\":2,\"subtotal\":1000.00}]";
+
+        TillSession closed = posService.closeSession(session.getId(), BigDecimal.valueOf(1000), null, notes, breakdown);
+
+        PosZReportDTO z = posService.buildZReport(closed.getId());
+
+        assertEquals(0, BigDecimal.valueOf(1000).compareTo(z.expectedCash()));
+        assertEquals(0, BigDecimal.valueOf(1000).compareTo(z.countedCash()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(z.difference()));
+        assertEquals(notes, z.closingNotes());
+        assertEquals(breakdown, z.cashBreakdownJson());
+        assertEquals("CLOSED", z.status());
+    }
+
+    @Test
     void testSessionsHistoryQuery() {
         TillSession s1 = posService.openSession("operador", BigDecimal.valueOf(200), testCompany.getId());
         addMovement(s1, TillMovementType.SALE, BigDecimal.valueOf(300), "Venda 1");

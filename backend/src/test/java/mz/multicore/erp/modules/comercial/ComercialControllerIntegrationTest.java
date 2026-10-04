@@ -136,7 +136,9 @@ class ComercialControllerIntegrationTest {
                     "unitPrice": 120.50,
                     "purchasePrice": 80.00,
                     "minStock": 5,
-                    "unitsPerBox": 1,
+                    "unitsPerBox": 999,
+                    "packagesPerBox": 12,
+                    "unitsPerPackage": 6,
                     "categoryId": %s,
                     "saleType": "UNIT",
                     "stockTracked": true,
@@ -162,7 +164,38 @@ class ComercialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePayload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value(name));
+                .andExpect(jsonPath("$.name").value(name))
+                .andExpect(jsonPath("$.packagesPerBox").value(12))
+                .andExpect(jsonPath("$.unitsPerPackage").value(6))
+                .andExpect(jsonPath("$.unitsPerBox").value(72));
+    }
+
+    @Test
+    void authenticatedDesktopCanUploadLargeProductImage() throws Exception {
+        JsonNode login = login();
+        String token = login.get("token").asText();
+        String companyId = login.get("companies").get(0).get("id").asText();
+
+        String productsJson = mockMvc.perform(get("/api/comercial/products")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode products = objectMapper.readTree(productsJson);
+        org.junit.jupiter.api.Assertions.assertFalse(products.isEmpty());
+        long id = products.get(0).get("id").asLong();
+
+        // 250 KB de imagem simulada (ultrapassa largamente o antigo limite de 255 bytes)
+        byte[] largeImage = new byte[250_000];
+        java.util.Arrays.fill(largeImage, (byte) 0x7F);
+
+        mockMvc.perform(post("/api/comercial/products/" + id + "/image")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(largeImage))
+                .andExpect(status().isNoContent());
     }
 
     private JsonNode login() throws Exception {

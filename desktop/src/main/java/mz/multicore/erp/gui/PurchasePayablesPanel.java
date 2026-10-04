@@ -55,18 +55,42 @@ final class PurchasePayablesPanel {
 
         JTextField paySearch = TableFilter.searchField("Nº compra ou fornecedor…");
         JComboBox<String> payPeriodo = TableFilter.periodCombo();
+        UIHelper.styleComboBox(payPeriodo);
+        payPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(owner.payablesTable, paySearch,
                 java.util.List.of(),
                 java.util.List.of(new TableFilter.PeriodFilter(payPeriodo, 5)));
-        JPanel payBar = TableFilter.bar(paySearch,
-                TableFilter.label("Data:", "fas-calendar-alt"), payPeriodo);
-        payBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(payBar, BorderLayout.NORTH);
+
+        JPanel payFilters = new JPanel(new GridBagLayout());
+        payFilters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; payFilters.add(filterLabel("Período"), g);
+        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        payFilters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; payFilters.add(payPeriodo, g);
+        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        payFilters.add(paySearch, g);
+
+        payFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(UIHelper.tableCardTop("Contas a Pagar a Fornecedores", payFilters,
+                refreshBtn, payBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         payablesFooter = new JLabel(" ");
         payablesFooter.setForeground(UIHelper.TEXT_MUTED);
         payablesFooter.setBorder(new EmptyBorder(8, 4, 0, 4));
-        card.add(payablesFooter, BorderLayout.SOUTH);
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setOpaque(false);
+        southPanel.add(ClientTablePagination.install(owner.payablesTable), BorderLayout.NORTH);
+        southPanel.add(payablesFooter, BorderLayout.SOUTH);
+        card.add(southPanel, BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -148,4 +172,10 @@ final class PurchasePayablesPanel {
         }
     }
 
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
+    }
 }

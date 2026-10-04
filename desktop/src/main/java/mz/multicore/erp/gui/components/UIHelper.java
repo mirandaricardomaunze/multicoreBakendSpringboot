@@ -22,9 +22,13 @@ import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 public class UIHelper {
@@ -55,6 +59,10 @@ public class UIHelper {
     public static final Color REJECTED_RED = new Color(239, 68, 68);    // Red-500 (#EF4444)
     public static final Color REJECTED_RED_HOVER = new Color(220, 38, 38); // Red-600 (#DC2626)
     public static final Color PENDING_YELLOW = new Color(245, 158, 11);  // Amber-500 (#F59E0B)
+    public static final Color ACCENT_CYAN = new Color(6, 182, 212);      // Cyan-500 (#06B6D4)
+    public static final Color ACCENT_ORANGE = new Color(249, 115, 22);   // Orange-500 (#F97316)
+    public static final Color ACCENT_PINK = new Color(236, 72, 153);     // Pink-500 (#EC4899)
+    public static final Color ACCENT_SKY = new Color(14, 165, 233);      // Sky-500 (#0EA5E9)
     public static final Color KPI_INFO_SOFT = new Color(224, 242, 254);
     public static final Color KPI_PURPLE_SOFT = new Color(243, 232, 255);
     public static final Color KPI_WARNING_SOFT = new Color(254, 243, 199);
@@ -74,10 +82,10 @@ public class UIHelper {
     public static final Color KPI_DANGER_END = new Color(185, 28, 28);
     public static final Color KPI_ORANGE_DARK = new Color(194, 65, 12);
     public static final Color KPI_ORANGE_END = new Color(234, 88, 12);
-    private static final Color SECONDARY = new Color(75, 85, 99);       // Gray-600 (#4B5563)
-    private static final Color SECONDARY_HOVER = new Color(107, 114, 128); // Gray-500 (#6B7280)
-    public static final Color BUTTON_NEUTRAL = new Color(51, 65, 85);       // Slate-700
-    public static final Color BUTTON_NEUTRAL_HOVER = new Color(71, 85, 105); // Slate-600
+    public static final Color SECONDARY = new Color(14, 165, 233);          // Sky-500 (#0EA5E9)
+    public static final Color SECONDARY_HOVER = new Color(2, 132, 199);    // Sky-600 (#0284C7)
+    public static final Color BUTTON_NEUTRAL = new Color(99, 102, 241);       // Indigo-500 (#6366F1)
+    public static final Color BUTTON_NEUTRAL_HOVER = new Color(79, 70, 229); // Indigo-600 (#4F46E5)
 
     // ── Pré-visualização de impressão ─────────────────────────────────────────────────────────
     //    Papel é papel: a folha desenhada no modal de impressão não segue o tema da aplicação,
@@ -121,6 +129,40 @@ public class UIHelper {
     public static final int FORM_CONTROL_HEIGHT = 38;
     public static final int DIALOG_FORM_MIN_WIDTH = 560;
 
+    // ── Formatação canónica de datas e moeda (DRY em todo o sistema) ─────────────────────────
+    public static final Locale LOCALE_MZ = new Locale("pt", "MZ");
+    public static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    public static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    public static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Formata quantia monetária no padrão de Moçambique (ex.: "1 250,00 MT"). */
+    public static String formatMzn(BigDecimal amount) {
+        return TableCellRenderers.format(amount, 2, " MT");
+    }
+
+    /** Formata quantia monetária a partir de Number (Double, Long, Integer). */
+    public static String formatMzn(Number amount) {
+        if (amount == null) return "—";
+        return formatMzn(BigDecimal.valueOf(amount.doubleValue()));
+    }
+
+    /** Formata quantidade numérica com duas casas decimais (ex.: "12,50"). */
+    public static String formatQty(BigDecimal qty) {
+        return TableCellRenderers.format(qty, 2, "");
+    }
+
+    /** Formata data no padrão canónico "dd/MM/yyyy". */
+    public static String formatDate(TemporalAccessor date) {
+        if (date == null) return "—";
+        return DATE_FMT.format(date);
+    }
+
+    /** Formata data e hora no padrão canónico "dd/MM/yyyy HH:mm". */
+    public static String formatDateTime(TemporalAccessor dateTime) {
+        if (dateTime == null) return "—";
+        return DATETIME_FMT.format(dateTime);
+    }
+
     private static Theme activeTheme = Theme.DARK;
     private static final java.util.prefs.Preferences PREFS =
             java.util.prefs.Preferences.userRoot().node("mz/multicore/erp/ui");
@@ -140,6 +182,29 @@ public class UIHelper {
      * (ex.: testes/backend), não há efeito.
      */
     public static Runnable onForcedLogout;
+
+    /**
+     * Pede confirmação ao utilizador e termina a sessão activa, voltando ao ecrã de login.
+     */
+    public static void requestLogout(Component parent) {
+        int opt = JOptionPane.showConfirmDialog(
+                parent,
+                "Deseja realmente terminar a sessão?",
+                "Terminar Sessão",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+        if (opt == JOptionPane.YES_OPTION) {
+            if (onForcedLogout != null) {
+                onForcedLogout.run();
+            } else {
+                Window win = parent instanceof Window w ? w : SwingUtilities.getWindowAncestor(parent);
+                if (win != null) {
+                    win.dispose();
+                }
+            }
+        }
+    }
 
     /**
      * Janela principal da aplicação. Registada pelo {@code MainFrame} no arranque para que os modais
@@ -236,6 +301,10 @@ public class UIHelper {
         return activeTheme == Theme.LIGHT;
     }
 
+    public static boolean isHighContrast() {
+        return activeTheme != null && activeTheme.isHighContrast();
+    }
+
     /** Lê o tema guardado (por defeito escuro) e aplica os slots + UIManager. Chamar no arranque. */
     public static void loadAndApplySavedTheme() {
         applyTheme(Theme.byId(PREFS.get("theme", "dark")));
@@ -278,6 +347,22 @@ public class UIHelper {
         }
     }
 
+    /**
+     * Alterna circularmente entre os temas suportados: DARK -> LIGHT -> HIGH_CONTRAST -> DARK.
+     */
+    public static Theme cycleTheme() {
+        Theme next;
+        if (activeTheme == Theme.DARK) {
+            next = Theme.LIGHT;
+        } else if (activeTheme == Theme.LIGHT) {
+            next = Theme.HIGH_CONTRAST;
+        } else {
+            next = Theme.DARK;
+        }
+        setTheme(next);
+        return next;
+    }
+
     private static void restyleAllWindows(Theme from, Theme to) {
         Color[] oldP = from.palette();
         Color[] newP = to.palette();
@@ -309,12 +394,32 @@ public class UIHelper {
     }
 
     /** Razão de contraste WCAG entre duas cores (1:1 a 21:1). */
-    static double contrastRatio(Color a, Color b) {
+    public static double contrastRatio(Color a, Color b) {
         double la = relativeLuminance(a);
         double lb = relativeLuminance(b);
         double hi = Math.max(la, lb);
         double lo = Math.min(la, lb);
         return (hi + 0.05) / (lo + 0.05);
+    }
+
+    public static boolean meetsWcagAaa(Color a, Color b) {
+        return contrastRatio(a, b) >= 7.0;
+    }
+
+    /**
+     * Interpola suavemente entre duas cores com ratio [0.0f .. 1.0f], suportando transparência.
+     */
+    public static Color blendColors(Color c1, Color c2, float ratio) {
+        if (c1 == null && c2 == null) return Color.BLACK;
+        if (c1 == null) return c2;
+        if (c2 == null) return c1;
+        float r = Math.max(0f, Math.min(1f, ratio));
+        float ir = 1.0f - r;
+        int red = Math.round(c1.getRed() * ir + c2.getRed() * r);
+        int green = Math.round(c1.getGreen() * ir + c2.getGreen() * r);
+        int blue = Math.round(c1.getBlue() * ir + c2.getBlue() * r);
+        int alpha = Math.round(c1.getAlpha() * ir + c2.getAlpha() * r);
+        return new Color(red, green, blue, alpha);
     }
 
     private static double relativeLuminance(Color c) {
@@ -386,12 +491,68 @@ public class UIHelper {
     /** Acção canónica de recarga manual para vistas partilhadas entre vários utilizadores. */
     public static ModernButton createRefreshButton(Runnable refreshAction) {
         Objects.requireNonNull(refreshAction, "A acção de actualização é obrigatória.");
-        ModernButton button = createSecondaryButton("Actualizar");
-        button.setIcon(icon("fas-sync-alt", 14));
-        button.setToolTipText("Carregar os dados mais recentes da loja");
+        Color refreshBase = new Color(3, 105, 161);
+        Color refreshHover = new Color(7, 89, 133);
+        ModernButton button = new ModernButton("Actualizar", refreshBase, refreshHover);
+        button.setIcon(icon("fas-sync-alt", 14, Color.WHITE));
+        button.setForeground(Color.WHITE);
+        button.setToolTipText("Carregar os dados mais recentes");
         button.getAccessibleContext().setAccessibleName("Actualizar dados");
         button.addActionListener(event -> refreshAction.run());
         return button;
+    }
+
+    /**
+     * Barra de acções canónica: painel com botões alinhados à direita, gap 8px uniforme.
+     * Substitui o padrão ad-hoc de 3 linhas em todo o sistema.
+     * Uso: {@code header.add(UIHelper.actionsBar(btn1, btn2), BorderLayout.EAST);}
+     */
+    public static JPanel actionsBar(JComponent... components) {
+        return TableFilter.toolbar(null, components);
+    }
+
+    /**
+     * Topo canónico de um card de listagem: título/acções na primeira fila e filtros na segunda.
+     * Mantém toda a operação da tabela dentro do mesmo {@link ModernPanel} sem sobrecarregar a
+     * linha de pesquisa com botões.
+     */
+    public static JPanel tableCardTop(String title, JComponent filters, JComponent... actions) {
+        JPanel top = new JPanel(new BorderLayout(0, 10));
+        top.setOpaque(false);
+
+        JPanel header = new JPanel(new BorderLayout(8, 0));
+        header.setOpaque(false);
+        header.add(createSubheading(title), BorderLayout.WEST);
+        if (actions != null && actions.length > 0) {
+            header.add(actionsBar(actions), BorderLayout.EAST);
+        }
+        top.add(header, BorderLayout.NORTH);
+        if (filters != null) {
+            top.add(filters, BorderLayout.CENTER);
+        }
+        return top;
+    }
+
+    /**
+     * Barra de filtros + acções canónica.
+     * Uso: {@code panel.add(UIHelper.filterBar(filters, actions), BorderLayout.NORTH);}
+     */
+    public static JPanel filterBar(JComponent[] filters, JComponent[] actions) {
+        return TableFilter.toolbar(filters, actions);
+    }
+
+    /**
+     * Anexa uma barra de filtro rápido universal à tabela.
+     */
+    public static TableQuickFilterBar attachQuickFilter(JTable table) {
+        return TableQuickFilterBar.attach(table);
+    }
+
+    /**
+     * Encapsula a tabela com scroll e barra de pesquisa rápida superior.
+     */
+    public static JPanel wrapTableWithQuickFilter(JScrollPane scrollPane, JTable table) {
+        return TableQuickFilterBar.wrapWithFilter(scrollPane, table);
     }
 
     public static ActionMenuButton createActionMenuButton(String text) {
@@ -735,7 +896,7 @@ public class UIHelper {
         table.setForeground(TEXT_LIGHT);
         table.setGridColor(GRID);
         table.setFont(new Font(FONT, Font.PLAIN, 13));
-        table.setRowHeight(35);
+        table.setRowHeight(UiDensityManager.getInstance().getDensity().getTableRowHeight());
         table.setSelectionBackground(SELECTION_BG);
         table.setSelectionForeground(TEXT_LIGHT);
         // Grelha completa estilo Multicore (linhas verticais + horizontais)
@@ -793,7 +954,41 @@ public class UIHelper {
                 }
 
                 if (value != null) {
-                    String valStr = value.toString();
+                    String valStr;
+                    if (value instanceof BigDecimal bd) {
+                        valStr = TableCellRenderers.format(bd, 2, "");
+                        setText(valStr);
+                    } else if (value instanceof Double d) {
+                        valStr = TableCellRenderers.format(BigDecimal.valueOf(d), 2, "");
+                        setText(valStr);
+                    } else if (value instanceof Float f) {
+                        valStr = TableCellRenderers.format(BigDecimal.valueOf(f), 2, "");
+                        setText(valStr);
+                    } else if (value instanceof String s && !s.trim().isEmpty() && !s.equals("—") && !s.equals("-")) {
+                        String trimmed = s.trim();
+                        boolean hasSign = trimmed.startsWith("+");
+                        String clean = trimmed.replaceAll("^[+]", "").replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
+                        clean = clean.replace(" ", "").replace("\u00A0", "");
+                        if (clean.matches("^\\d+[.,]\\d+$")) {
+                            try {
+                                BigDecimal parsedDecimal = new BigDecimal(clean.replace(',', '.'));
+                                String suffix = "";
+                                if (trimmed.endsWith(" MT")) suffix = " MT";
+                                else if (trimmed.endsWith(" un")) suffix = " un";
+                                else if (trimmed.endsWith(" kg")) suffix = " kg";
+                                else if (trimmed.endsWith("%")) suffix = "%";
+                                String fmt = TableCellRenderers.format(parsedDecimal, 2, suffix);
+                                valStr = (hasSign && parsedDecimal.signum() > 0 ? "+" : "") + fmt;
+                                setText(valStr);
+                            } catch (Exception ex) {
+                                valStr = s;
+                            }
+                        } else {
+                            valStr = s;
+                        }
+                    } else {
+                        valStr = value.toString();
+                    }
                     if (valStr.length() > 30) {
                         setToolTipText("<html><body style='width: 250px; font-family: Segoe UI; font-size: 11px; padding: 4px;'>"
                                        + valStr.replace("\n", "<br>") + "</body></html>");
@@ -829,6 +1024,181 @@ public class UIHelper {
 
         installRowSelector(table);
         installListingFooter(table);
+    }
+
+    /**
+     * Instala manipulador de duplo clique canónico na tabela.
+     *
+     * @param table tabela alvo
+     * @param onDoubleClick acção executada ao dar duplo clique com botão esquerdo numa linha
+     */
+    public static void installDoubleClick(JTable table, Runnable onDoubleClick) {
+        if (table == null || onDoubleClick == null) return;
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && javax.swing.SwingUtilities.isLeftMouseButton(e)) {
+                    if (table.getSelectedRow() >= 0) {
+                        onDoubleClick.run();
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Instala atalhos de teclado universais na grelha de linhas de um documento:
+     * - INSERT / Ctrl+ENTER: Adicionar linha
+     * - DELETE / Ctrl+DELETE: Remover linha seleccionada (quando não em edição directa de célula)
+     * - Ctrl+S / F10: Guardar / submeter documento
+     *
+     * @param table grelha de linhas
+     * @param onAdd acção de adicionar linha
+     * @param onRemove acção de remover linha
+     * @param onSave acção de gravar documento (opcional)
+     */
+    public static void installDocumentGridShortcuts(JTable table, Runnable onAdd, Runnable onRemove, Runnable onSave) {
+        if (table == null) return;
+        InputMap im = table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        ActionMap am = table.getActionMap();
+
+        if (onAdd != null) {
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_INSERT, 0), "gridAddLine");
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, java.awt.event.InputEvent.CTRL_DOWN_MASK), "gridAddLine");
+            am.put("gridAddLine", new AbstractAction() {
+                @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                    onAdd.run();
+                }
+            });
+        }
+
+        if (onRemove != null) {
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DELETE, 0), "gridRemoveLine");
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DELETE, java.awt.event.InputEvent.CTRL_DOWN_MASK), "gridRemoveLine");
+            am.put("gridRemoveLine", new AbstractAction() {
+                @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                    if (!table.isEditing() && table.getSelectedRow() >= 0) {
+                        onRemove.run();
+                    }
+                }
+            });
+        }
+
+        if (onSave != null) {
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_DOWN_MASK), "gridSaveDoc");
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F10, 0), "gridSaveDoc");
+            am.put("gridSaveDoc", new AbstractAction() {
+                @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                    onSave.run();
+                }
+            });
+        }
+
+        installCellNavigationKeys(table, onAdd);
+    }
+
+    /**
+     * Instala navegação por células estilo Excel / PHC:
+     * - TAB / ENTER: confirma a célula e avança para a próxima coluna editável.
+     *   Se estiver na última coluna da última linha, aciona onAddLine e foca a nova linha.
+     * - SHIFT+TAB: recua para a coluna editável anterior.
+     */
+    public static void installCellNavigationKeys(JTable table, Runnable onAddLine) {
+        if (table == null) return;
+        InputMap im = table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        ActionMap am = table.getActionMap();
+
+        AbstractAction nextAction = new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (table.isEditing()) {
+                    table.getCellEditor().stopCellEditing();
+                }
+                int row = table.getSelectedRow();
+                int col = table.getSelectedColumn();
+                if (row < 0) {
+                    if (table.getRowCount() > 0) {
+                        row = 0;
+                        col = findNextEditableColumn(table, row, -1);
+                    } else if (onAddLine != null) {
+                        onAddLine.run();
+                        return;
+                    } else {
+                        return;
+                    }
+                } else {
+                    int nextCol = findNextEditableColumn(table, row, col);
+                    if (nextCol != -1) {
+                        col = nextCol;
+                    } else {
+                        if (row + 1 < table.getRowCount()) {
+                            row++;
+                            col = findNextEditableColumn(table, row, -1);
+                        } else if (onAddLine != null) {
+                            onAddLine.run();
+                            SwingUtilities.invokeLater(() -> {
+                                int newRow = table.getRowCount() - 1;
+                                if (newRow >= 0) {
+                                    int firstCol = findNextEditableColumn(table, newRow, -1);
+                                    if (firstCol >= 0) {
+                                        table.changeSelection(newRow, firstCol, false, false);
+                                        table.editCellAt(newRow, firstCol);
+                                    }
+                                }
+                            });
+                            return;
+                        }
+                    }
+                }
+                if (row >= 0 && row < table.getRowCount() && col >= 0 && col < table.getColumnCount()) {
+                    table.changeSelection(row, col, false, false);
+                    table.editCellAt(row, col);
+                }
+            }
+        };
+
+        AbstractAction prevAction = new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (table.isEditing()) {
+                    table.getCellEditor().stopCellEditing();
+                }
+                int row = table.getSelectedRow();
+                int col = table.getSelectedColumn();
+                if (row < 0) return;
+                int prevCol = findPrevEditableColumn(table, row, col);
+                if (prevCol != -1) {
+                    col = prevCol;
+                } else if (row > 0) {
+                    row--;
+                    col = findPrevEditableColumn(table, row, table.getColumnCount());
+                }
+                if (col >= 0 && row >= 0) {
+                    table.changeSelection(row, col, false, false);
+                    table.editCellAt(row, col);
+                }
+            }
+        };
+
+        im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_TAB, 0), "gridNavNext");
+        im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "gridNavNext");
+        am.put("gridNavNext", nextAction);
+
+        im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_TAB, java.awt.event.InputEvent.SHIFT_DOWN_MASK), "gridNavPrev");
+        am.put("gridNavPrev", prevAction);
+    }
+
+    public static int findNextEditableColumn(JTable table, int row, int startCol) {
+        if (row < 0 || row >= table.getRowCount()) return -1;
+        for (int c = startCol + 1; c < table.getColumnCount(); c++) {
+            if (table.isCellEditable(row, c)) return c;
+        }
+        return -1;
+    }
+
+    public static int findPrevEditableColumn(JTable table, int row, int startCol) {
+        if (row < 0 || row >= table.getRowCount()) return -1;
+        for (int c = startCol - 1; c >= 0; c--) {
+            if (table.isCellEditable(row, c)) return c;
+        }
+        return -1;
     }
 
     /**
@@ -1191,6 +1561,54 @@ public class UIHelper {
     /** Cria um ícone composto com badge numérico ou indicador no canto superior direito. */
     public static javax.swing.Icon badgedIcon(String code, int size, Color color, int badgeCount, Color badgeBg) {
         return new BadgedIcon(icon(code, size, color), badgeCount, badgeBg);
+    }
+
+    /**
+     * Mapeia um ícone FontAwesome para a sua cor semântica canónica de domínio.
+     */
+    public static Color semanticColorFor(String iconCode) {
+        if (iconCode == null || iconCode.isBlank()) {
+            return ACCENT_BLUE;
+        }
+        String code = iconCode.toLowerCase().trim();
+        if (code.contains("boxes") || code.contains("box") || code.contains("warehouse") || code.contains("cubes") || code.contains("tag") || code.contains("barcode") || code.contains("dolly")) {
+            return MODULE_STOCK;
+        }
+        if (code.contains("user") || code.contains("users") || code.contains("id-card") || code.contains("calendar") || code.contains("clock") || code.contains("briefcase")) {
+            return MODULE_HR;
+        }
+        if (code.contains("percent") || code.contains("tax") || code.contains("calculator") || code.contains("receipt") || code.contains("file-invoice") || code.contains("balance-scale")) {
+            return MODULE_FISCAL;
+        }
+        if (code.contains("cart") || code.contains("cash") || code.contains("store") || code.contains("credit-card") || code.contains("shopping")) {
+            return MODULE_POS;
+        }
+        if (code.contains("truck") || code.contains("shipping") || code.contains("shopping-basket")) {
+            return MODULE_COMPRAS;
+        }
+        if (code.contains("chart") || code.contains("money") || code.contains("coins") || code.contains("wallet")) {
+            return MODULE_FINANCEIRO;
+        }
+        if (code.contains("handshake") || code.contains("address-book") || code.contains("headset")) {
+            return MODULE_CRM;
+        }
+        if (code.contains("shield") || code.contains("lock") || code.contains("key") || code.contains("user-shield")) {
+            return ACCENT_CYAN;
+        }
+        if (code.contains("exclamation") || code.contains("trash") || code.contains("times") || code.contains("ban")) {
+            return REJECTED_RED;
+        }
+        if (code.contains("check") || code.contains("check-circle")) {
+            return APPROVED_GREEN;
+        }
+        return ACCENT_BLUE;
+    }
+
+    /**
+     * Cria um ícone vetorial com a cor semântica contrastante apropriada ao seu papel.
+     */
+    public static javax.swing.Icon semanticIcon(String iconCode, int size) {
+        return icon(iconCode, size, semanticColorFor(iconCode));
     }
 
     /**
@@ -1644,6 +2062,10 @@ public class UIHelper {
         return header;
     }
 
+    public static JComponent buildPremiumHeader(String title, String subtitle, String iconCode, Color accentColor) {
+        return buildPremiumHeader(iconCode, title, subtitle);
+    }
+
     public static void styleEmbeddedTableScrollPane(JScrollPane scroll, JTable table, int visibleRows) {
         styleScrollPane(scroll);
         table.setFillsViewportHeight(true);
@@ -1973,6 +2395,7 @@ public class UIHelper {
             case "IN_PROGRESS" -> "Em curso";
             case "RESOLVED" -> "Resolvido";
             case "CLOSED" -> "Fechado";
+            case "DRAFT" -> "Rascunho";
             case "PENDING", "PENDING_APPROVAL" -> "Pendente";
             case "APPROVED" -> "Aprovado";
             case "REJECTED" -> "Rejeitado";
@@ -2177,5 +2600,59 @@ public class UIHelper {
         panel.setPreferredSize(new Dimension(Math.max(DIALOG_FORM_MIN_WIDTH, preferred.width), preferred.height));
         panel.setMinimumSize(new Dimension(DIALOG_FORM_MIN_WIDTH, preferred.height));
         return panel;
+    }
+
+    /** Instala filtro que permite apenas dígitos (0-9) no campo de texto até ao limite de caracteres. */
+    public static void installDigitsOnlyFilter(javax.swing.text.JTextComponent comp, int maxLength) {
+        if (comp == null || !(comp.getDocument() instanceof javax.swing.text.AbstractDocument doc)) return;
+        doc.setDocumentFilter(new javax.swing.text.DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, javax.swing.text.AttributeSet attr) throws javax.swing.text.BadLocationException {
+                if (string == null) return;
+                String filtered = string.replaceAll("[^0-9]", "");
+                if (maxLength > 0 && (fb.getDocument().getLength() + filtered.length()) > maxLength) {
+                    filtered = filtered.substring(0, Math.max(0, maxLength - fb.getDocument().getLength()));
+                }
+                super.insertString(fb, offset, filtered, attr);
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, javax.swing.text.AttributeSet attrs) throws javax.swing.text.BadLocationException {
+                if (text == null) return;
+                String filtered = text.replaceAll("[^0-9]", "");
+                int currentLen = fb.getDocument().getLength() - length;
+                if (maxLength > 0 && (currentLen + filtered.length()) > maxLength) {
+                    filtered = filtered.substring(0, Math.max(0, maxLength - currentLen));
+                }
+                super.replace(fb, offset, length, filtered, attrs);
+            }
+        });
+    }
+
+    /** Instala filtro que converte automaticamente as letras introduzidas para MAIÚSCULAS (SKU, BI, código, etc.). */
+    public static void installUppercaseFilter(javax.swing.text.JTextComponent comp, int maxLength) {
+        if (comp == null || !(comp.getDocument() instanceof javax.swing.text.AbstractDocument doc)) return;
+        doc.setDocumentFilter(new javax.swing.text.DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, javax.swing.text.AttributeSet attr) throws javax.swing.text.BadLocationException {
+                if (string == null) return;
+                String upper = string.toUpperCase();
+                if (maxLength > 0 && (fb.getDocument().getLength() + upper.length()) > maxLength) {
+                    upper = upper.substring(0, Math.max(0, maxLength - fb.getDocument().getLength()));
+                }
+                super.insertString(fb, offset, upper, attr);
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, javax.swing.text.AttributeSet attrs) throws javax.swing.text.BadLocationException {
+                if (text == null) return;
+                String upper = text.toUpperCase();
+                int currentLen = fb.getDocument().getLength() - length;
+                if (maxLength > 0 && (currentLen + upper.length()) > maxLength) {
+                    upper = upper.substring(0, Math.max(0, maxLength - currentLen));
+                }
+                super.replace(fb, offset, length, upper, attrs);
+            }
+        });
     }
 }

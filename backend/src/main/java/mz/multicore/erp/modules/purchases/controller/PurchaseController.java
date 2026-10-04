@@ -87,6 +87,12 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseOrderService.createOrder(request));
     }
 
+    @PutMapping("/orders/{id}")
+    public ResponseEntity<PurchaseOrderDTO> updateOrder(
+            @PathVariable Long id, @RequestBody @Valid UpdatePurchaseOrderRequest request) {
+        return ResponseEntity.ok(purchaseOrderService.updateOrder(id, request));
+    }
+
     @PostMapping("/orders/{id}/receive")
     public ResponseEntity<PurchaseOrderDTO> receiveOrder(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseOrderService.receiveOrder(id));
@@ -129,7 +135,7 @@ public class PurchaseController {
     @PostMapping("/discrepancies/{id}/resolve")
     public ResponseEntity<mz.multicore.erp.modules.purchases.dto.GoodsReceiptDiscrepancyDTO> resolveDiscrepancy(
             @PathVariable Long id,
-            @RequestBody mz.multicore.erp.modules.purchases.dto.ResolveDiscrepancyRequest request) {
+            @RequestBody @Valid mz.multicore.erp.modules.purchases.dto.ResolveDiscrepancyRequest request) {
         return ResponseEntity.ok(discrepancyService.resolve(id, request == null ? null : request.resolutionNotes()));
     }
 

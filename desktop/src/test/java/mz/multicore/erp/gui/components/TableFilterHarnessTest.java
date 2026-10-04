@@ -61,7 +61,8 @@ class TableFilterHarnessTest {
 
         // Este mês
         assertTrue(TableFilter.matchesPeriod(LocalDate.of(2026, 9, 1), "Este mês", today));
-        assertTrue(TableFilter.matchesPeriod(LocalDate.of(2026, 9, 30), "Este mês", today));
+        assertTrue(TableFilter.matchesPeriod(LocalDate.of(2026, 9, 1), "Este mês", today));
+        assertFalse(TableFilter.matchesPeriod(LocalDate.of(2026, 9, 30), "Este mês", today));
         assertFalse(TableFilter.matchesPeriod(LocalDate.of(2026, 8, 31), "Este mês", today));
         assertFalse(TableFilter.matchesPeriod(LocalDate.of(2026, 10, 1), "Este mês", today));
     }
@@ -71,12 +72,15 @@ class TableFilterHarnessTest {
     void periodCombo_hasCanonicalOptionsAndStyle() {
         JComboBox<String> combo = TableFilter.periodCombo();
         assertNotNull(combo);
-        assertEquals(5, combo.getItemCount());
+        assertEquals(8, combo.getItemCount());
         assertEquals("Todo o período", combo.getItemAt(0));
         assertEquals("Hoje", combo.getItemAt(1));
-        assertEquals("Últimos 7 dias", combo.getItemAt(2));
-        assertEquals("Últimos 30 dias", combo.getItemAt(3));
-        assertEquals("Este mês", combo.getItemAt(4));
+        assertEquals("Ontem", combo.getItemAt(2));
+        assertEquals("Esta semana", combo.getItemAt(3));
+        assertEquals("Últimos 7 dias", combo.getItemAt(4));
+        assertEquals("Este mês", combo.getItemAt(5));
+        assertEquals("Últimos 30 dias", combo.getItemAt(6));
+        assertEquals("Este ano", combo.getItemAt(7));
     }
 
     @Test

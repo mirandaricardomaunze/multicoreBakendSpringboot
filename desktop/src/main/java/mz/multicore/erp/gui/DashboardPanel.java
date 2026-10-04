@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ArrowScrollPanel;
+import mz.multicore.erp.gui.components.DashboardTrendCalculator;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -84,7 +85,10 @@ public class DashboardPanel extends JPanel {
     private JLabel welcomeLabel;
     private JLabel balanceValLabel;
     private JLabel salesValLabel;
+    private KpiCard.TrendBadge salesTrendBadge;
+    private JLabel salesSubLabel;
     private JLabel posSalesValLabel;
+    private KpiCard.TrendBadge posTrendBadge;
     private JLabel posSalesCountSub;
     private JLabel approvalsValLabel;
     private JLabel ticketsValLabel;
@@ -186,18 +190,23 @@ public class DashboardPanel extends JPanel {
                 UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END));
 
         salesValLabel = newValueLabel("0.00 MT", 19);
+        salesTrendBadge = new KpiCard.TrendBadge(null);
+        salesSubLabel = new JLabel("Ticket Médio: 0.00 MT/venda");
+        salesSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        salesSubLabel.setForeground(UIHelper.KPI_PURPLE_SOFT);
         gridPanel.add(buildKpiCard(
                 "FATURAÇÃO TOTAL", "fas-file-invoice-dollar", UIHelper.KPI_PURPLE_SOFT,
-                salesValLabel, null,
+                salesValLabel, salesTrendBadge, salesSubLabel,
                 UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END));
 
         posSalesValLabel = newValueLabel("0.00 MT", 19);
-        posSalesCountSub = new JLabel("0 vendas hoje");
+        posTrendBadge = new KpiCard.TrendBadge(null);
+        posSalesCountSub = new JLabel("0 vendas");
         posSalesCountSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         posSalesCountSub.setForeground(UIHelper.KPI_SUCCESS_SOFT);
         gridPanel.add(buildKpiCard(
-                "VENDAS POS (HOJE)", "fas-cash-register", UIHelper.KPI_SUCCESS_SOFT,
-                posSalesValLabel, posSalesCountSub,
+                "VENDAS POS", "fas-cash-register", UIHelper.KPI_SUCCESS_SOFT,
+                posSalesValLabel, posTrendBadge, posSalesCountSub,
                 UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN));
 
         taxSummaryLabel = newValueLabel("0.00 MT", 19);
@@ -347,6 +356,12 @@ public class DashboardPanel extends JPanel {
         return KpiCard.create(title, iconCode, titleColor, valueLabel, subLabel, gradientStart, gradientEnd);
     }
 
+    private ModernPanel buildKpiCard(String title, String iconCode, Color titleColor,
+                                      JLabel valueLabel, KpiCard.TrendBadge trendBadge, JLabel subLabel,
+                                      Color gradientStart, Color gradientEnd) {
+        return KpiCard.create(title, iconCode, titleColor, valueLabel, trendBadge, subLabel, gradientStart, gradientEnd);
+    }
+
     private ModernPanel createChartCard(JComponent chart) {
         ModernPanel card = new ModernPanel(12, UIHelper.BG_CARD, UIHelper.BG_CARD);
         card.setLayout(new BorderLayout());
@@ -378,17 +393,14 @@ public class DashboardPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         LocalDate today = LocalDate.now();
 
-        LocalDate fromDate = switch (currentPeriod) {
-            case HOJE -> today;
-            case ESTA_SEMANA -> today.minusDays(7);
-            case ESTE_MES -> today.withDayOfMonth(1);
-            case ESTE_ANO -> today.withDayOfYear(1);
-            case TODOS -> null;
-        };
-        LocalDate toDate = switch (currentPeriod) {
-            case TODOS -> null;
-            default -> today;
-        };
+        DashboardTrendCalculator.ComparisonPeriod comp =
+                DashboardTrendCalculator.resolvePeriods(currentPeriod, today);
+        DashboardTrendCalculator.DateRange curRange = comp.current();
+        DashboardTrendCalculator.DateRange prevRange = comp.previous();
+        String compLabel = comp.comparisonLabel();
+
+        LocalDate fromDate = curRange.from();
+        LocalDate toDate = curRange.to();
 
         // 1. Saldo de tesouraria
         BigDecimal totalBal = financeApiClient.getAllAccounts().stream()
@@ -399,24 +411,48 @@ public class DashboardPanel extends JPanel {
         List<InvoiceDTO> allInvoices = comercialApiClient.getAllInvoices();
         List<InvoiceDTO> filteredInvoices = allInvoices.stream()
                 .filter(i -> i.status() == InvoiceStatus.APPROVED || i.status() == InvoiceStatus.PAID)
-                .filter(i -> isDateInRange(i.createdAt() != null ? i.createdAt().toLocalDate() : null, fromDate, toDate))
+                .filter(i -> curRange.contains(i.createdAt() != null ? i.createdAt().toLocalDate() : null))
                 .toList();
 
         BigDecimal totalSales = filteredInvoices.stream()
                 .map(InvoiceDTO::totalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        BigDecimal prevSales = BigDecimal.ZERO;
+        if (prevRange != null) {
+            prevSales = allInvoices.stream()
+                    .filter(i -> i.status() == InvoiceStatus.APPROVED || i.status() == InvoiceStatus.PAID)
+                    .filter(i -> prevRange.contains(i.createdAt() != null ? i.createdAt().toLocalDate() : null))
+                    .map(InvoiceDTO::totalAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        BigDecimal salesTrendPercent = (prevRange != null)
+                ? DashboardTrendCalculator.calculatePercentageChange(totalSales, prevSales)
+                : null;
+        BigDecimal salesAvgTicket = DashboardTrendCalculator.calculateAverageTicket(totalSales, filteredInvoices.size());
+
         // 3. Vendas POS
         POSSalesSummaryDTO posSummary = null;
+        POSSalesSummaryDTO posPrevSummary = null;
         POSSalesSummaryDTO posToday = null;
         try {
             posSummary = comercialApiClient.getPOSSalesSummary(companyId, fromDate, toDate);
+            if (prevRange != null) {
+                posPrevSummary = comercialApiClient.getPOSSalesSummary(companyId, prevRange.from(), prevRange.to());
+            }
             posToday = comercialApiClient.getPOSSalesSummary(companyId, today, today);
         } catch (Exception ignored) {}
 
         BigDecimal posSalesAmount = posSummary != null && posSummary.totalAmount() != null ? posSummary.totalAmount() : BigDecimal.ZERO;
+        long posSalesCount = posSummary != null ? posSummary.count() : 0L;
+        BigDecimal posPrevAmount = posPrevSummary != null && posPrevSummary.totalAmount() != null ? posPrevSummary.totalAmount() : BigDecimal.ZERO;
+        BigDecimal posTrendPercent = (prevRange != null)
+                ? DashboardTrendCalculator.calculatePercentageChange(posSalesAmount, posPrevAmount)
+                : null;
         BigDecimal posTodayTotal = posToday != null && posToday.totalAmount() != null ? posToday.totalAmount() : BigDecimal.ZERO;
         long posTodayCount = posToday != null ? posToday.count() : 0L;
+        BigDecimal posAvgTicket = DashboardTrendCalculator.calculateAverageTicket(posSalesAmount, posSalesCount);
 
         // 4. Pendências e CRM
         int appCount = approvalApiClient.getPendingRequests().size();
@@ -514,6 +550,7 @@ public class DashboardPanel extends JPanel {
         ProfitEngine.ProfitMetrics profitMetrics = ProfitEngine.calculateMetrics(filteredInvoices, posSalesAmount, null);
 
         return new DashboardData(totalBal, totalSales, posSalesAmount, posTodayTotal, posTodayCount,
+                salesTrendPercent, posTrendPercent, compLabel, salesAvgTicket, posAvgTicket,
                 appCount, ticketCount, ivaLiquidado, ivaDeduzido, ivaLiquido, totalPurchases,
                 lowStocksCount, expiring.size(), expiredCount, soonCount, topRanked, activities, profitMetrics);
     }
@@ -528,8 +565,18 @@ public class DashboardPanel extends JPanel {
     private void applyDashboardData(DashboardData data) {
         balanceValLabel.setText(String.format("%,.2f MT", data.totalBalance()));
         salesValLabel.setText(String.format("%,.2f MT", data.totalSales()));
+        salesTrendBadge.updateTrend(data.salesTrendPercent(), data.compLabel());
+        salesSubLabel.setText("Ticket Médio: " + DashboardTrendCalculator.formatAverageTicket(data.salesAvgTicket()));
+
         posSalesValLabel.setText(String.format("%,.2f MT", data.posSalesAmount()));
-        posSalesCountSub.setText(data.posTodayCount() + (data.posTodayCount() == 1 ? " venda hoje" : " vendas hoje"));
+        posTrendBadge.updateTrend(data.posTrendPercent(), data.compLabel());
+        if (currentPeriod == PeriodFilter.HOJE) {
+            posSalesCountSub.setText(String.format("%d venda%s hoje · TM: %,.2f MT",
+                    data.posTodayCount(), data.posTodayCount() == 1 ? "" : "s", data.posAvgTicket()));
+        } else {
+            posSalesCountSub.setText(String.format("%d venda%s · TM: %,.2f MT",
+                    data.posTodayCount(), data.posTodayCount() == 1 ? "" : "s", data.posAvgTicket()));
+        }
 
         approvalsValLabel.setText(data.approvalCount() + " Pedidos");
         ticketsValLabel.setText(data.ticketCount() + " Abertos");
@@ -596,6 +643,8 @@ public class DashboardPanel extends JPanel {
 
     private record DashboardData(BigDecimal totalBalance, BigDecimal totalSales,
                                  BigDecimal posSalesAmount, BigDecimal posTodayTotal, long posTodayCount,
+                                 BigDecimal salesTrendPercent, BigDecimal posTrendPercent, String compLabel,
+                                 BigDecimal salesAvgTicket, BigDecimal posAvgTicket,
                                  int approvalCount, long ticketCount, BigDecimal outputVat,
                                  BigDecimal inputVat, BigDecimal netVat, BigDecimal totalPurchases,
                                  long lowStockCount, int expiringCount, long expiredCount, long soonCount,

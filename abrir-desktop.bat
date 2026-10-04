@@ -8,7 +8,7 @@ if not exist "%JAVA_EXE%" set "JAVA_EXE=javaw"
 set "JAR_PATH=%~dp0desktop\target\multicore-desktop-1.0.0.jar"
 
 if exist "%JAR_PATH%" (
-    start "" "%JAVA_EXE%" -jar "%JAR_PATH%"
+    start "" "%JAVA_EXE%" -Djava.awt.headless=false -Dspring.profiles.active=desktop -jar "%JAR_PATH%"
     exit /b 0
 )
 

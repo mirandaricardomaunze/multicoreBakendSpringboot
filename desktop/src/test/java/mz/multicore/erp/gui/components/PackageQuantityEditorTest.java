@@ -12,14 +12,16 @@ class PackageQuantityEditorTest {
     void boxesAndLooseUnitsUpdateTotalBidirectionally() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             PackageQuantityEditor editor = new PackageQuantityEditor();
-            editor.setUnitsPerBox(12);
+            editor.setPackaging(4, 3);
             editor.boxesField().setText("2");
-            editor.looseUnitsField().setText("5");
+            editor.packagesField().setText("1");
+            editor.looseUnitsField().setText("2");
             assertEquals("29", editor.totalField().getText());
 
             editor.totalField().setText("41");
             assertEquals("3", editor.boxesField().getText());
-            assertEquals("5", editor.looseUnitsField().getText());
+            assertEquals("1", editor.packagesField().getText());
+            assertEquals("2", editor.looseUnitsField().getText());
         });
     }
 
@@ -27,11 +29,12 @@ class PackageQuantityEditorTest {
     void resetRemovesResidualLooseUnits() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             PackageQuantityEditor editor = new PackageQuantityEditor();
-            editor.setUnitsPerBox(12);
+            editor.setPackaging(4, 3);
             editor.totalField().setText("1");
             editor.reset();
             editor.boxesField().setText("2");
             assertEquals("24", editor.totalField().getText());
+            assertEquals("0", editor.packagesField().getText());
             assertEquals("0", editor.looseUnitsField().getText());
         });
     }

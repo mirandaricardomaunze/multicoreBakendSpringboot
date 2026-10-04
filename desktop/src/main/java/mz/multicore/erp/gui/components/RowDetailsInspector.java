@@ -31,6 +31,13 @@ public final class RowDetailsInspector {
     public static void open(JTable table) {
         if (table == null || table.getSelectedRow() < 0
                 || Boolean.TRUE.equals(table.getClientProperty("noRowInspector"))) return;
+
+        Runnable customAction = (Runnable) table.getClientProperty("customDetailAction");
+        if (customAction != null) {
+            customAction.run();
+            return;
+        }
+
         RecordDetailsDialog.show(table);
     }
 }

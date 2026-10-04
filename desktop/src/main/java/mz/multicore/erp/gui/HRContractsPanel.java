@@ -1,8 +1,10 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
+import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -49,39 +51,23 @@ final class HRContractsPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Contratos de Trabalho"), BorderLayout.WEST);
-
         ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir PDF");
         printBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         printBtn.addActionListener(e -> withSelection(this::printContract));
 
-        ModernButton activateBtn = UIHelper.createSecondaryButton("Activar");
-        activateBtn.setIcon(UIHelper.icon("fas-check", 14));
-        activateBtn.addActionListener(e -> withSelection(this::activateContract));
-
-        ModernButton renewBtn = UIHelper.createSecondaryButton("Renovar");
-        renewBtn.setIcon(UIHelper.icon("fas-redo", 14));
-        renewBtn.addActionListener(e -> withSelection(this::renewContract));
-
-        ModernButton terminateBtn = UIHelper.createSecondaryButton("Cessar");
-        terminateBtn.setIcon(UIHelper.icon("fas-ban", 14));
-        terminateBtn.addActionListener(e -> withSelection(this::terminateContract));
+        ActionMenuButton manageBtn = UIHelper.createActionMenuButton("Gestão do Contrato")
+                .addAction("Activar", UIHelper.icon("fas-check", 14), () -> withSelection(this::activateContract))
+                .addAction("Renovar", UIHelper.icon("fas-redo", 14), () -> withSelection(this::renewContract))
+                .addAction("Cessar", UIHelper.icon("fas-ban", 14), () -> withSelection(this::terminateContract))
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14, UIHelper.ACCENT_BLUE), this::load);
 
         ModernButton newBtn = UIHelper.createPrimaryButton("Novo Contrato");
         newBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newBtn.addActionListener(e -> createContract());
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(printBtn);
-        actions.add(activateBtn);
-        actions.add(renewBtn);
-        actions.add(terminateBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout());
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         String[] cols = {"Nº", "Colaborador", "Tipo", "Função", "Início", "Fim", "Salário", "Estado"};
         model = new DefaultTableModel(cols, 0) {
@@ -92,18 +78,21 @@ final class HRContractsPanel {
         table.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
 
+        JScrollPane scroll = new JScrollPane(table);
+        UIHelper.styleScrollPane(scroll);
+
         JTextField search = TableFilter.searchField("Nº, colaborador ou função…");
         JComboBox<String> statusFilter = TableFilter.combo("Todos os estados",
                 "Rascunho", "Vigente", "Cessado", "Prazo terminado");
         TableFilter.install(table, search, new TableFilter.ColumnFilter(statusFilter, 7));
 
-        JPanel bar = TableFilter.bar(search, TableFilter.label("Estado:"), statusFilter);
+        JPanel bar = TableFilter.bar(search, TableFilter.label("Estado:", "fas-filter"), statusFilter);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        JPanel body = new JPanel(new BorderLayout(0, 8));
-        body.setOpaque(false);
-        body.add(bar, BorderLayout.NORTH);
-        body.add(new JScrollPane(table), BorderLayout.CENTER);
-        tab.add(body, BorderLayout.CENTER);
+
+        card.add(UIHelper.tableCardTop("Contratos de Trabalho", bar,
+                manageBtn, printBtn, newBtn), BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        tab.add(card, BorderLayout.CENTER);
 
         load();
         return tab;

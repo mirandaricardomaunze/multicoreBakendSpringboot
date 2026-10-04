@@ -94,76 +94,56 @@ public class CustomerStatementPanel extends JPanel {
         topRow.add(busyBar, BorderLayout.EAST);
         header.add(topRow, BorderLayout.NORTH);
 
-        // Linha 2: Barra de filtros e acções
-        ModernPanel filterBar = new ModernPanel(12);
-        filterBar.setLayout(new BorderLayout(12, 0));
-        filterBar.setBorder(new EmptyBorder(8, 12, 8, 12));
-
-        JPanel leftFilters = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftFilters.setOpaque(false);
-
         JLabel lblCliente = new JLabel("Cliente:");
         lblCliente.setForeground(UIHelper.TEXT_LIGHT);
         lblCliente.setFont(lblCliente.getFont().deriveFont(12f));
-        leftFilters.add(lblCliente);
 
         clientCombo = new JComboBox<>();
         clientCombo.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(clientCombo);
         clientCombo.addActionListener(e -> refreshData());
-        leftFilters.add(clientCombo);
 
         JLabel lblInicio = new JLabel("Início:");
         lblInicio.setForeground(UIHelper.TEXT_LIGHT);
         lblInicio.setFont(lblInicio.getFont().deriveFont(12f));
-        leftFilters.add(lblInicio);
 
         LocalDate defaultStart = LocalDate.now().withDayOfYear(1);
         startDateField = new DateField(defaultStart);
         startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
         startDateField.addActionListener(e -> refreshData());
-        leftFilters.add(startDateField);
 
         JLabel lblFim = new JLabel("Fim:");
         lblFim.setForeground(UIHelper.TEXT_LIGHT);
         lblFim.setFont(lblFim.getFont().deriveFont(12f));
-        leftFilters.add(lblFim);
 
         LocalDate defaultEnd = LocalDate.now();
         endDateField = new DateField(defaultEnd);
         endDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
         endDateField.addActionListener(e -> refreshData());
-        leftFilters.add(endDateField);
-
-        filterBar.add(leftFilters, BorderLayout.WEST);
-
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
-        rightActions.add(refreshBtn);
 
         ModernButton pdfBtn = UIHelper.createPrimaryButton("Imprimir Extrato (PDF)");
         pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         pdfBtn.setPreferredSize(new Dimension(185, UIHelper.FORM_CONTROL_HEIGHT));
         pdfBtn.addActionListener(e -> emitStatementPdf());
-        rightActions.add(pdfBtn);
 
         ModernButton emailBtn = UIHelper.createSecondaryButton("Enviar por Email");
         emailBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
         emailBtn.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         emailBtn.addActionListener(e -> emitStatementEmail());
-        rightActions.add(emailBtn);
 
-        filterBar.add(rightActions, BorderLayout.EAST);
+        JPanel filterBar = TableFilter.toolbar(
+                new JComponent[]{lblCliente, clientCombo, lblInicio, startDateField, lblFim, endDateField},
+                new JComponent[]{refreshBtn, pdfBtn, emailBtn}
+        );
         header.add(filterBar, BorderLayout.SOUTH);
 
         return header;
     }
 
     private JPanel buildSummaryCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 5, 12, 0));
-        grid.setOpaque(false);
+        JPanel grid = KpiCard.createGrid(5);
 
         openingBalanceLabel = new JLabel("0,00 MT");
         totalDebitsLabel = new JLabel("0,00 MT");
@@ -171,10 +151,10 @@ public class CustomerStatementPanel extends JPanel {
         closingBalanceLabel = new JLabel("0,00 MT");
         overdueAmountLabel = new JLabel("0,00 MT");
 
-        grid.add(KpiCard.createMetricCard("Saldo Anterior", openingBalanceLabel, "Posição inicial", "fas-history", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createMetricCard("Saldo Anterior", openingBalanceLabel, "Posição inicial", "fas-history", UIHelper.ACCENT));
         grid.add(KpiCard.createMetricCard("Total Facturado (+)", totalDebitsLabel, "Débitos do período", "fas-file-invoice", UIHelper.ACCENT_BLUE));
         grid.add(KpiCard.createMetricCard("Total Liquidado (-)", totalCreditsLabel, "Créditos/Recibos", "fas-money-bill-wave", UIHelper.APPROVED_GREEN));
-        grid.add(KpiCard.createMetricCard("Saldo em Aberto", closingBalanceLabel, "Posição actual", "fas-balance-scale", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createMetricCard("Saldo em Aberto", closingBalanceLabel, "Posição actual", "fas-balance-scale", UIHelper.PENDING_YELLOW));
         grid.add(KpiCard.createMetricCard("Total Vencido em Mora", overdueAmountLabel, "Valores em atraso", "fas-exclamation-triangle", UIHelper.REJECTED_RED));
 
         return grid;

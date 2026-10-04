@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
@@ -43,6 +44,7 @@ public class CashFlowForecastService {
 
     @Transactional(readOnly = true)
     public CashFlowForecastDTO generateForecastForCompany(Long companyId, LocalDate referenceDate) {
+        PermissionGuard.requireManagerOrAdmin("consultar projeção previsional de fluxo de caixa");
         LocalDate today = referenceDate != null ? referenceDate : LocalDate.now();
 
         // 1. Posição Atual de Tesouraria

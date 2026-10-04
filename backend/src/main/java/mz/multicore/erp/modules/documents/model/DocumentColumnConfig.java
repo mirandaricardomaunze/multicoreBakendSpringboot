@@ -45,6 +45,18 @@ public class DocumentColumnConfig extends BaseEntity {
     @Column(name = "show_quantity", nullable = false)
     private boolean showQuantity = true;
 
+    /** Quantidade da linha convertida para embalagens comerciais equivalentes. */
+    @Column(name = "show_packages", nullable = false)
+    private boolean showPackages = true;
+
+    /** Quantidade da linha convertida para caixas completas ou fraccionadas. */
+    @Column(name = "show_boxes", nullable = false)
+    private boolean showBoxes = true;
+
+    /** Percentagem de uma caixa completa representada pela quantidade da linha. */
+    @Column(name = "show_box_percentage", nullable = false)
+    private boolean showBoxPercentage = true;
+
     @Column(name = "show_unit_price", nullable = false)
     private boolean showUnitPrice = true;
 

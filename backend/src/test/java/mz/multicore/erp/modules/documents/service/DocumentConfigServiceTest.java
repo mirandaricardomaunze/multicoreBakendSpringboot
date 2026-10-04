@@ -59,6 +59,9 @@ class DocumentConfigServiceTest {
         DocumentColumnsDTO cols = service.getColumns(COMPANY_ID, DocumentType.COMMERCIAL);
 
         assertTrue(cols.barcode());
+        assertTrue(cols.packages());
+        assertTrue(cols.boxes());
+        assertTrue(cols.boxPercentage());
         assertTrue(cols.subtotal());
     }
 
@@ -69,7 +72,8 @@ class DocumentConfigServiceTest {
                 .thenReturn(Optional.empty());
         when(repository.save(any(DocumentColumnConfig.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        DocumentColumnsDTO input = new DocumentColumnsDTO(false, true, true, false, true, true, true, true, null);
+        DocumentColumnsDTO input = new DocumentColumnsDTO(false, true, true, false, true, true, true,
+                true, true, true, true, null);
         DocumentColumnsDTO saved = service.save(COMPANY_ID, DocumentType.COMMERCIAL, input);
 
         assertFalse(saved.barcode());
@@ -81,7 +85,8 @@ class DocumentConfigServiceTest {
     // DC-03
     @Test
     void save_esconderTodas_lancaBusinessRule() {
-        DocumentColumnsDTO none = new DocumentColumnsDTO(false, false, false, false, false, false, false, false, null);
+        DocumentColumnsDTO none = new DocumentColumnsDTO(false, false, false, false, false, false, false,
+                false, false, false, false, null);
 
         assertThrows(BusinessRuleException.class, () -> service.save(COMPANY_ID, DocumentType.COMMERCIAL, none));
         verify(repository, never()).save(any());
@@ -118,7 +123,8 @@ class DocumentConfigServiceTest {
                 .thenReturn(Optional.empty());
 
         service.save(COMPANY_ID, DocumentType.POS_RECEIPT,
-                new DocumentColumnsDTO(false, false, true, false, true, false, false, true, "Volte sempre"));
+                new DocumentColumnsDTO(false, false, true, false, true, false, false, false,
+                        false, false, true, "Volte sempre"));
 
         // A leitura da config COMMERCIAL continua a devolver tudo visível (independente do POS).
         DocumentColumnsDTO commercial = service.getColumns(COMPANY_ID, DocumentType.COMMERCIAL);

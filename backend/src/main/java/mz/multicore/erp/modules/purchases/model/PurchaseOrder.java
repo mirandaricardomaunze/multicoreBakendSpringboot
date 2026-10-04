@@ -76,6 +76,10 @@ public class PurchaseOrder extends BaseEntity {
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseOrderLine> lines = new ArrayList<>();
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
+
     public void addLine(PurchaseOrderLine line) {
         line.setPurchaseOrder(this);
         this.lines.add(line);

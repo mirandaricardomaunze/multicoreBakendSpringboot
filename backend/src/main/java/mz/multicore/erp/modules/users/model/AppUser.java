@@ -43,6 +43,12 @@ public class AppUser extends BaseEntity {
     @Column(name = "active")
     private boolean active = true;
 
+    @Column(name = "manager_pin_hash")
+    private String managerPinHash;
+
+    @Column(name = "email")
+    private String email;
+
     /** Papel de plataforma (superadmin), ortogonal aos papéis por-empresa. Gere todas as empresas. */
     @Column(name = "platform_admin", nullable = false)
     private boolean platformAdmin = false;

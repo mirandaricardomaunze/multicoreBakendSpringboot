@@ -32,8 +32,9 @@ final class PurchaseOrdersPanel {
         if (owner.poWarehouseCombo == null) return;
         owner.poWarehouseCombo.removeAllItems();
         for (WarehouseDTO w : owner.warehousesList) owner.poWarehouseCombo.addItem(w.name());
-        owner.poProductCombo.removeAllItems();
-        for (ProductDTO p : owner.productsList) owner.poProductCombo.addItem(p.name() + " (" + p.sku() + ")");
+        if (owner.poProductCombo != null) {
+            owner.poProductCombo.setProducts(owner.productsList);
+        }
         refreshPackagingFactor();
     }
 
@@ -53,7 +54,7 @@ final class PurchaseOrdersPanel {
 
         owner.poSupplierCombo = new JComboBox<>(); UIHelper.styleComboBox(owner.poSupplierCombo);
         owner.poWarehouseCombo = new JComboBox<>(); UIHelper.styleComboBox(owner.poWarehouseCombo);
-        owner.poProductCombo = new JComboBox<>(); UIHelper.styleComboBox(owner.poProductCombo);
+        owner.poProductCombo = new mz.multicore.erp.gui.components.ProductSearchComboBox();
         poPackageEditor = new PackageQuantityEditor();
         poQtyField = poPackageEditor.totalField();
         owner.poProductCombo.addActionListener(event -> refreshPackagingFactor());
@@ -116,25 +117,22 @@ final class PurchaseOrdersPanel {
         // ---- lista de encomendas (base) ----
         JPanel listHeader = new JPanel(new BorderLayout(8, 0)); listHeader.setOpaque(false);
         listHeader.add(UIHelper.createHeading("Encomendas Registadas"), BorderLayout.WEST);
-        JPanel listActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); listActions.setOpaque(false);
-        ModernButton receiveBtn = UIHelper.createSuccessButton("Receber");
-        receiveBtn.setIcon(UIHelper.icon("fas-dolly", 14));
-        receiveBtn.addActionListener(e -> receiveSelectedPO());
-        ModernButton receivePartialBtn = UIHelper.createPrimaryButton("Receber Parcial…");
-        receivePartialBtn.setIcon(UIHelper.icon("fas-dolly-flatbed", 14));
-        receivePartialBtn.addActionListener(e -> receivePartialSelectedPO());
-        ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar");
-        cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
-        cancelBtn.addActionListener(e -> cancelSelectedPO());
+
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> { owner.poSearchField.setText(""); refresh(); });
+
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações da Encomenda");
+        actionsMenu.addAction("Receber Encomenda", UIHelper.icon("fas-dolly", 14, UIHelper.APPROVED_GREEN), this::receiveSelectedPO);
+        actionsMenu.addAction("Receber Parcial…", UIHelper.icon("fas-dolly-flatbed", 14, UIHelper.ACCENT_BLUE), this::receivePartialSelectedPO);
+        actionsMenu.addAction("Imprimir Etiquetas", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT), this::printSelectedPOReceiptLabels);
+        actionsMenu.addAction("Cancelar Encomenda", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), this::cancelSelectedPO);
+
         ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
         newOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         newOrderBtn.addActionListener(e -> openPurchaseOrderFormDialog());
-        listActions.add(receiveBtn); listActions.add(receivePartialBtn); listActions.add(cancelBtn); listActions.add(refreshBtn);
-        listActions.add(newOrderBtn);
-        listHeader.add(listActions, BorderLayout.EAST);
+
+        listHeader.add(UIHelper.actionsBar(refreshBtn, actionsMenu, newOrderBtn), BorderLayout.EAST);
 
         String[] cols = {"Nº", "Fornecedor", "Estado", "Total", "Data", "Entrega prev."};
         poListModel = new DefaultTableModel(cols, 0) {
@@ -150,21 +148,45 @@ final class PurchaseOrdersPanel {
         owner.poSearchField = TableFilter.searchField("Nº ou fornecedor…");
         JComboBox<String> poEstado = TableFilter.combo("Todos os estados",
                 "ORDERED", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED");
+        UIHelper.styleComboBox(poEstado);
+        poEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> poPeriodo = TableFilter.periodCombo();
+        UIHelper.styleComboBox(poPeriodo);
+        poPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(poListTable, owner.poSearchField,
                 java.util.List.of(new TableFilter.ColumnFilter(poEstado, 2)),
                 java.util.List.of(new TableFilter.PeriodFilter(poPeriodo, 4)));
-        JPanel poBar = TableFilter.bar(owner.poSearchField,
-                TableFilter.label("Estado:"), poEstado,
-                TableFilter.label("Data:", "fas-calendar-alt"), poPeriodo);
-        poBar.setBorder(new EmptyBorder(10, 0, 0, 0));
-        listHeader.add(poBar, BorderLayout.SOUTH);
+
+        JPanel poFilters = new JPanel(new GridBagLayout());
+        poFilters.setOpaque(false);
+        GridBagConstraints pg = new GridBagConstraints();
+        pg.gridy = 0;
+        pg.fill = GridBagConstraints.HORIZONTAL;
+        pg.insets = new Insets(0, 0, 0, 12);
+
+        pg.gridx = 0; pg.weightx = 0; poFilters.add(filterLabel("Estado"), pg);
+        pg.gridx = 1; pg.weightx = 0; poFilters.add(filterLabel("Período"), pg);
+        pg.gridx = 2; pg.weightx = 1.0; pg.insets = new Insets(0, 0, 0, 0);
+        poFilters.add(filterLabel("Pesquisa"), pg);
+
+        pg.gridy = 1;
+        pg.insets = new Insets(4, 0, 0, 12);
+        pg.gridx = 0; pg.weightx = 0; poFilters.add(poEstado, pg);
+        pg.gridx = 1; pg.weightx = 0; poFilters.add(poPeriodo, pg);
+        pg.gridx = 2; pg.weightx = 1.0; pg.insets = new Insets(4, 0, 0, 0);
+        poFilters.add(owner.poSearchField, pg);
+
+        poFilters.setBorder(new EmptyBorder(10, 0, 0, 0));
+        listHeader.add(poFilters, BorderLayout.SOUTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
         listCard.setBorder(new EmptyBorder(12, 16, 12, 16));
         listCard.add(listHeader, BorderLayout.NORTH);
         listCard.add(listScroll, BorderLayout.CENTER);
+        listCard.add(ClientTablePagination.install(poListTable), BorderLayout.SOUTH);
 
         // Lista de encomendas ocupa a tab inteira; o formulário vive no modal.
         tab.add(listCard, BorderLayout.CENTER);
@@ -199,20 +221,15 @@ final class PurchaseOrdersPanel {
 
         // Pré-selecionar produto e pré-adicionar linha se fornecido
         if (productId != null) {
-            for (int i = 0; i < owner.productsList.size(); i++) {
-                if (productId.equals(owner.productsList.get(i).id())) {
-                    owner.poProductCombo.setSelectedIndex(i);
-                    refreshPackagingFactor();
-                    if (quantity != null && quantity.signum() > 0) {
-                        poQtyField.setText(quantity.toPlainString());
-                    }
-                    if (unitPrice != null && unitPrice.signum() >= 0) {
-                        owner.poPriceField.setText(unitPrice.toPlainString());
-                    }
-                    addPoDraftLine();
-                    break;
-                }
+            owner.poProductCombo.selectProduct(productId);
+            refreshPackagingFactor();
+            if (quantity != null && quantity.signum() > 0) {
+                poQtyField.setText(quantity.toPlainString());
             }
+            if (unitPrice != null && unitPrice.signum() >= 0) {
+                owner.poPriceField.setText(unitPrice.toPlainString());
+            }
+            addPoDraftLine();
         }
 
         Window parent = SwingUtilities.getWindowAncestor(owner);
@@ -241,8 +258,8 @@ final class PurchaseOrdersPanel {
     }
 
     private void addPoDraftLine() {
-        int prodIdx = owner.poProductCombo.getSelectedIndex();
-        if (prodIdx < 0 || prodIdx >= owner.productsList.size()) {
+        ProductDTO product = owner.poProductCombo.selectedProduct();
+        if (product == null) {
             owner.showPurchaseNotice(FeedbackType.WARNING, "Produto necessário", "Seleccione um produto para adicionar.");
             return;
         }
@@ -250,7 +267,6 @@ final class PurchaseOrdersPanel {
             BigDecimal qty = poQtyField.value();
             BigDecimal price = owner.poPriceField.value();
             if (qty.signum() <= 0 || price.signum() < 0) throw new NumberFormatException();
-            ProductDTO product = owner.productsList.get(prodIdx);
             owner.poDraftLines.add(new CreatePurchaseOrderLineRequest(
                     product.id(), qty, price, null, null, null));
             owner.poLinesModel.addRow(new Object[]{
@@ -266,9 +282,9 @@ final class PurchaseOrdersPanel {
 
     private void refreshPackagingFactor() {
         if (poPackageEditor == null) return;
-        int index = owner.poProductCombo.getSelectedIndex();
-        if (index >= 0 && index < owner.productsList.size()) {
-            poPackageEditor.setUnitsPerBox(owner.productsList.get(index).unitsPerBox());
+        ProductDTO p = owner.poProductCombo != null ? owner.poProductCombo.selectedProduct() : null;
+        if (p != null) {
+            poPackageEditor.setUnitsPerBox(p.unitsPerBox());
         }
     }
 
@@ -360,65 +376,14 @@ final class PurchaseOrdersPanel {
             return;
         }
 
-        // Tabela: Produto | Encomendado | Recebido | Em falta | A receber agora (editável).
-        String[] cols = {"Produto", "Encomendado", "Recebido", "Em falta", "A receber agora"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return c == 4; }
-        };
-        List<PurchaseOrderLineDTO> lines = sel.lines();
-        for (PurchaseOrderLineDTO l : lines) {
-            BigDecimal outstanding = l.outstandingQuantity();
-            model.addRow(new Object[]{
-                    l.productName(),
-                    l.quantity().toPlainString(),
-                    l.receivedQuantity().toPlainString(),
-                    outstanding.toPlainString(),
-                    outstanding.toPlainString() // pré-preenche com o em falta
-            });
-        }
-        JTable table = new JTable(model);
-        UIHelper.styleTable(table);
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setMinimumSize(new Dimension(460, 180));
-
-        JPanel panel = new JPanel(new BorderLayout(0, 8));
-        panel.setOpaque(false);
-        panel.add(new JLabel("Encomenda " + sel.orderNumber() + " — indique a quantidade a receber agora:"),
-                BorderLayout.NORTH);
-        panel.add(scroll, BorderLayout.CENTER);
-
-        int opt = JOptionPane.showConfirmDialog(owner, panel, "Recepção Parcial",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (opt != JOptionPane.OK_OPTION) return;
-        if (table.isEditing()) table.getCellEditor().stopCellEditing();
-
-        List<ReceivePurchaseOrderRequest.ReceiveLine> toReceive = new ArrayList<>();
-        try {
-            for (int i = 0; i < lines.size(); i++) {
-                String raw = String.valueOf(model.getValueAt(i, 4)).trim().replace(',', '.');
-                if (raw.isEmpty()) continue;
-                BigDecimal qty = new BigDecimal(raw);
-                if (qty.signum() > 0) {
-                    toReceive.add(new ReceivePurchaseOrderRequest.ReceiveLine(lines.get(i).id(), qty));
-                }
-            }
-        } catch (NumberFormatException ex) {
-            owner.showPurchaseNotice(FeedbackType.ERROR, "Quantidade inválida",
-                    "Corrija as quantidades a receber e tente novamente.");
-            return;
-        }
-        if (toReceive.isEmpty()) {
-            owner.showPurchaseNotice(FeedbackType.WARNING, "Quantidade necessária",
-                    "Indique pelo menos uma quantidade a receber.");
-            return;
-        }
-        ReceivePurchaseOrderRequest request = new ReceivePurchaseOrderRequest(toReceive);
-        UIHelper.runWithProgress(owner, "A registar recepção parcial…",
-                () -> owner.purchaseApiClient.receivePartial(sel.id(), request), updated -> {
-            owner.showPurchaseSuccess("Recepção registada · " + UIHelper.humanStatus(updated.status()) + ".");
-            refresh();
-            owner.loadPurchasesHistory();
-        }, owner::showPurchaseError);
+        PurchaseOrderReceivingDialog.show(SwingUtilities.getWindowAncestor(owner), sel, request -> {
+            UIHelper.runWithProgress(owner, "A registar recepção parcial…",
+                    () -> owner.purchaseApiClient.receivePartial(sel.id(), request), updated -> {
+                owner.showPurchaseSuccess("Recepção registada · " + UIHelper.humanStatus(updated.status()) + ".");
+                refresh();
+                owner.loadPurchasesHistory();
+            }, owner::showPurchaseError);
+        });
     }
 
     private void cancelSelectedPO() {
@@ -433,4 +398,63 @@ final class PurchaseOrdersPanel {
         }, ignored -> refresh(), owner::showPurchaseError);
     }
 
+
+    void printSelectedPOReceiptLabels() {
+        PurchaseOrderDTO sel = selectedPO();
+        if (sel == null) return;
+        List<ProductDTO> products = extractReceivedProducts(sel);
+        if (products.isEmpty()) {
+            owner.showPurchaseNotice(FeedbackType.WARNING, "Sem artigos recebidos", "Esta encomenda ainda não possui quantidades recebidas para emissão de etiquetas.");
+            return;
+        }
+        ShelfLabelsDialog.show(SwingUtilities.getWindowAncestor(owner), products);
+    }
+
+    public static List<ProductDTO> extractReceivedProducts(PurchaseOrderDTO order) {
+        List<ProductDTO> result = new ArrayList<>();
+        if (order == null || order.lines() == null) return result;
+        for (PurchaseOrderLineDTO line : order.lines()) {
+            BigDecimal qty = line.receivedQuantity();
+            if (qty != null && qty.signum() > 0) {
+                String sku = line.productSku() != null && !line.productSku().isBlank()
+                        ? line.productSku() : "ART-" + line.productId();
+                String barcode = (line.productSku() != null && !line.productSku().isBlank())
+                        ? line.productSku()
+                        : (line.serialNumber() != null ? line.serialNumber() : sku);
+                BigDecimal price = line.unitPrice() != null ? line.unitPrice() : BigDecimal.ZERO;
+                result.add(new ProductDTO(
+                        line.productId(),
+                        sku,
+                        sku,
+                        barcode,
+                        line.productName(),
+                        price,
+                        price,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        1,
+                        "UNIT",
+                        true,
+                        null,
+                        "Geral",
+                        null,
+                        line.taxRate() != null ? line.taxRate() : BigDecimal.ZERO,
+                        "IVA",
+                        "Entrada por Encomenda",
+                        null,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO
+                ));
+            }
+        }
+        return result;
+    }
+
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
+    }
 }

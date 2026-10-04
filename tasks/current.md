@@ -12,11 +12,1356 @@ curl.exe -s http://localhost:8080/actuator/health   # deve retornar {"status":"U
 mvn spring-boot:run -pl backend
 
 # 3. Lançar desktop (após backend UP)
-Start-Process "C:\Users\miran\.jdks\ms-21.0.10\bin\java.exe" `
-    -ArgumentList "-jar","C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1.0.0.jar"
+Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1.0.0.jar"
 ```
 
 **Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
+
+### Eliminação Global de Botões Escuros no Sistema com SPEC e HARNESS — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador solicitou eliminar botões escuros em todos os outros lugares do sistema ("tem em outros lugares do sistema", "sim e use spec e harness").
+- **Implementação Realizada:**
+  1. **Especificação Técnica Canónica:** Criado [docs/ELIMINACAO_BOTOES_ESCUROS_SISTEMA_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/ELIMINACAO_BOTOES_ESCUROS_SISTEMA_SPEC.md).
+  2. **Documentação do Harness:** Criado [docs/ELIMINACAO_BOTOES_ESCUROS_SISTEMA_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/ELIMINACAO_BOTOES_ESCUROS_SISTEMA_HARNESS.md).
+  3. **Harness Automatizado:** Implementado [desktop/src/test/java/mz/multicore/erp/gui/BrightButtonsHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/BrightButtonsHarnessTest.java) cobrindo luminosidade, contraste, botões secundários, botões de actualização, ausência de botões escuros no POS e canonicidade de botões de cancelamento.
+  4. **Padronização no `UIHelper`:**
+     - `SECONDARY`: de Gray-600 (`#4B5563`) para `Sky-500` (`#0EA5E9`), revitalizando instantaneamente centenas de botões secundários em todos os módulos.
+     - `BUTTON_NEUTRAL`: de Slate-700 (`#334155`) para `Indigo-500` (`#6366F1`).
+     - `createRefreshButton`: fundo azul vivo com ícone e texto brancos.
+     - Modais principais ([SubscriptionRenewalDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/SubscriptionRenewalDialog.java), [ManagerPinDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/users/ManagerPinDialog.java), [GoalsTab.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/performance/GoalsTab.java), [BonusTab.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/performance/BonusTab.java), [MobilePaymentModal.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/MobilePaymentModal.java), [SystemMonitoringDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/SystemMonitoringDialog.java), [LicenseAcceptanceDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/LicenseAcceptanceDialog.java)): botões de fechar/cancelar canónicos em `createDangerButton` (`#EF4444`).
+- **Validação:**
+  - `BrightButtonsHarnessTest`: 5/5 testes aprovados.
+  - `UiPanelDecompositionTest`: 100% aprovado, todos os painéis abaixo de 1000 linhas.
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados.
+  - Reactor Maven compilação total 100% com sucesso.
+
+### Eliminação de Botões Escuros e Revitalização Visual no Ponto de Venda (POS) — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador solicitou a remoção de todos os botões escuros no módulo POS ("Nao quero botoes escuros no Pos").
+  - Identificados e substituídos todos os botões que utilizavam `BUTTON_NEUTRAL` (Slate-700 / `#334155`) e `SECONDARY` (Gray-600 / `#4B5563`) por cores vibrantes, semânticas e claras do design system (`ACCENT_BLUE`, `ACCENT_CYAN`, `ACCENT_SKY`, `APPROVED_GREEN`, `ACCENT`, `Indigo-500`).
+- **Implementação Realizada:**
+  1. [POSPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/POSPanel.java):
+     - Selector de abas (`tabVendaBtn` e `tabHistBtn`): substituído o estado inactivo escuro por `Indigo-500` vibrante (`new Color(99, 102, 241)`).
+     - Botão "Cotação": agora em `ACCENT_CYAN` (`#06B6D4`) com ícone e texto brancos.
+     - Botão "Fidelidade": agora em `ACCENT` (`#8B5CF6`) com ícone e texto brancos.
+     - Botão "Passar Turno": agora em `Teal-600` (`new Color(13, 148, 136)`) com ícone e texto brancos.
+     - Botão "Actualizar": agora em `ACCENT_SKY` (`#0EA5E9`) com ícone e texto brancos.
+     - Painel preservado rigorosamente em **986 linhas** (abaixo do teto de 1000 linhas).
+  2. [PosCatalogController.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosCatalogController.java):
+     - Botões de paginação do catálogo ("Anterior" e "Próximo") alterados de cinzento ardósia escuro para `ACCENT_BLUE` (`#3B82F6`) vibrante com chevrons brancos.
+  3. [PosShortcutBar.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosShortcutBar.java):
+     - Crachás das teclas de atalho (F1..F12, ESC): fundo alterado do cinzento escuro `BUTTON_NEUTRAL` para a cor de acento vibrante de cada acção correspondente.
+  4. [PosPaymentDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosPaymentDialog.java):
+     - Chips de método de pagamento (Numerário, M-Pesa, E-Mola, Cartão, Vale): estilo activo `ACCENT_BLUE` e inactivo `Indigo-500` com texto branco.
+     - Botões de cédulas rápidas em Meticais ("50 MT", "100 MT", "200 MT", "500 MT", "1000 MT", "2000 MT"): estilizados em verde esmeralda (`APPROVED_GREEN` `#10B981`) e "Exacto" em `ACCENT_BLUE` (`#3B82F6`).
+     - Botão "Push USSD": `ACCENT_ORANGE` (`#F97316`).
+     - Botão "Verificar Vale": `ACCENT_CYAN` (`#06B6D4`).
+  5. [PosSalesHistoryPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosSalesHistoryPanel.java):
+     - Botão "Devolver / Trocar": `ACCENT_ORANGE` (`#F97316`).
+     - Botão "Actualizar": `ACCENT_BLUE` (`#3B82F6`).
+  6. [PosScaleLiveWidget.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/pos/scale/PosScaleLiveWidget.java):
+     - Botão "Tarar": `ACCENT_SKY` (`#0EA5E9`).
+     - Botão "Simular": `ACCENT_CYAN` (`#06B6D4`).
+  7. Diálogos modais do POS:
+     - [PosImportQuotationDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosImportQuotationDialog.java): "Actualizar" em `ACCENT_BLUE` e "Cancelar" em `REJECTED_RED`.
+     - [PosBlindCloseDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/pos/PosBlindCloseDialog.java): "Cancelar / Voltar" em `REJECTED_RED`.
+     - [PosSessionHistoryDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/pos/PosSessionHistoryDialog.java): "Recarregar" em `ACCENT_BLUE` e "Fechar" em `REJECTED_RED`.
+     - [PosContingencyDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/pos/contingency/PosContingencyDialog.java): "Reimprimir Talão" em `ACCENT_CYAN` e "Fechar" em `REJECTED_RED`.
+     - [PosReturnDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosReturnDialog.java): "Copiar Código" em `ACCENT_CYAN`.
+     - [PosShortcutHelpDialog.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosShortcutHelpDialog.java): crachás em `ACCENT_BLUE`.
+- **Validação:**
+  - `UiPanelDecompositionTest` e `DesktopThinContextTest`: 100% aprovados (3/3 testes).
+  - Verificação de ocorrências residuais: 0 ocorrências de `BUTTON_NEUTRAL` e 0 de `createSecondaryButton` em todas as classes POS.
+  - Desktop reempacotado e reiniciado interativamente via `schtasks` (PID 20796).
+
+### Catálogo Multi-Armazém Dinâmico no Ponto de Venda (POS) — Backend e Desktop — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - No Ponto de Venda (POS), ao seleccionar ou alternar o armazém na barra superior (`warehouseCombo`), o catálogo de produtos e os leitores de código de barras devem reflectir imediatamente a disponibilidade e o saldo de stock específico do armazém seleccionado em tempo real.
+- **Implementação Realizada:**
+  1. **Contratos (`contracts`):**
+     - [POSCatalogItemDTO.java](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/comercial/dto/POSCatalogItemDTO.java): adicionado campo `BigDecimal stockQuantity` com construtor sobrecarregado retrocompatível de 2 parâmetros (`this(product, sellable, null)`).
+  2. **Backend (`backend`):**
+     - [InventoryService.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/modules/inventory/service/InventoryService.java): adicionados `getInStockProductIdsForSale(companyId, warehouseId)` e `getStockQuantitiesForSale(companyId, warehouseId)`, filtrando armazéns activos com `salesAllowed = true`.
+     - [ComercialService.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java): `getPOSCatalogPage(query, availableOnly, warehouseId, page, size)` calcula status vendável (`sellable`) e saldo de stock por armazém; `findPOSCatalogItemByBarcode(barcode, warehouseId)` resolve artigo por armazém.
+     - [ComercialController.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/modules/comercial/controller/ComercialController.java): expõe parâmetro opcional `@RequestParam(required = false) Long warehouseId` nas rotas `/products/pos-catalog/page` e `/products/pos-catalog/by-barcode`.
+  3. **Desktop (`desktop`):**
+     - [ComercialApiClient.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/desktop/client/ComercialApiClient.java): adicionado suporte a `warehouseId` nos pedidos HTTP do catálogo e leitor de código de barras.
+     - [POSPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/POSPanel.java): listener ligado a `warehouseCombo` com protecção contra disparos espúrios (`suppressWarehouseEvents`), cache concorrente de saldo de stock por produto (`productStockQuantities`), e métodos auxiliares `getSelectedWarehouseId()`, `getSelectedWarehouseName()`, `getProductStock(productId)`. Mantido estritamente abaixo do limite de 1000 linhas (984 linhas).
+     - [PosCatalogController.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosCatalogController.java): recarrega catálogo automaticamente ao mudar armazém, renderiza crachá `[Qtd] disp.` em verde semântico (`APPROVED_GREEN`) ou `ESGOTADO` em vermelho (`REJECTED_RED`), e inclui nome do armazém e saldo detalhado no tooltip.
+     - [PosBarcodeActions.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosBarcodeActions.java): valida código de barras e artigos pesados em conformidade com o armazém seleccionado.
+- **Validação e Testes:**
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados (isolamento Maven `contracts` / `backend` / `desktop`).
+  - `ComercialServiceTest` e `ComercialControllerIntegrationTest`: 55/55 testes aprovados.
+  - `DesktopThinContextTest`: 2/2 testes aprovados (arranque limpo de contexto e `MainFrame`).
+  - `UiPanelDecompositionTest`: 100% aprovado (painéis prioritários mantidos `<= 1000` linhas).
+- **Lançamento:**
+  - Backend empacotado e activo em `http://localhost:8080/actuator/health` (`UP`).
+  - Desktop interactivo empacotado e em execução na sessão Windows.
+
+### Unificação DRY de Formatação (Data e Moeda) e Auditoria de Design System — 2026-10-03 — **concluída com sucesso**
+
+- **Diagnóstico e Auditoria Geral:**
+  1. Varredura completa em 203 ficheiros do módulo `desktop` (97 ecrãs e diálogos).
+  2. Confirmada 100% de conformidade de design em contenção de tabelas com `ModernPanel(16)`, estilização canónica de abas `JTabbedPane` com cores semânticas vibrantes e 0 cores cruas (`new Color`) ou emojis Unicode em código de negócio.
+  3. Identificada duplicação de `DecimalFormat` e `DateTimeFormatter` em dezenas de ficheiros da UI.
+- **Implementação Realizada:**
+  1. Centralização canónica no [UIHelper.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/UIHelper.java):
+     - `UIHelper.formatMzn(BigDecimal)` e `UIHelper.formatMzn(Number)` para moedas (ex.: "1 250,00 MT").
+     - `UIHelper.formatQty(BigDecimal)` para quantidades numéricas.
+     - `UIHelper.DATE_FMT`, `UIHelper.DATETIME_FMT`, `UIHelper.TIME_FMT`, `UIHelper.formatDate(...)` e `UIHelper.formatDateTime(...)`.
+  2. Refatoração DRY e eliminação de blocos estáticos redundantes em:
+     - [StockWastePanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/StockWastePanel.java)
+     - [CreditRiskPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/CreditRiskPanel.java)
+     - [ForensicAuditPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/ForensicAuditPanel.java)
+     - [NotificationFeed.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/NotificationFeed.java)
+     - [BonusTab.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/performance/BonusTab.java), [GoalsTab.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/performance/GoalsTab.java), [ProgressTab.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/performance/ProgressTab.java), [RankingTab.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/performance/RankingTab.java)
+- **Validação:**
+  - 26 testes unitários e de integração desktop executados e aprovados com 100% de sucesso (`DesktopThinContextTest`, `FinalUiUniformityHarnessTest`, `TableCardContainmentAuditTest`, `StockWastePanelHarnessTest`, `CreditRiskPanelHarnessTest`, `ForensicAuditPanelHarnessTest`).
+  - Aplicação recompilada e reiniciada na sessão Windows (PID 7804).
+
+### Padronização Visual e Ergonómica da Aba de Alertas de Stock (`StockAlertsPanel`) — 2026-10-03 — **concluída com sucesso**
+
+- **Diagnóstico do Problema:**
+  1. Havia um cabeçalho externo e botão "Actualizar" solto fora do card (`topStack`), flutuando no vazio antes das abas.
+  2. Os inputs de pesquisa e filtro de estado usavam `TableFilter.bar` sem alinhamento com rótulos superiores e sem ocupar a largura (`weightx = 1.0`), deixando campos estreitos e dissonantes do design system das outras tabelas.
+  3. Faltava paginação `ClientTablePagination` no rodapé das tabelas de alertas.
+- **Implementação Realizada:**
+  1. Eliminação total do `topStack` solto e alinhamento estrito dentro do card `ModernPanel(16)`.
+  2. Grade de filtros com `GridBagLayout` idêntica a `Níveis de Stock` e `Lotes & Validades`:
+     - Rótulos superiores padronizados com `filterLabel("Estado do Lote")` e `filterLabel("Pesquisa")`.
+     - Campo de busca `SearchField` profissional (altura 38px, cantos arredondados, lupa vetorial integrada, ocupando `weightx = 1.0`).
+     - `JComboBox` de estado estilizado com `UIHelper.styleComboBox` (largura 220px).
+  3. Botão "Actualizar" posicionado no canto superior direito de cada card através de `UIHelper.tableCardTop(...)`.
+  4. Resumos estatísticos dinâmicos (`alertsSummary` e `outSummary`) integrados abaixo da faixa de filtros dentro do card, com cores semânticas vibrantes (`APPROVED_GREEN`, `REJECTED_RED`, `PENDING_YELLOW`).
+  5. Paginação canónica instalada no rodapé de ambas as tabelas (`ClientTablePagination.install(...)`).
+- **Validação de Testes:**
+  - `DesktopThinContextTest` (2/2 passing)
+  - `TableActionPlacementHarnessTest` (6/6 passing)
+  - `TableCardContainmentAuditTest` (2/2 passing)
+  - `MultiModuleArchitectureHarnessTest` (6/6 passing)
+- **Execução:** Desktop reempacotado e reiniciado interativamente via `schtasks` (PID 3372).
+
+### SPEC-CONC-001: Controlo Estrito de Concorrência e Bloqueio Otimista Transversal — 2026-10-03 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Proteção de integridade contra sobreposição silenciosa de dados (*Lost Updates*) em ambientes multi-operador e multi-terminal:
+  1. **Bloqueio Otimista em Entidades Mestras (`@Version`):**
+     - Migration Flyway `V80__optimistic_locking_master_data.sql` adicionando `version BIGINT NOT NULL DEFAULT 0` em `clients`, `products` e `suppliers`.
+     - Entidades [Client.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/modules/comercial/model/Client.java), [Product.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/modules/comercial/model/Product.java) e [Supplier.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/modules/purchases/model/Supplier.java) atualizadas com anotação `@Version` e campo `Long version`.
+  2. **Interceção Centralizada no GlobalExceptionHandler (`HTTP 409 Conflict`):**
+     - Mapeamento específico de `ObjectOptimisticLockingFailureException` e `OptimisticLockException` no [GlobalExceptionHandler.java](file:///c:/Users/miran/Desktop/manager/backend/src/main/java/mz/multicore/erp/architecture/exception/GlobalExceptionHandler.java).
+     - Devolução de `HTTP 409 Conflict` com mensagem clara em português de Moçambique: *"Este registo foi alterado ou aprovado concorrentemente por outro utilizador. Por favor, actualize os dados antes de gravar."*, eliminando quedas para erro genérico 500.
+  3. **Compatibilidade Transversal de Contratos DTO (`contracts`):**
+     - [ClientDTO.java](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/comercial/dto/ClientDTO.java), [ProductDTO.java](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/comercial/dto/ProductDTO.java) e [SupplierDTO.java](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/purchases/dto/SupplierDTO.java) atualizados com campo `version` preservando 100% dos construtores sobrecarregados anteriores para retrocompatibilidade.
+- **SPEC:** [docs/OPTIMISTIC_LOCKING_CONCURRENCY_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/OPTIMISTIC_LOCKING_CONCURRENCY_SPEC.md).
+- **HARNESS:** [docs/OPTIMISTIC_LOCKING_CONCURRENCY_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/OPTIMISTIC_LOCKING_CONCURRENCY_HARNESS.md).
+- **Testes Automatizados:** [OptimisticLockingConcurrencyHarnessTest.java](file:///c:/Users/miran/Desktop/manager/backend/src/test/java/mz/multicore/erp/architecture/concurrency/OptimisticLockingConcurrencyHarnessTest.java) (5/5 passing).
+- **Validação Global:** 24 testes executados e aprovados sem falhas (`MultiModuleArchitectureHarnessTest`, `RateLimitingAndBruteForceHarnessTest`, `AuditTrailCriticalEventsHarnessTest`, `OptimisticLockingConcurrencyHarnessTest`, `DesktopThinContextTest`).
+- **Execução e Lançamento:** Aplicação reempacotada com sucesso e inicializada: Backend UP em `http://localhost:8080/actuator/health` e Desktop interativo ativo na sessão Windows (PID 18500).
+
+### SPEC-AUD-001: Trilha de Auditoria Centralizada e Imutável de Eventos Críticos — 2026-10-03 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Implementação da centralização, imutabilidade e enriquecimento forense da trilha de auditoria para operações de alto impacto financeiro, controlo de stock e segurança de utilizadores:
+  1. **Enriquecimento Forense de Rede (`AuditLog` & `ipAddress`):**
+     - Migration Flyway `V79__audit_logs_ip_address.sql` adicionando a coluna `ip_address VARCHAR(50)` na tabela `audit_logs`.
+     - Entidade `AuditLog` atualizada com mapeamento JPA `@Column(name = "ip_address", length = 50)`.
+     - `AuditLogDTO` atualizado em `contracts` com novo campo `ipAddress` e construtor sobrecarregado retrocompatível de 4 parâmetros.
+     - `AuditLogService` enriquecido com suporte a sobrecargas para registo de IP do cliente em `logEvent` e `logCurrent`.
+     - `AuditController` atualizado para expor `ipAddress` no DTO de leitura.
+  2. **Auditoria Integral de Inventário e Quebras de Stock (`StockWasteService`):**
+     - Registo de Quebras: evento `STOCK_WASTE_REGISTER` gravado contendo produto, armazém, quantidade, custo financeiro total em MZN e motivo.
+     - Aprovação e Rejeição: eventos `STOCK_WASTE_APPROVE` e `STOCK_WASTE_REJECT` gravados contendo ID do registo, gestor aprovador e notas justificativas.
+  3. **Auditoria de Limites de Crédito Comercial (`ComercialService`):**
+     - Detecção automática de mutações em `updateClient`: evento `CLIENT_CREDIT_LIMIT_CHANGE` gravado com nome do cliente, ID, valor anterior e novo limite em MT.
+  4. **Auditoria de Segurança e Privilégios de Utilizadores (`AppUserService`):**
+     - Criação de utilizadores: `USER_CREATE` com perfil atribuído.
+     - Alteração de papéis na empresa: `USER_ROLE_CHANGE` com registo do perfil anterior e novo perfil.
+     - Definição/alteração de PIN de supervisor: `USER_PIN_SET`.
+     - Reposição forçada de credenciais: `USER_PASSWORD_RESET`.
+     - Ativação/desativação de contas: `USER_STATUS_CHANGE`.
+  5. **Anulação de Documentos Fiscais e Comerciais:**
+     - `INVOICE_CANCEL`, `RECEIPT_CANCEL`, `ORDER_CANCEL`, `QUOTATION_CANCEL`, `DELIVERY_GUIDE_CANCEL`, `CREDIT_NOTE_CANCEL`, `DEBIT_NOTE_CANCEL` registados com numeração e motivo obrigatório.
+- **SPEC:** [docs/AUDIT_TRAIL_CRITICAL_EVENTS_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/AUDIT_TRAIL_CRITICAL_EVENTS_SPEC.md).
+- **HARNESS:** [docs/AUDIT_TRAIL_CRITICAL_EVENTS_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/AUDIT_TRAIL_CRITICAL_EVENTS_HARNESS.md).
+- **Testes Automatizados:** [AuditTrailCriticalEventsHarnessTest.java](file:///c:/Users/miran/Desktop/manager/backend/src/test/java/mz/multicore/erp/modules/audit/AuditTrailCriticalEventsHarnessTest.java) (6/6 passing).
+- **Validação Global:** 21 testes aprovados sem falhas (`MultiModuleArchitectureHarnessTest`, `RateLimitingAndBruteForceHarnessTest`, `AuditTrailCriticalEventsHarnessTest`, `DesktopThinContextTest`).
+- **Execução e Lançamento:** Aplicação reempacotada com sucesso e inicializada: Backend UP em `http://localhost:8080/actuator/health` e Desktop interativo ativo na sessão Windows (PID 10572).
+
+### SPEC-SEC-RL-001: Rate Limiting e Proteção Ativa contra Força Bruta (Login & PIN de Gerente) — 2026-10-03 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Implementação de proteção contra força bruta e adivinhação de credenciais baseada em SOLID/DRY e Defesa em Profundidade em duas frentes críticas:
+  1. **Login de Utilizador e IP (`LoginRateLimiter`):**
+     - Nível Utilizador: limite estrito de 5 falhas consecutivas, com bloqueio temporário de 15 minutos e mensagem de aviso com tempo restante em minutos.
+     - Nível IP de Origem: proteção contra ataques de força bruta distribuída e *credential stuffing* (varredura de múltiplos utilizadores a partir de um mesmo IP, bloqueado após 30 falhas).
+     - Reset automático e imediato de contadores ao autenticar com sucesso.
+  2. **Verificação de PIN de Gerente/Supervisor (`ManagerPinRateLimiter`):**
+     - O PIN de autorização de supervisor (4 dígitos numéricos, 10.000 combinações possíveis) passa a ser protegido contra adivinhação automatizada.
+     - Limite de 3 tentativas falhadas por empresa/origem -> bloqueio de 5 minutos com resposta estruturada informando o tempo restante.
+     - Reset imediato do contador ao submeter o PIN correto de um gestor/administrador ativo.
+     - Isolamento estrito entre diferentes tenants e IPs.
+- **SPEC:** [docs/RATE_LIMITING_AND_BRUTE_FORCE_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/RATE_LIMITING_AND_BRUTE_FORCE_SPEC.md).
+- **HARNESS:** [docs/RATE_LIMITING_AND_BRUTE_FORCE_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/RATE_LIMITING_AND_BRUTE_FORCE_HARNESS.md).
+- **Testes Automatizados:** [RateLimitingAndBruteForceHarnessTest.java](file:///c:/Users/miran/Desktop/manager/backend/src/test/java/mz/multicore/erp/architecture/security/RateLimitingAndBruteForceHarnessTest.java) (7/7 passing).
+- **Validação Global:** 16 testes aprovados no backend (`RateLimitingAndBruteForceHarnessTest`, `InputSecurityAndBackendValidationHarnessTest`, `MultiModuleArchitectureHarnessTest`, `SecurityPermissionGuardCoverageTest`) e 2 testes desktop (`DesktopThinContextTest`).
+- **Execução e Lançamento:** Aplicação reempacotada com sucesso e inicializada: Backend UP em `http://localhost:8080/actuator/health` e Desktop interativo ativo na sessão Windows (PID 14960).
+
+### SPEC-SEC-VAL-001: Segurança nos Inputs e Validação Global no Backend — 2026-10-03 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Implementação do padrão de defesa em profundidade (*Defense-in-Depth*) para garantir que nenhum input de utilizador é considerado confiável pelo backend, com validação declarativa e sanitização activa em todas as fronteiras da aplicação:
+  1. **Anotações Canónicas de Validação (`contracts`):**
+     - `@ValidNuit`: Validação de 9 dígitos com suporte a flag opcional de verificação estrita do algoritmo Módulo 11 da Autoridade Tributária e código de Consumidor Final (`999999999`).
+     - `@ValidPhoneMZ`: Validação de operadoras móveis nacionais (82/83, 84/85, 86/87), linhas fixas (21-28) e prefixo internacional opcional `+258`.
+     - `@ValidBiMZ`: Validação de Bilhete de Identidade moçambicano (12 dígitos numéricos + 1 letra maiúscula de controlo).
+  2. **Higienização Activa (*Sanitization*) contra Ameaças (`InputSanitizer`):**
+     - Remoção de bytes de controlo nulos (`\0`) e caracteres ASCII de controlo ocultos (`\x00-\x1F`), preservando inteiramente acentos moçambicanos e caracteres UTF-8.
+     - Prevenção de Path Traversal e injeção de cabeçalhos em nomes de ficheiros exportados (`sanitizeFileName`).
+     - Neutralização de injeções de script/XSS em textos livres e observações (`sanitizeNotes`).
+     - Truncagem e normalização de queries de pesquisa (`sanitizeSearchQuery`).
+  3. **Endurecimento de Respostas de Excepção (`GlobalExceptionHandler`):**
+     - Mapeamento de `MethodArgumentNotValidException` e `ConstraintViolationException` para `HTTP 400 Bad Request` com lista descritiva de erros em português.
+     - Interceptação de `DataIntegrityViolationException` devolvendo erro amigável sem expor tabelas, constraints ou internals de SQL/JDBC para o cliente HTTP.
+     - Suporte a `IllegalArgumentException` sob `400 Bad Request`.
+  4. **DTOs e Controladores Auditados e Protegidos com `@Valid` e Sanitização Activa:**
+     - `CancelReasonRequest`, `CreateDeliveryGuideRequest`, `ConvertOrderToTransferRequest`, `CreateStockTransferRequest`, `UpdateStockTransferRequest`, `CreateStockWasteRequest`, `ApproveWasteRequest`, `CloseSessionRequest`, `ShiftHandoverRequest`, `CreatePurchaseOrderRequest`, `UpdatePurchaseOrderRequest`, `CreateQuotationRequest`, `UpdateQuotationRequest`.
+     - `SaveClientRequest`, `CreateSupplierRequest`, `CreateCompanyRequest`, `CreateWarehouseRequest`, `UpdateInventoryItemCountRequest` e `UserSecurityRequestsDTOs`.
+     - `UserController`, `StockWasteController`, `InventoryPhysicalCountingController`, `PrintController` e `ComercialController`.
+- **SPEC:** [docs/SEGURANCA_INPUTS_E_VALIDACAO_BACKEND_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/SEGURANCA_INPUTS_E_VALIDACAO_BACKEND_SPEC.md).
+- **HARNESS:** [docs/SEGURANCA_INPUTS_E_VALIDACAO_BACKEND_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/SEGURANCA_INPUTS_E_VALIDACAO_BACKEND_HARNESS.md).
+- **Testes Automatizados:** [InputSecurityAndBackendValidationHarnessTest.java](file:///c:/Users/miran/Desktop/manager/backend/src/test/java/mz/multicore/erp/architecture/security/InputSecurityAndBackendValidationHarnessTest.java) (7/7 passing).
+- **Validação Global:** 15 testes aprovados (7 `InputSecurityAndBackendValidationHarnessTest`, 6 `MultiModuleArchitectureHarnessTest`, 2 `DesktopThinContextTest`), com conformidade total de fronteiras Maven.
+- **Execução e Lançamento:** Aplicação reempacotada (`mvn clean package`) e inicializada: Backend UP em `http://localhost:8080/actuator/health` e Desktop interativo ativo na sessão Windows (PID 12084).
+
+### SPEC-FAM-001: Fecho Automático e Manual de Mensagens de Feedback (Inline & Toast) — 2026-10-02 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Resposta ao requisito ergonómico de mensagens de feedback que aparecem, fecham sozinhas após tempo suficiente e podem ser fechadas a qualquer momento pelo operador:
+  1. **Fecho Automático Temporizado (`InlineFeedbackPanel`):**
+     - Temporizador `autoCloseTimer` integrado com calibragem por tipo semântico: `SUCCESS` (5s), `INFO` (5s), `WARNING` (7s), `ERROR` (8s).
+     - Fecho limpo via EDT que actualiza o layout do ecrã pai (`revalidate()`, `repaint()`).
+  2. **Pausa Inteligente ao Passar o Rato (`Hover Pause`):**
+     - Implementado em [InlineFeedbackPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/InlineFeedbackPanel.java) e [ToastManager.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/ToastManager.java) através de `installHoverListeners` e `attachHoverRecursive`.
+     - O temporizador é interrompido quando o rato está sobre a mensagem (`mouseEntered`) e reiniciado quando sai (`mouseExited`), garantindo que o operador nunca perde o conteúdo enquanto está a ler ou a interagir.
+  3. **Fecho Manual Instantâneo:**
+     - Botão de fechar com ícone `fas-times` acessível, cursor pointer e tooltip `"Fechar mensagem"`, cancelando temporizadores e escondendo o painel imediatamente.
+  4. **Modo Persistente para Avisos Críticos:**
+     - Suporte a sobrecargas `show(..., int autoCloseDurationMs)` permitindo passar `0` ou invocar `setAutoCloseEnabled(false)`.
+- **SPEC:** [docs/FEEDBACK_AUTO_DISMISS_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/FEEDBACK_AUTO_DISMISS_SPEC.md).
+- **HARNESS:** [FeedbackAutoCloseAndManualDismissHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/components/FeedbackAutoCloseAndManualDismissHarnessTest.java) (6/6 passing).
+- **Validação Global:** 14 testes executados (6 `FeedbackAutoCloseAndManualDismissHarnessTest`, 6 `DataValidationAndRegexHarnessTest`, 2 `DesktopThinContextTest`) com 100% de aprovação.
+- **Execução:** Desktop reempacotado e relançado na sessão do utilizador (PID 20844).
+
+### SPEC-DVR-001: Validação de Dados, Regex Canónico e Filtros Reactivos (Frontend & Backend) — 2026-10-02 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Criar uma fonte única de verdade (Single Source of Truth) para validação de dados em Moçambique no módulo `contracts`, filtragem reactiva de digitação no `desktop` e validação de regras de negócio no `backend`:
+  1. **Validação Canónica (`contracts`):** [ValidationPatterns.java](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/architecture/validation/ValidationPatterns.java) com regex e algoritmos oficiais:
+     - `EMAIL_REGEX` / `isValidEmail`: Validação robusta de sintaxe de email.
+     - `NUIT_REGEX` / `isValidNuit`: Exatamente 9 dígitos numéricos, algoritmo de dígito de controlo Módulo 11 da AT e código de Consumidor Final `999999999`.
+     - `PHONE_MZ_REGEX` / `isValidPhone`: Vodacom (84/85), Tmcel (82/83), Movitel (86/87), linhas fixas (21-28) e prefixo internacional `+258`.
+     - `BI_MZ_REGEX` / `isValidBi`: Bilhete de Identidade moçambicano (12 dígitos + 1 letra maiúscula).
+     - `BARCODE_REGEX` e `SKU_REGEX`: Códigos de barras e identificadores limpos de artigo.
+     - `isValidPositiveAmount`, `isValidNonNegativeAmount`, `isValidPercentage` e `cleanPhoneMozambique`.
+  2. **Filtros Reactivos no Desktop (`UIHelper`):**
+     - `UIHelper.installDigitsOnlyFilter(comp, maxLength)`: Intercepta e bloqueia caracteres não numéricos em tempo real.
+     - `UIHelper.installUppercaseFilter(comp, maxLength)`: Converte letras minúsculas para maiúsculas automaticamente em campos alfanuméricos.
+  3. **Validação Declarativa nos Formulários (`FormField`):**
+     - Novos métodos de validação com feedback visual inline em Moçambicano: `validateEmail()`, `validateNuit()`, `validatePhone()`, `validateMinLength()`, `validateRegex()`.
+     - Foco automático e preservação dos dados preenchidos no diálogo em caso de erro.
+  4. **Formulários Actualizados:**
+     - [ClientesPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/ClientesPanel.java): Nome, NUIT (com filtro de 9 dígitos), Email.
+     - [PurchaseSuppliersPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PurchaseSuppliersPanel.java): Nome, NUIT (com filtro de 9 dígitos), Telefone, Email.
+  5. **Backend (`backend`):**
+     - `TaxIdValidator.java` actualizado para delegar na regra canónica `ValidationPatterns.NUIT_PATTERN`.
+- **SPEC:** [docs/DATA_VALIDATION_AND_REGEX_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/DATA_VALIDATION_AND_REGEX_SPEC.md).
+- **HARNESS:** [DataValidationAndRegexHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/DataValidationAndRegexHarnessTest.java) (6/6 passing).
+- **Validação Global:** 14 testes executados (6 `DataValidationAndRegexHarnessTest`, 2 `DesktopThinContextTest`, 6 `MultiModuleArchitectureHarnessTest`) com 100% de sucesso.
+- **Execução:** Desktop reempacotado e reiniciado interativamente via `schtasks` (PID 22964).
+
+### SPEC-ACI-001: Intercepção Activa de Crédito e Risco na Faturação e POS — 2026-10-02 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Prevenção proactiva de risco de crédito no ponto de venda e na emissão de faturas:
+  1. **POS (`POSPanel`):** Vendas a crédito (`fiado`) exigem obrigatoriamente a seleção de cliente cadastrado e bloqueiam clientes com limite 0,00 MT (pronto pagamento exclusivo) antes de invocar a finalização.
+  2. **Faturação (`ComercialPanel`):** Pre-flight check no salvamento de rascunhos de faturas através de `CustomerCreditValidator.validateCreditPreFlight`, informando o operador sem quebrar o estado da grelha.
+  3. **Motor Canónico:** [CustomerCreditValidator.java](desktop/src/main/java/mz/multicore/erp/gui/components/CustomerCreditValidator.java) com validação de regras de limite, dívida e clientes flexíveis.
+- **SPEC:** [docs/ACTIVE_CREDIT_INTERCEPTION_SPEC.md](docs/ACTIVE_CREDIT_INTERCEPTION_SPEC.md).
+- **HARNESS:** [ActiveCreditInterceptionHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/ActiveCreditInterceptionHarnessTest.java) (2/2 passing).
+- **Validação Global:** 12/12 testes desktop aprovados sem falhas (`ActiveCreditInterceptionHarnessTest`, `DesktopThinContextTest`, etc.).
+- **Execução:** Reempacotado e reiniciado interativamente via `schtasks` (PID 13116).
+
+### Pacote de 4 Melhorias Operacionais: Navegação PHC, Validação NUIT/Crédito, Totais no Rodapé e Etiquetas na Recepção — 2026-10-02 — **concluída com SPEC e HARNESS**
+
+- **1. Navegação Fluida por Teclado nas Grelhas PHC (SPEC-GCN-001):**
+  - Navegação tipo folha de cálculo com `ENTER` e `TAB` para a próxima coluna editável, `Shift+TAB` para a anterior, e adição automática de nova linha ao premir `ENTER`/`TAB` na última célula editável da última linha.
+  - SPEC: [docs/GRID_CELL_NAVIGATION_SPEC.md](docs/GRID_CELL_NAVIGATION_SPEC.md).
+  - IMPLEMENTAÇÃO: [UIHelper.java](desktop/src/main/java/mz/multicore/erp/gui/components/UIHelper.java) (`installCellNavigationKeys`, `findNextEditableColumn`, `findPrevEditableColumn`).
+  - HARNESS: [GridCellNavigationHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/GridCellNavigationHarnessTest.java) (2/2 passing).
+
+- **2. Validação de NUIT Moçambicano e Limite de Crédito (SPEC-NCL-001):**
+  - Algoritmo Módulo 11 da Autoridade Tributária de Moçambique, suporte a consumidor final `999999999`, e validador de crédito [CustomerCreditValidator.java](desktop/src/main/java/mz/multicore/erp/gui/components/CustomerCreditValidator.java) com bloqueio por faturas vencidas e saldo excedido.
+  - SPEC: [docs/NUIT_AND_CREDIT_LIMIT_VALIDATION_SPEC.md](docs/NUIT_AND_CREDIT_LIMIT_VALIDATION_SPEC.md).
+  - IMPLEMENTAÇÃO: [NuitValidator.java](desktop/src/main/java/mz/multicore/erp/gui/components/NuitValidator.java), [CustomerCreditValidator.java](desktop/src/main/java/mz/multicore/erp/gui/components/CustomerCreditValidator.java), [ClientesPanel.java](desktop/src/main/java/mz/multicore/erp/gui/ClientesPanel.java).
+  - HARNESS: [NuitAndCreditLimitValidationHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/NuitAndCreditLimitValidationHarnessTest.java) (2/2 passing).
+
+- **3. Barra de Totais e Estatísticas Instantâneas no Rodapé das Tabelas (SPEC-DTT-001):**
+  - Rodapé dinâmico (`ClientTablePagination`) reagindo em tempo real à seleção de linhas (`ListSelectionListener`), calculando somatório de valores monetários a 2 casas decimais (`[Total: X.XX MT]`) e quantidades (`[Qtd: X.XX]`).
+  - SPEC: [docs/DYNAMIC_TABLE_TOTALS_FOOTER_SPEC.md](docs/DYNAMIC_TABLE_TOTALS_FOOTER_SPEC.md).
+  - IMPLEMENTAÇÃO: [ClientTablePagination.java](desktop/src/main/java/mz/multicore/erp/gui/components/ClientTablePagination.java).
+  - HARNESS: [DynamicTableTotalsFooterHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/DynamicTableTotalsFooterHarnessTest.java) (1/1 passing).
+
+- **4. Impressão Directa de Etiquetas na Recepção de Mercadorias (SPEC-PRL-001):**
+  - Emissão imediata de etiquetas com códigos de barras e preços a partir das quantidades conferidas em bom estado no assistente [PurchaseOrderReceivingDialog.java](desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrderReceivingDialog.java), além de opção no menu de gestão de [PurchaseOrdersPanel.java](desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrdersPanel.java).
+  - SPEC: [docs/PURCHASE_RECEIVING_LABEL_PRINTING_SPEC.md](docs/PURCHASE_RECEIVING_LABEL_PRINTING_SPEC.md).
+  - IMPLEMENTAÇÃO: [PurchaseOrderReceivingDialog.java](desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrderReceivingDialog.java), [PurchaseOrdersPanel.java](desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrdersPanel.java).
+  - HARNESS: [PurchaseReceivingLabelPrintingHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/PurchaseReceivingLabelPrintingHarnessTest.java) (3/3 passing).
+
+- **Testes Globais Executados:** 16 testes passando (10 desktop + 6 backend) com 0 falhas e 0 erros.
+
+### Pacote de Modernização Operacional: Conversão Documental, Omnibar, Recepção de Compras e Caixa POS — 2026-10-02 — **concluída com SPEC e HARNESS**
+
+- **1. Conversão Directa entre Documentos (SPEC-DCW-001):**
+  - Rastreabilidade e conversão com 1 clique: Cotação ➔ Encomenda ➔ Guia de Remessa / Factura.
+  - SPEC: [docs/DOCUMENT_CONVERSION_WORKFLOW_SPEC.md](docs/DOCUMENT_CONVERSION_WORKFLOW_SPEC.md).
+  - HARNESS: [DocumentConversionWorkflowHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/DocumentConversionWorkflowHarnessTest.java) (3/3 passing).
+- **2. Barra de Pesquisa Global Rápida — Omnibar (SPEC-GOB-001):**
+  - Atalho global `Ctrl+K` em toda a aplicação com índice de módulos, acções operacionais e comandos rápidos.
+  - SPEC: [docs/GLOBAL_OMNIBAR_SPEC.md](docs/GLOBAL_OMNIBAR_SPEC.md).
+  - HARNESS: [GlobalOmnibarHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/GlobalOmnibarHarnessTest.java) (2/2 passing).
+- **4. Recepção e Conferência de Mercadorias (SPEC-POR-001):**
+  - Assistente modal [PurchaseOrderReceivingDialog.java](desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrderReceivingDialog.java) com segregação de mercadoria em bom estado, avarias e faltas definitivas, formatado a 2 casas decimais.
+  - SPEC: [docs/PURCHASE_ORDER_RECEIVING_SPEC.md](docs/PURCHASE_ORDER_RECEIVING_SPEC.md).
+  - HARNESS: [PurchaseOrderReceivingHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/PurchaseOrderReceivingHarnessTest.java) (2/2 passing).
+- **5. Gestão de Sangrias, Suprimentos e Validação de Caixa (SPEC-PCM-001):**
+  - Assistente modal canónico [PosCashMovementDialog.java](desktop/src/main/java/mz/multicore/erp/gui/pos/PosCashMovementDialog.java) com `MoneyField`, motivo obrigatório e auditoria em tempo real.
+  - SPEC: [docs/POS_CASH_MOVEMENTS_SPEC.md](docs/POS_CASH_MOVEMENTS_SPEC.md).
+  - HARNESS: [PosCashMovementsHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/pos/PosCashMovementsHarnessTest.java) (2/2 passing).
+- **Testes Globais:** 14 testes desktop aprovados sem falhas + `MultiModuleArchitectureHarnessTest` (6/6 passing).
+- **Execução:** Reempacotado e reiniciado interativamente via `schtasks` (PID 24408).
+
+### SPEC-DTI-001: Padrão Universal de Interacção com Tabelas (Duplo Clique e Atalhos) — 2026-10-02 — **concluída com SPEC e HARNESS**
+
+- **Decisão e Princípio:** Garantir ergonomia ágil e velocidade de balcão uniforme em 100% dos documentos do ERP:
+  1. **Duplo Clique em Listagens:** Duplo clique abre directamente o editor / consulta do documento seleccionado:
+     - `ordersTable` (Encomendas de Cliente): `owner.openSelectedOrderEditor()`
+     - `invoicesTable` (Faturas Recentes): `owner.printSelectedInvoice()`
+     - `table` (Cotações): `this.openSelectedEditor()`
+     - `poListTable` (Encomendas a Fornecedor): `this.openSelectedEditor()`
+     - `transferTable` (Transferências de Stock): `transferActions.openSelectedEditor()`
+  2. **Atalhos Universais nas Grelhas de Itens (`UIHelper.installDocumentGridShortcuts`):**
+     - `INSERT` / `Ctrl+ENTER`: Adicionar nova linha em branco na grelha.
+     - `DELETE` / `Ctrl+DELETE`: Remover linha seleccionada na grelha (protegido quando a célula está em modo de edição de texto).
+     - `Ctrl+S` / `F10`: Gravar / submeter documento directamente do teclado.
+- **SPEC:** [docs/DOCUMENT_TABLE_INTERACTION_SPEC.md](docs/DOCUMENT_TABLE_INTERACTION_SPEC.md).
+- **HARNESS:** [DocumentTableInteractionHarnessTest.java](desktop/src/test/java/mz/multicore/erp/gui/DocumentTableInteractionHarnessTest.java) (5/5 passing).
+- **Validação de Testes:** 27 testes aprovados sem falhas (`DocumentTableInteractionHarnessTest`, `EditableDocumentEditorsHarnessTest`, `PhcDocumentEditorHomologationHarnessTest`, `OrderEditorHarnessTest`, `StockTransferDraftUiHarnessTest`, `DesktopThinContextTest`, `MultiModuleArchitectureHarnessTest`).
+- **Execução:** Reempacotado e reiniciado interativamente via `schtasks` (PID 2440).
+
+### Uniformização Canónica de Editores de Documentos (Cabeçalhos em Linha e Grelhas PHC) — 2026-10-02 — **concluída com sucesso**
+
+- **Decisão e Princípio:** Garantir que todas as telas de documentos operacionais (Encomendas de Cliente, Cotações, Encomendas a Fornecedor, Transferências de Stock e Faturação) funcionem exactamente da mesma forma canónica:
+  1. **Cabeçalho Compacto em Linha:** substituição de formulários verticais empilhados ou grids altos por cartões horizontais de campos agrupados (`fieldGroup` com label superior e dimensão padronizada), libertando mais de 140px de área vertical útil para os itens.
+  2. **Grelha PHC em Linha Padronizada:** grelhas editáveis directamente nas células (`Produto`, `Qtd`, `Emb.`, `Cx.`, ...), sincronização instantânea de embalagens/caixas/preços, foco imediato após inserção de linha e supressão explícita de paginação cliente automática (`ClientTablePagination.DISABLED` e `noTableFooter`).
+  3. **Resolução de Jitter/Tremores:** eliminação definitiva de tremores de viewport e scrolls concorrentes em tabelas embebidas.
+- **Ficheiros Padronizados:**
+  - [CommercialOrdersView.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/CommercialOrdersView.java): Cabeçalho compacto em linha horizontal com `kindHint` discreto.
+  - [StockTransferEditorForm.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/StockTransferEditorForm.java): Formulário horizontal, eliminação do jitter e grelha com Produto na coluna 0.
+  - [QuotationEditorForm.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/commercial/QuotationEditorForm.java): Substituição do formulário de 8 linhas empilhadas por card de 2 linhas horizontais e desativação de paginação acidental na grelha.
+  - [PurchaseOrdersPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrdersPanel.java): Cabeçalho compacto em linha horizontal (`Fornecedor`, `Armazém`, `Entrega Prevista`, `Observações`) e tabela com `ClientTablePagination.DISABLED`.
+  - [CommercialInvoicesView.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/CommercialInvoicesView.java): Cabeçalho compacto em linha horizontal (`Cliente`, `Armazém de Expedição`), remoção de resíduos de labels órfãos e grelha padronizada.
+- **Validação de Testes:**
+  - `EditableDocumentEditorsHarnessTest` (4/4 passing)
+  - `PhcDocumentEditorHomologationHarnessTest` (4/4 passing)
+  - `OrderEditorHarnessTest` (4/4 passing)
+  - `StockTransferDraftUiHarnessTest` (2/2 passing)
+  - `DesktopThinContextTest` (2/2 passing)
+  - `MultiModuleArchitectureHarnessTest` (6/6 passing)
+- **Execução:** Reempacotado e reiniciado interativamente via `schtasks` (PID 1752).
+
+### Edição Documental PHC Directamente nas Grelhas — 2026-09-29 — **concluída com SPEC e HARNESS**
+
+- **Decisão funcional:** documentos em preparação são criados e actualizados numa área de trabalho
+  no próprio separador; os artigos são editados directamente nas células da tabela, sem formulário
+  lateral, diálogo de artigo ou fluxo dependente de duplo clique.
+- **Âmbito migrado:** cotações, encomendas de clientes, encomendas a fornecedores, preparação de
+  facturas e transferências de stock. Produto pesquisável, quantidade, embalagem, caixa, percentagem
+  da caixa, desconto e dados de rastreabilidade aparecem conforme a lógica de cada documento.
+- **Limites de negócio:** facturas emitidas e documentos submetidos/terminais permanecem somente
+  para consulta; notas de crédito/débito e recepção parcial continuam como operações curtas de
+  confirmação, mas as suas linhas já são editadas directamente na respectiva grelha.
+- **SPEC/HARNESS:** `docs/PHC_INLINE_DOCUMENT_GRID_SPEC.md` e
+  `docs/PHC_INLINE_DOCUMENT_GRID_HARNESS.md`.
+- **Validação dirigida:** 21 testes, zero falhas — `PhcInlineDocumentGridHarnessTest`,
+  `OrderEditorHarnessTest`, `EditableDocumentEditorsHarnessTest`,
+  `StockTransferDraftUiHarnessTest`, `DesktopThinContextTest` e
+  `MultiModuleArchitectureHarnessTest`.
+
+### Uniformização Geral de Botões Actualizar e Posicionamento de Cards/Sumários no Topo — 2026-09-28 — **concluída com auditoria e testes**
+
+- **Necessidade do Negócio:** Garantir conformidade ergonómica rigorosa em 100% dos ecrãs e tabelas do sistema Desktop Swing: nenhum botão de "Actualizar" escondido dentro de menus suspensos (*dropdowns*), disponibilização de botão autónomo directo com ícone vetorial `fas-sync-alt` em todas as tabelas de listagem de dados, posicionamento obrigatório de todos os cartões de KPI, blocos de métricas e sumários no topo (acima da grelha de dados) e contenção estrita em `ModernPanel(16)` via `UIHelper.tableCardTop(...)`.
+- **Painéis e Ecrãs Migrados/Ajustados:**
+  1. **Inventário:** `PhysicalInventoryPanel` (cards de KPI no topo + `refreshBtn` no card top).
+  2. **Recursos Humanos:** `HRContractsPanel`, `HRDeductionsPanel`, `HRExpensesPanel`, `HRTerminationsPanel`, `HRTimeSheetPanel`, `HRVacationsPanel` e `HRPanel` (Colaboradores, Recibos de Salário e Registo de Faltas) todos com botões autónomos `UIHelper.createRefreshButton(...)` nos cabeçalhos das tabelas.
+  3. **Stock & Armazéns:** `StockBatchesPanel`, `StockPanel` (Rastreabilidade/Movimentos e Transferências), `StockAlertsPanel` (sub-abas com `tableCardTop` e botão unificado de actualização).
+  4. **Aprovações & CRM:** `ApprovalsPanel` (Pedidos a Aguardar e Histórico de Decisões) e `CRMPanel` (Folhas de Obra) com botões de actualizar visíveis.
+  5. **Comercial & Fiscal:** `DeliveryGuidesPanel` (removido do dropdown de acções para botão directo no topo), `FiscalPanel` (Taxas Fiscais e Retenções na Fonte), `BankReconciliationPanel` (adicionado na barra de acções).
+  6. **Contas Correntes:** `OutstandingAccountsPanel` (migrado `agingSummary` do rodapé para o cabeçalho superior integrado sob a barra de filtros, eliminando rodapés soltos).
+- **Validação Automatizada:**
+  - `TableActionPlacementHarnessTest`: **6/6 testes aprovados** (incluindo verificação explícita de `StockAlertsPanel`).
+  - `TableCardContainmentAuditTest`: **2/2 testes aprovados** (zero tabelas soltas fora de `ModernPanel`).
+  - `DesktopThinContextTest`: **2/2 testes aprovados** (arranque integral do contexto desktop).
+  - `MultiModuleArchitectureHarnessTest`: **6/6 testes aprovados** (respeito absoluto pelas fronteiras maven `contracts`, `backend` e `desktop`).
+  - `mvn compile`: compilação limpa em todos os módulos sem erros.
+
+### Transferências de Stock Editáveis por Rascunho — 2026-09-28 — **concluída com SPEC e HARNESS**
+
+- **Necessidade do negócio:** substituir o formulário modal de transferência por edição profissional
+  no próprio separador, com todos os itens visíveis, pesquisa de produtos, composição de embalagens
+  e aprovação separada da preparação.
+- **SPEC/HARNESS:** `docs/STOCK_TRANSFER_DRAFT_LIFECYCLE_SPEC.md` e
+  `docs/STOCK_TRANSFER_DRAFT_LIFECYCLE_HARNESS.md`.
+- **Ciclo entregue:** `DRAFT → PENDING_APPROVAL → APPROVED | REJECTED`, com cancelamento apenas
+  em `DRAFT`/`PENDING_APPROVAL`; estados terminais são somente consulta.
+- **Persistência/contratos:** migration `V78__stock_transfer_draft_lifecycle.sql`, `@Version`, campo
+  `version` retrocompatível no `StockTransferDTO` e novo `UpdateStockTransferRequest`.
+- **API:** `PUT /api/inventory/transfers/{id}` e
+  `POST /api/inventory/transfers/{id}/submit`, além das operações existentes de decisão/cancelamento.
+- **Desktop:** área de trabalho exclusivamente tabular no modelo PHC: dados gerais numa grelha de
+  uma linha e artigos noutra grelha, com pesquisa do produto dentro da célula e edição directa de
+  `Qtd`, `Emb.` e `Cx.`; sem formulário ou diálogo de edição, com acções no topo do card.
+- **Reposição interna:** conversões criam rascunho e orientam o utilizador a rever e submeter em
+  Stock; apenas a aprovação movimenta FEFO e fecha a reposição.
+- **Validação:** 40 testes dirigidos, zero falhas (`StockTransferServiceTest`, integração HTTP H2,
+  `MultiModuleArchitectureHarnessTest`, `DesktopThinContextTest` e harnesses de UI); `mvn clean
+  compile` e empacotamento concluídos.
+- **Execução:** backend `UP` e desktop interactivo relançado com o pacote actualizado.
+
+### Passagem de Turno Multi-operador e Reconciliação Parcial no POS — 2026-09-27 — **concluída com SPEC e HARNESS**
+- **Necessidade do Negócio:** Permitir a rotação de operadores de caixa ao longo do dia comercial sem fechar a sessão mãe nem fragmentar a contabilidade do fecho Z, garantindo handover auditável com contagem cega física (notas e moedas MZN), cálculo de divergências e transferência atómica de posse.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Especificação & Harness:** [docs/POS_PASSAGEM_TURNO_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/POS_PASSAGEM_TURNO_SPEC.md) (`SPEC-POS-PASSAGEM-TURNO-001`) e [docs/POS_PASSAGEM_TURNO_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/POS_PASSAGEM_TURNO_HARNESS.md) (`HARNESS-POS-PASSAGEM-TURNO-001`).
+  2. **Base de Dados & Migração Flyway (`V76__shift_reconciliations.sql`):** Tabela `shift_reconciliations` com chaves estrangeiras, índices e coluna `current_operator` em `till_sessions`.
+  3. **Contratos (`contracts`):**
+     - DTOs `ShiftHandoverRequest` e `ShiftReconciliationDTO`.
+     - `TillSessionDTO` e `PosZReportDTO` com campo `currentOperator`, lista `shiftReconciliations` e construtores retrocompatíveis.
+  4. **Backend Headless (`backend`):**
+     - Entidade `ShiftReconciliation` e repositório `ShiftReconciliationRepository`.
+     - `TillSessionRepository.findActiveSessionForOperator`: query atómica que resolve a sessão aberta tanto para operadores pós-handover quanto para sessões mono-operador.
+     - `POSService.performShiftHandover`: validações semânticas, controlo de permissão para divergências (`PermissionGuard.requireManagerOrAdmin`), persistência e auditoria `POS_SHIFT_HANDOVER`.
+     - `POSService.getShiftReconciliations` e `POSService.buildZReport` com integração de turnos.
+     - `POSZReportPrintService`: renderização PDF no fecho Z incluindo tabela de passagens de turno e operadores.
+  5. **Desktop Swing (`desktop`):**
+     - `POSApiClient`: métodos de handover e consulta de reconciliações.
+     - `PosShiftHandoverDialog`: diálogo modal ergonómico com suporte a contagem por notas/moedas MZN e total directo.
+     - `PosCashSessionActions.shiftHandover`: invocação da acção no fluxo de sessão.
+     - `POSPanel`: botão "Passar Turno" (`fas-people-arrows`) e banner de estado de caixa com operador activo. Painel mantido estritamente em **990 linhas** (< 1000 linhas obrigatório).
+- **Harness & Validação Automatizada:**
+  - `PosShiftHandoverHarnessTest`: **4/4 aprovados** (handover exacto, divergência com permissão, validações de integridade e múltiplos turnos consecutivos).
+  - `PosZReportHarnessTest`: **4/4 aprovados**.
+  - `DesktopThinContextTest`: **2/2 aprovados**.
+  - `MultiModuleArchitectureHarnessTest`: **6/6 aprovados**.
+  - `PosKeyboardShortcutsHarnessTest`: **6/6 aprovados**.
+  - `QuotationConversionUiHarnessTest`: **4/4 aprovados**.
+  - Compilação limpa e empacotamento Maven de `contracts`, `backend` e `desktop` concluídos com sucesso.
+  - Backend `UP` na porta 8080 e aplicação Desktop lançada na sessão interativa.
+
+### Editor Unificado para Criar e Actualizar Encomendas — 2026-09-27 — **concluído com SPEC e HARNESS**
+- O formulário modal foi substituído pelo mesmo editor de página inteira já alojado no separador
+  de Encomendas: `Nova encomenda` abre vazio e `Editar / Consultar` carrega cabeçalho e itens.
+- A tabela do editor permite seleccionar ou fazer duplo clique, actualizar o item na mesma posição
+  e removê-lo; produto pesquisável, composição Caixa/Embalagem/Unidade, FEFO, desconto e série são
+  preservados. A barra superior mantém `Voltar à lista` e `Guardar alterações`; totais ficam no rodapé.
+- Contrato `UpdateOrderRequest`, `PUT /api/comercial/orders/{id}` e `OrderDTO.version` implementam
+  gravação transaccional com bloqueio optimista. O backend preserva número/tipo, recalcula preço,
+  IVA e totais, revalida reservas antes da separação e reabre aprovação de encomendas formais.
+- Estados editáveis: `PENDING_APPROVAL`, `PENDING` e `AWAITING_SEPARATION`; estados posteriores são
+  consulta e continuam bloqueados no Service mesmo que a UI seja contornada.
+- SPEC/HARNESS: `docs/ORDER_EDITOR_SPEC.md`, `docs/ORDER_EDITOR_HARNESS.md` e
+  `OrderEditorHarnessTest`; regras cobertas também em `ComercialServiceTest`.
+- Validação concluída: `OrderEditorHarnessTest`, `ComercialServiceTest`,
+  `MultiModuleArchitectureHarnessTest`, `DesktopThinContextTest`, harnesses de tabelas/pesquisa,
+  `POSServiceTest` e `MoneyFlowHttpIntegrationTest` aprovados; `mvn clean compile` aprovado.
+- Corrigida a selecção do construtor principal de `POSService` com `@Autowired`, preservando os
+  construtores sobrecarregados usados pelos harnesses; backend confirmado `UP` e desktop reiniciado.
+
+### Conversão Direta de Cotações e Pró-formas em Fatura Comercial ou Venda no POS — 2026-09-27 — **concluída com SPEC e HARNESS**
+- **Necessidade do Negócio:** Fechar o ciclo comercial entre orçamentos/propostas aprovadas (série `CT`) e a sua liquidação, permitindo quer a conversão direta em Factura Comercial B2B (`FT`), quer a importação rápida no POS ao balcão, garantindo que o preço acordado com o cliente na cotação tem precedência sobre o preço do catálogo e que cotações caducadas não podem ser faturadas sem estender a validade.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Especificação & Harness:** [docs/COTACAO_CONVERSAO_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/COTACAO_CONVERSAO_SPEC.md) (`SPEC-COTACAO-CONVERSAO-001`) e [docs/COTACAO_CONVERSAO_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/COTACAO_CONVERSAO_HARNESS.md) (`HARNESS-COTACAO-CONVERSAO-001`).
+  2. **Base de Dados & Migração Flyway (`V75__quotation_invoice_conversion.sql`):** Adição de `invoice_id` e `invoice_number` com índice `idx_quotations_company_invoice` na tabela `quotations`.
+  3. **Contratos (`contracts`):**
+     - `QuotationDTO`: campos `invoiceId` e `invoiceNumber` preservando construtor retrocompatível.
+     - `POSCheckoutLineRequest`: campo `BigDecimal unitPrice` com construtores retrocompatíveis.
+     - `POSCheckoutRequest`: campo `Long quotationId` com construtores sobrecarregados retrocompatíveis.
+  4. **Backend Headless (`backend`):**
+     - `Quotation`: colunas `invoiceId` e `invoiceNumber`.
+     - `QuotationRepository`: métodos `findOpenByCompanyIdWithLines` e `findByIdAndCompanyId`.
+     - `ComercialService.createInvoiceFromQuotation`: emissão de fatura comercial herdando preços cotados, com verificação de crédito e baixa de stock.
+     - `QuotationService.convertToInvoice`: conversão direta com bloqueio de caducadas e dupla conversão.
+     - `QuotationService.findOpenByCompany`: filtro de cotações abertas e vigentes.
+     - `POSService.checkout`: honra de `customUnitPrice` nas linhas e conversão atómica da cotação para `CONVERTED` com auditoria `QUOTATION_CONVERT_POS`.
+  5. **Desktop Swing (`desktop`):**
+     - `QuotationsPanel`: opção `Converter em Factura` (`fas-file-invoice-dollar`) no `ActionMenuButton` sem emojis crus, mantendo o painel com 361 linhas.
+     - `PosCartItem`: suporte a `customUnitPrice` e cálculo dinâmico de subtotais e taxas de IVA.
+     - `PosImportQuotationDialog` (232 linhas < 1000): diálogo modal isolado com busca incremental por número/cliente/NUIT e seleção rápida.
+     - `PosQuotationActions` (179 linhas < 1000): lógica de importação para o carrinho, cliente e armazém.
+     - `PosReceiptPrinter`: extração da impressão de recibos térmicos.
+     - `POSPanel`: botão "Cotação" (`F7`), banner dinâmico de cotação vinculada com remoção de vínculo e checkout integrado. Painel mantido estritamente em **992 linhas** (< 1000 linhas obrigatório).
+- **Harness & Validação Automatizada:**
+  - `QuotationConversionHarnessTest`: **5/5 aprovados** (conversão em FT, bloqueio de expiradas, bloqueio de dupla conversão, listagem de abertas e checkout POS com cotação).
+  - `QuotationConversionUiHarnessTest`: **4/4 aprovados** (ação sem emojis em QuotationsPanel, diálogo instanciável, precedência de preço cotado no PosCartItem e verificação de < 1000 linhas em ficheiros Swing).
+  - `PosKeyboardShortcutsHarnessTest`: **6/6 aprovados**.
+  - `DesktopThinContextTest`: **2/2 aprovados**.
+  - `MultiModuleArchitectureHarnessTest`: **6/6 aprovados** (estrita aderência de fronteiras físicas Maven).
+  - Compilação limpa e empacotamento Maven concluídos com sucesso.
+  - Backend `UP` na porta 8080 e aplicação Desktop lançada na sessão interativa.
+
+### Atalhos Rápidos de Teclado no POS (F1 a F12 + Barra Visual de Rodapé + Guia F1) — 2026-09-27 — **concluída com SPEC e HARNESS**
+- **Necessidade do Negócio:** Dotar os operadores de caixa de alta velocidade no balcão de atendimento comercial sem dependência de rato, com mapa canónico de teclas de função (`F1` a `F12`), atalhos operacionais (`ESC`, `DELETE`, `+ / -`, `CTRL+N`), aplicação de desconto ágil (`F5`), cancelamento seguro com confirmação e barra de atalhos rápida no rodapé para ecrãs tácteis e operadores novatos.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Especificação & Harness:** [docs/POS_KEYBOARD_SHORTCUTS_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/POS_KEYBOARD_SHORTCUTS_SPEC.md) (`SPEC-POS-KEYBOARD-001`) e [docs/POS_KEYBOARD_SHORTCUTS_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/POS_KEYBOARD_SHORTCUTS_HARNESS.md) (`HARNESS-POS-KEYBOARD-001`).
+  2. **Gestor Central de Atalhos (`PosKeyboardShortcutsHandler.java`):** Registo unificado no `InputMap` (`WHEN_ANCESTOR_OF_FOCUSED_COMPONENT`) e `ActionMap` de todas as teclas:
+     - `F1`: Guia de Atalhos (`PosShortcutHelpDialog`).
+     - `F2`: Pesquisa de Artigo no Catálogo.
+     - `F3`: Foco no Leitor de Código de Barras.
+     - `F4`: Pesquisa / Identificação do Cliente.
+     - `F5`: Desconto de Linha com diálogo modal percentual.
+     - `F6`: Alteração da Quantidade da Linha do Carrinho.
+     - `F7`: Cartão de Fidelização & Pontos.
+     - `F8`: Devoluções & Vales de Compras (`PosReturnDialog`).
+     - `F9`: Movimentos de Caixa (Sangria/Suprimento).
+     - `F10`: Finalizar Venda / Pagamento (`PosPaymentDialog`).
+     - `F11`: Alternar Vista (Venda Activa vs Histórico de Vendas).
+     - `F12`: Fecho Cego de Caixa (`PosBlindCloseDialog`).
+     - `ESC`: Cancelar / Limpar Carrinho (com confirmação se houver artigos).
+     - `DELETE`, `+` e `-`: Ajuste de linhas e quantidade na tabela do carrinho.
+     - `CTRL+N`: Nova Venda.
+  3. **Barra de Atalhos do Rodapé (`PosShortcutBar.java`):** Chips compactos e interactivos com badges monoespaçadas, ícones vetoriais FontAwesome e suporte a toque/rato sem emojis Unicode crus.
+  4. **Guia Modal de Atalhos (`PosShortcutHelpDialog.java`):** Diálogo moderno categorizado em *Artigos & Carrinho*, *Caixa & Operações* e *Geral & Navegação*.
+  5. **Decomposição e Optimização do `POSPanel.java`:** Redução de linhas de 997 para **985 linhas** (< 1000 linhas obrigatório), garantindo total separação de responsabilidades.
+- **Harness & Validação:**
+  - `PosKeyboardShortcutsHarnessTest`: **6/6 aprovados** (incluindo `KEY-06: testNoDuplicateSearchIconsInPosPanel`).
+  - `POSKeyboardShortcutTest`: **2/2 aprovados**.
+  - `DesktopThinContextTest`: **2/2 aprovados**.
+  - `PosVoucherUiHarnessTest`: **5/5 aprovados**.
+  - `TableCardContainmentAuditTest` & `UiPanelDecompositionTest`: **100% aprovados**.
+  - **Correção Visual no POS:** Eliminada duplicação do ícone de pesquisa no campo de cliente e produto (`clientSearchField` e `productSearchField` refatorados para `new JTextField()` com estilo unificado, mantendo exatamente um único ícone de lupa provido por `PosLayout.searchRow`).
+  - Backend UP na porta 8080 e Desktop activo na sessão interactiva.
+
+### Posicionamento Uniforme das Acções de Tabelas — 2026-09-27 — **concluída com SPEC e HARNESS**
+- Definido o padrão único: acções globais no cabeçalho, filtros e acções da lista no topo do card,
+  tabela no centro e apenas paginação, totais ou estado informativo no rodapé.
+- Migradas as áreas de Facturas (incluindo linhas do rascunho), Encomendas, Compras, Recibos,
+  Cotações, Guias de Remessa, Notificações, Auditoria, Backups, Contabilidade e tabelas editáveis
+  de notas e transferências.
+- Barras densas foram agrupadas em `ActionMenuButton`, respeitando o limite de três controlos
+  visíveis e cinco opções por menu.
+- SPEC/HARNESS: `docs/TABLE_ACTION_PLACEMENT_SPEC.md`,
+  `docs/TABLE_ACTION_PLACEMENT_HARNESS.md` e `TableActionPlacementHarnessTest`.
+- Validação: `mvn clean compile`, suite focada de UI e `DesktopThinContextTest` aprovados; JARs
+  empacotados, backend `UP` e desktop reiniciado na sessão interactiva.
+- Refinamento de Facturação: todas as acções passaram para a primeira fila do próprio card, em
+  `Actualizar`, `Mais acções` e `Emitir`; pesquisa, estado e período ocupam a segunda fila. A
+  paginação de servidor passou a seguir a mesma hierarquia visual das Notas de Crédito.
+- Uniformização transversal concluída com `UIHelper.tableCardTop(...)`: o mesmo cabeçalho interno,
+  faixa de filtros e limite de três acções visíveis foi aplicado às listagens de Comercial,
+  Clientes, Compras, Stock, Fiscal, CRM, RH, Plataforma, Notificações e Utilizadores.
+
+### Devoluções e Trocas no POS com Emissão de Vale de Compras / Saldo a Favor do Cliente — 2026-09-27 — **concluída com SPEC e HARNESS**
+- **Necessidade do Negócio:** Implementação do fluxo completo de devolução e troca de artigos no POS comercial com reposição de stock, escolha do método de reembolso (Reembolso financeiro, Crédito em conta corrente ou Emissão de Vale de Compras alfanumérico / Store Credit com validade de 90 dias), emissão de talão térmico de 80mm com código de barras, e suporte a resgate e abatimento total ou parcial do vale no checkout do POS (`PosPaymentDialog`).
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Especificação & Harness:** [docs/POS_DEVOLUCOES_VALE_COMPRAS_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/POS_DEVOLUCOES_VALE_COMPRAS_SPEC.md) (`SPEC-POS-VOUCHER-001`) e [docs/POS_DEVOLUCOES_VALE_COMPRAS_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/POS_DEVOLUCOES_VALE_COMPRAS_HARNESS.md) (`HARNESS-POS-VOUCHER-001`).
+  2. **Base de Dados (`V74__store_vouchers.sql`):** Criação da tabela `store_vouchers` com integridade referencial, índices em `code`, `company_id`, `client_id`, `status` e controlo de saldos inicial e restante.
+  3. **Contratos (`contracts`):** DTOs `StoreVoucherDTO` (com helpers de vigência e estado) e `POSReturnResultDTO`, além de enum de método de pagamento `STORE_CREDIT`.
+  4. **Backend (`backend`):** Entidade JPA `StoreVoucher`, repositório `StoreVoucherRepository`, serviços de devolução com reposição de stock e emissão de vale em `POSService.java`, resgate com validação de saldo e prazos em `POSService.redeemVoucherForPayment`, endpoints `/api/pos/returns` e `/api/pos/vouchers/{code}`, e impressão térmica 80mm em `StoreVoucherPrintService` e `/api/print/pos-voucher/*`.
+  5. **Desktop Swing (`desktop`):**
+     - `PosReturnDialog.java` (267 linhas < 1000): opção primária "VALE DE COMPRAS (Store Credit)", seletor inteligente de faturas recentes, comprovativo modal com código alfanumérico, cópia para área de transferência, impressão de talão térmico 80mm e opção de troca imediata no checkout.
+     - `PosPaymentDialog.java` (347 linhas < 1000): novo método de pagamento "Vale Compras" (`fas-ticket-alt`), consulta e validação em tempo real com exibição do titular e saldo, feedback claro e sem fechar a janela em caso de saldo insuficiente ou vale expirado.
+     - `POSApiClient.java`: métodos de devolução, consulta e impressão de vales de compras.
+- **Harness & Validação:**
+  - `PosVoucherHarnessTest`: **10/10 aprovados** (emissão de vale, multi-itens, isolamento multi-empresa, resgate total e parcial, validação de saldo insuficiente e expiração).
+  - `PosVoucherUiHarnessTest`: **5/5 aprovados** (validação de UI Swing, botões e campos).
+  - `MultiModuleArchitectureHarnessTest`: **6/6 aprovados** (estrita aderência de fronteiras físicas Maven).
+  - `POSServiceTest`: **26/26 aprovados**.
+  - `PosContingencyHarnessTest`: **3/3 aprovados**.
+  - `DesktopThinContextTest`: **2/2 aprovados**.
+  - `TableCardContainmentAuditTest` & `UiPanelDecompositionTest`: **100% aprovados**.
+  - Todos os arquivos Swing respeitam o limite de 1000 linhas (`POSPanel`: 997, `PosPaymentDialog`: 347, `PosReturnDialog`: 267).
+
+### Fecho Cego de Caixa no POS (Blind Drop) com Contagem de Notas/Moedas e Apuramento de Quebras/Sobras — 2026-09-27 — **concluída com SPEC e HARNESS**
+- **Necessidade do Negócio:** Implementação de fecho cego estrito onde o operador conta a gaveta sem visualizar o saldo esperado pelo sistema, com grelha de discriminação por notas e moedas oficiais de Meticais (MZN: 1000, 500, 200, 100, 50, 20 MT e moedas 10, 5, 2, 1, 0.50 MT), cálculo em tempo real, justificação de quebras/sobras e impressão do Relatório Z com tabela de contagem física.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Especificação & Testes:** `docs/FECHO_CAIXA_CEGO_DENOMINACOES_SPEC.md` e `docs/FECHO_CAIXA_CEGO_DENOMINACOES_HARNESS.md`.
+  2. **Base de Dados (`V73__pos_blind_close_denominations_and_notes.sql`):** Adicionadas colunas `closing_notes VARCHAR(500)` e `cash_breakdown_json TEXT` à tabela `till_sessions`.
+  3. **Contratos (`contracts`):** `CashDenominationDTO`, `CloseSessionRequest` (com notas e breakdown JSON preservando retrocompatibilidade) e `PosZReportDTO` enriquecido.
+  4. **Backend (`TillSession.java`, `POSService.java`, `POSController.java`, `POSZReportPrintService.java`):** Persistência de notas e JSON de denominações, validação de regras de divergência, enriquecimento do log de auditoria `POS_CLOSE_SESSION` e renderização no PDF do Relatório Z da tabela de contagem física e observações.
+  5. **Desktop Swing (`PosBlindCloseDialog.java`, `POSApiClient.java`):** Interface modal ergonómica com grelha de notas e moedas, botões rápidos `+1`/`+5`, total consolidado dinâmico, alternador para introdução rápida direta, campo de justificação de quebra/sobra, painel de reconciliação pós-fecho e impressão direta do Relatório Z (A4).
+- **Harness & Validação:**
+  - `MultiModuleArchitectureHarnessTest`: **6/6 aprovados**.
+  - `POSServiceTest`: **26/26 aprovados**.
+  - `PosZReportHarnessTest`: **4/4 aprovados**.
+  - `DesktopThinContextTest`: **2/2 aprovados**.
+  - `PosBlindCloseDialogHarnessTest`: **2/2 aprovados**.
+  - `PosZReportUiHarnessTest`: **2/2 aprovados**.
+  - `TableCardContainmentAuditTest` & `UiPanelDecompositionTest`: **100% aprovados**.
+  - Backend UP na porta 8080 e Desktop ativo na sessão interactiva.
+
+### Selecção Pesquisável de Produtos nos Formulários — 2026-09-27 — **concluída com SPEC e HARNESS**
+- Criados `SearchableComboBox<T>` e `ProductSearchComboBox`, com pesquisa incremental sem distinção
+  de acentos/maiúsculas e correspondência por vários termos.
+- A pesquisa de produtos considera nome, SKU, referência, código de barras, descrição e categoria;
+  o resultado apresenta código, nome e preço.
+- Aplicado em factura, pedido de cliente, compra, encomenda a fornecedor, cotação, promoção,
+  transferência, ajuste de stock, entrada de lote, edição de produto e registo de quebra.
+- Os formulários recebem o `ProductDTO` seleccionado em vez de inferir o produto pelo índice ou
+  apenas pelo nome, preservando pré-selecção e evitando conflito entre produtos homónimos.
+- SPEC/HARNESS: `docs/PRODUCT_SEARCH_SELECTION_SPEC.md` e
+  `docs/PRODUCT_SEARCH_SELECTION_HARNESS.md`.
+- Harness alinhado integralmente à SPEC: pesquisa por cada identificador, normalização de acentos,
+  múltiplos termos, selecção tipada, catálogo vazio/sem resultado, rótulo e altura de 38 px.
+- Validação focada: `ProductSearchComboBoxHarnessTest`, `DesktopThinContextTest`,
+  `StockCommercialUiHarnessTest`, `StockInteractionHarnessTest`, `StockWastePanelHarnessTest` e
+  `UiPanelDecompositionTest` aprovados.
+
+### Auditoria e Correção Global de Contenção de Filtros e Tabelas em Todo o Sistema — 2026-09-26 — **concluída com SUCESSO**
+- **Necessidade do Negócio:** O utilizador solicitou verificar todas as tabelas do sistema para identificar e corrigir quaisquer outras telas onde campos de pesquisa e seletores estivessem fora do card que contém a tabela.
+- **Auditoria Exhaustiva (66 Ficheiros de Interface com Tabela):**
+  1. Varredura completa de todas as classes Swing com `JTable`, inspecionando o posicionamento de `TableFilter.bar`, `TableFilter.searchField`, `SearchField`, `JComboBox` e painéis de controlo.
+  2. **Casos Identificados e Corrigidos:**
+     - **Clientes ([ClientesPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/ClientesPanel.java)):** A barra de pesquisa de clientes estava inserida num painel intermediário transparente `center` (`center.add(searchRow, BorderLayout.NORTH)`), fora do `ModernPanel card`. Foi movida diretamente para o topo interno do card (`card.add(searchRow, BorderLayout.NORTH)`).
+     - **Fiscal Salarial ([FiscalPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/FiscalPanel.java)):** A aba *IRPS & INSS Salarial* continha os seletores de período, botões de atualização/impressão e a tabela adicionados soltos diretamente na aba sem `ModernPanel`. Foram encapsulados num `ModernPanel(16)` card com `card.add(controls, BorderLayout.NORTH)` e `card.add(scroll, BorderLayout.CENTER)`.
+  3. **Módulos Verificados e Confirmados como Conformes:**
+     - Comercial: `CommercialInvoicesView` (`listCard`), `CommercialOrdersView` (`listCard`), `QuotationsPanel` (`card`), `ReceiptsPanel` (`card`), `DeliveryGuidesPanel` (`card`), `CommercialNotesPanel` (`card`), `CommercialMovementsPanel` (`card`), `OutstandingAccountsPanel` (`card`).
+     - Compras: `ComprasPanel` (`historyCard`), `PurchaseOrdersPanel` (`listCard`), `PurchaseSuppliersPanel` (`listCard`), `PurchasePayablesPanel` (`card`), `PurchaseReorderPanel` (`card`).
+     - Recursos Humanos: `HRPanel` (`card`), `HRContractsPanel` (`card`), `HRDeductionsPanel` (`card`), `HRExpensesPanel` (`card`), `HRLiabilitiesPanel` (`card`), `HRTerminationsPanel` (`card`), `HRTimeSheetPanel` (`card`), `HRVacationsPanel` (`card`).
+     - Financeiro e Tesouraria: `FinanceiroPanel` (`accountsCard`, `movementsCard`), `BankReconciliationPanel` (`card`), `CreditRiskPanel` (`card`).
+     - Auditoria e Segurança: `ForensicAuditPanel` (`card`), `UserManagementPanel` (`card`), `ApprovalsPanel` (`pendingCard`, `historyCard`).
+     - Performance e Plataforma: `GoalsTab` (`card`), `RankingTab` (`card`), `BonusTab` (`card`), `PlataformaPanel` (5 tabelas em `card`/`listCard`), `NotificationsPanel` (`card`), `PromotionsPanel` (`card`).
+- **Harness & Validação:**
+  - `DesktopThinContextTest`: **2/2 aprovados**.
+  - `TableCardContainmentAuditTest`: **2/2 aprovados**.
+  - Desktop recompilado e empacotado (`BUILD SUCCESS`). Backend UP e Desktop reiniciado.
+
+### Contenção Estrita dos Filtros e Pesquisa no Card da Tabela (Lotes & Validades e Stock) — 2026-09-26 — **concluída com SUCESSO**
+- **Necessidade do Negócio:** Em conformidade com a convenção canónica de UI Swing do ERP Multicore, todos os campos de pesquisa e caixas de seleção/filtro devem estar estritamente contidos dentro do card `ModernPanel(16)` que abriga a tabela (`BorderLayout.NORTH` para filtros e `BorderLayout.CENTER` para a tabela), sendo proibido manter filtros soltos fora do card. No separador de *Lotes & Validades* e restantes tabelas do Stock, os seletores de armazém, validade e campo de pesquisa encontravam-se soltos no topo fora do card da tabela.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Lotes & Validades (`StockBatchesPanel.java`):**
+     - O cabeçalho (título e botões de ação) mantém-se no topo (`tab.add(header, BorderLayout.NORTH)`).
+     - Os campos de seleção (`batchWarehouseCombo`, `batchExpirationCombo`), campo de pesquisa (`batchSearchField`) e o resumo dinâmico (`batchesSummary`) foram unificados no painel de cabeçalho do card e inseridos em `card.add(filterCardHeader, BorderLayout.NORTH)`.
+     - A tabela e a barra de paginação continuam em `BorderLayout.CENTER` e `BorderLayout.SOUTH` do mesmo `card`, garantindo layout coeso e delimitado.
+  2. **Artigos em Stock (`StockPanel.java`):**
+     - O bloco de filtros de armazém, estado, categoria e pesquisa foi movido para o interior do `ModernPanel(16) card` (`card.add(filters, BorderLayout.NORTH)`).
+  3. **Categorias de Stock (`StockCategoriesPanel.java`):**
+     - O campo de pesquisa por código e nome foi movido para dentro do `card` (`card.add(searchRow, BorderLayout.NORTH)`).
+  4. **Alertas de Stock (`StockAlertsPanel.java`):**
+     - As sub-abas *Esgotados* e *Validade (expirados / a expirar)* agora inserem as suas barras de pesquisa e filtros diretamente em `outCard.add(outBar, BorderLayout.NORTH)` e `expCard.add(expBar, BorderLayout.NORTH)`.
+- **Harness & Validação:**
+  - `DesktopThinContextTest`: **2/2 testes verdes** (inicialização do `MainFrame` 100% íntegra).
+  - `TableCardContainmentAuditTest`: **2/2 testes verdes** (auditoria de contenção de tabelas e contagem de botões aprovada).
+  - `PhysicalInventoryPanelHarnessTest`: **4/4 testes verdes**.
+  - Recompilação e empacotamento com `mvn package -DskipTests -pl desktop` com **BUILD SUCCESS**.
+  - Backend UP e Desktop reiniciado com sucesso na sessão interativa.
+
+### Bloqueio e Validação Obrigatória de Motorista e Matrícula nas Guias — 2026-09-26 — **concluída com SUCESSO**
+- **Necessidade do Negócio:** O sistema não pode aceitar a emissão ou criação de Guias (Guias de Transferência entre armazéns e Guias de Remessa) sem que os campos de **Motorista** e **Matrícula do Veículo** estejam devidamente preenchidos.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Contratos (`CreateStockTransferRequest`, `ConvertOrderToTransferRequest`):**
+     - Mapeamento retrocompatível garantindo que pedidos de transferência e conversões de encomenda para transferência recebam e validem `driverName` e `vehiclePlate`.
+  2. **Backend (`StockTransferService.java`, `DeliveryGuideService.java`, `InternalReplenishmentService.java`):**
+     - Em `StockTransferService.create(...)`: Validação preventiva no topo do método. Se `driverName` ou `vehiclePlate` estiverem vazios/nulos, lança imediatamente `BusinessRuleException("O nome do motorista é obrigatório para emitir a guia de transferência.")` ou `BusinessRuleException("A matrícula do veículo é obrigatória para emitir a guia de transferência.")`.
+     - Em `DeliveryGuideService.createFromOrder(...)`: Validação de `responsible` (transportador/responsável) e `vehicle` (matrícula/viatura). Se vazios, lança `BusinessRuleException("O transportador / responsável é obrigatório para emitir a guia de remessa.")` e `BusinessRuleException("A viatura / matrícula é obrigatória para emitir a guia de remessa.")`.
+     - Em `InternalReplenishmentService.java`: Suporte a fallback seguro de `driverName` e `vehiclePlate` a partir de `responsible` e `vehicle`.
+  3. **Desktop Swing com Prevenção de Perda de Dados (`StockTransferActions.java`, `OrderToTransferAction.java`, `InternalReplenishmentActions.java`, `ComercialPanel.java`):**
+     - Todos os formulários foram atualizados com rótulos `*` e placeholders claros indicando obrigatoriedade: `"Motorista *:"` e `"Matrícula do Veículo *:"`.
+     - Implementado hook em `ModernFormDialog.setOnSave` / `setOnSaveAsync`: a validação ocorre antes de fechar a janela. Caso falhe, foca automaticamente o campo em falta e apresenta a mensagem de erro no `feedbackPanel`, **sem fechar o diálogo e sem perder os produtos, quantidades e lotes já introduzidos**.
+- **Harness & Validação:**
+  - `StockTransferServiceTest`: **14/14 testes verdes** (adicionados `create_semMotorista_lancaExcecao` e `create_semMatricula_lancaExcecao`).
+  - `DeliveryGuideServiceTest`: **9/9 testes verdes**.
+  - `InternalReplenishmentServiceTest`: **14/14 testes verdes**.
+  - `StockTransferPrintServiceTest`: **3/3 testes verdes**.
+  - `MultiModuleArchitectureHarnessTest`: **6/6 testes verdes**.
+  - `DesktopThinContextTest`: **2/2 testes verdes**.
+  - `TableCardContainmentAuditTest`: **2/2 testes verdes**.
+
+### Colunas Completas da Tabela da Guia (Referência, Código de Barras, Produto, Qtd, Embalagem, Caixa, % da Caixa, Valor Unitário, IVA) — 2026-09-26 — **concluída com SUCESSO**
+- **Necessidade do Negócio:** A tabela de linhas da Guia (especificamente a Guia de Transferência e documentos logísticos) deve conter exatamente as 9 colunas canónicas de logística e valor:
+  1. `Referência` (`reference`)
+  2. `Código de Barras` (`barcode`)
+  3. `Produto` (`name` + lote quando aplicável)
+  4. `Quantidade` (`quantity` em unidades)
+  5. `Embalagem` (embalagens equivalentes: `quantidade ÷ unitsPerPackage`)
+  6. `Caixa` (caixas equivalentes: `quantidade ÷ (packagesPerBox × unitsPerPackage)`)
+  7. `% da Caixa` (percentagem da caixa consoante as embalagens do produto: `(quantidade ÷ unitsPerBox) × 100`)
+  8. `Valor Unitário` (`effectiveUnitPrice` do produto)
+  9. `IVA` (taxa de imposto do produto: `effectiveTaxRate`, ex: `16%`)
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Backend (`StockTransferPrintService.java`, `StockTransferService.java`):**
+     - Substituída a tabela simplificada de 4 colunas (`Código`, `Descrição`, `Lote`, `Qtd`) pela tabela profissional completa de 9 colunas com alinhamentos e larguras otimizadas:
+       `Referência (12% L) · Cód. Barras (13% L) · Produto (21% L) · Qtd (6% R) · Embalagem (11% R) · Caixa (7% R) · % da Caixa (10% R) · Valor Unit. (13% R) · IVA (7% R)`.
+     - Implementados os cálculos de embalagem e caixas (`formatPackages`, `formatBoxes`, `formatBoxPercentage`) com `stripTrailingZeros()`.
+     - Atualizado o bloco de totais (`buildTotalsLine`) para incluir: `Linhas`, `Qtd. Total`, `Total Mercadoria (Líquido)`, `Total IVA` e `Total Geral`.
+     - `StockTransferService.toDTO` mapeia `reference`, `barcode`, fatores de embalagem (`packagesPerBox`, `unitsPerPackage`), `effectiveUnitPrice` e `effectiveTaxRate`.
+  2. **Renderizador Partilhado (`LineItemsTableRenderer.java`):**
+     - Adicionado o método canónico `formatBoxes(Row row)` para caixas equivalentes, mantendo coerência estrita com `PackagingComposition` e `PackagingQuantity`.
+  3. **Desktop Swing (`StockTransferActions.java`, `StockPanel.java`, `DeliveryGuidesPanel.java`):**
+     - Formulário interativo de criação de transferências exibe dinamicamente as colunas calculadas: `Embalagem`, `Caixa`, `% Caixa`, além de `Lote (FEFO)` e `Validade (FEFO)`.
+     - Modal de consulta completa (`displayTransferLinesModal` em `StockTransferActions.java`): exibe resumo de transporte (origem, destino, motorista, matrícula, data, estado), a tabela completa com as 9 colunas alinhadas, resumo de totais (`Linhas`, `Qtd Total`, `Total Líquido`, `Total IVA`, `Total Geral`) e botão direto de "Imprimir Guia".
+     - Integrada ação `"Ver Linhas"` no menu de ações `transferMenu` (4 opções $\le 5$) e ouvinte de duplo clique / tecla Enter na tabela `transferTable` em `StockPanel.java`.
+     - `DeliveryGuidesPanel.java` enriquecido com duplo clique e `ModernFormDialog` detalhado com colunas de caixas, unidades, valores monetários e impressão.
+- **Harness & Validação:**
+  - `StockTransferPrintServiceTest`: **3/3 testes verdes** (incluindo `render_imprimeTabelaComColunasObrigatorias`).
+  - `StockTransferServiceTest`: **12/12 testes verdes**.
+  - `LineItemsTableRendererTest`: **5/5 testes verdes**.
+  - `MultiModuleArchitectureHarnessTest`: **6/6 testes verdes**.
+  - `DesktopThinContextTest`: **2/2 testes verdes**.
+  - `TableCardContainmentAuditTest`: **2/2 testes verdes**.
+  - Recompilado e empacotado via `mvn package -DskipTests`, backend UP na porta 8080 e Desktop lançado.
+
+### Campos de Motorista e Matrícula na Guia de Transferência Entre Armazéns — 2026-09-26 — **concluída com SUCESSO**
+- **Necessidade do Negócio:** Ao emitir uma Guia de Transferência de Stock entre armazéns, o sistema deve fornecer campos específicos e visíveis para inserção do **Motorista** e da **Matrícula** da viatura de transporte.
+- **Solução Implementada de Ponta a Ponta:**
+  1. **Base de Dados (`V71__stock_transfer_driver_and_plate.sql`):** Adicionadas as colunas `driver_name VARCHAR(120)` e `vehicle_plate VARCHAR(30)` à tabela `stock_transfers`.
+  2. **Contratos (`contracts`):**
+     - [CreateStockTransferRequest](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/inventory/dto/CreateStockTransferRequest.java): Acrescentados os campos `driverName` e `vehiclePlate`, preservando construtor retrocompatível.
+     - [StockTransferDTO](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/inventory/dto/StockTransferDTO.java): Expostos `driverName` e `vehiclePlate` com construtores retrocompatíveis.
+     - [ConvertOrderToTransferRequest](file:///c:/Users/miran/Desktop/manager/contracts/src/main/java/mz/multicore/erp/modules/comercial/dto/ConvertOrderToTransferRequest.java): Atualizado para suportar motorista e matrícula na conversão de encomendas de reposição.
+  3. **Backend (`StockTransfer.java`, `StockTransferService.java`, `StockTransferPrintService.java`):**
+     - Entidade `StockTransfer` mapeia `driverName` e `vehiclePlate`.
+     - `StockTransferService` persiste os campos e mapeia para DTO.
+     - `StockTransferPrintService` renderiza no PDF da Guia de Transferência o nome do Motorista e a Matrícula do Veículo (ou linha para preenchimento se deixado em branco).
+  4. **Desktop (`StockTransferActions.java`, `StockPanel.java`, `OrderToTransferAction.java`, `InternalReplenishmentActions.java`):**
+     - O formulário de "Nova Transferência" (`createTransferDialog`) agora inclui os campos *Motorista:* e *Matrícula do Veículo:* com placeholders explicativos.
+     - A tabela de transferências em `StockPanel` foi expandida com as colunas *Motorista* e *Matrícula*, com filtro/pesquisa adaptado.
+     - `StockPanel.java` permaneceu em 952 linhas (estritamente $< 1000$ linhas).
+- **Harness & Validação:**
+  - `StockTransferServiceTest` (incluindo `create_comMotoristaEMatricula_persisteCampos`): **12/12 testes verdes**.
+  - `StockTransferPrintServiceTest`: **2/2 testes verdes** (validação de extração de texto PDF com motorista e matrícula).
+  - `InternalReplenishmentServiceTest`: **14/14 testes verdes**.
+  - `DesktopThinContextTest`, `FinalUiUniformityHarnessTest`, `UiPanelDecompositionTest`: **8/8 testes verdes**.
+  - `MultiModuleArchitectureHarnessTest`: **6/6 testes verdes**.
+  - Aplicação recompilada, empacotada e reiniciada com sucesso.
+
+### Obrigatoriedade de Nome do Cliente nas Vendas POS (Mesmo Não Cadastrado) — 2026-09-26 — **concluída com SUCESSO**
+- **Necessidade do Negócio:** O sistema não pode aceitar a emissão ou conclusão de vendas no POS sem o nome do cliente/comprador, mesmo quando o cliente for avulso / não cadastrado na base de dados.
+- **Solução Implementada:**
+  1. **Contratos (`POSCheckoutRequest`):** Documentada e tipada a obrigatoriedade de `walkInName` quando `clientId == null`.
+  2. **Backend (`POSService.java`):**
+     - Se `request.clientId() == null` e `request.walkInName()` for nulo ou em branco, lança `BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.")`.
+     - Fatura/recibo grava e valida `customerName` estritamente não vazio.
+  3. **Desktop (`POSPanel.java`):**
+     - O campo de pesquisa do cabeçalho foi identificado com `Nome do cliente *` e tooltip instrutivo.
+     - No checkout (`runCheckout`), se o operador não tiver selecionado um cliente cadastrado e o campo de texto estiver vazio, o sistema exibe imediatamente um diálogo modal amigável (`UIHelper.promptRequiredText`) solicitando o nome do cliente. Se o operador cancelar ou deixar em branco, a venda é bloqueada com aviso de validação.
+     - Mantida a decomposição estrita do `POSPanel.java` com 996 linhas (< 1000 linhas).
+- **Harness & Validação:**
+  - `PosCustomerRequirementHarnessTest`: **2/2 testes aprovados**.
+  - `POSServiceTest`: **24/24 testes aprovados** (incluindo `checkout_semNomeClienteNaoCadastrado_lancaExcecaoDeRegraDeNegocio`).
+  - Suíte completa de POS Desktop: **19/19 testes aprovados** (`PosProfessionalErgonomicsHarnessTest`, `PosErgonomicsHarnessTest`, `PosContingencyManagerTest`, etc.).
+  - `DesktopThinContextTest`, `TableCardContainmentAuditTest`, `UiPanelDecompositionTest`: **100% aprovados**.
+  - Backend e Desktop recompilados, empacotados e reiniciados na sessão interativa.
+
+### Correção do Limite de 5 Ações no `ActionMenuButton` e Resolução de Erro de Login no `MainFrame` — 2026-09-25 — **concluída com SUCESSO**
+- **Sintoma / Bloqueio:** Ao submeter login no diálogo de autenticação do Desktop (ex.: utilizador `ana` ou `admin`), a interface exibia `Failed to instantiate [mz.multicore.erp.gui.MainFrame]: Constructor threw exc`.
+- **Causa Raiz Identificada:** A classe [ActionMenuButton](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/ActionMenuButton.java) possui uma restrição de integridade rígida (`MAX_ACTIONS = 5`) testada em [ActionMenuButtonTest](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/components/ActionMenuButtonTest.java). Na refatoração anterior do [HRPanel](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/HRPanel.java):
+  1. Na aba de Colaboradores, `moreBtn` continha 6 ações (> 5).
+  2. Na aba de Recibos de Salário, `actionsBtn` continha 8 ações (> 5).
+  Ao inicializar o [MainFrame](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/MainFrame.java), a invocação do construtor de [HRPanel](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/HRPanel.java) lançava `IllegalStateException: O menu de acções não pode ter mais de cinco opções.`.
+- **Solução Implementada:**
+  1. Em [HRPanel](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/HRPanel.java) (Colaboradores): `moreBtn` ajustado para exatamente 5 ações (*Editar Colaborador*, *Evolução Salarial*, *Documentos*, *Saúde Ocupacional*, *Alterar Estado*), com barra de ações no cabeçalho contendo 3 botões (`moreBtn`, `profileBtn`, `newBtn`).
+  2. Em [HRPanel](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/HRPanel.java) (Recibos de Salário):
+     - Criado `documentsBtn` com 3 ações (*Imprimir PDF*, *Exportar Lista*, *Ficheiro de Pagamento*).
+     - Criado `actionsBtn` com 5 ações (*Aprovar Recibo*, *Marcar Pago*, *13.º Mês*, *Fechar Mês*, *Reabrir Mês*).
+     - Mantido `newBtn` ("Gerar Recibo") no cabeçalho (3 botões: `documentsBtn`, `actionsBtn`, `newBtn`).
+     - Botão `processBtn` ("Processar Mês") integrado elegantemente na barra superior do cartão de tabela junto aos filtros de pesquisa/estado/período.
+  3. Atualizado o teste [HrCrmUiErgonomicsHarnessTest](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/HrCrmUiErgonomicsHarnessTest.java).
+- **Harness & Validação:**
+  - `DesktopThinContextTest`: **100% verde** (MainFrame instancia perfeitamente para utilizador comum e superadmin sem qualquer exceção).
+  - `ActionMenuButtonTest`, `HrCrmUiErgonomicsHarnessTest`, `UiPanelDecompositionTest`: **11/11 testes verdes**.
+  - `TableCardContainmentAuditTest`, `StockCommercialUiHarnessTest`, `FinalUiUniformityHarnessTest`: **12/12 testes verdes**.
+  - Desktop recompilado, empacotado e aplicação reiniciada na sessão interactiva (PID `25308`).
+
+- **Necessidade:** O utilizador solicitou refatoração formal com especificação e testes harness para eliminar qualquer sobrecarga de botões nos módulos de Recursos Humanos, CRM e Notificações, e confirmação do padrão internacional (GS1 / ISO / SAP) na gestão de embalagens multinível.
+- **Solução Implementada:**
+  1. **`CRMPanel.java` (Folhas de Obra & Assistência Técnica):**
+     - Cabeçalho reduzido de 6 para 3 botões: `[Ações da Folha ▾]` (agrupando *Imprimir PDF*, *Corrigir*, *Anular*, *Tarifa/hora*), `[Faturar Folha de Obra]` e `[Nova Folha de Obra]`.
+  2. **`HRPanel.java` (Recursos Humanos Central):**
+     - Aba Colaboradores reduzida de 4 para 3 botões: `[Mais acções ▾]` (incluindo *Editar Colaborador*), `[Ver Perfil]` e `[Novo Colaborador]`.
+     - Aba Recibos de Salário reduzida de 6 para 3 botões: `[Gestão & Documentos ▾]` (agrupando aprovações, pagamentos, exportação e fecho), `[Processar Mês]` e `[Gerar Recibo]`.
+     - Aba Registo de Faltas reduzida de 4 para 3 botões: `[Exportar PDF]`, `[Ações da Falta ▾]` (agrupando *Justificar* e *Eliminar*) e `[Registar Falta]`.
+  3. **Submódulos de RH (`HRVacationsPanel`, `HRTimeSheetPanel`, `HRDeductionsPanel`, `HRLiabilitiesPanel`, `HRTerminationsPanel`):**
+     - Todos os cabeçalhos foram estruturados com máximo de 2 a 3 botões, agrupando ações secundárias em `ActionMenuButton`.
+  4. **`NotificationsPanel.java` (Central de Notificações):**
+     - Rodapé reorganizado em layout bilateral: `[Actualizar]` à esquerda no `BorderLayout.WEST`, e apenas 3 botões à direita (`[Marcar como lida]`, `[Marcar todas como lidas]`, `[Abrir módulo]`).
+  5. **Verificação de Embalagens (Padrão Internacional):**
+     - Validada a cadeia logística multinível (`Caixa → Embalagem → Unidade`) via `PackagingComposition`, `PackagingQuantity`, `PackageQuantityEditor` e `LineItemsTableRenderer`.
+     - Fórmulas de conversão e integridade fiscal 100% validadas contra `PackageQuantityHarnessTest`.
+- **Harness & Validação:**
+  - Criado o teste automatizado `HrCrmUiErgonomicsHarnessTest.java` (4/4 testes verdes).
+  - `TableCardContainmentAuditTest`: **0 barras sobrecarregadas em TODO o sistema ERP** (100% de conformidade) e **0 tabelas sem ModernPanel**.
+  - `UiPanelDecompositionTest`: todos os ficheiros cumprem a restrição de < 1000 linhas.
+  - Desktop recompilado, empacotado e reiniciado na sessão interactiva (PID `26208`).
+
+### Desobstrução e Agrupamento de Ações no Módulo de Stock & Inventário Físico (`AUDIT-02`) — 2026-09-25 — **concluída com SUCESSO**
+- **Necessidade:** O utilizador solicitou refatoração formal com especificação e testes harness para eliminar a sobrecarga de botões abertos no módulo de Stock & Armazéns (`StockPanel`) e Contagem Física de Inventário (`PhysicalInventoryPanel`), onde barras continham 5 botões horizontais comprimindo os títulos.
+- **Solução Implementada:**
+  1. **`PhysicalInventoryPanel.java` (Inventário Físico & Reconciliação):**
+     - Cabeçalho reduzido de 5 para exatamente 3 botões:
+       - `[Dossiê PDF]` (Secundário de impressão/visualização).
+       - `[Ciclo da Sessão ▾]` (`ActionMenuButton` contendo *Iniciar Contagem*, *Fecho & Acerto*, *Cancelar Sessão*).
+       - `[Nova Sessão]` (Primário de criação).
+     - Estados dos itens de menu do ciclo de vida sincronizados dinamicamente via `setActionEnabled(...)` conforme a sessão esteja em Rascunho, Em Progresso ou Fechada.
+  2. **`StockPanel.java` (Controle de Stock & Armazéns):**
+     - **Barra Superior Global:** Reduzida de 5 para 3 botões: `[Actualizar]`, `[Mais acções ▾]` e `[Registar Produto]`.
+     - Ações de *Inventário Físico* e *Trancar Stock* consolidadas dentro do `ActionMenuButton("Mais acções")`, com atualização dinâmica de estado para administradores.
+     - **Aba de Transferências entre Armazéns:** Cabeçalho reduzido de 5 para 3 botões: `[Imprimir Guia]`, `[Ações da Transferência ▾]` (agrupando *Aprovar*, *Rejeitar*, *Registar Encomenda*) e `[Nova Transferência]`.
+- **Harness & Validação:**
+  - Criado teste `testTopBarActionCountAndMenuContainment` em `PhysicalInventoryPanelHarnessTest.java` (4/4 testes verdes).
+  - Criado teste `stockToolbarsAdhereToMaxThreeButtons` em `StockCommercialUiHarnessTest.java` (5/5 testes verdes).
+  - `TableCardContainmentAuditTest` e `UiPanelDecompositionTest` 100% verdes.
+  - Desktop recompilado, empacotado e aplicação reiniciada na sessão interactiva (PID `24052`).
+
+### Desobstrução e Agrupamento de Ações nos Módulos Comercial e Compras (`AUDIT-02`) — 2026-09-25 — **concluída com SUCESSO**
+- **Necessidade:** Conforme a regra de ergonomia do `AGENTS.md`, cabeçalhos e barras de ação devem evitar filas longas de botões (máximo 2 a 3 botões visíveis, agrupando ações secundárias em `ActionMenuButton`). A auditoria `AUDIT-02` identificou sobreposição potencial em Encomendas, Faturas, Ordens de Compra e Fornecedores.
+- **Solução Implementada:**
+  1. **`CommercialOrdersView.java` (Central de Pedidos e Separação):**
+     - Cabeçalho: 2 botões (`[Actualizar]`, `[Novo Pedido de Cliente]`).
+     - Rodapé do Card: Desacoplado em layout bilateral; à esquerda `[Mais acções ▾]` (detalhes, impressão, histórico, exportação), à direita barra com exatamente 3 botões: `[Cancelar Encomenda]`, `[Converter ▾]` (agrupando *Converter em Guia* e *Converter em Transferência*) e `[Faturar Encomenda]`.
+  2. **`CommercialInvoicesView.java` (Faturação Recente):**
+     - Cabeçalho: `[Actualizar]`, `[Faturar a partir de Encomenda]`, `[Nova Fatura]` (3 botões).
+     - Rodapé do Card: Bilateral; à esquerda `[Mais acções ▾]`, à direita apenas 2 botões de ciclo de vida: `[Anular Fatura]` e `[Liquidar (RC)]`.
+  3. **`PurchaseOrdersPanel.java` (Ordens de Compra):**
+     - Cabeçalho: Reduzido de 5 para 3 botões: `[Actualizar]`, `[Receção & Gestão ▾]` (agrupando *Receber Total*, *Receber Parcial*, *Cancelar Encomenda*) e `[Nova Encomenda]`.
+  4. **`PurchaseSuppliersPanel.java` (Fornecedores Cadastrados):**
+     - Cabeçalho: Reduzido de 5 para 3 botões: `[Actualizar]`, `[Ações ▾]` (agrupando *Ver Ficha*, *Editar*, *Activar/Desactivar*) e `[Novo Fornecedor]`.
+  5. **`ActionMenuButton.java`:**
+     - Adicionado método público `setActionEnabled(int index, boolean enabled)` e expostos `actionAt` e `actionCount` para permitir controle de estado por linha nas opções dos menus suspensos.
+- **Validação:**
+  - `StockCommercialUiHarnessTest` (4/4 testes verdes).
+  - `CommercialMultiuserRefreshHarnessTest` (1/1 teste verde).
+  - `TableCardContainmentAuditTest` e `UiPanelDecompositionTest` 100% verdes.
+  - Desktop recompilado, empacotado e reiniciado (PID `23976`).
+
+### Auditoria e Conformidade Global do Padrão Table-Card Containment (52 Painéis / 100% de Conformidade) — 2026-09-25 — **concluída com SUCESSO**
+- **Necessidade:** O utilizador solicitou auditoria global e garantia de que todas as tabelas e filtros do ERP Multicore cumprissem estritamente o padrão canónico: tabelas e respectivos filtros de pesquisa/estado contidos num `ModernPanel(16)` card (`BorderLayout.NORTH` para filtros e `CENTER` para tabela, sem filtros soltos).
+- **Auditoria Automatizada:**
+  - Criado o teste de auditoria global `TableCardContainmentAuditTest.java` para escanear recursivamente todos os painéis e abas do módulo Desktop.
+  - Identificados 5 painéis pendentes: `UserManagementPanel.java`, `PosSalesHistoryPanel.java`, `GoalsTab.java`, `RankingTab.java` e `BonusTab.java`.
+- **Solução Implementada:**
+  1. `UserManagementPanel.java`: Tabela e toolbar encapsuladas em `ModernPanel(16)` com `EmptyBorder(15, 15, 15, 15)` e acções secundárias agrupadas em `ActionMenuButton("Operações")`.
+  2. `PosSalesHistoryPanel.java`: Tabela do histórico de vendas, barra de filtros/pesquisa e paginação integradas num card `ModernPanel(16)`.
+  3. `GoalsTab.java`: Tabela de metas e selects de estado e período encapsulados num card `ModernPanel(16)` com botões de acção organizados.
+  4. `RankingTab.java`: Tabela de ranking e select de período contidos num card `ModernPanel(16)`.
+  5. `BonusTab.java`: Tabela de bónus encapsulada em `ModernPanel(16)` com acções secundárias de linha agrupadas em `ActionMenuButton("Mais Ações")`.
+- **Validação:**
+  - `TableCardContainmentAuditTest`: 2/2 testes aprovados, **0 painéis pendentes** (100% de conformidade em 52 painéis).
+  - `UiPanelDecompositionTest`: todos os ficheiros mantêm-se abaixo do limite de 1000 linhas.
+  - JAR desktop compilado, empacotado e aplicação reiniciada na sessão interactiva do utilizador.
+
+### Padrão Canónico de Encapsulamento em Card e Desobstrução de Acções em Contratos (`HRContractsPanel`) — 2026-09-25 — **concluída com SUCESSO**
+- **Necessidade:** O utilizador reportou que na aba de Contratos de RH (`HRContractsPanel`) os filtros e o campo de pesquisa ainda estavam soltos fora de um card (`body` era um `JPanel` simples transparente), e no cabeçalho havia sobreposição entre o título e os 5 botões de acção horizontais (`Imprimir PDF`, `Activar`, `Renovar`, `Cessar`, `Novo Contrato`).
+- **Solução Implementada:**
+  1. **Encapsulamento em Card (`ModernPanel(16)`):**
+     - O corpo da tabela e a barra de pesquisa/filtros foram envolvidos em um `ModernPanel(16)` com `EmptyBorder(15, 15, 15, 15)`.
+     - `TableFilter.bar` (`searchField` + `Estado: [combo]`) posicionado no `BorderLayout.NORTH` do `card`.
+     - `JScrollPane(table)` estilizado com `UIHelper.styleScrollPane` posicionado no `BorderLayout.CENTER` do `card`.
+  2. **Hierarquia e Desobstrução de Acções no Cabeçalho:**
+     - Substituídos os 5 botões abertos por uma hierarquia ergonómica:
+       - `[Novo Contrato]` (Botão Primário de criação global).
+       - `[Imprimir PDF]` (Botão Secundário de impressão directa).
+       - `[Gestão do Contrato ▾]` (`ActionMenuButton` contendo as acções de linha seleccionada: `Activar`, `Renovar`, `Cessar`).
+     - A largura da barra de acções foi reduzida de ~650px para ~310px, eliminando completamente qualquer risco de sobreposição com o título em qualquer resolução.
+  3. **Validação & Testes:**
+     - Criado o teste automatizado `HRContractsPanelHarnessTest.java` (3/3 testes verdes).
+     - Executada suite conjunta: `HRContractsPanelHarnessTest`, `StockWastePanelHarnessTest`, `PhysicalInventoryPanelHarnessTest` (13/13 aprovados).
+     - Aplicação empacotada e reiniciada via `schtasks` (PID `9408`).
+
+### Padrão Canónico de Encapsulamento em Card (*Table-Card Containment Pattern*) em Quebras de Stock (`StockWastePanel`) — 2026-09-25 — **concluída com SUCESSO**
+- **Necessidade:** O utilizador reportou que no módulo de inventário os cards de métricas deviam ficar no topo, e no ecrã de Quebras & Desperdício a tabela de histórico estava com viewport espremido (~30px), os botões colidiam com os filtros e os campos de pesquisa/filtros estavam soltos/desalinhados. Solicitou especificação formal e que filtros e campos de pesquisa ficassem estritamente dentro do card (`ModernPanel`) que contém a tabela, conforme demonstrado no ecrã canónico de referência (*Recursos Humanos -> Contratos*).
+- **Solução Implementada:**
+  1. **Especificação Canónica:**
+     - Atualizados [docs/GESTAO_QUEBRAS_STOCK_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/GESTAO_QUEBRAS_STOCK_SPEC.md) (§3.1) e [docs/UI_DESIGN_SYSTEM.md](file:///c:/Users/miran/Desktop/manager/docs/UI_DESIGN_SYSTEM.md) documentando a regra inegociável de contenção em card.
+  2. **Refatoração de `StockWastePanel.java`:**
+     - **Aba 1 (Registo & Validação de Quebras):**
+       - Cabeçalho externo mantém acções globais (`[Actualizar]`, `[Registar Quebra]`).
+       - Interior do card (`ModernPanel(16)`): toolbar em `BorderLayout.NORTH` com `BorderLayout(0, 8)` acomodando linha de topo (`wasteSearchField` à esquerda e botões de acção de linha `[Aprovar]`, `[Rejeitar]` à direita via `TableFilter.toolbar`) e linha de filtros semânticos (`Estado:`, `Motivo:`, `Período:` via `TableFilter.bar`) sem sobreposições.
+       - Viewport da tabela fixado com `preferredScrollableViewportSize(new Dimension(800, 380))` e altura de linha em 42px.
+     - **Aba 2 (Radar de Validades & Prevenção):**
+       - Banner informativo reposicionado no topo da aba (`BorderLayout.NORTH`).
+       - Dropdown de urgência e botão de ação rápida `[Registar Quebra deste Lote]` encapsulados na toolbar superior dentro do card da tabela (`ModernPanel(16)`), eliminando o helper deformador `filterGroup`.
+       - Viewport amplo de 380px e linhas de 42px.
+     - **Aba 3 (Métricas & Relatório Executivo):**
+       - Filtros de período (`Data Início:`, `Data Fim:`, `[Filtrar Período]`) e botão `[Imprimir Relatório Oficial PDF]` encapsulados horizontalmente dentro de `ModernPanel(14)` no topo.
+       - Ambas as tabelas (`reasonCard` e `catCard`) dentro de cards estilizados com 320px de viewport e 36px de altura de linha.
+     - Linhas totais de `StockWastePanel.java` reduzidas para 884 linhas (limite $\le 1000$).
+  3. **Validação:**
+     - `StockWastePanelHarnessTest` e `PhysicalInventoryPanelHarnessTest` (10/10 testes verdes).
+     - Aplicação empacotada e reiniciada via `schtasks` (PID `20432`).
+
+### Unificação Global do Design do Sistema (Cards Coloridos, Altura Padrão de Tabelas, Barras de Filtro e Acções) — 2026-09-25 — **concluída com SUCESSO**
+- **Necessidade:** O utilizador solicitou que os campos de dados/pesquisa e seleção nas tabelas tivessem a mesma organização em todo o sistema, os cards de KPI tivessem fundos coloridos vibrantes com gradiente como no Dashboard (altura uniforme de 86px) e as tabelas eliminassem alturas reduzidas arbitrárias.
+- **Solução Implementada:**
+  1. **Cards de KPI Coloridos e Uniformes (`KpiCard.java`):**
+     - Adicionados métodos de resolução de gradientes de alto contraste: `resolveKpiGradient(accentColor)` e `resolveKpiSoftColor(accentColor)`.
+     - Atualizados todos os cartões (`createCard`, `createMetricCard`, `createPillarCard`) para renderizarem com gradientes semânticos (azul, verde esmeralda, âmbar, vermelho, violeta, laranja) com valores em branco nítido e subtítulos/ícones de alto contraste.
+     - Padronizados os grids em todos os painéis com `KpiCard.createGrid(colunas)` e altura canónica fixa de 86px.
+  2. **Altura e Organização Canónica de Tabelas:**
+     - Removidas alturas forçadas pequenas (`rowHeight=28`, `rowHeight=32`) em painéis como `PhysicalInventoryPanel`, `CreditRiskPanel`, `ForensicAuditPanel`, restaurando a altura ergonómica canónica de 35px gerida por `UIHelper.styleTable(table)`.
+  3. **Barras de Filtros e Acções Canónicas (`TableFilter` & `UIHelper`):**
+     - Adicionados helpers canónicos `UIHelper.actionsBar(JComponent...)` e `UIHelper.filterBar(...)` delegando para `TableFilter.toolbar(...)`.
+     - Padronizadas mais de 25 barras de ferramentas em painéis de Compras, Comercial, Stock, RH, Financeiro, CRM e Fiscal.
+     - Restaurados métodos e constantes em `UIHelper`: `ACCENT_CYAN`, `ACCENT_ORANGE`, `cycleTheme()`, `meetsWcagAaa()`, `blendColors()`, `attachQuickFilter()`, `wrapTableWithQuickFilter()`, `semanticColorFor()`, `semanticIcon()` e `requestLogout()`.
+  4. **Resolução de Erro de Instanciação do MainFrame ("constructor failed" no login):**
+     - O login autenticava na API com sucesso, mas ao abrir a janela principal `MainFrame` lançava `BeanCreationException / Constructor threw exception` devido a símbolos em falta (`UIHelper.ACCENT_PINK`, `UIHelper.ACCENT_SKY`), import em falta de `TableFilter` em `SupplierStatementPanel` e sobrecarga de 4 argumentos em `UIHelper.buildPremiumHeader`.
+     - Todos os símbolos foram implementados e importados, todas as 237 classes foram recompiladas do zero com javac, e o teste integral `DesktopThinContextTest` passou a 100% (2/2 testes aprovados para utilizador normal e superadmin).
+     - Aplicação Desktop reiniciada e ativa na sessão interactiva do Windows.
+
+### Padronização e Reutilização Global de Cards de KPI com Altura Uniforme (`KpiCard`) — 2026-09-25 — **concluída com HARNESS**
+- **Necessidade:** O utilizador solicitou que os cards de indicadores fossem reutilizáveis em todo o sistema como no painel principal (Dashboard) e com exatamente o mesmo tamanho/altura uniforme.
+- **Solução Canónica Implementada:**
+  - `KpiCard.java` promovido a componente canónico único do sistema de design:
+    - Altura padrão uniforme rigorosa: `STANDARD_CARD_HEIGHT = 86px` e largura mínima `STANDARD_CARD_MIN_WIDTH = 140px` aplicadas a todos os métodos fábrica (`create`, `createCard`, `createMetricCard`).
+    - Adicionado método fábrica universal `createCard(title, valueLabel, subtitle, iconCode, accentColor)` com variantes para `String` directa e integração de `TrendBadge`.
+    - Adicionado gerador de grelha uniforme `createGrid(columns)` com espaçamento padronizado de 10px e transparência.
+  - Refatorados 6 painéis que continham métodos privados ad-hoc (`buildKpiCard`, `createKpiCard`) com tamanhos desiguais para usarem o `KpiCard` canónico:
+    1. `UserManagementPanel.java` (Utilizadores & PINs)
+    2. `BankReconciliationPanel.java` (Conciliação Bancária)
+    3. `CashFlowForecastPanel.java` (Previsão de Tesouraria)
+    4. `PurchaseReorderPanel.java` (Reposição Inteligente de Compras)
+    5. `ProfitAnalyticsWidget.java` (Rentabilidade & Margem)
+    6. `StockProductDetailDialog.java` (Ficha Executiva do Artigo)
+  - Criado o teste de regressão automatizado `KpiCardUniformityHarnessTest.java` (3/3 testes verdes).
+- **Validação:** `KpiCardUniformityHarnessTest` (3/3), `UiPanelDecompositionTest` (todos os ficheiros $\le 1000$ linhas) e `MultiModuleArchitectureHarnessTest` (6/6) 100% verdes; aplicação empacotada e reiniciada no Windows (PID `17888`).
+
+### Correcção de Abertura de Configurações no Sidebar (NullPointerException em `usersTableModel`) — 2026-09-25 — **corrigido e validado**
+- **Causa Raiz:** Ao clicar em "Configurações" na barra lateral, o método `ConfigPanel.onPanelSelected()` invocava `loadUsersList()`, o qual tentava executar `usersTableModel.setRowCount(0)`. Contudo, a aba de utilizadores havia sido refatorada e desacoplada para o componente moderno `UserManagementPanel`, deixando o campo `usersTableModel` nulo no `ConfigPanel`. Isso lançava uma `NullPointerException` não tratada no Event Dispatch Thread do Swing (`AWT-EventQueue-0`), travando a interface gráfica.
+- **Solução Implementada:**
+  - `ConfigPanel.java`: Removidos os campos mortos `usersTableModel`, `usersTable` e métodos obsoletos de gestão de utilizadores (`loadUsersList`, `applyUsers`, `registerUser`, `updateSelectedUserRole`, `editSelectedUserName`).
+  - Associada a instância viva de `UserManagementPanel` e delegado o recarregamento assíncrono seguro em `onPanelSelected()` via `usersPanel.refreshDataAsync()`.
+  - `UserManagementPanel.java`: Eliminados emojis crus Unicode (`🟢`, `🔴`, `🔑`) nas colunas da tabela de utilizadores para evitar renderização de retângulos/quadrinhos (`▯`) no Java 2D do Windows, substituindo por texto limpo e profissional (`ATIVO`, `INATIVO`, `CONFIGURADO`).
+  - Criado o teste de regressão `ConfigPanelSelectionHarnessTest.java` validando a instanciação e o ciclo de vida de `onPanelSelected()` sem exceções.
+- **Validação:** `ConfigPanelSelectionHarnessTest` (1/1), `UiPanelDecompositionTest` (`ConfigPanel.java` com 771 linhas $\le 1000$) aprovados; aplicação recompilada, empacotada e reiniciada no Windows.
+
+### Pagamentos de Plataforma para Ativação e Renovação de Planos (M-Pesa, e-Mola e Transferência Manual) — 2026-09-25 — **concluída com SPEC e HARNESS**
+- Criada especificação técnica canónica: `docs/PLATFORM_SUBSCRIPTION_PAYMENTS_SPEC.md` (`SPEC-PSP-001`).
+- Criada matriz de testes (harness): `docs/PLATFORM_SUBSCRIPTION_PAYMENTS_HARNESS.md` (`HARNESS-PSP-001`).
+- **Contratos & DTOs (`contracts`):**
+  - `SubscriptionPlanDetailDTO` (plano, label comercial, preço mensal em MT, descrição de recursos).
+  - `SelfServiceSubscriptionPaymentRequest` (plano, meses contratados, forma de pagamento, telemóvel, referência/comprovativo e observações).
+  - `SubscriptionPaymentResultDTO` (sucesso, mensagem amigável, id de transação e DTO da assinatura atualizada).
+- **Backend & Regras de Negócio (`backend`):**
+  - `SubscriptionService`:
+    - `listAvailablePlans()`: cataloga planos comerciais `BASIC` (1.500 MT), `PRO` (3.500 MT) e `ENTERPRISE` (7.500 MT).
+    - `calculateRenewalPrice(plan, months)`: cálculo determinístico de faturação com tabela progressiva de descontos moçambicanos (3m: 5%, 6m: 10%, 12m: 15% anual).
+    - `initiateSelfServiceRenewal(request)`: fluxo unificado que suporta tanto pagamentos móveis automáticos (M-Pesa/e-Mola por Push USSD) quanto transferência bancária manual / depósito com submissão de comprovativo.
+    - `confirmMobileRenewal(transactionId)`: validação e estorno de transação móvel aprovada com extensão imediata do `validUntil`.
+  - `MySubscriptionController`:
+    - `GET /api/subscription/plans`: consulta pública e autenticada de planos e preços em MT.
+    - `POST /api/subscription/renew`: iniciação de pedido de renovação pelo assinante.
+    - `POST /api/subscription/confirm-payment/{transactionId}`: confirmação reativa de transação móvel aprovada.
+  - Mantida 100% intacta a ativação manual administrativa em `PlatformSubscriptionController` e no `PlataformaPanel.java`.
+  - Harness de backend `PlatformSubscriptionPaymentsHarnessTest` (6/6 testes verdes, cobrindo PSP-01 a PSP-06).
+  - Testes unitários `SubscriptionServiceTest` (7/7 testes verdes).
+- **Desktop & UI Swing (`desktop`):**
+  - `MySubscriptionApiClient`: métodos `listPlans()`, `renewSubscription()` e `confirmPayment()`.
+  - `SubscriptionRenewalDialog.java`: modal moderno e executivo com cartões de plano, selecção de período com badges de desconto (5%, 10%, 15%), rádio para M-Pesa / e-Mola (Push USSD) e Transferência Bancária manual (Millennium BIM / BCI).
+  - `ConfigPanel.java`: adicionado botão `[ Renovar / Activar Plano ]` com ícone `fas-crown` na aba de Subscrição, abrindo o fluxo com recarregamento reativo da assinatura.
+  - Harness de desktop `SubscriptionRenewalUiHarnessTest` (2/2 testes verdes).
+- **Validação Arquitetural & Execução:**
+  - `MultiModuleArchitectureHarnessTest` (6/6) e `UiPanelDecompositionTest` (todos os ficheiros $\le 1000$ linhas) 100% aprovados.
+  - Backend e Desktop compilados, empacotados e ativos na sessão interativa do utilizador (`javaw` PID 9384).
+
+### Integração de Pagamento Móvel (M-Pesa & e-Mola via Push USSD no POS) — 2026-09-25 — **concluída com SPEC e HARNESS**
+- Criada especificação técnica canónica: `docs/MOBILE_PAYMENT_INTEGRATION_SPEC.md` (`SPEC-MPI-001`).
+- Criada matriz de testes (harness): `docs/MOBILE_PAYMENT_INTEGRATION_HARNESS.md` (`HARNESS-MPI-001`).
+- **Contratos & DTOs (`contracts`):**
+  - Enums `MobilePaymentProvider` (`MPESA` Vodacom 84/85, `EMOLA` Movitel 86/87) e `MobilePaymentStatus` (`PENDING`, `SUCCESS`, `FAILED`, `EXPIRED`, `CANCELLED`).
+  - Records imutáveis `InitiateMobilePaymentRequest`, `MobilePaymentResponse` e `MobilePaymentStatusResponse`.
+- **Backend & Persistência (`backend`):**
+  - Migração Flyway `V70__mobile_payment_transactions.sql` com índices de auditoria e isolamento multi-tenant por empresa.
+  - Entidade JPA `MobilePaymentTransaction` e repositório `MobilePaymentRepository`.
+  - Serviço `MobilePaymentService` com normalização de números Moçambicanos (9 dígitos), validação estrita de prefixos por operadora, geração de referências financeiras canónicas e motor de simulação/sandbox inteligente.
+  - Endpoints REST `POST /api/pos/mobile-payment/initiate`, `GET /api/pos/mobile-payment/{transactionId}/status` e `POST /simulate-complete`.
+  - Harness de backend `MobilePaymentHarnessTest` (6/6 testes verdes, cobrindo MPI-01 a MPI-06).
+- **Desktop & Checkout POS (`desktop`):**
+  - Cliente `POSApiClient` com suporte a iniciação, consulta periódica e simulação.
+  - Diálogo interativo `MobilePaymentModal.java` com contador regressivo (60s), animação de pulso, validação de número de telemóvel em tempo real e feedback sonoro (`PosAudioFeedbackEngine`).
+  - Integração no `PosPaymentDialog.java`: ao selecionar "M-Pesa" ou "e-Mola", surge o botão inteligente `[ Push M-Pesa ]` / `[ Push e-Mola ]`, preenchendo automaticamente a referência financeira autorizada no comprovativo da venda.
+  - Harness de desktop `MobilePaymentModalHarnessTest` (2/2 testes verdes).
+- **Validação:** Compilação e harnesses 100% aprovados, limites de linhas ($\le 1000$) e regras de arquitetura desacoplada preservados; aplicação empacotada e reiniciada no Windows.
+
+### Correcção de Sobreposição de Atalho no Botão Remover do POS — 2026-09-25 — **corrigido e validado**
+- **Causa Raiz:** No `ModernButton.java`, o badge de tecla de atalho (`shortcutText`, ex.: `[Del]`) era pintado sobre o canvas direito sem que os insets do botão refletissem esse espaço. Como a UI do Swing (`BasicButtonUI`) centralizava o texto "Remover" e o ícone na largura total da moldura, o texto estendia-se para a direita, sendo atropelado pelo badge. Adicionalmente, na barra de ações do carrinho (`POSPanel.java`), a caixa "Venda a Crédito (Conta Corrente)" dividia o mesmo `BorderLayout` horizontal entre `Remover` e `Finalizar Venda`, espremendo os botões.
+- **Solução Implementada:**
+  - `ModernButton.java`: Sobrescritos `getInsets()` e `getInsets(Insets)` para reservar dinamicamente a largura do badge (`calculateShortcutBadgeWidth()`) acrescida de 8px de resguardo à direita. A área de layout do texto (`viewRect`) agora termina estritamente antes do badge, tornando impossível qualquer sobreposição.
+  - `POSPanel.java`: Isolada a opção de crédito em linha própria (`creditRow`) logo acima dos botões, dedicando a linha inferior (`buttonRow`) exclusivamente para `Remover` (à esquerda) e `Finalizar Venda` (ao centro/direita).
+- **Validação:** `PosQuickTenderHarnessTest` (6/6), `PosButtonColourHierarchyTest` (1/1), `UiPanelDecompositionTest` (1/1, `POSPanel.java` a 997 linhas $\le 1000$) e `MultiModuleArchitectureHarnessTest` (6/6) 100% verdes; aplicação recompilada e reiniciada.
+
+### Dashboard Comercial & Executivo: Variação de Vendas em Tempo Real, Ticket Médio e Margem Bruta — 2026-09-25 — **concluída com SPEC e HARNESS**
+- Criada especificação técnica: `docs/DASHBOARD_COMMERCIAL_KPI_AND_TREND_SPEC.md`.
+- Criada matriz de testes (harness): `docs/DASHBOARD_COMMERCIAL_KPI_AND_TREND_HARNESS.md`.
+- Criado harness automatizado: `desktop/src/test/java/mz/multicore/erp/gui/DashboardCommercialKpiHarnessTest.java` (8 testes, 100% verde).
+- **Motor de Tendências & Intervalos Comparativos (`DashboardTrendCalculator.java`):**
+  - Resolução temporal determinística (`resolvePeriods`) para todos os filtros (`HOJE` vs ontem, `ESTA_SEMANA` vs semana anterior, `ESTE_MES` vs mês anterior, `ESTE_ANO` vs ano anterior, `TODOS` histórico).
+  - Cálculo de variação percentual robusto com tratamento estrito de divisão por zero e transição de base nula.
+  - Cálculo determinístico de Ticket Médio (`calculateAverageTicket`) e Margem Bruta Estimada (`calculateGrossMarginPercentage`).
+- **Cartões de KPI & Badges de Tendência (`KpiCard.java` & `DashboardPanel.java`):**
+  - `KpiCard.TrendBadge` expandido com suporte a atualização reativa em tempo real (`updateTrend`), tooltips de comparação e total imunidade contra caracteres Unicode crus (`▲`/`▼`) através de ícones vetoriais FontAwesome.
+  - Card de **FATURAÇÃO TOTAL**: Apresenta valor consolidado, `TrendBadge` de variação com o período imediatamente anterior e subtítulo executivo de Ticket Médio (`TM: X.XX MT/venda`).
+  - Card de **VENDAS POS**: Apresenta total arrecadado no balcão, `TrendBadge` reativo de desempenho e contagem de recibos com Ticket Médio por cliente de balcão.
+- **Validação:** `DashboardCommercialKpiHarnessTest` (8/8), `ExecutiveUiExperienceHarnessTest` (10/10), `UiPanelDecompositionTest` (1/1) e `MultiModuleArchitectureHarnessTest` (6/6) 100% verdes; aplicação empacotada e reiniciada na sessão interactiva.
+
+### Pagamento Rápido no POS (Quick Tender) & Badges de Teclado — 2026-09-25 — **concluída com SPEC e HARNESS**
+- Criada especificação técnica: `docs/POS_QUICK_TENDER_AND_KEYBADGE_SPEC.md`.
+- Criada matriz de testes (harness): `docs/POS_QUICK_TENDER_AND_KEYBADGE_HARNESS.md`.
+- Criado harness automatizado: `desktop/src/test/java/mz/multicore/erp/gui/pos/PosQuickTenderHarnessTest.java` (6 testes, 100% verde).
+- **Visor de Troco & Cédulas Nacionais:**
+  - `PosPaymentDialog.java` transformado em ecrã executivo de checkout comercial rápido.
+  - Visor de troco de alto contraste com valores em 22pt bold (verde para troco a entregar, âmbar para valor em falta).
+  - Cédulas Moçambicanas de 1 toque: `Exacto`, `50 MT`, `100 MT`, `200 MT`, `500 MT`, `1000 MT`, `2000 MT`.
+  - Seletor visual de métodos de pagamento com chips temáticos (Numerário, Cartão POS, M-Pesa, e-Mola, Transferência).
+- **Badges de Teclado nos Botões (`KeyBadge` & `ModernButton`):**
+  - Implementado `KeyBadge.java` e suporte nativo em `ModernButton.setShortcut("F9")` com renderização de tecla física em relevo.
+  - Aplicados atalhos nos botões principais do POS: `[F9]` Finalizar Venda, `[F6]` Quantidade, `[Del]` Remover, `[F7]` Fidelidade, `[Z]` Fechar Caixa.
+- **Validação:** `PosQuickTenderHarnessTest`, `UiPanelDecompositionTest`, `DesktopThinContextTest` e `MultiModuleArchitectureHarnessTest` 100% aprovados; aplicação recompilada e relançada.
+
+### Correção de Sobreposição de Botões no Topo do POS — 2026-09-25 — **corrigido e validado**
+- **Causa Raiz:** O widget da balança (`scaleWidget`), com largura de ~340px, estava adicionado ao painel `segmented` (lado esquerdo) juntamente com as abas de navegação ("Venda POS", "Histórico de Vendas", "Fidelidade (F7)", "Contingência"). Somando aos botões de sessão do lado direito (`sessionActions`: Refresh, "Fechos (Z)", "Abrir Caixa", "Sangria / Suprimento", "Fechar Caixa (Z)"), a barra superior exigia mais de 1560px, provocando colisão e sobreposição directa entre os botões da balança e os botões de caixa em ecrãs padrão.
+- **Solução Implementada:**
+  - Realocado o `scaleWidget` para o `sessionBanner` (`PosLayout.createSessionBanner(statusLabel, scaleWidget)`), integrando os controlos de balança e peso em tempo real à direita do estado operacional do caixa.
+  - A barra superior (`topBar`) agora contém exclusivamente as abas de navegação à esquerda (~445px) e as acções de caixa à direita (~488px), reduzindo a largura total para menos de 935px e garantindo folga ampla em qualquer resolução (1080p, 1366x768).
+- **Validação:** `UiPanelDecompositionTest`, `PosButtonColourHierarchyTest` e `UiMicroInteractionsHarnessTest` aprovados com 100% de sucesso; pacote desktop gerado e executado na sessão interactiva.
+
+### Composição Caixa → Embalagem → Unidade — 2026-09-25 — **implementada com SPEC e HARNESS**
+- Produto passa a guardar `packagesPerBox` e `unitsPerPackage`; `unitsPerBox` é calculado no backend
+  como produto dos dois factores e permanece compatível com clientes e relatórios anteriores.
+- Migração aditiva `V68__product_packaging_composition.sql` preserva stocks existentes, interpretando
+  cada unidade anterior como uma embalagem de uma unidade.
+- Cadastro/edição e detalhe do produto apresentam embalagens por caixa, unidades por embalagem e
+  total por caixa somente leitura.
+- Entradas de stock, facturas, pedidos, compras e encomendas aceitam caixas, embalagens e unidades;
+  stock, preços e impostos continuam em unidades-base.
+- Documentos comerciais justificam a quantidade com as colunas configuráveis **Embalagens**
+  (`quantidade ÷ unidades/embalagem`), **Caixas** (`quantidade ÷ unidades/caixa`) e **% da Caixa**
+  (`quantidade ÷ unidades/caixa × 100`), sem impacto nos cálculos fiscais ou de stock. O cabeçalho
+  A4 usa abreviações legíveis: `Emb.`, `Cx.` e `% Cx.`.
+- SPEC/HARNESS: `docs/PRODUCT_PACKAGING_COMPOSITION_SPEC.md` e
+  `docs/PRODUCT_PACKAGING_COMPOSITION_HARNESS.md`.
+- Validação: compilação incremental verde; suite completa com **1.328 testes, 0 falhas, 0 erros e
+  1 ignorado**, incluindo `MultiModuleArchitectureHarnessTest` e `DesktopThinContextTest`; build
+  limpo e relançamento operacional executados na conclusão.
+
+### Micro-Interações, UI Líquida e Badges em Pílula (SPEC e HARNESS) — 2026-09-25 — **concluída com SPEC e HARNESS**
+- Criada especificação técnica: `docs/UI_MICRO_INTERACTIONS_SPEC.md`.
+- Criado harness automatizado: `desktop/src/test/java/mz/multicore/erp/gui/components/UiMicroInteractionsHarnessTest.java` (5 testes, 100% verde).
+- **Transição Suave de Hover (`ModernButton.java`):**
+  - Implementada interpolação de cor linear fluida via `UIHelper.blendColors(normalColor, hoverColor, progress)` em 6 passos a ~50fps (120ms).
+  - Feedback táctil: ligeiro deslocamento de 1px ao premir, reproduzindo a sensação física de clique.
+  - Limpeza de recursos rigorosa no descarte do componente (`removeNotify`).
+- **Toasts Flutuantes Animados (`ToastManager.java`):**
+  - Transição de entrada com slide-up de 8px e fade-in de opacidade (onde suportado pela GPU/sistema).
+  - Saída suave com fade-out antes do `dispose()`.
+  - Botão de fechar e suporte a clique imediato para descartar a notificação.
+- **Pílulas de Estado Reutilizáveis (`StatusBadge.java`):**
+  - Componente em estilo pílula (Pill Badge) com cantos perfeitamente arredondados, fundo translúcido da cor semântica e texto de alto contraste com ícone vetorial FontAwesome.
+  - Métodos de conveniência: `success`, `warning`, `danger`, `info`, `neutral`.
+- **Limpeza de Caracteres Unicode no Monitoramento (`SystemMonitoringDialog.java`):**
+  - Removidos símbolos brutos `●`, `▲`, `✖` do badge de saúde do sistema, substituindo por ícones vetoriais FontAwesome (`fas-check-circle`, `fas-exclamation-triangle`, `fas-times-circle`), eliminando qualquer risco de quadrinhos (`▯`).
+- **Validação:** Testes de feedback profissional (`ProfessionalFeedbackHarnessTest`), micro-interações (`UiMicroInteractionsHarnessTest`) e limites de decomposição (`UiPanelDecompositionTest`) aprovados; aplicação recompilada e relançada na sessão interativa do Windows.
+
+### Botão de Logout & Terminar Sessão — 2026-09-24 — **implementado e validado**
+- Implementado mecanismo explícito e acessível de **Terminar Sessão (Logout)** no Desktop:
+  - **Top Bar (`MainFrame`):** Adicionado botão de logout no chip de utilizador (ícone `fas-sign-out-alt` vermelho, tooltip explicativo e ação com diálogo de confirmação).
+  - **Sidebar Retrátil (`CollapsibleSidebar`):** Botão de logout dedicado no card de perfil do operador no rodapé do menu lateral, com menu de contexto também ao clicar no avatar.
+  - **Paleta de Comandos (`GlobalSearchDialog` / `Ctrl+K`):** Ação rápida `act_logout` com termos de busca ("logout", "sair", "encerrar", "trocar utilizador", "login", "desconectar").
+  - **Roteamento & Segurança:** `UIHelper.requestLogout(Component parent)` invoca `UIHelper.onForcedLogout` registado pelo `DesktopLauncher`, que invalida a sessão via `/api/auth/logout`, limpa `DesktopSessionStore` e `CurrentUserContext`, fecha a janela principal e reabre com segurança o diálogo de login `LoginDialog`.
+- Todos os limites de decomposição (`UiPanelDecompositionTest`, `MainFrame.java` a 988 linhas $\le 1000$) e arquitetura (`MultiModuleArchitectureHarnessTest`) mantidos 100% verdes.
+
+### Eliminação de Reticências (`...` / `…`) em Botões do Sistema — 2026-09-24 — **implementado e validado**
+- Removidas todas as reticências literais (`...` e `…`) de todos os botões da aplicação (`CommercialInvoicesView`, `CommercialOrdersView`, `ComprasPanel`, `PurchaseOrdersPanel`, `StockProductActions`, `StockCategoriesPanel`, `HRPanel`, `HREmployeeActions`, `PlataformaPanel`, `LoginDialog`).
+- `ModernButton` atualizado com método estático `stripEllipsis()`, higienização automática no construtor e no método `setText()`, além de margem horizontal interna e cálculo de tamanho preferencial com margem de segurança para prevenir que o Swing LayoutManager trunque títulos de botões com reticências.
+- `ActionMenuButton` atualizado para higienizar rótulos em menus suspensos de botões.
+- Recompilação, validação com harnesses (`UiPanelDecompositionTest`, `SidebarFavoritesHarnessTest`) e relançamento interativo no Desktop.
+
+### Modernização Visual da Barra de Título (FlatLaf Window Decorations) — 2026-09-24 — **implementado e validado**
+- Ativadas as decorações de janela unificadas do FlatLaf (`flatlaf.useWindowDecorations=true`, `TitlePane.useWindowDecorations=true`, `TitlePane.unifiedBackground=true`, `JRootPane.titleBarShowIcon=true`, `JRootPane.titleBarShowTitle=true`).
+- A moldura branca/cinzenta clássica nativa do Windows foi substituída pela barra de título personalizada do FlatLaf integrada no tema ativo do ERP, com cantos arredondados, botões de minimizar/maximizar/fechar estilizados e transição perfeita com a barra de ferramentas superior.
+- Desktop recompilado e relançado na sessão interativa.
+
+### Correção de Glifos Quadrados na Barra Lateral — 2026-09-24 — **corrigido e validado**
+- **Causa Raiz Identificada:** Foi utilizado o caractere Unicode raw emoji estrela `⭐` no cabeçalho `"⭐ FAVORITOS"` (`CollapsibleSidebar.java`) e no prefixo de rótulo dos itens favoritos `String labelText = isFav ? "⭐ " + label : label;` (`SidebarNavItem.java`). No Swing em Windows com fontes de sistema padrão (`Segoe UI`), emojis não possuem glifo vectorial nativo suportado pelo Java 2D e renderizam como caixas de caractere não imprimível `▯` ("quadrinhos"), desalinham o texto dos itens e violam a regra de não usar emojis.
+- **Solução Implementada:**
+  - `CollapsibleSidebar.java`: `SectionHeader` atualizado com sobrecarga que aceita `Icon`. A secção de topo agora exibe o ícone vectorial FontAwesome `UIHelper.icon("fas-star", 10, UIHelper.PENDING_YELLOW)` ao lado de `"FAVORITOS"` sem nenhum emoji.
+  - `SidebarNavItem.java`: Removido o prefixo de emoji do texto em `paintLabel`. Os nomes dos módulos voltam a renderizar perfeitamente alinhados e nítidos.
+- **Validação:** `SidebarFavoritesHarnessTest` (7/7) e `UiPanelDecompositionTest` (1/1) 100% aprovados; desktop recompilado e empacotado.
+
+### Estabilização funcional pós-Fase 27 — 2026-09-24 — **concluída com SPEC e HARNESS**
+
+- Criados `docs/SYSTEM_FUNCTIONAL_STABILIZATION_SPEC.md` (`SPEC-SFS-001`) e
+  `docs/SYSTEM_FUNCTIONAL_STABILIZATION_HARNESS.md` (`HARNESS-SFS-001`).
+- Segurança multiempresa reforçada: mudança de papel, desactivação e revogação de acesso não podem
+  remover o último administrador **activo** de uma empresa; a decisão usa o papel por empresa.
+- Harnesses de auditoria forense e previsão de tesouraria alinhados com o RBAC fail-closed
+  `MANAGER/ADMIN`, mantendo utilizadores comuns bloqueados.
+- Desktop estabilizado: vocabulário temporal canónico de oito opções, matrizes executivas sem
+  paginação indevida, selecção modelo/vista correcta em quebras de stock e estado vazio rico.
+- Impressão fiscal e Relatório Z passam obrigatoriamente por `PrintPreviewDialog`.
+- Funcionalidades recentes deixaram de introduzir `JOptionPane`; o inventário legado regressou ao
+  limite canónico de 49 chamadas e ganhou prompt temático reutilizável em `ModernMessageDialog`.
+- Verificação final: `mvn -q clean compile` verde; `mvn -q test` verde com **1.316 testes**, zero
+  falhas, zero erros e 1 teste previamente ignorado. `MultiModuleArchitectureHarnessTest` 6/6.
+
+### Fase 27: Módulo de Observabilidade Multi-Tenant & Central de Alarmes (Sonoro & E-mail) — 2026-09-24 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/MULTI_TENANT_MONITORING_ALERTS_SPEC.md` (`SPEC-MTMA-001`) — Especificação técnica do monitoramento operacional multi-tenant em tempo real, agregação de status por empresa/inquilino (backups, anomalias forenses pendentes e utilizadores), síntese sonora PCM em memória sem dependências externas, disparo transacional de e-mails com cooldown inteligente de 15 minutos anti-spam e integração com o sino de notificações.
+  - `docs/MULTI_TENANT_MONITORING_ALERTS_HARNESS.md` (`HARNESS-MTMA-001`) — Matriz de testes automatizados MTMA-01 a MTMA-08.
+- **Componentes Canónicos Criados & Atualizados:**
+  - `contracts`: DTOs records `TenantHealthDTO.java`, `SystemAlertIncidentDTO.java`, `SystemAlertTestResultDTO.java`.
+  - `backend`:
+    - `SystemIncidentManager.java`: Gestor thread-safe em memória dos últimos 50 incidentes operacionais.
+    - `SystemAlertEmailService.java`: Despacho de e-mail de alerta transacional com cooldown de 15 minutos e suporte a modo de teste.
+    - `TenantMonitoringService.java`: Consolidação do estado multi-tenant a partir de repositórios, bases de dados e auditorias.
+    - `SystemMonitoringController.java`: Endpoints REST `/api/monitoring/tenants-health`, `/api/monitoring/incidents`, `/api/monitoring/test-email-alert`.
+  - `desktop`:
+    - `SoundAlertManager.java`: Motor Singleton de alarme sonoro sintetizado em tempo real (900 Hz + 1200 Hz), com salvaguarda estrita para ambientes headless e persistência de preferências em `${user.home}/.multicore/alert_sound_settings.json`.
+    - `SystemMonitoringApiClient.java`: Expandido com chamadas para dados multi-tenant, incidentes e teste de e-mail.
+    - `SystemMonitoringDialog.java`: Reorganizado em abas modernas ("Diagnóstico Geral", "Saúde Multi-Tenant", "Central de Alarmes") com botões de teste interativo e tabela de incidentes em tempo real (mantido em 560 linhas $\le 1000$).
+    - `NotificationFeed.java`: Injeção automática de incidentes críticos do sistema com prioridade máxima no sino do ERP.
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `SystemAlertHarnessTest.java` (backend - 5/5 testes verdes).
+  - `SystemMonitoringHarnessTest.java` (backend - 7/7 testes verdes).
+  - `SoundAlertHarnessTest.java` (desktop - 3/3 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis $\le 1000$ linhas).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+  - **22/22 testes unitários, de integração e de arquitetura 100% verdes (BUILD SUCCESS)**.
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Limpeza e Modernização de Selects (JComboBox): Remoção de Traços e Hífens (`---` e `—`) — 2026-09-23
+- **Padronização Visual & Elegância nos Menus Suspensos:**
+  - Remoção de delimitadores arcaicos e poluídos (`---` e `— ... —`) em opções padrão de todos os `JComboBox` da aplicação.
+  - Substituição por texto limpo, moderno e direto:
+    - `"--- Todos os Armazéns ---"` $\rightarrow$ `"Todos os Armazéns"` (`StockBatchesPanel.java`, `StockPanel.java`).
+    - `"— Sem categoria —"` $\rightarrow$ `"Sem categoria"` (`StockProductActions.java`).
+    - `"— IVA Padrão (16%) —"` $\rightarrow$ `"IVA Padrão (16%)"` (`StockProductActions.java`).
+    - `"— sem prestador cadastrado —"` $\rightarrow$ `"Sem prestador cadastrado"` (`HREmployeeActions.java`).
+    - `"— A crédito (pagar depois) —"` $\rightarrow$ `"A crédito (pagar depois)"` (`ComprasPanel.java`).
+    - `"— Consumidor Final (sem registo) —"` $\rightarrow$ `"Consumidor Final (sem registo)"` (`ComercialPanel.java`, `QuotationEditorDialog.java`).
+    - `"— Seleccionar Conta —"`, `"— Sem Extractos —"`, `"— Nenhuma transacção compatível encontrada —"` $\rightarrow$ versões limpas em `BankReconciliationPanel.java`.
+    - Placeholders de formulários `"— FEFO automático —"` $\rightarrow$ `"FEFO automático"` (`CommercialInvoicesView.java`, `CommercialOrdersView.java`).
+  - Total compatibilidade com índices e seleção de modelo (`getSelectedIndex() == 0` preservado).
+  - Verificação de arquitetura e decomposição: 16 testes verdes (incluindo `UiPanelDecompositionTest`, com todos os ficheiros $\le 1000$ linhas).
+
+### Refatoração Ergonómica: Redesenho do TablePager & Diário Contabilístico — 2026-09-23
+- **TablePager Moderno & Simétrico:**
+  - Substituição das cápsulas verticais desproporcionadas por botões de navegação quadrados simétricos (30 × 30 px) `PagerNavButton`.
+  - Estilo moderno suave (*ghost / outline*) com cantos arredondados, bordas subtis e realce dinâmico em hover.
+  - Estado desabilitado refinado com fundo translúcido (sem blocos pretos opacos mortos).
+  - Ícones de navegação atualizados (`fas-angle-double-left`, `fas-chevron-left`, `fas-chevron-right`, `fas-angle-double-right`).
+  - Alinhamento de altura com o seletor de registos por página (30 px).
+- **Diário Contabilístico (`AccountingPanel`):**
+  - Barra superior de pesquisa rápida com `TableQuickFilterBar` (`Ctrl+F`) e botão `[ Actualizar ]`.
+  - Rodapé executivo de conferência de partidas dobradas com cálculo automático: `Total Débito` · `Total Crédito` · `Equilibrado ✓ / Desbalanceado ⚠`.
+  - Manutenção estrita do limite de linhas: `AccountingPanel.java` (508 linhas $\le 1000$) e `TablePager.java` (219 linhas $\le 1000$).
+
+### Fase 26: Barra Universal de Filtro Rápido e Pesquisa em Tabelas (`TableQuickFilterBar` / `Ctrl+F`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/TABLE_QUICK_FILTER_SPEC.md` (`SPEC-TBLF-001`) — Especificação técnica do componente universal de pesquisa e filtragem rápida em tabelas Swing, correspondência multi-termo *case-insensitive* (`(?i)`), conjunção lógica AND entre colunas, atalhos de teclado `Ctrl+F` e `Escape`, contador reativo em tempo real e conformidade com temas e alto contraste.
+  - `docs/TABLE_QUICK_FILTER_HARNESS.md` (`HARNESS-TBLF-001`) — Matriz de testes automatizados TBLF-01 a TBLF-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `TableQuickFilterBar.java`: Componente visual universal com `TableRowSorter`, campo de texto estilizado, botão limpar `[ ✕ ]`, contador reativo, atalhos de foco `Ctrl+F` e `Escape`, e métodos de empacotamento `wrapWithFilter`.
+  - `UIHelper.java`: Adicionados os métodos utilitários `attachQuickFilter(JTable table)` e `wrapTableWithQuickFilter(JScrollPane scrollPane, JTable table)`.
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `TableQuickFilterHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `FormDraftAutoSaveHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `UiDensityZoomHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `RecentItemsHistoryHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `HighContrastThemeHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis com linhas $\le 1.000$).
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 25: Auto-Salvamento & Recuperação de Rascunhos de Formulários contra Cortes de Energia / Fecho Acidental (`FormDraftManager` / `FormDraftBanner`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/FORM_DRAFT_AUTOSAVE_SPEC.md` (`SPEC-DFRT-001`) — Especificação técnica do sistema de persistência local atómica e assíncrona de rascunhos de formulários em `${user.home}/.multicore/drafts/<formKey>.json`, banner de aviso contextual (`FormDraftBanner`) e ciclo de vida de restauração/descarte.
+  - `docs/FORM_DRAFT_AUTOSAVE_HARNESS.md` (`HARNESS-DFRT-001`) — Matriz de testes automatizados DFRT-01 a DFRT-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `FormDraft.java`: Record imutável com `formKey`, `title`, `timestampMillis`, `fields` (`Map<String, String>`) e formatação relativa de tempo.
+  - `FormDraftManager.java`: Gestor thread-safe Singleton com `saveDraftAsync`, `saveDraftSync`, `loadDraft`, `discardDraft`, `hasDraft` e persistência atómica em JSON com fallback gracioso.
+  - `FormDraftBanner.java`: Barra de notificação visual moderna em tom âmbar suave com ícone `fas-save`, botão de ação `[ Restaurar Rascunho ]` e descarte `[ Descartar ]`.
+  - `UIHelper.java`: Adicionado método de utilidade `attachDraftBanner(Container, formKey, onRestore)` para integração automática e desobstruída em qualquer tela ou diálogo de edição.
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `FormDraftAutoSaveHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `UiDensityZoomHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `RecentItemsHistoryHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `HighContrastThemeHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 24: Densidade de Interface & Escala de Tipografia / Zoom Operacional (`UiDensity` / `UiDensityManager`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/UI_DENSITY_ZOOM_SPEC.md` (`SPEC-DENS-001`) — Especificação técnica dos modos de densidade (`COMPACT` 28px/32px/0.90x, `STANDARD` 36px/38px/1.0x, `COMFORTABLE` 44px/44px/1.15x), persistência em `java.util.prefs.Preferences` (`"density"`), propagação para `UIManager` e repintura atómica de tabelas.
+  - `docs/UI_DENSITY_ZOOM_HARNESS.md` (`HARNESS-DENS-001`) — Matriz de testes automatizados DENS-01 a DENS-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `UiDensity.java`: Enum canónico com as métricas de altura de linha de tabela, altura de controlo, escala tipográfica e resolução por identificador.
+  - `UiDensityManager.java`: Gestor thread-safe Singleton com comutação cíclica (`cycleDensity()`), persistência em preferências, propagação para `UIManager` e notificação de ouvintes.
+  - `UIHelper.java`: Atualizado `styleTable(table)` e `initGlobalTheme()` para aplicar dinamicamente a altura de linha de tabela da densidade ativa.
+  - `ConfigPanel.java`: Botão de comutação rápida de densidade na barra de ferramentas superior (`fas-text-height`). Mantido em 874 linhas ($\le 1.000$).
+  - `MainFrame.java`: Integrado o comando de alternância de densidade na Command Palette (`Ctrl+K`). Mantido em 998 linhas ($\le 1.000$).
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `UiDensityZoomHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `RecentItemsHistoryHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `HighContrastThemeHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 23: Histórico de Itens Recentes & Quick-Recall (`Ctrl+H` / `RecentItemsHistoryManager`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/RECENT_ITEMS_HISTORY_SPEC.md` (`SPEC-RHIS-001`) — Especificação técnica do histórico de navegação e atividade recente, modelo imutável `RecentItem`, lógica de inserção MRU e evicção LRU (capacidade 20 itens), persistência atómica local em `${user.home}/.multicore/recent_items.json`, atalhos de teclado e interface de recall rápido.
+  - `docs/RECENT_ITEMS_HISTORY_HARNESS.md` (`HARNESS-RHIS-001`) — Matriz de testes automatizados RHIS-01 a RHIS-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `RecentItem.java`: Record imutável contendo `id`, `category`, `title`, `subtitle`, `targetView`, `recordId`, `iconCode`, `timestampMillis` e cálculo relativo de tempo decorrido ("Agora mesmo", "há 5 min", "há 2 h").
+  - `RecentItemsHistoryManager.java`: Gestor thread-safe Singleton com deduplicação por chave, ordenação MRU, evicção LRU e persistência em JSON via Jackson.
+  - `RecentItemsDialog.java`: Diálogo executivo modal com pesquisa instantânea, renderização de badges coloridos por categoria de módulo, navegação com `Enter` ou duplo clique, e limpeza de histórico.
+  - `MainFrame.java`: Integrado o atalho universal `Ctrl+H`, botão de histórico `fas-history` na barra superior, item na Command Palette (`Ctrl+K`) e auto-registo de navegação de módulos. Mantido em 997 linhas ($\le 1.000$).
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `RecentItemsHistoryHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `HighContrastThemeHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 22: Modo de Alto Contraste Acessível & Operação Exterior / Outdoor (`Theme.HIGH_CONTRAST` & `UIHelper.cycleTheme`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/HIGH_CONTRAST_ACCESSIBILITY_SPEC.md` (`SPEC-HCON-001`) — Especificação técnica do tema de alto contraste acessível e operação exterior em Moçambique (luz solar direta, estaleiros, feiras, armazéns portuários e baixa visão), conformidade WCAG 2.1 AAA ($\ge 7.0:1$), fundo `#000000`, texto branco `#FFFFFF` (21:1), texto prateado `#E0E0E0` (>15:1), bordas brancas marcadas e ciclo de alternância contínua.
+  - `docs/HIGH_CONTRAST_ACCESSIBILITY_HARNESS.md` (`HARNESS-HCON-001`) — Matriz de testes automatizados HCON-01 a HCON-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `Theme.java`: Adicionado `Theme.HIGH_CONTRAST` na ordem canónica de 10 cores da paleta, atualizado `Theme.byId(id)` para suportar aliases (`"high_contrast"`, `"highcontrast"`, `"contrast"`) e métodos de inspeção booleana.
+  - `UIHelper.java`: Adicionados `isHighContrast()`, `cycleTheme()`, métodos públicos de conformidade WCAG AAA/AA (`meetsWcagAaa`, `meetsWcagAa`, `contrastRatio`) e estilização FlatLaf de alto contraste com foco e bordas marcadas.
+  - `MainFrame.java`: TopBar atualizado com comutador cíclico (`fas-adjust` em alto contraste) e adicionado atalho direto na Command Palette (`Ctrl+K`). Mantido em 975 linhas ($\le 1.000$).
+  - `ConfigPanel.java`: Botão de tema atualizado com etiqueta e ícone reativos ao modo de alto contraste. Mantido em 860 linhas ($\le 1.000$).
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `HighContrastThemeHarnessTest.java` (desktop - 8/8 testes verdes).
+  - `ButtonContrastTest.java` (desktop - 6/6 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 21: Motor de Feedback Sonoro Discreto no POS & Leituras (`PosAudioFeedbackEngine`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/POS_AUDIO_FEEDBACK_SPEC.md` (`SPEC-PAUD-001`) — Especificação técnica do motor de síntese de som PCM em memória na JVM (sem dependências de ficheiros `.wav` externos), tons para eventos `SUCCESS`, `WARNING`, `ERROR` e `SCALE_STABLE`, execução assíncrona não-bloqueante e persistência de definições em `${user.home}/.multicore/audio_settings.json`.
+  - `docs/POS_AUDIO_FEEDBACK_HARNESS.md` (`HARNESS-PAUD-001`) — Matriz de testes automatizados PAUD-01 a PAUD-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `PosAudioFeedbackEngine.java`: Motor Singleton de áudio não-bloqueante com geração de tons de onda senoidal PCM e tolerância a ambientes headless.
+  - `PosCatalogController.java`: Integrado o disparo do evento `SUCCESS` (800 Hz) ao adicionar produto ao carrinho, e `ERROR` (350 Hz) em produtos esgotados.
+  - `PosBarcodeActions.java`: Integrado o disparo do evento `ERROR` em código de barras não encontrado ou PLU inválido.
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `PosAudioFeedbackHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `SidebarFavoritesHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `UserManagementPanelHarnessTest.java` (desktop - 2/2 testes verdes).
+  - `ExecutiveDetailDialogHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `ButtonIconContrastHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `IconSystemHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `UiOrganizationNavigationHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis com linhas $\le 1.000$).
+  - **43/43 testes 100% verdes (BUILD SUCCESS)**.
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 20: Atalhos Favoritos Personalizáveis na Barra Lateral Executiva (`CollapsibleSidebar` & `SidebarFavoritesManager`) — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/SIDEBAR_FAVORITES_SPEC.md` (`SPEC-SFAV-001`) — Especificação técnica da persistência local de favoritos, secção dinâmica **"⭐ FAVORITOS"** no topo do menu lateral, menu de contexto com botão direito (`JPopupMenu`), estrela indicadora `⭐` em rótulos e atualização em tempo real sem necessidade de reiniciar.
+  - `docs/SIDEBAR_FAVORITES_HARNESS.md` (`HARNESS-SFAV-001`) — Matriz de testes automatizados SFAV-01 a SFAV-08.
+- **Componentes Canónicos Criados & Atualizados (`desktop`):**
+  - `SidebarFavoritesManager.java`: Singleton thread-safe responsável pelo carregamento e persistência atómica de atalhos favoritos em `${user.home}/.multicore/user_favorites.json`.
+  - `SidebarNavItem.java`: Atualizado para disparar menu de contexto ao clicar com o botão direito (`[ ⭐️ Fixar nos Favoritos ]` / `[ ❌ Remover dos Favoritos ]`), renderizar o prefixo `⭐ ` nos rótulos de itens favoritos e fornecer acessores.
+  - `CollapsibleSidebar.java`: Conetado ao `SidebarFavoritesManager` para reconstruir e alinhar dinamicamente a secção de topo **"⭐ FAVORITOS"** (615 linhas $\le 1000$).
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `SidebarFavoritesHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `UserManagementPanelHarnessTest.java` (desktop - 2/2 testes verdes).
+  - `ExecutiveDetailDialogHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `ButtonIconContrastHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `IconSystemHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `UiOrganizationNavigationHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis com linhas < 1.000).
+  - **36/36 testes 100% verdes (BUILD SUCCESS)**.
+- **Runtime:**
+  - Reactor Maven empacotado com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 19: Gestão Visual de Utilizadores, Matriz de Permissões & PIN de Autorização de Gestor — 2026-09-23 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/GESTAO_UTILIZADORES_PIN_SPEC.md` (`SPEC-GUP-001`) — Especificação técnica da gestão visual de utilizadores, RBAC fail-closed, atribuição de alçadas/roles, redefinição de senhas, alternância de estado ativo/inativo e PINs de autorização de gestor em 4 dígitos com PBKDF2.
+  - `docs/GESTAO_UTILIZADORES_PIN_HARNESS.md` (`HARNESS-GUP-001`) — Matriz de testes automatizados GUP-01 a GUP-08.
+- **Módulo `contracts`:**
+  - `AppUserDTO.java`: Adicionados campos `hasManagerPin` e `email` + construtor retrocompatível de 5 parâmetros.
+  - `UserSecurityRequestsDTOs.java`: DTOs de pedido `SetManagerPinRequest`, `VerifyManagerPinRequest`, `ResetPasswordRequest`, `ToggleUserStatusRequest`.
+- **Módulo `backend`:**
+  - `AppUser.java`: Adicionados campos `managerPinHash` e `email`.
+  - `AppUserService.java`: Implementados métodos de negócio `setManagerPin`, `verifyManagerPin`, `resetPassword`, `toggleUserStatus` com validação estrita e codificação PBKDF2 via Spring Security.
+  - `UserController.java`: Adicionados endpoints REST protegidos por RBAC `/api/users/{username}/pin` (PUT), `/api/users/verify-pin` (POST), `/api/users/{username}/reset-password` (POST), `/api/users/{username}/status` (PUT).
+  - `UserManagementHarnessTest.java`: 4/4 testes verdes cobrindo atribuição/verificação de PIN, redefinição de senha e alteração de estado.
+  - `SecurityPermissionGuardCoverageTest.java`: 3/3 testes verdes confirmando enforcement RBAC fail-closed.
+- **Módulo `desktop`:**
+  - `UserApiClient.java`: Expandido com cliente HTTP desacoplado para PINs, senhas e estado.
+  - `UserManagementPanel.java`: Painel executivo visual de utilizadores integrado no painel de Configurações da Empresa, com 4 KPI cards superiores, tabela zebrada com crachás de estado e PIN, e botões de ação com diálogos assíncronos.
+  - `UserEditorDialog.java`: Diálogo modal moderno (`ModernFormDialog`) para criação e edição de utilizadores e atribuição de perfis de acesso (`SELLER`, `MANAGER`, `ADMIN`, `ACCOUNTANT`, `HR_MANAGER`).
+  - `ManagerPinDialog.java`: Diálogo modal dedicado para pedido de PIN de autorização de gestor em operações sensíveis (anulações, descontos elevados, excepções de crédito), com bypass seguro em ambiente de testes headless.
+  - `UserManagementPanelHarnessTest.java`: 2/2 testes verdes cobrindo instanciação sem exceções e validação de PIN em headless.
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `UserManagementPanelHarnessTest.java` (desktop - 2/2 testes verdes).
+  - `UserManagementHarnessTest.java` (backend - 4/4 testes verdes).
+  - `SecurityPermissionGuardCoverageTest.java` (backend - 3/3 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+  - **15/15 testes unitários, de integração e de arquitetura 100% verdes (BUILD SUCCESS)**.
+- **Runtime:**
+  - Compilação do reactor Maven empacotada com **100% BUILD SUCCESS** (`multicore-contracts`, `multicore-backend`, `multicore-desktop`).
+
+### Fase 18: Modal Universal de Detalhes Executivos (`ExecutiveDetailDialog`) & Cobertura Multi-Módulo — 2026-09-22 — **implementado com SPEC e HARNESS**
+- **Componente Canónico Reutilizável (`desktop`):**
+  - `ExecutiveDetailDialog.java`: Motor universal para visualização de entidades de negócio com cabeçalho rico (Avatar com iniciais dinâmicas ou ícone FontAwesome, subtítulos contextualizados), Badge pill de status com severidades semânticas (`SUCCESS`, `WARNING`, `DANGER`, `INFO`, `NEUTRAL`), faixa horizontal de KPIs em cartões `ModernPanel`, abas temáticas coloridas (`UIHelper.styleTabbedPaneMulticore`) e rodapé flexível com botões de ação e fechamento.
+- **Implementação e Cobertura nos Módulos de Negócio:**
+  - **Comercial / Vendas (Encomendas)**: `OrderDetailsDialog.java` — Reescrito utilizando `ExecutiveDetailDialog` (eliminando o `JOptionPane` legado). Possui KPIs de valor total, linhas, volumes, peso total e condições de pagamento; 3 abas ("Itens da Encomenda", "Condições & Entrega", "Impressão & Rastreabilidade") e ação assíncrona de emissão/impressão de PDF.
+  - **Comercial / Vendas (Clientes)**: `CustomerDetailDialog.java` — Ficha completa do cliente com avatar de iniciais, status ativo, limite de crédito, prazos de pagamento acordados e pontos de fidelidade. Integrado no `ClientesPanel.java` via botão "Ver Ficha" (`fas-id-card`) e duplo clique na tabela.
+  - **Compras (Fornecedores)**: `SupplierDetailDialog.java` — Ficha completa do fornecedor com avatar, KPIs de linha telefónica direta, representante comercial, e-mail e atalho direto para a aba de Contas a Pagar. Integrado no `PurchaseSuppliersPanel.java` via botão "Ver Ficha" (`fas-id-card`) e duplo clique na tabela.
+  - **Stock / Inventário (Artigos)**: `StockProductDetailDialog.java` — Ficha de produto com layout de imagem em alta definição, indicadores de margem de lucro, saldos detalhados por armazém e tabela de rastreabilidade de lotes com validade. Integrado no `StockPanel.java` via "Ficha do Artigo" e duplo clique.
+  - **Recursos Humanos (Colaboradores)**: `HREmployeeProfileDialog.java` — Perfil unificado do trabalhador com dados cadastrais, histórico de recibos salariais, faltas, férias aprovadas e saúde ocupacional. Integrado no `HRPanel.java` via botão "Ver Perfil".
+  - **Garantia Universal para Todos os Restantes Módulos & Tabelas (`JTable`)**: `RecordDetailsDialog.java` e `RowDetailsInspector.java` — Atualizados para que qualquer tabela em qualquer módulo (POS, Tesouraria, Contabilidade, Auditoria, Plataforma, Definições) sem diálogo dedicado pré-escrito abra automaticamente um `ExecutiveDetailDialog` gerado em tempo real com Badge Pill de estado, cartões KPI autodetectados, abas de dados/rastreabilidade e botão de cópia.
+- **Validação Automatizada (Harness & Arquitetura):**
+  - `ExecutiveDetailDialogHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `ButtonIconContrastHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `IconSystemHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `UiOrganizationNavigationHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis com linhas < 1.000).
+  - `MultiModuleArchitectureHarnessTest.java` (backend & reactor - 6/6 testes verdes).
+  - **32/32 testes 100% verdes (BUILD SUCCESS)**.
+- **Runtime:**
+  - Backend Spring Boot saudável e ativo (`http://localhost:8080/actuator/health` -> `{"status":"UP"}`).
+  - Desktop Swing interativo relançado com sucesso via tarefa agendada Windows.
+
+### Fase 17: Observabilidade & Monitoramento Profissional do Sistema — 2026-09-21 — **implementado com SPEC e HARNESS**
+- **Documentação Canónica:**
+  - `docs/SYSTEM_MONITORING_SPEC.md` — Especificação de telemetria, limiares de recursos (Heap, Disco, Latência HikariCP), severidades (HEALTHY, WARNING, CRITICAL) e endpoints de diagnóstico.
+- **Contratos Canónicos (`contracts`):**
+  - DTOs independentes de JPA/Spring/Swing: `SystemHealthDTO.java`, `DatabaseHealthDTO.java`, `MemoryHealthDTO.java`, `StorageHealthDTO.java`, `ThreadPoolHealthDTO.java`, `SubsystemStatusDTO.java`, `SystemDiagnosticsExportDTO.java`.
+- **Backend (`backend`):**
+  - `SystemMonitoringService.java`: Recolha em tempo real de telemetria de JVM, ping `SELECT 1` e pool HikariCP, armazenamento, threads, subsistemas e geração de relatório formatado.
+  - `SystemMonitoringController.java`: Endpoints REST `GET /api/monitoring/system-health` e `GET /api/monitoring/diagnostics-export`.
+  - `SecurityInterceptor.java`: Suporte transparente para endpoints em nível de servidor (`/api/monitoring/*`).
+- **Desktop (`desktop`):**
+  - `SystemMonitoringApiClient.java`: Cliente HTTP desacoplado com contratos DTOs.
+  - `SystemMonitoringDialog.java`: Diálogo executivo moderno com semáforo, 4 cards de KPIs de hardware/persistência, tabela de subsistemas com tempo de resposta em ms, atualização assíncrona, cópia para clipboard e exportação em ficheiro `.txt` (388 linhas, <= 1000).
+  - Integração nos painéis `ConfigPanel.java` (barra de ferramentas, 912 linhas) e `PlataformaPanel.java` (aba Saúde & Diagnóstico).
+- **Validação Automatizada (Harness):**
+  - `SystemMonitoringHarnessTest.java` (backend - 7/7 testes verdes).
+  - `MultiModuleArchitectureHarnessTest.java` (backend - 6/6 testes verdes).
+  - `ButtonIconContrastHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `IconSystemHarnessTest.java` (desktop - 7/7 testes verdes).
+  - `UiOrganizationNavigationHarnessTest.java` (desktop - 6/6 testes verdes).
+  - `UiPanelDecompositionTest.java` (desktop - 1/1 teste verde, todos os painéis prioritários <= 1000 linhas).
+  - **33/33 testes unitários, de integração e de arquitetura 100% verdes (BUILD SUCCESS)**.
+- **Runtime:**
+  - Backend ativo e saudável na porta 8080 (`http://localhost:8080/actuator/health` -> `{"status":"UP"}`).
+  - Desktop interativo executando sob PID `16000`.
 
 ### Fase 16: Ícone Profissional Executivo & Seletor Universal de Calendário — 2026-09-20 — **implementado com SPEC e HARNESS**
 - **Documentação Canónica:**
@@ -2873,6 +4218,22 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
 - Paginação: controlos separados por 8 px e margem vertical de 10 px antes das acções inferiores.
 - Backup automático: deixa de tentar `pg_dump` no backend H2; a execução interactiva usa backup
   lógico JSON, enquanto PostgreSQL mantém o `.dump` físico restaurável.
+# Editores de documentos pré-emissão (2026-09-27)
+
+- Cotações em `DRAFT` e encomendas a fornecedor em `ORDERED` sem recepção usam editor de página
+  inteira com `DocumentEditorHost`, a mesma experiência para criar, editar e consultar.
+- As tabelas de linhas permitem editar/remover no próprio editor; pesquisa de produtos usa o
+  componente pesquisável e as acções ficam no topo do card.
+- Contratos `PUT` usam versão optimista; Services recalculam totais, protegem estado/tenant e
+  auditam `QUOTATION_UPDATE` e `PURCHASE_ORDER_UPDATE`.
+- SPEC/HARNESS: `docs/EDITABLE_DOCUMENT_EDITORS_SPEC.md` e
+  `docs/EDITABLE_DOCUMENT_EDITORS_HARNESS.md`.
+- Validação: 92 testes dirigidos aprovados, `mvn clean compile` concluído, backend `UP` e desktop
+  relançado com o pacote final.
+- Homologação HTTP adicional concluída numa base H2 isolada: criação/actualização de cotação e
+  encomenda a fornecedor, rejeição de versão antiga, bloqueio após envio e bloqueio após recepção
+  parcial. Nenhum dado operacional foi alterado.
+
 # Fluxo de atendimento e separacao (2026-08-16)
 
 - Especificacao: `docs/CUSTOMER_ORDER_FULFILLMENT_SPEC.md`.
@@ -2942,3 +4303,21 @@ Diagnostics Lombok no IDE (`cannot find symbol: getX()`) são **ruído**. Crité
   `DesktopLocalSettingsTest`, `WindowsInstallerHarnessTest`).
 - Próxima decisão obrigatória: mapeamento contabilístico para compras, notas, pagamentos mistos,
   subsídios/adiantamentos e fecho de exercício; não inventar contas ou política contabilística.
+
+## 2026-10-04 — Remediação da superfície de ataque
+
+- Removidas credenciais alternativas fixas; palavras-passe seed passam a BCrypt e erros de login
+  deixaram de revelar se o utilizador existe.
+- Reset de palavra-passe e PIN ficaram limitados ao tenant administrado; resets revogam sessões.
+- Empresa suspensa ou subscrição sem acesso bloqueiam cada pedido, incluindo sessões existentes.
+- Monitorização respeita a função persistida e o tenant; incidentes globais e teste de email exigem
+  `SUPERADMIN`. A auditoria forense rejeita acesso a outra empresa.
+- Rate limiting usa utilizador e IP, limita memória e aceita `X-Forwarded-For` apenas do proxy
+  configurado. O desktop exige HTTPS para servidores remotos e oculta credenciais de demonstração.
+- Decisão e cobertura: `docs/SECURITY_ATTACK_SURFACE_REMEDIATION_SPEC.md` e
+  `docs/SECURITY_ATTACK_SURFACE_REMEDIATION_HARNESS.md`.
+- Testes focados de segurança, monitorização, arquitetura e UI aprovados. A suíte completa do
+  backend executou 1014 testes, sem falhas. As simulações POS foram alinhadas com a consulta
+  canónica de sessão activa após passagem de turno; checkout, vales, contingência e conversão de
+  cotações voltaram a passar. A suíte desktop executou 539 testes e mantém 27 falhas e 1 erro de UI
+  fora desta fase, a tratar na estabilização visual seguinte.

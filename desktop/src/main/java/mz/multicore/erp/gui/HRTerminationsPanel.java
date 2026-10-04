@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -59,31 +60,17 @@ final class HRTerminationsPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Cessações e Acertos Finais"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createPrimaryButton("Cessar Vínculo");
         newBtn.setIcon(UIHelper.icon("fas-user-slash", 14));
         newBtn.addActionListener(e -> openTerminationDialog());
+
         ModernButton payBtn = UIHelper.createSuccessButton("Pagar Acerto");
         payBtn.setIcon(UIHelper.icon("fas-money-check-alt", 14));
         payBtn.addActionListener(e -> paySettlement());
-        ModernButton settlementBtn = UIHelper.createSecondaryButton("Acerto PDF");
-        settlementBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        settlementBtn.addActionListener(e -> printSettlement());
-        ModernButton certificateBtn = UIHelper.createSecondaryButton("Certificado");
-        certificateBtn.setIcon(UIHelper.icon("fas-file-alt", 14));
-        certificateBtn.addActionListener(e -> printCertificate());
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(certificateBtn);
-        actions.add(settlementBtn);
-        actions.add(payBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        ActionMenuButton docsBtn = UIHelper.createActionMenuButton("Documentos")
+                .addAction("Acerto PDF", UIHelper.icon("fas-file-pdf", 14), this::printSettlement)
+                .addAction("Certificado de Trabalho", UIHelper.icon("fas-file-alt", 14), this::printCertificate);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -112,7 +99,9 @@ final class HRTerminationsPanel {
                 TableFilter.label("Saída:", "fas-calendar-alt"), periodo);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        card.add(bar, BorderLayout.NORTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+        card.add(UIHelper.tableCardTop("Cessações e Acertos Finais", bar,
+                refreshBtn, docsBtn, payBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

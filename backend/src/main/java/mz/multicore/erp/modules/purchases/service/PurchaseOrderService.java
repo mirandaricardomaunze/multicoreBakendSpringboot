@@ -19,6 +19,7 @@ import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.PurchaseOrderDTO;
 import mz.multicore.erp.modules.purchases.dto.PurchaseOrderLineDTO;
 import mz.multicore.erp.modules.purchases.dto.ReceivePurchaseOrderRequest;
+import mz.multicore.erp.modules.purchases.dto.UpdatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrderLine;
 import mz.multicore.erp.modules.purchases.model.Supplier;
@@ -139,6 +140,75 @@ public class PurchaseOrderService {
         auditLogService.logCurrent("PURCHASE_ORDER_CREATE",
                 "Encomenda " + order.getOrderNumber() + " - Fornecedor " + supplier.getName());
         return toDTO(order);
+    }
+
+    /** Actualiza a encomenda antes de qualquer recepção física de mercadoria. */
+    @Transactional
+    public PurchaseOrderDTO updateOrder(Long id, UpdatePurchaseOrderRequest request) {
+        PurchaseOrder order = loadForActiveCompany(id);
+        if (!PurchaseOrder.ORDERED.equals(order.getStatus())
+                || order.getLines().stream().anyMatch(line -> nz(line.getReceivedQuantity()).signum() > 0)) {
+            throw new BusinessRuleException(
+                    "A encomenda só pode ser alterada antes de iniciar qualquer recepção de mercadoria.");
+        }
+        if (request.version() == null || request.version() != order.getVersion()) {
+            throw new BusinessRuleException(
+                    "A encomenda foi alterada por outro utilizador. Recarregue o documento antes de guardar.");
+        }
+
+        Long companyId = order.getCompany().getId();
+        Supplier supplier = supplierRepository.findById(request.supplierId())
+                .orElseThrow(() -> new BusinessRuleException("Fornecedor não encontrado."));
+        if (supplier.getCompany() == null || !companyId.equals(supplier.getCompany().getId())) {
+            throw new BusinessRuleException("O fornecedor não pertence à empresa ativa.");
+        }
+        if (!supplier.isActive()) {
+            throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
+        }
+        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
+
+        order.setSupplier(supplier);
+        order.setWarehouse(warehouse);
+        order.setExpectedDate(request.expectedDate());
+        order.setNotes(request.notes() == null || request.notes().isBlank() ? null : request.notes().trim());
+        order.getLines().clear();
+
+        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal totalTax = BigDecimal.ZERO;
+        for (CreatePurchaseOrderLineRequest lineReq : request.lines()) {
+            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "Produto não encontrado ID: " + lineReq.productId()));
+            BigDecimal taxRate = lineReq.taxRate() != null
+                    ? lineReq.taxRate() : product.effectiveTaxRate();
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    lineReq.unitPrice(), lineReq.quantity(), BigDecimal.ZERO, taxRate);
+            PurchaseOrderLine line = new PurchaseOrderLine();
+            line.setProduct(product);
+            line.setQuantity(lineReq.quantity());
+            line.setReceivedQuantity(BigDecimal.ZERO);
+            line.setUnitPrice(lineReq.unitPrice());
+            line.setTaxRate(taxRate);
+            line.setLineTotal(amounts.total());
+            line.setBatchNumber(lineReq.batchNumber());
+            line.setExpirationDate(lineReq.expirationDate());
+            line.setSerialNumber(lineReq.serialNumber());
+            order.addLine(line);
+            total = total.add(amounts.total());
+            totalTax = totalTax.add(amounts.tax());
+        }
+        order.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
+        order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
+
+        PurchaseOrder saved = orderRepository.saveAndFlush(order);
+        auditLogService.logCurrent("PURCHASE_ORDER_UPDATE",
+                "Encomenda " + saved.getOrderNumber() + " actualizada antes da recepção. Total: "
+                        + saved.getTotalAmount() + " MT.");
+        return toDTO(saved);
     }
 
     /** Recebe tudo o que falta de cada linha (de ORDERED ou PARTIALLY_RECEIVED) e fecha RECEIVED. */
@@ -375,7 +445,8 @@ public class PurchaseOrderService {
                 o.getTaxAmount(),
                 o.getStatus(),
                 o.getNotes(),
-                lines
+                lines,
+                o.getVersion()
         );
     }
 }

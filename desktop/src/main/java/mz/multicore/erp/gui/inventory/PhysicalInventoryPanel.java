@@ -1,8 +1,15 @@
 package mz.multicore.erp.gui.inventory;
 
 import mz.multicore.erp.desktop.client.InventoryPhysicalCountingApiClient;
+import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
+import mz.multicore.erp.gui.components.ModernFormDialog;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableFilter;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.inventory.dto.*;
 
@@ -27,9 +34,7 @@ public class PhysicalInventoryPanel extends JPanel {
     private JTextField manualQtyField;
     private ModernButton recordCountBtn;
 
-    private ModernButton startBtn;
-    private ModernButton closeBtn;
-    private ModernButton cancelBtn;
+    private ActionMenuButton sessionActionsMenu;
     private ModernButton printPdfBtn;
     private ModernButton newSessionBtn;
 
@@ -46,74 +51,42 @@ public class PhysicalInventoryPanel extends JPanel {
 
     public PhysicalInventoryPanel(InventoryPhysicalCountingApiClient apiClient) {
         this.apiClient = apiClient;
-        setLayout(new BorderLayout(0, 12));
-        setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(12, 16, 12, 16));
+        setLayout(new BorderLayout(0, 10));
+        setOpaque(false);
+        setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        add(buildTopBar(), BorderLayout.NORTH);
+        initTable();
+        initActions();
         add(buildCenterPanel(), BorderLayout.CENTER);
 
         refreshSessions();
     }
 
-    private JPanel buildTopBar() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setOpaque(false);
-
-        // Header Title & Subtitle
-        JPanel titlePanel = new JPanel(new GridLayout(2, 1, 0, 2));
-        titlePanel.setOpaque(false);
-        JLabel title = new JLabel("Inventário Físico & Reconciliação de Stock");
-        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
-        title.setForeground(UIHelper.TEXT_LIGHT);
-        JLabel subtitle = new JLabel("Auditoria periódica de armazém, leitura por código de barras e acerto automático de stock");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-        titlePanel.add(title);
-        titlePanel.add(subtitle);
-
-        // Action Toolbar
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        toolbar.setOpaque(false);
-
+    private void initActions() {
+        // Action Toolbar — canónica: acções à direita sem sobreposição
         newSessionBtn = UIHelper.createPrimaryButton("Nova Sessão");
         newSessionBtn.setIcon(UIHelper.icon("fas-plus", 13, Color.WHITE));
         newSessionBtn.addActionListener(e -> openNewSessionDialog());
 
-        startBtn = UIHelper.createSuccessButton("Iniciar Contagem");
-        startBtn.setIcon(UIHelper.icon("fas-play", 13, Color.WHITE));
-        startBtn.addActionListener(e -> handleStartCounting());
-
-        closeBtn = UIHelper.createWarningButton("Fechamento & Acerto");
-        closeBtn.setIcon(UIHelper.icon("fas-check-double", 13, Color.WHITE));
-        closeBtn.addActionListener(e -> handleCloseSession());
-
-        cancelBtn = UIHelper.createDangerButton("Cancelar");
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
-        cancelBtn.addActionListener(e -> handleCancelSession());
+        sessionActionsMenu = UIHelper.createActionMenuButton("Ciclo da Sessão")
+                .addAction("Iniciar Contagem", UIHelper.icon("fas-play", 13, UIHelper.APPROVED_GREEN), this::handleStartCounting)
+                .addAction("Fecho & Acerto", UIHelper.icon("fas-check-double", 13, UIHelper.PENDING_YELLOW), this::handleCloseSession)
+                .addAction("Cancelar Sessão", UIHelper.icon("fas-times", 13, UIHelper.REJECTED_RED), this::handleCancelSession)
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 13, UIHelper.ACCENT_BLUE), this::refreshSessions);
 
         printPdfBtn = UIHelper.createSecondaryButton("Dossiê PDF");
         printPdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 13, Color.WHITE));
+        printPdfBtn.setToolTipText("Visualizar e Imprimir Dossiê do Inventário");
         printPdfBtn.addActionListener(e -> handlePrintPdf());
 
-        toolbar.add(newSessionBtn);
-        toolbar.add(startBtn);
-        toolbar.add(closeBtn);
-        toolbar.add(cancelBtn);
-        toolbar.add(printPdfBtn);
-
-        panel.add(titlePanel, BorderLayout.WEST);
-        panel.add(toolbar, BorderLayout.EAST);
-        return panel;
     }
 
     private JPanel buildCenterPanel() {
         JPanel center = new JPanel(new BorderLayout(0, 10));
         center.setOpaque(false);
 
-        // KPI Section
-        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 10, 0));
-        kpiGrid.setOpaque(false);
+        // KPI Section — grid canónico com altura compacta e fundo unificado
+        JPanel kpiGrid = KpiCard.createGrid(4);
 
         kpiTotalItems = new JLabel("0");
         kpiCountedItems = new JLabel("0");
@@ -122,37 +95,40 @@ public class PhysicalInventoryPanel extends JPanel {
 
         kpiGrid.add(KpiCard.createMetricCard("Total de Produtos", kpiTotalItems, "Itens no inventário", "fas-boxes", UIHelper.ACCENT_BLUE));
         kpiGrid.add(KpiCard.createMetricCard("Produtos Contados", kpiCountedItems, "Itens bipados/registados", "fas-tasks", UIHelper.APPROVED_GREEN));
-        kpiGrid.add(KpiCard.createMetricCard("Sobras (MT)", kpiSurplusVal, "Impacto positivo de stock", "fas-arrow-up", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createMetricCard("Sobras (MT)", kpiSurplusVal, "Impacto positivo de stock", "fas-arrow-up", UIHelper.ACCENT_CYAN));
         kpiGrid.add(KpiCard.createMetricCard("Faltas (MT)", kpiDeficitVal, "Impacto negativo de stock", "fas-arrow-down", UIHelper.REJECTED_RED));
 
         center.add(kpiGrid, BorderLayout.NORTH);
-
-        // Scan & Table Container
-        JPanel body = new JPanel(new BorderLayout(0, 8));
-        body.setOpaque(false);
-
-        body.add(buildScanBar(), BorderLayout.NORTH);
-        body.add(buildTablePanel(), BorderLayout.CENTER);
-
-        center.add(body, BorderLayout.CENTER);
+        center.add(buildTableCard(), BorderLayout.CENTER);
         return center;
     }
 
-    private JPanel buildScanBar() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
-        panel.setBackground(UIHelper.BG_CARD);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.BORDER),
-                new EmptyBorder(6, 10, 6, 10)
-        ));
+    private ModernPanel buildTableCard() {
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JLabel sessionLbl = new JLabel("Sessão Activa:");
-        sessionLbl.setForeground(UIHelper.TEXT_LIGHT);
-        sessionLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        card.add(UIHelper.tableCardTop("Inventário Físico & Reconciliação", buildCardToolbar(),
+                printPdfBtn, sessionActionsMenu, newSessionBtn), BorderLayout.NORTH);
 
+        JScrollPane scroll = new JScrollPane(itemsTable);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel buildCardToolbar() {
+        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        bar.setOpaque(false);
+
+        // Esquerda: Sessão Activa + Campo de Pesquisa livre
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        left.setOpaque(false);
+
+        JLabel sessionLbl = TableFilter.label("Sessão:", "fas-clipboard-list");
         sessionCombo = new JComboBox<>();
         UIHelper.styleComboBox(sessionCombo);
-        sessionCombo.setPreferredSize(new Dimension(220, UIHelper.FORM_CONTROL_HEIGHT));
+        sessionCombo.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         sessionCombo.addActionListener(e -> onSessionSelected());
 
         statusLabel = new JLabel(" [-] ");
@@ -163,13 +139,27 @@ public class PhysicalInventoryPanel extends JPanel {
         countModeLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 11));
         countModeLabel.setForeground(UIHelper.ACCENT_BLUE);
 
-        JLabel barcodeLbl = new JLabel("Bipar Barcode / SKU:");
-        barcodeLbl.setForeground(UIHelper.TEXT_LIGHT);
-        barcodeLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        JTextField searchField = TableFilter.searchField("Pesquisar na contagem…");
+        searchField.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        TableFilter.install(itemsTable, searchField);
 
-        barcodeScanField = new JTextField(12);
+        left.add(sessionLbl);
+        left.add(sessionCombo);
+        left.add(statusLabel);
+        left.add(countModeLabel);
+        left.add(searchField);
+        bar.add(left, BorderLayout.WEST);
+
+        // Direita: Leitor de Código de Barras / SKU + Qtd + Botão Registar
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+
+        JLabel barcodeLbl = TableFilter.label("Bipar Barcode / SKU:", "fas-barcode");
+
+        barcodeScanField = new JTextField(10);
         UIHelper.styleTextField(barcodeScanField);
-        barcodeScanField.setToolTipText("Bipar ou introduzir Código de Barras / SKU (Enter para adicionar +1)");
+        barcodeScanField.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
+        barcodeScanField.setToolTipText("Bipar ou introduzir Código de Barras / SKU (Enter para adicionar)");
         barcodeScanField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -179,36 +169,28 @@ public class PhysicalInventoryPanel extends JPanel {
             }
         });
 
-        JLabel qtyLbl = new JLabel("Qtd:");
-        qtyLbl.setForeground(UIHelper.TEXT_LIGHT);
-        qtyLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        JLabel qtyLbl = TableFilter.label("Qtd:");
 
-        manualQtyField = new JTextField("1", 4);
+        manualQtyField = new JTextField("1", 3);
         UIHelper.styleTextField(manualQtyField);
+        manualQtyField.setPreferredSize(new Dimension(45, UIHelper.FORM_CONTROL_HEIGHT));
         manualQtyField.setHorizontalAlignment(JTextField.RIGHT);
 
         recordCountBtn = UIHelper.createPrimaryButton("Registar");
         recordCountBtn.setIcon(UIHelper.icon("fas-barcode", 13, Color.WHITE));
         recordCountBtn.addActionListener(e -> handleBarcodeScan());
 
-        panel.add(sessionLbl);
-        panel.add(sessionCombo);
-        panel.add(statusLabel);
-        panel.add(countModeLabel);
-        panel.add(Box.createHorizontalStrut(16));
-        panel.add(barcodeLbl);
-        panel.add(barcodeScanField);
-        panel.add(qtyLbl);
-        panel.add(manualQtyField);
-        panel.add(recordCountBtn);
+        right.add(barcodeLbl);
+        right.add(barcodeScanField);
+        right.add(qtyLbl);
+        right.add(manualQtyField);
+        right.add(recordCountBtn);
+        bar.add(right, BorderLayout.EAST);
 
-        return panel;
+        return bar;
     }
 
-    private JPanel buildTablePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setOpaque(false);
-
+    private void initTable() {
         String[] cols = {"Código", "Produto", "Esperado", "Contado", "Diferença", "Custo Unit. (MT)", "Impacto (MT)", "Notas"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
@@ -219,7 +201,6 @@ public class PhysicalInventoryPanel extends JPanel {
 
         itemsTable = new JTable(tableModel);
         UIHelper.styleTable(itemsTable);
-        itemsTable.setRowHeight(28);
 
         // Custom Cell Renderer para Semáforo de Variação
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
@@ -272,11 +253,6 @@ public class PhysicalInventoryPanel extends JPanel {
                 }
             }
         });
-
-        JScrollPane scroll = new JScrollPane(itemsTable);
-        UIHelper.styleScrollPane(scroll);
-        panel.add(scroll, BorderLayout.CENTER);
-        return panel;
     }
 
     private void refreshSessions() {
@@ -354,9 +330,10 @@ public class PhysicalInventoryPanel extends JPanel {
         boolean isInProgress = currentSession.status() == InventoryStatus.IN_PROGRESS;
         boolean isClosed = currentSession.status() == InventoryStatus.CLOSED;
 
-        startBtn.setEnabled(isDraft);
-        closeBtn.setEnabled(isInProgress || isDraft);
-        cancelBtn.setEnabled(!isClosed);
+        sessionActionsMenu.setActionEnabled(0, isDraft);
+        sessionActionsMenu.setActionEnabled(1, isInProgress || isDraft);
+        sessionActionsMenu.setActionEnabled(2, !isClosed);
+        sessionActionsMenu.setEnabled(!isClosed);
         printPdfBtn.setEnabled(true);
         enableControls(isInProgress || isDraft);
     }
@@ -383,40 +360,44 @@ public class PhysicalInventoryPanel extends JPanel {
             updateKpiAndButtons();
             barcodeScanField.setText("");
             barcodeScanField.requestFocusInWindow();
-        }, ex -> JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro no Bipamento", JOptionPane.ERROR_MESSAGE));
+        }, ex -> ToastManager.show(this, FeedbackType.ERROR, "Erro no bipamento: " + ex.getMessage()));
     }
 
     private void handleStartCounting() {
         if (currentSession == null) return;
-        UIHelper.submitAsync(startBtn, () -> apiClient.startCounting(currentSession.id()), updated -> {
+        UIHelper.submitAsync(sessionActionsMenu, () -> apiClient.startCounting(currentSession.id()), updated -> {
             this.currentSession = updated;
             updateKpiAndButtons();
-            JOptionPane.showMessageDialog(this, "Contagem de inventário iniciada!", "Inventário Físico", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Contagem de inventário iniciada.");
         }, null);
     }
 
     private void handleCloseSession() {
         if (currentSession == null) return;
-        int opt = JOptionPane.showConfirmDialog(this,
+        boolean confirmed = ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(this),
+                FeedbackType.WARNING,
+                "Fecho e Acerto de Stock",
                 "Tem certeza que deseja encerrar o inventário " + currentSession.inventoryNumber() + "?\nO stock lógico dos produtos será ajustado automaticamente para igualar a contagem física.",
-                "Fechamento & Acerto de Stock", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (opt == JOptionPane.YES_OPTION) {
-            UIHelper.submitAsync(closeBtn, () -> apiClient.closeAndAdjustStock(currentSession.id()), updated -> {
+                "Encerrar Inventário");
+        if (confirmed) {
+            UIHelper.submitAsync(sessionActionsMenu, () -> apiClient.closeAndAdjustStock(currentSession.id()), updated -> {
                 this.currentSession = updated;
                 populateTable(updated);
                 updateKpiAndButtons();
-                JOptionPane.showMessageDialog(this, "Inventário concluído e stock ajustado com sucesso!", "Inventário Concluído", JOptionPane.INFORMATION_MESSAGE);
+                ToastManager.success(this, "Inventário concluído e stock ajustado com sucesso.");
             }, null);
         }
     }
 
     private void handleCancelSession() {
         if (currentSession == null) return;
-        int opt = JOptionPane.showConfirmDialog(this,
+        boolean confirmed = ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(this),
+                FeedbackType.WARNING,
+                "Cancelar Inventário",
                 "Deseja cancelar a sessão " + currentSession.inventoryNumber() + "?",
-                "Cancelar Inventário", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (opt == JOptionPane.YES_OPTION) {
-            UIHelper.submitAsync(cancelBtn, () -> apiClient.cancelSession(currentSession.id()), updated -> {
+                "Cancelar Sessão");
+        if (confirmed) {
+            UIHelper.submitAsync(sessionActionsMenu, () -> apiClient.cancelSession(currentSession.id()), updated -> {
                 this.currentSession = updated;
                 updateKpiAndButtons();
             }, null);
@@ -441,13 +422,20 @@ public class PhysicalInventoryPanel extends JPanel {
         panel.add(UIHelper.createFilterGroup("Descrição:", descField));
         panel.add(blindCheckBox);
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "Abertura de Nova Sessão de Inventário", JOptionPane.OK_CANCEL_OPTION);
-        if (res == JOptionPane.OK_OPTION) {
+        ModernFormDialog dialog = new ModernFormDialog(SwingUtilities.getWindowAncestor(this),
+                "Abertura de Nova Sessão de Inventário", "fas-clipboard-list",
+                "Defina o âmbito da contagem física", panel)
+                .setConfirmButton("Abrir Sessão", "fas-play");
+        if (dialog.showDialog()) {
             String desc = descField.getText().trim();
             CreateInventorySessionRequest req = new CreateInventorySessionRequest(desc, blindCheckBox.isSelected(), null);
             UIHelper.submitAsync(newSessionBtn, () -> apiClient.createSession(req), created -> {
                 refreshSessions();
             }, null);
         }
+    }
+
+    JTable getItemsTable() {
+        return itemsTable;
     }
 }

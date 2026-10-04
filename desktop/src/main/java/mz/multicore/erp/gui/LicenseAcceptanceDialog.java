@@ -31,7 +31,7 @@ public class LicenseAcceptanceDialog extends JDialog {
     private final JCheckBox authorityCheck = new JCheckBox(
             "Li o contrato e possuo poderes para o aceitar em nome da empresa.");
     private final ModernButton acceptButton = UIHelper.createPrimaryButton("Concordar e continuar");
-    private final ModernButton declineButton = UIHelper.createSecondaryButton("Não concordo");
+    private final ModernButton declineButton = UIHelper.createDangerButton("Não concordo");
     private final JProgressBar progress = UIHelper.createBusyBar();
     private LicenseTermsDTO terms;
     private boolean accepted;

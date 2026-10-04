@@ -39,11 +39,15 @@ public record OrderDTO(
     LocalDate expectedDeliveryDate,
     /** Derivado no servidor — o desktop apresenta, não recalcula. */
     boolean deliveryOverdue,
+    Long warehouseId,
+    String warehouseName,
     /** Reposição interna: para que armazém vai a mercadoria, e a transferência que a cumpre. */
     Long destinationWarehouseId,
     String destinationWarehouseName,
     Long stockTransferId,
-    String transferNumber
+    String transferNumber,
+    /** Versão optimista usada para impedir que uma edição sobreponha alterações de outro posto. */
+    long version
 ) {
     /** Construtor retrocompatível para quem construía o DTO antes da via existir. */
     public OrderDTO(Long id, String orderNumber, Long clientId, String clientName, String clientTaxId,
@@ -64,6 +68,6 @@ public record OrderDTO(
         this(id, orderNumber, clientId, clientName, clientTaxId, walkInName, totalBeforeTax, taxAmount,
                 totalAmount, status, invoiceId, lines, createdAt, printedAt, printCount, lastPrintedBy,
                 kind, kindLabel, OrderStatusLabel.of(status), null, null, null, null, null, false,
-                null, null, null, null);
+                null, null, null, null, null, null, 0L);
     }
 }

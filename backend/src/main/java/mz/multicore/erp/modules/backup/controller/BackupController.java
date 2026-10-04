@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.backup.controller;
 
+import jakarta.validation.Valid;
+
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
@@ -89,12 +92,31 @@ public class BackupController {
     }
 
     @PostMapping("/verify")
-    public BackupVerificationDTO verify(@RequestBody VerifyRequest request) {
+    public BackupVerificationDTO verify(@RequestBody @Valid VerifyRequest request) {
         requireAdmin();
-        String path = new File(backupDir, request.fileName()).getPath();
+        String path = resolveInsideBackupDir(request.fileName()).toString();
         BackupVerificationDTO verification = backupService.verifyBackup(path);
         audit("BACKUP_VERIFY", "Backup verificado: " + verification.fileName());
         return verification;
+    }
+
+    /**
+     * O nome do ficheiro vem do cliente. Concatená-lo ao directório deixava um ADMIN (ou um token
+     * roubado) apontar a {@code ..\..\qualquer-coisa} e fazer o servidor lê-lo. Rejeita-se — em vez
+     * de sanear — porque sanear verificaria em silêncio um ficheiro diferente do pedido.
+     */
+    private Path resolveInsideBackupDir(String fileName) {
+        if (fileName == null || fileName.isBlank()
+                || fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")
+                || fileName.contains(":") || fileName.indexOf('\0') >= 0) {
+            throw new BusinessRuleException("Nome de ficheiro de cópia de segurança inválido.");
+        }
+        Path base = Path.of(backupDir).toAbsolutePath().normalize();
+        Path target = base.resolve(fileName).normalize();
+        if (!target.startsWith(base)) {
+            throw new BusinessRuleException("Nome de ficheiro de cópia de segurança inválido.");
+        }
+        return target;
     }
 
     private void requireAdmin() {
@@ -110,5 +132,8 @@ public class BackupController {
 
     public record LogicalBackupResult(String path) {}
 
-    public record VerifyRequest(String fileName) {}
+    public record VerifyRequest(
+            @jakarta.validation.constraints.NotBlank(message = "O nome do ficheiro é obrigatório.")
+            @jakarta.validation.constraints.Size(max = 255, message = "O nome do ficheiro não pode exceder 255 caracteres.")
+            String fileName) {}
 }

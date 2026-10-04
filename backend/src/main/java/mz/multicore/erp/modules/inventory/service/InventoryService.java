@@ -113,14 +113,21 @@ public class InventoryService {
     }
 
     /**
-     * IDs dos produtos com stock disponível ({@code quantity > 0}) em pelo menos um armazém de venda
-     * (activo + {@code allowsSales}). Usado pelo POS para esconder do catálogo os produtos esgotados.
+     * IDs dos produtos com stock disponível ({@code quantity > 0}) num armazém de venda específico
+     * ou em qualquer armazém de venda da empresa (se {@code warehouseId} for nulo).
+     * Usado pelo POS para suportar catálogo multiarmazém em tempo real.
      */
     @Transactional(readOnly = true)
     public java.util.Set<Long> getInStockProductIdsForSale(Long companyId) {
+        return getInStockProductIdsForSale(companyId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> getInStockProductIdsForSale(Long companyId, Long warehouseId) {
         CurrentUserContext.requireCompany(companyId);
         java.util.Set<Long> ids = new java.util.HashSet<>();
-        for (Warehouse w : getSalesWarehousesByCompany(companyId)) {
+        List<Warehouse> warehouses = resolveSalesWarehouses(companyId, warehouseId);
+        for (Warehouse w : warehouses) {
             for (Stock s : stockRepository.findByWarehouseId(w.getId())) {
                 if (s.getProduct() != null && s.getQuantity() != null && s.getQuantity().signum() > 0) {
                     ids.add(s.getProduct().getId());
@@ -128,6 +135,32 @@ public class InventoryService {
             }
         }
         return ids;
+    }
+
+    /**
+     * Saldos de stock disponíveis para venda por produto num armazém específico ou na empresa inteira.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<Long, BigDecimal> getStockQuantitiesForSale(Long companyId, Long warehouseId) {
+        CurrentUserContext.requireCompany(companyId);
+        java.util.Map<Long, BigDecimal> map = new java.util.HashMap<>();
+        List<Warehouse> warehouses = resolveSalesWarehouses(companyId, warehouseId);
+        for (Warehouse w : warehouses) {
+            for (Stock s : stockRepository.findByWarehouseId(w.getId())) {
+                if (s.getProduct() != null && s.getQuantity() != null) {
+                    map.merge(s.getProduct().getId(), s.getQuantity(), BigDecimal::add);
+                }
+            }
+        }
+        return map;
+    }
+
+    private List<Warehouse> resolveSalesWarehouses(Long companyId, Long warehouseId) {
+        if (warehouseId == null) {
+            return getSalesWarehousesByCompany(companyId);
+        }
+        Warehouse w = loadWarehouseForActiveCompany(warehouseId);
+        return (w != null && w.isActive() && w.isAllowsSales()) ? List.of(w) : List.of();
     }
 
     @Transactional

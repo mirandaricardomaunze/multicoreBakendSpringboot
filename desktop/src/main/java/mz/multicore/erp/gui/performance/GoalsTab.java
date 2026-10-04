@@ -35,14 +35,6 @@ public class GoalsTab extends JPanel {
     private JComboBox<String> periodFilter;
     private InlineFeedbackPanel feedbackPanel;
 
-    private static final DecimalFormat CURRENCY_FMT;
-
-    static {
-        DecimalFormatSymbols sym = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        sym.setGroupingSeparator(' ');
-        sym.setDecimalSeparator(',');
-        CURRENCY_FMT = new DecimalFormat("#,##0.00", sym);
-    }
 
     public GoalsTab(PerformanceApiClient apiClient, DesktopSession session, Runnable onGoalChanged) {
         this.apiClient = apiClient;
@@ -60,43 +52,49 @@ public class GoalsTab extends JPanel {
         feedbackPanel = new InlineFeedbackPanel();
         add(feedbackPanel, BorderLayout.NORTH);
 
-        JPanel contentPanel = new JPanel(new BorderLayout(0, 10));
-        contentPanel.setBackground(UIHelper.BG_DARK);
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 12));
+        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Header / Filter toolbar
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        toolbar.setBackground(UIHelper.BG_DARK);
+        // Header / Filter toolbar inside card
+        JPanel filterBar = new JPanel(new BorderLayout(10, 0));
+        filterBar.setOpaque(false);
+
+        JPanel filtersLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        filtersLeft.setOpaque(false);
 
         statusFilter = PerformanceControls.createSelect(
                 new String[]{"Todas", "Ativas", "Atingidas", "Não Atingidas", "Canceladas"},
                 PerformanceControls.FILTER_SELECT_WIDTH
         );
         statusFilter.addActionListener(e -> reload());
-        toolbar.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
+        filtersLeft.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
 
         periodFilter = PerformanceControls.createSelect(
                 new String[]{"Todos", "Mensal", "Trimestral", "Semestral", "Anual"},
                 PerformanceControls.FILTER_SELECT_WIDTH
         );
         periodFilter.addActionListener(e -> reload());
-        toolbar.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
+        filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
         ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
-        toolbar.add(btnRefresh);
-
-        ModernButton btnNew = UIHelper.createPrimaryButton("Nova Meta");
-        btnNew.setIcon(UIHelper.icon("fas-plus", 14));
-        btnNew.addActionListener(e -> openCreateGoalDialog());
-        toolbar.add(btnNew);
 
         ModernButton btnCancel = UIHelper.createDangerButton("Cancelar Meta");
         btnCancel.setIcon(UIHelper.icon("fas-ban", 14));
         btnCancel.addActionListener(e -> cancelSelectedGoal());
-        toolbar.add(btnCancel);
 
-        contentPanel.add(toolbar, BorderLayout.NORTH);
+        ModernButton btnNew = UIHelper.createPrimaryButton("Nova Meta");
+        btnNew.setIcon(UIHelper.icon("fas-plus", 14));
+        btnNew.addActionListener(e -> openCreateGoalDialog());
+
+        JPanel actionsRight = UIHelper.actionsBar(btnRefresh, btnCancel, btnNew);
+
+        filterBar.add(filtersLeft, BorderLayout.WEST);
+        filterBar.add(actionsRight, BorderLayout.EAST);
+
+        card.add(filterBar, BorderLayout.NORTH);
 
         // Table
         String[] columns = {"ID", "Nome da Meta", "Período", "Início", "Fim", "Escopo", "Alvo Receita (MZN)", "Alvo Margem (MZN)", "Prémio", "Estado"};
@@ -114,9 +112,9 @@ public class GoalsTab extends JPanel {
         UIHelper.styleScrollPane(scrollPane);
         TableContextMenu.install(scrollPane);
         scrollPane.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
+        card.add(scrollPane, BorderLayout.CENTER);
 
-        add(contentPanel, BorderLayout.CENTER);
+        add(card, BorderLayout.CENTER);
     }
 
     public void reload() {
@@ -156,8 +154,8 @@ public class GoalsTab extends JPanel {
                                 g.periodStart(),
                                 g.periodEnd(),
                                 g.scopeLabel() != null ? g.scopeLabel() : g.scope().name(),
-                                g.targetRevenue() != null ? CURRENCY_FMT.format(g.targetRevenue()) : "-",
-                                g.targetMargin() != null ? CURRENCY_FMT.format(g.targetMargin()) : "-",
+                                g.targetRevenue() != null ? UIHelper.formatMzn(g.targetRevenue()) : "-",
+                                g.targetMargin() != null ? UIHelper.formatMzn(g.targetMargin()) : "-",
                                 formatBonus(g.bonusType(), g.bonusValue(), g.bonusCap()),
                                 humanStatus(g.status())
                         });
@@ -235,7 +233,8 @@ public class GoalsTab extends JPanel {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         footer.setBackground(UIHelper.BG_DARK);
 
-        ModernButton btnCancel = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton btnCancel = UIHelper.createDangerButton("Cancelar");
+        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnCancel.addActionListener(e -> dialog.dispose());
         footer.add(btnCancel);
 
@@ -352,12 +351,12 @@ public class GoalsTab extends JPanel {
     private String formatBonus(BonusType type, BigDecimal value, BigDecimal cap) {
         if (type == null || value == null) return "-";
         String valStr = switch (type) {
-            case FIXED -> CURRENCY_FMT.format(value) + " MZN";
+            case FIXED -> UIHelper.formatMzn(value) + " MZN";
             case PERCENTAGE_OF_REVENUE -> value + "% da Receita";
             case PERCENTAGE_OF_MARGIN -> value + "% da Margem";
         };
         if (cap != null && cap.compareTo(BigDecimal.ZERO) > 0) {
-            valStr += " (teto " + CURRENCY_FMT.format(cap) + " MZN)";
+            valStr += " (teto " + UIHelper.formatMzn(cap) + " MZN)";
         }
         return valStr;
     }

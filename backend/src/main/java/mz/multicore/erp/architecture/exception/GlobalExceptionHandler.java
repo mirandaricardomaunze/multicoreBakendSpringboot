@@ -36,17 +36,75 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
+        String readableMsg = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + (err.getDefaultMessage() != null ? err.getDefaultMessage() : "valor inválido"))
+                .collect(java.util.stream.Collectors.joining("; ", "Validação falhou: ", "."));
+
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
+            String fieldName = error instanceof FieldError fe ? fe.getField() : error.getObjectName();
+            String errorMessage = error.getDefaultMessage() != null ? error.getDefaultMessage() : "valor inválido";
             errors.put(fieldName, errorMessage);
         });
+
+        log.warn("Erro de validação de argumentos: {}", readableMsg);
 
         ErrorResponse response = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 "Validation Error",
-                errors.toString()
+                readableMsg
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex) {
+        String detail = ex.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(java.util.stream.Collectors.joining("; ", "Validação de restrição falhou: ", "."));
+        log.warn("Violação de restrição Jakarta: {}", detail);
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Constraint Violation",
+                detail
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("Violação de integridade de dados na base de dados: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Data Integrity Violation",
+                "Operação não permitida por conflito de integridade de dados (registo duplicado ou dependência activa)."
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler({org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+                       jakarta.persistence.OptimisticLockException.class})
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex) {
+        log.warn("Conflito de concorrência optimista (versão desactualizada): {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                "Este registo foi alterado ou aprovado concorrentemente por outro utilizador. Por favor, actualize os dados antes de gravar."
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Argumento inválido: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "Argumento ou parâmetro inválido."
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }

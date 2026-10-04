@@ -15,6 +15,7 @@ public final class PermissionGuard {
 
     private static final Set<String> MANAGER_ROLES = Set.of("MANAGER", "ADMIN");
     private static final Set<String> ADMIN_ROLES = Set.of("ADMIN");
+    private static final Set<String> MONITORING_ROLES = Set.of("ADMIN", SUPERADMIN_ROLE);
     private static final Set<String> SUPERADMIN_ROLES = Set.of(SUPERADMIN_ROLE);
     private static final Set<String> SELLER_ROLES = Set.of("SELLER", "MANAGER", "ADMIN");
 
@@ -27,6 +28,10 @@ public final class PermissionGuard {
 
     public static void requireAdmin(String operation) {
         requireAny(ADMIN_ROLES, operation, "ADMIN");
+    }
+
+    public static void requireMonitoringAdmin(String operation) {
+        requireAny(MONITORING_ROLES, operation, "ADMIN ou SUPERADMIN");
     }
 
     public static void requireSuperAdmin(String operation) {

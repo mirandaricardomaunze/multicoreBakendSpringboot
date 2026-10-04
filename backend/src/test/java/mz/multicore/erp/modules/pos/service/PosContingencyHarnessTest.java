@@ -65,6 +65,8 @@ class PosContingencyHarnessTest {
     private CreditNoteService creditNoteService;
     private ReceivablesService receivablesService;
     private ApplicationEventPublisher eventPublisher;
+    private mz.multicore.erp.modules.pos.repository.StoreVoucherRepository storeVoucherRepository;
+    private mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository;
 
     private POSService posService;
 
@@ -99,6 +101,8 @@ class PosContingencyHarnessTest {
         creditNoteService = mock(CreditNoteService.class);
         receivablesService = mock(ReceivablesService.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
+        storeVoucherRepository = mock(mz.multicore.erp.modules.pos.repository.StoreVoucherRepository.class);
+        creditNoteRepository = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
 
         posService = new POSService(
                 tillSessionRepository,
@@ -117,7 +121,9 @@ class PosContingencyHarnessTest {
                 auditLogService,
                 creditNoteService,
                 receivablesService,
-                eventPublisher
+                eventPublisher,
+                storeVoucherRepository,
+                creditNoteRepository
         );
 
         company = new Company();
@@ -152,7 +158,7 @@ class PosContingencyHarnessTest {
 
         when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
         when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
-        when(tillSessionRepository.findByOperatorAndStatusAndCompanyId(OPERATOR, "OPEN", COMPANY_ID))
+        when(tillSessionRepository.findActiveSessionForOperator(OPERATOR, "OPEN", COMPANY_ID))
                 .thenReturn(Optional.of(openSession));
         when(walkInClientProvider.getOrCreate()).thenReturn(walkInClient);
         when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
@@ -243,7 +249,7 @@ class PosContingencyHarnessTest {
                 OPERATOR,
                 COMPANY_ID,
                 null,
-                null,
+                "Cliente Balcão",
                 WAREHOUSE_ID,
                 ACCOUNT_ID,
                 List.of(new POSCheckoutLineRequest(PRODUCT_ID, new BigDecimal("1"), null, null, null)),

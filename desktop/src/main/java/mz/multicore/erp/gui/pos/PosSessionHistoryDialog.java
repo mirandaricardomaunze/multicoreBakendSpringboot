@@ -2,7 +2,10 @@ package mz.multicore.erp.gui.pos;
 
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO;
 
 import javax.swing.*;
@@ -96,7 +99,7 @@ public class PosSessionHistoryDialog extends JDialog {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
         footer.setBackground(UIHelper.ROW_ALT);
 
-        ModernButton btnReload = new ModernButton("Recarregar", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        ModernButton btnReload = UIHelper.createPrimaryButton("Recarregar");
         btnReload.setIcon(UIHelper.icon("fas-sync-alt", 13, Color.WHITE));
         btnReload.setForeground(Color.WHITE);
         btnReload.addActionListener(e -> loadData());
@@ -107,7 +110,7 @@ public class PosSessionHistoryDialog extends JDialog {
         btnPrintZ.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         btnPrintZ.addActionListener(e -> printSelectedZ());
 
-        ModernButton btnClose = new ModernButton("Fechar", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        ModernButton btnClose = UIHelper.createDangerButton("Fechar");
         btnClose.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnClose.setForeground(Color.WHITE);
         btnClose.addActionListener(e -> dispose());
@@ -137,23 +140,23 @@ public class PosSessionHistoryDialog extends JDialog {
                 });
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao carregar histórico de caixa: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            ToastManager.show(this, FeedbackType.ERROR, "Erro ao carregar histórico de caixa: " + ex.getMessage());
         }
     }
 
     private void printSelectedZ() {
         int selectedRow = table.getSelectedRow();
         if (selectedRow < 0 || currentList == null || selectedRow >= currentList.size()) {
-            JOptionPane.showMessageDialog(this, "Selecione uma sessão na tabela para re-imprimir o Relatório Z.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma sessão na tabela para reimprimir o Relatório Z.");
             return;
         }
 
         PosSessionSummaryDTO s = currentList.get(selectedRow);
         try {
             byte[] pdfBytes = posApiClient.renderZReport(s.sessionId());
-            UIHelper.previewOrPrintPdf(this, pdfBytes, "relatorio-z-" + s.sessionId());
+            PrintPreviewDialog.show(this, pdfBytes, "relatorio-z-" + s.sessionId() + ".pdf");
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao gerar PDF do Relatório Z: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            ToastManager.show(this, FeedbackType.ERROR, "Erro ao gerar PDF do Relatório Z: " + ex.getMessage());
         }
     }
 

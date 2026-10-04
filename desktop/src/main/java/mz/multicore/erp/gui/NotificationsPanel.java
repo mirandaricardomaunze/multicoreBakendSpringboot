@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.NotificationFeed.NotificationItem;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -10,6 +11,7 @@ import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -19,7 +21,6 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +44,7 @@ public class NotificationsPanel extends JPanel {
     private final JTable table;
     private final JLabel summaryLabel;
     private final ModernButton refreshButton;
-    private final ModernButton markReadButton;
-    private final ModernButton markAllButton;
+    private final ActionMenuButton readingMenu;
     private List<NotificationItem> items = new ArrayList<>();
     private int refreshVersion;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
@@ -63,21 +63,10 @@ public class NotificationsPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(22, 25, 22, 25));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        JPanel titles = new JPanel();
-        titles.setOpaque(false);
-        titles.setLayout(new javax.swing.BoxLayout(titles, javax.swing.BoxLayout.Y_AXIS));
-        JLabel title = UIHelper.createHeading("Notificações");
         summaryLabel = new JLabel("Alertas operacionais da empresa ativa");
         summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
-        titles.add(title);
-        titles.add(summaryLabel);
-        header.add(titles, BorderLayout.WEST);
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new javax.swing.BoxLayout(north, javax.swing.BoxLayout.Y_AXIS));
-        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
+        add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
@@ -104,36 +93,32 @@ public class NotificationsPanel extends JPanel {
         TableFilter.install(table, search,
                 new TableFilter.ColumnFilter(type, 0),
                 new TableFilter.ColumnFilter(readState, 4));
-        JPanel filterBar = TableFilter.bar(search, TableFilter.label("Tipo:"), type,
-                TableFilter.label("Leitura:"), readState);
-        filterBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filterBar, BorderLayout.NORTH);
-
-        JScrollPane scroll = new JScrollPane(table);
-        UIHelper.styleScrollPane(scroll);
-        card.add(scroll, BorderLayout.CENTER);
-
         ModernButton openButton = UIHelper.createPrimaryButton("Abrir módulo");
         openButton.setIcon(UIHelper.icon("fas-external-link-alt", 14));
         openButton.addActionListener(e -> openSelectedModule());
-        markReadButton = UIHelper.createSecondaryButton("Marcar como lida");
-        markReadButton.setIcon(UIHelper.icon("fas-check", 14));
-        markReadButton.addActionListener(e -> markSelectedRead());
-        markAllButton = UIHelper.createSecondaryButton("Marcar todas como lidas");
-        markAllButton.setIcon(UIHelper.icon("fas-check-double", 14));
-        markAllButton.addActionListener(e -> markAllRead());
-        markAllButton.setEnabled(false);
         refreshButton = UIHelper.createSecondaryButton("Actualizar");
         refreshButton.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshButton.addActionListener(e -> refreshData());
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
-        actions.add(openButton);
-        actions.add(markReadButton);
-        actions.add(markAllButton);
-        actions.add(refreshButton);
-        card.add(actions, BorderLayout.SOUTH);
+        readingMenu = UIHelper.createActionMenuButton("Leitura")
+                .addAction("Marcar como lida", UIHelper.icon("fas-check", 14), this::markSelectedRead)
+                .addAction("Marcar todas como lidas", UIHelper.icon("fas-check-double", 14), this::markAllRead);
+        readingMenu.setActionEnabled(1, false);
+        JPanel filters = UIHelper.filterBar(
+                new JComponent[]{search, TableFilter.label("Tipo:"), type,
+                        TableFilter.label("Leitura:"), readState},
+                null);
+        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        JPanel filterStack = new JPanel(new BorderLayout(0, 6));
+        filterStack.setOpaque(false);
+        filterStack.add(summaryLabel, BorderLayout.NORTH);
+        filterStack.add(filters, BorderLayout.CENTER);
+        card.add(UIHelper.tableCardTop("Notificações", filterStack,
+                refreshButton, readingMenu, openButton), BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(table);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
     }
 
@@ -184,7 +169,7 @@ public class NotificationsPanel extends JPanel {
         }
         int unread = readStore.unreadCount(items);
         summaryLabel.setText(summaryText(items.size(), unread));
-        markAllButton.setEnabled(unread > 0);
+        readingMenu.setActionEnabled(1, unread > 0);
         unreadCountListener.accept(unread);
     }
 

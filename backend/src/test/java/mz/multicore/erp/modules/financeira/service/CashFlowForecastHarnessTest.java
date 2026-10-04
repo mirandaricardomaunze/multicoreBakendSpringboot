@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.financeira.service;
 
+import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
@@ -16,6 +17,7 @@ import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.Supplier;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +58,13 @@ class CashFlowForecastHarnessTest {
     void setUp() {
         forecastService = new CashFlowForecastService(accountRepository, invoiceRepository, purchaseRepository);
         printService = new CashFlowForecastPrintService(forecastService, companyService);
+        CurrentUserContext.setCurrentUser("gestor_financeiro", "MANAGER");
+        CurrentUserContext.setCurrentCompanyId(companyId);
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentUserContext.clear();
     }
 
     @Test

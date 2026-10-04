@@ -2,6 +2,7 @@ package mz.multicore.erp.architecture.security;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
+import java.time.Clock;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,5 +46,20 @@ class LoginRateLimiterTest {
         rl.recordFailure("Bob");
         rl.recordFailure(" bob ");
         assertThrows(BusinessRuleException.class, () -> rl.checkAllowed("BOB"));
+    }
+
+    @Test
+    void failuresFromOneOriginDoNotLockSameUserElsewhere() {
+        LoginRateLimiter rl = new LoginRateLimiter(3, 15, 30, Clock.systemUTC());
+        for (int i = 0; i < 3; i++) rl.recordFailure("bob", "203.0.113.1");
+        assertThrows(BusinessRuleException.class, () -> rl.checkAllowed("bob", "203.0.113.1"));
+        assertDoesNotThrow(() -> rl.checkAllowed("bob", "203.0.113.2"));
+    }
+
+    @Test
+    void arbitraryUsernamesCannotGrowAttemptStoreWithoutBound() {
+        LoginRateLimiter rl = new LoginRateLimiter(3, 15, 30, Clock.systemUTC(), 5);
+        for (int i = 0; i < 20; i++) rl.recordFailure("unknown-" + i, "203.0.113.1");
+        org.junit.jupiter.api.Assertions.assertTrue(rl.trackedKeys() <= 5);
     }
 }

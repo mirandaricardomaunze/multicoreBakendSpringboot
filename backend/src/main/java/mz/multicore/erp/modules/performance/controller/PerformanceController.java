@@ -122,7 +122,7 @@ public class PerformanceController {
     @PostMapping("/bonuses/{id}/approve")
     public ResponseEntity<SalesGoalBonusDTO> approveBonus(
             @PathVariable Long id,
-            @RequestBody(required = false) ApproveBonusRequest request) {
+            @RequestBody(required = false) @Valid ApproveBonusRequest request) {
         return ResponseEntity.ok(salesGoalService.approveBonus(id, request));
     }
 

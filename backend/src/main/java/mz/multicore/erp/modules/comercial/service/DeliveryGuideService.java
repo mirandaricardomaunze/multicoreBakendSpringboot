@@ -77,6 +77,13 @@ public class DeliveryGuideService {
                             + "Estado actual da encomenda: " + order.getStatus());
         }
 
+        if (request.responsible() == null || request.responsible().isBlank()) {
+            throw new BusinessRuleException("O transportador / responsável é obrigatório para emitir a guia de remessa.");
+        }
+        if (request.vehicle() == null || request.vehicle().isBlank()) {
+            throw new BusinessRuleException("A viatura / matrícula é obrigatória para emitir a guia de remessa.");
+        }
+
         DeliveryGuide guide = new DeliveryGuide();
         guide.setGuideNumber(documentNumberService.next(DocumentSeries.DELIVERY_GUIDE));
         guide.setGuideDate(LocalDateTime.now());

@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -38,34 +39,18 @@ final class HRVacationsPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Pedidos de Férias"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createPrimaryButton("Novo Pedido");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton approveBtn = UIHelper.createSuccessButton("Aprovar");
-        approveBtn.setIcon(UIHelper.icon("fas-check", 14));
-        ModernButton rejectBtn = UIHelper.createDangerButton("Rejeitar");
-        rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
+        newBtn.addActionListener(e -> openCreateVacationDialog());
+
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        ModernButton allowanceBtn = UIHelper.createPrimaryButton("Subsídio");
-        allowanceBtn.setIcon(UIHelper.icon("fas-money-check-alt", 14));
-        newBtn.addActionListener(e -> openCreateVacationDialog());
-        approveBtn.addActionListener(e -> decideVacation(true));
-        rejectBtn.addActionListener(e -> decideVacation(false));
         exportBtn.addActionListener(e -> owner.exportTable("ferias", "Mapa de Férias", owner.vacationsTable));
-        allowanceBtn.addActionListener(e -> openVacationAllowance());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(allowanceBtn);
-        actions.add(rejectBtn);
-        actions.add(approveBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+
+        ActionMenuButton decisionBtn = UIHelper.createActionMenuButton("Decisão & Subsídio")
+                .addAction("Aprovar", UIHelper.icon("fas-check", 14), () -> decideVacation(true))
+                .addAction("Rejeitar", UIHelper.icon("fas-times", 14), () -> decideVacation(false))
+                .addAction("Subsídio de Férias", UIHelper.icon("fas-money-check-alt", 14), this::openVacationAllowance);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -92,7 +77,9 @@ final class HRVacationsPanel {
                 TableFilter.label("Estado:"), vacEstado,
                 TableFilter.label("Início:", "fas-calendar-alt"), vacPeriodo);
         vacBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(vacBar, BorderLayout.NORTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+        card.add(UIHelper.tableCardTop("Pedidos de Férias", vacBar,
+                refreshBtn, exportBtn, decisionBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

@@ -6,5 +6,11 @@ public record AppUserDTO(
         String username,
         String name,
         String role,
-        boolean active
-) {}
+        boolean active,
+        boolean hasManagerPin,
+        String email
+) {
+    public AppUserDTO(Long id, String username, String name, String role, boolean active) {
+        this(id, username, name, role, active, false, null);
+    }
+}

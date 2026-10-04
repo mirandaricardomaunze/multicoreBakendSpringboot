@@ -30,6 +30,6 @@ public class AuditController {
     }
 
     private static AuditLogDTO toDto(AuditLog l) {
-        return new AuditLogDTO(l.getEventTime(), l.getUsername(), l.getAction(), l.getDetails());
+        return new AuditLogDTO(l.getEventTime(), l.getUsername(), l.getAction(), l.getDetails(), l.getIpAddress());
     }
 }

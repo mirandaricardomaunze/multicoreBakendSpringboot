@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferLineRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
+import mz.multicore.erp.modules.inventory.dto.UpdateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
@@ -99,7 +100,7 @@ class StockTransferServiceTest {
     // ────────────────────────── create ──────────────────────────
 
     @Test
-    void create_ficaPendente_eNaoMoveStock() {
+    void create_ficaRascunho_eNaoMoveStock() {
         when(companyRepository.findById(1L)).thenReturn(Optional.of(company));
         when(warehouseRepository.findById(10L)).thenReturn(Optional.of(origin));
         when(warehouseRepository.findById(20L)).thenReturn(Optional.of(destination));
@@ -110,10 +111,57 @@ class StockTransferServiceTest {
 
         StockTransferDTO dto = service.create(request(new BigDecimal("5")));
 
-        assertEquals(TransferStatus.PENDING_APPROVAL.name(), dto.status());
+        assertEquals(TransferStatus.DRAFT.name(), dto.status());
         // O stock NÃO se move na criação.
         verify(productBatchService, never()).consumeFEFO(any(), any(), any());
         verify(stockMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void create_comMotoristaEMatricula_persisteCampos() {
+        when(companyRepository.findById(1L)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(10L)).thenReturn(Optional.of(origin));
+        when(warehouseRepository.findById(20L)).thenReturn(Optional.of(destination));
+        when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
+        when(documentNumberService.next(any())).thenReturn("TRF-2026/1");
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(new BigDecimal("50"));
+        when(transferRepository.save(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateStockTransferRequest req = new CreateStockTransferRequest(
+                1L, 10L, 20L, "Responsável Chefe", "Toyota", "Notas",
+                List.of(new CreateStockTransferLineRequest(100L, new BigDecimal("5"))),
+                "Carlos Motorista", "ABC-123-MC");
+
+        StockTransferDTO dto = service.create(req);
+
+        assertEquals("Carlos Motorista", dto.driverName());
+        assertEquals("ABC-123-MC", dto.vehiclePlate());
+        assertEquals("Responsável Chefe", dto.responsible());
+        assertEquals("Toyota", dto.vehicle());
+    }
+
+    @Test
+    void create_semMotorista_lancaExcecao() {
+        CreateStockTransferRequest req = new CreateStockTransferRequest(
+                1L, 10L, 20L, null, "ABC-123-MC", "Notas",
+                List.of(new CreateStockTransferLineRequest(100L, new BigDecimal("5"))),
+                null, "ABC-123-MC");
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.create(req));
+        assertTrue(ex.getMessage().contains("motorista"), ex.getMessage());
+        verify(transferRepository, never()).save(any());
+    }
+
+    @Test
+    void create_semMatricula_lancaExcecao() {
+        CreateStockTransferRequest req = new CreateStockTransferRequest(
+                1L, 10L, 20L, "Carlos Motorista", null, "Notas",
+                List.of(new CreateStockTransferLineRequest(100L, new BigDecimal("5"))),
+                "Carlos Motorista", null);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.create(req));
+        assertTrue(ex.getMessage().contains("matrícula"), ex.getMessage());
+        verify(transferRepository, never()).save(any());
     }
 
     @Test
@@ -148,7 +196,7 @@ class StockTransferServiceTest {
 
         StockTransferDTO dto = service.create(request(new BigDecimal("5")));
 
-        assertEquals(TransferStatus.PENDING_APPROVAL.name(), dto.status());
+        assertEquals(TransferStatus.DRAFT.name(), dto.status());
         verify(productBatchService, never()).consumeFEFO(any(), any(), any());
     }
 
@@ -163,6 +211,86 @@ class StockTransferServiceTest {
         when(stockRepository.findByProductIdAndWarehouseId(100L, 10L)).thenReturn(Optional.empty());
 
         assertThrows(BusinessRuleException.class, () -> service.create(request(new BigDecimal("5"))));
+        verify(transferRepository, never()).save(any());
+    }
+
+    // ────────────────────────── update / submit ──────────────────────────
+
+    @Test
+    void update_rascunho_substituiLinhas_ePreservaIdentidade() {
+        StockTransfer draft = draftTransfer(new BigDecimal("5"));
+        draft.setVersion(3L);
+        LocalDateTime originalDate = draft.getTransferDate();
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(draft));
+        when(warehouseRepository.findById(10L)).thenReturn(Optional.of(origin));
+        when(warehouseRepository.findById(20L)).thenReturn(Optional.of(destination));
+        when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(new BigDecimal("50"));
+        when(transferRepository.saveAndFlush(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        StockTransferDTO dto = service.update(1L, new UpdateStockTransferRequest(
+                3L, 10L, 20L, "Maria", "Camioneta", "Revisto",
+                List.of(new CreateStockTransferLineRequest(100L, new BigDecimal("7"))),
+                "Carlos", "ABC-123-MC"));
+
+        assertEquals("TRF-2026/1", dto.transferNumber());
+        assertEquals(originalDate, dto.transferDate());
+        assertEquals(TransferStatus.DRAFT.name(), dto.status());
+        assertEquals(new BigDecimal("7"), dto.lines().get(0).quantity());
+        assertEquals("Carlos", dto.driverName());
+        verify(productBatchService, never()).consumeFEFO(any(), any(), any());
+    }
+
+    @Test
+    void update_comVersaoDesactualizada_eRecusado() {
+        StockTransfer draft = draftTransfer(new BigDecimal("5"));
+        draft.setVersion(4L);
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(draft));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.update(1L,
+                new UpdateStockTransferRequest(3L, 10L, 20L, "Maria", "Camioneta", null,
+                        List.of(new CreateStockTransferLineRequest(100L, BigDecimal.ONE)),
+                        "Carlos", "ABC-123-MC")));
+
+        assertTrue(error.getMessage().contains("outro utilizador"));
+        verify(transferRepository, never()).save(any());
+    }
+
+    @Test
+    void update_pendente_eRecusado() {
+        StockTransfer pending = pendingTransfer(new BigDecimal("5"));
+        pending.setVersion(1L);
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(pending));
+
+        assertThrows(BusinessRuleException.class, () -> service.update(1L,
+                new UpdateStockTransferRequest(1L, 10L, 20L, "Maria", "Camioneta", null,
+                        List.of(new CreateStockTransferLineRequest(100L, BigDecimal.ONE)),
+                        "Carlos", "ABC-123-MC")));
+    }
+
+    @Test
+    void submit_rascunho_ficaPendente_eNaoMoveStock() {
+        StockTransfer draft = draftTransfer(new BigDecimal("5"));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(draft));
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(new BigDecimal("50"));
+        when(transferRepository.save(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        StockTransferDTO dto = service.submit(1L);
+
+        assertEquals(TransferStatus.PENDING_APPROVAL.name(), dto.status());
+        verify(productBatchService, never()).consumeFEFO(any(), any(), any());
+        verify(stockMovementRepository, never()).save(any());
+        verify(auditLogService).logCurrent(eq("STOCK_TRANSFER_SUBMIT"), contains("submetida"));
+    }
+
+    @Test
+    void submit_semStockActual_eRecusado() {
+        StockTransfer draft = draftTransfer(new BigDecimal("5"));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(draft));
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(new BigDecimal("2"));
+
+        assertThrows(BusinessRuleException.class, () -> service.submit(1L));
+        assertEquals(TransferStatus.DRAFT, draft.getStatus());
         verify(transferRepository, never()).save(any());
     }
 
@@ -211,6 +339,15 @@ class StockTransferServiceTest {
         verify(productBatchService, never()).consumeFEFO(any(), any(), any());
     }
 
+    @Test
+    void approve_rascunho_lancaExcecao() {
+        StockTransfer draft = draftTransfer(new BigDecimal("5"));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(draft));
+
+        assertThrows(BusinessRuleException.class, () -> service.approve(1L));
+        verify(productBatchService, never()).consumeFEFO(any(), any(), any());
+    }
+
     // ────────────────────────── reject / cancel ──────────────────────────
 
     @Test
@@ -236,6 +373,14 @@ class StockTransferServiceTest {
     }
 
     @Test
+    void reject_rascunho_lancaExcecao() {
+        StockTransfer draft = draftTransfer(new BigDecimal("5"));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(draft));
+
+        assertThrows(BusinessRuleException.class, () -> service.reject(1L, "Ainda incompleta"));
+    }
+
+    @Test
     void cancel_pendente_ficaCancelada() {
         StockTransfer pending = pendingTransfer(new BigDecimal("5"));
         when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(pending));
@@ -255,11 +400,20 @@ class StockTransferServiceTest {
         assertThrows(BusinessRuleException.class, () -> service.cancel(1L));
     }
 
+    @Test
+    void cancel_rejeitada_lancaExcecao() {
+        StockTransfer rejected = pendingTransfer(new BigDecimal("5"));
+        rejected.setStatus(TransferStatus.REJECTED);
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(rejected));
+
+        assertThrows(BusinessRuleException.class, () -> service.cancel(1L));
+    }
+
     // ────────────────────────── helpers ──────────────────────────
 
     private CreateStockTransferRequest request(BigDecimal qty) {
         return new CreateStockTransferRequest(
-                1L, 10L, 20L, "João", null, null,
+                1L, 10L, 20L, "João", "ABC-123-MC", null,
                 List.of(new CreateStockTransferLineRequest(100L, qty)));
     }
 
@@ -279,6 +433,12 @@ class StockTransferServiceTest {
         line.setQuantity(qty);
         t.getLines().add(line);
         return t;
+    }
+
+    private StockTransfer draftTransfer(BigDecimal qty) {
+        StockTransfer transfer = pendingTransfer(qty);
+        transfer.setStatus(TransferStatus.DRAFT);
+        return transfer;
     }
 
     private static Company company(long id) {

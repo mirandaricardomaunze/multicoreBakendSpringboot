@@ -1,6 +1,8 @@
 package mz.multicore.erp.modules.audit.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.dto.ForensicAnomalyDTO;
 import mz.multicore.erp.modules.audit.dto.ForensicAuditSummaryDTO;
 import mz.multicore.erp.modules.audit.dto.ForensicCategory;
@@ -63,6 +65,14 @@ public class ForensicAuditService {
             ForensicCategory categoryFilter,
             String operatorFilter
     ) {
+        if (PermissionGuard.SUPERADMIN_ROLE.equalsIgnoreCase(CurrentUserContext.getRole())) {
+            if (companyId == null) {
+                throw new BusinessRuleException("Seleccione uma empresa para consultar a auditoria forense.");
+            }
+        } else {
+            PermissionGuard.requireManagerOrAdmin("consultar auditoria forense e controlo de fraude");
+            CurrentUserContext.requireCompany(companyId);
+        }
         List<ForensicAnomalyDTO> allAnomalies = new ArrayList<>();
 
         // 1. Inspecção de Cancelamentos de Faturas e Recibos

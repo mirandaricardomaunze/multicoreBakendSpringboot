@@ -44,15 +44,17 @@ final class OrderToTransferAction {
         String destination = String.valueOf(owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_ORIGIN));
 
         JTextField orderField = new JTextField(orderNumber);
+        JTextField driverField = new JTextField();
+        JTextField vehiclePlateField = new JTextField();
         JTextField responsibleField = new JTextField();
-        JTextField vehicleField = new JTextField();
         JTextArea notesArea = new JTextArea(3, 28);
-        for (JTextField f : List.of(orderField, responsibleField, vehicleField)) {
+        for (JTextField f : List.of(orderField, driverField, vehiclePlateField, responsibleField)) {
             UIHelper.styleTextField(f);
         }
         orderField.setEditable(false);
-        responsibleField.putClientProperty("JTextField.placeholderText", "Quem leva a mercadoria");
-        vehicleField.putClientProperty("JTextField.placeholderText", "Matrícula ou identificação da viatura");
+        driverField.putClientProperty("JTextField.placeholderText", "Nome do motorista (obrigatório)");
+        vehiclePlateField.putClientProperty("JTextField.placeholderText", "Matrícula do veículo (obrigatório, Ex: ABC-123-MC)");
+        responsibleField.putClientProperty("JTextField.placeholderText", "Responsável pelo transporte (opcional)");
         UIHelper.styleTextArea(notesArea);
         notesArea.setLineWrap(true);
         notesArea.setWrapStyleWord(true);
@@ -61,8 +63,9 @@ final class OrderToTransferAction {
 
         JPanel form = UIHelper.createDialogForm(
                 "Encomenda:", orderField,
-                "Responsável pelo transporte:", responsibleField,
-                "Viatura / Matrícula:", vehicleField,
+                "Motorista *:", driverField,
+                "Matrícula do Veículo *:", vehiclePlateField,
+                "Responsável:", responsibleField,
                 "Observações:", notesScroll);
 
         StockTransferDTO[] created = new StockTransferDTO[1];
@@ -71,16 +74,25 @@ final class OrderToTransferAction {
                 "Origem, destino e artigos vêm da encomenda — falta só quem leva e em quê", form)
                 .setConfirmButton("Criar Transferência", "fas-dolly")
                 .setOnSaveAsync(() -> {
+                    String driver = blankToNull(driverField.getText());
+                    String plate = blankToNull(vehiclePlateField.getText());
                     String responsible = blankToNull(responsibleField.getText());
-                    String vehicle = blankToNull(vehicleField.getText());
                     String notes = blankToNull(notesArea.getText());
-                    return () -> created[0] = api.convertOrderToTransfer(orderId, responsible, vehicle, notes);
+                    if (driver == null && responsible == null) {
+                        driverField.requestFocusInWindow();
+                        throw new IllegalArgumentException("O nome do motorista é obrigatório para emitir a guia de transferência.");
+                    }
+                    if (plate == null) {
+                        vehiclePlateField.requestFocusInWindow();
+                        throw new IllegalArgumentException("A matrícula do veículo é obrigatória para emitir a guia de transferência.");
+                    }
+                    return () -> created[0] = api.convertOrderToTransfer(orderId, responsible, plate, notes, driver, plate);
                 });
 
         if (dialog.showDialog() && created[0] != null) {
             owner.showCommercialSuccess("Transferência " + created[0].transferNumber() + " criada a partir de "
                     + orderNumber + ("—".equals(destination) ? "" : ", com destino a " + destination)
-                    + "; requer aprovação em Stock › Transferências.");
+                    + "; reveja e submeta o rascunho em Stock › Transferências.");
             owner.loadOrdersTable();
         }
     }

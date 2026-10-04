@@ -4,6 +4,7 @@ import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.WasteStatus;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import mz.multicore.erp.modules.printing.WasteReportPrintService;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -37,14 +38,14 @@ public class StockWasteController {
     }
 
     @PostMapping
-    public ResponseEntity<StockWasteDTO> register(@RequestBody CreateStockWasteRequest request) {
+    public ResponseEntity<StockWasteDTO> register(@RequestBody @Valid CreateStockWasteRequest request) {
         return ResponseEntity.ok(wasteService.registerWaste(request));
     }
 
     @PostMapping("/{id}/approve")
     public ResponseEntity<StockWasteDTO> approve(
             @PathVariable Long id,
-            @RequestBody ApproveWasteRequest request
+            @RequestBody @Valid ApproveWasteRequest request
     ) {
         return ResponseEntity.ok(wasteService.approveWaste(id, request));
     }

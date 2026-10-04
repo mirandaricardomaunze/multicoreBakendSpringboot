@@ -36,7 +36,8 @@ public class WorkSheetPrintService {
 
     /** Uma folha de obra não é factura: sem código de barras, sem validade e sem coluna de IVA. */
     private static final DocumentColumnsDTO WORKSHEET_COLUMNS =
-            new DocumentColumnsDTO(false, false, true, false, true, true, false, true, null);
+            new DocumentColumnsDTO(false, false, true, false, true, false, false,
+                    false, true, false, true, null);
 
     private final WorkSheetRepository workSheetRepository;
 
@@ -134,13 +135,13 @@ public class WorkSheetPrintService {
         if (ws.getHoursWorked() != null && ws.getHoursWorked().compareTo(BigDecimal.ZERO) > 0) {
             rows.add(new LineItemsTableRenderer.Row(
                     null, null, "Mão de obra técnica (horas)", null,
-                    ws.getHoursWorked(), ws.getHourlyRate(),
+                    ws.getHoursWorked(), null, null, ws.getHourlyRate(),
                     BigDecimal.ZERO, BigDecimal.ZERO, labour(ws)));
         }
         if (ws.getPartsCost() != null && ws.getPartsCost().compareTo(BigDecimal.ZERO) > 0) {
             rows.add(new LineItemsTableRenderer.Row(
                     null, null, partsDescription(ws), null,
-                    BigDecimal.ONE, ws.getPartsCost(),
+                    BigDecimal.ONE, null, null, ws.getPartsCost(),
                     BigDecimal.ZERO, BigDecimal.ZERO, ws.getPartsCost()));
         }
         return rows;

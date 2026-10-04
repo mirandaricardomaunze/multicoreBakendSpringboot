@@ -21,9 +21,6 @@ final class StockCategoriesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(12, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
-        header.add(UIHelper.createHeading("Categorias de Produto"), BorderLayout.WEST);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Categoria");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> openCategoryDialog(null));
@@ -33,29 +30,32 @@ final class StockCategoriesPanel {
             var sel = selectedCategory();
             if (sel != null) openCategoryDialog(sel);
         });
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCategory)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::refresh);
-        actions.add(moreBtn); actions.add(editBtn); actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCategory);
         // Pesquisa por código/nome
-        owner.categorySearchField = new SearchField("Pesquisar categoria por código ou nome…");
+        owner.categorySearchField = TableFilter.searchField("Pesquisar categoria por código ou nome…");
         UIHelper.onTextChange(owner.categorySearchField, () -> filterCategories(owner.categorySearchField.getText()));
-        JPanel searchRow = new JPanel(new BorderLayout());
+        JPanel searchRow = new JPanel(new GridBagLayout());
         searchRow.setOpaque(false);
-        searchRow.setBorder(new EmptyBorder(10, 0, 0, 0));
-        searchRow.add(owner.categorySearchField, BorderLayout.CENTER);
-
-        JPanel headerWrap = new JPanel(new BorderLayout());
-        headerWrap.setOpaque(false);
-        headerWrap.add(header, BorderLayout.NORTH);
-        headerWrap.add(searchRow, BorderLayout.SOUTH);
-        tab.add(headerWrap, BorderLayout.NORTH);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.gridx = 0; g.weightx = 1.0;
+        JLabel lbl = new JLabel("Pesquisa");
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setForeground(UIHelper.TEXT_MUTED);
+        searchRow.add(lbl, g);
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 0);
+        searchRow.add(owner.categorySearchField, g);
+        searchRow.setBorder(new EmptyBorder(0, 0, 12, 0));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.add(UIHelper.tableCardTop("Categorias de Produto", searchRow,
+                refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         String[] cols = {"Código", "Nome", "Cor", "Produtos", "Estado"};
         owner.categoriesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -193,7 +193,7 @@ final class StockCategoriesPanel {
             swatch.setForeground(UIHelper.TEXT_MUTED);
         };
         applySwatch.run();
-        ModernButton pickBtn = UIHelper.createSecondaryButton("Escolher…");
+        ModernButton pickBtn = UIHelper.createSecondaryButton("Escolher Cor");
         pickBtn.setIcon(UIHelper.icon("fas-palette", 14));
         pickBtn.addActionListener(ev -> {
             Color initial = UIHelper.ACCENT_BLUE;

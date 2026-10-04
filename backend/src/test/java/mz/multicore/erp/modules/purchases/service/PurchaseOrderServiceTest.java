@@ -15,6 +15,7 @@ import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderLineRequest;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.PurchaseOrderDTO;
 import mz.multicore.erp.modules.purchases.dto.ReceivePurchaseOrderRequest;
+import mz.multicore.erp.modules.purchases.dto.UpdatePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.ReceivePurchaseOrderRequest.ReceiveLine;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrderLine;
@@ -68,6 +69,7 @@ class PurchaseOrderServiceTest {
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
 
         when(orderRepository.save(any(PurchaseOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.saveAndFlush(any(PurchaseOrder.class))).thenAnswer(inv -> inv.getArgument(0));
         when(documentNumberService.next(anyString())).thenReturn("EC-F-2026/1");
     }
 
@@ -169,6 +171,48 @@ class PurchaseOrderServiceTest {
 
         // 250 líquido a 5% = 12,50 (a factura do fornecedor manda, mesmo que o artigo diga outra coisa).
         assertEquals(0, dto.taxAmount().compareTo(new BigDecimal("12.50")));
+    }
+
+    @Test
+    void updateOrder_antesDaRecepcao_actualizaSemMoverStock() {
+        PurchaseOrder order = orderInState(PurchaseOrder.ORDERED,
+                new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        order.setVersion(2L);
+        stubRefs(true);
+
+        PurchaseOrderDTO updated = service.updateOrder(99L, new UpdatePurchaseOrderRequest(
+                2L, 7L, 3L, LocalDate.now().plusDays(12), "revista",
+                List.of(new CreatePurchaseOrderLineRequest(11L, new BigDecimal("4"),
+                        new BigDecimal("20"), "L2", LocalDate.now().plusMonths(8), null,
+                        BigDecimal.ZERO))));
+
+        assertEquals(1, updated.lines().size());
+        assertEquals(0, new BigDecimal("80.00").compareTo(updated.totalAmount()));
+        assertEquals("revista", updated.notes());
+        verifyNoInteractions(inventoryService);
+    }
+
+    @Test
+    void updateOrder_versaoDesactualizada_recusa() {
+        PurchaseOrder order = orderInState(PurchaseOrder.ORDERED,
+                new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        order.setVersion(3L);
+        assertThrows(BusinessRuleException.class, () -> service.updateOrder(99L,
+                new UpdatePurchaseOrderRequest(2L, 7L, 3L, null, null,
+                        List.of(new CreatePurchaseOrderLineRequest(11L, BigDecimal.ONE,
+                                BigDecimal.ONE, null, null, null)))));
+        verify(orderRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateOrder_depoisDeRecepcaoParcial_recusa() {
+        PurchaseOrder order = orderInState(PurchaseOrder.PARTIALLY_RECEIVED,
+                new BigDecimal("10"), new BigDecimal("2"), 5L);
+        order.setVersion(1L);
+        assertThrows(BusinessRuleException.class, () -> service.updateOrder(99L,
+                new UpdatePurchaseOrderRequest(1L, 7L, 3L, null, null,
+                        List.of(new CreatePurchaseOrderLineRequest(11L, BigDecimal.ONE,
+                                BigDecimal.ONE, null, null, null)))));
     }
 
     private static mz.multicore.erp.modules.fiscal.model.TaxRate taxRateOf(String rate) {

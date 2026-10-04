@@ -5,6 +5,7 @@ import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -69,9 +70,9 @@ public class CRMPanel extends JPanel {
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
-        tabbedPane.addTab("Pedidos de Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Pedidos de Assistência", UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM),
                 createTicketsTab());
-        tabbedPane.addTab("Folhas de Obra", UIHelper.icon("fas-tools", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Folhas de Obra", UIHelper.icon("fas-tools", 16, UIHelper.ACCENT_ORANGE),
                 createWorkSheetsTab());
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -86,10 +87,6 @@ public class CRMPanel extends JPanel {
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Pedidos dos Clientes"), BorderLayout.WEST);
-
         ModernButton newTicketBtn = UIHelper.createSuccessButton("Novo Pedido");
         newTicketBtn.setIcon(UIHelper.icon("fas-headset", 14));
         newTicketBtn.setToolTipText("Abrir um pedido de assistência para um cliente");
@@ -103,14 +100,6 @@ public class CRMPanel extends JPanel {
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refreshData());
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(detailBtn);
-        actions.add(newTicketBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
 
         ModernPanel ticketsCard = new ModernPanel(16);
         ticketsCard.setLayout(new BorderLayout());
@@ -147,7 +136,8 @@ public class CRMPanel extends JPanel {
                 TableFilter.label("Prioridade:", "fas-flag"), tPrioridade,
                 TableFilter.label("Data:", "fas-calendar-alt"), tPeriodo);
         tBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        ticketsCard.add(tBar, BorderLayout.NORTH);
+        ticketsCard.add(UIHelper.tableCardTop("Pedidos dos Clientes", tBar,
+                refreshBtn, detailBtn, newTicketBtn), BorderLayout.NORTH);
         ticketsCard.add(tScroll, BorderLayout.CENTER);
         panel.add(ticketsCard, BorderLayout.CENTER);
         return panel;
@@ -159,48 +149,19 @@ public class CRMPanel extends JPanel {
         wsPanel.setOpaque(false);
         wsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
-        JPanel wsHeader = new JPanel(new BorderLayout());
-        wsHeader.setOpaque(false);
-        wsHeader.add(UIHelper.createSubheading("Folhas de Obra Registadas"), BorderLayout.WEST);
-
         ModernButton newWsBtn = UIHelper.createSuccessButton("Registar Folha de Obra");
         newWsBtn.setIcon(UIHelper.icon("fas-tools", 14));
         newWsBtn.addActionListener(e -> workSheetActions.registerWorkSheet());
-
-        ModernButton editBtn = UIHelper.createSecondaryButton("Corrigir");
-        editBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        editBtn.setToolTipText("Corrigir uma folha ainda por faturar");
-        editBtn.addActionListener(e -> workSheetActions.editWorkSheet());
-
-        ModernButton voidBtn = UIHelper.createDangerButton("Anular");
-        voidBtn.setIcon(UIHelper.icon("fas-ban", 14));
-        voidBtn.setToolTipText("Anular uma folha por faturar, com motivo");
-        voidBtn.addActionListener(e -> workSheetActions.voidWorkSheet());
-
-        ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir PDF");
-        printBtn.setIcon(UIHelper.icon("fas-print", 14));
-        printBtn.setToolTipText("Folha de obra em PDF para o cliente assinar");
-        printBtn.addActionListener(e -> workSheetActions.printWorkSheet());
 
         ModernButton billBtn = UIHelper.createPrimaryButton("Faturar Folha de Obra");
         billBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
         billBtn.addActionListener(e -> workSheetActions.billWorkSheet());
 
-        ModernButton rateBtn = UIHelper.createSecondaryButton("Tarifa/hora");
-        rateBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
-        rateBtn.setToolTipText("Preço por hora da assistência técnica (gerente ou administrador)");
-        rateBtn.addActionListener(e -> workSheetActions.editHourlyRate());
-
-        JPanel wsActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        wsActions.setOpaque(false);
-        wsActions.add(rateBtn);
-        wsActions.add(printBtn);
-        wsActions.add(editBtn);
-        wsActions.add(voidBtn);
-        wsActions.add(newWsBtn);
-        wsActions.add(billBtn);
-        wsHeader.add(wsActions, BorderLayout.EAST);
-        wsPanel.add(wsHeader, BorderLayout.NORTH);
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Ações da Folha")
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), workSheetActions::printWorkSheet)
+                .addAction("Corrigir", UIHelper.icon("fas-edit", 14), workSheetActions::editWorkSheet)
+                .addAction("Anular", UIHelper.icon("fas-ban", 14), workSheetActions::voidWorkSheet)
+                .addAction("Tarifa/hora", UIHelper.icon("fas-money-bill-wave", 14), workSheetActions::editHourlyRate);
 
         ModernPanel wsCard = new ModernPanel(16);
         wsCard.setLayout(new BorderLayout());
@@ -235,7 +196,9 @@ public class CRMPanel extends JPanel {
         JPanel wsBar = TableFilter.bar(wsSearch, TableFilter.label("Estado:"), wsEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), wsPeriodo);
         wsBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        wsCard.add(wsBar, BorderLayout.NORTH);
+        ModernButton wsRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
+        wsCard.add(UIHelper.tableCardTop("Folhas de Obra Registadas", wsBar,
+                wsRefreshBtn, moreBtn, billBtn, newWsBtn), BorderLayout.NORTH);
         wsCard.add(wsScroll, BorderLayout.CENTER);
         wsPanel.add(wsCard, BorderLayout.CENTER);
         return wsPanel;

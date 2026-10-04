@@ -87,15 +87,17 @@ public class PosProfessionalErgonomicsHarnessTest {
                         } else if ("+".equals(txt)) {
                             foundPlus = true;
                             assertNull(btn.getIcon(), "Botão de incremento '+' não deve ter ícone duplicado");
-                        } else if (txt != null && txt.contains("Quantidade (F6)")) {
-                            foundEditQty = true;
+                        } else if (txt != null && txt.contains("Quantidade")) {
+                            if ("F6".equals(btn.getShortcut()) || txt.contains("F6")) {
+                                foundEditQty = true;
+                            }
                         }
                     }
                 }
 
                 assertTrue(foundMinus, "Botão '−' deve estar presente no carrinho");
                 assertTrue(foundPlus, "Botão '+' deve estar presente no carrinho");
-                assertTrue(foundEditQty, "Botão 'Quantidade (F6)' deve estar presente no carrinho");
+                assertTrue(foundEditQty, "Botão 'Quantidade' com atalho [F6] deve estar presente no carrinho");
             } finally {
                 CurrentUserContext.clear();
             }

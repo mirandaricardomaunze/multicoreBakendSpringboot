@@ -4,15 +4,18 @@ import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.SearchField;
+import mz.multicore.erp.gui.components.ProductSearchComboBox;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.DocumentEditorHost;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.InventoryApiClient;
 import mz.multicore.erp.desktop.client.InventoryCountApiClient;
@@ -73,6 +76,10 @@ public class StockPanel extends JPanel {
     private DefaultTableModel transferModel;
     JTable transferTable;
     List<StockTransferDTO> transfersList = new ArrayList<>();
+    CardLayout transferPagesLayout;
+    JPanel transferPages;
+    DocumentEditorHost transferEditorHost;
+    StockTransferEditorForm transferEditorForm;
 
     // Warehouses list
     private JComboBox<String> warehouseFilterCombo;
@@ -81,12 +88,12 @@ public class StockPanel extends JPanel {
     // Stock levels
     private DefaultTableModel stockModel;
     private JTable stockTable;
-    private List<StockDTO> stocksList = new ArrayList<>();
+    List<StockDTO> stocksList = new ArrayList<>();
 
     // Bloqueio de stock (contagem cega): quantidades ocultas a não-administradores.
     private static final String MASK = "•••";
     private JLabel stockLockBanner;
-    private ModernButton stockLockBtn;
+    private ActionMenuButton moreBtn;
     private boolean stockLockKnown;
     private boolean stockLocked;
 
@@ -159,29 +166,21 @@ public class StockPanel extends JPanel {
 
         ModernButton newProductBtn = UIHelper.createSuccessButton("Registar Produto");
         newProductBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        stockLockBtn = UIHelper.createSecondaryButton("Trancar Stock");
-        stockLockBtn.setIcon(UIHelper.icon("fas-lock", 14));
-        stockLockBtn.setVisible(isAdmin()); // só ADMIN tranca/destranca
-        ModernButton physicalInventoryBtn = UIHelper.createPrimaryButton("Inventário Físico");
-        physicalInventoryBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
-        physicalInventoryBtn.addActionListener(e -> openPhysicalInventoryDialog());
-        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Editar Produto", UIHelper.icon("fas-edit", 14),
+        this.moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Inventário Físico", UIHelper.icon("fas-clipboard-check", 14, UIHelper.APPROVED_GREEN), this::openPhysicalInventoryDialog)
+                .addAction("Trancar Stock", UIHelper.icon("fas-lock", 14, UIHelper.PENDING_YELLOW), this::toggleStockLock)
+                .addAction("Ficha do Artigo", UIHelper.icon("fas-id-card", 14, UIHelper.ACCENT_BLUE),
+                        () -> showProductDetailDialog(selectedStockProductId()))
+                .addAction("Editar Produto", UIHelper.icon("fas-edit", 14, UIHelper.PENDING_YELLOW),
                         () -> editProductDialog(selectedStockProductId()))
-                .addAction("Criar Armazém", UIHelper.icon("fas-warehouse", 14), this::createWarehouseDialogV2)
-                .addAction("Etiquetas", UIHelper.icon("fas-barcode", 14), this::openLabelDialog);
+                .addAction("Etiquetas", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT), this::openLabelDialog);
+        moreBtn.actionAt(1).setVisible(isAdmin()); // só ADMIN tranca/destranca
+
         ModernButton refreshAllBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshAllBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshAllBtn.setToolTipText("Recarregar dados de stock e armazéns");
         refreshAllBtn.addActionListener(e -> onPanelSelected());
-        JPanel catalogueGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        catalogueGroup.setOpaque(false);
-        catalogueGroup.add(refreshAllBtn);
-        catalogueGroup.add(stockLockBtn);
-        catalogueGroup.add(moreBtn);
-        catalogueGroup.add(physicalInventoryBtn);
-        catalogueGroup.add(newProductBtn);
-        topBar.add(catalogueGroup, BorderLayout.EAST);
+        topBar.add(UIHelper.actionsBar(refreshAllBtn, moreBtn, newProductBtn), BorderLayout.EAST);
 
         stockLockBanner = new JLabel(" ");
         stockLockBanner.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
@@ -206,16 +205,16 @@ public class StockPanel extends JPanel {
         this.stockTabs = tabs;
         UIHelper.styleTabbedPaneMulticore(tabs);
 
-        tabs.addTab("Níveis de Stock",               UIHelper.icon("fas-boxes", 16, UIHelper.TEXT_LIGHT),         buildLevelsTab());
-        tabs.addTab("Alertas",                       UIHelper.icon("fas-exclamation-triangle", 16, UIHelper.TEXT_LIGHT), buildAlertsTab());
-        tabs.addTab("Lotes & Validades",             UIHelper.icon("fas-calendar-times", 16, UIHelper.TEXT_LIGHT),buildBatchesTab());
-        tabs.addTab("Movimentos & Rastreabilidade",  UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT),buildMovementsTab());
-        tabs.addTab("Transferências entre Armazéns", UIHelper.icon("fas-truck", 16, UIHelper.TEXT_LIGHT),         buildTransfersTab());
-        tabs.addTab("Gestão de Armazéns",            UIHelper.icon("fas-warehouse", 16, UIHelper.TEXT_LIGHT),     buildWarehousesTab());
-        tabs.addTab("Categorias",                    UIHelper.icon("fas-tags", 16, UIHelper.TEXT_LIGHT),         buildCategoriesTab());
-        tabs.addTab("Quebras & Desperdício",         UIHelper.icon("fas-trash-alt", 16, UIHelper.TEXT_LIGHT),     wastePanel);
+        tabs.addTab("Níveis de Stock",               UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK),         buildLevelsTab());
+        tabs.addTab("Alertas",                       UIHelper.icon("fas-exclamation-triangle", 16, UIHelper.PENDING_YELLOW), buildAlertsTab());
+        tabs.addTab("Lotes & Validades",             UIHelper.icon("fas-calendar-times", 16, UIHelper.ACCENT_ORANGE),buildBatchesTab());
+        tabs.addTab("Movimentos & Rastreabilidade",  UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE),buildMovementsTab());
+        tabs.addTab("Transferências entre Armazéns", UIHelper.icon("fas-truck", 16, UIHelper.ACCENT),         buildTransfersTab());
+        tabs.addTab("Gestão de Armazéns",            UIHelper.icon("fas-warehouse", 16, UIHelper.ACCENT_CYAN),     buildWarehousesTab());
+        tabs.addTab("Categorias",                    UIHelper.icon("fas-tags", 16, UIHelper.ACCENT_PINK),         buildCategoriesTab());
+        tabs.addTab("Quebras & Desperdício",         UIHelper.icon("fas-trash-alt", 16, UIHelper.REJECTED_RED),     wastePanel);
         if (physicalInventoryPanel != null) {
-            tabs.addTab("Inventário Físico",         UIHelper.icon("fas-clipboard-check", 16, UIHelper.TEXT_LIGHT), physicalInventoryPanel);
+            tabs.addTab("Inventário Físico",         UIHelper.icon("fas-clipboard-check", 16, UIHelper.APPROVED_GREEN), physicalInventoryPanel);
         }
 
         tabs.addChangeListener(e -> {
@@ -228,7 +227,6 @@ public class StockPanel extends JPanel {
 
         // GLOBAL ACTION LISTENERS
         newProductBtn.addActionListener(e -> createProductDialog());
-        stockLockBtn.addActionListener(e -> toggleStockLock());
     }
 
     public void showWasteManagement() {
@@ -278,9 +276,6 @@ public class StockPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Níveis de Stock"), BorderLayout.WEST);
         ModernButton printInventoryBtn = UIHelper.createSecondaryButton("Imprimir Inventário");
         printInventoryBtn.setIcon(UIHelper.icon("fas-print", 14));
         printInventoryBtn.addActionListener(e -> printInventoryReport());
@@ -292,12 +287,6 @@ public class StockPanel extends JPanel {
             loadStocks();
             refreshStockLock();
         });
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshLevelsBtn);
-        actions.add(printInventoryBtn);
-        header.add(actions, BorderLayout.EAST);
-
         // Multi-row filter bar
         JPanel filters = new JPanel(new GridBagLayout());
         filters.setOpaque(false);
@@ -347,15 +336,12 @@ public class StockPanel extends JPanel {
         g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
         filters.add(stockSearchField, g);
 
-        JPanel topStack = new JPanel(new BorderLayout(0, 10));
-        topStack.setOpaque(false);
-        topStack.add(header, BorderLayout.NORTH);
-        topStack.add(filters, BorderLayout.CENTER);
-        tab.add(topStack, BorderLayout.NORTH);
-
+        filters.setBorder(new EmptyBorder(0, 0, 12, 0));
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.add(UIHelper.tableCardTop("Níveis de Stock", filters,
+                refreshLevelsBtn, printInventoryBtn), BorderLayout.NORTH);
 
         String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado"};
         stockModel = new DefaultTableModel(stockCols, 0) {
@@ -368,21 +354,21 @@ public class StockPanel extends JPanel {
         stockTable.putClientProperty("noRowInspector", Boolean.TRUE);
         stockTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         stockTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
-        // Duplo-clique ou Enter numa linha → editar esse produto directamente (evita abrir modal duplicado).
+        // Duplo-clique ou Enter numa linha → abre a Ficha Executiva do Artigo com fotografia e métricas.
         stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2) {
                     Long id = selectedStockProductId();
-                    if (id != null) editProductDialog(id);
+                    if (id != null) showProductDetailDialog(id);
                 }
             }
         });
         stockTable.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "editProduct");
-        stockTable.getActionMap().put("editProduct", new AbstractAction() {
+                .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "viewProduct");
+        stockTable.getActionMap().put("viewProduct", new AbstractAction() {
             @Override public void actionPerformed(java.awt.event.ActionEvent e) {
                 Long id = selectedStockProductId();
-                if (id != null) editProductDialog(id);
+                if (id != null) showProductDetailDialog(id);
             }
         });
         JScrollPane stockScroll = new JScrollPane(stockTable);
@@ -416,15 +402,6 @@ public class StockPanel extends JPanel {
         ModernButton adjustmentBtn = UIHelper.createPrimaryButton("Ajuste / Inventário");
         adjustmentBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         adjustmentBtn.addActionListener(e -> createAdjustmentDialog());
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Rastreabilidade e Movimentos (Lotes & Séries)"), BorderLayout.WEST);
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        headerActions.setOpaque(false);
-        headerActions.add(adjustmentBtn);
-        header.add(headerActions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
-
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -440,20 +417,45 @@ public class StockPanel extends JPanel {
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
         JTextField mvSearch = TableFilter.searchField("Artigo, lote, série ou descrição…");
-        // Valores crus, e de propósito: o TableFilter compara com o VALOR DO MODELO, não com o que
-        // o renderer desenha. A coluna mostra "Compra" porque o TableCellRenderers.status() a
-        // humaniza na apresentação; o modelo continua canónico. Faltava o REVERSAL.
+        // Valores crus: o TableFilter compara com o VALOR DO MODELO, não com a renderização.
         JComboBox<String> mvTipo = TableFilter.combo("Todos os tipos",
                 "PURCHASE", "ENTRY", "SALE", "TRANSFER", "ADJUSTMENT", "RETURN", "REVERSAL");
+        UIHelper.styleComboBox(mvTipo);
+        mvTipo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> mvPeriodo = TableFilter.periodCombo();
+        UIHelper.styleComboBox(mvPeriodo);
+        mvPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(movementsTable, mvSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(mvTipo, 4)),
                 java.util.List.of(new TableFilter.PeriodFilter(mvPeriodo, 0)));
-        JPanel mvBar = TableFilter.bar(mvSearch, TableFilter.label("Tipo:"), mvTipo,
-                TableFilter.label("Data:", "fas-calendar-alt"), mvPeriodo);
-        mvBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(mvBar, BorderLayout.NORTH);
+
+        JPanel mvFilters = new JPanel(new GridBagLayout());
+        mvFilters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; mvFilters.add(filterLabel("Tipo de Movimento"), g);
+        g.gridx = 1; g.weightx = 0; mvFilters.add(filterLabel("Período"), g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        mvFilters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; mvFilters.add(mvTipo, g);
+        g.gridx = 1; g.weightx = 0; mvFilters.add(mvPeriodo, g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        mvFilters.add(mvSearch, g);
+
+        mvFilters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        ModernButton refreshMovBtn = UIHelper.createRefreshButton(this::loadMovements);
+        card.add(UIHelper.tableCardTop("Rastreabilidade e Movimentos (Lotes & Séries)", mvFilters,
+                refreshMovBtn, adjustmentBtn), BorderLayout.NORTH);
         card.add(movScroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(movementsTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -465,64 +467,97 @@ public class StockPanel extends JPanel {
 
         ModernButton transferBtn = UIHelper.createPrimaryButton("Nova Transferência");
         transferBtn.setIcon(UIHelper.icon("fas-truck", 14));
-        ModernButton approveTransferBtn = UIHelper.createSecondaryButton("Aprovar");
-        approveTransferBtn.setIcon(UIHelper.icon("fas-check", 14));
-        ModernButton rejectTransferBtn = UIHelper.createSecondaryButton("Rejeitar");
-        rejectTransferBtn.setIcon(UIHelper.icon("fas-times", 14));
-        ModernButton printTransferBtn = UIHelper.createSecondaryButton("Imprimir Guia");
-        printTransferBtn.setIcon(UIHelper.icon("fas-print", 14));
-        // Para o armazém que transferiu sem pedido formal ficar com registo de quem pediu.
-        ModernButton recordOrderBtn = UIHelper.createSecondaryButton("Registar Encomenda");
-        recordOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
-        recordOrderBtn.setToolTipText("Registar a encomenda de reposição em falta de uma "
-                + "transferência já aprovada. Não move stock — a mercadoria já mudou de armazém.");
-        transferBtn.addActionListener(e -> createTransferDialog());
-        approveTransferBtn.addActionListener(e -> approveSelectedTransfer());
-        rejectTransferBtn.addActionListener(e -> rejectSelectedTransfer());
-        printTransferBtn.addActionListener(e -> printSelectedTransfer());
-        recordOrderBtn.addActionListener(e -> transferActions.recordOrderForSelectedTransfer());
+        transferBtn.addActionListener(e -> transferActions.openCreateEditor());
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Transferências entre Armazéns"), BorderLayout.WEST);
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerActions.setOpaque(false);
-        headerActions.add(approveTransferBtn);
-        headerActions.add(rejectTransferBtn);
-        headerActions.add(printTransferBtn);
-        headerActions.add(recordOrderBtn);
-        headerActions.add(transferBtn);
-        header.add(headerActions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        ActionMenuButton transferMenu = UIHelper.createActionMenuButton("Fluxo da Transferência")
+                .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), () -> transferActions.openSelectedEditor())
+                .addAction("Submeter", UIHelper.icon("fas-paper-plane", 14, UIHelper.PENDING_YELLOW), () -> transferActions.submitSelectedTransfer())
+                .addAction("Aprovar", UIHelper.icon("fas-check", 14, UIHelper.APPROVED_GREEN), this::approveSelectedTransfer)
+                .addAction("Rejeitar", UIHelper.icon("fas-times", 14, UIHelper.REJECTED_RED), this::rejectSelectedTransfer)
+                .addAction("Cancelar", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), () -> transferActions.cancelSelectedTransfer());
+
+        ActionMenuButton transferDocuments = UIHelper.createActionMenuButton("Documentos")
+                .addAction("Imprimir Guia", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printSelectedTransfer)
+                .addAction("Registar Encomenda", UIHelper.icon("fas-clipboard-check", 14, UIHelper.ACCENT_BLUE), () -> transferActions.recordOrderForSelectedTransfer())
+                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14, UIHelper.ACCENT_BLUE), this::loadTransfers);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] transferCols = {"Nº Guia", "Data", "Origem", "Destino", "Linhas", "Estado", "Responsável"};
+        String[] transferCols = {"Nº Guia", "Data", "Origem", "Destino", "Motorista", "Matrícula", "Linhas", "Estado"};
         transferModel = new DefaultTableModel(transferCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         transferTable = new JTable(transferModel);
         UIHelper.styleTable(transferTable);
-        transferTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.status());
+        transferTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
+        transferTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    transferActions.openSelectedEditor();
+                }
+            }
+        });
+        transferTable.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "viewTransferLines");
+        transferTable.getActionMap().put("viewTransferLines", new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                transferActions.openSelectedEditor();
+            }
+        });
         JScrollPane transferScroll = new JScrollPane(transferTable);
         UIHelper.styleScrollPane(transferScroll);
-        JTextField trSearch = TableFilter.searchField("Nº guia, origem, destino ou responsável…");
+        JTextField trSearch = TableFilter.searchField("Nº guia, armazém, motorista ou matrícula…");
         JComboBox<String> trEstado = TableFilter.combo("Todos os estados",
-                "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+                "DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+        UIHelper.styleComboBox(trEstado);
+        trEstado.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> trPeriodo = TableFilter.periodCombo();
+        UIHelper.styleComboBox(trPeriodo);
+        trPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(transferTable, trSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(trEstado, 5)),
+                java.util.List.of(new TableFilter.ColumnFilter(trEstado, 7)),
                 java.util.List.of(new TableFilter.PeriodFilter(trPeriodo, 1)));
-        JPanel trBar = TableFilter.bar(trSearch, TableFilter.label("Estado:"), trEstado,
-                TableFilter.label("Data:", "fas-calendar-alt"), trPeriodo);
-        trBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(trBar, BorderLayout.NORTH);
+
+        JPanel trFilters = new JPanel(new GridBagLayout());
+        trFilters.setOpaque(false);
+        GridBagConstraints tg = new GridBagConstraints();
+        tg.gridy = 0;
+        tg.fill = GridBagConstraints.HORIZONTAL;
+        tg.insets = new Insets(0, 0, 0, 12);
+
+        tg.gridx = 0; tg.weightx = 0; trFilters.add(filterLabel("Estado"), tg);
+        tg.gridx = 1; tg.weightx = 0; trFilters.add(filterLabel("Período"), tg);
+        tg.gridx = 2; tg.weightx = 1.0; tg.insets = new Insets(0, 0, 0, 0);
+        trFilters.add(filterLabel("Pesquisa"), tg);
+
+        tg.gridy = 1;
+        tg.insets = new Insets(4, 0, 0, 12);
+        tg.gridx = 0; tg.weightx = 0; trFilters.add(trEstado, tg);
+        tg.gridx = 1; tg.weightx = 0; trFilters.add(trPeriodo, tg);
+        tg.gridx = 2; tg.weightx = 1.0; tg.insets = new Insets(4, 0, 0, 0);
+        trFilters.add(trSearch, tg);
+
+        trFilters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        card.add(UIHelper.tableCardTop("Transferências entre Armazéns", trFilters,
+                transferDocuments, transferMenu, transferBtn), BorderLayout.NORTH);
         card.add(transferScroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(transferTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
-        return tab;
+
+        transferEditorForm = new StockTransferEditorForm(this);
+        transferEditorHost = new DocumentEditorHost("Nova Transferência", transferEditorForm.component(),
+                transferActions::saveEditor, transferActions::showList, transferEditorForm::isDirty);
+        transferPagesLayout = new CardLayout();
+        transferPages = new JPanel(transferPagesLayout);
+        transferPages.setOpaque(false);
+        transferPages.add(tab, "list");
+        transferPages.add(transferEditorHost, "editor");
+        return transferPages;
     }
 
 
@@ -576,10 +611,10 @@ public class StockPanel extends JPanel {
     private void applyStockLock(boolean locked) {
         stockLockKnown = true;
         stockLocked = locked;
-        if (stockLockBtn != null) {
-            stockLockBtn.setVisible(isAdmin());
-            stockLockBtn.setText(locked ? "Destrancar Stock" : "Trancar Stock");
-            stockLockBtn.setIcon(UIHelper.icon(locked ? "fas-lock-open" : "fas-lock", 14));
+        if (moreBtn != null && moreBtn.actionCount() > 1) {
+            moreBtn.actionAt(1).setVisible(isAdmin());
+            moreBtn.actionAt(1).setText(locked ? "Destrancar Stock" : "Trancar Stock");
+            moreBtn.actionAt(1).setIcon(UIHelper.icon(locked ? "fas-lock-open" : "fas-lock", 14));
         }
         if (stockLockBanner != null) {
             if (!locked) {
@@ -623,14 +658,19 @@ public class StockPanel extends JPanel {
 
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (StockTransferDTO t : transfersList) {
+            String driver = t.driverName() != null ? t.driverName()
+                    : (t.responsible() != null ? t.responsible() : "-");
+            String plate = t.vehiclePlate() != null ? t.vehiclePlate()
+                    : (t.vehicle() != null ? t.vehicle() : "-");
             transferModel.addRow(new Object[]{
                     t.transferNumber(),
                     t.transferDate().format(dtf),
                     t.originWarehouseName(),
                     t.destinationWarehouseName(),
+                    driver,
+                    plate,
                     t.lines() == null ? 0 : t.lines().size(),
-                    t.status(),
-                    t.responsible() == null ? "-" : t.responsible()
+                    t.status()
             });
         }
     }
@@ -647,7 +687,7 @@ public class StockPanel extends JPanel {
         // Disable listeners temporarily
         Object selectedItem = warehouseFilterCombo.getSelectedItem();
         warehouseFilterCombo.removeAllItems();
-        warehouseFilterCombo.addItem("--- Todos os Armazéns ---");
+        warehouseFilterCombo.addItem("Todos os Armazéns");
 
         for (WarehouseDTO w : warehousesList) {
             warehouseFilterCombo.addItem(w.name());
@@ -746,7 +786,7 @@ public class StockPanel extends JPanel {
                     s.barcode() == null ? "—" : s.barcode(),
                     s.reference() == null ? s.sku() : s.reference(),
                     s.productName(),
-                    hide ? MASK : String.format("%,.3f", qty),
+                    hide ? MASK : String.format("%,.2f", qty),
                     hide ? MASK : String.format("%,.2f", qtyBoxes),
                     price,
                     hide ? MASK : estado
@@ -777,7 +817,7 @@ public class StockPanel extends JPanel {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (StockMovementDTO m : movements) {
             BigDecimal qty = m.quantity();
-            String formattedQty = (qty.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + String.format("%,.3f", qty);
+            String formattedQty = (qty.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + String.format("%,.2f", qty);
             movementsModel.addRow(new Object[]{
                     m.movementDate().format(dtf),
                     m.productName(),
@@ -822,19 +862,16 @@ public class StockPanel extends JPanel {
             return;
         }
 
-        JComboBox<String> prodCombo = new JComboBox<>();
+        ProductSearchComboBox prodCombo = new ProductSearchComboBox();
         JComboBox<String> whCombo = new JComboBox<>();
         JTextField countedField = new JTextField();
         JTextField reasonField = new JTextField("Contagem física de inventário");
 
-        UIHelper.styleComboBox(prodCombo);
         UIHelper.styleComboBox(whCombo);
         UIHelper.styleTextField(countedField);
         UIHelper.styleTextField(reasonField);
 
-        for (ProductDTO p : products) {
-            prodCombo.addItem(p.name());
-        }
+        prodCombo.setProducts(products);
         for (WarehouseDTO w : warehousesList) {
             whCombo.addItem(w.name());
         }
@@ -850,9 +887,9 @@ public class StockPanel extends JPanel {
                 "fas-clipboard-list", "Acerte a quantidade física em stock", dialogPanel);
         dialog.setConfirmButton("Registar ajuste", "fas-check");
         dialog.setOnSaveAsync(() -> {
-            int prodIdx = prodCombo.getSelectedIndex();
             int whIdx = whCombo.getSelectedIndex();
-            if (prodIdx < 0 || whIdx < 0) {
+            ProductDTO product = prodCombo.selectedProduct();
+            if (product == null || whIdx < 0) {
                 throw new IllegalArgumentException("Seleccione o artigo e o armazém.");
             }
             BigDecimal counted;
@@ -869,7 +906,6 @@ public class StockPanel extends JPanel {
                 throw new IllegalArgumentException("Indique o motivo do ajuste.");
             }
             UIHelper.clearFieldInvalid(reasonField);
-            ProductDTO product = products.get(prodIdx);
             WarehouseDTO warehouse = warehousesList.get(whIdx);
             CreateStockAdjustmentRequest request = new CreateStockAdjustmentRequest(
                     CurrentUserContext.getCurrentCompanyId(), product.id(), warehouse.id(), counted, reason);
@@ -890,14 +926,31 @@ public class StockPanel extends JPanel {
 
     private void createProductDialog() { productActions.createProductDialog(); }
 
-    private void editProductDialog(Long productId) { productActions.editProductDialog(productId); }
+    void editProductDialog(Long productId) { productActions.editProductDialog(productId); }
 
-    private void createTransferDialog() { transferActions.createTransferDialog(); }
+    void showProductDetailDialog(Long productId) {
+        if (productId == null) {
+            showStockNotice(FeedbackType.INFO, "Selecione um artigo", "Selecione um produto na tabela para ver a ficha detalhada.");
+            return;
+        }
+        ProductDTO product = null;
+        for (ProductDTO p : catalogProducts) {
+            if (p.id().equals(productId)) { product = p; break; }
+        }
+        if (product == null) {
+            try {
+                catalogProducts = comercialApiClient.getAllProducts();
+                for (ProductDTO p : catalogProducts) {
+                    if (p.id().equals(productId)) { product = p; break; }
+                }
+            } catch (Exception ignored) {}
+        }
+        if (product != null) new StockProductDetailDialog(this, product).showDialog();
+    }
 
+    void saveTransferEditor() { transferActions.saveEditor(); }
     private void approveSelectedTransfer() { transferActions.approveSelectedTransfer(); }
-
     private void rejectSelectedTransfer() { transferActions.rejectSelectedTransfer(); }
-
     private void printSelectedTransfer() { transferActions.printSelectedTransfer(); }
 
     private void printInventoryReport() {
@@ -905,7 +958,6 @@ public class StockPanel extends JPanel {
             showStockNotice(FeedbackType.INFO, "Sem dados para imprimir", "A listagem de stock está vazia.");
             return;
         }
-
         Long warehouseId = null;
         String fileSuffix = "todos";
         if (warehouseFilterCombo != null) {
@@ -913,16 +965,10 @@ public class StockPanel extends JPanel {
             if (idx > 0 && (idx - 1) < warehousesList.size()) {
                 WarehouseDTO selectedWarehouse = warehousesList.get(idx - 1);
                 warehouseId = selectedWarehouse.id();
-                fileSuffix = selectedWarehouse.name()
-                        .toLowerCase()
-                        .replaceAll("[^a-z0-9]+", "-")
-                        .replaceAll("(^-|-$)", "");
-                if (fileSuffix.isBlank()) {
-                    fileSuffix = "armazem-" + selectedWarehouse.id();
-                }
+                fileSuffix = selectedWarehouse.name().toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+                if (fileSuffix.isBlank()) fileSuffix = "armazem-" + selectedWarehouse.id();
             }
         }
-
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Long selectedWarehouseId = warehouseId;
         String suffix = fileSuffix;
@@ -931,26 +977,14 @@ public class StockPanel extends JPanel {
                 pdf -> PrintPreviewDialog.show(this, pdf, "inventario-stock-" + suffix),
                 this::showStockError);
     }
+
     void showStockLoadError(String area, Throwable error) {
-        feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area,
-                error.getMessage(), "Tentar novamente", this::onPanelSelected);
+        feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area, error.getMessage(), "Tentar novamente", this::onPanelSelected);
     }
-
-    void showStockError(Throwable error) {
-        showStockNotice(FeedbackType.ERROR, "Não foi possível concluir a operação", error.getMessage());
-    }
-
-    void showStockNotice(FeedbackType type, String title, String message) {
-        feedback.show(type, title, message, null, null);
-    }
-
-    void showStockSuccess(String message) {
-        ToastManager.success(this, message);
-    }
+    void showStockError(Throwable error) { showStockNotice(FeedbackType.ERROR, "Não foi possível concluir a operação", error.getMessage()); }
+    void showStockNotice(FeedbackType type, String title, String message) { feedback.show(type, title, message, null, null); }
+    void showStockSuccess(String message) { ToastManager.success(this, message); }
 
     private record StockAlerts(List<StockAlertDTO> outOfStock, List<ProductBatchDTO> expiring) {}
-
-    private record CategoryData(
-            List<mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO> categories,
-            List<ProductDTO> products) {}
+    private record CategoryData(List<mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO> categories, List<ProductDTO> products) {}
 }

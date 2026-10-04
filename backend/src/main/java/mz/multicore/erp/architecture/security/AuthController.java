@@ -23,26 +23,30 @@ public class AuthController {
     private final AuthSessionService authSessionService;
     private final SubscriptionService subscriptionService;
     private final LoginRateLimiter loginRateLimiter;
+    private final ClientIpResolver clientIpResolver;
 
     public AuthController(AppUserService appUserService, AuthSessionService authSessionService,
-                          SubscriptionService subscriptionService, LoginRateLimiter loginRateLimiter) {
+                          SubscriptionService subscriptionService, LoginRateLimiter loginRateLimiter,
+                          ClientIpResolver clientIpResolver) {
         this.appUserService = appUserService;
         this.authSessionService = authSessionService;
         this.subscriptionService = subscriptionService;
         this.loginRateLimiter = loginRateLimiter;
+        this.clientIpResolver = clientIpResolver;
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        loginRateLimiter.checkAllowed(request.username());
+    public LoginResponse login(@Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        String clientIp = clientIpResolver.resolve(httpRequest);
+        loginRateLimiter.checkAllowed(request.username(), clientIp);
         AppUser user;
         try {
             user = appUserService.authenticate(request.username(), request.password());
         } catch (RuntimeException ex) {
-            loginRateLimiter.recordFailure(request.username()); // conta falhas (senha errada, inativo, inexistente)
+            loginRateLimiter.recordFailure(request.username(), clientIp); // conta falhas (senha errada, inativo, inexistente)
             throw ex;
         }
-        loginRateLimiter.recordSuccess(request.username());
+        loginRateLimiter.recordSuccess(request.username(), clientIp);
         AuthSessionService.AuthSession session = authSessionService.create(user);
 
         // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que

@@ -160,17 +160,65 @@ public final class TableNavigator {
     }
 
     private static JButton navButton(String iconCode, String tooltip, Runnable action) {
-        JButton b = new JButton(UIHelper.icon(iconCode, 13, Color.WHITE));
-        b.setRolloverIcon(UIHelper.icon(iconCode, 13, UIHelper.ACCENT));
-        b.setToolTipText(tooltip);
-        b.getAccessibleContext().setAccessibleName(tooltip);
-        b.setPreferredSize(new Dimension(28, 24));
-        b.setContentAreaFilled(false);
-        b.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
-        b.setFocusPainted(false);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.addActionListener(e -> action.run());
-        return b;
+        return new NavButton(iconCode, tooltip, action);
+    }
+
+    private static final class NavButton extends JButton {
+        private final String iconCode;
+        private boolean hovered;
+
+        NavButton(String iconCode, String tooltip, Runnable action) {
+            this.iconCode = iconCode;
+            setToolTipText(tooltip);
+            getAccessibleContext().setAccessibleName(tooltip);
+            setPreferredSize(new Dimension(28, 26));
+            setMinimumSize(new Dimension(28, 26));
+            setMaximumSize(new Dimension(28, 26));
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            addActionListener(e -> action.run());
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override public void mouseEntered(java.awt.event.MouseEvent e) { hovered = true; repaint(); }
+                @Override public void mouseExited(java.awt.event.MouseEvent e)  { hovered = false; repaint(); }
+            });
+            refreshIcons();
+        }
+
+        private void refreshIcons() {
+            boolean light = UIHelper.isLight();
+            Color base = light ? new Color(51, 65, 85) : new Color(226, 232, 240);
+            Color hover = UIHelper.ACCENT_BLUE;
+            Color disabled = light ? new Color(203, 213, 225) : new Color(100, 116, 139);
+            setIcon(UIHelper.icon(iconCode, 13, base));
+            setRolloverIcon(UIHelper.icon(iconCode, 13, hover));
+            setDisabledIcon(UIHelper.icon(iconCode, 13, disabled));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            if (isEnabled() && hovered) {
+                g2.setColor(new Color(UIHelper.ACCENT_BLUE.getRed(),
+                        UIHelper.ACCENT_BLUE.getGreen(), UIHelper.ACCENT_BLUE.getBlue(), 35));
+                g2.fillRoundRect(1, 1, w - 2, h - 2, 8, 8);
+                g2.setColor(new Color(UIHelper.ACCENT_BLUE.getRed(),
+                        UIHelper.ACCENT_BLUE.getGreen(), UIHelper.ACCENT_BLUE.getBlue(), 90));
+                g2.drawRoundRect(1, 1, w - 3, h - 3, 8, 8);
+            } else if (isEnabled() && UIHelper.isLight()) {
+                g2.setColor(new Color(241, 245, 249));
+                g2.fillRoundRect(1, 1, w - 2, h - 2, 8, 8);
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawRoundRect(1, 1, w - 3, h - 3, 8, 8);
+            }
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 
     private static final class NavigationBar extends JPanel {
@@ -221,9 +269,10 @@ public final class TableNavigator {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(UIHelper.BG_CARD);
+            boolean light = UIHelper.isLight();
+            g2.setColor(light ? new Color(248, 250, 252) : UIHelper.BG_CARD);
             g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
-            g2.setColor(UIHelper.BORDER);
+            g2.setColor(light ? new Color(203, 213, 225) : UIHelper.BORDER);
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
             g2.dispose();
             super.paintComponent(g);

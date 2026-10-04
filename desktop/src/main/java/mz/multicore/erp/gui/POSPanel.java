@@ -11,6 +11,7 @@ import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.CustomerCreditValidator;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.PosTodaySummaryView;
 import mz.multicore.erp.architecture.pricing.TaxRates;
@@ -86,7 +87,7 @@ public class POSPanel extends JPanel {
     JLabel statusLabel;
     ModernPanel sessionBanner;
     JComboBox<String> clientCombo;
-    private JComboBox<String> warehouseCombo;
+    JComboBox<String> warehouseCombo;
     private JComboBox<String> accountCombo;
     JTextField clientSearchField;
     JTextField productSearchField;
@@ -108,6 +109,7 @@ public class POSPanel extends JPanel {
     private ModernButton openSessionBtn;
     private ModernButton closeSessionBtn;
     private ModernButton cashMoveBtn;
+    private ModernButton shiftHandoverBtn;
     private ModernButton checkoutBtn;
     private ModernButton addToCartBtn;
     JCheckBox creditCheck;
@@ -115,6 +117,12 @@ public class POSPanel extends JPanel {
     private ModernButton tabVendaBtn;
     private ModernButton tabHistBtn;
     private ModernButton contingencyBtn;
+    private ModernButton quotationBtn;
+    final PosQuotationActions quotationActions;
+    Long currentQuotationId;
+    String currentQuotationNumber;
+    private JPanel quotationBannerPanel;
+    private JLabel quotationBannerLabel;
     private boolean historyView = false;
     DefaultTableModel salesHistoryModel;
     JTable salesHistoryTable;
@@ -125,6 +133,8 @@ public class POSPanel extends JPanel {
     List<ProductDTO> productsList = new ArrayList<>();
     List<ProductDTO> filteredProducts = new ArrayList<>();
     Set<Long> sellableProductIds = Set.of();
+    final java.util.Map<Long, BigDecimal> productStockQuantities = new java.util.concurrent.ConcurrentHashMap<>();
+    private boolean suppressWarehouseEvents = false;
     boolean showAllProducts = true;
     List<ClientDTO> clientsList = new ArrayList<>();
     List<ClientDTO> filteredClients = new ArrayList<>();
@@ -136,32 +146,25 @@ public class POSPanel extends JPanel {
         CartItem(ProductDTO product, BigDecimal qty, BigDecimal discount, String batch, String serial) {
             super(product, qty, discount, batch, serial);
         }
+
+        CartItem(ProductDTO product, BigDecimal qty, BigDecimal discount, String batch, String serial, BigDecimal customUnitPrice) {
+            super(product, qty, discount, batch, serial, customUnitPrice);
+        }
     }
 
     final List<CartItem> cartItems = new ArrayList<>();
 
-    public POSPanel(
-            POSApiClient posApiClient,
-            ComercialApiClient comercialApiClient,
-            InventoryApiClient inventoryApiClient,
-            FinanceApiClient financeApiClient,
-            PromotionApiClient promotionApiClient,
-            mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser
-    ) {
+    public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
+            PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser) {
         this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
                 scaleBarcodeParser, new PosContingencyManager(), null);
     }
 
-    public POSPanel(
-            POSApiClient posApiClient,
-            ComercialApiClient comercialApiClient,
-            InventoryApiClient inventoryApiClient,
-            FinanceApiClient financeApiClient,
-            PromotionApiClient promotionApiClient,
-            mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
-            PosContingencyManager contingencyManager,
-            PosContingencySyncService contingencySyncService
-    ) {
+    public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
+            PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
+            PosContingencyManager contingencyManager, PosContingencySyncService contingencySyncService) {
         this.posApiClient = posApiClient;
         this.comercialApiClient = comercialApiClient;
         this.inventoryApiClient = inventoryApiClient;
@@ -170,6 +173,7 @@ public class POSPanel extends JPanel {
         this.scaleBarcodeParser = scaleBarcodeParser;
         this.contingencyManager = contingencyManager != null ? contingencyManager : new PosContingencyManager();
         this.contingencySyncService = contingencySyncService;
+        this.quotationActions = new PosQuotationActions(this, comercialApiClient);
         this.salesHistoryPanel = new PosSalesHistoryPanel(this);
         this.returnDialog = new PosReturnDialog(this);
         this.cashSessionActions = new PosCashSessionActions(this);
@@ -189,20 +193,21 @@ public class POSPanel extends JPanel {
         // 1. TOP BAR — selector de vista (Venda POS | Histórico | Contingência)
         tabVendaBtn = new ModernButton("Venda POS");
         tabVendaBtn.setIcon(UIHelper.icon("fas-cash-register", 14));
-        tabVendaBtn.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
         tabVendaBtn.addActionListener(e -> selectView(false));
         tabHistBtn = new ModernButton("Histórico de Vendas");
         tabHistBtn.setIcon(UIHelper.icon("fas-history", 14));
-        tabHistBtn.setPreferredSize(new Dimension(165, UIHelper.FORM_CONTROL_HEIGHT));
         tabHistBtn.addActionListener(e -> selectView(true));
 
-        loyaltyBtn = UIHelper.createButton("Fidelidade (F7)", UIHelper.icon("fas-star", 14, Color.WHITE), UIHelper.BUTTON_NEUTRAL, e -> openLoyaltyDialog());
+        quotationBtn = UIHelper.createButton("Cotação", UIHelper.icon("fas-file-import", 14, Color.WHITE), UIHelper.ACCENT_CYAN, e -> quotationActions.openImportDialog());
+        quotationBtn.setForeground(Color.WHITE);
+        quotationBtn.setShortcut("F7");
+        quotationBtn.setToolTipText("Importar Cotação / Pró-forma aberta para o carrinho");
+
+        loyaltyBtn = UIHelper.createButton("Fidelidade", UIHelper.icon("fas-star", 14, Color.WHITE), UIHelper.ACCENT, e -> openLoyaltyDialog());
         loyaltyBtn.setForeground(Color.WHITE);
-        loyaltyBtn.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
 
         contingencyBtn = UIHelper.createWarningButton("Contingência");
         contingencyBtn.setIcon(UIHelper.icon("fas-exclamation-triangle", 14));
-        contingencyBtn.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         contingencyBtn.setVisible(false);
         contingencyBtn.addActionListener(e -> new PosContingencyDialog(
                 SwingUtilities.getWindowAncestor(this), this.contingencyManager, this.contingencySyncService).setVisible(true));
@@ -220,32 +225,37 @@ public class POSPanel extends JPanel {
         segmented.setOpaque(false);
         segmented.add(tabVendaBtn);
         segmented.add(tabHistBtn);
+        segmented.add(quotationBtn);
         segmented.add(loyaltyBtn);
         segmented.add(contingencyBtn);
-        segmented.add(scaleWidget);
 
         openSessionBtn = UIHelper.createSuccessButton("Abrir Caixa");
         openSessionBtn.setIcon(UIHelper.icon("fas-lock-open", 14));
-        openSessionBtn.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT)); openSessionBtn.addActionListener(e -> cashSessionActions.openSession());
-        closeSessionBtn = UIHelper.createDangerButton("Fechar Caixa (Z)");
+        openSessionBtn.addActionListener(e -> cashSessionActions.openSession());
+        closeSessionBtn = UIHelper.createDangerButton("Fechar Caixa");
+        closeSessionBtn.setShortcut("Z");
         closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14));
-        closeSessionBtn.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
         closeSessionBtn.addActionListener(e -> cashSessionActions.closeSession()); closeSessionBtn.setVisible(false);
         cashMoveBtn = UIHelper.createWarningButton("Sangria / Suprimento");
         cashMoveBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
-        cashMoveBtn.setPreferredSize(new Dimension(165, UIHelper.FORM_CONTROL_HEIGHT));
         cashMoveBtn.addActionListener(e -> cashSessionActions.manageCashMovements()); cashMoveBtn.setVisible(false);
+        shiftHandoverBtn = new ModernButton("Passar Turno", new Color(13, 148, 136), new Color(15, 118, 110));
+        shiftHandoverBtn.setIcon(UIHelper.icon("fas-people-arrows", 14, Color.WHITE));
+        shiftHandoverBtn.setForeground(Color.WHITE);
+        shiftHandoverBtn.setToolTipText("Passagem de turno entre operadores");
+        shiftHandoverBtn.addActionListener(e -> cashSessionActions.shiftHandover()); shiftHandoverBtn.setVisible(false);
         ModernButton historyZBtn = UIHelper.createPrimaryButton("Fechos (Z)");
         historyZBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
         historyZBtn.setToolTipText("Histórico de Fechos de Caixa (Z)");
-        historyZBtn.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
         historyZBtn.addActionListener(e -> cashSessionActions.showSessionHistory());
 
         JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         sessionActions.setOpaque(false);
-        sessionActions.add(UIHelper.createRefreshButton(this::refreshOperationalData));
+        ModernButton refreshPosBtn = UIHelper.createRefreshButton(this::refreshOperationalData);
+        sessionActions.add(refreshPosBtn);
         sessionActions.add(historyZBtn);
         sessionActions.add(openSessionBtn);
+        sessionActions.add(shiftHandoverBtn);
         sessionActions.add(cashMoveBtn);
         sessionActions.add(closeSessionBtn);
 
@@ -257,7 +267,7 @@ public class POSPanel extends JPanel {
         statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
         statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         statusLabel.setForeground(UIHelper.PENDING_YELLOW);
-        sessionBanner = PosLayout.createSessionBanner(statusLabel);
+        sessionBanner = PosLayout.createSessionBanner(statusLabel, scaleWidget);
         sessionBanner.setBackground(UIHelper.ROW_ALT);
 
         JPanel sessionBar = new JPanel(new BorderLayout(0, 4));
@@ -271,7 +281,7 @@ public class POSPanel extends JPanel {
         //     catálogo de produtos.
         barcodeField = new JTextField();
         UIHelper.styleTextField(barcodeField);
-        barcodeField.putClientProperty("JTextField.placeholderText", "Código de barras… (F3/Enter)");
+        barcodeField.putClientProperty("JTextField.placeholderText", "Código de barras (F3/Enter)");
         barcodeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         barcodeField.addActionListener(e -> handleBarcodeScan());
         JPanel barcodeBox = PosLayout.iconInputBox("fas-barcode", 16, UIHelper.ACCENT, barcodeField);
@@ -300,25 +310,31 @@ public class POSPanel extends JPanel {
 
         // LEFT: CATÁLOGO DE PRODUTOS EM CARDS — clicar adiciona ao carrinho
         warehouseCombo = new JComboBox<>(); UIHelper.styleComboBox(warehouseCombo);
+        warehouseCombo.addActionListener(e -> onWarehouseChanged());
         accountCombo = new JComboBox<>(); UIHelper.styleComboBox(accountCombo);
         clientCombo = new JComboBox<>(); UIHelper.styleComboBox(clientCombo);
 
-        clientSearchField = new JTextField(); UIHelper.styleTextField(clientSearchField);
-        productSearchField = new JTextField(); UIHelper.styleTextField(productSearchField);
-        clientSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar cliente por nome ou NUIT…");
-        productSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar produto por SKU ou nome…");
+        clientSearchField = new JTextField();
+        UIHelper.styleTextField(clientSearchField);
+        clientSearchField.putClientProperty("JTextField.placeholderText", "Nome do cliente ou NUIT…");
+        clientSearchField.setToolTipText("Nome do cliente (obrigatório) ou pesquisa de cliente cadastrado por nome/NUIT");
+
+        productSearchField = new JTextField();
+        UIHelper.styleTextField(productSearchField);
+        productSearchField.putClientProperty("JTextField.placeholderText", "Pesquisar produto por SKU ou nome");
+
         clientSearchField.getDocument().addDocumentListener(simpleDocumentListener(() -> filterClients(clientSearchField.getText())));
         productSearchField.getDocument().addDocumentListener(simpleDocumentListener(catalogController::scheduleCatalogReload));
 
         // Cabeçalho operacional numa única linha: nenhum campo fica escondido ou rouba altura ao carrinho.
-        // O cadastro de clientes vive no painel Clientes — no balcão a venda sem cliente vai para "Consumidor Final".
+        // O cadastro de clientes vive no painel Clientes — no balcão exige-se o nome do comprador no recibo.
         topSelectsBar = new JPanel(new GridBagLayout());
         topSelectsBar.setOpaque(false);
         topSelectsBar.setBorder(new EmptyBorder(4, 0, 4, 0));
         GridBagConstraints tg = new GridBagConstraints();
         tg.fill = GridBagConstraints.HORIZONTAL; tg.anchor = GridBagConstraints.NORTH; tg.gridy = 0;
         tg.gridx = 0; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[0]; tg.insets = new Insets(0, 0, 0, 6);
-        topSelectsBar.add(labeledField("Pesquisar cliente", PosLayout.searchRow(clientSearchField)), tg);
+        topSelectsBar.add(labeledField("Nome do cliente *", PosLayout.searchRow(clientSearchField)), tg);
         tg.gridx = 1; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[1];
         topSelectsBar.add(labeledField("Cliente", clientCombo), tg);
         tg.gridx = 2; tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[2];
@@ -376,10 +392,29 @@ public class POSPanel extends JPanel {
         // RIGHT: CART TABLE & CHECKOUT
         JPanel rightPanel = new JPanel(new BorderLayout(0, PosLayout.SECTION_VERTICAL_GAP));
         rightPanel.setOpaque(false);
+        JPanel cartHeader = new JPanel(new BorderLayout(8, 0));
+        cartHeader.setOpaque(false);
         JLabel cartTitle = new JLabel("Carrinho de Vendas (POS)", UIHelper.icon("fas-shopping-cart", 15, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);
         cartTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         cartTitle.setForeground(UIHelper.TEXT_LIGHT);
-        rightPanel.add(cartTitle, BorderLayout.NORTH);
+        cartHeader.add(cartTitle, BorderLayout.WEST);
+
+        quotationBannerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        quotationBannerPanel.setOpaque(false);
+        quotationBannerLabel = new JLabel("", UIHelper.icon("fas-file-invoice-dollar", 13, UIHelper.APPROVED_GREEN), SwingConstants.LEFT);
+        quotationBannerLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        quotationBannerLabel.setForeground(UIHelper.APPROVED_GREEN);
+        JButton clearQuotBtn = new JButton(UIHelper.icon("fas-times", 11, UIHelper.TEXT_MUTED));
+        clearQuotBtn.setBorderPainted(false);
+        clearQuotBtn.setContentAreaFilled(false);
+        clearQuotBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        clearQuotBtn.setToolTipText("Remover vínculo da cotação");
+        clearQuotBtn.addActionListener(e -> quotationActions.clearQuotationLink());
+        quotationBannerPanel.add(quotationBannerLabel);
+        quotationBannerPanel.add(clearQuotBtn);
+        quotationBannerPanel.setVisible(false);
+        cartHeader.add(quotationBannerPanel, BorderLayout.EAST);
+        rightPanel.add(cartHeader, BorderLayout.NORTH);
 
         ModernPanel cartCard = new ModernPanel(16);
         cartCard.setLayout(new BorderLayout(0, PosLayout.CARD_VERTICAL_GAP));
@@ -445,7 +480,8 @@ public class POSPanel extends JPanel {
         decreaseBtn.setIcon(null); decreaseBtn.setForeground(Color.WHITE);
         decreaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
         decreaseBtn.setPreferredSize(new Dimension(36, 32)); decreaseBtn.setToolTipText("Diminuir quantidade");
-        ModernButton editQtyBtn = UIHelper.createPrimaryButton("Quantidade (F6)");
+        ModernButton editQtyBtn = UIHelper.createPrimaryButton("Quantidade");
+        editQtyBtn.setShortcut("F6");
         editQtyBtn.setIcon(UIHelper.icon("fas-sort-numeric-up", 12, Color.WHITE)); editQtyBtn.setForeground(Color.WHITE);
         ModernButton increaseBtn = UIHelper.createPrimaryButton("+");
         increaseBtn.setIcon(null); increaseBtn.setForeground(Color.WHITE);
@@ -472,26 +508,29 @@ public class POSPanel extends JPanel {
 
         creditCheck = new JCheckBox("Venda a Crédito (Conta Corrente)");
         creditCheck.setToolTipText("Registar a venda a crédito na conta corrente do cliente");
-        creditCheck.setForeground(UIHelper.TEXT_LIGHT);
-        creditCheck.setOpaque(false);
+        creditCheck.setForeground(UIHelper.TEXT_LIGHT); creditCheck.setOpaque(false);
         creditCheck.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
 
-        JPanel buttonRow = new JPanel(new BorderLayout());
+        JPanel creditRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        creditRow.setOpaque(false); creditRow.add(creditCheck);
+
+        JPanel buttonRow = new JPanel(new BorderLayout(8, 0));
         buttonRow.setOpaque(false);
 
-        ModernButton removeBtn = UIHelper.createDangerButton("Remover Selecionado");
-        removeBtn.setIcon(UIHelper.icon("fas-trash", 14, Color.WHITE)); removeBtn.setForeground(Color.WHITE);
+        ModernButton removeBtn = UIHelper.createDangerButton("Remover");
+        removeBtn.setShortcut("Del");
+        removeBtn.setIcon(UIHelper.icon("fas-trash", 14, Color.WHITE));
         buttonRow.add(removeBtn, BorderLayout.WEST);
-        JPanel creditCell = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 5));
-        creditCell.setOpaque(false); creditCell.add(creditCheck);
-        buttonRow.add(creditCell, BorderLayout.CENTER);
 
-        checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda (F9)");
-        checkoutBtn.setIcon(UIHelper.icon("fas-check-circle", 14, Color.WHITE)); checkoutBtn.setForeground(Color.WHITE);
-        buttonRow.add(checkoutBtn, BorderLayout.EAST);
+        checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda");
+        checkoutBtn.setShortcut("F10");
+        checkoutBtn.setIcon(UIHelper.icon("fas-check-circle", 14, Color.WHITE));
+        buttonRow.add(checkoutBtn, BorderLayout.CENTER);
 
         cartBottom.add(totalRow);
-        cartBottom.add(Box.createRigidArea(new Dimension(0, 8)));
+        cartBottom.add(Box.createRigidArea(new Dimension(0, 4)));
+        cartBottom.add(creditRow);
+        cartBottom.add(Box.createRigidArea(new Dimension(0, 6)));
         cartBottom.add(buttonRow);
         cartCard.add(cartBottom, BorderLayout.SOUTH);
 
@@ -514,56 +553,23 @@ public class POSPanel extends JPanel {
         viewCards.add(salesTab, "venda");
         viewCards.add(buildSalesHistoryTab(), "hist");
         add(viewCards, BorderLayout.CENTER);
+        add(new PosShortcutBar(this), BorderLayout.SOUTH);
         selectView(false);
 
         // LISTENERS
-        openSessionBtn.addActionListener(e -> openSession());
-        closeSessionBtn.addActionListener(e -> closeSession());
-        cashMoveBtn.addActionListener(e -> manageCashMovements());
         removeBtn.addActionListener(e -> removeFromCart());
         decreaseBtn.addActionListener(e -> changeSelectedQuantity(BigDecimal.ONE.negate()));
         editQtyBtn.addActionListener(e -> editSelectedCartQuantity());
         increaseBtn.addActionListener(e -> changeSelectedQuantity(BigDecimal.ONE));
         checkoutBtn.addActionListener(e -> runCheckout());
 
-        installKeyboardShortcuts();
+        PosKeyboardShortcutsHandler.install(this);
     }
 
-    /** Atalhos de caixa previsíveis; Delete fica limitado à tabela para não apagar texto digitado. */
-    private void installKeyboardShortcuts() {
-        InputMap input = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-        ActionMap actions = getActionMap();
-        bindShortcut(input, actions, "posProductSearch", KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0),
-                () -> focusAndSelect(productSearchField));
-        bindShortcut(input, actions, "posBarcodeSearch", KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0),
-                () -> focusAndSelect(barcodeField));
-        bindShortcut(input, actions, "posClientSearch", KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0),
-                () -> focusAndSelect(clientSearchField));
-        bindShortcut(input, actions, "posEditQuantity", KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0),
-                this::editSelectedCartQuantity);
-        bindShortcut(input, actions, "posLoyaltySearch", KeyStroke.getKeyStroke(KeyEvent.VK_F7, 0),
-                this::openLoyaltyDialog);
-        bindShortcut(input, actions, "posCheckout", KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0),
-                this::runCheckout);
-
-        InputMap tableInput = cartTable.getInputMap(JComponent.WHEN_FOCUSED);
-        bindShortcut(tableInput, cartTable.getActionMap(), "posRemoveLine",
-                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), this::removeFromCart);
-    }
-
-    void openLoyaltyDialog() {
+    public void openLoyaltyDialog() {
         loyaltyController.openLoyaltyCardDialog(this, () -> loyaltyController.getSelectedLoyaltyClient()
                 .ifPresent(client -> { clientSearchField.setText(client.name()); catalogController.filterClients(client.name()); }));
     }
-
-    static void bindShortcut(InputMap input, ActionMap actions, String name, KeyStroke key, Runnable command) {
-        input.put(key, name);
-        actions.put(name, new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { command.run(); }
-        });
-    }
-
-    private static void focusAndSelect(JTextField field) { field.requestFocusInWindow(); field.selectAll(); }
 
     /** Comuta entre a vista de venda e o histórico, alternando o estilo dos botões do topo. */
     void selectView(boolean history) {
@@ -571,17 +577,14 @@ public class POSPanel extends JPanel {
         if (viewCards != null) {
             ((CardLayout) viewCards.getLayout()).show(viewCards, history ? "hist" : "venda");
         }
-        Color active = UIHelper.ACCENT_BLUE;
-        Color activeHover = UIHelper.ACCENT_BLUE.brighter();
-        Color idle = UIHelper.BUTTON_NEUTRAL;
-        Color idleHover = UIHelper.BUTTON_NEUTRAL_HOVER;
+        Color active = UIHelper.ACCENT_BLUE, activeHover = UIHelper.ACCENT_BLUE_HOVER;
+        Color activeHist = UIHelper.ACCENT, activeHistHover = UIHelper.ACCENT_HOVER;
+        Color idle = new Color(99, 102, 241), idleHover = new Color(79, 70, 229);
         tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
-        tabHistBtn.setColors(history ? active : idle, history ? activeHover : idleHover);
+        tabHistBtn.setColors(history ? activeHist : idle, history ? activeHistHover : idleHover);
         tabVendaBtn.setForeground(Color.WHITE);
         tabHistBtn.setForeground(Color.WHITE);
-        if (history) {
-            refreshSalesHistory();
-        }
+        if (history) refreshSalesHistory();
     }
 
     public void onPanelSelected() {
@@ -603,10 +606,7 @@ public class POSPanel extends JPanel {
     void refreshSessionState() {
         String operator = CurrentUserContext.getUsername();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        if (companyId == null || operator == null) {
-            return;
-        }
-
+        if (companyId == null || operator == null) return;
         UIHelper.loadAsync(this, () -> posApiClient.getActiveSession(operator, companyId),
                 this::applySessionState, error -> showPosLoadError("estado do caixa", error));
     }
@@ -614,52 +614,41 @@ public class POSPanel extends JPanel {
     private void applySessionState(Optional<TillSessionDTO> sessionOpt) {
         if (sessionOpt.isPresent()) {
             activeSession = sessionOpt.get();
+            String effectiveOp = activeSession.currentOperator() != null && !activeSession.currentOperator().isBlank()
+                    ? activeSession.currentOperator() : activeSession.operator();
             statusLabel.setText(String.format("Caixa Aberta por %s | Fundo Inicial: %,.2f MT",
-                    activeSession.operator(), activeSession.openingBalance()));
+                    effectiveOp, activeSession.openingBalance()));
             statusLabel.setForeground(UIHelper.APPROVED_GREEN);
             statusLabel.setIcon(UIHelper.icon("fas-lock-open", 14, UIHelper.APPROVED_GREEN));
             statusLabel.setIconTextGap(8);
-            if (sessionBanner != null) {
-                sessionBanner.setBackground(UIHelper.SELECTION_BG);
-                sessionBanner.repaint();
-            }
+            if (sessionBanner != null) { sessionBanner.setBackground(UIHelper.SELECTION_BG); sessionBanner.repaint(); }
             openSessionBtn.setVisible(false);
             closeSessionBtn.setVisible(true);
             cashMoveBtn.setVisible(true);
+            shiftHandoverBtn.setVisible(true);
             checkoutBtn.setEnabled(true);
             checkoutBtn.setToolTipText(null);
-            if (addToCartBtn != null) {
-                addToCartBtn.setEnabled(true);
-                addToCartBtn.setToolTipText(null);
-            }
+            if (addToCartBtn != null) { addToCartBtn.setEnabled(true); addToCartBtn.setToolTipText(null); }
         } else {
             activeSession = null;
             statusLabel.setText("Caixa Fechada. É necessário abrir sessão antes de vender.");
             statusLabel.setForeground(UIHelper.PENDING_YELLOW);
             statusLabel.setIcon(UIHelper.icon("fas-lock", 14, UIHelper.PENDING_YELLOW));
             statusLabel.setIconTextGap(8);
-            if (sessionBanner != null) {
-                sessionBanner.setBackground(UIHelper.ROW_ALT);
-                sessionBanner.repaint();
-            }
+            if (sessionBanner != null) { sessionBanner.setBackground(UIHelper.ROW_ALT); sessionBanner.repaint(); }
             openSessionBtn.setVisible(true);
             closeSessionBtn.setVisible(false);
             cashMoveBtn.setVisible(false);
+            shiftHandoverBtn.setVisible(false);
             checkoutBtn.setEnabled(false);
             checkoutBtn.setToolTipText("Abra a caixa antes de finalizar uma venda.");
-            if (addToCartBtn != null) {
-                addToCartBtn.setEnabled(false);
-                addToCartBtn.setToolTipText("Abra a caixa antes de adicionar artigos.");
-            }
+            if (addToCartBtn != null) { addToCartBtn.setEnabled(false); addToCartBtn.setToolTipText("Abra a caixa antes de adicionar artigos."); }
         }
     }
 
     void loadMetadata() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        if (companyId == null) {
-            return;
-        }
-
+        if (companyId == null) return;
         UIHelper.loadAsync(this, () -> new PosMetadata(comercialApiClient.getAllClients(),
                         inventoryApiClient.getSalesWarehousesByCompany(companyId), financeApiClient.getAllAccounts()),
                 this::applyMetadata, error -> showPosLoadError("dados do ponto de venda", error));
@@ -673,22 +662,20 @@ public class POSPanel extends JPanel {
         clientsList = metadata.clients();
         warehousesList = metadata.warehouses();
         accountsList = metadata.accounts();
-
-        warehouseCombo.removeAllItems();
-        accountCombo.removeAllItems();
-        for (WarehouseDTO w : warehousesList) {
-            warehouseCombo.addItem(w.name());
+        suppressWarehouseEvents = true;
+        try {
+            warehouseCombo.removeAllItems();
+            accountCombo.removeAllItems();
+            for (WarehouseDTO w : warehousesList) warehouseCombo.addItem(w.name());
+            for (TreasuryAccountDTO acc : accountsList) accountCombo.addItem(acc.name() + " (" + String.format("%.2f", acc.balance()) + " MT)");
+        } finally {
+            suppressWarehouseEvents = false;
         }
-        for (TreasuryAccountDTO acc : accountsList) {
-            accountCombo.addItem(acc.name() + " (" + String.format("%.2f", acc.balance()) + " MT)");
-        }
-
         filterClients(clientSearchField == null ? "" : clientSearchField.getText());
         catalogController.loadCatalogPage(0);
     }
 
     private void filterClients(String query) { catalogController.filterClients(query); }
-
     private void rebuildProductGrid() { catalogController.rebuildProductGrid(); }
 
 
@@ -720,13 +707,11 @@ public class POSPanel extends JPanel {
         };
     }
 
-    private void openSession() { cashSessionActions.openSession(); }
+    void openSession() { cashSessionActions.openSession(); }
+    public void closeSession() { cashSessionActions.closeSession(); }
+    public void manageCashMovements() { cashSessionActions.manageCashMovements(); }
 
-    private void closeSession() { cashSessionActions.closeSession(); }
-
-    private void manageCashMovements() { cashSessionActions.manageCashMovements(); }
-
-    private void removeFromCart() {
+    public void removeFromCart() {
         int selectedView = cartTable.getSelectedRow();
         if (selectedView < 0) {
             showPosNotice(FeedbackType.WARNING, "Seleccione um artigo", "Escolha uma linha do carrinho para remover.");
@@ -737,14 +722,12 @@ public class POSPanel extends JPanel {
         updateCartTotal(Math.min(selected, cartItems.size() - 1));
     }
 
-    private void changeSelectedQuantity(BigDecimal delta) { catalogController.changeSelectedQuantity(delta); }
+    public void changeSelectedQuantity(BigDecimal delta) { catalogController.changeSelectedQuantity(delta); }
 
-    /** Alteração rápida e segura da quantidade; mantém produto, promoção e cálculos oficiais. */
-    private void editSelectedCartQuantity() {
+    public void editSelectedCartQuantity() {
         int selectedView = cartTable.getSelectedRow();
         if (selectedView < 0) {
-            showPosNotice(FeedbackType.WARNING, "Seleccione um artigo",
-                    "Escolha uma linha do carrinho para alterar a quantidade.");
+            showPosNotice(FeedbackType.WARNING, "Seleccione um artigo", "Escolha uma linha do carrinho para alterar a quantidade.");
             return;
         }
         int selected = cartTable.convertRowIndexToModel(selectedView);
@@ -753,10 +736,7 @@ public class POSPanel extends JPanel {
         CartItem item = cartItems.get(selected);
         JTextField quantityField = new JTextField(item.qty.stripTrailingZeros().toPlainString());
         UIHelper.styleTextField(quantityField);
-        JPanel form = UIHelper.createDialogForm(
-                "Artigo:", readOnlyField(item.product.name()),
-                "Quantidade:", quantityField
-        );
+        JPanel form = UIHelper.createDialogForm("Artigo:", readOnlyField(item.product.name()), "Quantidade:", quantityField);
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Alterar Quantidade",
                 "fas-sort-numeric-up", "Actualize a quantidade da linha seleccionada", form)
@@ -768,15 +748,11 @@ public class POSPanel extends JPanel {
                     } catch (NumberFormatException ex) {
                         throw new IllegalArgumentException("Introduza uma quantidade válida.");
                     }
-                    if (quantity.signum() <= 0) {
-                        throw new IllegalArgumentException("A quantidade deve ser maior do que zero.");
-                    }
+                    if (quantity.signum() <= 0) throw new IllegalArgumentException("A quantidade deve ser maior do que zero.");
                     item.qty = quantity;
                 })
                 .showDialog();
-        if (confirmed) {
-            updateCartTotal(selected);
-        }
+        if (confirmed) updateCartTotal(selected);
     }
 
     private static JTextField readOnlyField(String value) {
@@ -802,21 +778,14 @@ public class POSPanel extends JPanel {
             total = total.add(item.getTotal());
         }
         totalLabel.setText(String.format("%,.2f MT", total));
-        if (subtotalValueLabel != null) {
-            subtotalValueLabel.setText(String.format("%,.2f MT", net));
-        }
-        if (ivaValueLabel != null) {
-            ivaValueLabel.setText(String.format("%,.2f MT", tax));
-        }
+        if (subtotalValueLabel != null) subtotalValueLabel.setText(String.format("%,.2f MT", net));
+        if (ivaValueLabel != null) ivaValueLabel.setText(String.format("%,.2f MT", tax));
         rebuildCartRows();
         refreshCartView();
         if (cartItemCountLabel != null) {
-            BigDecimal units = cartItems.stream()
-                    .map(item -> item.qty)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal units = cartItems.stream().map(item -> item.qty).reduce(BigDecimal.ZERO, BigDecimal::add);
             String formatted = units.stripTrailingZeros().toPlainString();
-            cartItemCountLabel.setText(formatted + (BigDecimal.ONE.compareTo(units) == 0
-                    ? " artigo" : " artigos"));
+            cartItemCountLabel.setText(formatted + (BigDecimal.ONE.compareTo(units) == 0 ? " artigo" : " artigos"));
         }
         catalogController.selectAndRevealCartRow(preferredModelRow);
     }
@@ -824,9 +793,7 @@ public class POSPanel extends JPanel {
     /** Etiqueta da célula IVA da linha: "Isento" quando taxa 0, senão "valor (taxa%)". */
     static String ivaCellLabel(CartItem item) {
         BigDecimal rate = effectiveTaxRate(item.product.taxRate());
-        if (rate.compareTo(BigDecimal.ZERO) == 0) {
-            return "Isento";
-        }
+        if (rate.compareTo(BigDecimal.ZERO) == 0) return "Isento";
         String pct = rate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString();
         return String.format("%,.2f MT (%s%%)", item.getTax(), pct);
     }
@@ -843,7 +810,7 @@ public class POSPanel extends JPanel {
         layout.show(cartCenter, cartItems.isEmpty() ? "empty" : "table");
     }
 
-    private void runCheckout() {
+    public void runCheckout() {
         if (activeSession == null) {
             showPosNotice(FeedbackType.WARNING, "Sessão de caixa necessária", "Abra uma sessão de caixa antes de finalizar a venda.");
             return;
@@ -857,38 +824,47 @@ public class POSPanel extends JPanel {
             return;
         }
 
-        int clientIdx = clientCombo.getSelectedIndex();
-        int whIdx = warehouseCombo.getSelectedIndex();
-        int accIdx = accountCombo.getSelectedIndex();
-
+        int clientIdx = clientCombo.getSelectedIndex(), whIdx = warehouseCombo.getSelectedIndex(), accIdx = accountCombo.getSelectedIndex();
         if (whIdx < 0 || accIdx < 0) {
-            showPosNotice(FeedbackType.WARNING, "Selecção incompleta",
-                    "Seleccione o armazém e a conta de tesouraria.");
+            showPosNotice(FeedbackType.WARNING, "Selecção incompleta", "Seleccione o armazém e a conta de tesouraria.");
             return;
         }
 
-        // Cliente é opcional. Se nada seleccionado, usa-se "Consumidor Final".
-        // Se o operador escreveu algo no campo de pesquisa sem seleccionar combo, esse texto
-        // vai como walkInName (rótulo para o recibo, sem criar registo de cliente).
-        ClientDTO client = (clientIdx >= 0 && clientIdx < filteredClients.size())
-                ? filteredClients.get(clientIdx)
-                : null;
-        String walkInName = null;
-        if (client == null) {
-            String typed = clientSearchField == null ? "" : clientSearchField.getText().trim();
-            if (!typed.isEmpty()) walkInName = typed;
+        // Cliente pode ser avulso (não cadastrado), mas o NOME é obrigatório no recibo/fatura.
+        ClientDTO client = (clientIdx >= 0 && clientIdx < filteredClients.size()) ? filteredClients.get(clientIdx) : null;
+        String walkInName = (client == null && clientSearchField != null) ? clientSearchField.getText().trim() : null;
+        if (client == null && (walkInName == null || walkInName.isBlank())) {
+            walkInName = UIHelper.promptRequiredText("Identificação do Cliente", "fas-user",
+                    "Venda a Cliente Não Cadastrado", "Introduza o nome do cliente:");
+            if (walkInName == null || walkInName.isBlank()) {
+                showPosNotice(FeedbackType.WARNING, "Nome do cliente obrigatório",
+                        "É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
+                if (clientSearchField != null) clientSearchField.requestFocusInWindow();
+                return;
+            }
+            walkInName = walkInName.trim();
+            if (clientSearchField != null) clientSearchField.setText(walkInName);
         }
         WarehouseDTO wh = warehousesList.get(whIdx);
         TreasuryAccountDTO acc = accountsList.get(accIdx);
 
         List<POSCheckoutLineRequest> lines = cartItems.stream()
-                .map(i -> new POSCheckoutLineRequest(i.product.id(), i.qty, i.discount, i.batch, i.serial))
+                .map(i -> new POSCheckoutLineRequest(i.product.id(), i.qty, i.discount, i.batch, i.serial, i.customUnitPrice))
                 .toList();
 
         String operator = CurrentUserContext.getUsername();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         boolean fiado = creditCheck != null && creditCheck.isSelected();
         BigDecimal cartTotal = cartItems.stream().map(CartItem::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+
+        if (fiado) {
+            CustomerCreditValidator.CreditAssessment assessment =
+                    CustomerCreditValidator.validateCreditPreFlight(client, cartTotal);
+            if (!assessment.isApproved()) {
+                showPosNotice(FeedbackType.WARNING, "Crédito não autorizado", assessment.details());
+                return;
+            }
+        }
 
         java.util.List<mz.multicore.erp.modules.pos.dto.PosPaymentRequest> payments;
         Long treasuryAccountId;
@@ -904,10 +880,10 @@ public class POSPanel extends JPanel {
         }
 
         POSCheckoutRequest request = new POSCheckoutRequest(operator, companyId, client != null ? client.id() : null,
-                walkInName, wh.id(), treasuryAccountId, lines, payments);
+                walkInName, wh.id(), treasuryAccountId, lines, payments, currentQuotationId);
 
-        // Checkout corre fora do EDT com indicador "a finalizar venda…" (não congela a UI).
-        UIHelper.runWithProgress(this, "A finalizar venda…",
+        // Checkout corre fora do EDT com indicador "a finalizar venda" (não congela a UI).
+        UIHelper.runWithProgress(this, "A finalizar venda",
                 () -> posApiClient.checkout(request),
                 inv -> {
                     String paymentLabel = fiado ? "EM DÍVIDA (fiado)" : "PAGO";
@@ -917,6 +893,7 @@ public class POSPanel extends JPanel {
                     if (fiado && creditCheck != null) creditCheck.setSelected(false);
 
                     printReceiptIfConfirmed(inv);
+                    if (quotationActions != null) quotationActions.clearQuotationLink();
 
                     // Reset cart
                     cartItems.clear();
@@ -928,6 +905,7 @@ public class POSPanel extends JPanel {
                 },
                 ex -> {
                     if (contingencyManager.handleContingencyCheckout(this, request, cartTotal, ex, () -> {
+                        if (quotationActions != null) quotationActions.clearQuotationLink();
                         cartItems.clear();
                         cartModel.setRowCount(0);
                         updateCartTotal();
@@ -942,24 +920,18 @@ public class POSPanel extends JPanel {
      * pagamento pronto a enviar, ou {@code null} se o operador cancelar.
      */
     private mz.multicore.erp.modules.pos.dto.PosPaymentRequest askPayment(BigDecimal total, Long accountId) {
-        return PosPaymentDialog.show(total, accountId);
+        return PosPaymentDialog.show(total, accountId, posApiClient);
     }
 
     private void printReceiptIfConfirmed(InvoiceDTO invoice) {
-        if (mz.multicore.erp.gui.components.PosDirectPrintEngine.isDirectPrintEnabled()) {
-            UIHelper.runWithProgress(this, "A imprimir talão…",
-                    () -> posApiClient.renderReceipt(invoice.id()),
-                    pdf -> mz.multicore.erp.gui.components.PosDirectPrintEngine.printReceiptSilent(pdf, "recibo-" + invoice.invoiceNumber(), this),
-                    ex -> showPosNotice(FeedbackType.ERROR, "Falha na impressão direta", ex.getMessage()));
-            return;
-        }
-        if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(this), FeedbackType.INFO,
-                "Imprimir recibo", "Deseja imprimir o recibo da venda " + invoice.invoiceNumber() + "?",
-                "Imprimir")) return;
-        UIHelper.runWithProgress(this, "A gerar recibo…",
-                () -> posApiClient.renderReceipt(invoice.id()),
-                pdf -> PrintPreviewDialog.show(this, pdf, "recibo-" + invoice.invoiceNumber()),
-                ex -> showPosNotice(FeedbackType.ERROR, "Não foi possível imprimir o recibo", ex.getMessage()));
+        PosReceiptPrinter.printReceiptIfConfirmed(this, invoice);
+    }
+
+    void updateQuotationBanner() {
+        if (quotationBannerPanel == null || quotationBannerLabel == null) return;
+        boolean hasQuot = currentQuotationId != null && currentQuotationNumber != null;
+        if (hasQuot) quotationBannerLabel.setText("Cotação vinculada: " + currentQuotationNumber);
+        quotationBannerPanel.setVisible(hasQuot);
     }
 
     /**
@@ -969,22 +941,37 @@ public class POSPanel extends JPanel {
     private void handleBarcodeScan() { barcodeActions.handleBarcodeScan(); }
 
     private JPanel buildSalesHistoryTab() { return salesHistoryPanel.buildPanel(); }
-
     void refreshSalesHistory() { salesHistoryPanel.refresh(); }
-
     void showPosLoadError(String area, Throwable error) {
-        feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area,
-                error.getMessage(), "Tentar novamente", this::onPanelSelected);
+        feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area, error.getMessage(), "Tentar novamente", this::onPanelSelected);
     }
-
-    void showPosNotice(FeedbackType type, String title, String message) {
-        feedback.show(type, title, message, null, null);
-    }
-
+    void showPosNotice(FeedbackType type, String title, String message) { feedback.show(type, title, message, null, null); }
     void showPosSuccess(String message) { ToastManager.success(this, message); }
     boolean isProductSellable(ProductDTO product) { return product != null && sellableProductIds.contains(product.id()); }
     void registerSellableProduct(ProductDTO product) { java.util.Set<Long> u = new java.util.HashSet<>(sellableProductIds); u.add(product.id()); sellableProductIds = u; }
-    void showReturnDialog() { returnDialog.show(); }
+    public void showReturnDialog() { returnDialog.show(); }
+    public boolean isHistoryView() { return historyView; }
+    public void clearCart() {
+        if (quotationActions != null) quotationActions.clearQuotationLink();
+        cartItems.clear();
+        updateCartTotal(-1);
+        if (barcodeField != null) barcodeField.requestFocusInWindow();
+    }
+    public BigDecimal getProductStock(Long productId) { return productId != null ? productStockQuantities.get(productId) : null; }
+    public Long getSelectedWarehouseId() {
+        if (warehouseCombo == null) return null;
+        int idx = warehouseCombo.getSelectedIndex();
+        return (idx >= 0 && idx < warehousesList.size()) ? warehousesList.get(idx).id() : null;
+    }
+    public String getSelectedWarehouseName() {
+        if (warehouseCombo == null) return null;
+        int idx = warehouseCombo.getSelectedIndex();
+        return (idx >= 0 && idx < warehousesList.size()) ? warehousesList.get(idx).name() : null;
+    }
+    void onWarehouseChanged() {
+        if (suppressWarehouseEvents) return;
+        if (catalogController != null) catalogController.loadCatalogPage(0);
+    }
 
     private record PosMetadata(java.util.List<ClientDTO> clients, java.util.List<WarehouseDTO> warehouses, java.util.List<TreasuryAccountDTO> accounts) {}
 

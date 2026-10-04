@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.inventory.controller;
 
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
+import mz.multicore.erp.modules.inventory.dto.UpdateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.service.StockTransferService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,17 @@ public class StockTransferController {
     @PostMapping
     public ResponseEntity<StockTransferDTO> create(@RequestBody @Valid CreateStockTransferRequest request) {
         return ResponseEntity.ok(stockTransferService.create(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<StockTransferDTO> update(@PathVariable Long id,
+                                                    @RequestBody @Valid UpdateStockTransferRequest request) {
+        return ResponseEntity.ok(stockTransferService.update(id, request));
+    }
+
+    @PostMapping("/{id}/submit")
+    public ResponseEntity<StockTransferDTO> submit(@PathVariable Long id) {
+        return ResponseEntity.ok(stockTransferService.submit(id));
     }
 
     @PostMapping("/{id}/approve")

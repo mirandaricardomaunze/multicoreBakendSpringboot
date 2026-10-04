@@ -36,24 +36,15 @@ public final class DeliveryGuidesPanel extends JPanel {
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(15, 15, 15, 15));
-        JPanel header = new JPanel(new BorderLayout(8, 0));
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Guias de Remessa"), BorderLayout.WEST);
+        ModernButton transfersBtn = null;
         if (openWarehouseTransfers != null) {
-            ModernButton transfersBtn = UIHelper.createSecondaryButton("Transferências entre Armazéns");
+            transfersBtn = UIHelper.createSecondaryButton("Transferências entre Armazéns");
             transfersBtn.setIcon(UIHelper.icon("fas-truck", 14));
             transfersBtn.setToolTipText("Estas guias vão para o cliente. Para mover mercadoria entre "
                     + "armazéns da empresa, use a Guia de Transferência (em Stock).");
             transfersBtn.addActionListener(e -> openWarehouseTransfers.run());
-            JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-            headerActions.setOpaque(false);
-            headerActions.add(transfersBtn);
-            header.add(headerActions, BorderLayout.EAST);
         }
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
+        add(feedback, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -66,6 +57,11 @@ public final class DeliveryGuidesPanel extends JPanel {
         table.getColumnModel().getColumn(8).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(9).setCellRenderer(TableCellRenderers.status());
         hideColumn(0);
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) showPackages();
+            }
+        });
         JTextField search = TableFilter.searchField("Nº guia, encomenda, cliente ou viatura…");
         JComboBox<String> status = TableFilter.combo("Todos os estados",
                 "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
@@ -73,24 +69,26 @@ public final class DeliveryGuidesPanel extends JPanel {
         TableFilter.install(table, search,
                 java.util.List.of(new TableFilter.ColumnFilter(status, 9)),
                 java.util.List.of(new TableFilter.PeriodFilter(periodo, 2)));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status,
-                TableFilter.label("Data:", "fas-calendar-alt"), periodo);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
+        ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Ver caixas e unidades", UIHelper.icon("fas-boxes", 14), this::showPackages)
+                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
+                .addAction("Cancelar", UIHelper.icon("fas-ban", 14), this::cancel)
+                .addAction("Rejeitar", UIHelper.icon("fas-times", 14), this::reject);
+        ModernButton approve = button("Aprovar", "fas-check", UIHelper.createSuccessButton("Aprovar"), this::approve);
+        JPanel filters = UIHelper.filterBar(
+                new JComponent[]{search, TableFilter.label("Estado:"), status,
+                        TableFilter.label("Data:", "fas-calendar-alt"), periodo},
+                null);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
+        if (transfersBtn == null) {
+            card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, more, approve), BorderLayout.NORTH);
+        } else {
+            card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, transfersBtn, more, approve), BorderLayout.NORTH);
+        }
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
-        ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Ver caixas e unidades", UIHelper.icon("fas-boxes", 14), this::showPackages)
-                .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print);
-        actions.add(UIHelper.createRefreshButton(this::refresh));
-        actions.add(more);
-        actions.add(button("Cancelar", "fas-ban", UIHelper.createDangerButton("Cancelar"), this::cancel));
-        actions.add(button("Rejeitar", "fas-times", UIHelper.createDangerButton("Rejeitar"), this::reject));
-        actions.add(button("Aprovar", "fas-check", UIHelper.createSuccessButton("Aprovar"), this::approve));
-        card.add(actions, BorderLayout.SOUTH);
         add(card, BorderLayout.CENTER);
     }
 
@@ -170,22 +168,28 @@ public final class DeliveryGuidesPanel extends JPanel {
         Long id = (Long) model.getValueAt(row, 0);
         UIHelper.loadAsync(this, () -> apiClient.getDeliveryGuideById(id), guide -> {
             DefaultTableModel lines = new DefaultTableModel(
-                    new String[]{"Produto", "Quantidade", "Composição", "Peso kg", "% Qtd", "% Peso"}, 0) {
+                    new String[]{"Produto", "Quantidade", "Composição", "Valor Unit.", "Total", "Peso kg", "% Qtd", "% Peso"}, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
             guide.lines().forEach(line -> {
                 String packages = mz.multicore.erp.architecture.quantity.PackageQuantity
                         .label(line.quantity(), line.unitsPerBox());
-                lines.addRow(new Object[]{line.productName(), line.quantity(), packages,
+                lines.addRow(new Object[]{line.productName(), line.quantity(), packages, line.unitPrice() != null ? line.unitPrice() : java.math.BigDecimal.ZERO, line.lineTotal() != null ? line.lineTotal() : java.math.BigDecimal.ZERO,
                         line.lineGrossWeightKg(), line.quantityPercentage() + "%", line.weightPercentage() + "%"});
             });
             JTable details = new JTable(lines);
             UIHelper.styleTable(details);
+            details.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
+            details.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
             JScrollPane scroll = new JScrollPane(details);
             UIHelper.styleScrollPane(scroll);
             scroll.setPreferredSize(new Dimension(900, 300));
-            JOptionPane.showMessageDialog(this, scroll, "Caixas e unidades — " + guide.guideNumber(),
-                    JOptionPane.PLAIN_MESSAGE);
+            ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Caixas e Unidades — " + guide.guideNumber(), "fas-boxes", scroll);
+            dlg.asReadOnly("Fechar");
+            dlg.setSize(920, 480);
+            dlg.showDialog();
+            // modern dialog displayed
+            // closed
         }, error -> showError("carregar caixas da guia", error));
     }
 

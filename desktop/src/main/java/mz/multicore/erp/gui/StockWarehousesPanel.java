@@ -21,22 +21,15 @@ final class StockWarehousesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(12, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
-        header.add(UIHelper.createHeading("Gestão de Armazéns"), BorderLayout.WEST);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Armazém");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> warehouseDialog(null));
         ModernButton editBtn = UIHelper.createSecondaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-edit", 14));
         editBtn.addActionListener(e -> { WarehouseDTO w = selectedManagedWarehouse(); if (w != null) warehouseDialog(w); });
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedWarehouse)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::refresh);
-        actions.add(moreBtn); actions.add(editBtn); actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
-
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedWarehouse);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -59,16 +52,41 @@ final class StockWarehousesPanel {
         JTextField whSearch = TableFilter.searchField("Nome, nº, localização ou responsável…");
         JComboBox<String> whTipo = TableFilter.combo("Todos os tipos",
                 "Loja", "Depósito", "Armazém Central", "Trânsito");
+        UIHelper.styleComboBox(whTipo);
+        whTipo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> whEstado = TableFilter.combo("Todos os estados", "ACTIVO", "INATIVO");
+        UIHelper.styleComboBox(whEstado);
+        whEstado.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(owner.warehousesTable, whSearch,
                 new TableFilter.ColumnFilter(whTipo, 2),
                 new TableFilter.ColumnFilter(whEstado, 8));
-        JPanel whBar = TableFilter.bar(whSearch,
-                TableFilter.label("Tipo:"), whTipo,
-                TableFilter.label("Estado:"), whEstado);
-        whBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(whBar, BorderLayout.NORTH);
+
+        JPanel whFilters = new JPanel(new GridBagLayout());
+        whFilters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; whFilters.add(filterLabel("Tipo de Armazém"), g);
+        g.gridx = 1; g.weightx = 0; whFilters.add(filterLabel("Estado"), g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        whFilters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; whFilters.add(whTipo, g);
+        g.gridx = 1; g.weightx = 0; whFilters.add(whEstado, g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        whFilters.add(whSearch, g);
+
+        whFilters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        card.add(UIHelper.tableCardTop("Gestão de Armazéns", whFilters,
+                refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(owner.warehousesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -201,4 +219,10 @@ final class StockWarehousesPanel {
      * quantidade contada) e mostra a diferença face ao sistema. Artigos deixados em branco não são
      * tocados (só se ajusta o que foi efectivamente contado).
      */
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
+    }
 }

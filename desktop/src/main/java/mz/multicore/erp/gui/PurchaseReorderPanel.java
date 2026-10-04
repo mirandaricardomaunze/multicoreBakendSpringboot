@@ -123,25 +123,49 @@ final class PurchaseReorderPanel {
         // Barra de Filtros
         JTextField reorderSearch = TableFilter.searchField("Pesquisar produto, SKU ou fornecedor…");
         JComboBox<String> reorderUrgencia = TableFilter.combo("Todas as urgências", "ESGOTADO", "CRÍTICO", "BAIXO");
+        UIHelper.styleComboBox(reorderUrgencia);
+        reorderUrgencia.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         supplierFilterCombo = TableFilter.combo("Todos os fornecedores");
+        UIHelper.styleComboBox(supplierFilterCombo);
+        supplierFilterCombo.setPreferredSize(new Dimension(220, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(reorderTable, reorderSearch,
                 new TableFilter.ColumnFilter(reorderUrgencia, 12),
                 new TableFilter.ColumnFilter(supplierFilterCombo, 9));
 
-        JPanel reorderBar = TableFilter.bar(
-                reorderSearch,
-                TableFilter.label("Urgência:"), reorderUrgencia,
-                TableFilter.label("Fornecedor:"), supplierFilterCombo
-        );
-        reorderBar.setBorder(new EmptyBorder(0, 0, 6, 0));
-        card.add(reorderBar, BorderLayout.NORTH);
+        JPanel reorderFilters = new JPanel(new GridBagLayout());
+        reorderFilters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; reorderFilters.add(filterLabel("Urgência"), g);
+        g.gridx = 1; g.weightx = 0; reorderFilters.add(filterLabel("Fornecedor"), g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        reorderFilters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; reorderFilters.add(reorderUrgencia, g);
+        g.gridx = 1; g.weightx = 0; reorderFilters.add(supplierFilterCombo, g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        reorderFilters.add(reorderSearch, g);
+
+        reorderFilters.setBorder(new EmptyBorder(0, 0, 6, 0));
+        card.add(UIHelper.tableCardTop("Reposição Inteligente & Previsão de Rutura", reorderFilters,
+                refreshBtn, orderBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         reorderFooter = new JLabel(" ");
         reorderFooter.setForeground(UIHelper.TEXT_MUTED);
         reorderFooter.setBorder(new EmptyBorder(6, 4, 0, 4));
-        card.add(reorderFooter, BorderLayout.SOUTH);
+        JPanel reorderSouth = new JPanel(new BorderLayout());
+        reorderSouth.setOpaque(false);
+        reorderSouth.add(ClientTablePagination.install(reorderTable), BorderLayout.NORTH);
+        reorderSouth.add(reorderFooter, BorderLayout.SOUTH);
+        card.add(reorderSouth, BorderLayout.SOUTH);
 
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -268,5 +292,11 @@ final class PurchaseReorderPanel {
         }
         // Se nenhuma linha selecionada, abre o diálogo de nova encomenda normal
         owner.purchaseOrdersPanel.openPurchaseOrderFormDialog();
+    }
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 }

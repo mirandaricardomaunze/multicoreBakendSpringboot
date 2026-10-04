@@ -42,6 +42,6 @@ class AuthControllerIntegrationTest {
                                 {"username":"ana","password":"invalid"}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Senha incorreta."));
+                .andExpect(jsonPath("$.message").value("Utilizador ou senha incorrectos."));
     }
 }

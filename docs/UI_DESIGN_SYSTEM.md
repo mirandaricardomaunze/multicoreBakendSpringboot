@@ -21,7 +21,7 @@ Usar:
 Evitar:
 
 - `new Color(...)` ad-hoc em paineis.
-- Emojis em botoes, tabs ou labels funcionais.
+- Emojis ou símbolos Unicode brutos (como ⭐, ✅, ❌) em botões, abas, títulos, secções ou labels funcionais (o Java 2D no Windows renderiza retângulos/quadrinhos `▯` por falta de glifo nativo).
 - Layouts que dependem de tamanhos magicos sem responsividade.
 - Regras de negocio dentro de listeners Swing.
 
@@ -31,12 +31,18 @@ Padrao:
 
 ```java
 UIHelper.icon("fas-save", 14)
+UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK)
+UIHelper.semanticIcon("fas-users", 16)
 ```
 
-Regras:
+Regras Obrigatorias:
 
 - Usar Ikonli FontAwesome 5 Solid.
 - Icone deve reforcar a accao: guardar, imprimir, procurar, apagar, aprovar.
+- **Ícones Coloridos Semânticos em Abas e Ações**:
+  - Abas de navegação (`JTabbedPane.addTab(...)`) e itens de ação rápida (`ActionMenuButton`) devem obrigatoriamente utilizar ícones vetoriais coloridos pela semântica do módulo ou função (`UIHelper.MODULE_*`, `UIHelper.ACCENT_*`, `UIHelper.APPROVED_GREEN`, `UIHelper.PENDING_YELLOW`, `UIHelper.REJECTED_RED` ou `UIHelper.semanticIcon(...)`).
+  - É proibido usar ícones monocromáticos cinzentos/pretos (`UIHelper.TEXT_LIGHT`, `UIHelper.TEXT_SECONDARY`, `UIHelper.TEXT_MUTED`) em abas de navegação ou cabeçalhos de diálogo.
+  - Diálogos de formulário (`ModernFormDialog`) herdam e exibem automaticamente o badge colorido temático via `UIHelper.buildPremiumHeader(...)` baseado no código do ícone e módulo.
 - Botoes destrutivos devem ser visualmente distintos e confirmar quando houver risco.
 
 ## Formularios
@@ -71,6 +77,12 @@ Regras:
 - **Posicionamento Canónico na Barra de Ferramentas:**
   `TableFilter.bar(searchField, TableFilter.label("Estado:"), statusCombo, TableFilter.label("Data:", "fas-calendar-alt"), periodCombo)`
 - **Uniformidade Geométrica:** Todos os controlos da barra de filtros têm altura de 38 px (`UIHelper.FORM_CONTROL_HEIGHT`).
+- **Padrão de Encapsulamento em Card (*Table-Card Containment*):** Os campos de pesquisa, filtros de coluna e ações contextuais da tabela devem estar obrigatoriamente encapsulados **dentro** do `ModernPanel` que hospeda a tabela (`BorderLayout.NORTH`), logo acima do cabeçalho da tabela, nunca flutuando soltos no painel pai fora do card. O card compõe assim uma unidade visual integral: [Filtros/Pesquisa no Topo] -> [Tabela no Centro] -> [Paginação no Rodapé].
+- **Posicionamento de Acções:** Acções da tabela ficam à direita da barra superior via
+  `UIHelper.filterBar(...)` / `TableFilter.toolbar(...)`. O `BorderLayout.SOUTH` do card é reservado
+  exclusivamente a paginação, contagem, totais e estado informativo; botões de acção são proibidos
+  nessa zona. Cabeçalhos de página podem conter até três acções estritamente globais. Ver
+  `docs/TABLE_ACTION_PLACEMENT_SPEC.md`.
 
 
 ## Dialogos

@@ -7,8 +7,12 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.JPasswordField;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -29,6 +33,27 @@ public final class ModernMessageDialog {
         return create(owner, type, title, message, true)
                 .setConfirmLabel(confirmLabel == null ? "Confirmar" : confirmLabel)
                 .showDialog();
+    }
+
+    /** Prompt temático para substituir os inputs textuais legados do JOptionPane. */
+    public static String prompt(Component owner, FeedbackType type, String title, String message,
+                                String initialValue, boolean secret) {
+        JTextField field = secret ? new JPasswordField() : new JTextField();
+        if (initialValue != null) field.setText(initialValue);
+        UIHelper.styleTextField(field);
+        JPanel form = UIHelper.createDialogForm(message == null ? "Valor:" : message, field);
+        String[] result = {null};
+        ModernFormDialog dialog = new ModernFormDialog(resolveOwner(owner), title,
+                (type == null ? FeedbackType.INFO : type).iconCode(), null, form)
+                .setConfirmButton("Confirmar", "fas-check");
+        dialog.setOnSave(() -> result[0] = field instanceof JPasswordField password
+                ? new String(password.getPassword())
+                : field.getText());
+        return dialog.showDialog() ? result[0] : null;
+    }
+
+    private static Window resolveOwner(Component owner) {
+        return owner instanceof Window window ? window : SwingUtilities.getWindowAncestor(owner);
     }
 
     static JPanel buildMessageBody(FeedbackType type, String message) {

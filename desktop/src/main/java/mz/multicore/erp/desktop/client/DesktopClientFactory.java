@@ -22,6 +22,10 @@ public class DesktopClientFactory {
         return new DesktopApiClient(config, sessionStore.requireSession());
     }
 
+    public boolean isSuperAdmin() {
+        return sessionStore.requireSession().superAdmin();
+    }
+
     /**
      * Cliente sem sessão, para os poucos caminhos públicos ({@code /api/version}).
      * Existe para se poder perguntar a versão <b>antes</b> do login — e sem rebentar com o

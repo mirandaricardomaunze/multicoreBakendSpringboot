@@ -59,10 +59,10 @@ public class PerformancePanel extends JPanel {
         tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
 
-        tabbedPane.addTab("Metas Comerciais", UIHelper.icon("fas-bullseye", 16, UIHelper.TEXT_LIGHT), goalsTab);
-        tabbedPane.addTab("Progresso em Tempo Real", UIHelper.icon("fas-chart-line", 16, UIHelper.TEXT_LIGHT), progressTab);
-        tabbedPane.addTab("Ranking da Equipa", UIHelper.icon("fas-trophy", 16, UIHelper.TEXT_LIGHT), rankingTab);
-        tabbedPane.addTab("Prémios & Bónus", UIHelper.icon("fas-award", 16, UIHelper.TEXT_LIGHT), bonusTab);
+        tabbedPane.addTab("Metas Comerciais", UIHelper.icon("fas-bullseye", 16, UIHelper.ACCENT_BLUE), goalsTab);
+        tabbedPane.addTab("Progresso em Tempo Real", UIHelper.icon("fas-chart-line", 16, UIHelper.APPROVED_GREEN), progressTab);
+        tabbedPane.addTab("Ranking da Equipa", UIHelper.icon("fas-trophy", 16, UIHelper.PENDING_YELLOW), rankingTab);
+        tabbedPane.addTab("Prémios & Bónus", UIHelper.icon("fas-award", 16, UIHelper.ACCENT_PINK), bonusTab);
 
         tabbedPane.addChangeListener(e -> reloadActiveTab());
 

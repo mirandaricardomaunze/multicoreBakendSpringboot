@@ -32,7 +32,7 @@ class DesktopApiClientTest {
     void setUp() {
         httpClient = mock(HttpClient.class);
         ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
-        DesktopApiConfig config = new DesktopApiConfig("http://test.local");
+        DesktopApiConfig config = new DesktopApiConfig("https://test.local");
 
         DesktopSession session = new DesktopSession("tok-123", Instant.now().plusSeconds(3600),
                 "ana", "Ana", false, List.of(new DesktopSession.CompanyAccess(7L, "ACME", "ADMIN")));
@@ -66,7 +66,7 @@ class DesktopApiClientTest {
         assertEquals(1, result.id());
         assertEquals("Ana", result.name());
         HttpRequest req = captureRequest();
-        assertEquals("http://test.local/api/x/1", req.uri().toString());
+        assertEquals("https://test.local/api/x/1", req.uri().toString());
         assertEquals("GET", req.method());
         assertEquals("Bearer tok-123", req.headers().firstValue("Authorization").orElse(null));
         assertEquals("7", req.headers().firstValue("X-Company-Id").orElse(null));

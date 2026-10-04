@@ -31,14 +31,6 @@ public class BonusTab extends JPanel {
     private JComboBox<String> statusFilter;
     private InlineFeedbackPanel feedbackPanel;
 
-    private static final DecimalFormat CURRENCY_FMT;
-
-    static {
-        DecimalFormatSymbols sym = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        sym.setGroupingSeparator(' ');
-        sym.setDecimalSeparator(',');
-        CURRENCY_FMT = new DecimalFormat("#,##0.00", sym);
-    }
 
     public BonusTab(PerformanceApiClient apiClient, DesktopSession session) {
         this.apiClient = apiClient;
@@ -55,41 +47,42 @@ public class BonusTab extends JPanel {
         feedbackPanel = new InlineFeedbackPanel();
         add(feedbackPanel, BorderLayout.NORTH);
 
-        JPanel contentPanel = new JPanel(new BorderLayout(0, 10));
-        contentPanel.setBackground(UIHelper.BG_DARK);
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 12));
+        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Toolbar
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        toolbar.setBackground(UIHelper.BG_DARK);
+        // Toolbar inside card
+        JPanel filterBar = new JPanel(new BorderLayout(10, 0));
+        filterBar.setOpaque(false);
+
+        JPanel filtersLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        filtersLeft.setOpaque(false);
 
         statusFilter = PerformanceControls.createSelect(
                 new String[]{"Todos", "Pendentes", "Aprovados", "Pagos", "Cancelados"},
                 PerformanceControls.FILTER_SELECT_WIDTH
         );
         statusFilter.addActionListener(e -> reload());
-        toolbar.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
+        filtersLeft.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
 
         ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
-        toolbar.add(btnRefresh);
 
         ModernButton btnApprove = UIHelper.createSuccessButton("Aprovar Prémio");
         btnApprove.setIcon(UIHelper.icon("fas-check", 14));
         btnApprove.addActionListener(e -> approveSelectedBonus());
-        toolbar.add(btnApprove);
 
-        ModernButton btnAdjust = UIHelper.createSecondaryButton("Ajustar Prémio");
-        btnAdjust.setIcon(UIHelper.icon("fas-edit", 14));
-        btnAdjust.addActionListener(e -> adjustSelectedBonus());
-        toolbar.add(btnAdjust);
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Mais Ações");
+        actionsMenu.addAction("Ajustar Prémio", UIHelper.icon("fas-edit", 12), this::adjustSelectedBonus);
+        actionsMenu.addAction("Integrar na Folha", UIHelper.icon("fas-file-invoice-dollar", 12), this::integrateSelectedBonus);
 
-        ModernButton btnIntegrate = UIHelper.createPrimaryButton("Integrar na Folha");
-        btnIntegrate.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        btnIntegrate.addActionListener(e -> integrateSelectedBonus());
-        toolbar.add(btnIntegrate);
+        JPanel actionsRight = UIHelper.actionsBar(btnRefresh, actionsMenu, btnApprove);
 
-        contentPanel.add(toolbar, BorderLayout.NORTH);
+        filterBar.add(filtersLeft, BorderLayout.WEST);
+        filterBar.add(actionsRight, BorderLayout.EAST);
+
+        card.add(filterBar, BorderLayout.NORTH);
 
         // Table
         String[] columns = {"ID", "Meta Comercial", "Colaborador", "Calculado (MZN)", "Aprovado (MZN)", "Justificação", "Estado", "Aprovador", "Recibo ID"};
@@ -107,9 +100,9 @@ public class BonusTab extends JPanel {
         UIHelper.styleScrollPane(scrollPane);
         TableContextMenu.install(scrollPane);
         scrollPane.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
+        card.add(scrollPane, BorderLayout.CENTER);
 
-        add(contentPanel, BorderLayout.CENTER);
+        add(card, BorderLayout.CENTER);
     }
 
     public void reload() {
@@ -136,8 +129,8 @@ public class BonusTab extends JPanel {
                                 b.id(),
                                 b.goalName(),
                                 b.employeeName() != null ? b.employeeName() : "Equipa",
-                                CURRENCY_FMT.format(b.calculatedAmount() != null ? b.calculatedAmount() : BigDecimal.ZERO),
-                                CURRENCY_FMT.format(b.approvedAmount() != null ? b.approvedAmount() : BigDecimal.ZERO),
+                                UIHelper.formatMzn(b.calculatedAmount() != null ? b.calculatedAmount() : BigDecimal.ZERO),
+                                UIHelper.formatMzn(b.approvedAmount() != null ? b.approvedAmount() : BigDecimal.ZERO),
                                 b.justification() != null ? b.justification() : "-",
                                 humanStatus(b.status()),
                                 b.approvedBy() != null ? b.approvedBy() : "-",
@@ -164,7 +157,7 @@ public class BonusTab extends JPanel {
                 FeedbackType.INFO,
                 "Aprovar Prémio Comercial",
                 String.format("Confirmar aprovação do prémio de %s MZN para %s?",
-                        CURRENCY_FMT.format(selected.calculatedAmount()), selected.employeeName()),
+                        UIHelper.formatMzn(selected.calculatedAmount()), selected.employeeName()),
                 "Aprovar"
         );
         if (!ok) return;
@@ -216,7 +209,8 @@ public class BonusTab extends JPanel {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         footer.setBackground(UIHelper.BG_DARK);
 
-        ModernButton btnCancel = UIHelper.createSecondaryButton("Cancelar");
+        ModernButton btnCancel = UIHelper.createDangerButton("Cancelar");
+        btnCancel.setIcon(UIHelper.icon("fas-times", 13, Color.WHITE));
         btnCancel.addActionListener(e -> dialog.dispose());
         footer.add(btnCancel);
 

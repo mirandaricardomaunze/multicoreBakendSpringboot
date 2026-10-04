@@ -59,6 +59,66 @@ public final class FormField extends JPanel {
         return true;
     }
 
+    public boolean validateRegex(java.util.regex.Pattern pattern, String errorMessage) {
+        if (!validateRequired()) return false;
+        String value = input instanceof JTextComponent text ? text.getText().trim() : null;
+        if (value == null || value.isEmpty()) return true;
+        if (!pattern.matcher(value).matches()) {
+            setError(errorMessage);
+            return false;
+        }
+        clearError();
+        return true;
+    }
+
+    public boolean validateEmail() {
+        if (!validateRequired()) return false;
+        String value = input instanceof JTextComponent text ? text.getText().trim() : null;
+        if (value == null || value.isEmpty()) return true;
+        if (!mz.multicore.erp.architecture.validation.ValidationPatterns.isValidEmail(value)) {
+            setError("Formato de email inválido (ex.: utilizador@empresa.co.mz).");
+            return false;
+        }
+        clearError();
+        return true;
+    }
+
+    public boolean validateNuit() {
+        if (!validateRequired()) return false;
+        String value = input instanceof JTextComponent text ? text.getText().trim() : null;
+        if (value == null || value.isEmpty()) return true;
+        if (!mz.multicore.erp.architecture.validation.ValidationPatterns.isValidNuit(value)) {
+            setError("NUIT inválido (deve conter 9 dígitos válidos segundo a AT).");
+            return false;
+        }
+        clearError();
+        return true;
+    }
+
+    public boolean validatePhone() {
+        if (!validateRequired()) return false;
+        String value = input instanceof JTextComponent text ? text.getText().trim() : null;
+        if (value == null || value.isEmpty()) return true;
+        if (!mz.multicore.erp.architecture.validation.ValidationPatterns.isValidPhone(value)) {
+            setError("Telefone inválido (ex.: 841234567 ou +258 84 123 4567).");
+            return false;
+        }
+        clearError();
+        return true;
+    }
+
+    public boolean validateMinLength(int minLength, String fieldName) {
+        if (!validateRequired()) return false;
+        String value = input instanceof JTextComponent text ? text.getText().trim() : null;
+        if (value == null || value.isEmpty()) return true;
+        if (value.length() < minLength) {
+            setError(fieldName + " deve ter no mínimo " + minLength + " caracteres.");
+            return false;
+        }
+        clearError();
+        return true;
+    }
+
     public void setError(String message) {
         String safe = message == null || message.isBlank() ? "Valor inválido." : message;
         errorLabel.setText(safe);

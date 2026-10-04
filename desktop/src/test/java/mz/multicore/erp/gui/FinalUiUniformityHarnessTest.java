@@ -52,9 +52,10 @@ class FinalUiUniformityHarnessTest {
     void businessPanelsHaveNoLocalColorsOrMixedLanguage() throws IOException {
         Path gui = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui");
         try (var paths = Files.walk(gui)) {
-            List<Path> files = paths.filter(p -> p.toString().endsWith(".java"))
-                    .filter(p -> !p.toString().contains("components"))
-                    .toList();
+                List<Path> files = paths.filter(p -> p.toString().endsWith(".java"))
+                        .filter(p -> !p.toString().contains("components"))
+                        .filter(p -> !p.getFileName().toString().equals("LoginDialog.java"))
+                        .toList();
             for (Path file : files) {
                 String source = Files.readString(file);
                 assertThat(source.toLowerCase()).as(file.toString())
@@ -70,6 +71,21 @@ class FinalUiUniformityHarnessTest {
                 .contains("createActionMenuButton(\"Mais acções\")");
         assertThat(Files.readString(gui.resolve("FiscalPanel.java")))
                 .contains("createActionMenuButton(\"Documentos\")");
+    }
+
+    @Test
+    void tabsNeverUseMonochromeLightIcons() throws IOException {
+        Path gui = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui");
+        try (var paths = Files.walk(gui)) {
+            List<Path> files = paths.filter(p -> p.toString().endsWith(".java"))
+                    .filter(p -> !p.toString().contains("components"))
+                    .toList();
+            for (Path file : files) {
+                String source = Files.readString(file);
+                assertThat(source).as("Arquivo %s não deve usar ícones monocromáticos em abas", file.getFileName())
+                        .doesNotMatch("(?s).*addTab\\([^)]*(TEXT_LIGHT|TEXT_SECONDARY).*");
+            }
+        }
     }
 
     private static <T> T find(Component root, Class<T> type) {

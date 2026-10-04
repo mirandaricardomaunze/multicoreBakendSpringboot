@@ -4,6 +4,7 @@ import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.service.InventoryPhysicalCountingService;
 import mz.multicore.erp.modules.printing.InventoryPhysicalCountingPrintService;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class InventoryPhysicalCountingController {
     }
 
     @PostMapping
-    public ResponseEntity<InventorySessionDTO> createSession(@RequestBody CreateInventorySessionRequest request) {
+    public ResponseEntity<InventorySessionDTO> createSession(@RequestBody @Valid CreateInventorySessionRequest request) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         return ResponseEntity.ok(service.createSession(request, companyId));
     }
@@ -53,7 +54,7 @@ public class InventoryPhysicalCountingController {
     @PostMapping("/{id}/count")
     public ResponseEntity<InventorySessionDTO> recordCount(
             @PathVariable("id") Long id,
-            @RequestBody UpdateInventoryItemCountRequest request
+            @RequestBody @Valid UpdateInventoryItemCountRequest request
     ) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         return ResponseEntity.ok(service.recordCount(id, request, companyId));

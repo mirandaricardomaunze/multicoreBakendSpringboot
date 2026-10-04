@@ -62,9 +62,10 @@ public class ComercialController {
     public ResponseEntity<PageResponse<POSCatalogItemDTO>> getPOSCatalogPage(
             @RequestParam(defaultValue = "") String query,
             @RequestParam(defaultValue = "false") boolean availableOnly,
+            @RequestParam(required = false) Long warehouseId,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "36") Integer size) {
-        return ResponseEntity.ok(comercialService.getPOSCatalogPage(query, availableOnly, page, size));
+        return ResponseEntity.ok(comercialService.getPOSCatalogPage(query, availableOnly, warehouseId, page, size));
     }
 
     /** Localiza um produto pelo código de barras (leitor do POS). Corpo {@code null} se não existir. */
@@ -74,15 +75,18 @@ public class ComercialController {
     }
 
     @GetMapping("/products/pos-catalog/by-barcode")
-    public ResponseEntity<POSCatalogItemDTO> findPOSCatalogItemByBarcode(@RequestParam String barcode) {
-        return ResponseEntity.ok(comercialService.findPOSCatalogItemByBarcode(barcode));
+    public ResponseEntity<POSCatalogItemDTO> findPOSCatalogItemByBarcode(
+            @RequestParam String barcode,
+            @RequestParam(required = false) Long warehouseId) {
+        return ResponseEntity.ok(comercialService.findPOSCatalogItemByBarcode(barcode, warehouseId));
     }
 
     @PostMapping("/products")
     public ResponseEntity<ProductDTO> createProduct(@RequestBody @Valid CreateProductRequest r) {
         return ResponseEntity.ok(comercialService.createProduct(
                 r.sku(), r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
-                r.unitsPerBox(), r.categoryId(), r.saleType(), r.stockTracked(), r.taxRateId(), r.description(),
+                r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
+                r.stockTracked(), r.taxRateId(), r.description(),
                 r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg()));
     }
 
@@ -90,7 +94,8 @@ public class ComercialController {
     public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id, @RequestBody @Valid CreateProductRequest r) {
         return ResponseEntity.ok(comercialService.updateProduct(
                 id, r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
-                r.unitsPerBox(), r.categoryId(), r.saleType(), r.stockTracked(), r.taxRateId(), r.description(),
+                r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
+                r.stockTracked(), r.taxRateId(), r.description(),
                 r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg()));
     }
 
@@ -166,7 +171,7 @@ public class ComercialController {
     }
 
     @PostMapping("/invoices/{id}/cancel")
-    public ResponseEntity<Void> cancelInvoice(@PathVariable Long id, @RequestBody CancelReasonRequest request) {
+    public ResponseEntity<Void> cancelInvoice(@PathVariable Long id, @RequestBody @Valid CancelReasonRequest request) {
         comercialService.cancelInvoice(id, request.reason());
         return ResponseEntity.noContent().build();
     }
@@ -202,6 +207,12 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.createOrder(request));
     }
 
+    @PutMapping("/orders/{id}")
+    public ResponseEntity<OrderDTO> updateOrder(@PathVariable Long id,
+                                                 @RequestBody @Valid UpdateOrderRequest request) {
+        return ResponseEntity.ok(comercialService.updateOrder(id, request));
+    }
+
     /** Converte uma reposição interna na transferência que a cumpre. Ver REPOSICAO_INTERNA_SPEC §4. */
     @PostMapping("/orders/{id}/transfer")
     public ResponseEntity<mz.multicore.erp.modules.inventory.dto.StockTransferDTO> convertToTransfer(
@@ -216,7 +227,7 @@ public class ComercialController {
     }
 
     @PostMapping("/orders/{id}/cancel")
-    public ResponseEntity<Void> cancelOrder(@PathVariable Long id, @RequestBody CancelReasonRequest request) {
+    public ResponseEntity<Void> cancelOrder(@PathVariable Long id, @RequestBody @Valid CancelReasonRequest request) {
         comercialService.cancelOrder(id, request.reason());
         return ResponseEntity.noContent().build();
     }
@@ -239,7 +250,7 @@ public class ComercialController {
     }
 
     @PostMapping("/receipts/{id}/cancel")
-    public ResponseEntity<Void> cancelReceipt(@PathVariable Long id, @RequestBody CancelReasonRequest request) {
+    public ResponseEntity<Void> cancelReceipt(@PathVariable Long id, @RequestBody @Valid CancelReasonRequest request) {
         comercialService.cancelReceipt(id, request.reason());
         return ResponseEntity.noContent().build();
     }

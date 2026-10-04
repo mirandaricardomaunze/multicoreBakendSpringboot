@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.purchases.dto.PurchaseOrderDTO;
 import mz.multicore.erp.modules.purchases.dto.ReceivePurchaseOrderRequest;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
 import mz.multicore.erp.modules.purchases.dto.SupplierDTO;
+import mz.multicore.erp.modules.purchases.dto.UpdatePurchaseOrderRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -90,6 +91,11 @@ public class PurchaseApiClient {
 
     public PurchaseOrderDTO createOrder(CreatePurchaseOrderRequest request) {
         return clientFactory.authenticatedClient().post("/api/purchases/orders", request, PurchaseOrderDTO.class);
+    }
+
+    public PurchaseOrderDTO updateOrder(Long id, UpdatePurchaseOrderRequest request) {
+        return clientFactory.authenticatedClient()
+                .put("/api/purchases/orders/" + id, request, PurchaseOrderDTO.class);
     }
 
     public PurchaseOrderDTO receiveOrder(Long id) {

@@ -19,6 +19,20 @@ Exemplos:
 /api/hr/employees
 ```
 
+Transferências de stock com rascunho editável:
+
+```text
+POST /api/inventory/transfers
+PUT  /api/inventory/transfers/{id}
+POST /api/inventory/transfers/{id}/submit
+POST /api/inventory/transfers/{id}/approve
+POST /api/inventory/transfers/{id}/reject
+POST /api/inventory/transfers/{id}/cancel
+```
+
+`PUT` recebe `UpdateStockTransferRequest` com `version`; apenas `DRAFT` é editável. Submeter
+bloqueia o conteúdo e apenas aprovar uma guia `PENDING_APPROVAL` movimenta stock.
+
 Se houver quebra futura de contrato publico, introduzir versionamento explicito:
 
 ```text
@@ -76,6 +90,18 @@ public record CreateProductRequest(
 | Sem permissao | `403 Forbidden` |
 | Nao encontrado | `404 Not Found` quando houver handler proprio |
 
+## Autorizacao e sessoes
+
+- Credenciais invalidas no login devolvem uma mensagem uniforme, independentemente de o nome
+  de utilizador existir, estar inactivo ou ter senha errada.
+- Os pedidos de tenant revalidam utilizador, associacao, empresa activa e assinatura.
+- Repor uma senha revoga todas as sessoes da conta.
+- `/api/monitoring/**` requer `ADMIN` da empresa indicada em `X-Company-Id` ou `SUPERADMIN`
+  sem empresa. `ADMIN` recebe apenas dados da propria empresa; incidentes globais e teste de
+  email exigem `SUPERADMIN`.
+
+Detalhes e casos de regressao: [SECURITY_ATTACK_SURFACE_REMEDIATION_SPEC.md](SECURITY_ATTACK_SURFACE_REMEDIATION_SPEC.md).
+
 ## Erros
 
 Erros devem ser uniformes e accionaveis:
@@ -126,6 +152,27 @@ Como o Swing vai migrar para clients HTTP:
   devolve `PageResponse<POSCatalogItemDTO>`.
 - `GET /api/comercial/products/pos-catalog/by-barcode?barcode=...` devolve um item com produto e
   disponibilidade, permitindo ao scanner operar fora da página visível.
+
+# Editor de encomendas
+
+- `PUT /api/comercial/orders/{id}` actualiza cliente, armazém, destino e linhas de uma encomenda
+  ainda editável. Recebe `UpdateOrderRequest` com a versão optimista e devolve `OrderDTO`.
+- `OrderDTO` inclui `warehouseId`, `warehouseName` e `version`, preservando os construtores
+  retrocompatíveis usados pelos clientes anteriores.
+- Número e tipo da encomenda não são editáveis. Estados fechados são recusados pelo Service.
+- Ver `docs/ORDER_EDITOR_SPEC.md`.
+
+# Editores de documentos pré-emissão
+
+- `PUT /api/comercial/quotations/{id}` actualiza integralmente uma cotação em `DRAFT`.
+  Recebe `UpdateQuotationRequest`, incluindo `version`, e devolve `QuotationDTO` com a nova versão.
+- `PUT /api/purchases/orders/{id}` actualiza integralmente uma encomenda a fornecedor em
+  `ORDERED`, desde que nenhuma linha tenha quantidade recebida. Recebe
+  `UpdatePurchaseOrderRequest`, incluindo `version`, e devolve `PurchaseOrderDTO`.
+- Os dois endpoints recalculam impostos e totais no Service, validam o tenant e recusam versões
+  desactualizadas. Número, data de emissão e estado nunca são alterados pelo cliente.
+- Ver `docs/EDITABLE_DOCUMENT_EDITORS_SPEC.md`.
+
 # Saúde ocupacional
 
 - `GET /api/hr/occupational-health/employee/{id}/summary` — resumo não clínico do último exame.

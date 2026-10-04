@@ -3,6 +3,11 @@
 **Objetivo:** correr o backend Spring Boot (`mz.multicore.erp.MulticoreApplication`) num VPS, com PostgreSQL
 **privado** (nunca exposto à internet) e HTTPS automático, rumo ao desktop **cliente-fino** (só HTTPS).
 
+**Proxy confiável (2026-10-03):** o backend recebe `TRUSTED_PROXY_HOST=caddy` apenas na rede
+interna. O Caddy substitui `X-Forwarded-For` pelo IP da ligação cliente; o backend só aceita esse
+cabeçalho quando a ligação veio do endereço resolvido de `caddy`. Outros deployments devem manter
+`TRUSTED_PROXY_HOST` vazio até configurarem um proxy equivalente.
+
 **Modelo escolhido:** VPS + Docker; desktop **HTTPS-only primeiro** (a BD só abre aos balcões depois de
 a migração da UI para HTTP estar completa — ver [§ Track B](#track-b--migração-para-cliente-fino)).
 

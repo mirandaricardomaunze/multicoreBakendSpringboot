@@ -23,23 +23,12 @@ final class HRExpensesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Notas de Despesas"), BorderLayout.WEST);
-
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         exportBtn.addActionListener(e -> owner.exportTable("despesas", "Notas de Despesas", owner.expensesTable));
         ModernButton submitBtn = UIHelper.createPrimaryButton("Submeter Despesa");
         submitBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
         submitBtn.addActionListener(e -> submitExpense());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(submitBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
-
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -61,7 +50,9 @@ final class HRExpensesPanel {
                 new TableFilter.ColumnFilter(expEstado, 3));
         JPanel expBar = TableFilter.bar(expSearch, TableFilter.label("Estado:"), expEstado);
         expBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(expBar, BorderLayout.NORTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
+        card.add(UIHelper.tableCardTop("Notas de Despesas", expBar,
+                refreshBtn, exportBtn, submitBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

@@ -4,6 +4,8 @@ import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.LoyaltyEngine;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 
 import javax.swing.*;
@@ -103,10 +105,9 @@ public class PosLoyaltyController {
                     BigDecimal points = match.get().loyaltyPoints() != null ? match.get().loyaltyPoints() : BigDecimal.ZERO;
                     BigDecimal valueMzn = LoyaltyEngine.pointsToValueMzn(points);
 
-                    JOptionPane.showMessageDialog(parentWindow,
+                    ModernMessageDialog.show(parentWindow, FeedbackType.SUCCESS, "Cartão de Fidelidade",
                             String.format("Cliente Fidelizado Encontrado!\n\nNome: %s\nPontos Acumulados: %s pts (%.2f MT)",
-                                    match.get().name(), points.toPlainString(), valueMzn),
-                            "Cartão de Fidelidade", JOptionPane.INFORMATION_MESSAGE);
+                                    match.get().name(), points.toPlainString(), valueMzn));
 
                     if (onClientSelectedCallback != null) {
                         onClientSelectedCallback.run();

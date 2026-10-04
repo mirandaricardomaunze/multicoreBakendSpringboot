@@ -296,7 +296,8 @@ public class PurchaseService {
                 s.getPhone(),
                 s.getContactPerson(),
                 s.isActive(),
-                s.getCompany() != null ? s.getCompany().getId() : null
+                s.getCompany() != null ? s.getCompany().getId() : null,
+                s.getVersion()
         );
     }
 

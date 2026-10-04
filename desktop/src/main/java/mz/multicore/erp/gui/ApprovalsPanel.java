@@ -61,9 +61,9 @@ public class ApprovalsPanel extends JPanel {
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
-        tabbedPane.addTab("Pendentes", UIHelper.icon("fas-hourglass-half", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Pendentes", UIHelper.icon("fas-hourglass-half", 16, UIHelper.PENDING_YELLOW),
                 createPendingTab());
-        tabbedPane.addTab("Histórico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Histórico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.APPROVED_GREEN),
                 createHistoryTab());
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
@@ -102,19 +102,10 @@ public class ApprovalsPanel extends JPanel {
         pendingPanel.setOpaque(false);
         pendingPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
-        JPanel pendHeader = new JPanel(new BorderLayout());
-        pendHeader.setOpaque(false);
-        pendHeader.add(UIHelper.createSubheading("Pedidos a Aguardar Decisão"), BorderLayout.WEST);
         openBtn = UIHelper.createPrimaryButton("Abrir / Decidir");
         openBtn.setIcon(UIHelper.icon("fas-gavel", 14));
         openBtn.setEnabled(false);
         openBtn.addActionListener(e -> openDecisionForSelected());
-        JPanel pendActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        pendActions.setOpaque(false);
-        pendActions.add(openBtn);
-        pendHeader.add(pendActions, BorderLayout.EAST);
-        pendingPanel.add(pendHeader, BorderLayout.NORTH);
-
         ModernPanel pendingCard = new ModernPanel(16);
         pendingCard.setLayout(new BorderLayout());
         pendingCard.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -137,8 +128,9 @@ public class ApprovalsPanel extends JPanel {
         UIHelper.humanizeRoleCombo(pPerfil);
         TableFilter.install(pendingTable, pSearch, new TableFilter.ColumnFilter(pPerfil, 4));
         JPanel pBar = TableFilter.bar(pSearch, TableFilter.label("Perfil:"), pPerfil);
-        pBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        pendingCard.add(pBar, BorderLayout.NORTH);
+        ModernButton pRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
+        pendingCard.add(UIHelper.tableCardTop("Pedidos a Aguardar Decisão", pBar,
+                pRefreshBtn, openBtn), BorderLayout.NORTH);
         pendingCard.add(pendingScroll, BorderLayout.CENTER);
         pendingPanel.add(pendingCard, BorderLayout.CENTER);
         return pendingPanel;
@@ -149,8 +141,6 @@ public class ApprovalsPanel extends JPanel {
         JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
         bottomPanel.setOpaque(false);
         bottomPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
-        bottomPanel.add(UIHelper.createSubheading("Histórico e Auditoria de Aprovações"), BorderLayout.NORTH);
-
         ModernPanel historyCard = new ModernPanel(16);
         historyCard.setLayout(new BorderLayout());
         historyCard.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -175,7 +165,8 @@ public class ApprovalsPanel extends JPanel {
         JPanel hBar = TableFilter.bar(hSearch, TableFilter.label("Estado final:"), hEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), hPeriodo);
         hBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        historyCard.add(hBar, BorderLayout.NORTH);
+        ModernButton hRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
+        historyCard.add(UIHelper.tableCardTop("Histórico e Auditoria de Aprovações", hBar, hRefreshBtn), BorderLayout.NORTH);
         historyCard.add(historyScroll, BorderLayout.CENTER);
         bottomPanel.add(historyCard, BorderLayout.CENTER);
         return bottomPanel;

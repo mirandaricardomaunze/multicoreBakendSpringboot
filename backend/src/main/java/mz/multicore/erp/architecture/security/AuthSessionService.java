@@ -46,5 +46,11 @@ public class AuthSessionService {
         }
     }
 
+    public void revokeUser(String username) {
+        if (username != null) {
+            sessions.entrySet().removeIf(entry -> username.equals(entry.getValue().username()));
+        }
+    }
+
     public record AuthSession(String token, String username, Instant issuedAt, Instant expiresAt) {}
 }

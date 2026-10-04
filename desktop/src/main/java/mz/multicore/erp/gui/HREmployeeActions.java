@@ -54,7 +54,7 @@ final class HREmployeeActions {
             "BI", "DIRE", "PASSAPORTE", "NUIT", "CERTIFICADO", "OUTRO"};
     private static final String[] FITNESS_RESULTS = {"FIT", "FIT_WITH_RESTRICTIONS", "UNFIT"};
     private static final String[] FITNESS_LABELS = {"Apto", "Apto com restrições", "Inapto"};
-    private static final String NO_PROVIDER = "— sem prestador cadastrado —";
+    private static final String NO_PROVIDER = "Sem prestador cadastrado";
 
     /** Tipos de falta para justificação. O primeiro é o que a falta gerada pelo ponto deixa de ser. */
     private static final String[] ABSENCE_TYPES = {
@@ -459,11 +459,12 @@ final class HREmployeeActions {
         }
 
         JTabbedPane tabs = new JTabbedPane();
+        UIHelper.styleTabbedPane(tabs);
         tabs.addTab("Sem exame (" + snapshot.missing().size() + ")",
-                UIHelper.icon("fas-exclamation-triangle", 14), complianceTable(missing,
+                UIHelper.icon("fas-exclamation-triangle", 14, UIHelper.PENDING_YELLOW), complianceTable(missing,
                         "Trabalhadores no activo que nunca fizeram exame de aptidão. Quem nunca fez "
                                 + "não aparece nos avisos de validade — é aqui que aparece."));
-        tabs.addTab("Custos do ano", UIHelper.icon("fas-coins", 14), complianceTable(costs,
+        tabs.addTab("Custos do ano", UIHelper.icon("fas-coins", 14, UIHelper.APPROVED_GREEN), complianceTable(costs,
                 String.format("De %s a %s · %d exame(s) com custo · total %s · por pagar %s. "
                                 + "O exame de aptidão é encargo do empregador, nunca do trabalhador.",
                         snapshot.costs().from().format(DATE_FMT), snapshot.costs().to().format(DATE_FMT),
@@ -520,7 +521,7 @@ final class HREmployeeActions {
         final String[] attachmentName = {null};
         JLabel attachmentLabel = new JLabel("Nenhum comprovativo seleccionado");
         attachmentLabel.setForeground(UIHelper.TEXT_MUTED);
-        ModernButton attachmentButton = UIHelper.createSecondaryButton("Anexar comprovativo…");
+        ModernButton attachmentButton = UIHelper.createSecondaryButton("Anexar Comprovativo");
         attachmentButton.setIcon(UIHelper.icon("fas-paperclip", 14));
         attachmentButton.addActionListener(event -> {
             JFileChooser chooser = new JFileChooser();

@@ -45,24 +45,13 @@ public final class OutstandingAccountsPanel extends JPanel {
         setOpaque(false);
         setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Contas Correntes — Faturas com Saldo em Dívida"), BorderLayout.WEST);
         ModernButton pay = UIHelper.createSuccessButton("Receber Pagamento");
         pay.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         pay.addActionListener(e -> receivePayment());
         ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> refresh());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refresh);
-        actions.add(pay);
-        header.add(actions, BorderLayout.EAST);
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
+        add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -89,22 +78,54 @@ public final class OutstandingAccountsPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
         JTextField search = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
         JComboBox<String> status = TableFilter.combo("Todos os estados", "APPROVED", "PARTIALLY_PAID");
+        UIHelper.styleComboBox(status);
+        status.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> aging = TableFilter.combo(agingLabels());
+        UIHelper.styleComboBox(aging);
+        aging.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> period = TableFilter.periodCombo();
+        UIHelper.styleComboBox(period);
+        period.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(status, 10), new TableFilter.ColumnFilter(aging, 9)),
                 List.of(new TableFilter.PeriodFilter(period, 1)));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Estado:"), status,
-                TableFilter.label("Antiguidade:", "fas-hourglass-half"), aging,
-                TableFilter.label("Data:", "fas-calendar-alt"), period);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
-        card.add(scroll, BorderLayout.CENTER);
 
+        JPanel filters = new JPanel(new GridBagLayout());
+        filters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; filters.add(filterLabel("Estado"), g);
+        g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Antiguidade"), g);
+        g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Período"), g);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        filters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; filters.add(status, g);
+        g.gridx = 1; g.weightx = 0; filters.add(aging, g);
+        g.gridx = 2; g.weightx = 0; filters.add(period, g);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        filters.add(search, g);
+
+        filters.setBorder(new EmptyBorder(0, 0, 8, 0));
         agingSummary = new JLabel(" ");
         agingSummary.setForeground(UIHelper.TEXT_LIGHT);
-        agingSummary.setBorder(new EmptyBorder(10, 2, 0, 2));
-        card.add(agingSummary, BorderLayout.SOUTH);
+        agingSummary.setBorder(new EmptyBorder(4, 2, 0, 2));
+        JPanel filterHeader = new JPanel(new BorderLayout(0, 4));
+        filterHeader.setOpaque(false);
+        filterHeader.add(filters, BorderLayout.NORTH);
+        filterHeader.add(agingSummary, BorderLayout.SOUTH);
+        card.add(UIHelper.tableCardTop("Contas Correntes — Faturas com Saldo em Dívida", filterHeader,
+                refresh, pay), BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         add(card, BorderLayout.CENTER);
     }
 
@@ -221,5 +242,11 @@ public final class OutstandingAccountsPanel extends JPanel {
 
     private void showNotice(FeedbackType type, String title, String message) {
         feedback.show(type, title, message, null, null);
+    }
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 }

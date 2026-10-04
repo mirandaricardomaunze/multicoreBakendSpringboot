@@ -29,11 +29,7 @@ public final class ReceiptsPanel extends JPanel {
         setLayout(new BorderLayout(0, 15));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(15, 15, 15, 15));
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        JComponent heading = UIHelper.createHeading("Recibos Emitidos (Liquidações)");
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(heading); north.add(feedback); add(north, BorderLayout.NORTH);
+        add(feedback, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -53,23 +49,21 @@ public final class ReceiptsPanel extends JPanel {
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(method, 5), new TableFilter.ColumnFilter(status, 6)),
                 List.of(new TableFilter.PeriodFilter(period, 7)));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Método:"), method,
-                TableFilter.label("Estado:"), status, TableFilter.label("Data:", "fas-calendar-alt"), period);
-        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filters, BorderLayout.NORTH);
-        JScrollPane scroll = new JScrollPane(table);
-        UIHelper.styleScrollPane(scroll);
-        card.add(scroll, BorderLayout.CENTER);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
         ModernButton cancel = UIHelper.createDangerButton("Anular Recibo");
         cancel.setIcon(UIHelper.icon("fas-ban", 14));
         cancel.addActionListener(e -> cancelSelected());
-        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> refresh());
-        actions.add(cancel); actions.add(refresh);
-        card.add(actions, BorderLayout.SOUTH);
+        ModernButton refresh = UIHelper.createRefreshButton(this::refresh);
+        JPanel filters = UIHelper.filterBar(
+                new JComponent[]{search, TableFilter.label("Método:"), method,
+                        TableFilter.label("Estado:"), status,
+                        TableFilter.label("Data:", "fas-calendar-alt"), period},
+                null);
+        filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(UIHelper.tableCardTop("Recibos Emitidos (Liquidações)", filters,
+                refresh, cancel), BorderLayout.NORTH);
+        JScrollPane scroll = new JScrollPane(table);
+        UIHelper.styleScrollPane(scroll);
+        card.add(scroll, BorderLayout.CENTER);
         add(card, BorderLayout.CENTER);
     }
 

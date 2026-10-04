@@ -41,7 +41,7 @@ O `DocumentType` passa a ter um tipo por documento comercial:
 
 ## 3. Novas colunas configuráveis
 
-Além das 8 já existentes, são adicionadas:
+Além das 11 existentes — incluindo **Embalagens**, **Caixas** e **% da Caixa** — são adicionadas:
 
 | Campo DTO            | Coluna visível        | Aplicável a                  |
 |----------------------|-----------------------|------------------------------|

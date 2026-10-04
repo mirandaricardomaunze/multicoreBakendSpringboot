@@ -72,7 +72,43 @@ public final class Theme {
             new Color(219, 234, 254)  // selectionBg   Blue-100
     );
 
+    public static final Theme HIGH_CONTRAST = new Theme(
+            "high_contrast",
+            new Color(0, 0, 0),        // bg            Pure Black (#000000)
+            new Color(10, 10, 10),     // card          Deep Black (#0A0A0A)
+            new Color(255, 255, 255),  // textPrimary   Pure White (#FFFFFF) - 21:1
+            new Color(224, 224, 224),  // textMuted     Silver High-Vis (#E0E0E0) - ~15.8:1
+            new Color(80, 80, 80),     // grid          Separator Gray (#505050)
+            new Color(18, 18, 18),     // tableHeaderBg Jet Black (#121212)
+            new Color(24, 24, 24),     // rowAlt        Zebra (#181818)
+            new Color(0, 0, 0),        // fieldBg       Black (#000000)
+            new Color(255, 255, 255),  // border        Pure White (#FFFFFF)
+            new Color(0, 102, 204)     // selectionBg   Royal Blue (#0066CC)
+    );
+
     public static Theme byId(String id) {
-        return "light".equalsIgnoreCase(id) ? LIGHT : DARK;
+        if (id == null) {
+            return DARK;
+        }
+        String clean = id.trim().toLowerCase();
+        if ("light".equals(clean)) {
+            return LIGHT;
+        }
+        if ("high_contrast".equals(clean) || "highcontrast".equals(clean) || "contrast".equals(clean)) {
+            return HIGH_CONTRAST;
+        }
+        return DARK;
+    }
+
+    public boolean isHighContrast() {
+        return this == HIGH_CONTRAST;
+    }
+
+    public boolean isLight() {
+        return this == LIGHT;
+    }
+
+    public boolean isDark() {
+        return this == DARK;
     }
 }

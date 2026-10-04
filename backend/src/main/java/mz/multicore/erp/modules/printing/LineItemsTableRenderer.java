@@ -21,7 +21,7 @@ import java.util.function.Function;
  * are decided here so every commercial document looks identical.
  *
  * Colunas canónicas (ver docs/DOCUMENT_LINE_COLUMNS_SPEC.md):
- * Cód. Barras · Referência · Descrição · Validade · Qtd · Preço Unit. · IVA · Subtotal.
+ * Cód. · Ref. · Desc. · Val. · Qtd. · Emb. · Cx. · % Cx. · P. Unit. · IVA · Subt.
  */
 public final class LineItemsTableRenderer {
 
@@ -33,6 +33,8 @@ public final class LineItemsTableRenderer {
             String description,
             LocalDate expiryDate,
             BigDecimal quantity,
+            Integer packagesPerBox,
+            Integer unitsPerPackage,
             BigDecimal unitPrice,
             BigDecimal taxRate,
             BigDecimal discountPercentage,
@@ -80,28 +82,40 @@ public final class LineItemsTableRenderer {
     private static List<Column> activeColumns(DocumentColumnsDTO cols) {
         List<Column> columns = new ArrayList<>();
         if (cols.barcode()) {
-            columns.add(new Column(14f, "Cód. Barras", Element.ALIGN_LEFT, r -> safe(r.barcode())));
+            columns.add(new Column(11f, "Cód.", Element.ALIGN_LEFT, r -> safe(r.barcode())));
         }
         if (cols.reference()) {
-            columns.add(new Column(10f, "Referência", Element.ALIGN_LEFT, r -> safe(r.reference())));
+            columns.add(new Column(8f, "Ref.", Element.ALIGN_LEFT, r -> safe(r.reference())));
         }
         if (cols.description()) {
-            columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+            columns.add(new Column(23f, "Desc.", Element.ALIGN_LEFT, r -> safe(r.description())));
         }
         if (cols.expiry()) {
-            columns.add(new Column(11f, "Validade", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
+            columns.add(new Column(8f, "Val.", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
         }
         if (cols.quantity()) {
-            columns.add(new Column(7f, "Qtd", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
+            columns.add(new Column(6f, "Qtd.", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
+        }
+        if (cols.packages()) {
+            columns.add(new Column(7f, "Emb.", Element.ALIGN_RIGHT,
+                    LineItemsTableRenderer::formatPackages));
+        }
+        if (cols.boxes()) {
+            columns.add(new Column(6f, "Cx.", Element.ALIGN_RIGHT,
+                    LineItemsTableRenderer::formatBoxes));
+        }
+        if (cols.boxPercentage()) {
+            columns.add(new Column(9f, "% Cx.", Element.ALIGN_RIGHT,
+                    LineItemsTableRenderer::formatBoxPercentage));
         }
         if (cols.unitPrice()) {
-            columns.add(new Column(12f, "Preço Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
+            columns.add(new Column(10f, "P. Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
         }
         if (cols.tax()) {
             columns.add(new Column(6f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
         }
         if (cols.subtotal()) {
-            columns.add(new Column(16f, "Subtotal", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
+            columns.add(new Column(13f, "Subt.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
         }
         if (columns.isEmpty()) {
             columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
@@ -149,5 +163,41 @@ public final class LineItemsTableRenderer {
     private static String formatQuantity(BigDecimal quantity) {
         if (quantity == null) return "0";
         return quantity.stripTrailingZeros().toPlainString();
+    }
+
+    /** Quantidade da linha expressa em embalagens equivalentes, incluindo fracções de embalagem. */
+    static String formatPackages(Row row) {
+        if (!hasPackaging(row)) return "—";
+        BigDecimal packages = safeQuantity(row.quantity())
+                .divide(BigDecimal.valueOf(row.unitsPerPackage()), 3, RoundingMode.HALF_UP);
+        return packages.stripTrailingZeros().toPlainString();
+    }
+
+    /** Quantidade da linha expressa em caixas equivalentes, incluindo fracções de caixa. */
+    static String formatBoxes(Row row) {
+        if (!hasPackaging(row)) return "—";
+        long unitsPerBox = (long) row.packagesPerBox() * row.unitsPerPackage();
+        BigDecimal boxes = safeQuantity(row.quantity())
+                .divide(BigDecimal.valueOf(unitsPerBox), 3, RoundingMode.HALF_UP);
+        return boxes.stripTrailingZeros().toPlainString();
+    }
+
+    /** 100% corresponde exactamente a uma caixa; valores acima de 100% representam várias caixas. */
+    static String formatBoxPercentage(Row row) {
+        if (!hasPackaging(row)) return "—";
+        long unitsPerBox = (long) row.packagesPerBox() * row.unitsPerPackage();
+        BigDecimal percentage = safeQuantity(row.quantity())
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(unitsPerBox), 2, RoundingMode.HALF_UP);
+        return percentage.stripTrailingZeros().toPlainString() + "%";
+    }
+
+    private static boolean hasPackaging(Row row) {
+        return row != null && row.packagesPerBox() != null && row.packagesPerBox() > 0
+                && row.unitsPerPackage() != null && row.unitsPerPackage() > 0;
+    }
+
+    private static BigDecimal safeQuantity(BigDecimal quantity) {
+        return quantity == null ? BigDecimal.ZERO : quantity;
     }
 }

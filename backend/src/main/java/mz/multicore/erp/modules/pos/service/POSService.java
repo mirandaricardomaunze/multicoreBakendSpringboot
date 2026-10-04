@@ -33,6 +33,9 @@ import mz.multicore.erp.modules.pos.dto.TillMovementDTO;
 import mz.multicore.erp.modules.pos.dto.PosZReportDTO;
 import mz.multicore.erp.modules.pos.dto.TillSessionDTO;
 import mz.multicore.erp.modules.pos.model.PaymentEntry;
+import mz.multicore.erp.modules.pos.model.ShiftReconciliation;
+import mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO;
+import mz.multicore.erp.modules.pos.dto.ShiftHandoverRequest;
 import mz.multicore.erp.modules.pos.model.PaymentMethod;
 import mz.multicore.erp.modules.pos.model.TillMovement;
 import mz.multicore.erp.modules.pos.model.TillMovementType;
@@ -40,7 +43,16 @@ import mz.multicore.erp.modules.pos.model.TillSession;
 import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
 import mz.multicore.erp.modules.pos.repository.TillMovementRepository;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
+import mz.multicore.erp.modules.pos.repository.ShiftReconciliationRepository;
+import mz.multicore.erp.modules.pos.repository.StoreVoucherRepository;
+import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
+import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.pos.dto.POSReturnResultDTO;
+import mz.multicore.erp.modules.pos.dto.StoreVoucherDTO;
+import mz.multicore.erp.modules.pos.model.StoreVoucher;
+import mz.multicore.erp.modules.pos.model.StoreVoucherStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -69,6 +81,10 @@ public class POSService {
     private final CreditNoteService creditNoteService;
     private final ReceivablesService receivablesService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final StoreVoucherRepository storeVoucherRepository;
+    private final CreditNoteRepository creditNoteRepository;
+    private final QuotationRepository quotationRepository;
+    private final ShiftReconciliationRepository shiftReconciliationRepository;
 
     public POSService(
             TillSessionRepository tillSessionRepository,
@@ -87,7 +103,41 @@ public class POSService {
             AuditLogService auditLogService,
             CreditNoteService creditNoteService,
             ReceivablesService receivablesService,
-            org.springframework.context.ApplicationEventPublisher eventPublisher
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            StoreVoucherRepository storeVoucherRepository,
+            CreditNoteRepository creditNoteRepository,
+            QuotationRepository quotationRepository
+    ) {
+        this(tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
+                productRepository, warehouseRepository, companyRepository, treasuryAccountRepository,
+                inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
+                documentNumberService, auditLogService, creditNoteService, receivablesService,
+                eventPublisher, storeVoucherRepository, creditNoteRepository, quotationRepository, null);
+    }
+
+    @Autowired
+    public POSService(
+            TillSessionRepository tillSessionRepository,
+            TillMovementRepository tillMovementRepository,
+            InvoiceRepository invoiceRepository,
+            ClientRepository clientRepository,
+            ProductRepository productRepository,
+            WarehouseRepository warehouseRepository,
+            CompanyRepository companyRepository,
+            TreasuryAccountRepository treasuryAccountRepository,
+            InventoryService inventoryService,
+            FinanceService financeService,
+            PaymentEntryRepository paymentEntryRepository,
+            WalkInClientProvider walkInClientProvider,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            CreditNoteService creditNoteService,
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            StoreVoucherRepository storeVoucherRepository,
+            CreditNoteRepository creditNoteRepository,
+            QuotationRepository quotationRepository,
+            ShiftReconciliationRepository shiftReconciliationRepository
     ) {
         this.tillSessionRepository = tillSessionRepository;
         this.tillMovementRepository = tillMovementRepository;
@@ -106,12 +156,50 @@ public class POSService {
         this.creditNoteService = creditNoteService;
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
+        this.storeVoucherRepository = storeVoucherRepository;
+        this.creditNoteRepository = creditNoteRepository;
+        this.quotationRepository = quotationRepository;
+        this.shiftReconciliationRepository = shiftReconciliationRepository;
     }
 
+    public POSService(
+            TillSessionRepository tillSessionRepository,
+            TillMovementRepository tillMovementRepository,
+            InvoiceRepository invoiceRepository,
+            ClientRepository clientRepository,
+            ProductRepository productRepository,
+            WarehouseRepository warehouseRepository,
+            CompanyRepository companyRepository,
+            TreasuryAccountRepository treasuryAccountRepository,
+            InventoryService inventoryService,
+            FinanceService financeService,
+            PaymentEntryRepository paymentEntryRepository,
+            WalkInClientProvider walkInClientProvider,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            CreditNoteService creditNoteService,
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            StoreVoucherRepository storeVoucherRepository,
+            CreditNoteRepository creditNoteRepository
+    ) {
+        this(tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
+                productRepository, warehouseRepository, companyRepository, treasuryAccountRepository,
+                inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
+                documentNumberService, auditLogService, creditNoteService, receivablesService,
+                eventPublisher, storeVoucherRepository, creditNoteRepository, null, null);
+    }
+
+    /**
+     * Procura a sessão OPEN do operador. Após passagem de turno, o operador actual está
+     * em {@code current_operator}; por isso verifica-se primeiro esse campo e só depois
+     * o campo {@code operator} (abertura original). Garante que o operador B, que recebeu
+     * a caixa por handover, encontra a sessão sem a ter aberto.
+     */
     @Transactional(readOnly = true)
     public Optional<TillSession> getActiveSession(String operator, Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return tillSessionRepository.findByOperatorAndStatusAndCompanyId(operator, "OPEN", companyId);
+        return tillSessionRepository.findActiveSessionForOperator(operator, "OPEN", companyId);
     }
 
     @Transactional(readOnly = true)
@@ -151,7 +239,12 @@ public class POSService {
 
     @Transactional
     public TillSession closeSession(Long sessionId, BigDecimal closingBalanceReal) {
-        return closeSession(sessionId, closingBalanceReal, null);
+        return closeSession(sessionId, closingBalanceReal, null, null, null);
+    }
+
+    @Transactional
+    public TillSession closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId) {
+        return closeSession(sessionId, closingBalanceReal, depositAccountId, null, null);
     }
 
     /**
@@ -161,7 +254,7 @@ public class POSService {
      * a sessão fecha sem gerar o depósito (será lançado manualmente).
      */
     @Transactional
-    public TillSession closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId) {
+    public TillSession closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId, String notes, String cashBreakdownJson) {
         TillSession session = tillSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
 
@@ -177,6 +270,9 @@ public class POSService {
         session.setCloseDate(LocalDateTime.now());
         session.setStatus("CLOSED");
         session.setDifference(closingBalanceReal.subtract(expected));
+        session.setClosingNotes(notes != null && !notes.isBlank() ? notes.trim() : null);
+        session.setCashBreakdownJson(cashBreakdownJson != null && !cashBreakdownJson.isBlank() ? cashBreakdownJson.trim() : null);
+
         if (session.getDifference().compareTo(BigDecimal.ZERO) != 0) {
             PermissionGuard.requireManagerOrAdmin("fechar caixa com diferença");
         }
@@ -194,7 +290,8 @@ public class POSService {
         auditLogService.logCurrent("POS_CLOSE_SESSION",
                 "Sessão " + sessionId + " fechada por " + session.getOperator()
                         + ". Esperado: " + expected + " MT; contado: " + closingBalanceReal
-                        + " MT; diferença: " + session.getDifference() + " MT.");
+                        + " MT; diferença: " + session.getDifference() + " MT."
+                        + (session.getClosingNotes() != null ? " Justificação: " + session.getClosingNotes() : ""));
 
         return session;
     }
@@ -273,9 +370,15 @@ public class POSService {
         BigDecimal counted = session.getClosingBalanceReal();
         BigDecimal difference = counted == null ? null : counted.subtract(expected);
 
+        List<ShiftReconciliationDTO> recons = shiftReconciliationRepository != null
+                ? shiftReconciliationRepository.findByTillSessionIdOrderByReconciledAtAsc(sessionId)
+                        .stream().map(this::toDTO).toList()
+                : java.util.Collections.emptyList();
+
         return new PosZReportDTO(
                 session.getId(),
                 session.getOperator(),
+                session.getCurrentOperator(),
                 session.getOpenDate(),
                 session.getCloseDate(),
                 session.getStatus(),
@@ -293,7 +396,10 @@ public class POSService {
                 counted,
                 difference,
                 saleCount,
-                refundsCount
+                refundsCount,
+                session.getClosingNotes(),
+                session.getCashBreakdownJson(),
+                recons
         );
     }
 
@@ -402,10 +508,11 @@ public class POSService {
             client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         } else {
-            client = walkInClientProvider.getOrCreate();
-            if (request.walkInName() != null && !request.walkInName().isBlank()) {
-                walkInLabel = request.walkInName().trim();
+            if (request.walkInName() == null || request.walkInName().trim().isBlank()) {
+                throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
             }
+            client = walkInClientProvider.getOrCreate();
+            walkInLabel = request.walkInName().trim();
         }
 
         Invoice invoice = new Invoice();
@@ -415,7 +522,11 @@ public class POSService {
         invoice.setClient(client);
         // Nome a imprimir no recibo: o rótulo walk-in escrito pelo operador, ou o nome do
         // cliente registado quando não há rótulo livre.
-        invoice.setCustomerName(walkInLabel != null ? walkInLabel : client.getName());
+        String resolvedCustomerName = walkInLabel != null ? walkInLabel : client.getName();
+        if (resolvedCustomerName == null || resolvedCustomerName.trim().isBlank()) {
+            throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.");
+        }
+        invoice.setCustomerName(resolvedCustomerName.trim());
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
         invoice.setStatus(InvoiceStatus.PAID); // Immediate payment for POS sales
@@ -436,8 +547,11 @@ public class POSService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
-            // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso do produto.
-            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+            // Preço efectivo: se a linha traz preço cotado/personalizado (>0), honra esse valor;
+            // caso contrário, aplica tabela/grosso quando a quantidade atinge a mínima de grosso do produto.
+            BigDecimal unitPrice = (lineReq.unitPrice() != null && lineReq.unitPrice().compareTo(BigDecimal.ZERO) > 0)
+                    ? lineReq.unitPrice()
+                    : product.effectiveUnitPrice(lineReq.quantity());
 
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
@@ -505,40 +619,60 @@ public class POSService {
 
         invoice.setAmountPaid(totalPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
-        invoice = invoiceRepository.save(invoice);
+        final Invoice savedInvoice = invoiceRepository.save(invoice);
+
+        // Se a venda provém de uma cotação/pró-forma, marca a cotação como convertida
+        if (request.quotationId() != null && quotationRepository != null) {
+            quotationRepository.findByIdAndCompanyId(request.quotationId(), request.companyId())
+                    .ifPresent(quotation -> {
+                        if (quotation.getStatus().isOpen()) {
+                            quotation.setStatus(mz.multicore.erp.modules.comercial.model.QuotationStatus.CONVERTED);
+                            quotation.setInvoiceId(savedInvoice.getId());
+                            quotation.setInvoiceNumber(savedInvoice.getInvoiceNumber());
+                            if (quotation.getDecidedAt() == null) {
+                                quotation.setDecidedAt(LocalDateTime.now());
+                                quotation.setDecidedBy(savedInvoice.getCreatedBy());
+                            }
+                            quotationRepository.save(quotation);
+                            auditLogService.logCurrent("QUOTATION_CONVERT_POS",
+                                    "Cotação " + quotation.getQuotationNumber() + " convertida no POS através da fatura "
+                                            + savedInvoice.getInvoiceNumber() + ". Total: " + savedInvoice.getTotalAmount() + " MT.");
+                        }
+                    });
+        }
 
         // Persist PaymentEntry rows + apply each to the right treasury/till
         if (hasMultiPayments) {
             for (PosPaymentRequest p : payments) {
-                applyPayment(invoice, p, session, client);
+                applyPayment(savedInvoice, p, session, client);
             }
         } else {
             // Legacy path — venda em numerário: entra apenas na gaveta da caixa.
             // O numerário só chega à tesouraria no fecho da sessão (depósito), evitando
             // a dupla contagem que existia ao registar também uma transação de tesouraria.
-            registerTillMovement(session, totalAmount, invoice.getInvoiceNumber());
+            registerTillMovement(session, totalAmount, savedInvoice.getInvoiceNumber());
         }
 
         // Contabilidade: a venda de balcão é uma fatura real e lança como tal. Numerário
         // (gaveta ou método CASH) entra em Caixa; o resto em Banco. Ver CONTABILIDADE_SPEC §5.
         boolean cashPayment = !hasMultiPayments || payments.stream()
                 .anyMatch(p -> "CASH".equalsIgnoreCase(p.method()));
-        BigDecimal costOfGoods = invoice.getLines().stream()
+        BigDecimal costOfGoods = savedInvoice.getLines().stream()
                 .map(InvoiceLine::lineCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.SaleRegisteredEvent(
-                invoice.getCompany().getId(),
-                invoice.getId(),
-                invoice.getInvoiceNumber(),
+                savedInvoice.getCompany().getId(),
+                savedInvoice.getId(),
+                savedInvoice.getInvoiceNumber(),
                 java.time.LocalDate.now(),
-                invoice.getTotalBeforeTax(),
-                invoice.getTaxAmount(),
-                invoice.getTotalAmount(),
+                savedInvoice.getTotalBeforeTax(),
+                savedInvoice.getTaxAmount(),
+                savedInvoice.getTotalAmount(),
                 costOfGoods,
                 totalPaid,
                 cashPayment));
 
-        return invoice;
+        return savedInvoice;
     }
 
     /**
@@ -546,7 +680,7 @@ public class POSService {
      * A nota e aprovada dentro da mesma transaccao para repor stock apenas uma vez.
      */
     @Transactional
-    public CreditNoteDTO returnSale(POSReturnRequest request) {
+    public POSReturnResultDTO returnSale(POSReturnRequest request) {
         PermissionGuard.requireManagerOrAdmin("registar devolução no POS");
         CurrentUserContext.requireCompany(request.companyId());
 
@@ -568,32 +702,93 @@ public class POSService {
                 request.lines()
         ));
         CreditNoteDTO approved = creditNoteService.approve(created.id());
-        applyRefund(request, approved, invoice);
+        StoreVoucher voucher = applyRefund(request, approved, invoice);
         auditLogService.logCurrent("POS_RETURN",
                 "Devolução POS da fatura " + invoice.getInvoiceNumber()
                         + " via nota de crédito " + approved.noteNumber()
-                        + ". Total: " + approved.totalAmount() + " MT. Motivo: " + request.reason());
-        return approved;
+                        + ". Total: " + approved.totalAmount() + " MT. Motivo: " + request.reason()
+                        + (voucher != null ? " (Vale emitido: " + voucher.getCode() + ")" : ""));
+        return new POSReturnResultDTO(approved, voucher != null ? toDTO(voucher) : null);
     }
 
-    private void applyRefund(POSReturnRequest request, CreditNoteDTO note, Invoice invoice) {
+    private StoreVoucher applyRefund(POSReturnRequest request, CreditNoteDTO note, Invoice invoice) {
         PaymentMethod method = parsePaymentMethod(request.refundMethod());
         BigDecimal amount = note.totalAmount().setScale(2, RoundingMode.HALF_UP);
         String description = "Reembolso POS " + note.noteNumber()
                 + " (Fatura " + invoice.getInvoiceNumber() + ")";
 
         switch (method) {
-            case CASH -> refundCash(request.operator(), request.companyId(), amount, description);
+            case CASH -> {
+                refundCash(request.operator(), request.companyId(), amount, description);
+                return null;
+            }
             case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (request.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para reembolso por " + method + ".");
                 }
                 financeService.registerTransaction(request.treasuryAccountId(), "CREDIT", amount, description);
+                return null;
             }
             case CREDIT -> {
                 // A nota de credito fica como credito do cliente; nao ha saida imediata de caixa.
+                return null;
+            }
+            case STORE_CREDIT -> {
+                return createStoreVoucherForReturn(invoice, note, amount, request.operator());
             }
         }
+        return null;
+    }
+
+    private StoreVoucher createStoreVoucherForReturn(Invoice invoice, CreditNoteDTO note, BigDecimal amount, String operator) {
+        String code = generateUniqueVoucherCode();
+        StoreVoucher voucher = new StoreVoucher();
+        voucher.setCode(code);
+        voucher.setInitialAmount(amount);
+        voucher.setRemainingAmount(amount);
+        voucher.setCompany(invoice.getCompany());
+        voucher.setClient(invoice.getClient());
+        String clientName = invoice.getCustomerName();
+        if (clientName == null || clientName.isBlank()) {
+            clientName = invoice.getClient() != null ? invoice.getClient().getName() : "Cliente Geral";
+        }
+        voucher.setClientName(clientName);
+        CreditNote cn = creditNoteRepository.findById(note.id()).orElse(null);
+        voucher.setCreditNote(cn);
+        voucher.setIssuedAt(LocalDateTime.now());
+        voucher.setExpiresAt(java.time.LocalDate.now().plusDays(90));
+        voucher.setStatus(StoreVoucherStatus.ACTIVE);
+        voucher.setCreatedBy(operator != null ? operator : "SYSTEM");
+        voucher = storeVoucherRepository.save(voucher);
+
+        auditLogService.logCurrent("STORE_VOUCHER_ISSUED",
+                "Emitido vale de compras " + code + " no valor de " + amount + " MT para " + clientName
+                        + " associado à nota de crédito " + note.noteNumber());
+        return voucher;
+    }
+
+    private String generateUniqueVoucherCode() {
+        java.security.SecureRandom rng = new java.security.SecureRandom();
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        String code;
+        int attempts = 0;
+        do {
+            StringBuilder sb = new StringBuilder("VALE-");
+            for (int i = 0; i < 4; i++) {
+                sb.append(chars.charAt(rng.nextInt(chars.length())));
+            }
+            sb.append("-");
+            for (int i = 0; i < 4; i++) {
+                sb.append(chars.charAt(rng.nextInt(chars.length())));
+            }
+            code = sb.toString();
+            attempts++;
+            if (attempts > 50) {
+                code = "VALE-" + System.currentTimeMillis();
+                break;
+            }
+        } while (storeVoucherRepository.existsByCode(code));
+        return code;
     }
 
     private void refundCash(String operator, Long companyId, BigDecimal amount, String description) {
@@ -618,20 +813,23 @@ public class POSService {
     }
 
     private PaymentMethod parsePaymentMethod(String method) {
+        if (method == null || method.isBlank()) {
+            throw new BusinessRuleException("Método de pagamento inválido: null");
+        }
+        String normalized = method.trim().toUpperCase();
+        if ("VALE".equals(normalized) || "VALE_COMPRAS".equals(normalized) || "VALE DE COMPRAS".equals(normalized)
+                || "STORE_CREDIT".equals(normalized) || "STORE CREDIT".equals(normalized)) {
+            return PaymentMethod.STORE_CREDIT;
+        }
         try {
-            return PaymentMethod.valueOf(method == null ? "" : method.trim().toUpperCase());
+            return PaymentMethod.valueOf(normalized);
         } catch (IllegalArgumentException ex) {
             throw new BusinessRuleException("Método de reembolso inválido: " + method);
         }
     }
 
     private void applyPayment(Invoice invoice, PosPaymentRequest req, TillSession session, Client client) {
-        PaymentMethod method;
-        try {
-            method = PaymentMethod.valueOf(req.method());
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessRuleException("Método de pagamento inválido: " + req.method());
-        }
+        PaymentMethod method = parsePaymentMethod(req.method());
 
         BigDecimal amount = req.amount().setScale(2, RoundingMode.HALF_UP);
         BigDecimal tendered = req.tenderedAmount() == null ? amount : req.tenderedAmount().setScale(2, RoundingMode.HALF_UP);
@@ -674,7 +872,81 @@ public class POSService {
                 financeService.registerTransaction(req.treasuryAccountId(), "DEBIT", amount, desc);
             }
             case CREDIT -> { /* fiado — sem movimento financeiro até pagamento */ }
+            case STORE_CREDIT -> {
+                redeemVoucherForPayment(req.reference(), amount, invoice);
+            }
         }
+    }
+
+    private void redeemVoucherForPayment(String voucherCode, BigDecimal amount, Invoice invoice) {
+        if (voucherCode == null || voucherCode.isBlank()) {
+            throw new BusinessRuleException("Código do vale de compras é obrigatório.");
+        }
+        StoreVoucher voucher = storeVoucherRepository.findByCodeAndCompanyId(voucherCode.trim().toUpperCase(), invoice.getCompany().getId())
+                .orElseThrow(() -> new BusinessRuleException("Vale de compras não encontrado ou inválido: " + voucherCode));
+
+        if (voucher.getStatus() != StoreVoucherStatus.ACTIVE && voucher.getStatus() != StoreVoucherStatus.PARTIALLY_USED) {
+            throw new BusinessRuleException("O vale de compras " + voucherCode + " não está disponível para utilização (Estado: " + voucher.getStatus() + ").");
+        }
+
+        if (voucher.getExpiresAt().isBefore(java.time.LocalDate.now())) {
+            voucher.setStatus(StoreVoucherStatus.EXPIRED);
+            storeVoucherRepository.save(voucher);
+            throw new BusinessRuleException("O vale de compras " + voucherCode + " expirou em " + voucher.getExpiresAt());
+        }
+
+        if (voucher.getRemainingAmount().compareTo(amount) < 0) {
+            throw new BusinessRuleException(String.format(
+                    "Saldo insuficiente no vale de compras. Saldo disponível: %s MT, valor a abater: %s MT.",
+                    voucher.getRemainingAmount(), amount));
+        }
+
+        BigDecimal newRemaining = voucher.getRemainingAmount().subtract(amount).setScale(2, RoundingMode.HALF_UP);
+        voucher.setRemainingAmount(newRemaining);
+        if (newRemaining.compareTo(BigDecimal.ZERO) == 0) {
+            voucher.setStatus(StoreVoucherStatus.FULLY_REDEEMED);
+        } else {
+            voucher.setStatus(StoreVoucherStatus.PARTIALLY_USED);
+        }
+        storeVoucherRepository.save(voucher);
+        auditLogService.logCurrent("STORE_VOUCHER_REDEEM",
+                "Abatido " + amount + " MT do vale " + voucher.getCode() + " na venda " + invoice.getInvoiceNumber()
+                        + ". Saldo restante: " + newRemaining + " MT.");
+    }
+
+    @Transactional
+    public StoreVoucherDTO getVoucher(String code, Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        if (code == null || code.isBlank()) {
+            throw new BusinessRuleException("Código do vale não pode ser vazio.");
+        }
+        StoreVoucher voucher = storeVoucherRepository.findByCodeAndCompanyId(code.trim().toUpperCase(), companyId)
+                .orElseThrow(() -> new BusinessRuleException("Vale de compras não encontrado: " + code));
+
+        if (voucher.getExpiresAt().isBefore(java.time.LocalDate.now()) && voucher.getStatus() == StoreVoucherStatus.ACTIVE) {
+            voucher.setStatus(StoreVoucherStatus.EXPIRED);
+            voucher = storeVoucherRepository.save(voucher);
+        }
+        return toDTO(voucher);
+    }
+
+    public StoreVoucherDTO toDTO(StoreVoucher voucher) {
+        if (voucher == null) return null;
+        return new StoreVoucherDTO(
+                voucher.getId(),
+                voucher.getCode(),
+                voucher.getInitialAmount(),
+                voucher.getRemainingAmount(),
+                voucher.getCompany() != null ? voucher.getCompany().getId() : null,
+                voucher.getClient() != null ? voucher.getClient().getId() : null,
+                voucher.getClientName(),
+                voucher.getCreditNote() != null ? voucher.getCreditNote().getId() : null,
+                voucher.getCreditNote() != null ? voucher.getCreditNote().getNoteNumber() : null,
+                voucher.getIssuedAt(),
+                voucher.getExpiresAt(),
+                voucher.getStatus() != null ? voucher.getStatus().name() : null,
+                voucher.getCreatedBy()
+        );
     }
 
     /**
@@ -742,6 +1014,7 @@ public class POSService {
         return new TillSessionDTO(
                 s.getId(),
                 s.getOperator(),
+                s.getCurrentOperator(),
                 s.getCompany() != null ? s.getCompany().getId() : null,
                 s.getOpeningBalance(),
                 s.getClosingBalanceExpected(),
@@ -749,7 +1022,107 @@ public class POSService {
                 s.getDifference(),
                 s.getOpenDate(),
                 s.getCloseDate(),
-                s.getStatus()
+                s.getStatus(),
+                s.getClosingNotes(),
+                s.getCashBreakdownJson()
+        );
+    }
+
+    // ── Passagem de turno (Shift Handover) ──────────────────────────────────
+
+    /**
+     * Realiza a passagem de turno entre operadores dentro da mesma sessão.
+     * Regista uma reconciliação parcial (contagem da gaveta no momento do handover)
+     * e transfere a posse da sessão para o operador de entrada.
+     */
+    @Transactional
+    public ShiftReconciliationDTO performShiftHandover(ShiftHandoverRequest request) {
+        TillSession session = tillSessionRepository.findById(request.sessionId())
+                .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
+
+        if (!"OPEN".equals(session.getStatus())) {
+            throw new BusinessRuleException("Impossível realizar passagem de turno numa sessão fechada.");
+        }
+        CurrentUserContext.requireCompany(session.getCompany().getId());
+
+        // Validar que o operador de saída é o actual
+        String effectiveOperator = session.getCurrentOperator() != null
+                ? session.getCurrentOperator() : session.getOperator();
+        if (!effectiveOperator.equalsIgnoreCase(request.outgoingOperator())) {
+            throw new BusinessRuleException(
+                    "O operador de saída ('" + request.outgoingOperator()
+                            + "') não corresponde ao operador actual da sessão ('" + effectiveOperator + "').");
+        }
+
+        if (request.incomingOperator() == null || request.incomingOperator().isBlank()) {
+            throw new BusinessRuleException("É obrigatório indicar o operador de entrada.");
+        }
+        if (request.outgoingOperator().equalsIgnoreCase(request.incomingOperator())) {
+            throw new BusinessRuleException("O operador de entrada não pode ser o mesmo que o de saída.");
+        }
+        if (request.countedCash() == null) {
+            throw new BusinessRuleException("É obrigatório indicar o valor contado na gaveta.");
+        }
+
+        BigDecimal expected = computeExpectedCash(session.getId(), session.getOpeningBalance());
+        BigDecimal difference = request.countedCash().subtract(expected);
+
+        if (difference.compareTo(BigDecimal.ZERO) != 0) {
+            PermissionGuard.requireManagerOrAdmin("passagem de turno com diferença");
+        }
+
+        // Registar reconciliação
+        ShiftReconciliation recon = new ShiftReconciliation();
+        recon.setTillSession(session);
+        recon.setOutgoingOperator(request.outgoingOperator());
+        recon.setIncomingOperator(request.incomingOperator());
+        recon.setReconciledAt(LocalDateTime.now());
+        recon.setExpectedCash(expected);
+        recon.setCountedCash(request.countedCash());
+        recon.setDifference(difference);
+        recon.setCashBreakdownJson(request.cashBreakdownJson() != null && !request.cashBreakdownJson().isBlank()
+                ? request.cashBreakdownJson().trim() : null);
+        recon.setNotes(request.notes() != null && !request.notes().isBlank()
+                ? request.notes().trim() : null);
+        recon.setCreatedBy(request.outgoingOperator());
+        recon.setCompany(session.getCompany());
+        recon = shiftReconciliationRepository.save(recon);
+
+        // Transferir posse da sessão
+        session.setCurrentOperator(request.incomingOperator());
+        tillSessionRepository.save(session);
+
+        auditLogService.logCurrent("POS_SHIFT_HANDOVER",
+                "Passagem de turno na sessão " + session.getId()
+                        + ": " + request.outgoingOperator() + " -> " + request.incomingOperator()
+                        + ". Esperado: " + expected + " MT; contado: " + request.countedCash()
+                        + " MT; diferença: " + difference + " MT."
+                        + (recon.getNotes() != null ? " Obs: " + recon.getNotes() : ""));
+
+        return toDTO(recon);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShiftReconciliationDTO> getShiftReconciliations(Long sessionId) {
+        TillSession session = tillSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
+        CurrentUserContext.requireCompany(session.getCompany().getId());
+        return shiftReconciliationRepository.findByTillSessionIdOrderByReconciledAtAsc(sessionId)
+                .stream().map(this::toDTO).toList();
+    }
+
+    public ShiftReconciliationDTO toDTO(ShiftReconciliation r) {
+        return new ShiftReconciliationDTO(
+                r.getId(),
+                r.getTillSession() != null ? r.getTillSession().getId() : null,
+                r.getOutgoingOperator(),
+                r.getIncomingOperator(),
+                r.getReconciledAt(),
+                r.getExpectedCash(),
+                r.getCountedCash(),
+                r.getDifference(),
+                r.getCashBreakdownJson(),
+                r.getNotes()
         );
     }
 

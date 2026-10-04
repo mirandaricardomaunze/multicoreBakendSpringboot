@@ -12,10 +12,17 @@ class DocumentPackageQuantityCoverageHarnessTest {
 
     @Test
     void allCurrentProductLineEditorsUseCanonicalPackageEditor() throws IOException {
-        assertOccurrences("CommercialInvoicesView.java", "new PackageQuantityEditor()", 1);
-        assertOccurrences("CommercialOrdersView.java", "new PackageQuantityEditor()", 1);
+        assertInlinePackageGrid("CommercialInvoicesView.java");
+        assertInlinePackageGrid("CommercialOrdersView.java");
         assertOccurrences("ComprasPanel.java", "new PackageQuantityEditor()", 1);
         assertOccurrences("PurchaseOrdersPanel.java", "new PackageQuantityEditor()", 1);
+    }
+
+    private static void assertInlinePackageGrid(String file) throws IOException {
+        String source = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui", file));
+        assertTrue(source.contains("\"Emb.\"") && source.contains("\"Cx.\"")
+                        && source.contains("sync") && source.contains("Grid"),
+                () -> "Grelha canónica de embalagem ausente em " + file);
     }
 
     private static void assertOccurrences(String file, String token, int minimum) throws IOException {

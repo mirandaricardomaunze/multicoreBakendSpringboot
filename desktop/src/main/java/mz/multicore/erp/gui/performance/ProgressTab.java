@@ -21,14 +21,6 @@ public class ProgressTab extends JPanel {
 
     private JPanel cardsContainer;
     private InlineFeedbackPanel feedbackPanel;
-    private static final DecimalFormat CURRENCY_FMT;
-
-    static {
-        DecimalFormatSymbols sym = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        sym.setGroupingSeparator(' ');
-        sym.setDecimalSeparator(',');
-        CURRENCY_FMT = new DecimalFormat("#,##0.00", sym);
-    }
 
     public ProgressTab(PerformanceApiClient apiClient, DesktopSession session) {
         this.apiClient = apiClient;
@@ -218,6 +210,6 @@ public class ProgressTab extends JPanel {
 
     private String formatMoney(BigDecimal amount) {
         if (amount == null) return "0,00";
-        return CURRENCY_FMT.format(amount);
+        return UIHelper.formatMzn(amount);
     }
 }

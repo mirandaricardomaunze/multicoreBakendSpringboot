@@ -30,4 +30,7 @@ public class AuditLog {
 
     @Column(name = "details", length = 1000)
     private String details;
+
+    @Column(name = "ip_address", length = 50)
+    private String ipAddress;
 }

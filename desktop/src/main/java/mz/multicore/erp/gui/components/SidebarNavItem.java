@@ -76,7 +76,16 @@ public class SidebarNavItem extends JComponent {
             @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
             @Override public void mouseExited(MouseEvent e)  { hover = false; repaint(); }
             @Override public void mousePressed(MouseEvent e) {
-                if (onClick != null) onClick.run();
+                if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
+                    showContextMenu(e);
+                } else if (onClick != null && e.getButton() == MouseEvent.BUTTON1) {
+                    onClick.run();
+                }
+            }
+            @Override public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
+                    showContextMenu(e);
+                }
             }
         });
 
@@ -93,6 +102,29 @@ public class SidebarNavItem extends JComponent {
             }
         });
     }
+
+    private void showContextMenu(MouseEvent e) {
+        if (label == null || label.isBlank()) return;
+        boolean isFav = SidebarFavoritesManager.getInstance().isFavorite(label);
+        javax.swing.JPopupMenu popup = new javax.swing.JPopupMenu();
+        javax.swing.JMenuItem toggleFavItem = new javax.swing.JMenuItem(
+                isFav ? "Remover dos Favoritos" : "Fixar nos Favoritos",
+                UIHelper.icon(isFav ? "fas-times" : "fas-star", 14, isFav ? UIHelper.REJECTED_RED : UIHelper.ACCENT_ORANGE)
+        );
+        toggleFavItem.addActionListener(evt -> SidebarFavoritesManager.getInstance().toggleFavorite(label));
+        popup.add(toggleFavItem);
+
+        if (isShowing()) {
+            popup.show(this, e.getX(), e.getY());
+        } else {
+            SidebarFavoritesManager.getInstance().toggleFavorite(label);
+        }
+    }
+
+    public String getIconGlyph() { return iconGlyph; }
+    public Icon getIcon() { return icon; }
+    public Color getAccent() { return accent; }
+    public Runnable getOnClick() { return onClick; }
 
     public String getLabel() {
         return label;
@@ -136,7 +168,7 @@ public class SidebarNavItem extends JComponent {
     private void applySize() {
         int width = collapsed ? ICON_COLUMN : 224;
         Dimension d = new Dimension(width, ITEM_HEIGHT);
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, ITEM_HEIGHT));
+        setMaximumSize(new Dimension(collapsed ? ICON_COLUMN : Integer.MAX_VALUE, ITEM_HEIGHT));
         setPreferredSize(d);
         setMinimumSize(new Dimension(ICON_COLUMN, ITEM_HEIGHT));
         setAlignmentX(LEFT_ALIGNMENT);
@@ -164,42 +196,55 @@ public class SidebarNavItem extends JComponent {
     }
 
     private void paintBackground(Graphics2D g2, int w, int h) {
+        int areaW = collapsed ? ICON_COLUMN - 4 : w;
         int padX = 6;
-        int rectW = Math.max(0, w - padX * 2);
+        int rectW = Math.max(0, areaW - padX * 2);
         int rectH = h - 6;
         int rectY = 3;
 
         if (active) {
-            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), UIHelper.isLight() ? 32 : 48));
+            // Preenchimento pill translúcido e suave com a cor semântica do módulo
+            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), UIHelper.isLight() ? 28 : 42));
             g2.fillRoundRect(padX, rectY, rectW, rectH, CORNER, CORNER);
-            // Barra de acento lateral
-            g2.setColor(accent);
-            g2.fillRoundRect(padX + 2, rectY + 5, 3, rectH - 10, 3, 3);
+
+            if (!collapsed) {
+                // Barra vertical de destaque na margem esquerda
+                g2.setColor(accent);
+                g2.fillRoundRect(padX + 2, rectY + 6, 3, rectH - 12, 3, 3);
+            } else {
+                // No modo colapsado, elegante anel suave ao redor do pill
+                g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 140));
+                g2.drawRoundRect(padX, rectY, rectW - 1, rectH - 1, CORNER, CORNER);
+            }
         } else if (hover) {
             g2.setColor(hoverOverlay());
             g2.fillRoundRect(padX, rectY, rectW, rectH, CORNER, CORNER);
         }
 
-        if (focused) {
+        if (focused && !active) {
             g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 90));
             g2.drawRoundRect(padX, rectY, rectW - 1, rectH - 1, CORNER, CORNER);
         }
     }
 
     private void paintIcon(Graphics2D g2, int h) {
+        int iconW = (icon != null) ? icon.getIconWidth() : 16;
+        int iconH = (icon != null) ? icon.getIconHeight() : 16;
+        int colW = collapsed ? (ICON_COLUMN - 4) : ICON_COLUMN;
+        int iconX = (colW - iconW) / 2;
+        int iconY = (h - iconH) / 2;
+
         if (icon != null) {
-            int iconX = (ICON_COLUMN - icon.getIconWidth()) / 2 + LEFT_INSET;
-            int iconY = (h - icon.getIconHeight()) / 2;
             icon.paintIcon(this, g2, iconX, iconY);
             return;
         }
         g2.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 16));
         FontMetrics fm = g2.getFontMetrics();
-        int iconWidth = fm.stringWidth(iconGlyph);
-        int iconX = (ICON_COLUMN - iconWidth) / 2 + LEFT_INSET;
-        int iconY = (h + fm.getAscent() - fm.getDescent()) / 2;
+        int glyphW = fm.stringWidth(iconGlyph);
+        int glyphX = (colW - glyphW) / 2;
+        int glyphY = (h + fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(active ? textActive() : textInactive());
-        g2.drawString(iconGlyph, iconX, iconY);
+        g2.drawString(iconGlyph, glyphX, glyphY);
     }
 
     private void paintLabel(Graphics2D g2, int h) {
@@ -207,7 +252,7 @@ public class SidebarNavItem extends JComponent {
         FontMetrics fm = g2.getFontMetrics();
         int labelY = (h + fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(active ? textActive() : textInactive());
-        int labelX = ICON_COLUMN + LEFT_INSET + 2;
+        int labelX = ICON_COLUMN + 6;
         int badgeReserve = (badgeCount > 0) ? 36 : 0;
         int available = getWidth() - labelX - RIGHT_INSET - badgeReserve;
         String drawn = fitToWidth(label, fm, Math.max(20, available));

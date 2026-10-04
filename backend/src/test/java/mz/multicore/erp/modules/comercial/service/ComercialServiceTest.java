@@ -8,6 +8,7 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
+import mz.multicore.erp.modules.comercial.dto.UpdateOrderRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
@@ -356,6 +357,79 @@ class ComercialServiceTest {
         assertEquals(0, dto.taxAmount().compareTo(BigDecimal.ZERO));
     }
 
+    // ────────────────────────── updateOrder ──────────────────────────
+
+    @Test
+    void updateOrder_pendente_recalculaLinhasESubmeteNovaAprovacao() {
+        Order order = pendingOrder(BigDecimal.ONE);
+        order.setKind(mz.multicore.erp.modules.comercial.model.OrderKind.FORMAL_ORDER);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(orderRepository.saveAndFlush(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderDTO updated = service.updateOrder(1L, updateOrderRequest(0L, new BigDecimal("2")));
+
+        assertEquals("PENDING_APPROVAL", updated.status());
+        assertEquals(0, new BigDecimal("2").compareTo(updated.lines().getFirst().quantity()));
+        assertEquals(0, new BigDecimal("208.80").compareTo(updated.totalAmount()));
+        verify(approvalService).cancelPendingForDocument(eq("ORDER"), eq(1L), any());
+        verify(approvalService).submitRequest(eq("ORDER"), eq(1L), eq(new BigDecimal("208.80")), any());
+        verify(auditLogService).logCurrent(eq("ORDER_UPDATE"), any());
+    }
+
+    @Test
+    void updateOrder_versaoDesactualizada_recusaSemGravar() {
+        Order order = pendingOrder(BigDecimal.ONE);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.updateOrder(1L, updateOrderRequest(99L, BigDecimal.ONE)));
+
+        assertTrue(error.getMessage().contains("outro posto"));
+        verify(orderRepository, never()).save(any());
+        verify(orderRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateOrder_estadoFechado_recusaAlteracao() {
+        Order order = pendingOrder(BigDecimal.ONE);
+        order.setStatus("SEPARATED");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.updateOrder(1L, updateOrderRequest(0L, BigDecimal.ONE)));
+
+        assertTrue(error.getMessage().contains("já não pode ser alterada"));
+        verify(orderRepository, never()).save(any());
+        verify(orderRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateOrder_aguardaSeparacao_revalidaEActualizaReserva() {
+        Order order = pendingOrder(BigDecimal.ONE);
+        order.setKind(mz.multicore.erp.modules.comercial.model.OrderKind.PICKING_REQUEST);
+        order.setStatus("AWAITING_SEPARATION");
+        order.setReservationActive(true);
+        order.getLines().getFirst().setReservedQuantity(BigDecimal.ONE);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(inventoryService.lockAndGetPhysicalQuantity(PRODUCT_ID, WAREHOUSE_ID))
+                .thenReturn(new BigDecimal("10"));
+        when(orderLineRepository.sumActiveReservations(PRODUCT_ID, WAREHOUSE_ID))
+                .thenReturn(new BigDecimal("4"));
+        when(orderRepository.saveAndFlush(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderDTO updated = service.updateOrder(1L, updateOrderRequest(0L, new BigDecimal("5")));
+
+        assertEquals("AWAITING_SEPARATION", updated.status());
+        assertEquals(0, new BigDecimal("5").compareTo(order.getLines().getFirst().getReservedQuantity()));
+        verify(approvalService, never()).submitRequest(any(), any(), any(), any());
+    }
+
     private static mz.multicore.erp.modules.fiscal.model.TaxRate taxRateOf(String rate) {
         mz.multicore.erp.modules.fiscal.model.TaxRate taxRate = new mz.multicore.erp.modules.fiscal.model.TaxRate();
         taxRate.setRate(new BigDecimal(rate));
@@ -679,7 +753,37 @@ class ComercialServiceTest {
         assertEquals("Arroz 5kg", dto.name());
         assertEquals(new BigDecimal("250"), dto.unitPrice());
         assertEquals(24, dto.unitsPerBox());
+        assertEquals(24, dto.packagesPerBox());
+        assertEquals(1, dto.unitsPerPackage());
         verify(auditLogService).logCurrent(eq("PRODUCT_UPDATE"), any());
+    }
+
+    @Test
+    void updateProduct_composicaoCompleta_calculaTotalPorCaixaNoBackend() {
+        when(productRepository.findByIdAndCompaniesId(PRODUCT_ID, COMPANY_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var dto = service.updateProduct(PRODUCT_ID, null, null, "Sumo em Packs",
+                new BigDecimal("250"), new BigDecimal("180"), new BigDecimal("2"),
+                999, 12, 6, null, "UNIT", true, null, null,
+                null, null, null, null);
+
+        assertEquals(12, dto.packagesPerBox());
+        assertEquals(6, dto.unitsPerPackage());
+        assertEquals(72, dto.unitsPerBox());
+    }
+
+    @Test
+    void toDTO_registoAnteriorSemComposicao_preservaUnidadesPorCaixa() {
+        product.setUnitsPerBox(24);
+        product.setPackagesPerBox(1);
+        product.setUnitsPerPackage(1);
+
+        var dto = service.toDTO(product);
+
+        assertEquals(24, dto.unitsPerBox());
+        assertEquals(24, dto.packagesPerBox());
+        assertEquals(1, dto.unitsPerPackage());
     }
 
     @Test
@@ -792,6 +896,12 @@ class ComercialServiceTest {
         return new CreateInvoiceRequest(CLIENT_ID, COMPANY_ID, WAREHOUSE_ID,
                 List.of(new CreateInvoiceLineRequest(PRODUCT_ID, qty, new BigDecimal("0.16"),
                         discount, null, null)));
+    }
+
+    private UpdateOrderRequest updateOrderRequest(Long version, BigDecimal quantity) {
+        return new UpdateOrderRequest(version, CLIENT_ID, null, WAREHOUSE_ID, null,
+                List.of(new CreateInvoiceLineRequest(PRODUCT_ID, quantity, new BigDecimal("0.16"),
+                        new BigDecimal("10"), null, null)));
     }
 
     private Order pendingOrder(BigDecimal qty) {

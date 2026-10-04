@@ -77,34 +77,26 @@ public final class CommercialNotesPanel {
         ModernButton create = UIHelper.createSuccessButton("Emitir Nota");
         create.setIcon(UIHelper.icon("fas-plus", 14));
         create.addActionListener(e -> loadInvoices(this::showCreditDialog));
-        ModernButton approve = UIHelper.createSuccessButton("Aprovar");
-        approve.setIcon(UIHelper.icon("fas-check", 14));
-        approve.addActionListener(e -> approveCredit());
-        ModernButton reject = UIHelper.createDangerButton("Rejeitar");
-        reject.setIcon(UIHelper.icon("fas-times", 14));
-        reject.addActionListener(e -> rejectCredit());
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printCredit);
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printCredit)
+                .addAction("Rejeitar", UIHelper.icon("fas-times", 14, UIHelper.REJECTED_RED), this::rejectCredit)
+                .addAction("Aprovar", UIHelper.icon("fas-check", 14, UIHelper.APPROVED_GREEN), this::approveCredit);
         return buildTab("Notas de Crédito", creditTable,
                 new String[]{"RETURN", "DISCOUNT", "ERROR", "CANCELLATION"}, 4, 7,
-                UIHelper.createRefreshButton(this::loadCredits), more, reject, approve, create);
+                UIHelper.createRefreshButton(this::loadCredits), more, create);
     }
 
     private JPanel buildDebitTab() {
         ModernButton create = UIHelper.createSuccessButton("Emitir Nota");
         create.setIcon(UIHelper.icon("fas-plus", 14));
         create.addActionListener(e -> loadInvoices(this::showDebitDialog));
-        ModernButton approve = UIHelper.createSuccessButton("Aprovar");
-        approve.setIcon(UIHelper.icon("fas-check", 14));
-        approve.addActionListener(e -> approveDebit());
-        ModernButton reject = UIHelper.createDangerButton("Rejeitar");
-        reject.setIcon(UIHelper.icon("fas-times", 14));
-        reject.addActionListener(e -> rejectDebit());
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printDebit);
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printDebit)
+                .addAction("Rejeitar", UIHelper.icon("fas-times", 14, UIHelper.REJECTED_RED), this::rejectDebit)
+                .addAction("Aprovar", UIHelper.icon("fas-check", 14, UIHelper.APPROVED_GREEN), this::approveDebit);
         return buildTab("Notas de Débito", debitTable,
                 new String[]{"FREIGHT", "SURCHARGE", "CORRECTION", "OTHER"}, 4, 6,
-                UIHelper.createRefreshButton(this::loadDebits), more, reject, approve, create);
+                UIHelper.createRefreshButton(this::loadDebits), more, create);
     }
 
     private JPanel buildTab(String title, JTable table, String[] reasons, int reasonColumn, int statusColumn,
@@ -112,35 +104,55 @@ public final class CommercialNotesPanel {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading(title), BorderLayout.WEST);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        for (ModernButton button : buttons) actions.add(button);
-        header.add(actions, BorderLayout.EAST);
         InlineFeedbackPanel feedback = table == creditTable ? creditFeedback : debitFeedback;
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(header); north.add(feedback); tab.add(north, BorderLayout.NORTH);
+        tab.add(feedback, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         JTextField search = TableFilter.searchField("Nº nota, fatura ou cliente…");
         JComboBox<String> reason = TableFilter.combo(withFirst("Todos os motivos", reasons));
+        UIHelper.styleComboBox(reason);
+        reason.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> status = TableFilter.combo("Todos os estados", "PENDING", "APPROVED", "REJECTED");
+        UIHelper.styleComboBox(status);
+        status.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> period = TableFilter.periodCombo();
+        UIHelper.styleComboBox(period);
+        period.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(reason, reasonColumn), new TableFilter.ColumnFilter(status, statusColumn)),
                 List.of(new TableFilter.PeriodFilter(period, 1)));
-        JPanel filters = TableFilter.bar(search, TableFilter.label("Motivo:"), reason,
-                TableFilter.label("Estado:"), status, TableFilter.label("Data:", "fas-calendar-alt"), period);
+
+        JPanel filters = new JPanel(new GridBagLayout());
+        filters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; filters.add(filterLabel("Motivo"), g);
+        g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Estado"), g);
+        g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Período"), g);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        filters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; filters.add(reason, g);
+        g.gridx = 1; g.weightx = 0; filters.add(status, g);
+        g.gridx = 2; g.weightx = 0; filters.add(period, g);
+        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        filters.add(search, g);
+
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        card.add(filters, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop(title, filters, buttons), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -325,14 +337,13 @@ public final class CommercialNotesPanel {
         ModernButton remove = UIHelper.createDangerButton("Remover");
         remove.setIcon(UIHelper.icon("fas-minus", 14));
         remove.addActionListener(e -> { if (lineTable.getSelectedRow() >= 0) lines.removeRow(lineTable.getSelectedRow()); });
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        buttons.setOpaque(false);
-        buttons.add(add); buttons.add(remove);
+        JPanel buttons = UIHelper.actionsBar(remove, add);
         JScrollPane scroll = new JScrollPane(lineTable);
         UIHelper.styleScrollPane(scroll);
         JPanel tablePanel = new JPanel(new BorderLayout(0, 6));
         tablePanel.setOpaque(false);
-        tablePanel.add(scroll, BorderLayout.CENTER); tablePanel.add(buttons, BorderLayout.SOUTH);
+        tablePanel.add(buttons, BorderLayout.NORTH);
+        tablePanel.add(scroll, BorderLayout.CENTER);
         JPanel form = UIHelper.createDialogForm("Fatura:", invoice, "Motivo:", reason, "Descrição:", description);
         JPanel content = new JPanel(new BorderLayout(0, 10));
         content.setOpaque(false); content.add(form, BorderLayout.NORTH); content.add(tablePanel, BorderLayout.CENTER);
@@ -388,5 +399,11 @@ public final class CommercialNotesPanel {
 
     private void showNotice(Component owner, FeedbackType type, String title, String message) {
         (owner == debitTab ? debitFeedback : creditFeedback).show(type, title, message, null, null);
+    }
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 }

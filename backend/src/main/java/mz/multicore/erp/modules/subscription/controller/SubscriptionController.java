@@ -39,7 +39,7 @@ public class SubscriptionController {
     }
 
     @PatchMapping("/{companyId}/status")
-    public SubscriptionDTO changeStatus(@PathVariable Long companyId, @RequestBody StatusRequest request) {
+    public SubscriptionDTO changeStatus(@PathVariable Long companyId, @RequestBody @Valid StatusRequest request) {
         return subscriptionService.changeStatus(companyId, request.status());
     }
 
@@ -64,5 +64,8 @@ public class SubscriptionController {
         return subscriptionService.methodOptions();
     }
 
-    public record StatusRequest(String status) {}
+    public record StatusRequest(
+            @jakarta.validation.constraints.NotBlank(message = "O estado é obrigatório.")
+            @jakarta.validation.constraints.Size(max = 30, message = "O estado não pode exceder 30 caracteres.")
+            String status) {}
 }

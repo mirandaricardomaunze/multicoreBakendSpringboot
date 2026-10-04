@@ -111,4 +111,21 @@ public class IconSystemHarnessTest {
         btn.doClick();
         assertTrue(clicked.get(), "O clique no botão deve disparar a acção registada");
     }
+
+    @Test
+    @DisplayName("IC-07: semanticColorFor e semanticIcon devolvem cores e ícones semânticos contrastantes")
+    void testSemanticColorAndIconGeneration() {
+        Color cStock = UIHelper.semanticColorFor("fas-boxes");
+        assertEquals(UIHelper.MODULE_STOCK, cStock, "fas-boxes deve mapear para cor de Stock");
+
+        Color cHR = UIHelper.semanticColorFor("fas-users");
+        assertEquals(UIHelper.MODULE_HR, cHR, "fas-users deve mapear para cor de RH");
+
+        Color cFiscal = UIHelper.semanticColorFor("fas-percent");
+        assertEquals(UIHelper.MODULE_FISCAL, cFiscal, "fas-percent deve mapear para cor Fiscal");
+
+        Icon semIcon = UIHelper.semanticIcon("fas-shopping-cart", UIHelper.ICON_MD);
+        assertNotNull(semIcon, "semanticIcon deve produzir ícone válido");
+        assertTrue(semIcon.getIconWidth() >= UIHelper.ICON_MD);
+    }
 }

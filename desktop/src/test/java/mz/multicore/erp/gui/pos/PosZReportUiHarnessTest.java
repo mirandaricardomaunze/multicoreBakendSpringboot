@@ -41,6 +41,7 @@ class PosZReportUiHarnessTest {
                 BigDecimal.valueOf(600), BigDecimal.ZERO, 5, 0
         );
 
+        when(posApiClient.closeSession(anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(session);
         when(posApiClient.closeSession(anyLong(), Mockito.any(), Mockito.any())).thenReturn(session);
         when(posApiClient.getZReport(anyLong())).thenReturn(z);
 

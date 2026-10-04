@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.desktop.client.HRApiClient;
 import mz.multicore.erp.desktop.client.InventoryApiClient;
@@ -37,8 +38,6 @@ public class NotificationFeed {
     private static final int EXPIRY_ALERT_DAYS = 30;
     private static final long SUBSCRIPTION_ALERT_DAYS = 7;
     private static final BigDecimal DEFAULT_LOW_STOCK = BigDecimal.valueOf(5);
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DecimalFormat MZN_FMT = new DecimalFormat("#,##0.00 MT", new DecimalFormatSymbols(new Locale("pt", "MZ")));
 
     private final ApprovalApiClient approvalApiClient;
     private final InventoryApiClient inventoryApiClient;
@@ -63,6 +62,8 @@ public class NotificationFeed {
         this(approvalApiClient, inventoryApiClient, subscriptionApiClient, hrApiClient, performanceApiClient, null, null);
     }
 
+    private final mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient;
+
     public NotificationFeed(ApprovalApiClient approvalApiClient,
                             InventoryApiClient inventoryApiClient,
                             MySubscriptionApiClient subscriptionApiClient,
@@ -70,6 +71,17 @@ public class NotificationFeed {
                             mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient,
                             CreditRiskApiClient creditRiskApiClient,
                             StockWasteApiClient stockWasteApiClient) {
+        this(approvalApiClient, inventoryApiClient, subscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, null);
+    }
+
+    public NotificationFeed(ApprovalApiClient approvalApiClient,
+                            InventoryApiClient inventoryApiClient,
+                            MySubscriptionApiClient subscriptionApiClient,
+                            HRApiClient hrApiClient,
+                            mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient,
+                            CreditRiskApiClient creditRiskApiClient,
+                            StockWasteApiClient stockWasteApiClient,
+                            mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient) {
         this.approvalApiClient = approvalApiClient;
         this.inventoryApiClient = inventoryApiClient;
         this.subscriptionApiClient = subscriptionApiClient;
@@ -77,10 +89,12 @@ public class NotificationFeed {
         this.performanceApiClient = performanceApiClient;
         this.creditRiskApiClient = creditRiskApiClient;
         this.stockWasteApiClient = stockWasteApiClient;
+        this.monitoringApiClient = monitoringApiClient;
     }
 
     public List<NotificationItem> load(Long companyId) {
         List<NotificationItem> items = new ArrayList<>();
+        addSystemAlerts(items);
         addApprovals(items);
         addCreditRiskAlerts(items);
         addStockWasteAlerts(items, companyId);
@@ -104,7 +118,7 @@ public class NotificationFeed {
             if (approval.description() != null && !approval.description().isBlank()) {
                 detail += " — " + approval.description();
             }
-            String when = approval.createdAt() == null ? "Pendente" : approval.createdAt().toLocalDate().format(DATE_FORMAT);
+            String when = approval.createdAt() == null ? "Pendente" : approval.createdAt().toLocalDate().format(UIHelper.DATE_FMT);
             items.add(new NotificationItem("Aprovações", "Pedido de aprovação pendente", detail,
                     when, "approvals", 2));
         }
@@ -132,7 +146,7 @@ public class NotificationFeed {
                     + (batch.warehouseName() == null ? "Armazém" : batch.warehouseName());
             items.add(new NotificationItem("Validades",
                     (expired ? "Lote vencido: " : "Lote a vencer: ") + batch.productName(),
-                    detail, batch.expirationDate().format(DATE_FORMAT), "stock", expired ? 3 : 2));
+                    detail, batch.expirationDate().format(UIHelper.DATE_FMT), "stock", expired ? 3 : 2));
         }
     }
 
@@ -149,7 +163,7 @@ public class NotificationFeed {
                 : "A assinatura expira em " + days + " dia(s)";
         String detail = subscription.planLabel() == null ? "Consulte a sua assinatura" : "Plano " + subscription.planLabel();
         String when = subscription.validUntil() == null ? statusLabel
-                : subscription.validUntil().format(DATE_FORMAT);
+                : subscription.validUntil().format(UIHelper.DATE_FMT);
         items.add(new NotificationItem("Assinatura", title, detail, when, "config", blocked ? 3 : 2));
     }
 
@@ -168,7 +182,7 @@ public class NotificationFeed {
                     days <= 0 ? "Contrato termina hoje: " + contract.employeeName()
                               : "Contrato termina em " + days + " dia(s): " + contract.employeeName(),
                     contract.contractNumber() + " · " + contract.contractTypeLabel(),
-                    contract.endDate() == null ? "Sem termo" : contract.endDate().format(DATE_FORMAT),
+                    contract.endDate() == null ? "Sem termo" : contract.endDate().format(UIHelper.DATE_FMT),
                     "hr", days <= 7 ? 3 : 2));
         }
         for (EmploymentContractDTO contract : alerts.probationEndingSoon()) {
@@ -178,7 +192,7 @@ public class NotificationFeed {
                     days <= 0 ? "Período experimental termina hoje: " + contract.employeeName()
                               : "Período experimental termina em " + days + " dia(s): " + contract.employeeName(),
                     contract.contractNumber() + " · decidir a confirmação",
-                    contract.probationEndDate() == null ? "" : contract.probationEndDate().format(DATE_FORMAT),
+                    contract.probationEndDate() == null ? "" : contract.probationEndDate().format(UIHelper.DATE_FMT),
                     "hr", 3));
         }
     }
@@ -213,7 +227,7 @@ public class NotificationFeed {
                     : liability.amount() + " MT a entregar";
             items.add(new NotificationItem("Retenções", title, detail,
                     liability.dueDate() == null ? "Prazo por configurar"
-                            : liability.dueDate().format(DATE_FORMAT),
+                            : liability.dueDate().format(UIHelper.DATE_FMT),
                     "hr", priority));
         }
     }
@@ -240,7 +254,7 @@ public class NotificationFeed {
             String detail = document.documentNumber() == null
                     ? "Documento do colaborador" : "Nº " + document.documentNumber();
             items.add(new NotificationItem("Documentos", title, detail,
-                    document.expiryDate().format(DATE_FORMAT), "hr",
+                    document.expiryDate().format(UIHelper.DATE_FMT), "hr",
                     document.expired() || days <= 15 ? 3 : 2));
         }
     }
@@ -257,7 +271,7 @@ public class NotificationFeed {
                             : "Renovar exame em " + days + " dia(s): " + exam.employeeName();
             items.add(new NotificationItem("Saúde Ocupacional", title,
                     "Agendar exame periódico · " + fitnessLabel(exam.fitnessResult()),
-                    exam.expiryDate().format(DATE_FORMAT), "hr", days <= 15 ? 3 : 2));
+                    exam.expiryDate().format(UIHelper.DATE_FMT), "hr", days <= 15 ? 3 : 2));
         }
         // Quem nunca fez exame não tem validade a caducar, logo nunca entrava no ciclo acima — e é
         // o caso mais grave dos dois perante a inspecção do trabalho. Mesma lição das obrigações
@@ -268,7 +282,7 @@ public class NotificationFeed {
                     missing.daysSinceHire() == null
                             ? "Admissão por registar · exame de admissão nunca realizado"
                             : "Admitido há " + missing.daysSinceHire() + " dia(s) sem exame de admissão",
-                    missing.hireDate() == null ? "—" : missing.hireDate().format(DATE_FORMAT), "hr", 3));
+                    missing.hireDate() == null ? "—" : missing.hireDate().format(UIHelper.DATE_FMT), "hr", 3));
         }
     }
 
@@ -367,9 +381,33 @@ public class NotificationFeed {
         }
     }
 
+    private void addSystemAlerts(List<NotificationItem> items) {
+        if (monitoringApiClient == null || !SignedInUser.isManagerOrAdmin()) return;
+        try {
+            List<mz.multicore.erp.modules.monitoring.dto.SystemAlertIncidentDTO> incidents = monitoringApiClient.getIncidents();
+            if (incidents == null) return;
+            for (var inc : incidents) {
+                if (!inc.resolved() && "CRITICAL".equalsIgnoreCase(inc.severity())) {
+                    String when = inc.timestamp() != null
+                            ? inc.timestamp().atZone(java.time.ZoneId.systemDefault()).format(UIHelper.DATE_FMT)
+                            : "Agora";
+                    items.add(new NotificationItem(
+                            "Alerta do Sistema",
+                            "Falha Crítica: " + inc.subsystem(),
+                            inc.tenantName() + " — " + inc.message(),
+                            when,
+                            "config",
+                            3
+                    ));
+                }
+            }
+        } catch (Exception ignored) {
+            // Degrada suavemente se serviço de monitoramento estiver offline
+        }
+    }
+
     private static String formatMoney(BigDecimal val) {
-        if (val == null) return "0,00 MT";
-        return MZN_FMT.format(val.setScale(2, java.math.RoundingMode.HALF_UP));
+        return UIHelper.formatMzn(val);
     }
 
     public record NotificationItem(

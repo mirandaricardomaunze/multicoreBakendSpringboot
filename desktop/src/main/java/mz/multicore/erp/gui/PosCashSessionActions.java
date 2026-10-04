@@ -21,7 +21,7 @@ final class PosCashSessionActions {
         if (bal == null) return;
         String operator = CurrentUserContext.getUsername();
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.runWithProgress(owner, "A abrir caixa…",
+        UIHelper.runWithProgress(owner, "A abrir caixa",
                 () -> owner.posApiClient.openSession(operator, bal, companyId), opened -> {
             owner.showPosSuccess("Sessão de caixa aberta com sucesso.");
             owner.refreshSessionState();
@@ -51,6 +51,22 @@ final class PosCashSessionActions {
     }
 
     /**
+     * Passagem de turno: o operador actual faz contagem da gaveta, selecciona o
+     * operador seguinte, e transfere a posse da sessão sem a fechar.
+     */
+    public void shiftHandover() {
+        if (owner.activeSession == null) return;
+        mz.multicore.erp.gui.pos.PosShiftHandoverDialog dialog =
+                new mz.multicore.erp.gui.pos.PosShiftHandoverDialog(
+                        SwingUtilities.getWindowAncestor(owner),
+                        owner.posApiClient,
+                        owner.activeSession,
+                        owner::refreshSessionState
+                );
+        dialog.setVisible(true);
+    }
+
+    /**
      * Pergunta ao operador para que conta de tesouraria deve ir o depósito do numerário
      * da sessão. Devolve o id da conta, ou null se o operador optar por não depositar
      * agora (ou não houver contas configuradas).
@@ -76,42 +92,22 @@ final class PosCashSessionActions {
 
     public void manageCashMovements() {
         if (owner.activeSession == null) return;
+        Long sessionId = owner.activeSession.id();
 
-        String[] options = {"SUPRIMENTO (Entrada de Dinheiro)", "SANGRIA (Retirada de Dinheiro)"};
-        int opt = JOptionPane.showOptionDialog(owner, "Selecione o tipo de movimento:", "Movimentar Caixa",
-                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-
-        if (opt < 0) return;
-        String type = (opt == 0) ? "SUPRIMENTO" : "SANGRIA";
-
-        MoneyField amountField = new MoneyField();
-        JTextField descField = new JTextField();
-        JPanel dialogPanel = UIHelper.createDialogForm(
-                "Valor (MT):", amountField,
-                "Descrição / Motivo:", descField
-        );
-
-        int confirm = JOptionPane.showConfirmDialog(owner, dialogPanel, type, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (confirm == JOptionPane.OK_OPTION) {
-            try {
-                BigDecimal amt = amountField.value();
-                String desc = descField.getText().trim();
-                if (amt.compareTo(BigDecimal.ZERO) <= 0) {
-                    owner.showPosNotice(FeedbackType.ERROR, "Valor inválido", "O valor deve ser maior do que zero.");
-                    return;
-                }
-                Long sessionId = owner.activeSession.id();
-                UIHelper.runWithProgress(owner, "A registar movimento…",
-                        () -> owner.posApiClient.addCashMovement(sessionId, type, amt, desc), ignored -> {
-                            owner.showPosSuccess("Movimento de caixa registado com sucesso.");
+        mz.multicore.erp.gui.pos.PosCashMovementDialog.show(
+                SwingUtilities.getWindowAncestor(owner),
+                sessionId,
+                (type, amt, desc) -> UIHelper.runWithProgress(
+                        owner,
+                        "A registar movimento de caixa…",
+                        () -> owner.posApiClient.addCashMovement(sessionId, type, amt, desc),
+                        ignored -> {
+                            owner.showPosSuccess("Movimento de caixa (" + type + ") de " + amt + " MT registado com sucesso.");
                             owner.refreshSessionState();
-                        }, error -> showError("Não foi possível registar o movimento de caixa", error));
-            } catch (NumberFormatException ex) {
-                owner.showPosNotice(FeedbackType.ERROR, "Montante inválido", "Introduza um montante numérico válido.");
-            } catch (Exception ex) {
-                owner.showPosNotice(FeedbackType.ERROR, "Não foi possível movimentar o caixa", ex.getMessage());
-            }
-        }
+                        },
+                        error -> showError("Não foi possível registar o movimento de caixa", error)
+                )
+        );
     }
 
     private void showError(String action, Throwable error) {

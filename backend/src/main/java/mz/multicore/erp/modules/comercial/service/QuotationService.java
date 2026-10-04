@@ -7,9 +7,11 @@ import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.dto.CreateQuotationLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
+import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationLineDTO;
+import mz.multicore.erp.modules.comercial.dto.UpdateQuotationRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
@@ -172,6 +174,78 @@ public class QuotationService {
         return toDTO(saved);
     }
 
+    /** Actualiza integralmente uma proposta enquanto ainda é um rascunho interno. */
+    @Transactional
+    public QuotationDTO update(Long id, UpdateQuotationRequest request) {
+        Quotation quotation = load(id);
+        if (quotation.getStatus() != QuotationStatus.DRAFT) {
+            throw new BusinessRuleException("Apenas cotações em rascunho podem ser alteradas. Estado actual: "
+                    + quotation.getStatus().getLabel() + ".");
+        }
+        if (request.version() == null || request.version() != quotation.getVersion()) {
+            throw new BusinessRuleException(
+                    "A cotação foi alterada por outro utilizador. Recarregue o documento antes de guardar.");
+        }
+
+        Long companyId = quotation.getCompany().getId();
+        Client client = request.clientId() == null
+                ? walkInClientProvider.getOrCreate()
+                : clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
+
+        quotation.setClient(client);
+        quotation.setWalkInName(blankToNull(request.walkInName()));
+        quotation.setWarehouse(warehouse);
+        quotation.assignValidity(LocalDate.now(), request.validityDays());
+        quotation.setPaymentTerms(blankToNull(request.paymentTerms()));
+        quotation.setDeliveryTerms(blankToNull(request.deliveryTerms()));
+        quotation.setDeliveryDays(request.deliveryDays());
+        quotation.setNotes(blankToNull(request.notes()));
+        quotation.getLines().clear();
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal totalTax = BigDecimal.ZERO;
+        for (CreateQuotationLineRequest lineReq : request.lines()) {
+            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "Produto não encontrado ID: " + lineReq.productId()));
+            BigDecimal discount = lineReq.discountPercentage() == null
+                    ? BigDecimal.ZERO : lineReq.discountPercentage();
+            if (discount.signum() < 0 || discount.compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new BusinessRuleException("O desconto de linha deve ficar entre 0 e 100%.");
+            }
+            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+            BigDecimal taxRate = product.effectiveTaxRate();
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    unitPrice, lineReq.quantity(), discount, taxRate);
+
+            QuotationLine line = new QuotationLine();
+            line.setProduct(product);
+            line.setQuantity(lineReq.quantity());
+            line.setUnitPrice(unitPrice);
+            line.setTaxRate(taxRate);
+            line.setDiscountPercentage(discount);
+            line.setLineTotal(amounts.total());
+            quotation.addLine(line);
+            subtotal = subtotal.add(amounts.net());
+            totalTax = totalTax.add(amounts.tax());
+        }
+        quotation.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
+        quotation.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
+        quotation.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+
+        Quotation saved = quotationRepository.saveAndFlush(quotation);
+        auditLogService.logCurrent("QUOTATION_UPDATE",
+                "Cotação " + saved.getQuotationNumber() + " actualizada em rascunho. Total: "
+                        + saved.getTotalAmount() + " MT.");
+        return toDTO(saved);
+    }
+
     /** Marca a proposta como enviada ao cliente. Registo, não cerimónia — ver spec §5. */
     @Transactional
     public QuotationDTO send(Long id) {
@@ -324,11 +398,61 @@ public class QuotationService {
         return order;
     }
 
+    /**
+     * Converte a proposta directamente em factura comercial (FT),
+     * herdando os preços cotados, com baixa de stock e validação de crédito.
+     */
+    @Transactional
+    public InvoiceDTO convertToInvoice(Long id) {
+        Quotation quotation = load(id);
+        LocalDate today = LocalDate.now();
+
+        if (quotation.getStatus() == QuotationStatus.CONVERTED) {
+            String target = quotation.getInvoiceNumber() != null ? "na factura " + quotation.getInvoiceNumber()
+                    : (quotation.getOrderNumber() != null ? "na encomenda " + quotation.getOrderNumber() : "");
+            throw new BusinessRuleException("Esta cotação já foi convertida " + target + ".");
+        }
+        if (!quotation.getStatus().isOpen()) {
+            throw new BusinessRuleException("Apenas cotações em aberto podem ser convertidas. "
+                    + "Estado actual: " + quotation.getStatus().getLabel() + ".");
+        }
+        if (quotation.isExpired(today)) {
+            throw new BusinessRuleException("A cotação " + quotation.getQuotationNumber()
+                    + " caducou a " + quotation.getValidUntil().format(DATE_FMT)
+                    + ". Estenda a validade antes de converter — o preço proposto deixou de estar garantido.");
+        }
+
+        InvoiceDTO invoice = comercialService.createInvoiceFromQuotation(quotation);
+
+        if (quotation.getDecidedAt() == null) {
+            stampDecision(quotation);
+        }
+        quotation.setStatus(QuotationStatus.CONVERTED);
+        quotation.setInvoiceId(invoice.id());
+        quotation.setInvoiceNumber(invoice.invoiceNumber());
+        quotationRepository.save(quotation);
+
+        auditLogService.logCurrent("QUOTATION_CONVERT_INVOICE",
+                "Cotação " + quotation.getQuotationNumber() + " convertida directamente na factura "
+                        + invoice.invoiceNumber() + ". Total: " + invoice.totalAmount() + " MT.");
+        return invoice;
+    }
+
     @Transactional(readOnly = true)
     public List<QuotationDTO> findByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         return quotationRepository.findByCompanyIdOrderByQuotationDateDesc(companyId)
                 .stream().map(this::toDTO).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuotationDTO> findOpenByCompany(Long companyId) {
+        CurrentUserContext.requireCompany(companyId);
+        LocalDate today = LocalDate.now();
+        return quotationRepository.findOpenByCompanyIdWithLines(companyId).stream()
+                .filter(q -> !q.isExpired(today))
+                .map(this::toDTO)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -408,6 +532,9 @@ public class QuotationService {
                 q.getOrderId(),
                 q.getOrderNumber(),
                 q.getCreatedBy(),
-                lines);
+                lines,
+                q.getInvoiceId(),
+                q.getInvoiceNumber(),
+                q.getVersion());
     }
 }

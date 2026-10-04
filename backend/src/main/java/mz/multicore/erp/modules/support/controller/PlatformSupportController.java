@@ -42,7 +42,7 @@ public class PlatformSupportController {
     }
 
     @PatchMapping("/{id}/status")
-    public SupportTicketDTO changeStatus(@PathVariable Long id, @RequestBody StatusRequest request) {
+    public SupportTicketDTO changeStatus(@PathVariable Long id, @RequestBody @Valid StatusRequest request) {
         return supportService.changeStatus(id, request.status());
     }
 
@@ -51,5 +51,8 @@ public class PlatformSupportController {
         return supportService.statusOptions();
     }
 
-    public record StatusRequest(String status) {}
+    public record StatusRequest(
+            @jakarta.validation.constraints.NotBlank(message = "O estado é obrigatório.")
+            @jakarta.validation.constraints.Size(max = 30, message = "O estado não pode exceder 30 caracteres.")
+            String status) {}
 }

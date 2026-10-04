@@ -59,3 +59,14 @@ O painel está estruturado em 3 abas operacionais dentro de `StockPanel`:
 1. **Registo & Validação de Quebras:** Tabela consolidada de histórico, barra de filtros com período universal, botões de ação e modal para lançamento de nova quebra.
 2. **Radar de Validades & Prevenção:** Tabela de lotes com risco de vencimento, perda potencial calculada em Meticais e nível de alerta.
 3. **Métricas & Relatório Executivo:** Discriminação de custos de quebra por motivo e por categoria de produto, com botão de impressão de relatório em PDF.
+
+### 3.1 Padrão Canónico de Encapsulamento em Card (*Table-Card Containment Pattern*)
+
+Em conformidade com a identidade visual executiva do Multicore ERP:
+1. **Zona Externa ao Card (Cabeçalho de Secção):**
+   - Reservada exclusivamente ao título de secção (`UIHelper.createSubheading(...)`) e acções globais do ecrã (`UIHelper.actionsBar(...)` com criação, relatórios, actualização).
+2. **Interior do Card (`ModernPanel(16)`):**
+   - **`BorderLayout.NORTH`:** Campo de pesquisa textual universal (`SearchField`), filtros contextuais de coluna (`JComboBox`) e seletores de período (`periodCombo`), além de ações da linha seleccionada (`approveBtn`, `rejectBtn`).
+   - **`BorderLayout.CENTER`:** `JScrollPane` estilizado com a `JTable` de altura ampla e generosa (mínimo de 280px e viewport padrão de 380px, linhas com altura de 42px).
+   - **`BorderLayout.SOUTH`:** Barra canónica de paginação (`ClientTablePagination`).
+3. **Regra de Não Dispersão:** É expressamente proibido colocar campos de pesquisa, filtros de estado/motivo ou controlos de tabela soltos fora do `ModernPanel` que hospeda a respectiva tabela. Todo o conjunto analítico deve formar uma unidade visual encapsulada.

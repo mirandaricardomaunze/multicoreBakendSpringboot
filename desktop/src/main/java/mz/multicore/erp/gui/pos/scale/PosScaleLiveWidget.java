@@ -3,6 +3,9 @@ package mz.multicore.erp.gui.pos.scale;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.modules.pos.scale.SerialScaleReader;
 import mz.multicore.erp.modules.pos.scale.SerialScaleReader.ScaleReading;
 
@@ -52,7 +55,7 @@ public class PosScaleLiveWidget extends ModernPanel {
         captureButton.setMargin(new Insets(2, 6, 2, 6));
         captureButton.setPreferredSize(new Dimension(88, 30));
 
-        tareButton = new ModernButton("Tarar", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        tareButton = new ModernButton("Tarar", UIHelper.ACCENT_SKY, UIHelper.ACCENT_SKY.darker());
         tareButton.setIcon(UIHelper.icon("fas-sync", 11, Color.WHITE));
         tareButton.setForeground(Color.WHITE);
         tareButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
@@ -61,7 +64,7 @@ public class PosScaleLiveWidget extends ModernPanel {
         tareButton.setToolTipText("Zerar / Aplicar Tara no prato da balança");
         tareButton.setPreferredSize(new Dimension(72, 30));
 
-        simulateButton = new ModernButton("Simular", UIHelper.BUTTON_NEUTRAL, UIHelper.BUTTON_NEUTRAL_HOVER);
+        simulateButton = new ModernButton("Simular", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
         simulateButton.setIcon(UIHelper.icon("fas-edit", 11, Color.WHITE));
         simulateButton.setForeground(Color.WHITE);
         simulateButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
@@ -97,7 +100,7 @@ public class PosScaleLiveWidget extends ModernPanel {
     private void captureWeight() {
         ScaleReading reading = scaleReader.getCurrentReading();
         if (reading.status() == SerialScaleReader.ScaleStatus.UNSTABLE) {
-            JOptionPane.showMessageDialog(this, "A balança está instável. Aguarde a estabilização do peso.", "Aviso de Balança", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "A balança está instável. Aguarde a estabilização do peso.");
             return;
         }
         if (onWeightCapturedCallback != null) {
@@ -115,13 +118,14 @@ public class PosScaleLiveWidget extends ModernPanel {
     }
 
     private void openSimulationDialog() {
-        String input = JOptionPane.showInputDialog(this, "Insira o peso simulado em Quilos (ex: 1.450):", "Simulador de Balança", JOptionPane.QUESTION_MESSAGE);
+        String input = ModernMessageDialog.prompt(this, FeedbackType.INFO, "Simulador de Balança",
+                "Peso simulado em quilogramas (ex.: 1,450):", "", false);
         if (input != null && !input.isBlank()) {
             try {
                 BigDecimal weight = new BigDecimal(input.trim().replace(',', '.'));
                 scaleReader.setSimulatedWeight(weight, true);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Valor de peso inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
+                ToastManager.show(this, FeedbackType.ERROR, "Valor de peso inválido.");
             }
         }
     }

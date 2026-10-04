@@ -16,8 +16,8 @@ class PosButtonColourHierarchyTest {
                 .contains("createSuccessButton(\"Abrir Caixa\")")
                 .contains("createDangerButton(\"Fechar Caixa\")")
                 .contains("createWarningButton(\"Sangria / Suprimento\")")
-                .contains("createSuccessButton(\"Finalizar Venda (F9)\")")
-                .contains("createDangerButton(\"Remover Selecionado\")")
-                .contains("createPrimaryButton(\"Quantidade (F6)\")");
+                .contains("createSuccessButton(\"Finalizar Venda\")")
+                .contains("createDangerButton(\"Remover\")")
+                .contains("createPrimaryButton(\"Quantidade\")");
     }
 }

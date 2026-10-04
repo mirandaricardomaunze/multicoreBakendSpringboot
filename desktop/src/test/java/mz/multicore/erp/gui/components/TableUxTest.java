@@ -43,18 +43,19 @@ class TableUxTest {
         JScrollPane scroll = new JScrollPane(table);
 
         SwingUtilities.invokeAndWait(() -> TableEmptyState.install(scroll));
-        assertTrue(emptyStateLabel(scroll).isVisible());
+        assertTrue(emptyStateOverlay(scroll).isVisible());
 
         SwingUtilities.invokeAndWait(() -> model.addRow(new Object[]{"Registo existente"}));
         SwingUtilities.invokeAndWait(() -> { }); // processa a confirmação diferida do estado
 
         assertEquals(1, table.getRowCount());
-        assertFalse(emptyStateLabel(scroll).isVisible());
+        assertFalse(emptyStateOverlay(scroll).isVisible());
     }
 
-    private static javax.swing.JLabel emptyStateLabel(JScrollPane scroll) {
+    private static javax.swing.JPanel emptyStateOverlay(JScrollPane scroll) {
         for (Component component : scroll.getComponents()) {
-            if (component instanceof javax.swing.JLabel label) return label;
+            if (component instanceof javax.swing.JPanel panel
+                    && panel.getClientProperty("titleLabel") instanceof javax.swing.JLabel) return panel;
         }
         fail("Overlay do estado vazio não instalado.");
         return null;

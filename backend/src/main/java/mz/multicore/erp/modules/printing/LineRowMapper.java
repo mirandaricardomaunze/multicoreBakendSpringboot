@@ -40,6 +40,8 @@ public class LineRowMapper {
                 description,
                 resolveExpiry(product, batchNumber),
                 quantity,
+                product == null ? null : product.getPackagesPerBox(),
+                product == null ? null : product.getUnitsPerPackage(),
                 unitPrice,
                 taxRate,
                 discountPercentage,

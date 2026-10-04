@@ -119,6 +119,13 @@ public class Quotation extends BaseEntity {
     @Column(name = "order_number")
     private String orderNumber;
 
+    /** Fatura gerada na conversão directa ou no POS. */
+    @Column(name = "invoice_id")
+    private Long invoiceId;
+
+    @Column(name = "invoice_number")
+    private String invoiceNumber;
+
     @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuotationLine> lines = new ArrayList<>();
 

@@ -14,9 +14,17 @@ import java.util.List;
 public class TenantAccessService {
 
     private final AppUserRepository appUserRepository;
+    private final mz.multicore.erp.modules.subscription.service.SubscriptionService subscriptionService;
 
     public TenantAccessService(AppUserRepository appUserRepository) {
+        this(appUserRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public TenantAccessService(AppUserRepository appUserRepository,
+                               mz.multicore.erp.modules.subscription.service.SubscriptionService subscriptionService) {
         this.appUserRepository = appUserRepository;
+        this.subscriptionService = subscriptionService;
     }
 
     @Transactional(readOnly = true)
@@ -46,6 +54,10 @@ public class TenantAccessService {
         AppUser user = requireActiveUser(username);
         if (!user.hasCompany(companyId)) {
             throw new BusinessRuleException("O utilizador não tem acesso à empresa selecionada.");
+        }
+        Company company = user.findCompanyAccess(companyId).orElseThrow().getCompany();
+        if (!company.isActive() || (subscriptionService != null && !subscriptionService.allowsLogin(companyId))) {
+            throw new BusinessRuleException("A empresa está suspensa ou sem assinatura activa.");
         }
         return user;
     }

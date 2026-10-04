@@ -1,0 +1,2 @@
+ALTER TABLE stock_transfers
+    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;

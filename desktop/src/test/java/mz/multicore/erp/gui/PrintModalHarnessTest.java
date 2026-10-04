@@ -47,7 +47,8 @@ class PrintModalHarnessTest {
             "HRContractsPanel.java",
             "HRPanel.java",
             "HRTerminationsPanel.java",
-            "PosCashSessionActions.java",
+            "pos/PosBlindCloseDialog.java",
+            "pos/PosSessionHistoryDialog.java",
             "POSPanel.java",
             "PosSalesHistoryPanel.java",
             "StockBatchesPanel.java",
@@ -82,10 +83,17 @@ class PrintModalHarnessTest {
             // vive toda no TableExportAction — que também passa pelo modal, e que o CE-05 prende —,
             // e um ecrã que só exporta listagens não tem de repetir a chamada.
             assertThat(source.contains("PrintPreviewDialog.show(")
-                    || source.contains("TableExportAction.export("))
+                    || source.contains("TableExportAction.export(")
+                    || source.contains("PosReceiptPrinter.printReceiptIfConfirmed("))
                     .as("%s deixou de abrir o modal de impressão", screen)
                     .isTrue();
         }
+    }
+
+    @Test
+    void oDelegadoDeImpressaoPosAbreOModal() throws IOException {
+        String source = Files.readString(GUI.resolve("PosReceiptPrinter.java"));
+        assertThat(source).contains("PrintPreviewDialog.show(");
     }
 
     @Test

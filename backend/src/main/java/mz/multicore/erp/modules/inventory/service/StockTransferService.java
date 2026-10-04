@@ -13,6 +13,7 @@ import mz.multicore.erp.modules.inventory.dto.CreateStockTransferLineRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.dto.StockTransferLineDTO;
+import mz.multicore.erp.modules.inventory.dto.UpdateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Orchestrates stock transfers between warehouses of the same company.
@@ -85,6 +87,20 @@ public class StockTransferService {
             throw new BusinessRuleException("O armazém de origem e o armazém de destino devem ser diferentes.");
         }
 
+        String driver = request.driverName() != null && !request.driverName().isBlank()
+                ? request.driverName().trim()
+                : (request.responsible() != null && !request.responsible().isBlank() ? request.responsible().trim() : null);
+        if (driver == null || driver.isBlank()) {
+            throw new BusinessRuleException("O nome do motorista é obrigatório para emitir a guia de transferência.");
+        }
+
+        String plate = request.vehiclePlate() != null && !request.vehiclePlate().isBlank()
+                ? request.vehiclePlate().trim()
+                : (request.vehicle() != null && !request.vehicle().isBlank() ? request.vehicle().trim() : null);
+        if (plate == null || plate.isBlank()) {
+            throw new BusinessRuleException("A matrícula do veículo é obrigatória para emitir a guia de transferência.");
+        }
+
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
         Warehouse origin = warehouseRepository.findById(request.originWarehouseId())
@@ -103,22 +119,19 @@ public class StockTransferService {
         transfer.setCompany(company);
         transfer.setOriginWarehouse(origin);
         transfer.setDestinationWarehouse(destination);
-        // A guia nasce pendente: o stock só sai na aprovação (ver approve()).
-        transfer.setStatus(TransferStatus.PENDING_APPROVAL);
-        transfer.setResponsible(blankToNull(request.responsible()));
-        transfer.setVehicle(blankToNull(request.vehicle()));
+        // O rascunho pode ser revisto; só a aprovação posterior move stock.
+        transfer.setStatus(TransferStatus.DRAFT);
+        transfer.setResponsible(blankToNull(request.responsible()) != null ? blankToNull(request.responsible()) : driver);
+        transfer.setVehicle(blankToNull(request.vehicle()) != null ? blankToNull(request.vehicle()) : plate);
+        transfer.setDriverName(driver);
+        transfer.setVehiclePlate(plate);
         transfer.setNotes(blankToNull(request.notes()));
         transfer.setCreatedBy(CurrentUserContext.getUsername());
 
-        // Soma o pedido por produto, para validar a disponibilidade agregada na origem.
-        java.util.Map<Long, BigDecimal> requestedByProduct = new java.util.HashMap<>();
         for (CreateStockTransferLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException(
                             "Produto não encontrado ID: " + lineReq.productId()));
-
-            requestedByProduct.merge(product.getId(), lineReq.quantity(), BigDecimal::add);
-
             // Não move stock — só regista a intenção. O lote (FEFO) é decidido na aprovação.
             StockTransferLine line = new StockTransferLine();
             line.setTransfer(transfer);
@@ -127,23 +140,80 @@ public class StockTransferService {
             transfer.getLines().add(line);
         }
 
-        // Falha cedo se já não há stock para a guia — evita criar guias que nunca poderão ser
-        // aprovadas. A verificação autoritativa (FEFO) repete-se na aprovação.
-        for (StockTransferLine line : transfer.getLines()) {
-            Long productId = line.getProduct().getId();
-            BigDecimal needed = requestedByProduct.get(productId);
-            if (needed == null) continue; // já validado noutra linha do mesmo produto
-            BigDecimal available = availableForExit(productId, origin.getId());
-            if (available.compareTo(needed) < 0) {
-                throw new BusinessRuleException(String.format(
-                        "Stock insuficiente de '%s' no armazém de origem '%s'. Requerido: %s, Disponível: %s",
-                        line.getProduct().getName(), origin.getName(), needed, available));
-            }
-            requestedByProduct.remove(productId); // valida só uma vez por produto
-        }
+        validateAvailability(transfer);
 
         transfer = transferRepository.save(transfer);
+        auditLogService.logCurrent("STOCK_TRANSFER_DRAFT_CREATE",
+                "Rascunho da guia " + transfer.getTransferNumber() + " criado.");
         return toDTO(transfer);
+    }
+
+    /** Substitui a fotografia completa de uma guia enquanto ela ainda é rascunho. */
+    @Transactional
+    public StockTransferDTO update(Long id, UpdateStockTransferRequest request) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, companyId)
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        requireDraft(transfer, "actualizada");
+        if (!Objects.equals(transfer.getVersion(), request.version())) {
+            throw new BusinessRuleException(
+                    "Esta transferência foi alterada por outro utilizador. Actualize a lista e tente novamente.");
+        }
+        if (request.originWarehouseId().equals(request.destinationWarehouseId())) {
+            throw new BusinessRuleException("O armazém de origem e o armazém de destino devem ser diferentes.");
+        }
+
+        Warehouse origin = warehouseRepository.findById(request.originWarehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém de origem não encontrado."));
+        Warehouse destination = warehouseRepository.findById(request.destinationWarehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
+        if (!origin.getCompany().getId().equals(companyId)
+                || !destination.getCompany().getId().equals(companyId)) {
+            throw new BusinessRuleException("Os armazéns devem pertencer à empresa activa.");
+        }
+
+        String driver = requiredDriver(request.driverName(), request.responsible());
+        String plate = requiredPlate(request.vehiclePlate(), request.vehicle());
+        transfer.setOriginWarehouse(origin);
+        transfer.setDestinationWarehouse(destination);
+        transfer.setResponsible(blankToNull(request.responsible()) != null
+                ? blankToNull(request.responsible()) : driver);
+        transfer.setVehicle(blankToNull(request.vehicle()) != null ? blankToNull(request.vehicle()) : plate);
+        transfer.setDriverName(driver);
+        transfer.setVehiclePlate(plate);
+        transfer.setNotes(blankToNull(request.notes()));
+        transfer.getLines().clear();
+        for (CreateStockTransferLineRequest lineReq : request.lines()) {
+            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
+                    .orElseThrow(() -> new BusinessRuleException(
+                            "Produto não encontrado ID: " + lineReq.productId()));
+            StockTransferLine line = new StockTransferLine();
+            line.setTransfer(transfer);
+            line.setProduct(product);
+            line.setQuantity(lineReq.quantity());
+            transfer.getLines().add(line);
+        }
+        validateAvailability(transfer);
+
+        StockTransfer saved = transferRepository.saveAndFlush(transfer);
+        auditLogService.logCurrent("STOCK_TRANSFER_DRAFT_UPDATE",
+                "Rascunho da guia " + saved.getTransferNumber() + " actualizado.");
+        return toDTO(saved);
+    }
+
+    /** Fecha a edição do rascunho e encaminha-o para decisão. */
+    @Transactional
+    public StockTransferDTO submit(Long id) {
+        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(
+                        id, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        requireDraft(transfer, "submetida");
+        validateAvailability(transfer);
+        transfer.setStatus(TransferStatus.PENDING_APPROVAL);
+        StockTransfer saved = transferRepository.save(transfer);
+        auditLogService.logCurrent("STOCK_TRANSFER_SUBMIT",
+                "Guia " + saved.getTransferNumber() + " submetida para aprovação.");
+        return toDTO(saved);
     }
 
     /**
@@ -249,13 +319,16 @@ public class StockTransferService {
         return toDTO(saved);
     }
 
-    /** Cancela uma guia ainda pendente (sem efeito no stock). */
+    /** Cancela um rascunho ou uma guia pendente (sem efeito no stock). */
     @Transactional
     public StockTransferDTO cancel(Long id) {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
-        if (transfer.getStatus() == TransferStatus.APPROVED) {
-            throw new BusinessRuleException("Guias já aprovadas não podem ser canceladas — o stock já foi movido.");
+        if (transfer.getStatus() != TransferStatus.DRAFT
+                && transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
+            throw new BusinessRuleException(
+                    "Apenas guias em rascunho ou pendentes podem ser canceladas. Estado atual: "
+                            + transfer.getStatus().getLabel());
         }
         transfer.setStatus(TransferStatus.CANCELLED);
         StockTransfer saved = transferRepository.save(transfer);
@@ -267,6 +340,49 @@ public class StockTransferService {
 
     private void requireApproverRole() {
         PermissionGuard.requireManagerOrAdmin("aprovar ou rejeitar guias de transferência");
+    }
+
+    private void requireDraft(StockTransfer transfer, String operation) {
+        if (transfer.getStatus() != TransferStatus.DRAFT) {
+            throw new BusinessRuleException("Apenas guias em rascunho podem ser " + operation
+                    + ". Estado atual: " + transfer.getStatus().getLabel());
+        }
+    }
+
+    private String requiredDriver(String driverName, String responsible) {
+        String driver = blankToNull(driverName) != null ? blankToNull(driverName) : blankToNull(responsible);
+        if (driver == null) {
+            throw new BusinessRuleException("O nome do motorista é obrigatório para emitir a guia de transferência.");
+        }
+        return driver;
+    }
+
+    private String requiredPlate(String vehiclePlate, String vehicle) {
+        String plate = blankToNull(vehiclePlate) != null ? blankToNull(vehiclePlate) : blankToNull(vehicle);
+        if (plate == null) {
+            throw new BusinessRuleException("A matrícula do veículo é obrigatória para emitir a guia de transferência.");
+        }
+        return plate;
+    }
+
+    /** Validação agregada por produto usada ao gravar e ao submeter o rascunho. */
+    private void validateAvailability(StockTransfer transfer) {
+        java.util.Map<Long, BigDecimal> requested = new java.util.LinkedHashMap<>();
+        java.util.Map<Long, Product> products = new java.util.LinkedHashMap<>();
+        for (StockTransferLine line : transfer.getLines()) {
+            Long productId = line.getProduct().getId();
+            requested.merge(productId, line.getQuantity(), BigDecimal::add);
+            products.putIfAbsent(productId, line.getProduct());
+        }
+        for (var entry : requested.entrySet()) {
+            Product product = products.get(entry.getKey());
+            BigDecimal available = availableForExit(entry.getKey(), transfer.getOriginWarehouse().getId());
+            if (available.compareTo(entry.getValue()) < 0) {
+                throw new BusinessRuleException(String.format(
+                        "Stock insuficiente de '%s' no armazém de origem '%s'. Requerido: %s, Disponível: %s",
+                        product.getName(), transfer.getOriginWarehouse().getName(), entry.getValue(), available));
+            }
+        }
     }
 
     /**
@@ -370,14 +486,32 @@ public class StockTransferService {
 
     private StockTransferDTO toDTO(StockTransfer t) {
         List<StockTransferLineDTO> lineDTOs = t.getLines().stream()
-                .map(l -> new StockTransferLineDTO(
-                        l.getId(),
-                        l.getProduct().getId(),
-                        l.getProduct().getSku(),
-                        l.getProduct().getName(),
-                        l.getQuantity(),
-                        l.getBatchNumber()
-                )).toList();
+                .map(l -> {
+                    var p = l.getProduct();
+                    BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
+                    String ref = p != null && p.getReference() != null && !p.getReference().isBlank()
+                            ? p.getReference() : (p != null ? p.getSku() : null);
+                    String barcode = p != null ? p.getBarcode() : null;
+                    int pkgs = p != null && p.getPackagesPerBox() > 0 ? p.getPackagesPerBox() : 1;
+                    int units = p != null && p.getUnitsPerPackage() > 0 ? p.getUnitsPerPackage() : 1;
+                    BigDecimal price = (p != null && p.effectiveUnitPrice(qty) != null)
+                            ? p.effectiveUnitPrice(qty) : BigDecimal.ZERO;
+                    BigDecimal tax = p != null ? p.effectiveTaxRate() : BigDecimal.ZERO;
+                    return new StockTransferLineDTO(
+                            l.getId(),
+                            p != null ? p.getId() : null,
+                            p != null ? p.getSku() : null,
+                            ref,
+                            barcode,
+                            p != null ? p.getName() : null,
+                            qty,
+                            l.getBatchNumber(),
+                            pkgs,
+                            units,
+                            price,
+                            tax
+                    );
+                }).toList();
         return new StockTransferDTO(
                 t.getId(),
                 t.getTransferNumber(),
@@ -396,7 +530,10 @@ public class StockTransferService {
                 t.getRejectionReason(),
                 lineDTOs,
                 t.getOrderId(),
-                t.getOrderNumber()
+                t.getOrderNumber(),
+                t.getDriverName(),
+                t.getVehiclePlate(),
+                t.getVersion()
         );
     }
 }

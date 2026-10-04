@@ -36,7 +36,7 @@ public class DateField extends JTextField {
         calendarButton = new JButton(UIHelper.icon("fas-calendar-alt", 13, UIHelper.ACCENT_BLUE));
         calendarButton.setFocusable(false);
         calendarButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        calendarButton.setToolTipText("Abrir calendário (F4 ou Alt+↓)");
+        calendarButton.setToolTipText("Abrir calendário (F4 ou Alt+Seta Para Baixo)");
         calendarButton.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         calendarButton.addActionListener(e -> openCalendarPopup());
 

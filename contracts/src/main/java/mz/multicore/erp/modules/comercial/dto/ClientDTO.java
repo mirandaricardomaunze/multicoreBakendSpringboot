@@ -17,10 +17,15 @@ public record ClientDTO(
     int paymentTermsDays,
     BigDecimal creditLimit,
     BigDecimal loyaltyPoints,
-    String code
+    String code,
+    Long version
 ) {
+    public ClientDTO(Long id, String name, String taxId, String email, String address, int paymentTermsDays, BigDecimal creditLimit, BigDecimal loyaltyPoints, String code) {
+        this(id, name, taxId, email, address, paymentTermsDays, creditLimit, loyaltyPoints, code, 0L);
+    }
+
     public ClientDTO(Long id, String name, String taxId, String email, String address, int paymentTermsDays, BigDecimal creditLimit) {
-        this(id, name, taxId, email, address, paymentTermsDays, creditLimit, BigDecimal.ZERO, null);
+        this(id, name, taxId, email, address, paymentTermsDays, creditLimit, BigDecimal.ZERO, null, 0L);
     }
 
     public String nuit() { return taxId; }

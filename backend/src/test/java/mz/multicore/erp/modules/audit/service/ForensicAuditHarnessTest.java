@@ -75,7 +75,7 @@ class ForensicAuditHarnessTest {
         printService = new ForensicAuditPrintService(forensicAuditService, companyService);
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
-        CurrentUserContext.setCurrentUser("auditor_chefe", "AUDITOR");
+        CurrentUserContext.setCurrentUser("auditor_chefe", "MANAGER");
     }
 
     @AfterEach

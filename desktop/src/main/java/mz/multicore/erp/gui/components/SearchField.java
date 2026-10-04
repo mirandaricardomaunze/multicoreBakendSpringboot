@@ -21,7 +21,7 @@ public class SearchField extends JTextField {
     private final String hint;
 
     public SearchField(String hint) {
-        this.hint = hint == null ? "" : hint;
+        this.hint = hint == null ? "" : ModernButton.stripEllipsis(hint);
         UIHelper.styleTextField(this);
         putClientProperty("JTextField.placeholderText", this.hint);
         putClientProperty("JTextField.leadingIcon", icon);

@@ -24,21 +24,12 @@ final class StockBatchesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Lotes & Validades"), BorderLayout.WEST);
         ModernButton addBatchBtn = UIHelper.createSuccessButton("Adicionar Lote/Validade");
         addBatchBtn.setIcon(UIHelper.icon("fas-plus", 14));
         addBatchBtn.addActionListener(e -> owner.createBatchEntryDialog(null));
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         exportBtn.addActionListener(e -> exportBatchesPdf());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
-        actions.add(addBatchBtn);
-        actions.add(exportBtn);
-        header.add(actions, BorderLayout.EAST);
-
         // Filter bar
         JPanel filters = new JPanel(new GridBagLayout());
         filters.setOpaque(false);
@@ -79,18 +70,20 @@ final class StockBatchesPanel {
         owner.batchesSummary = new JLabel(" ");
         owner.batchesSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         owner.batchesSummary.setForeground(UIHelper.TEXT_MUTED);
-        owner.batchesSummary.setBorder(new EmptyBorder(2, 2, 0, 0));
-
-        JPanel topStack = new JPanel(new BorderLayout(0, 10));
-        topStack.setOpaque(false);
-        topStack.add(header, BorderLayout.NORTH);
-        topStack.add(filters, BorderLayout.CENTER);
-        topStack.add(owner.batchesSummary, BorderLayout.SOUTH);
-        tab.add(topStack, BorderLayout.NORTH);
+        owner.batchesSummary.setBorder(new EmptyBorder(6, 2, 0, 0));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JPanel filterCardHeader = new JPanel(new BorderLayout(0, 8));
+        filterCardHeader.setOpaque(false);
+        filterCardHeader.setBorder(new EmptyBorder(0, 0, 12, 0));
+        filterCardHeader.add(filters, BorderLayout.CENTER);
+        filterCardHeader.add(owner.batchesSummary, BorderLayout.SOUTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
+        card.add(UIHelper.tableCardTop("Lotes & Validades", filterCardHeader,
+                refreshBtn, exportBtn, addBatchBtn), BorderLayout.NORTH);
 
         String[] cols = {"Artigo (SKU)", "Nome do Artigo", "Armazém", "Nº Lote", "Validade", "Dias", "Quantidade", "Estado"};
         owner.batchesModel = new DefaultTableModel(cols, 0) {
@@ -122,7 +115,7 @@ final class StockBatchesPanel {
         if (owner.batchWarehouseCombo != null) {
             Object selected = owner.batchWarehouseCombo.getSelectedItem();
             owner.batchWarehouseCombo.removeAllItems();
-            owner.batchWarehouseCombo.addItem("--- Todos os Armazéns ---");
+            owner.batchWarehouseCombo.addItem("Todos os Armazéns");
             for (WarehouseDTO w : owner.warehousesList) {
                 owner.batchWarehouseCombo.addItem(w.name());
             }
@@ -212,7 +205,7 @@ final class StockBatchesPanel {
                     b.batchNumber(),
                     b.expirationDate() == null ? "—" : b.expirationDate().format(fmt),
                     daysCell,
-                    hide ? MASK : String.format("%,.3f", b.quantity()),
+                    hide ? MASK : String.format("%,.2f", b.quantity()),
                     status
             });
         }

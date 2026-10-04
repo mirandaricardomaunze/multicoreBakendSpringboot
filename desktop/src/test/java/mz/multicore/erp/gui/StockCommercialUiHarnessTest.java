@@ -45,4 +45,12 @@ class StockCommercialUiHarnessTest {
         String dialog = source(Path.of("components", "ModernFormDialog.java").toString());
         assertThat(dialog).contains("KeyEvent.VK_S", "CTRL_DOWN_MASK", "KeyEvent.VK_ESCAPE");
     }
+
+    @Test
+    void stockToolbarsAdhereToMaxThreeButtons() throws IOException {
+        String stock = source("StockPanel.java");
+        assertThat(stock).contains("topBar.add(UIHelper.actionsBar(refreshAllBtn, moreBtn, newProductBtn)");
+        assertThat(stock).contains("UIHelper.tableCardTop(\"Transferências entre Armazéns\", trFilters,")
+                .contains("transferDocuments, transferMenu, transferBtn");
+    }
 }

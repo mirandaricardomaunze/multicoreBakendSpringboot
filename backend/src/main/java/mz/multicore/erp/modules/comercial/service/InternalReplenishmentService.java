@@ -79,6 +79,9 @@ public class InternalReplenishmentService {
                 .map(line -> new CreateStockTransferLineRequest(line.getProduct().getId(), line.getQuantity()))
                 .toList();
 
+        String driver = request == null ? null : (request.driverName() != null ? request.driverName() : request.responsible());
+        String plate = request == null ? null : (request.vehiclePlate() != null ? request.vehiclePlate() : request.vehicle());
+
         StockTransferDTO transfer = stockTransferService.create(new CreateStockTransferRequest(
                 order.getCompany().getId(),
                 order.getWarehouse().getId(),
@@ -86,7 +89,9 @@ public class InternalReplenishmentService {
                 request == null ? null : request.responsible(),
                 request == null ? null : request.vehicle(),
                 notesFor(order, request),
-                lines));
+                lines,
+                driver,
+                plate));
 
         StockTransferDTO linked = stockTransferService.linkToOrder(
                 transfer.id(), order.getId(), order.getOrderNumber());

@@ -32,6 +32,8 @@ public class DocumentEditorHost extends JPanel {
 
     private final BooleanSupplier dirty;
     private final Runnable onBack;
+    private JLabel titleLabel;
+    private ModernButton saveButton;
 
     /**
      * @param title   título do documento (ex.: "Nova Encomenda")
@@ -79,20 +81,32 @@ public class DocumentEditorHost extends JPanel {
         ModernButton back = UIHelper.createSecondaryButton("Voltar à lista");
         back.setIcon(UIHelper.icon("fas-arrow-left", 14));
         back.addActionListener(e -> requestBack());
-        JLabel titleLabel = UIHelper.createHeading(title);
+        titleLabel = UIHelper.createHeading(title);
         left.add(back);
         left.add(titleLabel);
         bar.add(left, BorderLayout.WEST);
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         right.setOpaque(false);
-        ModernButton save = UIHelper.createPrimaryButton("Guardar");
-        save.setIcon(UIHelper.icon("fas-save", 14));
-        save.addActionListener(e -> { if (onSave != null) onSave.run(); });
-        right.add(save);
+        saveButton = UIHelper.createPrimaryButton("Guardar");
+        saveButton.setIcon(UIHelper.icon("fas-save", 14));
+        saveButton.addActionListener(e -> { if (onSave != null) onSave.run(); });
+        right.add(saveButton);
         bar.add(right, BorderLayout.EAST);
 
         return bar;
+    }
+
+    public void setEditorTitle(String title) {
+        titleLabel.setText(title == null ? "Documento" : title);
+    }
+
+    public void setSaveText(String text) {
+        saveButton.setText(text == null || text.isBlank() ? "Guardar" : text);
+    }
+
+    public void setSaveEnabled(boolean enabled) {
+        saveButton.setEnabled(enabled);
     }
 
     /** Envolve o conteúdo num scroll que ocupa toda a largura e rola na vertical quando é alto. */

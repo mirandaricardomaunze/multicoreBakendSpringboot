@@ -60,6 +60,7 @@ public class DataLoader implements CommandLineRunner {
     private final boolean seedDemoData;
     /** Senha inicial do superadmin. Vazia (ex.: prod sem env) ⇒ conta não é criada automaticamente. */
     private final String superAdminPassword;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public DataLoader(
             EmployeeRepository employeeRepository,
@@ -76,7 +77,8 @@ public class DataLoader implements CommandLineRunner {
             TaxRateRepository taxRateRepository,
             ProductCategoryRepository productCategoryRepository,
             @Value("${app.seed-demo-data:true}") boolean seedDemoData,
-            @Value("${app.superadmin.password:superadmin}") String superAdminPassword
+            @Value("${app.superadmin.password:superadmin}") String superAdminPassword,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder
     ) {
         this.employeeRepository = employeeRepository;
         this.clientRepository = clientRepository;
@@ -93,6 +95,7 @@ public class DataLoader implements CommandLineRunner {
         this.productCategoryRepository = productCategoryRepository;
         this.seedDemoData = seedDemoData;
         this.superAdminPassword = superAdminPassword;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -107,7 +110,7 @@ public class DataLoader implements CommandLineRunner {
         AppUser superAdmin = new AppUser();
         superAdmin.setUsername("superadmin");
         superAdmin.setName("Administrador da Plataforma");
-        superAdmin.setPassword(superAdminPassword);
+        superAdmin.setPassword(passwordEncoder.encode(superAdminPassword));
         superAdmin.setRole("ADMIN");
         superAdmin.setActive(true);
         superAdmin.setPlatformAdmin(true);
@@ -120,7 +123,7 @@ public class DataLoader implements CommandLineRunner {
             AppUser u = new AppUser();
             u.setUsername("admin");
             u.setName("Administrador Geral");
-            u.setPassword("admin");
+            u.setPassword(passwordEncoder.encode("admin"));
             u.setRole("ADMIN");
             u.setActive(true);
             u.setCreatedBy("SYSTEM");
@@ -243,7 +246,7 @@ public class DataLoader implements CommandLineRunner {
         AppUser mariaUser = new AppUser();
         mariaUser.setUsername("maria");
         mariaUser.setName("Maria Santos");
-        mariaUser.setPassword("password");
+        mariaUser.setPassword(passwordEncoder.encode("password"));
         mariaUser.setRole("EMPLOYEE");
         mariaUser.setActive(true);
         appUserRepository.save(mariaUser);
@@ -251,7 +254,7 @@ public class DataLoader implements CommandLineRunner {
         AppUser joaoUser = new AppUser();
         joaoUser.setUsername("joao");
         joaoUser.setName("João Silva");
-        joaoUser.setPassword("password");
+        joaoUser.setPassword(passwordEncoder.encode("password"));
         joaoUser.setRole("MANAGER");
         joaoUser.setActive(true);
         appUserRepository.save(joaoUser);
@@ -259,7 +262,7 @@ public class DataLoader implements CommandLineRunner {
         AppUser anaUser = new AppUser();
         anaUser.setUsername("ana");
         anaUser.setName("Ana Costa");
-        anaUser.setPassword("password");
+        anaUser.setPassword(passwordEncoder.encode("password"));
         anaUser.setRole("ADMIN");
         anaUser.setActive(true);
         appUserRepository.save(anaUser);

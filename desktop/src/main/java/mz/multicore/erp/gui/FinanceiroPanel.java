@@ -71,15 +71,15 @@ public class FinanceiroPanel extends JPanel {
 
         tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
-        tabbedPane.addTab("Contas", UIHelper.icon("fas-wallet", 16, UIHelper.TEXT_LIGHT), createAccountsTab());
-        tabbedPane.addTab("Fluxo de Caixa", UIHelper.icon("fas-exchange-alt", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Contas", UIHelper.icon("fas-wallet", 16, UIHelper.APPROVED_GREEN), createAccountsTab());
+        tabbedPane.addTab("Fluxo de Caixa", UIHelper.icon("fas-exchange-alt", 16, UIHelper.ACCENT_BLUE),
                 createMovementsTab());
         reconciliationPanel = new BankReconciliationPanel(bankReconciliationApiClient, financeApiClient);
-        tabbedPane.addTab("Reconciliação Bancária", UIHelper.icon("fas-university", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Reconciliação Bancária", UIHelper.icon("fas-university", 16, UIHelper.ACCENT),
                 reconciliationPanel);
         if (forecastApiClient != null) {
             this.forecastPanel = new CashFlowForecastPanel(forecastApiClient);
-            tabbedPane.addTab("Projeção Previsional", UIHelper.icon("fas-chart-line", 16, UIHelper.TEXT_LIGHT), forecastPanel);
+            tabbedPane.addTab("Projeção Previsional", UIHelper.icon("fas-chart-line", 16, UIHelper.ACCENT_CYAN), forecastPanel);
         } else {
             this.forecastPanel = null;
         }
@@ -132,10 +132,7 @@ public class FinanceiroPanel extends JPanel {
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Recebimento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         payBtn.addActionListener(e -> registerReceipt());
-        JPanel movActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        movActions.setOpaque(false);
-        movActions.add(payBtn);
-        movHeader.add(movActions, BorderLayout.EAST);
+        movHeader.add(UIHelper.actionsBar(payBtn), BorderLayout.EAST);
         movementsPanel.add(movHeader, BorderLayout.NORTH);
 
         ModernPanel movementsCard = new ModernPanel(16);

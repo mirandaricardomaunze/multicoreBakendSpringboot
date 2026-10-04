@@ -15,9 +15,9 @@ import java.util.function.Consumer;
 public class SmartAlertsDialog extends JDialog {
 
     public enum Urgency {
-        CRITICAL("Crítico", UIHelper.REJECTED_RED, "🔴"),
-        WARNING("Atenção", UIHelper.PENDING_YELLOW, "🟡"),
-        INFO("Informativo", UIHelper.ACCENT_BLUE, "🟢");
+        CRITICAL("Crítico", UIHelper.REJECTED_RED, "fas-exclamation-circle"),
+        WARNING("Atenção", UIHelper.PENDING_YELLOW, "fas-exclamation-triangle"),
+        INFO("Informativo", UIHelper.ACCENT_BLUE, "fas-info-circle");
 
         private final String label;
         private final Color color;
@@ -103,9 +103,11 @@ public class SmartAlertsDialog extends JDialog {
 
         ModernButton allBtn = UIHelper.createSecondaryButton("Todos (" + allAlerts.size() + ")");
         long critCount = allAlerts.stream().filter(a -> a.urgency() == Urgency.CRITICAL).count();
-        ModernButton critBtn = UIHelper.createSecondaryButton("Críticos 🔴 (" + critCount + ")");
+        ModernButton critBtn = UIHelper.createSecondaryButton("Críticos (" + critCount + ")");
+        critBtn.setIcon(UIHelper.icon("fas-exclamation-circle", 12, UIHelper.REJECTED_RED));
         long warnCount = allAlerts.stream().filter(a -> a.urgency() == Urgency.WARNING).count();
-        ModernButton warnBtn = UIHelper.createSecondaryButton("Atenção 🟡 (" + warnCount + ")");
+        ModernButton warnBtn = UIHelper.createSecondaryButton("Atenção (" + warnCount + ")");
+        warnBtn.setIcon(UIHelper.icon("fas-exclamation-triangle", 12, UIHelper.PENDING_YELLOW));
 
         allBtn.addActionListener(e -> { currentFilter = null; refreshList(); });
         critBtn.addActionListener(e -> { currentFilter = Urgency.CRITICAL; refreshList(); });
@@ -184,7 +186,8 @@ public class SmartAlertsDialog extends JDialog {
         catTag.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         catTag.setForeground(UIHelper.ACCENT_BLUE);
 
-        JLabel urgTag = new JLabel(alert.urgency().getIcon() + " " + alert.urgency().getLabel());
+        JLabel urgTag = new JLabel(alert.urgency().getLabel());
+        urgTag.setIcon(UIHelper.icon(alert.urgency().getIcon(), 11, alert.urgency().getColor()));
         urgTag.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         urgTag.setForeground(alert.urgency().getColor());
 

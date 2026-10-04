@@ -137,12 +137,19 @@ final class PosLayout {
         return row + 2;
     }
 
-    static mz.multicore.erp.gui.components.ModernPanel createSessionBanner(JLabel statusLabel) {
+    static mz.multicore.erp.gui.components.ModernPanel createSessionBanner(JLabel statusLabel, JComponent trailing) {
         mz.multicore.erp.gui.components.ModernPanel banner = new mz.multicore.erp.gui.components.ModernPanel(10);
-        banner.setLayout(new BorderLayout());
-        banner.setBorder(new EmptyBorder(6, 12, 6, 12));
-        banner.add(statusLabel, BorderLayout.CENTER);
+        banner.setLayout(new BorderLayout(12, 0));
+        banner.setBorder(new EmptyBorder(4, 12, 4, 6));
+        banner.add(statusLabel, BorderLayout.WEST);
+        if (trailing != null) {
+            banner.add(trailing, BorderLayout.EAST);
+        }
         return banner;
+    }
+
+    static mz.multicore.erp.gui.components.ModernPanel createSessionBanner(JLabel statusLabel) {
+        return createSessionBanner(statusLabel, null);
     }
 
     static mz.multicore.erp.gui.components.ModernPanel createTotalsRow(JLabel subtotalValue, JLabel ivaValue, JLabel totalValue) {

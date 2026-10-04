@@ -6,6 +6,7 @@ import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
+import mz.multicore.erp.architecture.quantity.PackagingComposition;
 import mz.multicore.erp.architecture.validation.TaxIdValidator;
 import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
@@ -161,6 +162,11 @@ public class ComercialService {
                 throw new BusinessRuleException("Já existe outro cliente registado com este NUIT/NIF.");
             });
         }
+        BigDecimal oldLimit = client.getCreditLimit();
+        BigDecimal newLimit = request.creditLimit();
+        boolean creditLimitChanged = (oldLimit == null && newLimit != null)
+                || (oldLimit != null && (newLimit == null || oldLimit.compareTo(newLimit) != 0));
+
         client.setName(request.name());
         client.setTaxId(taxId);
         client.setEmail(request.email());
@@ -170,6 +176,13 @@ public class ComercialService {
         client.setPaymentTermsDays(request.effectivePaymentTermsDays());
         client.setCreditLimit(request.creditLimit());
         client = clientRepository.save(client);
+
+        if (creditLimitChanged && auditLogService != null) {
+            String oldVal = oldLimit != null ? oldLimit.toPlainString() : "0";
+            String newVal = newLimit != null ? newLimit.toPlainString() : "0";
+            auditLogService.logCurrent("CLIENT_CREDIT_LIMIT_CHANGE",
+                    "Limite de crédito do cliente " + client.getName() + " (ID " + client.getId() + ") alterado de " + oldVal + " para " + newVal + " MZN");
+        }
         return toDTO(client);
     }
 
@@ -177,11 +190,12 @@ public class ComercialService {
     private ClientDTO toDTO(Client client) {
         return new ClientDTO(client.getId(), client.getName(), client.getTaxId(),
                 client.getEmail(), client.getAddress(), client.effectivePaymentTermsDays(),
-                client.getCreditLimit());
+                client.getCreditLimit(), BigDecimal.ZERO, null, client.getVersion());
     }
 
     @Transactional
     public void deleteClient(Long id) {
+        PermissionGuard.requireManagerOrAdmin("eliminar cliente");
         Client client = clientRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
         try {
@@ -643,27 +657,53 @@ public class ComercialService {
                 .collect(Collectors.toList());
     }
 
-    /** Página do catálogo POS; pesquisa e disponibilidade são aplicadas antes da paginação. */
+    /** Página do catálogo POS; pesquisa e disponibilidade são aplicadas antes da paginação para o armazém selecionado. */
     @Transactional(readOnly = true)
     public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(
-            String query, boolean availableOnly, Integer page, Integer size) {
+            String query, boolean availableOnly, Long warehouseId, Integer page, Integer size) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        java.util.Set<Long> sellableIds = inventoryService.getInStockProductIdsForSale(companyId);
+        java.util.Set<Long> sellableIds = warehouseId != null
+                ? inventoryService.getInStockProductIdsForSale(companyId, warehouseId)
+                : inventoryService.getInStockProductIdsForSale(companyId);
+        java.util.Map<Long, BigDecimal> stockQuantities = inventoryService != null
+                ? inventoryService.getStockQuantitiesForSale(companyId, warehouseId)
+                : java.util.Collections.emptyMap();
         java.util.Set<Long> queryIds = sellableIds.isEmpty() ? java.util.Set.of(-1L) : sellableIds;
         String normalizedQuery = query == null ? "" : query.trim();
         var result = productRepository.findPOSCatalogPage(companyId, normalizedQuery, availableOnly,
                 queryIds, PageQuery.of(page, size));
-        return mz.multicore.erp.architecture.paging.PageResponseMapper.from(result, product -> new POSCatalogItemDTO(
-                toDTO(product), !product.isStockTracked() || sellableIds.contains(product.getId())));
+        return mz.multicore.erp.architecture.paging.PageResponseMapper.from(result, product -> {
+            boolean sellable = !product.isStockTracked() || sellableIds.contains(product.getId());
+            BigDecimal qty = stockQuantities != null ? stockQuantities.getOrDefault(product.getId(), BigDecimal.ZERO) : BigDecimal.ZERO;
+            return new POSCatalogItemDTO(toDTO(product), sellable, qty);
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(
+            String query, boolean availableOnly, Integer page, Integer size) {
+        return getPOSCatalogPage(query, availableOnly, null, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode, Long warehouseId) {
+        ProductDTO product = findProductByBarcode(barcode);
+        if (product == null) return null;
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        java.util.Set<Long> sellableIds = warehouseId != null
+                ? inventoryService.getInStockProductIdsForSale(companyId, warehouseId)
+                : inventoryService.getInStockProductIdsForSale(companyId);
+        boolean sellable = !product.stockTracked() || sellableIds.contains(product.id());
+        java.util.Map<Long, BigDecimal> stockQuantities = inventoryService != null
+                ? inventoryService.getStockQuantitiesForSale(companyId, warehouseId)
+                : java.util.Collections.emptyMap();
+        BigDecimal qty = stockQuantities != null ? stockQuantities.getOrDefault(product.id(), BigDecimal.ZERO) : BigDecimal.ZERO;
+        return new POSCatalogItemDTO(product, sellable, qty);
     }
 
     @Transactional(readOnly = true)
     public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
-        ProductDTO product = findProductByBarcode(barcode);
-        if (product == null) return null;
-        boolean sellable = !product.stockTracked() || inventoryService
-                .getInStockProductIdsForSale(CurrentUserContext.getCurrentCompanyId()).contains(product.id());
-        return new POSCatalogItemDTO(product, sellable);
+        return findPOSCatalogItemByBarcode(barcode, null);
     }
 
     @Transactional
@@ -742,7 +782,7 @@ public class ComercialService {
         product.setUnitPrice(unitPrice);
         product.setPurchasePrice(purchasePrice);
         product.setMinStock(minStock);
-        product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        assignPackaging(product, unitsPerBox, null, null);
         product.setWholesalePrice(wholesalePrice);
         product.setWholesaleMinQty(wholesaleMinQty);
         product.setSaleType(parsedSaleType);
@@ -765,6 +805,7 @@ public class ComercialService {
     @Transactional
     public ProductDTO createProduct(String sku, String reference, String barcode, String name,
             BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            Integer packagesPerBox, Integer unitsPerPackage,
             Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
             BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
@@ -773,6 +814,7 @@ public class ComercialService {
                 wholesalePrice, wholesaleMinQty);
         Product product = productRepository.findByIdAndCompaniesId(created.id(), CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
         return toDTO(productRepository.save(product));
     }
@@ -780,8 +822,8 @@ public class ComercialService {
     /**
      * Actualiza os dados de um produto da empresa activa. O SKU é imutável (identidade do artigo);
      * referência e código de barras revalidam unicidade excluindo o próprio. Não toca no stock — só
-     * no cadastro. `unitsPerBox` afecta apenas a conversão para caixas no inventário (o stock
-     * continua em unidades).
+     * no cadastro. A composição caixa → embalagem → unidade afecta apenas a conversão no inventário;
+     * o stock continua em unidades.
      */
     @Transactional
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
@@ -820,7 +862,7 @@ public class ComercialService {
         product.setUnitPrice(unitPrice);
         product.setPurchasePrice(purchasePrice);
         product.setMinStock(minStock);
-        product.setUnitsPerBox(unitsPerBox <= 0 ? 1 : unitsPerBox);
+        assignPackaging(product, unitsPerBox, null, null);
         product.setWholesalePrice(wholesalePrice);
         product.setWholesaleMinQty(wholesaleMinQty);
         product.setSaleType(parsedSaleType);
@@ -847,6 +889,7 @@ public class ComercialService {
     @Transactional
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
             BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            Integer packagesPerBox, Integer unitsPerPackage,
             Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
             BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
@@ -854,8 +897,24 @@ public class ComercialService {
                 categoryId, saleType, stockTracked, taxRateId, description, wholesalePrice, wholesaleMinQty);
         Product product = productRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
         return toDTO(productRepository.save(product));
+    }
+
+    private void assignPackaging(Product product, int legacyUnitsPerBox,
+                                 Integer packagesPerBox, Integer unitsPerPackage) {
+        PackagingComposition composition;
+        if (packagesPerBox == null && unitsPerPackage == null) {
+            composition = PackagingComposition.legacy(legacyUnitsPerBox);
+        } else if (packagesPerBox == null || unitsPerPackage == null) {
+            throw new BusinessRuleException("Indique as embalagens por caixa e as unidades por embalagem.");
+        } else {
+            composition = PackagingComposition.of(packagesPerBox, unitsPerPackage);
+        }
+        product.setPackagesPerBox(composition.packagesPerBox());
+        product.setUnitsPerPackage(composition.unitsPerPackage());
+        product.setUnitsPerBox(composition.unitsPerBox());
     }
 
     private void assignLogisticsWeights(Product product, BigDecimal netKg, BigDecimal grossKg) {
@@ -908,6 +967,7 @@ public class ComercialService {
                 : mz.multicore.erp.architecture.pricing.TaxRates.STANDARD_VAT;
         Long taxRateId = hasRate ? p.getTaxRate().getId() : null;
         String taxRateLabel = hasRate ? p.getTaxRate().getName() : "IVA Normal (16%)";
+        PackagingComposition packaging = storedPackaging(p);
         return new ProductDTO(
                 p.getId(),
                 p.getSku(),
@@ -919,7 +979,9 @@ public class ComercialService {
                 p.getMinStock() != null ? p.getMinStock() : BigDecimal.ZERO,
                 p.getWholesalePrice(),
                 p.getWholesaleMinQty(),
-                p.getUnitsPerBox() <= 0 ? 1 : p.getUnitsPerBox(),
+                packaging.unitsPerBox(),
+                packaging.packagesPerBox(),
+                packaging.unitsPerPackage(),
                 p.getSaleType() != null ? p.getSaleType().name() : ProductSaleType.UNIT.name(),
                 p.isStockTracked(),
                 p.getCategory() != null ? p.getCategory().getId() : null,
@@ -930,8 +992,23 @@ public class ComercialService {
                 p.getDescription(),
                 p.getImageData(),
                 p.getNetUnitWeightKg(),
-                p.getGrossUnitWeightKg()
+                p.getGrossUnitWeightKg(),
+                p.getVersion()
         );
+    }
+
+    private PackagingComposition storedPackaging(Product product) {
+        int storedTotal = Math.max(1, product.getUnitsPerBox());
+        if (product.getPackagesPerBox() > 0 && product.getUnitsPerPackage() > 0) {
+            try {
+                PackagingComposition composition = PackagingComposition.of(
+                        product.getPackagesPerBox(), product.getUnitsPerPackage());
+                if (composition.unitsPerBox() == storedTotal) return composition;
+            } catch (BusinessRuleException ignored) {
+                // Registo anterior/inconsistente: aplicar abaixo a representação compatível.
+            }
+        }
+        return PackagingComposition.legacy(storedTotal);
     }
 
     /** Guarda/actualiza a imagem (thumbnail) de um produto da empresa actual. */
@@ -1073,6 +1150,156 @@ public class ComercialService {
 
         return placeOrder(company, client, warehouse, destination, request.walkInName(), lines, kind,
                 request.agreedTerms());
+    }
+
+    /**
+     * Actualiza o conteúdo ainda aberto de uma encomenda sem mudar o seu número nem a sua via.
+     * A versão do cliente protege contra gravações concorrentes e a reserva, quando existir, é
+     * recalculada antes de substituir as linhas.
+     */
+    @Transactional
+    public OrderDTO updateOrder(Long orderId, UpdateOrderRequest request) {
+        PermissionGuard.requireSeller("actualizar encomenda");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        Long companyId = order.getCompany().getId();
+        CurrentUserContext.requireCompany(companyId);
+        requireEditableOrder(order);
+        if (request.version() == null || request.version() != order.getVersion()) {
+            throw new BusinessRuleException("A encomenda foi alterada noutro posto. Actualize a lista e tente novamente.");
+        }
+
+        Client client = request.clientId() == null
+                ? walkInClientProvider.getOrCreate()
+                : clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
+                        .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        if (!companyId.equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
+        }
+
+        OrderKind kind = OrderKind.orDefault(order.getKind());
+        Warehouse destination = resolveDestination(companyId, request.destinationWarehouseId(), kind, warehouse);
+        List<OrderLine> replacement = buildOrderLines(companyId, request.lines());
+        if (order.isReservationActive()) {
+            revalidateReservation(order, warehouse, replacement);
+            replacement.forEach(line -> line.setReservedQuantity(line.getQuantity()));
+        }
+
+        order.setClient(client);
+        order.setWalkInName(cleanWalkInName(request.walkInName()));
+        order.setWarehouse(warehouse);
+        order.setDestinationWarehouse(destination);
+        order.getLines().clear();
+        replacement.forEach(order::addLine);
+        recalculateOrderTotals(order);
+
+        if (kind.requiresApproval()) {
+            approvalService.cancelPendingForDocument("ORDER", order.getId(),
+                    "Substituído por uma nova versão da encomenda.");
+            order.setStatus("PENDING_APPROVAL");
+        }
+        order = orderRepository.saveAndFlush(order);
+
+        if (kind.requiresApproval()) {
+            String description = String.format("Encomenda %s actualizada para %s - Total: %s MT",
+                    order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
+            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), description);
+        }
+        auditLogService.logCurrent("ORDER_UPDATE",
+                "Encomenda " + order.getOrderNumber() + " actualizada com " + order.getLines().size() + " linha(s).");
+        return toDTO(order);
+    }
+
+    private void requireEditableOrder(Order order) {
+        String status = order.getStatus() == null ? "" : order.getStatus().toUpperCase(java.util.Locale.ROOT);
+        if (!java.util.Set.of("PENDING_APPROVAL", "PENDING", "AWAITING_SEPARATION").contains(status)) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " está em \""
+                    + OrderStatusLabel.of(order.getStatus()) + "\" e já não pode ser alterada.");
+        }
+    }
+
+    private List<OrderLine> buildOrderLines(Long companyId, List<CreateInvoiceLineRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new BusinessRuleException("A encomenda deve conter pelo menos uma linha.");
+        }
+        List<OrderLine> lines = new java.util.ArrayList<>();
+        for (CreateInvoiceLineRequest request : requests) {
+            if (request.quantity() == null || request.quantity().signum() <= 0) {
+                throw new BusinessRuleException("A quantidade da linha deve ser positiva.");
+            }
+            BigDecimal discount = request.discountPercentage() == null
+                    ? BigDecimal.ZERO : request.discountPercentage();
+            if (discount.signum() < 0 || discount.compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new BusinessRuleException("O desconto da linha deve estar entre 0 e 100 por cento.");
+            }
+            Product product = productRepository.findByIdAndCompaniesId(request.productId(), companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + request.productId()));
+            BigDecimal unitPrice = product.effectiveUnitPrice(request.quantity());
+            BigDecimal taxRate = product.effectiveTaxRate();
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    unitPrice, request.quantity(), discount, taxRate);
+
+            OrderLine line = new OrderLine();
+            line.setProduct(product);
+            line.setQuantity(request.quantity());
+            line.setUnitPrice(unitPrice);
+            line.setTaxRate(taxRate);
+            line.setDiscountPercentage(discount);
+            line.setBatchNumber(request.batchNumber());
+            line.setSerialNumber(request.serialNumber());
+            line.setLineTotal(amounts.total());
+            lines.add(line);
+        }
+        return lines;
+    }
+
+    private void recalculateOrderTotals(Order order) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal totalTax = BigDecimal.ZERO;
+        for (OrderLine line : order.getLines()) {
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    line.getUnitPrice(), line.getQuantity(), line.getDiscountPercentage(), line.getTaxRate());
+            line.setLineTotal(amounts.total());
+            subtotal = subtotal.add(amounts.net());
+            totalTax = totalTax.add(amounts.tax());
+        }
+        order.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
+        order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
+        order.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private String cleanWalkInName(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private void revalidateReservation(Order order, Warehouse targetWarehouse, List<OrderLine> replacement) {
+        Long previousWarehouseId = order.getWarehouse().getId();
+        java.util.Map<Long, BigDecimal> previousByProduct = new java.util.HashMap<>();
+        if (previousWarehouseId.equals(targetWarehouse.getId())) {
+            for (OrderLine line : order.getLines()) {
+                previousByProduct.merge(line.getProduct().getId(), line.getReservedQuantity(), BigDecimal::add);
+            }
+        }
+        java.util.Map<Long, BigDecimal> requestedByProduct = new java.util.HashMap<>();
+        java.util.Map<Long, Product> products = new java.util.HashMap<>();
+        for (OrderLine line : replacement) {
+            Long productId = line.getProduct().getId();
+            requestedByProduct.merge(productId, line.getQuantity(), BigDecimal::add);
+            products.put(productId, line.getProduct());
+        }
+        for (var entry : requestedByProduct.entrySet()) {
+            Long productId = entry.getKey();
+            BigDecimal physical = inventoryService.lockAndGetPhysicalQuantity(productId, targetWarehouse.getId());
+            BigDecimal active = orderLineRepository.sumActiveReservations(productId, targetWarehouse.getId());
+            BigDecimal available = physical.subtract(active)
+                    .add(previousByProduct.getOrDefault(productId, BigDecimal.ZERO));
+            if (available.compareTo(entry.getValue()) < 0) {
+                throw new BusinessRuleException("Stock disponível insuficiente para "
+                        + products.get(productId).getName() + ".");
+            }
+        }
     }
 
     /**
@@ -1235,6 +1462,62 @@ public class ComercialService {
         return toDTO(invoice);
     }
 
+    /**
+     * Emite factura comercial directa a partir de uma cotação aprovada/aberta,
+     * herdando integralmente os preços cotados, quantidades, taxas e descontos.
+     * Baixa stock no armazém da cotação e valida limite de crédito do cliente.
+     */
+    @Transactional
+    public InvoiceDTO createInvoiceFromQuotation(Quotation quotation) {
+        CurrentUserContext.requireCompany(quotation.getCompany().getId());
+        Client client = quotation.getClient();
+        if (client != null) {
+            receivablesService.assertCreditAvailable(client, quotation.getTotalAmount());
+        }
+
+        Invoice invoice = new Invoice();
+        invoice.setClient(client);
+        invoice.setCompany(quotation.getCompany());
+        invoice.setWarehouse(quotation.getWarehouse());
+        invoice.setCustomerName(quotation.clientLabel());
+        invoice.assignDueDate(LocalDate.now(), null);
+        invoice.setSalesChannel(SalesChannel.MANUAL);
+        invoice.setStatus(InvoiceStatus.APPROVED);
+        invoice.setTotalBeforeTax(quotation.getTotalBeforeTax());
+        invoice.setTaxAmount(quotation.getTaxAmount());
+        invoice.setTotalAmount(quotation.getTotalAmount());
+        invoice.setCreatedBy(CurrentUserContext.getUsername() != null ? CurrentUserContext.getUsername() : "SYSTEM");
+        invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
+
+        for (QuotationLine quotedLine : quotation.getLines()) {
+            InvoiceLine invoiceLine = new InvoiceLine();
+            invoiceLine.setProduct(quotedLine.getProduct());
+            invoiceLine.setQuantity(quotedLine.getQuantity());
+            invoiceLine.setUnitPrice(quotedLine.getUnitPrice());
+            invoiceLine.setTaxRate(quotedLine.getTaxRate());
+            invoiceLine.setDiscountPercentage(quotedLine.getDiscountPercentage());
+            invoiceLine.setLineTotal(quotedLine.getLineTotal());
+            invoiceLine.setUnitCost(quotedLine.getProduct().getPurchasePrice());
+            invoice.addLine(invoiceLine);
+
+            String desc = String.format("Saída Fatura %s (Cotação %s) - Cliente %s",
+                    invoice.getInvoiceNumber(), quotation.getQuotationNumber(), quotation.clientLabel());
+            inventoryService.registerMovement(
+                    quotedLine.getProduct(),
+                    quotation.getWarehouse(),
+                    quotedLine.getQuantity().negate(),
+                    "SALE",
+                    null,
+                    null,
+                    desc
+            );
+        }
+
+        invoice = invoiceRepository.save(invoice);
+        publishSale(invoice, BigDecimal.ZERO, false);
+        return toDTO(invoice);
+    }
+
     @Transactional(readOnly = true)
     public List<OrderDTO> getOrdersByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
@@ -1346,19 +1629,24 @@ public class ComercialService {
      * destino, e aceitar um em silêncio deixaria um campo a mentir no documento.
      */
     private Warehouse resolveDestination(CreateOrderRequest request, OrderKind kind, Warehouse origin) {
+        return resolveDestination(request.companyId(), request.destinationWarehouseId(), kind, origin);
+    }
+
+    private Warehouse resolveDestination(Long companyId, Long destinationWarehouseId,
+                                         OrderKind kind, Warehouse origin) {
         if (!kind.requiresDestinationWarehouse()) {
             return null;
         }
-        if (request.destinationWarehouseId() == null) {
+        if (destinationWarehouseId == null) {
             throw new BusinessRuleException("Indique o armazém de destino: uma reposição interna "
                     + "tem de dizer para que loja vai a mercadoria.");
         }
-        if (request.destinationWarehouseId().equals(origin.getId())) {
+        if (destinationWarehouseId.equals(origin.getId())) {
             throw new BusinessRuleException("O armazém de destino tem de ser diferente do de origem.");
         }
-        Warehouse destination = warehouseRepository.findById(request.destinationWarehouseId())
+        Warehouse destination = warehouseRepository.findById(destinationWarehouseId)
                 .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
-        if (!request.companyId().equals(destination.getCompany().getId())) {
+        if (!companyId.equals(destination.getCompany().getId())) {
             throw new BusinessRuleException("O armazém de destino não pertence à empresa ativa.");
         }
         return destination;
@@ -1478,10 +1766,13 @@ public class ComercialService {
                 order.getExpectedDeliveryDate(),
                 // Atraso derivado no servidor: o relógio do posto de trabalho não pode discordar.
                 order.isDeliveryOverdue(LocalDate.now()),
+                order.getWarehouse() == null ? null : order.getWarehouse().getId(),
+                order.getWarehouse() == null ? null : order.getWarehouse().getName(),
                 order.getDestinationWarehouse() == null ? null : order.getDestinationWarehouse().getId(),
                 order.getDestinationWarehouse() == null ? null : order.getDestinationWarehouse().getName(),
                 order.getStockTransferId(),
-                order.getTransferNumber()
+                order.getTransferNumber(),
+                order.getVersion()
         );
     }
 

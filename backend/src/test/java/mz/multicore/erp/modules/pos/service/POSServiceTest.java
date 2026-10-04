@@ -69,6 +69,8 @@ class POSServiceTest {
     private CreditNoteService creditNoteService;
     private ReceivablesService receivablesService;
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private mz.multicore.erp.modules.pos.repository.StoreVoucherRepository storeVoucherRepository;
+    private mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository;
     private POSService service;
 
     private Company company;
@@ -101,12 +103,14 @@ class POSServiceTest {
         creditNoteService = mock(CreditNoteService.class);
         receivablesService = mock(ReceivablesService.class);
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        storeVoucherRepository = mock(mz.multicore.erp.modules.pos.repository.StoreVoucherRepository.class);
+        creditNoteRepository = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
 
         service = new POSService(tillSessionRepository, tillMovementRepository, invoiceRepository,
                 clientRepository, productRepository, warehouseRepository, companyRepository,
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
-                receivablesService, eventPublisher);
+                receivablesService, eventPublisher, storeVoucherRepository, creditNoteRepository);
 
         company = company(COMPANY_ID);
         warehouse = warehouse(WAREHOUSE_ID, company);
@@ -126,7 +130,7 @@ class POSServiceTest {
 
     @Test
     void checkout_semSessaoAberta_bloqueia() {
-        when(tillSessionRepository.findByOperatorAndStatusAndCompanyId(OPERATOR, "OPEN", COMPANY_ID))
+        when(tillSessionRepository.findActiveSessionForOperator(OPERATOR, "OPEN", COMPANY_ID))
                 .thenReturn(Optional.empty());
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
@@ -276,6 +280,20 @@ class POSServiceTest {
     }
 
     @Test
+    void checkout_semNomeClienteNaoCadastrado_lancaExcecaoDeRegraDeNegocio() {
+        stubHappyPath();
+
+        POSCheckoutRequest request = new POSCheckoutRequest(
+                OPERATOR, COMPANY_ID, /*clientId*/ null, /*walkInName*/ "   ", WAREHOUSE_ID,
+                ACCOUNT_ID,
+                List.of(new POSCheckoutLineRequest(PRODUCT_ID, new BigDecimal("1"), null, null, null)),
+                null);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.checkout(request));
+        assertTrue(ex.getMessage().contains("É obrigatório indicar o nome do cliente"));
+    }
+
+    @Test
     void checkout_numerarioComTroco_calculaTrocoNoPagamento() {
         stubHappyPath();
 
@@ -370,10 +388,45 @@ class POSServiceTest {
         verify(financeService).registerTransaction(eq(ACCOUNT_ID), eq("DEBIT"), eq(new BigDecimal("50")), any());
     }
 
+    @Test
+    void closeSession_comNotasEDenominacoes_persisteComSucesso() {
+        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
+        when(tillSessionRepository.save(any(TillSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        String notes = "Conferência regular sem divergência";
+        String breakdown = "[{\"denomination\":100,\"count\":1,\"subtotal\":100}]";
+
+        TillSession closed = service.closeSession(1L, new BigDecimal("100"), null, notes, breakdown);
+
+        assertEquals("CLOSED", closed.getStatus());
+        assertEquals("Conferência regular sem divergência", closed.getClosingNotes());
+        assertEquals(breakdown, closed.getCashBreakdownJson());
+        assertEquals(0, BigDecimal.ZERO.compareTo(closed.getDifference()));
+    }
+
+    @Test
+    void closeSession_comDiferencaEJustificacao_comPermissaoGerente_persisteNotasEDiferenca() {
+        CurrentUserContext.setCurrentUser("gerente", "MANAGER");
+        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
+        when(tillSessionRepository.save(any(TillSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        String notes = "Falta de 10 MT devido a erro de troco";
+        String breakdown = "[{\"denomination\":50,\"count\":1,\"subtotal\":50},{\"denomination\":20,\"count\":2,\"subtotal\":40}]";
+
+        TillSession closed = service.closeSession(1L, new BigDecimal("90"), null, notes, breakdown);
+
+        assertEquals("CLOSED", closed.getStatus());
+        assertEquals("Falta de 10 MT devido a erro de troco", closed.getClosingNotes());
+        assertEquals(breakdown, closed.getCashBreakdownJson());
+        assertEquals(new BigDecimal("-10"), closed.getDifference());
+    }
+
     // ────────────────────────── helpers ──────────────────────────
 
     private void stubHappyPath() {
-        when(tillSessionRepository.findByOperatorAndStatusAndCompanyId(OPERATOR, "OPEN", COMPANY_ID))
+        when(tillSessionRepository.findActiveSessionForOperator(OPERATOR, "OPEN", COMPANY_ID))
                 .thenReturn(Optional.of(openSession));
         when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
         when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
@@ -387,7 +440,7 @@ class POSServiceTest {
 
     private POSCheckoutRequest checkout(List<PosPaymentRequest> payments, Long treasuryAccountId) {
         return new POSCheckoutRequest(
-                OPERATOR, COMPANY_ID, /*clientId*/ null, /*walkInName*/ null, WAREHOUSE_ID,
+                OPERATOR, COMPANY_ID, /*clientId*/ null, /*walkInName*/ "Cliente Balcão", WAREHOUSE_ID,
                 treasuryAccountId,
                 List.of(new POSCheckoutLineRequest(PRODUCT_ID, new BigDecimal("1"), null, null, null)),
                 payments);

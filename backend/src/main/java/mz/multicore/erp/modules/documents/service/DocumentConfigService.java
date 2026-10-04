@@ -57,6 +57,9 @@ public class DocumentConfigService {
         config.setShowDescription(dto.description());
         config.setShowExpiry(dto.expiry());
         config.setShowQuantity(dto.quantity());
+        config.setShowPackages(dto.packages());
+        config.setShowBoxes(dto.boxes());
+        config.setShowBoxPercentage(dto.boxPercentage());
         config.setShowUnitPrice(dto.unitPrice());
         config.setShowTax(dto.tax());
         config.setShowSubtotal(dto.subtotal());
@@ -75,6 +78,9 @@ public class DocumentConfigService {
                 config.isShowDescription(),
                 config.isShowExpiry(),
                 config.isShowQuantity(),
+                config.isShowPackages(),
+                config.isShowBoxes(),
+                config.isShowBoxPercentage(),
                 config.isShowUnitPrice(),
                 config.isShowTax(),
                 config.isShowSubtotal(),

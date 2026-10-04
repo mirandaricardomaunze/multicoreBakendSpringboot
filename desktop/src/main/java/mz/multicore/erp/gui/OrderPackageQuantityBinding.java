@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.architecture.quantity.PackageQuantity;
+import mz.multicore.erp.architecture.quantity.PackagingComposition;
+import mz.multicore.erp.architecture.quantity.PackagingQuantity;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator;
 import java.math.BigDecimal;
@@ -9,7 +10,8 @@ final class OrderPackageQuantityBinding {
     private OrderPackageQuantityBinding() {}
 
     static String label(ProductDTO product, long total) {
-        return PackageQuantity.fromTotal(total, Math.max(1, product.unitsPerBox())).label();
+        return PackagingQuantity.fromTotal(total,
+                PackagingComposition.of(product.packagesPerBox(), product.unitsPerPackage())).label();
     }
 
     static void refreshDraftLogistics(ComercialPanel owner) {
@@ -23,13 +25,13 @@ final class OrderPackageQuantityBinding {
         BigDecimal totalWeight = BigDecimal.ZERO;
         for (int index = 0; index < shares.size(); index++) {
             var share = shares.get(index);
-            owner.orderLinesTableModel.setValueAt(share.lineWeightKg(), index, 2);
-            owner.orderLinesTableModel.setValueAt(share.quantityPercentage() + "%", index, 3);
-            owner.orderLinesTableModel.setValueAt(share.weightPercentage() + "%", index, 4);
+            owner.orderLinesTableModel.setValueAt(share.lineWeightKg(), index, 5);
+            owner.orderLinesTableModel.setValueAt(share.quantityPercentage() + "%", index, 6);
+            owner.orderLinesTableModel.setValueAt(share.weightPercentage() + "%", index, 7);
             totalWeight = totalWeight.add(share.lineWeightKg());
         }
         owner.orderTotalLabel.setToolTipText("Peso bruto estimado da carga: " + totalWeight + " kg");
-        owner.orderLoadLabel.setText("Carga: " + totalWeight.setScale(3, java.math.RoundingMode.HALF_UP) + " kg");
+        owner.orderLoadLabel.setText("Carga: " + totalWeight.setScale(2, java.math.RoundingMode.HALF_UP) + " kg");
     }
 
 }

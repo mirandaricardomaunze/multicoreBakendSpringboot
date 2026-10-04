@@ -122,8 +122,8 @@ public class DatabaseBackupDialog extends JDialog {
         verifyBtn.setIcon(UIHelper.icon("fas-shield-alt", 13));
         verifyBtn.addActionListener(e -> verifySelectedBackup());
 
+        tableCard.add(UIHelper.actionsBar(verifyBtn), BorderLayout.NORTH);
         tableActions.add(resultSummaryLabel, BorderLayout.CENTER);
-        tableActions.add(verifyBtn, BorderLayout.EAST);
         tableCard.add(tableActions, BorderLayout.SOUTH);
 
         center.add(tableCard, BorderLayout.CENTER);
@@ -200,11 +200,13 @@ public class DatabaseBackupDialog extends JDialog {
                 try {
                     String path = get();
                     if (path != null) {
-                        resultSummaryLabel.setText("✓ Backup gerado com sucesso: " + path);
+                        resultSummaryLabel.setIcon(UIHelper.icon("fas-check-circle", 14, UIHelper.APPROVED_GREEN));
+                        resultSummaryLabel.setText("Backup gerado com sucesso: " + path);
                         resultSummaryLabel.setForeground(UIHelper.APPROVED_GREEN);
                         loadData();
                     }
                 } catch (Exception e) {
+                    resultSummaryLabel.setIcon(UIHelper.icon("fas-times-circle", 14, UIHelper.REJECTED_RED));
                     resultSummaryLabel.setText("Falha ao gerar backup: " + e.getMessage());
                     resultSummaryLabel.setForeground(UIHelper.REJECTED_RED);
                 }
@@ -222,6 +224,7 @@ public class DatabaseBackupDialog extends JDialog {
 
         String fileName = (String) filesTableModel.getValueAt(row, 0);
         verifyBtn.setEnabled(false);
+        resultSummaryLabel.setIcon(null);
         resultSummaryLabel.setText("A verificar integridade de " + fileName + "...");
 
         SwingWorker<BackupVerificationDTO, Void> worker = new SwingWorker<>() {
@@ -236,14 +239,17 @@ public class DatabaseBackupDialog extends JDialog {
                 try {
                     BackupVerificationDTO res = get();
                     if (res != null) {
-                        resultSummaryLabel.setText(String.format("✓ Arquivo Íntegro: %s (Secções: %d, Gerado: %s)",
+                        resultSummaryLabel.setIcon(UIHelper.icon("fas-check-circle", 14, UIHelper.APPROVED_GREEN));
+                        resultSummaryLabel.setText(String.format("Arquivo Íntegro: %s (Secções: %d, Gerado: %s)",
                                 res.fileName(), res.totalSections(), res.generatedAt() != null ? res.generatedAt() : "Sim"));
                         resultSummaryLabel.setForeground(UIHelper.APPROVED_GREEN);
                     } else {
+                        resultSummaryLabel.setIcon(UIHelper.icon("fas-times-circle", 14, UIHelper.REJECTED_RED));
                         resultSummaryLabel.setText("Arquivo com integridade inválida ou corrompido.");
                         resultSummaryLabel.setForeground(UIHelper.REJECTED_RED);
                     }
                 } catch (Exception e) {
+                    resultSummaryLabel.setIcon(UIHelper.icon("fas-times-circle", 14, UIHelper.REJECTED_RED));
                     resultSummaryLabel.setText("Erro ao verificar arquivo: " + e.getMessage());
                     resultSummaryLabel.setForeground(UIHelper.REJECTED_RED);
                 }

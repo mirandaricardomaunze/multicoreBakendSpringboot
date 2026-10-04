@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.dto;
 
+import mz.multicore.erp.architecture.validation.ValidNuit;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
@@ -10,10 +11,21 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record SaveClientRequest(
-        @NotBlank @Size(max = 200) String name,
-        @NotBlank @Size(max = 40) String taxId,
-        @NotBlank @Email @Size(max = 200) String email,
-        @Size(max = 300) String address,
+        @NotBlank(message = "O nome do cliente é obrigatório.")
+        @Size(max = 200, message = "O nome não pode exceder 200 caracteres.")
+        String name,
+
+        @NotBlank(message = "O NUIT é obrigatório.")
+        @ValidNuit
+        String taxId,
+
+        @NotBlank(message = "O email é obrigatório.")
+        @Email(message = "O email deve ter um formato válido.")
+        @Size(max = 200, message = "O email não pode exceder 200 caracteres.")
+        String email,
+
+        @Size(max = 300, message = "O endereço não pode exceder 300 caracteres.")
+        String address,
 
         /** Prazo de pagamento em dias. Nulo = pronto pagamento (0). Tecto de 365 evita enganos de dedo. */
         @Min(value = 0, message = "O prazo de pagamento não pode ser negativo.")

@@ -26,7 +26,7 @@ public final class TableCellRenderers {
     }
 
     public static TableCellRenderer quantity() {
-        return new NumericRenderer(3, "");
+        return new NumericRenderer(2, "");
     }
 
     /**
@@ -60,7 +60,7 @@ public final class TableCellRenderers {
         };
     }
 
-    static String format(BigDecimal value, int scale, String suffix) {
+    public static String format(BigDecimal value, int scale, String suffix) {
         if (value == null) return "—";
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();
         symbols.setDecimalSeparator(',');
@@ -85,9 +85,21 @@ public final class TableCellRenderers {
         }
 
         @Override protected void setValue(Object value) {
-            BigDecimal number = value instanceof BigDecimal decimal
-                    ? decimal
-                    : value instanceof Number n ? new BigDecimal(n.toString()) : null;
+            BigDecimal number = null;
+            if (value instanceof BigDecimal decimal) {
+                number = decimal;
+            } else if (value instanceof Number n) {
+                number = new BigDecimal(n.toString());
+            } else if (value instanceof String s && !s.trim().isEmpty() && !s.equals("—") && !s.equals("-")) {
+                try {
+                    String clean = s.trim().replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
+                    clean = clean.replace(" ", "").replace("\u00A0", "");
+                    if (clean.matches("^[+-]?\\d+(?:[.,]\\d+)?$")) {
+                        number = new BigDecimal(clean.replace(',', '.'));
+                    }
+                } catch (Exception ignored) {
+                }
+            }
             setText(number == null && value != null ? String.valueOf(value) : format(number, scale, suffix));
         }
     }
@@ -208,7 +220,7 @@ public final class TableCellRenderers {
         private static boolean isBlue(String s) {
             return switch (s) {
                 case "PROCESSING", "EM PROCESSAMENTO", "SHIPPED", "ENVIADO",
-                     "SCHEDULED", "AGENDADO", "BAIXO" -> true;
+                     "SCHEDULED", "AGENDADO", "BAIXO", "DRAFT" -> true;
                 default -> false;
             };
         }

@@ -40,6 +40,7 @@ public class PrintController {
     private final TerminationPrintService terminationPrintService;
     private final TableExportPrintService tableExportPrintService;
     private final PerformanceReportPrintService performanceReportPrintService;
+    private final StoreVoucherPrintService storeVoucherPrintService;
 
     public PrintController(
             ReceiptPrintService receiptPrintService,
@@ -62,7 +63,8 @@ public class PrintController {
             EmploymentContractPrintService employmentContractPrintService,
             TerminationPrintService terminationPrintService,
             TableExportPrintService tableExportPrintService,
-            PerformanceReportPrintService performanceReportPrintService
+            PerformanceReportPrintService performanceReportPrintService,
+            StoreVoucherPrintService storeVoucherPrintService
     ) {
         this.receiptPrintService = receiptPrintService;
         this.invoicePrintService = invoicePrintService;
@@ -85,6 +87,7 @@ public class PrintController {
         this.terminationPrintService = terminationPrintService;
         this.tableExportPrintService = tableExportPrintService;
         this.performanceReportPrintService = performanceReportPrintService;
+        this.storeVoucherPrintService = storeVoucherPrintService;
     }
 
     /**
@@ -124,6 +127,16 @@ public class PrintController {
     @GetMapping("/pos-z-report/{sessionId}")
     public ResponseEntity<Resource> posZReport(@PathVariable Long sessionId) {
         return pdfResponse(posZReportPrintService.render(sessionId), "fecho-caixa-Z-" + sessionId);
+    }
+
+    @GetMapping("/pos-voucher/{voucherId}")
+    public ResponseEntity<Resource> posVoucher(@PathVariable Long voucherId) {
+        return pdfResponse(storeVoucherPrintService.render(voucherId), "vale-compras-" + voucherId);
+    }
+
+    @GetMapping("/pos-voucher/code/{code}")
+    public ResponseEntity<Resource> posVoucherByCode(@PathVariable String code) {
+        return pdfResponse(storeVoucherPrintService.renderByCode(code), "vale-compras-" + code);
     }
 
     @GetMapping("/invoice/{invoiceId}")
@@ -240,16 +253,17 @@ public class PrintController {
     @PostMapping("/performance-report")
     public ResponseEntity<Resource> performanceReportPost(
             @RequestParam Long companyId,
-            @RequestBody mz.multicore.erp.modules.performance.dto.PerformanceReportDTO report
+            @RequestBody @Valid mz.multicore.erp.modules.performance.dto.PerformanceReportDTO report
     ) {
         return pdfResponse(performanceReportPrintService.renderReport(companyId, report),
                 "relatorio-desempenho-" + companyId);
     }
 
     private ResponseEntity<Resource> pdfResponse(byte[] bytes, String fileBase) {
+        String safeFileBase = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeFileName(fileBase);
         ByteArrayResource resource = new ByteArrayResource(bytes);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileBase + ".pdf\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeFileBase + ".pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(bytes.length)
                 .body(resource);

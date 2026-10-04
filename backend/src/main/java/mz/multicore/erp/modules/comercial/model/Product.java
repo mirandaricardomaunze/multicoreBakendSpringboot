@@ -21,6 +21,10 @@ public class Product extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @Column(name = "sku", nullable = false, unique = true)
     private String sku;
 
@@ -50,9 +54,17 @@ public class Product extends BaseEntity {
     @Column(name = "wholesale_min_qty")
     private BigDecimal wholesaleMinQty;
 
-    /** Unidades por caixa para conversão visual (Qtd Caixas = stock / unitsPerBox). Default 1. */
+    /** Total derivado de unidades por caixa, mantido para consultas e clientes anteriores. */
     @Column(name = "units_per_box", nullable = false)
     private int unitsPerBox = 1;
+
+    /** Número de embalagens comerciais que compõem uma caixa. */
+    @Column(name = "packages_per_box", nullable = false)
+    private int packagesPerBox = 1;
+
+    /** Número de unidades-base contidas em cada embalagem comercial. */
+    @Column(name = "units_per_package", nullable = false)
+    private int unitsPerPackage = 1;
 
     @Column(name = "net_unit_weight_kg", precision = 12, scale = 3)
     private BigDecimal netUnitWeightKg;
@@ -83,7 +95,7 @@ public class Product extends BaseEntity {
     private String description;
 
     /** Imagem do produto (thumbnail ~320px) para o catálogo POS em cards. */
-    @Column(name = "image_data")
+    @Column(name = "image_data", length = 16_777_216)
     private byte[] imageData;
 
     @ManyToMany(fetch = FetchType.LAZY)

@@ -35,8 +35,6 @@ import java.util.Locale;
  */
 public class ForensicAuditPanel extends JPanel {
 
-    private static final DecimalFormat MZN_FMT = new DecimalFormat("#,##0.00 MT", new DecimalFormatSymbols(new Locale("pt", "MZ")));
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ForensicAuditApiClient apiClient;
 
@@ -105,8 +103,7 @@ public class ForensicAuditPanel extends JPanel {
     }
 
     private JPanel buildKpiBar() {
-        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 14, 0));
-        kpiRow.setOpaque(false);
+        JPanel kpiRow = KpiCard.createGrid(4);
 
         kpiRow.add(KpiCard.createMetricCard("RISCO FINANCEIRO TOTAL", kpiTotalRisk, "Exposição apurada em auditoria", "fas-shield-alt", UIHelper.REJECTED_RED));
         kpiRow.add(KpiCard.createMetricCard("OCORRÊNCIAS CRÍTICAS", kpiCritical, "Cancelamentos e desvios graves", "fas-exclamation-circle", UIHelper.REJECTED_RED));
@@ -138,7 +135,6 @@ public class ForensicAuditPanel extends JPanel {
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
         table.putClientProperty("noRowInspector", Boolean.TRUE);
-        table.setRowHeight(32);
 
         if (table.getColumnModel().getColumnCount() > 0) {
             table.getColumnModel().getColumn(0).setPreferredWidth(125); // Data/Hora
@@ -170,34 +166,23 @@ public class ForensicAuditPanel extends JPanel {
     }
 
     private JPanel buildFilterBar() {
-        JPanel bar = new JPanel(new BorderLayout(10, 0));
-        bar.setOpaque(false);
-
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        left.setOpaque(false);
-
         JLabel lblStart = new JLabel("Início:");
         lblStart.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         lblStart.setForeground(UIHelper.TEXT_MUTED);
-        left.add(lblStart);
 
         startDateField = new DateField(LocalDate.now().minusDays(30));
         startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
-        left.add(startDateField);
 
         JLabel lblEnd = new JLabel("Fim:");
         lblEnd.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         lblEnd.setForeground(UIHelper.TEXT_MUTED);
-        left.add(lblEnd);
 
         endDateField = new DateField(LocalDate.now());
         endDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
-        left.add(endDateField);
 
         severityCombo = new JComboBox<>(new String[]{"Todas Severidades", "CRITICAL", "SUSPICIOUS", "INFO"});
         severityCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(severityCombo);
-        left.add(severityCombo);
 
         categoryCombo = new JComboBox<>(new String[]{
                 "Todas Categorias",
@@ -210,30 +195,22 @@ public class ForensicAuditPanel extends JPanel {
         });
         categoryCombo.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(categoryCombo);
-        left.add(categoryCombo);
 
         operatorField = TableFilter.searchField("Operador...");
         operatorField.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
-        left.add(operatorField);
-
-        bar.add(left, BorderLayout.CENTER);
-
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        right.setOpaque(false);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadData);
-        right.add(refreshBtn);
 
         ModernButton pdfBtn = UIHelper.createPrimaryButton("Dossiê PDF");
         pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         pdfBtn.setToolTipText("Emitir Dossiê de Auditoria Forense em PDF A4");
         pdfBtn.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         pdfBtn.addActionListener(e -> emitForensicPdf());
-        right.add(pdfBtn);
 
-        bar.add(right, BorderLayout.EAST);
-
-        return bar;
+        return TableFilter.toolbar(
+                new JComponent[]{lblStart, startDateField, lblEnd, endDateField, severityCombo, categoryCombo, operatorField},
+                new JComponent[]{refreshBtn, pdfBtn}
+        );
     }
 
     public void loadData() {
@@ -270,7 +247,7 @@ public class ForensicAuditPanel extends JPanel {
     void renderSummary(ForensicAuditSummaryDTO summary) {
         if (summary == null) return;
 
-        kpiTotalRisk.setText(MZN_FMT.format(summary.totalFinancialRisk() != null ? summary.totalFinancialRisk() : BigDecimal.ZERO));
+        kpiTotalRisk.setText(UIHelper.formatMzn(summary.totalFinancialRisk() != null ? summary.totalFinancialRisk() : BigDecimal.ZERO));
         kpiCritical.setText(String.valueOf(summary.criticalCount()));
         kpiSuspicious.setText(String.valueOf(summary.suspiciousCount()));
         kpiComplianceScore.setText(summary.complianceScore() != null ? summary.complianceScore() : "100%");
@@ -279,8 +256,8 @@ public class ForensicAuditPanel extends JPanel {
         tableModel.setRowCount(0);
 
         for (ForensicAnomalyDTO a : currentAnomalies) {
-            String timeStr = a.timestamp() != null ? a.timestamp().format(DATE_FMT) : "—";
-            String impactStr = MZN_FMT.format(a.financialImpact() != null ? a.financialImpact() : BigDecimal.ZERO);
+            String timeStr = a.timestamp() != null ? a.timestamp().format(UIHelper.DATETIME_FMT) : "—";
+            String impactStr = UIHelper.formatMzn(a.financialImpact() != null ? a.financialImpact() : BigDecimal.ZERO);
 
             tableModel.addRow(new Object[]{
                     timeStr,
@@ -354,11 +331,11 @@ public class ForensicAuditPanel extends JPanel {
         area.setForeground(UIHelper.TEXT_LIGHT);
         area.setBorder(new EmptyBorder(12, 12, 12, 12));
 
-        String content = "Data/Hora: " + a.timestamp().format(DATE_FMT) + "\n"
+        String content = "Data/Hora: " + a.timestamp().format(UIHelper.DATETIME_FMT) + "\n"
                 + "Severidade: " + a.severity() + "\n"
                 + "Categoria: " + a.categoryLabel() + "\n"
                 + "Operador / Utilizador: " + a.operator() + "\n"
-                + "Impacto Financeiro: " + MZN_FMT.format(a.financialImpact()) + "\n"
+                + "Impacto Financeiro: " + UIHelper.formatMzn(a.financialImpact()) + "\n"
                 + "Motivo Original Declarado: " + a.justification() + "\n\n"
                 + "DETALHES ANALÍTICOS:\n" + a.details() + "\n\n"
                 + "RECOMENDAÇÃO PREVENTIVA DA AUDITORIA:\n" + a.recommendation();

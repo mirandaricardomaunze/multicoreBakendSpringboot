@@ -63,18 +63,39 @@ Regras:
 - Quantidade e custo nao podem ser negativos.
 - Entrada com lote vencido deve ser bloqueada salvo regra explicita.
 - StockMovement deve apontar para origem.
+- Uma encomenda a fornecedor só pode ser editada em `ORDERED` e antes de qualquer recepção.
+- A actualização da encomenda não movimenta stock; recepção e cancelamento continuam operações
+  próprias e auditáveis.
+
+## Cotação comercial
+
+1. Cliente ou comprador ocasional é identificado.
+2. Linhas, validade e condições comerciais são registadas.
+3. O Service valida tenant, produtos e armazém e recalcula impostos e totais.
+4. A cotação pode ser enviada, aceite, recusada, convertida ou cancelada pelo fluxo próprio.
+
+Regras:
+
+- Só uma cotação em `DRAFT` pode ser editada livremente.
+- Cotações enviadas ou decididas abrem apenas em consulta; alterações exigem nova revisão ou
+  operação de domínio adequada.
+- A actualização preserva número, data e estado e deve ficar auditada.
 
 ## Transferencia de stock
 
 1. Utilizador escolhe armazem origem e destino.
 2. Sistema valida stock disponivel.
-3. Transferencia e criada com estado controlado.
-4. Stock sai da origem e entra no destino conforme estado aprovado.
-5. Movimento fica rastreavel.
+3. Transferencia nasce `DRAFT`, sem reservar ou movimentar stock.
+4. Utilizador revê cabeçalho e linhas e submete para `PENDING_APPROVAL`.
+5. Gestor ou administrador aprova ou rejeita.
+6. Só a aprovação consome FEFO na origem e entra no destino.
+7. Movimento fica rastreavel.
 
 Regras:
 
 - Origem e destino nao podem ser iguais.
+- Só `DRAFT` pode ser editado; versão optimista impede sobrescrita concorrente.
+- `APPROVED`, `REJECTED` e `CANCELLED` são estados terminais e apenas consultáveis.
 - Transferencia nao deve duplicar movimentos ao confirmar duas vezes.
 - Cancelamento deve respeitar o estado actual.
 

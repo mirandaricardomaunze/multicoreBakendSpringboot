@@ -16,9 +16,11 @@ import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateReceiptRequest;
 import mz.multicore.erp.modules.comercial.dto.ExtendQuotationValidityRequest;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
+import mz.multicore.erp.modules.comercial.dto.UpdateQuotationRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
+import mz.multicore.erp.modules.comercial.dto.UpdateOrderRequest;
 import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.dto.POSSalesSummaryDTO;
@@ -127,17 +129,30 @@ public class ComercialApiClient {
 
     public PageResponse<mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO> getPOSCatalogPage(
             String query, boolean availableOnly, int page, int size) {
+        return getPOSCatalogPage(query, availableOnly, null, page, size);
+    }
+
+    public PageResponse<mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO> getPOSCatalogPage(
+            String query, boolean availableOnly, Long warehouseId, int page, int size) {
         String encoded = URLEncoder.encode(query == null ? "" : query, StandardCharsets.UTF_8);
         String path = "/api/comercial/products/pos-catalog/page?query=" + encoded
-                + "&availableOnly=" + availableOnly + "&page=" + page + "&size=" + size;
+                + "&availableOnly=" + availableOnly
+                + (warehouseId != null ? "&warehouseId=" + warehouseId : "")
+                + "&page=" + page + "&size=" + size;
         return clientFactory.authenticatedClient().getGeneric(path, PageResponse.class,
                 mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO.class);
     }
 
     public mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
+        return findPOSCatalogItemByBarcode(barcode, null);
+    }
+
+    public mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode, Long warehouseId) {
         String encoded = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);
+        String path = "/api/comercial/products/pos-catalog/by-barcode?barcode=" + encoded
+                + (warehouseId != null ? "&warehouseId=" + warehouseId : "");
         return clientFactory.authenticatedClient().get(
-                "/api/comercial/products/pos-catalog/by-barcode?barcode=" + encoded,
+                path,
                 mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO.class);
     }
 
@@ -164,22 +179,26 @@ public class ComercialApiClient {
     }
 
     public ProductDTO createProduct(String sku, String reference, String barcode, String name, BigDecimal unitPrice,
-            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, Long categoryId, String saleType,
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
             boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
             BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
         return clientFactory.authenticatedClient().post("/api/comercial/products",
                 new CreateProductRequest(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                        unitsPerBox, categoryId, saleType, stockTracked, taxRateId, description, wholesalePrice,
+                        unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
+                        taxRateId, description, wholesalePrice,
                         wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg), ProductDTO.class);
     }
 
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
-            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, Long categoryId, String saleType,
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
             boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
             BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
         return clientFactory.authenticatedClient().put("/api/comercial/products/" + id,
                 new CreateProductRequest(null, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                        unitsPerBox, categoryId, saleType, stockTracked, taxRateId, description, wholesalePrice,
+                        unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
+                        taxRateId, description, wholesalePrice,
                         wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg), ProductDTO.class);
     }
 
@@ -239,6 +258,10 @@ public class ComercialApiClient {
 
     public OrderDTO createOrder(CreateOrderRequest request) {
         return clientFactory.authenticatedClient().post("/api/comercial/orders", request, OrderDTO.class);
+    }
+
+    public OrderDTO updateOrder(Long id, UpdateOrderRequest request) {
+        return clientFactory.authenticatedClient().put("/api/comercial/orders/" + id, request, OrderDTO.class);
     }
 
     public OrderDTO submitFulfillmentOrder(CreateOrderRequest request, String key, String terminal) {
@@ -301,6 +324,11 @@ public class ComercialApiClient {
                 .post("/api/comercial/quotations", request, QuotationDTO.class);
     }
 
+    public QuotationDTO updateQuotation(Long id, UpdateQuotationRequest request) {
+        return clientFactory.authenticatedClient()
+                .put("/api/comercial/quotations/" + id, request, QuotationDTO.class);
+    }
+
     public QuotationDTO sendQuotation(Long id) {
         return clientFactory.authenticatedClient()
                 .post("/api/comercial/quotations/" + id + "/send", null, QuotationDTO.class);
@@ -332,6 +360,18 @@ public class ComercialApiClient {
                 .post("/api/comercial/quotations/" + id + "/convert", null, OrderDTO.class);
     }
 
+    /** Converte a cotação directamente em factura comercial (FT). */
+    public InvoiceDTO convertQuotationToInvoice(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/comercial/quotations/" + id + "/convert-to-invoice", null, InvoiceDTO.class);
+    }
+
+    /** Lista cotações em aberto e vigentes da empresa para importação no POS e seletores rápidos. */
+    public List<QuotationDTO> getOpenQuotationsByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/comercial/quotations/open?companyId=" + companyId, QuotationDTO.class);
+    }
+
     public byte[] renderQuotation(Long id) {
         return clientFactory.authenticatedClient().getBytes("/api/print/quotation/" + id);
     }
@@ -353,8 +393,13 @@ public class ComercialApiClient {
      */
     public mz.multicore.erp.modules.inventory.dto.StockTransferDTO convertOrderToTransfer(
             Long orderId, String responsible, String vehicle, String notes) {
+        return convertOrderToTransfer(orderId, responsible, vehicle, notes, null, null);
+    }
+
+    public mz.multicore.erp.modules.inventory.dto.StockTransferDTO convertOrderToTransfer(
+            Long orderId, String responsible, String vehicle, String notes, String driverName, String vehiclePlate) {
         return clientFactory.authenticatedClient().post("/api/comercial/orders/" + orderId + "/transfer",
-                new mz.multicore.erp.modules.comercial.dto.ConvertOrderToTransferRequest(responsible, vehicle, notes),
+                new mz.multicore.erp.modules.comercial.dto.ConvertOrderToTransferRequest(responsible, vehicle, notes, driverName, vehiclePlate),
                 mz.multicore.erp.modules.inventory.dto.StockTransferDTO.class);
     }
 

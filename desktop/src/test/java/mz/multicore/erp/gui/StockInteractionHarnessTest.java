@@ -53,7 +53,7 @@ class StockInteractionHarnessTest {
 
         assertThat(content)
                 .as("Modal de edição deve ter botão Atualizar")
-                .contains(".setConfirmButton(\"Atualizar\", \"fas-save\")");
+                .contains(".setConfirmButton(\"Actualizar\", \"fas-save\")");
 
         assertThat(content)
                 .as("Modal de edição deve usar setOnSaveAsync para validação e chamada segura")

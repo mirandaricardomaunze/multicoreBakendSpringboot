@@ -5,6 +5,7 @@ import mz.multicore.erp.desktop.client.FinanceApiClient;
 import mz.multicore.erp.gui.components.ArrowScrollPanel;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -140,45 +141,15 @@ public class BankReconciliationPanel extends JPanel {
     }
 
     private JPanel buildKpiCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 4, 12, 0));
-        grid.setOpaque(false);
-        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 85));
+        JPanel grid = KpiCard.createGrid(4);
         grid.setBorder(new EmptyBorder(0, 0, 4, 0));
 
-        grid.add(createKpiCard("Saldo no Extracto", kpiBankBalance, "Posição bancária oficial", UIHelper.ACCENT_BLUE, "fas-university"));
-        grid.add(createKpiCard("Saldo no Sistema", kpiSystemBalance, "Tesouraria Multicore ERP", UIHelper.TEXT_LIGHT, "fas-book"));
-        grid.add(createKpiCard("Diferença", kpiDifference, "Zero indica conciliação perfeita", UIHelper.APPROVED_GREEN, "fas-balance-scale"));
-        grid.add(createKpiCard("Movimentos Pendentes", kpiPendingCount, "Itens por reconciliar", UIHelper.PENDING_YELLOW, "fas-hourglass-half"));
+        grid.add(KpiCard.createCard("Saldo no Extracto", kpiBankBalance, "Posição bancária oficial", "fas-university", UIHelper.ACCENT_BLUE));
+        grid.add(KpiCard.createCard("Saldo no Sistema", kpiSystemBalance, "Tesouraria Multicore ERP", "fas-book", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createCard("Diferença", kpiDifference, "Zero indica conciliação perfeita", "fas-balance-scale", UIHelper.APPROVED_GREEN));
+        grid.add(KpiCard.createCard("Movimentos Pendentes", kpiPendingCount, "Itens por reconciliar", "fas-hourglass-half", UIHelper.PENDING_YELLOW));
 
         return grid;
-    }
-
-    private JPanel createKpiCard(String title, JLabel valueLabel, String subtitle, Color accentColor, String iconName) {
-        ModernPanel card = new ModernPanel();
-        card.setLayout(new BorderLayout(0, 4));
-        card.setBorder(new EmptyBorder(8, 14, 8, 14));
-
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        titleLbl.setForeground(UIHelper.TEXT_MUTED);
-        top.add(titleLbl, BorderLayout.WEST);
-
-        JLabel icon = new JLabel(UIHelper.icon(iconName, 14, accentColor));
-        top.add(icon, BorderLayout.EAST);
-        card.add(top, BorderLayout.NORTH);
-
-        valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
-        valueLabel.setForeground(accentColor);
-        card.add(valueLabel, BorderLayout.CENTER);
-
-        JLabel sub = new JLabel(subtitle);
-        sub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        sub.setForeground(UIHelper.TEXT_MUTED);
-        card.add(sub, BorderLayout.SOUTH);
-
-        return card;
     }
 
     private JPanel buildControlBar() {
@@ -206,7 +177,7 @@ public class BankReconciliationPanel extends JPanel {
                 if (value instanceof TreasuryAccountDTO acc) {
                     setText(acc.name() + " (" + acc.accountNumber() + ")");
                 } else {
-                    setText("— Seleccionar Conta —");
+                    setText("Seleccionar Conta");
                 }
                 return this;
             }
@@ -228,7 +199,7 @@ public class BankReconciliationPanel extends JPanel {
                 if (value instanceof BankStatementDTO st) {
                     setText(st.statementReference() + " (" + st.status() + ")");
                 } else {
-                    setText("— Sem Extractos —");
+                    setText("Sem Extractos");
                 }
                 return this;
             }
@@ -239,6 +210,9 @@ public class BankReconciliationPanel extends JPanel {
         // Linha 2: Barra de Acções da Reconciliação com largura plena e sem truncamento
         JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         actionsRow.setOpaque(false);
+
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
+        actionsRow.add(refreshBtn);
 
         ModernButton importBtn = UIHelper.createPrimaryButton("Importar Extracto");
         importBtn.setIcon(UIHelper.icon("fas-file-import", 14));
@@ -620,7 +594,7 @@ public class BankReconciliationPanel extends JPanel {
                 if (value instanceof TreasuryTransactionDTO t) {
                     setText("#TX-" + t.id() + " | " + t.transactionDate().format(DATE_FMT) + " | " + t.description() + " (" + String.format("%,.2f MT", t.amount()) + ")");
                 } else {
-                    setText("— Nenhuma transacção compatível encontrada —");
+                    setText("Nenhuma transacção compatível encontrada");
                 }
                 return this;
             }

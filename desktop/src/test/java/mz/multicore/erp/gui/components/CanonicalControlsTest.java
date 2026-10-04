@@ -61,7 +61,7 @@ class CanonicalControlsTest {
         JTable table = new JTable(1, 1);
         JLabel label = (JLabel) TableCellRenderers.quantity().getTableCellRendererComponent(
                 table, new BigDecimal("2.5"), false, false, 0, 0);
-        assertEquals("2,500", label.getText());
+        assertEquals("2,50", label.getText());
         assertEquals(SwingConstants.RIGHT, label.getHorizontalAlignment());
     }
 

@@ -30,13 +30,14 @@ public class ActionMenuButton extends ModernButton {
         if (label == null || label.isBlank()) {
             throw new IllegalArgumentException("A acção do menu deve ter um nome.");
         }
+        String cleanLabel = ModernButton.stripEllipsis(label);
         if (popup.getComponentCount() >= MAX_ACTIONS) {
             throw new IllegalStateException("O menu de acções não pode ter mais de cinco opções.");
         }
-        JMenuItem item = new JMenuItem(label, icon);
+        JMenuItem item = new JMenuItem(cleanLabel, icon);
         item.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         item.setBorder(new EmptyBorder(8, 10, 8, 14));
-        item.getAccessibleContext().setAccessibleName(label);
+        item.getAccessibleContext().setAccessibleName(cleanLabel);
         item.addActionListener(e -> {
             if (action != null) action.run();
         });
@@ -44,11 +45,18 @@ public class ActionMenuButton extends ModernButton {
         return this;
     }
 
-    int actionCount() {
+    public ActionMenuButton setActionEnabled(int index, boolean enabled) {
+        if (index >= 0 && index < popup.getComponentCount() && popup.getComponent(index) instanceof JMenuItem item) {
+            item.setEnabled(enabled);
+        }
+        return this;
+    }
+
+    public int actionCount() {
         return popup.getComponentCount();
     }
 
-    JMenuItem actionAt(int index) {
+    public JMenuItem actionAt(int index) {
         return (JMenuItem) popup.getComponent(index);
     }
 }

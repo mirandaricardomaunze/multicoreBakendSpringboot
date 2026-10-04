@@ -199,6 +199,7 @@ try {
 - **Painéis** ficam em `mz.multicore.erp.gui/<Modulo>Panel.java` e injectam Services no construtor.
 - **Estilos** via `UIHelper.style…(comp)`, `ModernButton`, `ModernPanel`. Não criar `new Color(...)` ad-hoc — usar as paletas de `UIHelper` (`ACCENT_BLUE`, `BG_DARK`, `TEXT_MUTED`, …).
 - **Ícones**: `UIHelper.icon("fas-<nome>", 14)` (FontAwesome 5 Solid via Ikonli). **Nunca emojis em labels** de botões / tabuladores.
+  - **Ícones Coloridos Semânticos**: Todas as abas (`JTabbedPane.addTab(...)`) e ações de menu de contexto devem utilizar ícones coloridos por semântica (`UIHelper.MODULE_*`, `UIHelper.ACCENT_*`, `UIHelper.APPROVED_GREEN`, `UIHelper.PENDING_YELLOW`, `UIHelper.REJECTED_RED` ou `UIHelper.semanticIcon(...)`). É proibido o uso de `UIHelper.TEXT_LIGHT` ou tons de cinzento em abas. Modais `ModernFormDialog` usam badge colorido temático automático.
 - **Diálogos**: `UIHelper.createDialogForm(...)` para criar forms label-campo; `UIHelper.makeDialogScrollable(...)` para diálogos altos.
 - **Datas pelo utilizador**: hoje `JTextField` com placeholder `yyyy-MM-dd` e parsing via `LocalDate.parse(...)`. Não introduzir uma terceira biblioteca de date picker — manter o padrão.
 - **Tabelas**: `DefaultTableModel` com `isCellEditable` definido. Render via `UIHelper.styleTable(tbl)`.

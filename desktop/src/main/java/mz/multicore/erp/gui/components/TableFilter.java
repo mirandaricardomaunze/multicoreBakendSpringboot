@@ -11,6 +11,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
+import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.util.ArrayList;
@@ -198,8 +199,8 @@ public final class TableFilter {
     }
 
     /**
-     * Barra de filtros: apenas os componentes. A pesquisa já tem a lupa <b>dentro</b> do input
-     * ({@link SearchField}), por isso não se coloca nenhum ícone solto à esquerda.
+     * Barra de filtros simples: apenas os componentes à esquerda.
+     * A pesquisa já tem a lupa <b>dentro</b> do input ({@link SearchField}).
      */
     public static JPanel bar(JComponent... comps) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -207,4 +208,50 @@ public final class TableFilter {
         for (JComponent c : comps) p.add(c);
         return p;
     }
+
+    /**
+     * Barra de ferramentas canónica: filtros/pesquisa à esquerda, botões de acção à direita.
+     * Gap padrão de 8 px entre elementos; fundo transparente. Usar em todos os painéis.
+     *
+     * <pre>
+     * [ SearchField ]  [ Label: ]  [ Combo ]  ──→ glue ←──  [ BtnSec ]  [ BtnPrimary ]
+     * </pre>
+     *
+     * @param filters componentes de filtro (SearchField, labels, combos) — montados à esquerda
+     * @param actions botões de acção — montados à direita
+     */
+    public static JPanel toolbar(JComponent[] filters, JComponent[] actions) {
+        JPanel p = new JPanel(new BorderLayout(8, 0));
+        p.setOpaque(false);
+        if (filters != null && filters.length > 0) {
+            JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            left.setOpaque(false);
+            for (JComponent c : filters) {
+                if (c != null) left.add(c);
+            }
+            p.add(left, BorderLayout.WEST);
+        }
+        if (actions != null && actions.length > 0) {
+            JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            right.setOpaque(false);
+            for (JComponent c : actions) {
+                if (c != null) right.add(c);
+            }
+            p.add(right, BorderLayout.EAST);
+        }
+        return p;
+    }
+
+    /**
+     * Separador visual vertical entre grupos de botões na toolbar.
+     * Largura de 1 px, 20 px de altura, cor {@link UIHelper#BORDER}.
+     */
+    public static JComponent separator() {
+        JPanel sep = new JPanel();
+        sep.setOpaque(true);
+        sep.setBackground(UIHelper.BORDER);
+        sep.setPreferredSize(new java.awt.Dimension(1, 20));
+        return sep;
+    }
 }
+

@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.fiscal.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.fiscal.dto.CreateWithholdingRequest;
 import mz.multicore.erp.modules.fiscal.dto.WithholdingRecordDTO;
@@ -66,6 +67,7 @@ public class WithholdingService {
 
     @Transactional
     public void delete(Long id) {
+        PermissionGuard.requireManagerOrAdmin("eliminar retenção na fonte");
         WithholdingRecord r = repository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Registo não encontrado."));
         CurrentUserContext.requireCompany(r.getCompany().getId());

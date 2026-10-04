@@ -40,8 +40,6 @@ import java.util.Locale;
  */
 public class CreditRiskPanel extends JPanel {
 
-    private static final DecimalFormat MZN_FMT = new DecimalFormat("#,##0.00 MT", new DecimalFormatSymbols(new Locale("pt", "MZ")));
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final CreditRiskApiClient creditRiskApiClient;
 
@@ -108,8 +106,7 @@ public class CreditRiskPanel extends JPanel {
     }
 
     private JPanel buildKpiBar() {
-        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 14, 0));
-        kpiRow.setOpaque(false);
+        JPanel kpiRow = KpiCard.createGrid(4);
 
         kpiRow.add(KpiCard.createMetricCard("TOTAL A RECEBER", kpiTotalReceivable, "Carteira global em aberto", "fas-wallet", UIHelper.ACCENT_BLUE));
         kpiRow.add(KpiCard.createMetricCard("SALDO EM MORA", kpiTotalOverdue, "Valores vencidos em atraso", "fas-exclamation-triangle", UIHelper.PENDING_YELLOW));
@@ -142,7 +139,6 @@ public class CreditRiskPanel extends JPanel {
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
         table.putClientProperty("noRowInspector", Boolean.TRUE);
-        table.setRowHeight(32);
 
         if (table.getColumnModel().getColumnCount() > 0) {
             table.getColumnModel().getColumn(0).setMaxWidth(50); // ID
@@ -176,22 +172,13 @@ public class CreditRiskPanel extends JPanel {
     }
 
     private JPanel buildFilterBar() {
-        JPanel bar = new JPanel(new BorderLayout(12, 0));
-        bar.setOpaque(false);
-
-        // Esquerda: Filtros de Data, Risco e Pesquisa
-        JPanel leftFilters = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftFilters.setOpaque(false);
-
         JLabel dateLbl = new JLabel("Data Ref:");
         dateLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         dateLbl.setForeground(UIHelper.TEXT_MUTED);
-        leftFilters.add(dateLbl);
 
         dateField = new JTextField(LocalDate.now().toString());
         dateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleTextField(dateField);
-        leftFilters.add(dateField);
 
         riskFilterCombo = new JComboBox<>(new String[]{
                 "Todos os Riscos", "Apenas Crítico / Alto", "Apenas Bloqueados",
@@ -199,17 +186,9 @@ public class CreditRiskPanel extends JPanel {
         });
         riskFilterCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(riskFilterCombo);
-        leftFilters.add(riskFilterCombo);
 
         searchField = TableFilter.searchField("Pesquisar cliente, NUIT, email...");
         searchField.setPreferredSize(new Dimension(230, UIHelper.FORM_CONTROL_HEIGHT));
-        leftFilters.add(searchField);
-
-        bar.add(leftFilters, BorderLayout.WEST);
-
-        // Direita: Acções
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
 
@@ -221,11 +200,10 @@ public class CreditRiskPanel extends JPanel {
         exceptionBtn.setIcon(UIHelper.icon("fas-unlock-alt", 14));
         exceptionBtn.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
 
-        rightActions.add(refreshBtn);
-        rightActions.add(pdfBtn);
-        rightActions.add(exceptionBtn);
-
-        bar.add(rightActions, BorderLayout.EAST);
+        JPanel bar = TableFilter.toolbar(
+                new JComponent[]{dateLbl, dateField, riskFilterCombo, searchField},
+                new JComponent[]{refreshBtn, pdfBtn, exceptionBtn}
+        );
 
         // Eventos
         pdfBtn.addActionListener(e -> emitDebtCollectionNoticePdf());
@@ -283,8 +261,8 @@ public class CreditRiskPanel extends JPanel {
 
     void updateKpis(CreditRiskSummaryDTO summary) {
         if (summary == null) return;
-        kpiTotalReceivable.setText(formatMoney(summary.totalReceivable()));
-        kpiTotalOverdue.setText(formatMoney(summary.totalOverdue()));
+        kpiTotalReceivable.setText(UIHelper.formatMzn(summary.totalReceivable()));
+        kpiTotalOverdue.setText(UIHelper.formatMzn(summary.totalOverdue()));
         kpiBlockedCount.setText(String.valueOf(summary.blockedClientsCount()));
         kpiCriticalCount.setText(String.valueOf(summary.criticalRiskCount() + summary.highRiskCount()));
     }
@@ -512,8 +490,7 @@ public class CreditRiskPanel extends JPanel {
     }
 
     private static String formatMoney(BigDecimal val) {
-        if (val == null) return "0,00 MT";
-        return MZN_FMT.format(val.setScale(2, RoundingMode.HALF_UP));
+        return UIHelper.formatMzn(val);
     }
 
     private record RiskFetchResult(CreditRiskSummaryDTO summary, List<ClientCreditRiskDTO> clients) {}

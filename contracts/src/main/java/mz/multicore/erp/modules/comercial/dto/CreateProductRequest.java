@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 /**
  * Criação/edição de produto. Em edição (PUT /products/{id}) o {@code sku} é ignorado (identidade
- * vem do path). Espelha os 15 campos do {@code ComercialService.createProduct/updateProduct}.
+ * vem do path). A composição nova preserva {@code unitsPerBox} para compatibilidade HTTP.
  */
 public record CreateProductRequest(
         String sku,
@@ -17,6 +17,8 @@ public record CreateProductRequest(
         BigDecimal purchasePrice,
         BigDecimal minStock,
         int unitsPerBox,
+        Integer packagesPerBox,
+        Integer unitsPerPackage,
         Long categoryId,
         String saleType,
         boolean stockTracked,

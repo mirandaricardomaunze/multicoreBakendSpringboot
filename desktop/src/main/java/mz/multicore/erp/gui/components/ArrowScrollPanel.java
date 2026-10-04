@@ -45,15 +45,20 @@ public class ArrowScrollPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
 
         // Botões de navegação por seta (Topo e Fundo)
+        Color navIconColor = UIHelper.isLight() ? new Color(51, 65, 85) : Color.WHITE;
         this.btnUp = UIHelper.createSecondaryButton("");
-        btnUp.setIcon(UIHelper.icon("fas-chevron-up", 12, Color.WHITE));
-        btnUp.setToolTipText("Rolar para cima (Page Up / ↑)");
+        btnUp.setIcon(UIHelper.icon("fas-chevron-up", 12, navIconColor));
+        btnUp.setRolloverIcon(UIHelper.icon("fas-chevron-up", 12, UIHelper.ACCENT_BLUE));
+        btnUp.setDisabledIcon(UIHelper.icon("fas-chevron-up", 12, UIHelper.TEXT_MUTED));
+        btnUp.setToolTipText("Rolar para cima (Page Up)");
         btnUp.setPreferredSize(new Dimension(32, 32));
         btnUp.addActionListener(e -> scrollSmoothly(-DEFAULT_SCROLL_STEP));
 
         this.btnDown = UIHelper.createSecondaryButton("");
-        btnDown.setIcon(UIHelper.icon("fas-chevron-down", 12, Color.WHITE));
-        btnDown.setToolTipText("Rolar para baixo (Page Down / ↓)");
+        btnDown.setIcon(UIHelper.icon("fas-chevron-down", 12, navIconColor));
+        btnDown.setRolloverIcon(UIHelper.icon("fas-chevron-down", 12, UIHelper.ACCENT_BLUE));
+        btnDown.setDisabledIcon(UIHelper.icon("fas-chevron-down", 12, UIHelper.TEXT_MUTED));
+        btnDown.setToolTipText("Rolar para baixo (Page Down)");
         btnDown.setPreferredSize(new Dimension(32, 32));
         btnDown.addActionListener(e -> scrollSmoothly(DEFAULT_SCROLL_STEP));
 

@@ -6,6 +6,7 @@ import mz.multicore.erp.gui.components.DecimalField;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.QuantityField;
+import mz.multicore.erp.gui.components.ProductSearchComboBox;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
@@ -53,7 +54,7 @@ public final class QuotationEditorDialog {
     private JTextField deliveryDaysField;
     private JTextArea notesArea;
 
-    private JComboBox<String> productCombo;
+    private ProductSearchComboBox productCombo;
     private QuantityField quantityField;
     private DecimalField discountField;
     private DefaultTableModel linesModel;
@@ -102,7 +103,7 @@ public final class QuotationEditorDialog {
 
     private JPanel buildHeaderForm() {
         clientCombo = new JComboBox<>();
-        clientCombo.addItem("— Consumidor Final (sem registo) —");
+        clientCombo.addItem("Consumidor Final (sem registo)");
         for (ClientDTO c : clients) {
             clientCombo.addItem(c.name() + " (" + c.taxId() + ")");
         }
@@ -159,11 +160,8 @@ public final class QuotationEditorDialog {
         JPanel section = new JPanel(new BorderLayout(0, 10));
         section.setOpaque(false);
 
-        productCombo = new JComboBox<>();
-        for (ProductDTO p : products) {
-            productCombo.addItem(productLabel(p) + " - " + p.unitPrice() + " MT");
-        }
-        UIHelper.styleComboBox(productCombo);
+        productCombo = new ProductSearchComboBox();
+        productCombo.setProducts(products);
 
         quantityField = new QuantityField("1", true);
         UIHelper.styleTextField(quantityField);
@@ -215,9 +213,12 @@ public final class QuotationEditorDialog {
     }
 
     private void addLine() {
-        int idx = productCombo.getSelectedIndex();
-        if (idx < 0 || idx >= products.size()) return;
-        ProductDTO product = products.get(idx);
+        ProductDTO product = productCombo.selectedProduct();
+        if (product == null) {
+            showNotice(FeedbackType.WARNING, "Produto necessário",
+                    "Pesquise e seleccione um produto para adicionar.");
+            return;
+        }
 
         BigDecimal qty;
         try {
@@ -335,11 +336,6 @@ public final class QuotationEditorDialog {
                 deliveryDays,
                 blankToNull(notesArea.getText()),
                 new ArrayList<>(draftLines));
-    }
-
-    private static String productLabel(ProductDTO p) {
-        String code = p.reference() != null && !p.reference().isBlank() ? p.reference() : p.sku();
-        return code + " - " + p.name();
     }
 
     private static String blankToNull(String value) {

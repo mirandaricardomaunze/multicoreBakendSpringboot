@@ -42,10 +42,29 @@ public class DesktopApplication {
         // Handler global para excepções silenciosas no EDT (Event Dispatch Thread).
         // Sem isto, erros no invokeLater são engolidos sem aparecer nos logs.
         System.setProperty("sun.awt.exception.handler", java.awt.EventQueue.class.getName());
+        System.setProperty("flatlaf.useWindowDecorations", "true");
+        javax.swing.JFrame.setDefaultLookAndFeelDecorated(true);
+        javax.swing.JDialog.setDefaultLookAndFeelDecorated(true);
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-            System.err.println("[FATAL] Excepção não tratada em thread '" + thread.getName() + "':");
+            System.err.println("[ERRO NÃO TRATADO] em thread '" + thread.getName() + "':");
             throwable.printStackTrace(System.err);
-            System.exit(1);
+            if (throwable instanceof VirtualMachineError) {
+                System.exit(1);
+            }
+            try {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    String msg = throwable.getMessage() != null && !throwable.getMessage().isBlank()
+                            ? throwable.getMessage()
+                            : throwable.getClass().getSimpleName();
+                    javax.swing.JOptionPane.showMessageDialog(
+                            null,
+                            "Ocorreu um erro operacional inesperado:\n" + msg + "\n\nConsulte o registo de suporte para mais detalhes.",
+                            "Multicore ERP — Aviso do Sistema",
+                            javax.swing.JOptionPane.WARNING_MESSAGE
+                    );
+                });
+            } catch (Throwable ignored) {
+            }
         });
 
         ConfigurableApplicationContext context = new SpringApplicationBuilder(DesktopApplication.class)

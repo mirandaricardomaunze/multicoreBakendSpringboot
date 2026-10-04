@@ -52,6 +52,7 @@ public class DesktopLauncher {
     private void showLogin() {
         LoginDialog login = new LoginDialog(authApiClient, this::onAuthenticated);
         login.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        login.setExtendedState(JFrame.MAXIMIZED_BOTH);
         login.setVisible(true);
         login.toFront();
         login.requestFocus();

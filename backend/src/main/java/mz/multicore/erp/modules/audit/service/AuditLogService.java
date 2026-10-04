@@ -19,19 +19,30 @@ public class AuditLogService {
     }
 
     @Transactional
-    public void logEvent(String username, Long companyId, String action, String details) {
+    public void logEvent(String username, Long companyId, String action, String details, String ipAddress) {
         AuditLog log = new AuditLog();
         log.setUsername(username != null ? username : "SYSTEM");
         log.setCompanyId(companyId);
         log.setAction(action);
         log.setDetails(details);
+        log.setIpAddress(ipAddress);
         log.setEventTime(LocalDateTime.now());
         auditLogRepository.save(log);
     }
 
     @Transactional
+    public void logEvent(String username, Long companyId, String action, String details) {
+        logEvent(username, companyId, action, details, null);
+    }
+
+    @Transactional
     public void logCurrent(String action, String details) {
-        logEvent(CurrentUserContext.getUsername(), CurrentUserContext.getCurrentCompanyId(), action, details);
+        logEvent(CurrentUserContext.getUsername(), CurrentUserContext.getCurrentCompanyId(), action, details, null);
+    }
+
+    @Transactional
+    public void logCurrent(String action, String details, String ipAddress) {
+        logEvent(CurrentUserContext.getUsername(), CurrentUserContext.getCurrentCompanyId(), action, details, ipAddress);
     }
 
     @Transactional(readOnly = true)

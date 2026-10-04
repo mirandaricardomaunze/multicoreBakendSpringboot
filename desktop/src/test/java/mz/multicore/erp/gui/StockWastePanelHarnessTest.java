@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,6 +46,8 @@ public class StockWastePanelHarnessTest {
 
                 assertNotNull(panel.wasteTable);
                 assertEquals(12, panel.wasteTable.getColumnCount(), "A tabela de quebras deve possuir 12 colunas operacionais");
+                assertEquals(42, panel.wasteTable.getRowHeight(), "A tabela de quebras deve ter altura de linha de 42px para conforto visual");
+                assertEquals(42, panel.radarTable.getRowHeight(), "A tabela do radar de validades deve ter altura de linha de 42px");
                 assertNotNull(panel.periodFilterCombo, "O filtro de período deve estar presente na barra de topo");
             } finally {
                 CurrentUserContext.clear();
@@ -135,13 +138,20 @@ public class StockWastePanelHarnessTest {
     @Test
     @DisplayName("GQS-05 & GQS-06: Botões de aprovação/rejeição habilitam exclusivamente para quebras PENDING_APPROVAL")
     void testApprovalButtonsStateHierarchy() throws Exception {
+        AtomicReference<StockWastePanel> panelRef = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("gestor", "ADMIN");
             CurrentUserContext.setCurrentCompanyId(1L);
+            StockWastePanel panel = createTestPanel();
+            panel.currentWasteList = sampleWasteList();
+            panel.applyWasteFilters();
+            panelRef.set(panel);
+        });
+
+        // A paginação recalcula a vista por invokeLater depois das alterações do modelo.
+        SwingUtilities.invokeAndWait(() -> {
+            StockWastePanel panel = panelRef.get();
             try {
-                StockWastePanel panel = createTestPanel();
-                panel.currentWasteList = sampleWasteList();
-                panel.applyWasteFilters();
 
                 // Sem seleção na tabela
                 panel.wasteTable.clearSelection();

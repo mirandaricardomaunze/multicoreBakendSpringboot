@@ -9,6 +9,7 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.gui.components.TableCellRenderers;
+import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.purchases.dto.SupplierDTO;
@@ -89,79 +90,61 @@ public class SupplierStatementPanel extends JPanel {
         topRow.add(busyBar, BorderLayout.EAST);
         header.add(topRow, BorderLayout.NORTH);
 
-        ModernPanel filterBar = new ModernPanel(12);
-        filterBar.setLayout(new BorderLayout(12, 0));
-        filterBar.setBorder(new EmptyBorder(8, 12, 8, 12));
-
-        JPanel leftFilters = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftFilters.setOpaque(false);
-
         JLabel lblFornecedor = new JLabel("Fornecedor:");
         lblFornecedor.setForeground(UIHelper.TEXT_LIGHT);
         lblFornecedor.setFont(lblFornecedor.getFont().deriveFont(12f));
-        leftFilters.add(lblFornecedor);
 
         supplierCombo = new JComboBox<>();
         supplierCombo.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(supplierCombo);
         supplierCombo.addActionListener(e -> refreshData());
-        leftFilters.add(supplierCombo);
 
         JLabel lblInicio = new JLabel("Início:");
         lblInicio.setForeground(UIHelper.TEXT_LIGHT);
         lblInicio.setFont(lblInicio.getFont().deriveFont(12f));
-        leftFilters.add(lblInicio);
 
         LocalDate defaultStart = LocalDate.now().withDayOfYear(1);
         startDateField = new DateField(defaultStart);
         startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
         startDateField.addActionListener(e -> refreshData());
-        leftFilters.add(startDateField);
 
         JLabel lblFim = new JLabel("Fim:");
         lblFim.setForeground(UIHelper.TEXT_LIGHT);
         lblFim.setFont(lblFim.getFont().deriveFont(12f));
-        leftFilters.add(lblFim);
 
         LocalDate defaultEnd = LocalDate.now();
         endDateField = new DateField(defaultEnd);
         endDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
         endDateField.addActionListener(e -> refreshData());
-        leftFilters.add(endDateField);
-
-        filterBar.add(leftFilters, BorderLayout.WEST);
-
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
-        rightActions.add(refreshBtn);
 
         ModernButton pdfBtn = UIHelper.createPrimaryButton("Imprimir Extrato (PDF)");
         pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         pdfBtn.setPreferredSize(new Dimension(185, UIHelper.FORM_CONTROL_HEIGHT));
         pdfBtn.addActionListener(e -> emitStatementPdf());
-        rightActions.add(pdfBtn);
 
-        filterBar.add(rightActions, BorderLayout.EAST);
+        JPanel filterBar = TableFilter.toolbar(
+                new JComponent[]{lblFornecedor, supplierCombo, lblInicio, startDateField, lblFim, endDateField},
+                new JComponent[]{refreshBtn, pdfBtn}
+        );
         header.add(filterBar, BorderLayout.SOUTH);
 
         return header;
     }
 
     private JPanel buildSummaryCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 4, 12, 0));
-        grid.setOpaque(false);
+        JPanel grid = KpiCard.createGrid(4);
 
         openingBalanceLabel = new JLabel("0,00 MT");
         totalDebitsLabel = new JLabel("0,00 MT");
         totalCreditsLabel = new JLabel("0,00 MT");
         closingBalanceLabel = new JLabel("0,00 MT");
 
-        grid.add(KpiCard.createMetricCard("Saldo Anterior a Pagar", openingBalanceLabel, "Posição inicial", "fas-history", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createMetricCard("Saldo Anterior a Pagar", openingBalanceLabel, "Posição inicial", "fas-history", UIHelper.ACCENT_BLUE));
         grid.add(KpiCard.createMetricCard("Total Compras (+)", totalCreditsLabel, "Compras do período", "fas-shopping-bag", UIHelper.PENDING_YELLOW));
         grid.add(KpiCard.createMetricCard("Total Pagamentos (-)", totalDebitsLabel, "Pagamentos efectuados", "fas-money-bill-wave", UIHelper.APPROVED_GREEN));
-        grid.add(KpiCard.createMetricCard("Saldo em Dívida a Pagar", closingBalanceLabel, "Posição actual", "fas-balance-scale", UIHelper.TEXT_LIGHT));
+        grid.add(KpiCard.createMetricCard("Saldo em Dívida a Pagar", closingBalanceLabel, "Posição actual", "fas-balance-scale", UIHelper.REJECTED_RED));
 
         return grid;
     }

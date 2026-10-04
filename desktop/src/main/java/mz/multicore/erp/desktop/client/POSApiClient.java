@@ -7,6 +7,8 @@ import mz.multicore.erp.modules.pos.dto.CloseSessionRequest;
 import mz.multicore.erp.modules.pos.dto.OpenSessionRequest;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutRequest;
 import mz.multicore.erp.modules.pos.dto.POSReturnRequest;
+import mz.multicore.erp.modules.pos.dto.POSReturnResultDTO;
+import mz.multicore.erp.modules.pos.dto.StoreVoucherDTO;
 import mz.multicore.erp.modules.pos.dto.PosPaymentRequest;
 import mz.multicore.erp.modules.pos.dto.TillMovementDTO;
 import mz.multicore.erp.modules.pos.dto.TillSessionDTO;
@@ -42,8 +44,12 @@ public class POSApiClient {
     }
 
     public TillSessionDTO closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId) {
+        return closeSession(sessionId, closingBalanceReal, depositAccountId, null, null);
+    }
+
+    public TillSessionDTO closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId, String notes, String cashBreakdownJson) {
         return clientFactory.authenticatedClient().post("/api/pos/sessions/" + sessionId + "/close",
-                new CloseSessionRequest(closingBalanceReal, depositAccountId), TillSessionDTO.class);
+                new CloseSessionRequest(closingBalanceReal, depositAccountId, notes, cashBreakdownJson), TillSessionDTO.class);
     }
 
     public TillMovementDTO addCashMovement(Long sessionId, String type, BigDecimal amount, String description) {
@@ -56,8 +62,30 @@ public class POSApiClient {
         return clientFactory.authenticatedClient().post("/api/pos/checkout", request, InvoiceDTO.class);
     }
 
-    public CreditNoteDTO returnSale(POSReturnRequest request) {
-        return clientFactory.authenticatedClient().post("/api/pos/returns", request, CreditNoteDTO.class);
+    public POSReturnResultDTO returnSale(POSReturnRequest request) {
+        return clientFactory.authenticatedClient().post("/api/pos/returns", request, POSReturnResultDTO.class);
+    }
+
+    /** Consulta dados e saldo de um Vale de Compras (Store Voucher). */
+    public Optional<StoreVoucherDTO> getVoucher(String code, Long companyId) {
+        try {
+            StoreVoucherDTO voucher = clientFactory.authenticatedClient().get(
+                    "/api/pos/vouchers/" + enc(code.trim().toUpperCase()) + "?companyId=" + companyId,
+                    StoreVoucherDTO.class);
+            return Optional.ofNullable(voucher);
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
+    /** Talão térmico do Vale de Compras em PDF ({@code /api/print/pos-voucher/{voucherId}}). */
+    public byte[] renderVoucher(Long voucherId) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/pos-voucher/" + voucherId);
+    }
+
+    /** Talão térmico do Vale de Compras por código em PDF ({@code /api/print/pos-voucher/code/{code}}). */
+    public byte[] renderVoucherByCode(String code) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/pos-voucher/code/" + enc(code.trim().toUpperCase()));
     }
 
     /** Pagamento posterior (fiado) de uma fatura em dívida. */
@@ -86,6 +114,47 @@ public class POSApiClient {
         mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO[] arr = clientFactory.authenticatedClient().get(
                 "/api/pos/sessions/history?companyId=" + companyId,
                 mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO[].class);
+        return arr != null ? java.util.Arrays.asList(arr) : java.util.Collections.emptyList();
+    }
+
+    /** Inicia solicitação de pagamento móvel Push USSD (M-Pesa ou e-Mola). */
+    public mz.multicore.erp.modules.pos.dto.MobilePaymentResponse initiateMobilePayment(
+            mz.multicore.erp.modules.pos.dto.InitiateMobilePaymentRequest request) {
+        return clientFactory.authenticatedClient().post("/api/pos/mobile-payment/initiate",
+                request, mz.multicore.erp.modules.pos.dto.MobilePaymentResponse.class);
+    }
+
+    /** Consulta estado do pagamento móvel em processamento. */
+    public mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse getMobilePaymentStatus(
+            String transactionId, Long companyId) {
+        String url = "/api/pos/mobile-payment/" + enc(transactionId) + "/status"
+                + (companyId != null ? "?companyId=" + companyId : "");
+        return clientFactory.authenticatedClient().get(url, mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse.class);
+    }
+
+    /** Força conclusão para modo de demonstração e testes. */
+    public mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse simulateCompleteMobilePayment(
+            String transactionId, Long companyId, boolean approve) {
+        String url = "/api/pos/mobile-payment/" + enc(transactionId) + "/simulate-complete?approve=" + approve
+                + (companyId != null ? "&companyId=" + companyId : "");
+        return clientFactory.authenticatedClient().post(url, null, mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse.class);
+    }
+
+    // ── Passagem de turno ─────────────────────────────────────────────────
+
+    /** Realiza passagem de turno entre operadores na mesma sessão. */
+    public mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO performShiftHandover(
+            Long sessionId, mz.multicore.erp.modules.pos.dto.ShiftHandoverRequest request) {
+        return clientFactory.authenticatedClient().post(
+                "/api/pos/sessions/" + sessionId + "/shift-handover",
+                request, mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO.class);
+    }
+
+    /** Lista reconciliações de passagem de turno de uma sessão. */
+    public java.util.List<mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO> getShiftReconciliations(Long sessionId) {
+        mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO[] arr = clientFactory.authenticatedClient().get(
+                "/api/pos/sessions/" + sessionId + "/shift-reconciliations",
+                mz.multicore.erp.modules.pos.dto.ShiftReconciliationDTO[].class);
         return arr != null ? java.util.Arrays.asList(arr) : java.util.Collections.emptyList();
     }
 

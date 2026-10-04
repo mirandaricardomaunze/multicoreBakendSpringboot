@@ -26,12 +26,13 @@ public class ModernPanel extends JPanel {
         setBackground(backgroundColor);
     }
 
-    /** Gradiente — para KPI cards do dashboard. */
+    /**
+     * Construtor legado com dois pontos de cor — agora mapeado para cor sólida sem gradientes.
+     */
     public ModernPanel(int radius, Color start, Color end) {
         this(radius);
-        this.isGradient = true;
-        this.gradientStart = start;
-        this.gradientEnd = end;
+        this.isGradient = false;
+        setBackground(start != null ? start : UIHelper.BG_CARD);
     }
 
     public void setCornerRadius(int radius) {
@@ -58,12 +59,11 @@ public class ModernPanel extends JPanel {
 
         g2.fillRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
 
-        // Border — adapta ao tema:
-        // • sobre gradiente (KPI card): branco translúcido subtil
-        // • painel normal: cor BORDER do tema activo (funciona em claro E escuro)
-        Color borderColor = isGradient
-                ? new Color(255, 255, 255, 20)
-                : UIHelper.BORDER;
+        // Border — adapta ao tema ou propriedade personalizada do card
+        Color customBorder = (Color) getClientProperty("card.border");
+        Color borderColor = customBorder != null
+                ? customBorder
+                : (isGradient ? new Color(255, 255, 255, 20) : UIHelper.BORDER);
         g2.setColor(borderColor);
         g2.setStroke(new BasicStroke(1f));
         g2.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);

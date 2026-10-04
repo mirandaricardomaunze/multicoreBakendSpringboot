@@ -85,7 +85,7 @@ class MoneyFlowHttpIntegrationTest {
 
         // Checkout de 5 unidades, pagamento pela conta de tesouraria (caminho legado).
         String body = postJson("/api/pos/checkout", c.token(), c.companyId(), """
-                {"operator":"ana","companyId":%s,"warehouseId":%d,"treasuryAccountId":%d,
+                {"operator":"ana","companyId":%s,"walkInName":"Cliente de Teste","warehouseId":%d,"treasuryAccountId":%d,
                  "lines":[{"productId":%d,"quantity":5,"discountPercentage":0}]}"""
                 .formatted(c.companyId(), c.warehouseId(), accountId, c.productId()))
                 .andExpect(status().isOk())
@@ -206,4 +206,5 @@ class MoneyFlowHttpIntegrationTest {
         }
         return mockMvc.perform(req);
     }
+
 }

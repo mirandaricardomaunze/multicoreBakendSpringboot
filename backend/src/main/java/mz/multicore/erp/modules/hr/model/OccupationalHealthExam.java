@@ -66,7 +66,7 @@ public class OccupationalHealthExam extends BaseEntity {
     @Column(name = "attachment_name", length = 255)
     private String attachmentName;
 
-    @Column(name = "attachment_data")
+    @Column(name = "attachment_data", length = 16_777_216)
     private byte[] attachmentData;
 
     /** Custo do exame, encargo do empregador. Anulável: nem toda a gente regista a factura. */

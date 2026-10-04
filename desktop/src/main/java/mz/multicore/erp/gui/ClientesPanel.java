@@ -5,6 +5,8 @@ import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FormField;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
 import mz.multicore.erp.gui.components.IntegerField;
@@ -12,6 +14,7 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.MoneyField;
+import mz.multicore.erp.gui.components.NuitValidator;
 import mz.multicore.erp.gui.components.TableExportAction;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -65,12 +68,12 @@ public class ClientesPanel extends JPanel {
         tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
 
-        tabs.addTab("Directório de Clientes", UIHelper.icon("fas-address-book", 16, UIHelper.TEXT_LIGHT), buildDirectoryTab());
+        tabs.addTab("Directório de Clientes", UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), buildDirectoryTab());
         if (creditRiskPanel != null) {
-            tabs.addTab("Risco de Crédito & Cobrança (Aging)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT), creditRiskPanel);
+            tabs.addTab("Risco de Crédito & Cobrança (Aging)", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.PENDING_YELLOW), creditRiskPanel);
         }
         if (customerStatementPanel != null) {
-            tabs.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.TEXT_LIGHT), customerStatementPanel);
+            tabs.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.ACCENT), customerStatementPanel);
         }
 
         tabs.addChangeListener(e -> {
@@ -104,10 +107,9 @@ public class ClientesPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // TOP BAR
-        JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setOpaque(false);
-        topBar.add(UIHelper.createHeading("Gestão de Clientes"), BorderLayout.WEST);
+        ModernButton viewBtn = UIHelper.createSecondaryButton("Ver Ficha");
+        viewBtn.setIcon(UIHelper.icon("fas-id-card", 14, UIHelper.ACCENT_CYAN));
+        viewBtn.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Cliente");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
@@ -121,43 +123,37 @@ public class ClientesPanel extends JPanel {
         deleteBtn.setIcon(UIHelper.icon("fas-trash", 14));
         deleteBtn.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
 
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::onPanelSelected);
-
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         exportBtn.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         exportBtn.setToolTipText("Exportar a lista filtrada para PDF");
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(exportBtn);
-        actions.add(editBtn);
-        actions.add(deleteBtn);
-        actions.add(newBtn);
-        topBar.add(actions, BorderLayout.EAST);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::onPanelSelected);
 
-        JPanel north = new JPanel();
-        north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        topBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(topBar);
-        north.add(feedback);
-        panel.add(north, BorderLayout.NORTH);
-
-        // CENTER CARD: search + table
-        JPanel center = new JPanel(new BorderLayout(0, 12));
-        center.setOpaque(false);
-
-        searchField = TableFilter.searchField("Filtrar por nome, NUIT, email ou endereço…");
-        searchField.setPreferredSize(new Dimension(320, UIHelper.FORM_CONTROL_HEIGHT));
-        JPanel searchRow = TableFilter.bar(searchField);
-        center.add(searchRow, BorderLayout.NORTH);
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14, UIHelper.REJECTED_RED), exportBtn::doClick)
+                .addAction("Ver Ficha", UIHelper.icon("fas-id-card", 14, UIHelper.ACCENT_CYAN), viewBtn::doClick)
+                .addAction("Editar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), editBtn::doClick)
+                .addAction("Eliminar", UIHelper.icon("fas-trash", 14, UIHelper.REJECTED_RED), deleteBtn::doClick);
+        panel.add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        searchField = TableFilter.searchField("Filtrar por nome, NUIT, email ou endereço…");
+        JPanel searchRow = new JPanel(new GridBagLayout());
+        searchRow.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.gridx = 0; g.weightx = 1.0;
+        searchRow.add(filterLabel("Pesquisa"), g);
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 0);
+        searchRow.add(searchField, g);
+        searchRow.setBorder(new EmptyBorder(0, 0, 12, 0));
+        card.add(UIHelper.tableCardTop("Gestão de Clientes", searchRow, refreshBtn, moreBtn, newBtn), BorderLayout.NORTH);
 
         String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço", "Prazo (dias)", "Limite de Crédito"};
         model = new DefaultTableModel(cols, 0) {
@@ -176,10 +172,14 @@ public class ClientesPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
         TableFilter.install(table, searchField);
         card.add(scroll, BorderLayout.CENTER);
-        center.add(card, BorderLayout.CENTER);
-        panel.add(center, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
+        panel.add(card, BorderLayout.CENTER);
 
         // LISTENERS
+        viewBtn.addActionListener(e -> {
+            ClientDTO selected = selectedClient();
+            if (selected != null) openClientDetailDialog(selected);
+        });
         newBtn.addActionListener(e -> openClientDialog(null));
         editBtn.addActionListener(e -> {
             ClientDTO selected = selectedClient();
@@ -193,7 +193,7 @@ public class ClientesPanel extends JPanel {
             public void mouseClicked(java.awt.event.MouseEvent ev) {
                 if (ev.getClickCount() == 2) {
                     ClientDTO selected = selectedClient();
-                    if (selected != null) openClientDialog(selected);
+                    if (selected != null) openClientDetailDialog(selected);
                 }
             }
         });
@@ -252,6 +252,7 @@ public class ClientesPanel extends JPanel {
         UIHelper.styleTextField(taxIdField);
         UIHelper.styleTextField(emailField);
         UIHelper.styleTextField(addressField);
+        UIHelper.installDigitsOnlyFilter(taxIdField, 9);
 
         FormField nameForm = new FormField("Nome", nameField, true, "Nome completo ou denominação social");
         FormField taxForm = new FormField("NUIT / NIF", taxIdField, true, null);
@@ -268,8 +269,10 @@ public class ClientesPanel extends JPanel {
         ModernFormDialog dialog = new ModernFormDialog(
                 UIHelper.mainWindow, title, null, "Dados de cadastro do cliente", form);
         dialog.setOnSaveAsync(() -> {
-            boolean valid = nameForm.validateRequired() & taxForm.validateRequired() & emailForm.validateRequired();
-            if (!valid) throw new IllegalArgumentException("Corrija os campos assinalados.");
+            boolean valid = nameForm.validateMinLength(3, "Nome")
+                    & taxForm.validateNuit()
+                    & emailForm.validateEmail();
+            if (!valid) throw new IllegalArgumentException("Corrija os campos assinalados com formato inválido.");
             String name = nameField.getText().trim();
             String taxId = taxIdField.getText().trim();
             String email = emailField.getText().trim();
@@ -305,5 +308,17 @@ public class ClientesPanel extends JPanel {
         } catch (Exception ex) {
             feedback.show(FeedbackType.ERROR, "Não foi possível eliminar o cliente", ex.getMessage(), null, null);
         }
+    }
+
+    private void openClientDetailDialog(ClientDTO client) {
+        new mz.multicore.erp.gui.commercial.CustomerDetailDialog(this, client,
+                () -> openClientDialog(client),
+                this::selectStatementTab).show();
+    }
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 }

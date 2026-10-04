@@ -1,11 +1,12 @@
 package mz.multicore.erp.modules.inventory.model;
 
 /**
- * Ciclo de vida de uma guia de transferência. A guia nasce {@link #PENDING_APPROVAL};
+ * Ciclo de vida de uma guia de transferência. A guia nasce {@link #DRAFT};
  * o stock só sai do armazém de origem quando passa a {@link #APPROVED}. {@link #REJECTED}
  * e {@link #CANCELLED} encerram a guia sem qualquer movimento de stock.
  */
 public enum TransferStatus {
+    DRAFT("Rascunho"),
     PENDING_APPROVAL("Pendente de Aprovação"),
     APPROVED("Aprovada"),
     REJECTED("Rejeitada"),

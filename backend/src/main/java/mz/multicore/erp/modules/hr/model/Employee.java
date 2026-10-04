@@ -40,7 +40,7 @@ public class Employee extends BaseEntity {
     private String phone;
 
     /** Fotografia reduzida do colaborador, usada na ficha e identificação visual. */
-    @Column(name = "photo")
+    @Column(name = "photo", length = 16_777_216)
     private byte[] photo;
 
     @Column(name = "tax_id", length = 40)

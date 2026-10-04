@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.quantity.PackagingComposition;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.*;
@@ -55,6 +56,38 @@ final class StockProductActions {
         }
     }
 
+    private static int parseRequiredPositiveInt(String raw, String fieldLabel) {
+        try {
+            int value = Integer.parseInt(raw == null ? "" : raw.trim());
+            if (value <= 0) throw new NumberFormatException();
+            return value;
+        } catch (NumberFormatException exception) {
+            throw new BusinessRuleException("Indique " + fieldLabel + " como número inteiro maior que zero.");
+        }
+    }
+
+    private static void bindPackagingFields(JTextField packagesPerBoxField,
+                                            JTextField unitsPerPackageField,
+                                            JTextField unitsPerBoxField) {
+        Runnable recalculate = () -> {
+            int packagesPerBox = parseIntOrZero(packagesPerBoxField.getText());
+            int unitsPerPackage = parseIntOrZero(unitsPerPackageField.getText());
+            if (packagesPerBox <= 0 || unitsPerPackage <= 0) {
+                unitsPerBoxField.setText("—");
+                return;
+            }
+            try {
+                unitsPerBoxField.setText(String.valueOf(
+                        PackagingComposition.of(packagesPerBox, unitsPerPackage).unitsPerBox()));
+            } catch (BusinessRuleException exception) {
+                unitsPerBoxField.setText("—");
+            }
+        };
+        UIHelper.onTextChange(packagesPerBoxField, recalculate);
+        UIHelper.onTextChange(unitsPerPackageField, recalculate);
+        recalculate.run();
+    }
+
     /** Decimal ≥ 0 a partir de texto livre; vazio/inválido → 0 (para unidades soltas). */
     private static BigDecimal parseDecimalOrZero(String raw) {
         if (raw == null || raw.trim().isEmpty()) return BigDecimal.ZERO;
@@ -77,11 +110,12 @@ final class StockProductActions {
             return;
         }
 
-        JComboBox<String> prodCombo = new JComboBox<>();
+        ProductSearchComboBox prodCombo = new ProductSearchComboBox();
         JComboBox<String> whCombo = new JComboBox<>();
         // Entrada por caixas: nº de caixas + unidades soltas → total em unidades (read-only).
         // O stock é sempre persistido/movimentado em UNIDADES; a caixa é só camada de entrada.
         JTextField boxesField = new JTextField("0");
+        JTextField packagesField = new JTextField("0");
         JTextField looseField = new JTextField("0");
         JTextField totalUnitsField = new JTextField();
         totalUnitsField.setEditable(false);
@@ -92,9 +126,9 @@ final class StockProductActions {
         JTextField serialField = new JTextField();
         JTextField descField = new JTextField("Entrada de lote/validade");
 
-        UIHelper.styleComboBox(prodCombo);
         UIHelper.styleComboBox(whCombo);
         UIHelper.styleTextField(boxesField);
+        UIHelper.styleTextField(packagesField);
         UIHelper.styleTextField(looseField);
         UIHelper.styleTextField(totalUnitsField);
         UIHelper.styleTextField(batchField);
@@ -105,35 +139,34 @@ final class StockProductActions {
         batchField.putClientProperty("JTextField.placeholderText", "Opcional — gerado a partir da validade se vazio");
         serialField.putClientProperty("JTextField.placeholderText", "Opcional");
 
-        for (ProductDTO p : products) {
-            prodCombo.addItem(p.sku() + " — " + p.name());
-        }
+        prodCombo.setProducts(products);
         for (WarehouseDTO w : owner.warehousesList) {
             whCombo.addItem(w.name());
         }
         if (preselected != null) {
-            for (int i = 0; i < products.size(); i++) {
-                if (products.get(i).id().equals(preselected.id())) {
-                    prodCombo.setSelectedIndex(i);
-                    break;
-                }
-            }
+            prodCombo.selectProduct(preselected.id());
         }
 
         // Total (unidades) = nº caixas × unidades/caixa + unidades soltas. Recalcula ao mudar
         // produto (logo unidades/caixa), nº de caixas ou unidades soltas.
         Runnable recomputeTotal = () -> {
-            int idx = prodCombo.getSelectedIndex();
-            int upb = (idx >= 0 && idx < products.size())
-                    ? Math.max(1, products.get(idx).unitsPerBox()) : 1;
-            unitsPerBoxHint.setText(upb + " unidade(s) por caixa");
+            ProductDTO product = prodCombo.selectedProduct();
+            int packagesPerBox = product == null ? 1 : Math.max(1, product.packagesPerBox());
+            int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
+            int unitsPerBox = product == null ? 1 : Math.max(1, product.unitsPerBox());
+            unitsPerBoxHint.setText(packagesPerBox + " emb/cx × " + unitsPerPackage
+                    + " un/emb = " + unitsPerBox + " un/cx");
             int boxes = parseIntOrZero(boxesField.getText());
+            int packages = parseIntOrZero(packagesField.getText());
             BigDecimal loose = parseDecimalOrZero(looseField.getText());
-            BigDecimal total = BigDecimal.valueOf((long) boxes * upb).add(loose);
+            BigDecimal total = BigDecimal.valueOf((long) boxes * unitsPerBox)
+                    .add(BigDecimal.valueOf((long) packages * unitsPerPackage))
+                    .add(loose);
             totalUnitsField.setText(total.stripTrailingZeros().toPlainString());
         };
         prodCombo.addActionListener(e -> recomputeTotal.run());
         UIHelper.onTextChange(boxesField, recomputeTotal);
+        UIHelper.onTextChange(packagesField, recomputeTotal);
         UIHelper.onTextChange(looseField, recomputeTotal);
         recomputeTotal.run();
 
@@ -141,8 +174,9 @@ final class StockProductActions {
                 "Produto:", prodCombo,
                 "Armazém:", whCombo,
                 "Nº de Caixas:", boxesField,
+                "Embalagens soltas:", packagesField,
                 "Unidades soltas:", looseField,
-                "Unidades / caixa:", unitsPerBoxHint,
+                "Composição da caixa:", unitsPerBoxHint,
                 "Total (unidades):", totalUnitsField,
                 "Validade (yyyy-MM-dd):", expirationField,
                 "Nº Lote:", batchField,
@@ -153,16 +187,30 @@ final class StockProductActions {
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Adicionar Lote / Validade", "fas-boxes", "Registe lote e data de validade (FEFO)", dialogPanel).showDialog();
         if (!confirmed) return;
 
-        int prodIdx = prodCombo.getSelectedIndex();
         int whIdx = whCombo.getSelectedIndex();
-        if (prodIdx < 0 || whIdx < 0) return;
+        ProductDTO selectedDTO = prodCombo.selectedProduct();
+        if (selectedDTO == null || whIdx < 0) return;
+
+        int loosePackages = parseIntOrZero(packagesField.getText());
+        BigDecimal looseUnits = parseDecimalOrZero(looseField.getText());
+        if (loosePackages >= selectedDTO.packagesPerBox()) {
+            owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida",
+                    "As embalagens soltas devem ser inferiores a uma caixa.");
+            return;
+        }
+        if (looseUnits.compareTo(BigDecimal.valueOf(selectedDTO.unitsPerPackage())) >= 0) {
+            owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida",
+                    "As unidades soltas devem ser inferiores a uma embalagem.");
+            return;
+        }
 
         BigDecimal qty;
         try {
             // A quantidade gravada é o total em unidades (caixas × und/caixa + soltas).
             qty = new BigDecimal(totalUnitsField.getText().trim());
             if (qty.compareTo(BigDecimal.ZERO) <= 0) {
-                owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida", "Indique uma quantidade maior que zero em caixas e/ou unidades soltas.");
+                owner.showStockNotice(FeedbackType.ERROR, "Quantidade inválida",
+                        "Indique uma quantidade maior que zero em caixas, embalagens e/ou unidades.");
                 return;
             }
         } catch (NumberFormatException ex) {
@@ -195,7 +243,6 @@ final class StockProductActions {
         if (serial.isEmpty()) serial = null;
         String desc = descField.getText().trim();
 
-        ProductDTO selectedDTO = products.get(prodIdx);
         WarehouseDTO selectedWarehouse = owner.warehousesList.get(whIdx);
 
         RegisterMovementRequest request = new RegisterMovementRequest(
@@ -221,7 +268,10 @@ final class StockProductActions {
         JTextField salesPriceField = new JTextField();
         JTextField purchasePriceField = new JTextField();
         JTextField minStockField = new JTextField("0");
+        JTextField packagesPerBoxField = new JTextField("1");
+        JTextField unitsPerPackageField = new JTextField("1");
         JTextField unitsPerBoxField = new JTextField("1");
+        unitsPerBoxField.setEditable(false);
         JTextField netWeightField = new JTextField();
         JTextField grossWeightField = new JTextField();
         JTextField wholesalePriceField = new JTextField();
@@ -236,6 +286,8 @@ final class StockProductActions {
         UIHelper.styleTextField(salesPriceField);
         UIHelper.styleTextField(purchasePriceField);
         UIHelper.styleTextField(minStockField);
+        UIHelper.styleTextField(packagesPerBoxField);
+        UIHelper.styleTextField(unitsPerPackageField);
         UIHelper.styleTextField(unitsPerBoxField);
         UIHelper.styleTextField(netWeightField);
         UIHelper.styleTextField(grossWeightField);
@@ -245,14 +297,15 @@ final class StockProductActions {
         UIHelper.styleComboBox(categoryCombo);
         wholesalePriceField.putClientProperty("JTextField.placeholderText", "Opcional — preço ao grosso");
         wholesaleMinQtyField.putClientProperty("JTextField.placeholderText", "Qtd (unidades) a partir da qual aplica");
+        bindPackagingFields(packagesPerBoxField, unitsPerPackageField, unitsPerBoxField);
 
-        categoryCombo.addItem("— Sem categoria —");
+        categoryCombo.addItem("Sem categoria");
         for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
 
         // IVA dinâmico: taxa de IVA por produto (default = IVA Normal 16%).
         JComboBox<String> taxCombo = new JComboBox<>();
         UIHelper.styleComboBox(taxCombo);
-        taxCombo.addItem("— IVA Padrão (16%) —");
+        taxCombo.addItem("IVA Padrão (16%)");
         int defaultTaxIdx = 0;
         for (int i = 0; i < vatRates.size(); i++) {
             taxCombo.addItem(vatRates.get(i).name());
@@ -268,7 +321,7 @@ final class StockProductActions {
         imagePreview.setBackground(UIHelper.BG_CARD);
         imagePreview.setForeground(UIHelper.TEXT_MUTED);
         imagePreview.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1, true));
-        ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem…");
+        ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem");
         chooseImageBtn.setIcon(UIHelper.icon("fas-image", 14));
         chooseImageBtn.addActionListener(ev -> {
             JFileChooser fc = new JFileChooser();
@@ -299,7 +352,9 @@ final class StockProductActions {
                 "Preço de Venda (MT):", salesPriceField,
                 "Preço de Compra (MT):", purchasePriceField,
                 "Stock Mínimo:", minStockField,
-                "Unidades por Caixa:", unitsPerBoxField,
+                "Embalagens por Caixa:", packagesPerBoxField,
+                "Unidades por Embalagem:", unitsPerPackageField,
+                "Total de Unidades por Caixa:", unitsPerBoxField,
                 "Peso líquido/unidade (kg):", netWeightField,
                 "Peso bruto/unidade (kg):", grossWeightField,
                 "Preço Grosso (MT):", wholesalePriceField,
@@ -321,7 +376,8 @@ final class StockProductActions {
             String salesPriceStr = sanitizeNumber(salesPriceField.getText());
             String purchasePriceStr = sanitizeNumber(purchasePriceField.getText());
             String minStockStr = sanitizeNumber(minStockField.getText());
-            String unitsPerBoxStr = unitsPerBoxField.getText().trim();
+            int packagesPerBox = parseRequiredPositiveInt(packagesPerBoxField.getText(), "embalagens por caixa");
+            int unitsPerPackage = parseRequiredPositiveInt(unitsPerPackageField.getText(), "unidades por embalagem");
             String desc = descField.getText().trim();
 
             if (sku.isEmpty() || name.isEmpty() || salesPriceStr.isEmpty()) {
@@ -343,8 +399,7 @@ final class StockProductActions {
             if (purchasePrice.signum() < 0) throw new BusinessRuleException("O preço de compra não pode ser negativo.");
             if (minStock.signum() < 0) throw new BusinessRuleException("O stock mínimo não pode ser negativo.");
 
-            int unitsPerBox = parseIntOrZero(unitsPerBoxStr);
-            if (unitsPerBox < 1) unitsPerBox = 1;
+            PackagingComposition packaging = PackagingComposition.of(packagesPerBox, unitsPerPackage);
 
             int catIdx = categoryCombo.getSelectedIndex();
             Long categoryId = null;
@@ -369,14 +424,17 @@ final class StockProductActions {
 
             Long selectedCategoryId = categoryId;
             Long selectedTaxRateId = taxRateId;
-            int selectedUnitsPerBox = unitsPerBox;
+            int selectedUnitsPerBox = packaging.unitsPerBox();
+            int selectedPackagesPerBox = packaging.packagesPerBox();
+            int selectedUnitsPerPackage = packaging.unitsPerPackage();
             byte[] selectedImage = imageHolder[0];
 
             return () -> {
                 ProductDTO created = owner.comercialApiClient.createProduct(
                         sku, reference.isEmpty() ? null : reference,
                         barcode.isEmpty() ? null : barcode, name, salesPrice, purchasePrice,
-                        minStock, selectedUnitsPerBox, selectedCategoryId, "UNIT", true,
+                        minStock, selectedUnitsPerBox, selectedPackagesPerBox, selectedUnitsPerPackage,
+                        selectedCategoryId, "UNIT", true,
                         selectedTaxRateId, desc.isEmpty() ? null : desc,
                         wholesalePrice, wholesaleMinQty, netWeightKg, grossWeightKg);
                 if (selectedImage != null) {
@@ -418,7 +476,7 @@ final class StockProductActions {
             return;
         }
 
-        JComboBox<String> productCombo = new JComboBox<>();
+        ProductSearchComboBox productCombo = new ProductSearchComboBox();
         JTextField skuField = new JTextField();
         skuField.setEditable(false);
         JTextField referenceField = new JTextField();
@@ -427,7 +485,10 @@ final class StockProductActions {
         JTextField salesPriceField = new JTextField();
         JTextField purchasePriceField = new JTextField();
         JTextField minStockField = new JTextField("0");
+        JTextField packagesPerBoxField = new JTextField("1");
+        JTextField unitsPerPackageField = new JTextField("1");
         JTextField unitsPerBoxField = new JTextField("1");
+        unitsPerBoxField.setEditable(false);
         JTextField netWeightField = new JTextField();
         JTextField grossWeightField = new JTextField();
         JTextField wholesalePriceField = new JTextField();
@@ -435,7 +496,6 @@ final class StockProductActions {
         JTextField descField = new JTextField();
         JComboBox<String> categoryCombo = new JComboBox<>();
 
-        UIHelper.styleComboBox(productCombo);
         UIHelper.styleTextField(wholesalePriceField);
         UIHelper.styleTextField(wholesaleMinQtyField);
         UIHelper.styleTextField(skuField);
@@ -445,26 +505,27 @@ final class StockProductActions {
         UIHelper.styleTextField(salesPriceField);
         UIHelper.styleTextField(purchasePriceField);
         UIHelper.styleTextField(minStockField);
+        UIHelper.styleTextField(packagesPerBoxField);
+        UIHelper.styleTextField(unitsPerPackageField);
         UIHelper.styleTextField(unitsPerBoxField);
         UIHelper.styleTextField(netWeightField);
         UIHelper.styleTextField(grossWeightField);
         UIHelper.styleTextField(descField);
         UIHelper.styleComboBox(categoryCombo);
+        bindPackagingFields(packagesPerBoxField, unitsPerPackageField, unitsPerBoxField);
 
-        for (ProductDTO p : products) productCombo.addItem(p.sku() + " — " + p.name());
+        productCombo.setProducts(products);
         // Abre já no produto seleccionado no inventário (ou no primeiro, se nenhum).
         if (preselectedProductId != null) {
-            for (int i = 0; i < products.size(); i++) {
-                if (products.get(i).id().equals(preselectedProductId)) { productCombo.setSelectedIndex(i); break; }
-            }
+            productCombo.selectProduct(preselectedProductId);
         }
 
-        categoryCombo.addItem("— Sem categoria —");
+        categoryCombo.addItem("Sem categoria");
         for (var c : categories) categoryCombo.addItem(c.name() + "  (" + c.code() + ")");
 
         JComboBox<String> taxCombo = new JComboBox<>();
         UIHelper.styleComboBox(taxCombo);
-        taxCombo.addItem("— IVA Padrão (16%) —");
+        taxCombo.addItem("IVA Padrão (16%)");
         for (var r : vatRates) taxCombo.addItem(r.name());
 
         final byte[][] imageHolder = {null};
@@ -474,7 +535,7 @@ final class StockProductActions {
         imagePreview.setBackground(UIHelper.BG_CARD);
         imagePreview.setForeground(UIHelper.TEXT_MUTED);
         imagePreview.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1, true));
-        ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem…");
+        ModernButton chooseImageBtn = UIHelper.createSecondaryButton("Escolher Imagem");
         chooseImageBtn.setIcon(UIHelper.icon("fas-image", 14));
         chooseImageBtn.addActionListener(ev -> {
             JFileChooser fc = new JFileChooser();
@@ -497,9 +558,8 @@ final class StockProductActions {
 
         // Pré-preenche o formulário com o produto seleccionado (e limpa imagem por enviar).
         Runnable prefill = () -> {
-            int idx = productCombo.getSelectedIndex();
-            if (idx < 0 || idx >= products.size()) return;
-            ProductDTO p = products.get(idx);
+            ProductDTO p = productCombo.selectedProduct();
+            if (p == null) return;
             skuField.setText(p.sku());
             referenceField.setText(p.reference() == null ? "" : p.reference());
             barcodeField.setText(p.barcode() == null ? "" : p.barcode());
@@ -507,6 +567,8 @@ final class StockProductActions {
             salesPriceField.setText(p.unitPrice() == null ? "" : p.unitPrice().toPlainString());
             purchasePriceField.setText(p.purchasePrice() == null ? "0" : p.purchasePrice().toPlainString());
             minStockField.setText(p.minStock() == null ? "0" : p.minStock().toPlainString());
+            packagesPerBoxField.setText(String.valueOf(p.packagesPerBox()));
+            unitsPerPackageField.setText(String.valueOf(p.unitsPerPackage()));
             unitsPerBoxField.setText(String.valueOf(p.unitsPerBox()));
             netWeightField.setText(p.netUnitWeightKg() == null ? "" : p.netUnitWeightKg().toPlainString());
             grossWeightField.setText(p.grossUnitWeightKg() == null ? "" : p.grossUnitWeightKg().toPlainString());
@@ -549,7 +611,9 @@ final class StockProductActions {
                 "Preço de Venda (MT):", salesPriceField,
                 "Preço de Compra (MT):", purchasePriceField,
                 "Stock Mínimo:", minStockField,
-                "Unidades por Caixa:", unitsPerBoxField,
+                "Embalagens por Caixa:", packagesPerBoxField,
+                "Unidades por Embalagem:", unitsPerPackageField,
+                "Total de Unidades por Caixa:", unitsPerBoxField,
                 "Peso líquido/unidade (kg):", netWeightField,
                 "Peso bruto/unidade (kg):", grossWeightField,
                 "Preço Grosso (MT):", wholesalePriceField,
@@ -563,11 +627,10 @@ final class StockProductActions {
                 .setConfirmButton("Actualizar", "fas-save");
 
         dialog.setOnSaveAsync(() -> {
-            int idx = productCombo.getSelectedIndex();
-            if (idx < 0 || idx >= products.size()) {
+            ProductDTO selected = productCombo.selectedProduct();
+            if (selected == null) {
                 throw new BusinessRuleException("Selecione um produto válido.");
             }
-            ProductDTO selected = products.get(idx);
 
             String reference = referenceField.getText().trim();
             String barcode = barcodeField.getText().trim();
@@ -575,7 +638,8 @@ final class StockProductActions {
             String salesPriceStr = sanitizeNumber(salesPriceField.getText());
             String purchasePriceStr = sanitizeNumber(purchasePriceField.getText());
             String minStockStr = sanitizeNumber(minStockField.getText());
-            String unitsPerBoxStr = unitsPerBoxField.getText().trim();
+            int packagesPerBox = parseRequiredPositiveInt(packagesPerBoxField.getText(), "embalagens por caixa");
+            int unitsPerPackage = parseRequiredPositiveInt(unitsPerPackageField.getText(), "unidades por embalagem");
             String desc = descField.getText().trim();
 
             if (name.isEmpty() || salesPriceStr.isEmpty()) {
@@ -597,8 +661,7 @@ final class StockProductActions {
             if (purchasePrice.signum() < 0) throw new BusinessRuleException("O preço de compra não pode ser negativo.");
             if (minStock.signum() < 0) throw new BusinessRuleException("O stock mínimo não pode ser negativo.");
 
-            int unitsPerBox = parseIntOrZero(unitsPerBoxStr);
-            if (unitsPerBox < 1) unitsPerBox = 1;
+            PackagingComposition packaging = PackagingComposition.of(packagesPerBox, unitsPerPackage);
 
             int catIdx = categoryCombo.getSelectedIndex();
             Long categoryId = null;
@@ -623,7 +686,9 @@ final class StockProductActions {
 
             Long selectedCategoryId = categoryId;
             Long selectedTaxRateId = taxRateId;
-            int selectedUnitsPerBox = unitsPerBox;
+            int selectedUnitsPerBox = packaging.unitsPerBox();
+            int selectedPackagesPerBox = packaging.packagesPerBox();
+            int selectedUnitsPerPackage = packaging.unitsPerPackage();
             byte[] selectedImage = imageHolder[0];
             String saleType = selected.saleType() != null ? selected.saleType() : "UNIT";
             boolean stockTracked = selected.stockTracked();
@@ -632,7 +697,8 @@ final class StockProductActions {
                 owner.comercialApiClient.updateProduct(
                         selected.id(), reference.isEmpty() ? null : reference,
                         barcode.isEmpty() ? null : barcode, name, salesPrice, purchasePrice,
-                        minStock, selectedUnitsPerBox, selectedCategoryId, saleType,
+                        minStock, selectedUnitsPerBox, selectedPackagesPerBox, selectedUnitsPerPackage,
+                        selectedCategoryId, saleType,
                         stockTracked, selectedTaxRateId,
                         desc.isEmpty() ? null : desc, wholesalePrice, wholesaleMinQty,
                         netWeightKg, grossWeightKg);

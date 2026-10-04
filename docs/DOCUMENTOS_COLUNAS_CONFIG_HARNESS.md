@@ -3,14 +3,14 @@
 > Cenários para [DOCUMENTOS_COLUNAS_CONFIG_SPEC.md](DOCUMENTOS_COLUNAS_CONFIG_SPEC.md).
 > DC-01..DC-06 automáticos; DC-50..DC-53 manuais (UI + PDF).
 
-**Última actualização:** 2026-07-04
+**Última actualização:** 2026-09-25
 
 ## Automáticos
 
 ### `DocumentConfigServiceTest`
 | ID    | Cenário | Esperado |
 |-------|---------|----------|
-| DC-01 | `getColumns` de empresa sem config guardada. | Devolve `all()` (8 colunas visíveis). |
+| DC-01 | `getColumns` de empresa sem config guardada. | Devolve `all()` (11 colunas visíveis). |
 | DC-02 | `save` com algumas colunas desligadas → `getColumns`. | Reflecte o guardado. |
 | DC-03 | `save` a esconder **todas** as colunas. | `BusinessRuleException` (documento não pode ficar sem colunas). |
 | DC-04 | `save` sem perfil MANAGER/ADMIN. | Bloqueado (`BusinessRuleException`). |
@@ -19,7 +19,9 @@
 ### `LineItemsTableRendererTest`
 | ID    | Cenário | Esperado |
 |-------|---------|----------|
-| DC-06 | `build(rows, colsSemBarcodeSemValidade)`. | Tabela tem **6** colunas; sem "Cód. Barras" nem "Validade". `build(rows)` mantém 8. |
+| DC-06 | `build(rows, colsSemBarcodeSemValidade)`. | Tabela tem **9** colunas; sem "Cód." nem "Val.". `build(rows)` mantém 11. |
+| DC-08 | Linha de 18 unidades, produto 12 embalagens × 6 unidades. | `Emb. = 3`, `Cx. = 0.25` e `% Cx. = 25%`. |
+| DC-09 | Cabeçalho completo | Usa `Cód. · Ref. · Desc. · Val. · Qtd. · Emb. · Cx. · % Cx. · P. Unit. · IVA · Subt.`. |
 
 ## Manuais (UI + PDF)
 
@@ -33,6 +35,7 @@
 | DC-55 | Config Recibo POS → marcar Referência → imprimir recibo de produto com referência. | Referência como sublinha sob o nome. |
 | DC-56 | Config tipo **Comercial**: desmarcar Cód. Barras. Depois abrir tipo **Recibo POS**. | São **independentes** — a config do recibo não muda ao alterar a comercial (e vice-versa). |
 | DC-57 | Config Recibo POS → escrever comentário "Trocas em 7 dias" no rodapé → Guardar → imprimir recibo. | O recibo mostra "Trocas em 7 dias" no fundo (em vez do texto padrão). |
+| DC-58 | Config Comercial → activar Embalagens, Caixas e % da Caixa → imprimir documento com 18 unidades de um produto 12 × 6. | PDF mostra `3`, `0.25` e `25%`; totais e IVA permanecem iguais. |
 
 ### Automático adicional — `DocumentConfigServiceTest`
 | ID    | Cenário | Esperado |

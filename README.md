@@ -57,6 +57,10 @@ mvn -pl desktop -am spring-boot:run
 
 > O desktop não contém driver de BD nem credenciais. Configure apenas `DESKTOP_API_BASE_URL` com o endereço HTTPS do backend.
 
+O desktop recusa HTTP para servidores remotos; HTTP apenas funciona em `localhost`, `127.0.0.1`
+ou `::1` para desenvolvimento. Os atalhos com contas de demonstração ficam ocultos por omissão
+e só aparecem com `-Dmulticore.demo-login=true` num ambiente isolado.
+
 O login e a seleção de empresa do desktop comunicam com a API HTTP. Por defeito,
 o modo desktop usa o backend local em `http://localhost:8080`. Para apontar para
 um backend remoto:

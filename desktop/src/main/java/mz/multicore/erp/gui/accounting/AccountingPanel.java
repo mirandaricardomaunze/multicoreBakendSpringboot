@@ -43,6 +43,7 @@ public final class AccountingPanel extends JPanel {
     private final DateField statementsTo = new DateField();
     private final JLabel statementsSummary = mutedLabel();
     private TablePager journalPager;
+    private final JLabel journalTotals = mutedLabel();
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     public AccountingPanel(AccountingApiClient accountingApiClient) {
@@ -61,11 +62,11 @@ public final class AccountingPanel extends JPanel {
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
-        tabs.addTab("Plano de Contas", UIHelper.icon("fas-sitemap", 14), buildChartTab());
-        tabs.addTab("Diário", UIHelper.icon("fas-book", 14), buildJournalTab());
-        tabs.addTab("Balancete", UIHelper.icon("fas-balance-scale", 14), buildTrialBalanceTab());
-        tabs.addTab("Razão", UIHelper.icon("fas-list-alt", 14), buildLedgerTab());
-        tabs.addTab("Demonstrações", UIHelper.icon("fas-chart-line", 14), buildStatementsTab());
+        tabs.addTab("Plano de Contas", UIHelper.icon("fas-sitemap", 16, UIHelper.MODULE_ACCOUNTING), buildChartTab());
+        tabs.addTab("Diário", UIHelper.icon("fas-book", 16, UIHelper.ACCENT_BLUE), buildJournalTab());
+        tabs.addTab("Balancete", UIHelper.icon("fas-balance-scale", 16, UIHelper.APPROVED_GREEN), buildTrialBalanceTab());
+        tabs.addTab("Razão", UIHelper.icon("fas-list-alt", 16, UIHelper.PENDING_YELLOW), buildLedgerTab());
+        tabs.addTab("Demonstrações", UIHelper.icon("fas-chart-line", 16, UIHelper.ACCENT_CYAN), buildStatementsTab());
         add(tabs, BorderLayout.CENTER);
 
         LocalDate today = LocalDate.now();
@@ -109,8 +110,12 @@ public final class AccountingPanel extends JPanel {
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> loadAccounts());
 
-        card.add(emptyChartWarning, BorderLayout.NORTH);
-        card.add(buttons(refresh, create, seed), BorderLayout.SOUTH);
+        JPanel chartToolbar = UIHelper.filterBar(null, new JComponent[]{refresh, create, seed});
+        JPanel chartNorth = new JPanel(new BorderLayout(0, 8));
+        chartNorth.setOpaque(false);
+        chartNorth.add(emptyChartWarning, BorderLayout.NORTH);
+        chartNorth.add(chartToolbar, BorderLayout.CENTER);
+        card.add(chartNorth, BorderLayout.NORTH);
         return wrap(card);
     }
 
@@ -184,15 +189,30 @@ public final class AccountingPanel extends JPanel {
         money(table, 5, 6);
         JPanel card = card(table);
 
-        journalPager = new TablePager(this::loadJournalPage);
+        TableQuickFilterBar filterBar = UIHelper.attachQuickFilter(table);
+        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
+        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refresh.addActionListener(e -> {
+            if (journalPager != null) journalPager.reload();
+        });
         ModernButton create = UIHelper.createSuccessButton("Novo Lançamento");
         create.setIcon(UIHelper.icon("fas-plus", 14));
         create.addActionListener(e -> openEntryDialog());
 
+        card.add(UIHelper.tableCardTop("Diário Contabilístico", filterBar,
+                refresh, create), BorderLayout.NORTH);
+
+        journalPager = new TablePager(this::loadJournalPage);
+
         JPanel south = new JPanel(new BorderLayout());
         south.setOpaque(false);
         south.add(journalPager, BorderLayout.NORTH);
-        south.add(buttons(create), BorderLayout.SOUTH);
+
+        JPanel footerBar = new JPanel(new BorderLayout());
+        footerBar.setOpaque(false);
+        footerBar.add(journalTotals, BorderLayout.WEST);
+        south.add(footerBar, BorderLayout.SOUTH);
+
         card.add(south, BorderLayout.SOUTH);
         return wrap(card);
     }
@@ -206,6 +226,9 @@ public final class AccountingPanel extends JPanel {
 
     private void applyJournal(PageResponse<JournalEntryDTO> response) {
         journalModel.setRowCount(0);
+        java.math.BigDecimal totalDebit = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal totalCredit = java.math.BigDecimal.ZERO;
+
         for (JournalEntryDTO entry : response.items()) {
             journalModel.addRow(new Object[]{
                     entry.entryNumber(),
@@ -214,6 +237,19 @@ public final class AccountingPanel extends JPanel {
                     entry.sourceLabel(),
                     entry.sourceDocumentNumber() == null ? "—" : entry.sourceDocumentNumber(),
                     entry.totalDebit(), entry.totalCredit()});
+            if (entry.totalDebit() != null) totalDebit = totalDebit.add(entry.totalDebit());
+            if (entry.totalCredit() != null) totalCredit = totalCredit.add(entry.totalCredit());
+        }
+
+        if (response.items().isEmpty()) {
+            journalTotals.setText("<html><span style='color:#94a3b8'>Nenhum lançamento no período. Certifique-se de semear o PGC-NIRF na aba 'Plano de Contas'.</span></html>");
+        } else {
+            boolean balanced = totalDebit.compareTo(totalCredit) == 0;
+            journalTotals.setText(String.format(
+                    "<html><b>Total Débito:</b> %,.2f MT &nbsp;·&nbsp; <b>Total Crédito:</b> %,.2f MT &nbsp;·&nbsp; %s</html>",
+                    totalDebit, totalCredit,
+                    balanced ? "<span style='color:#10b981'><b>Equilibrado</b></span>"
+                             : "<span style='color:#ef4444'><b>Desbalanceado</b></span>"));
         }
     }
 

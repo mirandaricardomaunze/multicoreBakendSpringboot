@@ -8,7 +8,11 @@ import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.Theme;
+import mz.multicore.erp.gui.components.UiDensity;
+import mz.multicore.erp.gui.components.UiDensityManager;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.AuditApiClient;
 import mz.multicore.erp.desktop.client.BackupApiClient;
 import mz.multicore.erp.desktop.client.UserApiClient;
@@ -42,6 +46,7 @@ public class ConfigPanel extends JPanel {
     final SupportApiClient supportApiClient;
     private final ConfigSupportPanel supportPanel;
     private final MySubscriptionApiClient mySubscriptionApiClient;
+    private final mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient;
 
     // TAB 5: SUPORTE À PLATAFORMA
     DefaultTableModel supportModel;
@@ -62,9 +67,7 @@ public class ConfigPanel extends JPanel {
     private JTable backupFilesTable;
 
     // TAB 3: USERS
-    private static final String[] USER_ROLES = {"EMPLOYEE", "SELLER", "MANAGER", "ADMIN"};
-    private DefaultTableModel usersTableModel;
-    private JTable usersTable;
+    private mz.multicore.erp.gui.users.UserManagementPanel usersPanel;
 
     // TAB 4: DOCUMENT COLUMNS
     private JComboBox<String> docTypeCombo;
@@ -73,6 +76,9 @@ public class ConfigPanel extends JPanel {
     private JCheckBox colDescription;
     private JCheckBox colExpiry;
     private JCheckBox colQuantity;
+    private JCheckBox colPackages;
+    private JCheckBox colBoxes;
+    private JCheckBox colBoxPercentage;
     private JCheckBox colUnitPrice;
     private JCheckBox colTax;
     private JCheckBox colSubtotal;
@@ -80,7 +86,8 @@ public class ConfigPanel extends JPanel {
 
     public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
                        DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
-                       MySubscriptionApiClient mySubscriptionApiClient) {
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient) {
         this.userApiClient = userApiClient;
         this.auditApiClient = auditApiClient;
         this.backupApiClient = backupApiClient;
@@ -88,6 +95,7 @@ public class ConfigPanel extends JPanel {
         this.supportApiClient = supportApiClient;
         this.supportPanel = new ConfigSupportPanel(this);
         this.mySubscriptionApiClient = mySubscriptionApiClient;
+        this.monitoringApiClient = monitoringApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -100,27 +108,27 @@ public class ConfigPanel extends JPanel {
 
         // TAB 1: AUDIT LOGS
         JPanel tabAudit = createAuditTab();
-        tabbedPane.addTab("Log de Auditoria Geral", UIHelper.icon("fas-clipboard-list", 16, UIHelper.TEXT_LIGHT), tabAudit);
+        tabbedPane.addTab("Log de Auditoria Geral", UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), tabAudit);
 
         // TAB 2: BACKUPS
         JPanel tabBackups = createBackupsTab();
-        tabbedPane.addTab("Cópias de Segurança & Backups", UIHelper.icon("fas-database", 16, UIHelper.TEXT_LIGHT), tabBackups);
+        tabbedPane.addTab("Cópias de Segurança & Backups", UIHelper.icon("fas-database", 16, UIHelper.ACCENT_CYAN), tabBackups);
 
         // TAB 3: USERS
         JPanel tabUsers = createUsersTab();
-        tabbedPane.addTab("Utilizadores & Permissões", UIHelper.icon("fas-user-shield", 16, UIHelper.TEXT_LIGHT), tabUsers);
+        tabbedPane.addTab("Utilizadores & Permissões", UIHelper.icon("fas-user-shield", 16, UIHelper.ACCENT), tabUsers);
 
         // TAB 4: DOCUMENT COLUMNS
         JPanel tabColumns = createDocumentColumnsTab();
-        tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.TEXT_LIGHT), tabColumns);
+        tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.PENDING_YELLOW), tabColumns);
 
         // TAB 5: SUPORTE À PLATAFORMA
         JPanel tabSupport = createSupportTab();
-        tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), tabSupport);
+        tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.ACCENT_SKY), tabSupport);
 
         // TAB 6: A MINHA ASSINATURA
         JPanel tabSubscription = createSubscriptionTab();
-        tabbedPane.addTab("A Minha Assinatura", UIHelper.icon("fas-id-card", 16, UIHelper.TEXT_LIGHT), tabSubscription);
+        tabbedPane.addTab("A Minha Assinatura", UIHelper.icon("fas-id-card", 16, UIHelper.APPROVED_GREEN), tabSubscription);
 
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -136,19 +144,46 @@ public class ConfigPanel extends JPanel {
         label.setForeground(UIHelper.TEXT_LIGHT);
         bar.add(label);
 
+        ModernButton monitorBtn = new ModernButton("Diagnóstico & Saúde", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
+        monitorBtn.setIcon(UIHelper.icon("fas-heartbeat", 14, Color.WHITE));
+        monitorBtn.addActionListener(e -> new SystemMonitoringDialog(SwingUtilities.getWindowAncestor(this), monitoringApiClient).show());
+        bar.add(monitorBtn);
+
         ModernButton themeBtn = UIHelper.createSecondaryButton(themeButtonLabel());
-        themeBtn.setIcon(UIHelper.icon(UIHelper.isLight() ? "fas-moon" : "fas-sun", 14));
+        themeBtn.setIcon(UIHelper.icon(themeButtonIcon(), 14));
         themeBtn.addActionListener(e -> {
-            UIHelper.setTheme(UIHelper.isLight() ? Theme.DARK : Theme.LIGHT);
+            UIHelper.cycleTheme();
             themeBtn.setText(themeButtonLabel());
-            themeBtn.setIcon(UIHelper.icon(UIHelper.isLight() ? "fas-moon" : "fas-sun", 14));
+            themeBtn.setIcon(UIHelper.icon(themeButtonIcon(), 14));
         });
         bar.add(themeBtn);
+
+        ModernButton densityBtn = UIHelper.createSecondaryButton(densityButtonLabel());
+        densityBtn.setIcon(UIHelper.icon("fas-text-height", 14));
+        densityBtn.addActionListener(e -> {
+            UiDensityManager.getInstance().cycleDensity();
+            densityBtn.setText(densityButtonLabel());
+        });
+        bar.add(densityBtn);
         return bar;
     }
 
+    private String densityButtonLabel() {
+        return "Densidade: " + UiDensityManager.getInstance().getDensity().getLabel().split(" ")[0];
+    }
+
     private String themeButtonLabel() {
-        return UIHelper.isLight() ? "Mudar para Tema Escuro" : "Mudar para Tema Claro";
+        if (UIHelper.isHighContrast()) {
+            return "Tema: Alto Contraste (Clique p/ Escuro)";
+        }
+        return UIHelper.isLight() ? "Tema: Claro (Clique p/ Alto Contraste)" : "Tema: Escuro (Clique p/ Claro)";
+    }
+
+    private String themeButtonIcon() {
+        if (UIHelper.isHighContrast()) {
+            return "fas-adjust";
+        }
+        return UIHelper.isLight() ? "fas-moon" : "fas-sun";
     }
 
     private JPanel createAuditTab() {
@@ -178,23 +213,15 @@ public class ConfigPanel extends JPanel {
         TableFilter.install(auditTable, auditSearch,
                 java.util.List.of(),
                 java.util.List.of(new TableFilter.PeriodFilter(auditPeriodo, 0)));
-        JPanel auditBar = TableFilter.bar(auditSearch,
-                TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo);
-        auditBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(auditBar, BorderLayout.NORTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadAuditLogs);
+        JPanel auditToolbar = UIHelper.filterBar(
+                new JComponent[]{auditSearch, TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo},
+                new JComponent[]{refreshBtn});
+        auditToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(auditToolbar, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnPanel.setOpaque(false);
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar Registos");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        btnPanel.add(refreshBtn);
-        card.add(btnPanel, BorderLayout.SOUTH);
-
         panel.add(card, BorderLayout.CENTER);
-
-        // LISTENERS
-        refreshBtn.addActionListener(e -> loadAuditLogs());
 
         return panel;
     }
@@ -267,124 +294,27 @@ public class ConfigPanel extends JPanel {
         UIHelper.styleTable(backupFilesTable);
         JScrollPane archiveScroll = new JScrollPane(backupFilesTable);
         UIHelper.styleScrollPane(archiveScroll);
-        archiveCard.add(archiveScroll, BorderLayout.CENTER);
-
-        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actionRow.setOpaque(false);
         ModernButton verifyBackupBtn = UIHelper.createPrimaryButton("Verificar Backup");
         verifyBackupBtn.setIcon(UIHelper.icon("fas-shield-alt", 14));
-        ModernButton refreshArchiveBtn = UIHelper.createSecondaryButton("Actualizar Arquivo");
-        refreshArchiveBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        actionRow.add(verifyBackupBtn);
-        actionRow.add(refreshArchiveBtn);
-        archiveCard.add(actionRow, BorderLayout.SOUTH);
+        ModernButton refreshArchiveBtn = UIHelper.createRefreshButton(this::loadBackupFilesList);
+        JPanel archiveToolbar = UIHelper.filterBar(null,
+                new JComponent[]{refreshArchiveBtn, verifyBackupBtn});
+        archiveToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        archiveCard.add(archiveToolbar, BorderLayout.NORTH);
+        archiveCard.add(archiveScroll, BorderLayout.CENTER);
 
         rightPanel.add(archiveCard, BorderLayout.CENTER);
         panel.add(rightPanel);
 
         // LISTENERS
         verifyBackupBtn.addActionListener(e -> verifySelectedBackup());
-        refreshArchiveBtn.addActionListener(e -> loadBackupFilesList());
 
         return panel;
     }
 
     private JPanel createUsersTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 12));
-        panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
-
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Utilizadores do Sistema"), BorderLayout.WEST);
-
-        ModernButton newUserBtn = UIHelper.createSuccessButton("Novo Utilizador");
-        newUserBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
-        ModernButton editUserBtn = UIHelper.createPrimaryButton("Editar");
-        editUserBtn.setIcon(UIHelper.icon("fas-pen", 14));
-        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Alterar Perfil", UIHelper.icon("fas-user-shield", 14), this::updateSelectedUserRole)
-                .addAction("Actualizar Lista", UIHelper.icon("fas-sync-alt", 14), this::loadUsersList);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(moreBtn);
-        actions.add(editUserBtn);
-        actions.add(newUserBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
-
-        ModernPanel listCard = new ModernPanel(16);
-        listCard.setLayout(new BorderLayout());
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-
-        String[] userCols = {"Username", "Nome Completo", "Role", "Estado"};
-        usersTableModel = new DefaultTableModel(userCols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-        usersTable = new JTable(usersTableModel);
-        UIHelper.styleTable(usersTable);
-        usersTable.putClientProperty("noRowInspector", Boolean.TRUE);
-        usersTable.getColumnModel().getColumn(2).setCellRenderer(mz.multicore.erp.gui.components.TableCellRenderers.role());
-        usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) editSelectedUserName();
-            }
-        });
-        JScrollPane scroll = new JScrollPane(usersTable);
-        UIHelper.styleScrollPane(scroll);
-
-        JTextField usrSearch = TableFilter.searchField("Username ou nome…");
-        JComboBox<String> usrRole = TableFilter.combo("Todos os perfis", "ADMIN", "MANAGER", "EMPLOYEE");
-        JComboBox<String> usrEstado = TableFilter.combo("Todos os estados", "ATIVO", "INATIVO");
-        TableFilter.install(usersTable, usrSearch,
-                new TableFilter.ColumnFilter(usrRole, 2),
-                new TableFilter.ColumnFilter(usrEstado, 3));
-        JPanel usrBar = TableFilter.bar(usrSearch,
-                TableFilter.label("Perfil:"), usrRole,
-                TableFilter.label("Estado:"), usrEstado);
-        usrBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(usrBar, BorderLayout.NORTH);
-        listCard.add(scroll, BorderLayout.CENTER);
-        panel.add(listCard, BorderLayout.CENTER);
-
-        // LISTENERS
-        newUserBtn.addActionListener(e -> registerUser());
-        editUserBtn.addActionListener(e -> editSelectedUserName());
-
-        return panel;
-    }
-
-    /** Edição do nome do utilizador seleccionado (o username é imutável). */
-    private void editSelectedUserName() {
-        int selectedRow = TableFilter.selectedModelRow(usersTable);
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Editar", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        String username = String.valueOf(usersTableModel.getValueAt(selectedRow, 0));
-        String currentName = String.valueOf(usersTableModel.getValueAt(selectedRow, 1));
-
-        javax.swing.JTextField nameField = new javax.swing.JTextField(currentName);
-        UIHelper.styleTextField(nameField);
-        JPanel form = UIHelper.createDialogForm("Nome completo:", nameField);
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Utilizador",
-                "fas-pen", "Utilizador: " + username, form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSaveAsync(() -> {
-            if (nameField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O nome é obrigatório.");
-            }
-            String updatedName = nameField.getText().trim();
-            return () -> {
-                userApiClient.updateUserName(username, updatedName);
-                return null;
-            };
-        });
-        if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Utilizador atualizado.", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadUsersList();
-        }
+        this.usersPanel = new mz.multicore.erp.gui.users.UserManagementPanel(userApiClient);
+        return usersPanel;
     }
 
     private JPanel createDocumentColumnsTab() {
@@ -426,6 +356,12 @@ public class ConfigPanel extends JPanel {
         colDescription = columnCheckBox("Descrição");
         colExpiry = columnCheckBox("Validade");
         colQuantity = columnCheckBox("Quantidade");
+        colPackages = columnCheckBox("Embalagens");
+        colPackages.setToolTipText("Quantidade equivalente de embalagens: unidades da linha ÷ unidades por embalagem.");
+        colBoxes = columnCheckBox("Caixas");
+        colBoxes.setToolTipText("Quantidade equivalente de caixas: unidades da linha ÷ unidades por caixa.");
+        colBoxPercentage = columnCheckBox("% da Caixa");
+        colBoxPercentage.setToolTipText("Percentagem equivalente: unidades da linha ÷ unidades por caixa × 100.");
         colUnitPrice = columnCheckBox("Preço Unitário");
         colTax = columnCheckBox("IVA");
         colSubtotal = columnCheckBox("Subtotal");
@@ -434,6 +370,9 @@ public class ConfigPanel extends JPanel {
         checks.add(colDescription);
         checks.add(colExpiry);
         checks.add(colQuantity);
+        checks.add(colPackages);
+        checks.add(colBoxes);
+        checks.add(colBoxPercentage);
         checks.add(colUnitPrice);
         checks.add(colTax);
         checks.add(colSubtotal);
@@ -494,6 +433,9 @@ public class ConfigPanel extends JPanel {
         colDescription.setSelected(cols.description());
         colExpiry.setSelected(cols.expiry());
         colQuantity.setSelected(cols.quantity());
+        colPackages.setSelected(cols.packages());
+        colBoxes.setSelected(cols.boxes());
+        colBoxPercentage.setSelected(cols.boxPercentage());
         colUnitPrice.setSelected(cols.unitPrice());
         colTax.setSelected(cols.tax());
         colSubtotal.setSelected(cols.subtotal());
@@ -507,6 +449,9 @@ public class ConfigPanel extends JPanel {
                 colDescription.isSelected(),
                 colExpiry.isSelected(),
                 colQuantity.isSelected(),
+                colPackages.isSelected(),
+                colBoxes.isSelected(),
+                colBoxPercentage.isSelected(),
                 colUnitPrice.isSelected(),
                 colTax.isSelected(),
                 colSubtotal.isSelected(),
@@ -518,8 +463,7 @@ public class ConfigPanel extends JPanel {
             documentConfigApiClient.save(companyId, documentType, dto);
             return null;
         }, ignored -> {
-            JOptionPane.showMessageDialog(this, "Configuração de " + selectedDocType().label() + " guardada com sucesso.",
-                    "Configuração Guardada", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Configuração de " + selectedDocType().label() + " guardada com sucesso.");
             loadAuditLogs();
         }, error -> showConfigError("configuração do documento", error));
     }
@@ -528,7 +472,9 @@ public class ConfigPanel extends JPanel {
         loadAuditLogs();
         loadBackupFilesList();
         refreshAutoBackupStatus();
-        loadUsersList();
+        if (usersPanel != null) {
+            usersPanel.refreshDataAsync();
+        }
         loadDocumentColumns();
         loadSupportTickets();
         loadMySubscription();
@@ -553,15 +499,14 @@ public class ConfigPanel extends JPanel {
         boolean ok = Boolean.TRUE.equals(st.lastSuccess());
         java.time.format.DateTimeFormatter f = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         backupAutoStatus.setText(base + " — última: " + st.lastTime().format(f)
-                + (ok ? "  ✓ OK" : "  ✗ FALHOU"));
+                + (ok ? "  [OK]" : "  [FALHOU]"));
         backupAutoStatus.setForeground(ok ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
     }
 
     /** Executa já o backup físico automático (retenção + registo). Só ADMIN. */
     private void runAutoBackupNow() {
         if (!SignedInUser.isAdmin()) {
-            JOptionPane.showMessageDialog(this, "Apenas administradores podem executar o backup.",
-                    "Acesso restrito", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "Apenas administradores podem executar o backup.");
             return;
         }
         UIHelper.runWithProgress(this, "A executar backup automático…",
@@ -571,7 +516,7 @@ public class ConfigPanel extends JPanel {
                     refreshAutoBackupStatus();
                     loadBackupFilesList();
                 },
-                ex -> JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+                ex -> ToastManager.show(this, FeedbackType.ERROR, ex.getMessage()));
     }
 
     private void loadAuditLogs() {
@@ -599,7 +544,7 @@ public class ConfigPanel extends JPanel {
         String activeRole = CurrentUserContext.getRole();
 
         if (!SignedInUser.isAdmin()) {
-            JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem iniciar cópias de segurança manuais.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
+            ToastManager.show(this, FeedbackType.ERROR, "Apenas utilizadores com cargo ADMIN podem iniciar cópias de segurança manuais.");
             return;
         }
 
@@ -608,7 +553,7 @@ public class ConfigPanel extends JPanel {
             backupLogArea.append(">> Backup efetuado com sucesso!\n");
             backupLogArea.append(">> Destino: " + path + "\n");
             // A auditoria (BACKUP_MANUAL) é registada pelo servidor.
-            JOptionPane.showMessageDialog(this, "Cópia de segurança gravada com sucesso em:\n" + path, "Backup Concluído", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Cópia de segurança gravada com sucesso em: " + path);
             loadBackupFilesList();
             loadAuditLogs();
         }, error -> {
@@ -620,7 +565,7 @@ public class ConfigPanel extends JPanel {
     private void runPhysicalBackup() {
         String activeUser = CurrentUserContext.getUsername();
         if (!SignedInUser.isAdmin()) {
-            JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem gerar backups físicos.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
+            ToastManager.show(this, FeedbackType.ERROR, "Apenas utilizadores com cargo ADMIN podem gerar backups físicos.");
             return;
         }
 
@@ -631,25 +576,24 @@ public class ConfigPanel extends JPanel {
                     backupLogArea.append(">> Backup físico concluído!\n");
                     backupLogArea.append(">> Destino: " + result.filePath() + "\n");
                     backupLogArea.append(">> Base de dados: " + result.database() + " (" + (result.sizeBytes() / 1024) + " KB)\n");
-                    JOptionPane.showMessageDialog(this, "Backup físico restaurável gravado em:\n" + result.filePath(),
-                            "Backup Físico Concluído", JOptionPane.INFORMATION_MESSAGE);
+                    ToastManager.success(this, "Backup físico restaurável gravado em: " + result.filePath());
                     loadAuditLogs();
                 },
                 error -> {
                     backupLogArea.append(">> ERRO: " + error.getMessage() + "\n");
-                    JOptionPane.showMessageDialog(this, "Erro ao gerar backup físico: " + error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+                    ToastManager.show(this, FeedbackType.ERROR, "Erro ao gerar backup físico: " + error.getMessage());
                 });
     }
 
     private void verifySelectedBackup() {
         if (!SignedInUser.isAdmin()) {
-            JOptionPane.showMessageDialog(this, "Apenas utilizadores com cargo ADMIN podem verificar cópias de segurança.", "Acesso Recusado", JOptionPane.ERROR_MESSAGE);
+            ToastManager.show(this, FeedbackType.ERROR, "Apenas utilizadores com cargo ADMIN podem verificar cópias de segurança.");
             return;
         }
 
         int selectedRow = backupFilesTable.getSelectedRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione um ficheiro de backup no arquivo.", "Backup", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione um ficheiro de backup no arquivo.");
             return;
         }
 
@@ -660,10 +604,7 @@ public class ConfigPanel extends JPanel {
             backupLogArea.append(">> Gerado em: " + verification.generatedAt() + "\n");
             backupLogArea.append(">> Secções verificadas: " + verification.totalSections() + "\n");
             backupLogArea.append(">> Registos: " + verification.itemCounts() + "\n");
-            JOptionPane.showMessageDialog(this,
-                    "Backup verificado com sucesso.\nFicheiro: " + verification.fileName(),
-                    "Backup Válido",
-                    JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Backup verificado com sucesso. Ficheiro: " + verification.fileName());
             loadAuditLogs();
         }, error -> {
             backupLogArea.append(">> ERRO DE VERIFICAÇÃO: " + error.getMessage() + "\n");
@@ -683,93 +624,7 @@ public class ConfigPanel extends JPanel {
         }, error -> showConfigError("arquivo de backups", error));
     }
 
-    private void loadUsersList() {
-        usersTableModel.setRowCount(0);
-        if (!SignedInUser.isAdmin()) {
-            usersTableModel.addRow(new Object[]{
-                    "Acesso restrito", "Apenas administradores podem gerir utilizadores.", "", ""
-            });
-            return;
-        }
-        UIHelper.loadAsync(this, userApiClient::getAllUsers, this::applyUsers,
-                error -> showConfigError("utilizadores", error));
-    }
 
-    private void applyUsers(List<AppUserDTO> users) {
-        usersTableModel.setRowCount(0);
-        for (AppUserDTO u : users) {
-            usersTableModel.addRow(new Object[]{
-                    u.username(),
-                    u.name(),
-                    u.role(),
-                    u.active() ? "ATIVO" : "INATIVO"
-            });
-        }
-    }
-
-    /** Criação de utilizador em modal profissional. */
-    private void registerUser() {
-        JTextField usernameField = new JTextField();
-        JTextField fullNameField = new JTextField();
-        JPasswordField passwordField = new JPasswordField();
-        JComboBox<String> roleCombo = new JComboBox<>(USER_ROLES);
-        UIHelper.styleComboBox(roleCombo);
-        UIHelper.humanizeRoleCombo(roleCombo);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Username:", usernameField,
-                "Função / Cargo:", roleCombo,
-                "Nome Completo:", fullNameField,
-                "Palavra-Passe:", passwordField
-        );
-
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Criar Novo Utilizador",
-                "fas-user-plus", "Conta de acesso ao sistema", form).setConfirmButton("Registar", "fas-user-plus");
-        dlg.setOnSaveAsync(() -> {
-            String username = usernameField.getText().trim();
-            String fullName = fullNameField.getText().trim();
-            String password = new String(passwordField.getPassword()).trim();
-            String role = (String) roleCombo.getSelectedItem();
-            if (username.isEmpty() || fullName.isEmpty() || password.isEmpty()) {
-                throw new IllegalArgumentException("Todos os campos são obrigatórios.");
-            }
-            return () -> userApiClient.createUser(username, fullName, password, role);
-        });
-
-        if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Utilizador criado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            loadUsersList();
-        }
-    }
-
-    /** Alteração de perfil do utilizador seleccionado, em modal profissional. */
-    private void updateSelectedUserRole() {
-        int selectedRow = TableFilter.selectedModelRow(usersTable);
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione um utilizador na lista.", "Perfil", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String username = String.valueOf(usersTableModel.getValueAt(selectedRow, 0));
-        JComboBox<String> roleCombo = new JComboBox<>(USER_ROLES);
-        UIHelper.styleComboBox(roleCombo);
-        UIHelper.humanizeRoleCombo(roleCombo);
-        roleCombo.setSelectedItem(String.valueOf(usersTableModel.getValueAt(selectedRow, 2)));
-
-        JPanel form = UIHelper.createDialogForm("Novo Perfil:", roleCombo);
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Alterar Perfil",
-                "fas-user-shield", "Utilizador: " + username, form).setConfirmButton("Alterar", "fas-check");
-        dlg.setOnSaveAsync(() -> {
-            String role = (String) roleCombo.getSelectedItem();
-            return () -> userApiClient.updateCompanyRole(username, role);
-        });
-
-        if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(this, "Perfil de '" + username + "' atualizado nesta empresa.",
-                    "Perfil Atualizado", JOptionPane.INFORMATION_MESSAGE);
-            loadUsersList();
-        }
-    }
 
     // ------------------------------------------------------------- TAB 5: Suporte à Plataforma
 
@@ -787,11 +642,16 @@ public class ConfigPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
         header.add(UIHelper.createHeading("Estado da Assinatura"), BorderLayout.WEST);
+        ModernButton renewBtn = UIHelper.createPrimaryButton("Renovar / Activar Plano");
+        renewBtn.setIcon(UIHelper.icon("fas-crown", 13, Color.WHITE));
+        renewBtn.addActionListener(e -> SubscriptionRenewalDialog.show(this, mySubscriptionApiClient, this::applyMySubscription));
+
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> loadMySubscription());
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
+        actions.add(renewBtn);
         actions.add(refreshBtn);
         header.add(actions, BorderLayout.EAST);
         panel.add(header, BorderLayout.NORTH);
@@ -844,8 +704,8 @@ public class ConfigPanel extends JPanel {
     }
 
     void showConfigError(String area, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível processar " + area + ": " + error.getMessage(),
-                "Erro", JOptionPane.ERROR_MESSAGE);
+        ToastManager.show(this, FeedbackType.ERROR,
+                "Não foi possível processar " + area + ": " + error.getMessage());
     }
 
     private String daysText(Long days) {

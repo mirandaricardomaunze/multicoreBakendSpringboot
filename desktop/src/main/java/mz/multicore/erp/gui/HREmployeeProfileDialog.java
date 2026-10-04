@@ -35,14 +35,14 @@ final class HREmployeeProfileDialog {
                      OccupationalHealthSummaryDTO health) {
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
-        tabs.addTab("Perfil", UIHelper.icon("fas-id-card", 14, UIHelper.TEXT_LIGHT), profile(employee));
-        tabs.addTab("Recibos", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.TEXT_LIGHT),
+        tabs.addTab("Perfil", UIHelper.icon("fas-id-card", 14, UIHelper.ACCENT_BLUE), profile(employee));
+        tabs.addTab("Recibos", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.APPROVED_GREEN),
                 payslips(employee.id(), payslips));
-        tabs.addTab("Faltas", UIHelper.icon("fas-user-times", 14, UIHelper.TEXT_LIGHT),
+        tabs.addTab("Faltas", UIHelper.icon("fas-user-times", 14, UIHelper.PENDING_YELLOW),
                 absences(employee.id(), absences));
-        tabs.addTab("Férias", UIHelper.icon("fas-umbrella-beach", 14, UIHelper.TEXT_LIGHT),
+        tabs.addTab("Férias", UIHelper.icon("fas-umbrella-beach", 14, UIHelper.ACCENT_ORANGE),
                 vacations(employee.id(), vacations));
-        tabs.addTab("Saúde", UIHelper.icon("fas-heartbeat", 14, UIHelper.TEXT_LIGHT), health(health));
+        tabs.addTab("Saúde", UIHelper.icon("fas-heartbeat", 14, UIHelper.REJECTED_RED), health(health));
 
         new ModernFormDialog(parent, "Perfil do Trabalhador", "fas-id-card",
                 employee.name() + " · " + value(employee.employeeNumber()), tabs)

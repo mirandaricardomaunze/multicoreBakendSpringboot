@@ -11,10 +11,9 @@ import java.util.List;
 public record POSCheckoutRequest(
         @NotBlank(message = "Operador é obrigatório.") String operator,
         @NotNull(message = "Empresa é obrigatória.") Long companyId,
-        /** Opcional. Se nulo, a venda é registada para "Consumidor Final" (balcão). */
+        /** Opcional. Se nulo, a venda é para cliente não cadastrado e o campo walkInName torna-se obrigatório. */
         Long clientId,
-        /** Opcional, só relevante quando {@code clientId} é nulo. Nome livre escrito pelo operador
-         *  para identificar o comprador no recibo, sem criar registo de cliente. */
+        /** Obrigatório quando {@code clientId} é nulo. Nome do cliente/comprador para o recibo e fatura. */
         @Size(max = 120, message = "Nome do comprador deve ter no máximo 120 caracteres.")
         String walkInName,
         @NotNull(message = "Armazém é obrigatório.") Long warehouseId,
@@ -25,12 +24,30 @@ public record POSCheckoutRequest(
         @Valid List<PosPaymentRequest> payments,
         /** Referência única de contingência (ex.: CONT-20260917-192000-A1B2) para idempotência e rastreio. */
         @Size(max = 60, message = "Referência de contingência não pode exceder 60 caracteres.")
-        String contingencyReference
+        String contingencyReference,
+        /** Cotação de origem (opcional). Se preenchida, o checkout marca a cotação como convertida. */
+        Long quotationId
 ) {
+    /** Construtor retrocompatível com referência de contingência sem cotação. */
+    public POSCheckoutRequest(String operator, Long companyId, Long clientId, String walkInName,
+                              Long warehouseId, Long treasuryAccountId,
+                              List<POSCheckoutLineRequest> lines, List<PosPaymentRequest> payments,
+                              String contingencyReference) {
+        this(operator, companyId, clientId, walkInName, warehouseId, treasuryAccountId, lines, payments, contingencyReference, null);
+    }
+
+    /** Construtor de conveniência para checkout associando cotação de origem sem contingência. */
+    public POSCheckoutRequest(String operator, Long companyId, Long clientId, String walkInName,
+                              Long warehouseId, Long treasuryAccountId,
+                              List<POSCheckoutLineRequest> lines, List<PosPaymentRequest> payments,
+                              Long quotationId) {
+        this(operator, companyId, clientId, walkInName, warehouseId, treasuryAccountId, lines, payments, null, quotationId);
+    }
+
     /** Construtor de conveniência para compatibilidade com versões e testes anteriores. */
     public POSCheckoutRequest(String operator, Long companyId, Long clientId, String walkInName,
                               Long warehouseId, Long treasuryAccountId,
                               List<POSCheckoutLineRequest> lines, List<PosPaymentRequest> payments) {
-        this(operator, companyId, clientId, walkInName, warehouseId, treasuryAccountId, lines, payments, null);
+        this(operator, companyId, clientId, walkInName, warehouseId, treasuryAccountId, lines, payments, null, null);
     }
 }

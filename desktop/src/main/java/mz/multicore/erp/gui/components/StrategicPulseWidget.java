@@ -129,8 +129,7 @@ public class StrategicPulseWidget extends ModernPanel {
     }
 
     private void buildCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 4, 12, 12));
-        grid.setOpaque(false);
+        JPanel grid = KpiCard.createGrid(4, 12, 12);
 
         grid.add(createPillarCard(
                 "COMPLIANCE & FRAUDE",
@@ -165,7 +164,7 @@ public class StrategicPulseWidget extends ModernPanel {
         grid.add(createPillarCard(
                 "METAS COMERCIAIS",
                 "fas-bullseye",
-                UIHelper.KPI_PURPLE_SOFT,
+                UIHelper.ACCENT,
                 performanceValLabel,
                 performanceSubLabel,
                 performanceNavBtn,
@@ -184,18 +183,23 @@ public class StrategicPulseWidget extends ModernPanel {
             ModernButton actionBtn,
             String actionIcon
     ) {
-        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, UIHelper.BG_DARK);
+        KpiCard.KpiPalette pal = KpiCard.resolvePalette(accentColor);
+
+        ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
+        card.putClientProperty("card.border", pal.border);
         card.setLayout(new BorderLayout(0, 8));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
+        card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
+        card.setMinimumSize(new Dimension(KpiCard.STANDARD_CARD_MIN_WIDTH, KpiCard.STANDARD_CARD_HEIGHT));
 
         // Header do card
         JPanel cardHeader = new JPanel(new BorderLayout(6, 0));
         cardHeader.setOpaque(false);
         JLabel titleLbl = new JLabel(title);
         titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
-        titleLbl.setForeground(UIHelper.TEXT_MUTED);
+        titleLbl.setForeground(pal.title);
 
-        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, accentColor));
+        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.title));
         cardHeader.add(iconLbl, BorderLayout.WEST);
         cardHeader.add(titleLbl, BorderLayout.CENTER);
         card.add(cardHeader, BorderLayout.NORTH);
@@ -206,11 +210,11 @@ public class StrategicPulseWidget extends ModernPanel {
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
 
         valueLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));
-        valueLabel.setForeground(UIHelper.TEXT_LIGHT);
+        valueLabel.setForeground(pal.value);
         valueLabel.setAlignmentX(0.0f);
 
         subLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        subLabel.setForeground(UIHelper.TEXT_MUTED);
+        subLabel.setForeground(pal.subtitle);
         subLabel.setAlignmentX(0.0f);
 
         content.add(valueLabel);

@@ -27,7 +27,8 @@ final class PosBarcodeActions {
             return;
         }
 
-        UIHelper.loadAsync(owner, () -> owner.comercialApiClient.findPOSCatalogItemByBarcode(code), item -> {
+        Long warehouseId = owner.getSelectedWarehouseId();
+        UIHelper.loadAsync(owner, () -> owner.comercialApiClient.findPOSCatalogItemByBarcode(code, warehouseId), item -> {
             if (item == null) {
                 showProductNotFound(code);
                 return;
@@ -105,11 +106,12 @@ final class PosBarcodeActions {
 
     /** Resolve o artigo pesado pelo PLU: tenta o código tal-e-qual e depois sem zeros à esquerda. */
     private mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO resolveWeighedProduct(String itemCode) {
-        var product = owner.comercialApiClient.findPOSCatalogItemByBarcode(itemCode);
+        Long warehouseId = owner.getSelectedWarehouseId();
+        var product = owner.comercialApiClient.findPOSCatalogItemByBarcode(itemCode, warehouseId);
         if (product == null) {
             String stripped = itemCode.replaceFirst("^0+", "");
             if (!stripped.isEmpty() && !stripped.equals(itemCode)) {
-                product = owner.comercialApiClient.findPOSCatalogItemByBarcode(stripped);
+                product = owner.comercialApiClient.findPOSCatalogItemByBarcode(stripped, warehouseId);
             }
         }
         return product;
@@ -153,6 +155,7 @@ final class PosBarcodeActions {
     }
 
     private void showProductNotFound(String code) {
+        mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.ERROR);
         owner.showPosNotice(FeedbackType.WARNING, "Produto não encontrado",
                 "Não existe produto com o código de barras '" + code + "'.");
         owner.barcodeField.selectAll();
@@ -160,6 +163,7 @@ final class PosBarcodeActions {
     }
 
     private void showWeighedProductNotFound(String code) {
+        mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.ERROR);
         owner.showPosNotice(FeedbackType.WARNING, "Artigo pesado não encontrado",
                 "Registe o PLU '" + code + "' no campo Código de barras do produto.");
         owner.barcodeField.selectAll();
@@ -167,6 +171,7 @@ final class PosBarcodeActions {
     }
 
     private void showOutOfStock(ProductDTO product) {
+        mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.getInstance().playAsync(mz.multicore.erp.gui.pos.audio.PosAudioFeedbackEngine.SoundEvent.ERROR);
         owner.showPosNotice(FeedbackType.WARNING, "Sem stock",
                 "O artigo '" + product.name() + "' está esgotado.");
         clearAndRefocus();

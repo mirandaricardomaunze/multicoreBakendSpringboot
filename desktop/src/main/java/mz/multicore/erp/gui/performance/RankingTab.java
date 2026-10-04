@@ -25,14 +25,6 @@ public class RankingTab extends JPanel {
     private JComboBox<String> periodFilter;
     private InlineFeedbackPanel feedbackPanel;
 
-    private static final DecimalFormat CURRENCY_FMT;
-
-    static {
-        DecimalFormatSymbols sym = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        sym.setGroupingSeparator(' ');
-        sym.setDecimalSeparator(',');
-        CURRENCY_FMT = new DecimalFormat("#,##0.00", sym);
-    }
 
     public RankingTab(PerformanceApiClient apiClient, DesktopSession session) {
         this.apiClient = apiClient;
@@ -49,31 +41,38 @@ public class RankingTab extends JPanel {
         feedbackPanel = new InlineFeedbackPanel();
         add(feedbackPanel, BorderLayout.NORTH);
 
-        JPanel contentPanel = new JPanel(new BorderLayout(0, 10));
-        contentPanel.setBackground(UIHelper.BG_DARK);
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 12));
+        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Toolbar
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        toolbar.setBackground(UIHelper.BG_DARK);
+        // Toolbar inside card
+        JPanel filterBar = new JPanel(new BorderLayout(10, 0));
+        filterBar.setOpaque(false);
+
+        JPanel filtersLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        filtersLeft.setOpaque(false);
 
         periodFilter = PerformanceControls.createSelect(
                 new String[]{"Este Mês", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"},
                 PerformanceControls.FILTER_SELECT_WIDTH
         );
         periodFilter.addActionListener(e -> reload());
-        toolbar.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
+        filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
         ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
-        toolbar.add(btnRefresh);
 
         ModernButton btnPrint = UIHelper.createPrimaryButton("Imprimir Relatório PDF");
         btnPrint.setIcon(UIHelper.icon("fas-print", 14));
         btnPrint.addActionListener(e -> printReport());
-        toolbar.add(btnPrint);
 
-        contentPanel.add(toolbar, BorderLayout.NORTH);
+        JPanel actionsRight = UIHelper.actionsBar(btnRefresh, btnPrint);
+
+        filterBar.add(filtersLeft, BorderLayout.WEST);
+        filterBar.add(actionsRight, BorderLayout.EAST);
+
+        card.add(filterBar, BorderLayout.NORTH);
 
         // Table
         String[] columns = {"Posição", "Colaborador", "Receita Gerada (MZN)", "Margem Bruta (MZN)", "Ticket Médio (MZN)", "Nº Faturas", "% Meta"};
@@ -91,9 +90,9 @@ public class RankingTab extends JPanel {
         UIHelper.styleScrollPane(scrollPane);
         TableContextMenu.install(scrollPane);
         scrollPane.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER));
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
+        card.add(scrollPane, BorderLayout.CENTER);
 
-        add(contentPanel, BorderLayout.CENTER);
+        add(card, BorderLayout.CENTER);
     }
 
     public void reload() {
@@ -114,9 +113,9 @@ public class RankingTab extends JPanel {
                         tableModel.addRow(new Object[]{
                                 r.rank() + "º",
                                 r.employeeName(),
-                                CURRENCY_FMT.format(r.revenue() != null ? r.revenue() : BigDecimal.ZERO),
-                                CURRENCY_FMT.format(r.grossMargin() != null ? r.grossMargin() : BigDecimal.ZERO),
-                                CURRENCY_FMT.format(r.avgTicket() != null ? r.avgTicket() : BigDecimal.ZERO),
+                                UIHelper.formatMzn(r.revenue() != null ? r.revenue() : BigDecimal.ZERO),
+                                UIHelper.formatMzn(r.grossMargin() != null ? r.grossMargin() : BigDecimal.ZERO),
+                                UIHelper.formatMzn(r.avgTicket() != null ? r.avgTicket() : BigDecimal.ZERO),
                                 r.invoiceCount(),
                                 (r.goalProgressPct() != null ? r.goalProgressPct() : BigDecimal.ZERO) + "%"
                         });

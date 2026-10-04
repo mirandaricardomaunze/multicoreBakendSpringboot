@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.MovimentosApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -41,20 +42,10 @@ public final class CommercialMovementsPanel extends JPanel {
         setOpaque(false);
         setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout(8, 0));
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Movimentos — Todos os Documentos Comerciais"), BorderLayout.WEST);
         ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> refresh());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refresh);
-        header.add(actions, BorderLayout.EAST);
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
+        add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -71,18 +62,43 @@ public final class CommercialMovementsPanel extends JPanel {
 
         search = TableFilter.searchField("Nº documento ou cliente…");
         period = TableFilter.periodCombo();
+        UIHelper.styleComboBox(period);
+        period.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(table, search, List.of(), List.of(new TableFilter.PeriodFilter(period, 3)));
         UIHelper.onTextChange(search, this::updateFooter);
         period.addActionListener(e -> updateFooter());
-        JPanel filterBar = TableFilter.bar(search, TableFilter.label("Data:", "fas-calendar-alt"), period);
+
+        JPanel filterBar = new JPanel(new GridBagLayout());
+        filterBar.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; filterBar.add(filterLabel("Período"), g);
+        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        filterBar.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; filterBar.add(period, g);
+        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        filterBar.add(search, g);
+
         filterBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(filterBar, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Movimentos — Todos os Documentos Comerciais", filterBar,
+                refresh), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         footer = new JLabel(" ");
         footer.setForeground(UIHelper.TEXT_MUTED);
         footer.setBorder(new EmptyBorder(8, 4, 0, 4));
-        card.add(footer, BorderLayout.SOUTH);
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setOpaque(false);
+        southPanel.add(ClientTablePagination.install(table), BorderLayout.NORTH);
+        southPanel.add(footer, BorderLayout.SOUTH);
+        card.add(southPanel, BorderLayout.SOUTH);
         add(card, BorderLayout.CENTER);
     }
 
@@ -128,5 +144,11 @@ public final class CommercialMovementsPanel extends JPanel {
             sum = sum.add(total);
         }
         footer.setText(String.format("%d documento(s) · Total: %,.2f MT", count, sum));
+    }
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
     }
 }

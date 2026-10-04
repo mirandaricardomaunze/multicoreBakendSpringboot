@@ -6,6 +6,7 @@ import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
 import mz.multicore.erp.modules.comercial.dto.ExtendQuotationValidityRequest;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
+import mz.multicore.erp.modules.comercial.dto.UpdateQuotationRequest;
 import mz.multicore.erp.modules.comercial.service.QuotationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +42,12 @@ public class QuotationController {
         return ResponseEntity.ok(quotationService.create(request));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<QuotationDTO> update(
+            @PathVariable Long id, @RequestBody @Valid UpdateQuotationRequest request) {
+        return ResponseEntity.ok(quotationService.update(id, request));
+    }
+
     @PostMapping("/{id}/send")
     public ResponseEntity<QuotationDTO> send(@PathVariable Long id) {
         return ResponseEntity.ok(quotationService.send(id));
@@ -53,7 +60,7 @@ public class QuotationController {
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<QuotationDTO> reject(@PathVariable Long id,
-                                                @RequestBody(required = false) CancelReasonRequest body) {
+                                                @RequestBody(required = false) @Valid CancelReasonRequest body) {
         return ResponseEntity.ok(quotationService.reject(id, body == null ? null : body.reason()));
     }
 
@@ -72,5 +79,17 @@ public class QuotationController {
     @PostMapping("/{id}/convert")
     public ResponseEntity<OrderDTO> convert(@PathVariable Long id) {
         return ResponseEntity.ok(quotationService.convert(id));
+    }
+
+    /** Converte a proposta directamente em factura comercial (FT). */
+    @PostMapping("/{id}/convert-to-invoice")
+    public ResponseEntity<mz.multicore.erp.modules.comercial.dto.InvoiceDTO> convertToInvoice(@PathVariable Long id) {
+        return ResponseEntity.ok(quotationService.convertToInvoice(id));
+    }
+
+    /** Lista cotações em aberto e vigentes da empresa para importação no POS e seletores. */
+    @GetMapping("/open")
+    public ResponseEntity<List<QuotationDTO>> listOpen(@RequestParam Long companyId) {
+        return ResponseEntity.ok(quotationService.findOpenByCompany(companyId));
     }
 }

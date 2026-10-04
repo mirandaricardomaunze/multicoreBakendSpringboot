@@ -125,7 +125,7 @@ class ExecutiveUiExperienceHarnessTest {
         SwingUtilities.invokeAndWait(() -> {
             KpiCard.TrendBadge badge = new KpiCard.TrendBadge(BigDecimal.valueOf(8.5));
 
-            assertThat(badge.getText()).isEqualTo("▲ +8.5%");
+            assertThat(badge.getText()).isEqualTo("+8.5%");
             assertThat(badge.getLabel().getForeground()).isEqualTo(UIHelper.APPROVED_GREEN);
             assertThat(badge.getClientProperty("trend.bg")).isEqualTo(new Color(16, 185, 129, 35));
         });
@@ -136,7 +136,7 @@ class ExecutiveUiExperienceHarnessTest {
         SwingUtilities.invokeAndWait(() -> {
             KpiCard.TrendBadge badge = new KpiCard.TrendBadge(BigDecimal.valueOf(-3.2));
 
-            assertThat(badge.getText()).isEqualTo("▼ -3.2%");
+            assertThat(badge.getText()).isEqualTo("-3.2%");
             assertThat(badge.getLabel().getForeground()).isEqualTo(UIHelper.REJECTED_RED);
             assertThat(badge.getClientProperty("trend.bg")).isEqualTo(new Color(239, 68, 68, 35));
         });
@@ -160,7 +160,7 @@ class ExecutiveUiExperienceHarnessTest {
             // Verificar se o TrendBadge está embutido na hierarquia do card
             KpiCard.TrendBadge foundBadge = findComponent(card, KpiCard.TrendBadge.class);
             assertNotNull(foundBadge, "O TrendBadge deve estar presente no cartão de KPI quando fornecido trendPercent");
-            assertThat(foundBadge.getText()).isEqualTo("▲ +12.4%");
+            assertThat(foundBadge.getText()).isEqualTo("+12.4%");
         });
     }
 

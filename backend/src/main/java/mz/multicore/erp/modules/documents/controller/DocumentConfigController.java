@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.documents.controller;
 
+import jakarta.validation.Valid;
+
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
@@ -32,7 +34,7 @@ public class DocumentConfigController {
     public ResponseEntity<DocumentColumnsDTO> saveColumns(
             @RequestParam Long companyId,
             @RequestParam(defaultValue = "COMMERCIAL") DocumentType documentType,
-            @RequestBody DocumentColumnsDTO dto) {
+            @RequestBody @Valid DocumentColumnsDTO dto) {
         return ResponseEntity.ok(service.save(companyId, documentType, dto));
     }
 }

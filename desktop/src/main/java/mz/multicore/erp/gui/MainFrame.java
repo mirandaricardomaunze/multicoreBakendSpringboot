@@ -33,12 +33,15 @@ import mz.multicore.erp.gui.components.ShortcutHelpDialog;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.RecentItemsDialog;
+import mz.multicore.erp.gui.components.RecentItemsHistoryManager;
 import mz.multicore.erp.desktop.client.HRApiClient;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -137,7 +140,8 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.BankReconciliationApiClient bankReconciliationApiClient, mz.multicore.erp.desktop.client.AccountStatementApiClient accountStatementApiClient,
             mz.multicore.erp.desktop.client.CashFlowForecastApiClient cashFlowForecastApiClient,
             mz.multicore.erp.desktop.client.ForensicAuditApiClient forensicAuditApiClient,
-            mz.multicore.erp.desktop.client.InventoryPhysicalCountingApiClient inventoryPhysicalCountingApiClient
+            mz.multicore.erp.desktop.client.InventoryPhysicalCountingApiClient inventoryPhysicalCountingApiClient,
+            mz.multicore.erp.desktop.client.SystemMonitoringApiClient systemMonitoringApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -147,6 +151,8 @@ public class MainFrame extends JFrame {
 
         setTitle("MULTICORE — Gestão Profissional");
         setIconImages(UIHelper.getAppIcons());
+        getRootPane().putClientProperty("JRootPane.titleBarShowIcon", true);
+        getRootPane().putClientProperty("JRootPane.titleBarShowTitle", true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 820);
         setMinimumSize(new Dimension(1024, 700));
@@ -160,7 +166,7 @@ public class MainFrame extends JFrame {
             accountingPanel = null; performancePanel = null; forensicAuditPanel = null;
             posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
             notificationFeed = null; notificationsPanel = null; notificationReadStore = null;
-            plataformaPanel = new PlataformaPanel(platformApiClient);
+            plataformaPanel = new PlataformaPanel(platformApiClient, systemMonitoringApiClient);
             contentPanel.add(plataformaPanel, "plataforma");
         } else {
             dashboardPanel  = new DashboardPanel(
@@ -183,11 +189,11 @@ public class MainFrame extends JFrame {
             approvalsPanel  = new ApprovalsPanel(approvalApiClient);
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
-            configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient);
+            configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
             performancePanel = new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = new ForensicAuditPanel(forensicAuditApiClient);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
-                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient);
+                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);
@@ -221,6 +227,7 @@ public class MainFrame extends JFrame {
         int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
         getRootPane().registerKeyboardAction(e -> { if (sidebar != null) sidebar.toggle(); }, KeyStroke.getKeyStroke(KeyEvent.VK_B, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> openGlobalSearch(), KeyStroke.getKeyStroke(KeyEvent.VK_K, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> openRecentItemsHistory(), KeyStroke.getKeyStroke(KeyEvent.VK_H, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> openShortcutHelp(), KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> toggleFullScreen(), KeyStroke.getKeyStroke(KeyEvent.VK_F11, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
@@ -299,6 +306,7 @@ public class MainFrame extends JFrame {
         companyCombo.setPreferredSize(new Dimension(210, 32));
         // Reaplicar o renderer DEPOIS de styleComboBox (senão mostraria CompanyAccess[...]).
         applyCompanyRenderer(companyCombo);
+        bar.addTrailing(buildHistoryButton());
         bar.addTrailing(buildThemeToggle());
         bar.addTrailing(buildNotificationBell());
         javax.swing.JComponent subChip = buildSubscriptionChip();
@@ -359,23 +367,43 @@ public class MainFrame extends JFrame {
 
         // 3. FISCAL & AUDITORIA
         sb.addSection("Fiscal & Auditoria");
-        sb.addItem(UIHelper.icon("fas-percent", 16, UIHelper.MODULE_CONFIG), "Área Fiscal", UIHelper.MODULE_CONFIG, () -> navigate("fiscal"));
-        sb.addItem(UIHelper.icon("fas-book", 16, UIHelper.MODULE_CONFIG), "Contabilidade", UIHelper.MODULE_CONFIG, () -> navigate("contabilidade"));
-        sb.addItem(UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_CONFIG), "Aprovações", UIHelper.MODULE_CONFIG, () -> navigate("approvals"));
+        sb.addItem(UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), "Área Fiscal", UIHelper.MODULE_FISCAL, () -> navigate("fiscal"));
+        sb.addItem(UIHelper.icon("fas-calculator", 16, UIHelper.MODULE_ACCOUNTING), "Contabilidade", UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"));
+        sb.addItem(UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_APPROVALS), "Aprovações", UIHelper.MODULE_APPROVALS, () -> navigate("approvals"));
         sb.addItem(UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), "Auditoria Forense", UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"));
 
         // 4. SISTEMA
         sb.addSection("Sistema");
-        sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.MODULE_CONFIG), "Notificações", UIHelper.MODULE_CONFIG, () -> navigate("notifications"));
-        sb.addItem(UIHelper.icon("fas-cog", 16, UIHelper.MODULE_CONFIG), "Configurações", UIHelper.MODULE_CONFIG, () -> navigate("config"));
+        sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_CYAN), "Notificações", UIHelper.ACCENT_CYAN, () -> navigate("notifications"));
+        sb.addItem(UIHelper.icon("fas-cog", 16, UIHelper.ACCENT_BLUE), "Configurações", UIHelper.ACCENT_BLUE, () -> navigate("config"));
 
         return sb;
     }
 
-    /** Botão de tema na barra de menu (ícone sol/lua). Trocar reconstrói a janela no tema escolhido. */
+    /** Botão de histórico recente na barra de menu (Ctrl+H). */
+    private javax.swing.JComponent buildHistoryButton() {
+        JLabel btn = new JLabel(UIHelper.icon("fas-history", 18, topBarIconTint()));
+        btn.setToolTipText("Histórico de Itens Recentes (Ctrl+H)");
+        btn.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        btn.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mousePressed(java.awt.event.MouseEvent e) { openRecentItemsHistory(); }
+        });
+        return btn;
+    }
+
+    public void openRecentItemsHistory() {
+        RecentItemsDialog.show(this, item -> {
+            if (item != null && item.targetView() != null && !item.targetView().isBlank()) navigate(item.targetView());
+        });
+    }
+
+    /** Botão de tema na barra de menu (sol/lua/ajuste). Trocar reconstrói a janela no tema escolhido. */
     private javax.swing.JComponent buildThemeToggle() {
-        String code = UIHelper.isLight() ? "fas-moon" : "fas-sun";
-        String tip = UIHelper.isLight() ? "Mudar para tema escuro" : "Mudar para tema claro";
+        String code = UIHelper.isHighContrast() ? "fas-adjust" : (UIHelper.isLight() ? "fas-moon" : "fas-sun");
+        String tip = UIHelper.isHighContrast()
+                ? "Mudar para Tema Escuro (Atual: Alto Contraste)"
+                : (UIHelper.isLight() ? "Mudar para Alto Contraste (Atual: Claro)" : "Mudar para Tema Claro (Atual: Escuro)");
         JLabel toggle = new JLabel(UIHelper.icon(code, 18, topBarIconTint()));
         toggle.setToolTipText(tip);
         toggle.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
@@ -383,7 +411,7 @@ public class MainFrame extends JFrame {
         toggle.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mousePressed(java.awt.event.MouseEvent e) {
-                UIHelper.setTheme(UIHelper.isLight() ? Theme.DARK : Theme.LIGHT);
+                UIHelper.cycleTheme();
             }
         });
         return toggle;
@@ -613,6 +641,15 @@ public class MainFrame extends JFrame {
         textStack.add(sessionRoleLabel);
         chip.add(textStack, BorderLayout.CENTER);
 
+        JButton logoutBtn = new JButton(UIHelper.icon("fas-sign-out-alt", 15, UIHelper.REJECTED_RED));
+        logoutBtn.setToolTipText("Terminar Sessão (Logout)");
+        logoutBtn.setFocusPainted(false);
+        logoutBtn.setBorderPainted(false);
+        logoutBtn.setContentAreaFilled(false);
+        logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        logoutBtn.addActionListener(e -> UIHelper.requestLogout(this));
+        chip.add(logoutBtn, BorderLayout.EAST);
+
         return chip;
     }
 
@@ -740,6 +777,7 @@ public class MainFrame extends JFrame {
         if (statusBar != null) statusBar.setModule(modName);
         if (topBar != null) topBar.setActive(modName);
         if (sidebar != null) sidebar.setActive(modName);
+        RecentItemsHistoryManager.getInstance().record("Módulo", null, modName, "Acesso rápido", cardName, "fas-folder-open");
         refreshPanel(cardName);
     }
 
@@ -920,41 +958,18 @@ public class MainFrame extends JFrame {
         ));
         items.add(new GlobalSearchDialog.SearchItem(
                 "mod_fiscal", "Área Fiscal & IVA", "Módulos", null,
-                UIHelper.icon("fas-percent", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
+                UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), UIHelper.MODULE_FISCAL,
                 () -> navigate("fiscal"), List.of("imposto", "declaracao", "mapa", "retencoes")
         ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "mod_contabilidade", "Contabilidade & Razão", "Módulos", null,
-                UIHelper.icon("fas-book", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
-                () -> navigate("contabilidade"), List.of("lancamentos", "diario", "balancete", "contas")
-        ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "mod_approvals", "Aprovações Pendentes", "Módulos", null,
-                UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
-                () -> navigate("approvals"), List.of("autorizar", "pendencias", "requisicoes")
-        ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "mod_notifications", "Notificações & Avisos", "Módulos", null,
-                UIHelper.icon("fas-bell", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
-                () -> navigate("notifications"), List.of("alertas", "sino", "avisos", "validade")
-        ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "mod_config", "Configurações do Sistema", "Módulos", null,
-                UIHelper.icon("fas-cog", 16, UIHelper.MODULE_CONFIG), UIHelper.MODULE_CONFIG,
-                () -> navigate("config"), List.of("utilizadores", "empresa", "auditoria", "backup", "licenca")
-        ));
+        items.add(new GlobalSearchDialog.SearchItem("mod_contabilidade", "Contabilidade & Razão", "Módulos", null, UIHelper.icon("fas-calculator", 16, UIHelper.MODULE_ACCOUNTING), UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"), List.of("lancamentos", "diario", "balancete", "contas")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_approvals", "Aprovações Pendentes", "Módulos", null, UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_APPROVALS), UIHelper.MODULE_APPROVALS, () -> navigate("approvals"), List.of("autorizar", "pendencias", "requisicoes")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_notifications", "Notificações & Avisos", "Módulos", null, UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("notifications"), List.of("alertas", "sino", "avisos", "validade")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_config", "Configurações do Sistema", "Módulos", null, UIHelper.icon("fas-cog", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("config"), List.of("utilizadores", "empresa", "auditoria", "backup", "licenca")));
 
         // 2. Ações Rápidas & Ferramentas
-        items.add(new GlobalSearchDialog.SearchItem(
-                "act_help", "Guia de Atalhos de Teclado", "Ferramentas", "F1",
-                UIHelper.icon("fas-keyboard", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE,
-                this::openShortcutHelp, List.of("atalhos", "ajuda", "comandos", "teclado", "help")
-        ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "act_fullscreen", "Alternar Modo Ecrã Completo", "Ferramentas", "F11",
-                UIHelper.icon("fas-expand", 16, UIHelper.BUTTON_NEUTRAL), UIHelper.BUTTON_NEUTRAL,
-                this::toggleFullScreen, List.of("fullscreen", "ecra inteiro", "maximizar", "quiosque")
-        ));
+        items.add(new GlobalSearchDialog.SearchItem("act_logout", "Terminar Sessão (Logout)", "Sistema", null, UIHelper.icon("fas-sign-out-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> UIHelper.requestLogout(this), List.of("logout", "sair", "encerrar", "trocar utilizador", "login", "desconectar")));
+        items.add(new GlobalSearchDialog.SearchItem("act_help", "Guia de Atalhos de Teclado", "Ferramentas", "F1", UIHelper.icon("fas-keyboard", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openShortcutHelp, List.of("atalhos", "ajuda", "comandos", "teclado", "help")));
+        items.add(new GlobalSearchDialog.SearchItem("act_fullscreen", "Alternar Modo Ecrã Completo", "Ferramentas", "F11", UIHelper.icon("fas-expand", 16, UIHelper.BUTTON_NEUTRAL), UIHelper.BUTTON_NEUTRAL, this::toggleFullScreen, List.of("fullscreen", "ecra inteiro", "maximizar", "quiosque")));
         items.add(new GlobalSearchDialog.SearchItem("act_sidebar", "Alternar Menu Lateral", "Ferramentas", "Ctrl+B", UIHelper.icon("fas-bars", 16, UIHelper.BUTTON_NEUTRAL), UIHelper.BUTTON_NEUTRAL, () -> { if (sidebar != null) sidebar.toggle(); }, List.of("menu", "sidebar", "ocultar", "expandir")));
         items.add(new GlobalSearchDialog.SearchItem("act_labels", "Gerador de Etiquetas de Prateleira", "Ferramentas", null, UIHelper.icon("fas-barcode", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK, () -> { navigate("stock"); if (stockPanel != null) stockPanel.openLabelDialog(); }, List.of("etiquetas", "barcode", "preco", "prateleira", "gondola", "rotulos")));
         items.add(new GlobalSearchDialog.SearchItem("act_waste", "Gestão de Quebras, Perdas & Desperdício", "Stock", null, UIHelper.icon("fas-trash-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> { navigate("stock"); if (stockPanel != null) stockPanel.showWasteManagement(); }, List.of("quebras", "perdas", "desperdicio", "validade", "avarias", "furto", "waste", "radar")));
@@ -962,8 +977,19 @@ public class MainFrame extends JFrame {
         items.add(new GlobalSearchDialog.SearchItem("act_forensic_audit", "Central de Auditoria Forense & Controlo de Fraude", "Fiscal & Auditoria", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"), List.of("auditoria", "forense", "fraude", "desvios", "anomalias", "cancelamentos", "quebras", "risco")));
         items.add(new GlobalSearchDialog.SearchItem("act_alerts", "Alertas Inteligentes & Ações Proativas", "Ferramentas", null, UIHelper.icon("fas-bell", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, this::openSmartAlerts, List.of("alertas", "acoes", "proativo", "notificacoes", "urgente")));
         items.add(new GlobalSearchDialog.SearchItem("act_backup", "Cópias de Segurança & Integridade", "Ferramentas", null, UIHelper.icon("fas-database", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openBackupDialog, List.of("backup", "copia", "restauro", "base de dados", "seguranca")));
-        items.add(new GlobalSearchDialog.SearchItem("act_currency", "Calculadora e Câmbio Multimoeda", "Ferramentas", null, UIHelper.icon("fas-money-bill-wave", 16, UIHelper.APPROVED_GREEN), UIHelper.APPROVED_GREEN, this::openCurrencyDialog, List.of("cambio", "moeda", "dolar", "rand", "euro", "troco")));
-        items.add(new GlobalSearchDialog.SearchItem("act_theme", "Alternar Tema Claro / Escuro", "Ferramentas", null, UIHelper.icon(UIHelper.isLight() ? "fas-moon" : "fas-sun", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> UIHelper.setTheme(UIHelper.isLight() ? Theme.DARK : Theme.LIGHT), List.of("tema", "dark", "light", "cores", "modo noturno")));
+        items.add(new GlobalSearchDialog.SearchItem("act_theme", "Alternar Tema (Escuro / Claro / Alto Contraste)", "Ferramentas", null, UIHelper.icon("fas-adjust", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> UIHelper.cycleTheme(), List.of("tema", "dark", "light", "alto contraste", "outdoor", "acessibilidade", "cores")));
+        items.add(new GlobalSearchDialog.SearchItem("act_theme_hc", "Modo Alto Contraste / Operação Exterior", "Acessibilidade", null, UIHelper.icon("fas-low-vision", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> UIHelper.setTheme(Theme.HIGH_CONTRAST), List.of("alto contraste", "outdoor", "acessibilidade", "sol", "leitura", "visibilidade")));
+        items.add(new GlobalSearchDialog.SearchItem("act_recent_history", "Histórico de Itens Recentes & Quick-Recall", "Ferramentas", "Ctrl+H", UIHelper.icon("fas-history", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, this::openRecentItemsHistory, List.of("historico", "recentes", "ultimos", "recall", "clientes", "faturas", "atalho")));
+        items.add(new GlobalSearchDialog.SearchItem("act_density", "Alternar Densidade da Interface (Compacto / Padrão / Confortável)", "Ferramentas", null, UIHelper.icon("fas-text-height", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> mz.multicore.erp.gui.components.UiDensityManager.getInstance().cycleDensity(), List.of("densidade", "zoom", "escala", "compacto", "amplo", "confortavel", "linhas")));
+
+        // 3. Ações Operacionais de Documentos
+        items.add(new GlobalSearchDialog.SearchItem("act_new_invoice", "Emitir Nova Factura Comercial", "Operações Comerciais", null, UIHelper.icon("fas-file-invoice", 16, UIHelper.APPROVED_GREEN), UIHelper.APPROVED_GREEN, () -> navigate("comercial"), List.of("nova fatura", "faturar", "venda", "ft", "emitir", "comercial")));
+        items.add(new GlobalSearchDialog.SearchItem("act_new_order", "Criar Nova Encomenda de Cliente", "Operações Comerciais", null, UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("comercial"), List.of("nova encomenda", "pedido", "encomendar", "separacao")));
+        items.add(new GlobalSearchDialog.SearchItem("act_new_quotation", "Elaborar Nova Cotação", "Operações Comerciais", null, UIHelper.icon("fas-file-alt", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> navigate("comercial"), List.of("nova cotacao", "proposta", "orcamento", "cotar")));
+        items.add(new GlobalSearchDialog.SearchItem("act_new_po", "Criar Encomenda a Fornecedor", "Compras", null, UIHelper.icon("fas-cart-plus", 16, UIHelper.MODULE_COMPRAS), UIHelper.MODULE_COMPRAS, () -> navigate("compras"), List.of("comprar", "encomenda fornecedor", "compras", "nova compra")));
+        items.add(new GlobalSearchDialog.SearchItem("act_receive_po", "Recepção e Conferência de Mercadorias", "Compras & Stock", null, UIHelper.icon("fas-truck-loading", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK, () -> navigate("compras"), List.of("receber mercadoria", "conferencia", "descarga", "entrada stock", "recepcao")));
+        items.add(new GlobalSearchDialog.SearchItem("act_transfer", "Transferência entre Armazéns", "Stock & Logística", null, UIHelper.icon("fas-dolly", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("stock"), List.of("transferencia", "transferir stock", "guias", "armazens", "logistica")));
+        items.add(new GlobalSearchDialog.SearchItem("act_pos_cash_move", "Movimento de Caixa (Sangria / Suprimento)", "POS & Caixa", "F9", UIHelper.icon("fas-money-bill-wave", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> navigate("pos"), List.of("sangria", "suprimento", "caixa", "troco", "retirada", "reforco", "dinheiro", "gaveta")));
 
         return items;
     }

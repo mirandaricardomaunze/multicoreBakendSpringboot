@@ -23,6 +23,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -100,6 +101,9 @@ public final class ClientTablePagination {
         next.addActionListener(e -> go(page + 1));
         last.addActionListener(e -> go(totalPages() - 1));
         table.getModel().addTableModelListener(this::modelChanged);
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) updateStatusText();
+        });
 
         table.addPropertyChangeListener("rowSorter", evt -> {
             if (evt.getNewValue() instanceof TableRowSorter<?> newSorter) {
@@ -223,13 +227,7 @@ public final class ClientTablePagination {
                     return visible.contains(entry.getIdentifier());
                 }
             });
-            if (matchingRows == 0) {
-                statusLeft.setText("Sem registos");
-                pageLabel.setText("");
-            } else {
-                statusLeft.setText(matchingRows + " registo(s)");
-                pageLabel.setText(String.format("Página  %d  de  %d", page + 1, pages));
-            }
+            updateStatusText();
             first.setEnabled(page > 0);
             previous.setEnabled(page > 0);
             next.setEnabled(page + 1 < pages);
@@ -242,12 +240,67 @@ public final class ClientTablePagination {
     private int selectedPageSize() { return (Integer) pageSize.getSelectedItem(); }
     private int totalPages() { return Math.max(1, (matchingRows + selectedPageSize() - 1) / selectedPageSize()); }
 
+    void updateStatusText() {
+        if (matchingRows == 0) {
+            statusLeft.setText("Sem registos");
+            pageLabel.setText("");
+            return;
+        }
+        int pages = totalPages();
+        pageLabel.setText(String.format("Página  %d  de  %d", page + 1, pages));
+
+        int[] selectedRows = table.getSelectedRows();
+        StringBuilder sb = new StringBuilder();
+        sb.append(matchingRows).append(" registo(s)");
+
+        if (selectedRows != null && selectedRows.length > 0) {
+            sb.append(" · ").append(selectedRows.length).append(" sel.");
+            BigDecimal sumMoney = BigDecimal.ZERO;
+            BigDecimal sumQty = BigDecimal.ZERO;
+            boolean hasMoney = false;
+            boolean hasQty = false;
+
+            for (int r : selectedRows) {
+                if (r < 0 || r >= table.getRowCount()) continue;
+                for (int c = 0; c < table.getColumnCount(); c++) {
+                    Object val = table.getValueAt(r, c);
+                    if (val == null) continue;
+                    String s = val.toString().trim();
+                    if (s.isEmpty() || s.equals("—") || s.equals("-")) continue;
+                    if (s.endsWith(" MT") || s.endsWith(" MZN")) {
+                        try {
+                            String numStr = s.replaceAll("(?i)\\s*(MT|MZN)\\s*$", "").replace(" ", "").replace("\u00A0", "").replace(',', '.');
+                            sumMoney = sumMoney.add(new BigDecimal(numStr));
+                            hasMoney = true;
+                        } catch (Exception ignored) {}
+                    } else if (val instanceof BigDecimal bd) {
+                        sumQty = sumQty.add(bd);
+                        hasQty = true;
+                    }
+                }
+            }
+            if (hasMoney && sumMoney.signum() > 0) {
+                sb.append(" [Total: ").append(TableCellRenderers.format(sumMoney, 2, " MT")).append("]");
+            } else if (hasQty && sumQty.signum() > 0) {
+                sb.append(" [Qtd: ").append(TableCellRenderers.format(sumQty, 2, "")).append("]");
+            }
+        }
+        statusLeft.setText(sb.toString());
+    }
+
     /**
      * Botão de navegação ghost circular (30×30).
      * Fundo transparente em repouso; acento suave ao passar o rato; desativado com opacidade reduzida.
      */
     private static GhostNavButton ghostBtn(String icon, String tooltip) {
-        return new GhostNavButton(UIHelper.icon(icon, 12), tooltip);
+        boolean light = UIHelper.isLight();
+        Color base = light ? new Color(51, 65, 85) : new Color(226, 232, 240);
+        Color hover = UIHelper.ACCENT_BLUE;
+        Color disabled = light ? new Color(203, 213, 225) : new Color(100, 116, 139);
+        GhostNavButton b = new GhostNavButton(UIHelper.icon(icon, 12, base), tooltip);
+        b.setRolloverIcon(UIHelper.icon(icon, 12, hover));
+        b.setDisabledIcon(UIHelper.icon(icon, 12, disabled));
+        return b;
     }
 
     private static final class GhostNavButton extends javax.swing.JButton {
@@ -280,7 +333,11 @@ public final class ClientTablePagination {
             int w = getWidth();
             int h = getHeight();
             if (!isEnabled()) {
-                g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.35f));
+                g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.45f));
+                if (UIHelper.isLight()) {
+                    g2.setColor(new Color(241, 245, 249));
+                    g2.fillRoundRect(0, 0, w, h, ARC, ARC);
+                }
             } else if (hovered) {
                 g2.setColor(new Color(UIHelper.ACCENT_BLUE.getRed(),
                         UIHelper.ACCENT_BLUE.getGreen(), UIHelper.ACCENT_BLUE.getBlue(), 40));
@@ -288,6 +345,11 @@ public final class ClientTablePagination {
                 g2.setColor(new Color(UIHelper.ACCENT_BLUE.getRed(),
                         UIHelper.ACCENT_BLUE.getGreen(), UIHelper.ACCENT_BLUE.getBlue(), 80));
                 g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(0, 0, w - 1, h - 1, ARC, ARC);
+            } else if (UIHelper.isLight()) {
+                g2.setColor(new Color(241, 245, 249));
+                g2.fillRoundRect(0, 0, w, h, ARC, ARC);
+                g2.setColor(new Color(226, 232, 240));
                 g2.drawRoundRect(0, 0, w - 1, h - 1, ARC, ARC);
             }
             super.paintComponent(g);

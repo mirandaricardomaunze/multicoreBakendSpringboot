@@ -1,10 +1,12 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 
 /** Constrói a vista de listagem/editor de faturação. */
@@ -16,133 +18,71 @@ final class CommercialInvoicesView {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // LEFT COLUMN: CREATE INVOICE FORM
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
-        leftPanel.setOpaque(false);
-
-        JPanel leftHeader = new JPanel(new BorderLayout(8, 0));
-        leftHeader.setOpaque(false);
-        JLabel leftTitle = UIHelper.createHeading("Emitir Nova Fatura");
-        leftHeader.add(leftTitle, BorderLayout.WEST);
-        ModernButton billFromOrderBtn = UIHelper.createPrimaryButton("Faturar Encomenda…");
-        billFromOrderBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        billFromOrderBtn.setToolTipText("Escolher uma encomenda pendente e gerar fatura automaticamente.");
-        billFromOrderBtn.addActionListener(e -> owner.openBillFromOrderDialog());
-        leftHeader.add(billFromOrderBtn, BorderLayout.EAST);
-        leftPanel.add(leftHeader, BorderLayout.NORTH);
-
         ModernPanel formCard = new ModernPanel(16);
-        formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+        formCard.setLayout(new FlowLayout(FlowLayout.LEFT, 16, 6));
+        formCard.setBorder(new EmptyBorder(10, 14, 10, 14));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        // Row 1: Client & Warehouse Selection (Side by Side)
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 0.5;
-        gbc.insets = new Insets(4, 8, 2, 8);
-        JLabel clientLbl = new JLabel("Cliente:");
-        clientLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(clientLbl, gbc);
-
-        gbc.gridx = 1;
-        JLabel warehouseLbl = new JLabel("Armazém de Expedição:");
-        warehouseLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(warehouseLbl, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 1;
-        gbc.insets = new Insets(2, 8, 8, 8);
         owner.clientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.clientCombo);
-        formCard.add(owner.clientCombo, gbc);
 
-        gbc.gridx = 1;
         owner.warehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.warehouseCombo);
-        formCard.add(owner.warehouseCombo, gbc);
 
-        // Row 2: Product Selection (Full Width)
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(4, 8, 2, 8);
-        JLabel prodLbl = new JLabel("Produto / Serviço:");
-        prodLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(prodLbl, gbc);
+        formCard.add(fieldGroup("Cliente:", owner.clientCombo, 340));
+        formCard.add(fieldGroup("Armazém de Expedição:", owner.warehouseCombo, 260));
 
-        gbc.gridy = 3;
-        gbc.insets = new Insets(2, 8, 8, 8);
-        owner.productCombo = new JComboBox<>();
-        UIHelper.styleComboBox(owner.productCombo);
-        formCard.add(owner.productCombo, gbc);
+        owner.productCombo = new ProductSearchComboBox();
 
-        // Row 3: Qtd & Desconto % (Side by Side)
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1; gbc.weightx = 0.5;
-        gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel qtyLbl = new JLabel("Qtd (unidades):");
-        qtyLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(qtyLbl, gbc);
-
-        gbc.gridx = 1;
-        JLabel discLbl = new JLabel("Desconto %:");
-        discLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(discLbl, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 5;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        owner.invoicePackageEditor = new PackageQuantityEditor();
-        owner.quantityField = owner.invoicePackageEditor.totalField();
-        owner.invoiceBoxesField = owner.invoicePackageEditor.boxesField();
-        owner.invoiceLooseUnitsField = owner.invoicePackageEditor.looseUnitsField();
-        formCard.add(owner.invoicePackageEditor, gbc);
-
-        gbc.gridx = 1;
+        // Editores reutilizados apenas pelas células da grelha.
         owner.discountField = new DecimalField("0", 2, false);
-        formCard.add(owner.discountField, gbc);
-
-        // Row 4: Lote/Validade (FEFO, read-only) e Série
-        gbc.gridx = 0; gbc.gridy = 6;
-        gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel batchLbl = new JLabel("Lote / Validade (FEFO):");
-        batchLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(batchLbl, gbc);
-
-        gbc.gridx = 1;
-        JLabel serialLbl = new JLabel("Série (Opcional):");
-        serialLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(serialLbl, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 7;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        owner.batchField = new JTextField();
-        UIHelper.styleTextField(owner.batchField);
-        owner.batchField.setEditable(false);
-        owner.batchField.setToolTipText("Lote a sair (FEFO) — calculado a partir do produto e armazém.");
-        owner.batchField.putClientProperty("JTextField.placeholderText", "— FEFO automático —");
-        formCard.add(owner.batchField, gbc);
-
-        gbc.gridx = 1;
         owner.serialField = new JTextField();
         UIHelper.styleTextField(owner.serialField);
-        formCard.add(owner.serialField, gbc);
 
-        // Row 5: line action
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(16, 8, 12, 8);
         ModernButton addLineBtn = UIHelper.createAddLineButton();
-        JPanel addLineActionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        addLineActionRow.setOpaque(false);
-        addLineActionRow.add(addLineBtn);
-        formCard.add(addLineActionRow, gbc);
+        addLineBtn.setText("Adicionar linha");
+        ModernButton removeLineBtn = UIHelper.createDangerButton("Remover linha");
+        removeLineBtn.setIcon(UIHelper.icon("fas-trash", 14));
+        removeLineBtn.addActionListener(e -> owner.removeSelectedInvoiceDraftLine());
 
-        // Row 6: Draft Lines Table (Full Width)
-        gbc.gridy = 9; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
-        String[] lineCols = {"Produto", "Qtd", "Preço Unit.", "Desc %", "Lote/Série", "Total"};
+        // Linhas do rascunho: a acção pertence ao topo do card da tabela.
+        String[] lineCols = {"Produto", "Qtd", "Emb.", "Cx.", "% Cx.", "Preço Unit.", "IVA",
+                "Desc. %", "Série", "Total"};
         owner.linesTableModel = new DefaultTableModel(lineCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return owner.invoiceGridEditable && (c <= 3 || c == 7 || c == 8);
+            }
         };
         owner.linesTable = new JTable(owner.linesTableModel);
         UIHelper.styleTable(owner.linesTable);
+        owner.linesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
+        owner.linesTable.putClientProperty("noTableFooter", Boolean.TRUE);
+        owner.linesTable.getColumnModel().getColumn(0)
+                .setCellEditor(new DefaultCellEditor(owner.productCombo));
+        owner.linesTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override protected void setValue(Object value) {
+                setText(value instanceof ProductDTO product ? product.name() : "Pesquisar produto...");
+            }
+        });
+        for (int column : java.util.List.of(1, 2, 3)) {
+            owner.linesTable.getColumnModel().getColumn(column)
+                    .setCellEditor(new DefaultCellEditor(new QuantityField("0", false)));
+            owner.linesTable.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.quantity());
+        }
+        owner.linesTable.getColumnModel().getColumn(7)
+                .setCellEditor(new DefaultCellEditor(owner.discountField));
+        owner.linesTable.getColumnModel().getColumn(8)
+                .setCellEditor(new DefaultCellEditor(owner.serialField));
+        owner.linesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
+        owner.linesTable.getColumnModel().getColumn(9).setCellRenderer(TableCellRenderers.money());
+        owner.linesTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+        owner.linesTable.setSurrendersFocusOnKeystroke(true);
+        owner.linesTable.setToolTipText("Edite Produto, Qtd, Emb., Cx., desconto e série directamente.");
+        owner.linesTableModel.addTableModelListener(event -> {
+            if (owner.syncingInvoiceGrid || event.getFirstRow() < 0
+                    || event.getType() != javax.swing.event.TableModelEvent.UPDATE) return;
+            owner.syncInvoiceLineFromGrid(event.getFirstRow(), event.getColumn());
+        });
         JScrollPane linesScroll = new JScrollPane(owner.linesTable);
         UIHelper.styleEmbeddedTableScrollPane(linesScroll, owner.linesTable, 4);
         // Draft table is placed in its own card below the input form.
@@ -161,10 +101,13 @@ final class CommercialInvoicesView {
         draftCard.setLayout(new BorderLayout(0, 10));
         draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
         draftCard.setPreferredSize(new Dimension(0, 280));
+        JLabel lineHint = new JLabel("Preparação tabular: edite as células; depois de emitida a fatura é imutável.");
+        lineHint.setForeground(UIHelper.TEXT_MUTED);
+        draftCard.add(UIHelper.tableCardTop("Linhas da Fatura", lineHint, addLineBtn, removeLineBtn), BorderLayout.NORTH);
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(totalRow, BorderLayout.SOUTH);
 
-        // Conteúdo do formulário (vai para o modal responsivo): inputs + linhas de rascunho.
+        // Área de trabalho de página: cabeçalho + grelha de rascunho.
         JPanel formContent = new JPanel(new BorderLayout(0, 12));
         formContent.setOpaque(false);
         formContent.add(formCard, BorderLayout.NORTH);
@@ -175,19 +118,8 @@ final class CommercialInvoicesView {
         formContent.add(draftWrap, BorderLayout.CENTER);
         owner.invoiceFormContent = formContent;
 
-        // TAB: cabeçalho com acções + lista de faturas em ecrã inteiro.
-        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
-        headerBar.setOpaque(false);
-        headerBar.add(UIHelper.createHeading("Faturas Recentes"), BorderLayout.WEST);
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerActions.setOpaque(false);
-        ModernButton newInvoiceBtn = UIHelper.createPrimaryButton("Nova Fatura…");
-        newInvoiceBtn.setIcon(UIHelper.icon("fas-file-invoice", 14));
-        newInvoiceBtn.addActionListener(e -> owner.openInvoiceEditor());
-        headerActions.add(billFromOrderBtn);
-        headerActions.add(newInvoiceBtn);
-        headerBar.add(headerActions, BorderLayout.EAST);
-        panel.add(headerBar, BorderLayout.NORTH);
+        // TAB: uma única unidade visual, com acções, filtros, tabela e paginação no mesmo card.
+        ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadInvoicesTable);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -220,47 +152,47 @@ final class CommercialInvoicesView {
         TableFilter.install(owner.invoicesTable, invSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(invEstado, 4)),
                 java.util.List.of(new TableFilter.PeriodFilter(invPeriodo, 3)));
-        JPanel invBar = TableFilter.bar(invSearch,
-                TableFilter.label("Estado:"), invEstado,
-                TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo);
-        invBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(invBar, BorderLayout.NORTH);
         listCard.add(invoicesScroll, BorderLayout.CENTER);
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        btnPanel.setOpaque(false);
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedInvoice)
-                .addAction("Imprimir Guia", UIHelper.icon("fas-truck", 14), owner::printSelectedGuide)
-                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportInvoicesTable);
-        ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadInvoicesTable);
-        ModernButton cancelInvoiceBtn = UIHelper.createDangerButton("Anular Fatura");
-        cancelInvoiceBtn.setIcon(UIHelper.icon("fas-ban", 14));
-        ModernButton payInvoiceBtn = UIHelper.createSuccessButton("Liquidar (RC)");
-        payInvoiceBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
-        btnPanel.add(refreshBtn);
-        btnPanel.add(moreBtn);
-        btnPanel.add(cancelInvoiceBtn);
-        btnPanel.add(payInvoiceBtn);
+                .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), owner::printSelectedInvoice)
+                .addAction("Imprimir Guia", UIHelper.icon("fas-truck", 14, UIHelper.ACCENT), owner::printSelectedGuide)
+                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14, UIHelper.REJECTED_RED), owner::exportInvoicesTable)
+                .addAction("Anular Fatura", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), owner::cancelSelectedInvoice)
+                .addAction("Liquidar (RC)", UIHelper.icon("fas-money-bill-wave", 14, UIHelper.APPROVED_GREEN), owner::paySelectedInvoice);
+        ActionMenuButton issueBtn = UIHelper.createActionMenuButton("Emitir")
+                .addAction("Nova Fatura", UIHelper.icon("fas-file-invoice", 14, UIHelper.ACCENT_BLUE), owner::openInvoiceEditor)
+                .addAction("Faturar Encomenda", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT), owner::openBillFromOrderDialog);
+        issueBtn.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
+        issueBtn.setToolTipText("Emitir uma nova fatura ou faturar uma encomenda pendente.");
 
-        // A tabela vem paginada do servidor: a barra de paginação fica entre a tabela e as acções.
+        JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
+        cardHeader.setOpaque(false);
+        cardHeader.add(UIHelper.createSubheading("Faturas Recentes"), BorderLayout.WEST);
+        cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn), BorderLayout.EAST);
+
+        JPanel invFilters = UIHelper.filterBar(
+                new JComponent[]{invSearch, TableFilter.label("Estado:"), invEstado,
+                        TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo},
+                null);
+        JPanel cardTop = new JPanel(new BorderLayout(0, 10));
+        cardTop.setOpaque(false);
+        cardTop.add(cardHeader, BorderLayout.NORTH);
+        cardTop.add(invFilters, BorderLayout.CENTER);
+        listCard.add(cardTop, BorderLayout.NORTH);
+
+        // A tabela vem paginada do servidor; o rodapé fica reservado exclusivamente à paginação.
         owner.invoicesPager = new TablePager(owner::loadInvoicesPage);
-        JPanel listSouth = new JPanel(new BorderLayout());
-        listSouth.setOpaque(false);
-        listSouth.add(owner.invoicesPager, BorderLayout.NORTH);
-        listSouth.add(btnPanel, BorderLayout.SOUTH);
-        listCard.add(listSouth, BorderLayout.SOUTH);
+        listCard.add(owner.invoicesPager, BorderLayout.SOUTH);
 
         // Lista de faturas ocupa a tab inteira; o formulário vive no modal.
         panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
+        UIHelper.installDoubleClick(owner.invoicesTable, owner::printSelectedInvoice);
+        UIHelper.installDocumentGridShortcuts(owner.linesTable,
+                owner::addDraftLine, owner::removeSelectedInvoiceDraftLine, owner::saveInvoiceFromEditor);
         addLineBtn.addActionListener(e -> owner.addDraftLine());
-        owner.productCombo.addActionListener(e -> { owner.refreshInvoiceFEFOHint(); owner.refreshInvoicePackaging(); });
-        owner.warehouseCombo.addActionListener(e -> owner.refreshInvoiceFEFOHint());
-        cancelInvoiceBtn.addActionListener(e -> owner.cancelSelectedInvoice());
-        payInvoiceBtn.addActionListener(e -> owner.paySelectedInvoice());
-
         // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
         DocumentEditorHost invoiceEditor = new DocumentEditorHost(
                 "Nova Fatura", owner.invoiceFormContent,
@@ -275,5 +207,17 @@ final class CommercialInvoicesView {
         return owner.faturacaoHost;
     }
 
-    /** Abre o editor de nova fatura (painel completo, substitui o modal). */
+    private static JPanel fieldGroup(String labelText, JComponent comp, int width) {
+        JPanel group = new JPanel(new BorderLayout(0, 4));
+        group.setOpaque(false);
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        lbl.setForeground(UIHelper.TEXT_MUTED);
+        group.add(lbl, BorderLayout.NORTH);
+        if (width > 0) {
+            comp.setPreferredSize(new Dimension(width, 36));
+        }
+        group.add(comp, BorderLayout.CENTER);
+        return group;
+    }
 }

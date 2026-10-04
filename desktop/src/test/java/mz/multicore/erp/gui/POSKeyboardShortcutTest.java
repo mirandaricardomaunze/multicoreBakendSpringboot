@@ -22,7 +22,8 @@ class POSKeyboardShortcutTest {
         AtomicBoolean executed = new AtomicBoolean();
         KeyStroke f9 = KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0);
 
-        POSPanel.bindShortcut(input, actions, "checkout", f9, () -> executed.set(true));
+        PosKeyboardShortcutsHandler.bindShortcut(input, actions, "checkout", f9,
+                () -> executed.set(true));
 
         assertEquals("checkout", input.get(f9));
         assertNotNull(actions.get("checkout"));

@@ -4,12 +4,14 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.FormField;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.QuantityField;
+import mz.multicore.erp.gui.components.ProductSearchComboBox;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
@@ -58,10 +60,6 @@ public class PromotionsPanel extends JPanel {
         setOpaque(false);
         setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Promoções de Loja"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Promoção");
         newBtn.setIcon(UIHelper.icon("fas-tags", 14));
         newBtn.addActionListener(e -> createPromotionDialog());
@@ -72,16 +70,7 @@ public class PromotionsPanel extends JPanel {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> reload());
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(toggleBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        JPanel north = new JPanel(); north.setOpaque(false);
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(header); north.add(feedback); add(north, BorderLayout.NORTH);
+        add(feedback, BorderLayout.NORTH);
 
         String[] cols = {"Nome", "Tipo", "Alcance", "Benefício", "Início", "Fim", "Estado"};
         model = new DefaultTableModel(cols, 0) {
@@ -99,16 +88,41 @@ public class PromotionsPanel extends JPanel {
 
         JTextField promoSearch = TableFilter.searchField("Nome, alcance ou benefício…");
         JComboBox<String> promoTipo = TableFilter.combo("Todos os tipos", "Percentagem", "Leve X, pague Y");
+        UIHelper.styleComboBox(promoTipo);
+        promoTipo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+
         JComboBox<String> promoEstado = TableFilter.combo("Todos os estados", "ACTIVA", "INACTIVA");
+        UIHelper.styleComboBox(promoEstado);
+        promoEstado.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+
         TableFilter.install(table, promoSearch,
                 new TableFilter.ColumnFilter(promoTipo, 1),
                 new TableFilter.ColumnFilter(promoEstado, 6));
-        JPanel promoBar = TableFilter.bar(promoSearch,
-                TableFilter.label("Tipo:"), promoTipo,
-                TableFilter.label("Estado:"), promoEstado);
-        promoBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(promoBar, BorderLayout.NORTH);
+
+        JPanel promoFilters = new JPanel(new GridBagLayout());
+        promoFilters.setOpaque(false);
+        GridBagConstraints g = new GridBagConstraints();
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.insets = new Insets(0, 0, 0, 12);
+
+        g.gridx = 0; g.weightx = 0; promoFilters.add(filterLabel("Tipo de Promoção"), g);
+        g.gridx = 1; g.weightx = 0; promoFilters.add(filterLabel("Estado"), g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
+        promoFilters.add(filterLabel("Pesquisa"), g);
+
+        g.gridy = 1;
+        g.insets = new Insets(4, 0, 0, 12);
+        g.gridx = 0; g.weightx = 0; promoFilters.add(promoTipo, g);
+        g.gridx = 1; g.weightx = 0; promoFilters.add(promoEstado, g);
+        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
+        promoFilters.add(promoSearch, g);
+
+        promoFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        card.add(UIHelper.tableCardTop("Promoções de Loja", promoFilters,
+                refreshBtn, toggleBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         add(card, BorderLayout.CENTER);
     }
 
@@ -177,9 +191,9 @@ public class PromotionsPanel extends JPanel {
         JTextField nameField = new JTextField();
         JComboBox<String> typeCombo = new JComboBox<>(new String[]{"Percentagem", "Leve X, pague Y"});
         JComboBox<String> scopeCombo = new JComboBox<>(new String[]{"Produto", "Categoria"});
-        JComboBox<String> productCombo = new JComboBox<>();
+        ProductSearchComboBox productCombo = new ProductSearchComboBox();
         JComboBox<String> categoryCombo = new JComboBox<>();
-        for (ProductDTO p : products) productCombo.addItem(p.sku() + " — " + p.name());
+        productCombo.setProducts(products);
         for (ProductCategoryDTO c : categories) categoryCombo.addItem(c.name());
 
         MoneyField percentField = new MoneyField();
@@ -191,7 +205,6 @@ public class PromotionsPanel extends JPanel {
         UIHelper.styleTextField(nameField);
         UIHelper.styleComboBox(typeCombo);
         UIHelper.styleComboBox(scopeCombo);
-        UIHelper.styleComboBox(productCombo);
         UIHelper.styleComboBox(categoryCombo);
 
         // "Leve X, pague Y" só faz sentido por produto → força e bloqueia o alcance.
@@ -232,9 +245,9 @@ public class PromotionsPanel extends JPanel {
             if (!nameForm.validateRequired()) throw new IllegalArgumentException("Indique o nome da promoção.");
             boolean percent = typeCombo.getSelectedIndex() == 0;
             boolean byProduct = scopeCombo.getSelectedIndex() == 0;
-            int productIndex = productCombo.getSelectedIndex();
+            ProductDTO selectedProduct = productCombo.selectedProduct();
             int categoryIndex = categoryCombo.getSelectedIndex();
-            if (byProduct && (productIndex < 0 || productIndex >= products.size()))
+            if (byProduct && selectedProduct == null)
                 throw new IllegalArgumentException("Selecione um produto.");
             if (!byProduct && (categoryIndex < 0 || categoryIndex >= categories.size()))
                 throw new IllegalArgumentException("Selecione uma categoria.");
@@ -246,7 +259,7 @@ public class PromotionsPanel extends JPanel {
             CreatePromotionRequest request = new CreatePromotionRequest(
                     CurrentUserContext.getCurrentCompanyId(), nameField.getText().trim(),
                     percent ? "PERCENT" : "BUY_X_GET_Y",
-                    byProduct ? products.get(productIndex).id() : null,
+                    byProduct ? selectedProduct.id() : null,
                     byProduct ? null : categories.get(categoryIndex).id(),
                     percentValue, buy, pay, start, end);
             return () -> { promotionApiClient.createPromotion(request); return null; };
@@ -258,4 +271,10 @@ public class PromotionsPanel extends JPanel {
     }
 
     private record PromotionOptions(List<ProductDTO> products, List<ProductCategoryDTO> categories) {}
+    private JLabel filterLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        label.setForeground(UIHelper.TEXT_MUTED);
+        return label;
+    }
 }

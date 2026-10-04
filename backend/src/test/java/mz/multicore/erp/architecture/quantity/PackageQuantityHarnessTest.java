@@ -26,4 +26,28 @@ class PackageQuantityHarnessTest {
         assertEquals(2, value.boxes());
         assertEquals(5, value.looseUnits());
     }
+
+    @Test void packagingComposition_calculatesUnitsPerBox() {
+        PackagingComposition composition = PackagingComposition.of(12, 6);
+        assertEquals(72, composition.unitsPerBox());
+    }
+
+    @Test void packagingComposition_rejectsInvalidAndOverflowingFactors() {
+        assertThrows(BusinessRuleException.class, () -> PackagingComposition.of(0, 6));
+        assertThrows(BusinessRuleException.class, () -> PackagingComposition.of(12, 0));
+        assertThrows(BusinessRuleException.class,
+                () -> PackagingComposition.of(Integer.MAX_VALUE, Integer.MAX_VALUE));
+    }
+
+    @Test void packagingQuantity_convertsAndDecomposesAllLevels() {
+        PackagingComposition composition = PackagingComposition.of(12, 6);
+        PackagingQuantity entered = PackagingQuantity.fromPackaging(2, 3, 4, composition);
+        assertEquals(166, entered.totalUnits());
+
+        PackagingQuantity decomposed = PackagingQuantity.fromTotal(166, composition);
+        assertEquals(2, decomposed.boxes());
+        assertEquals(3, decomposed.packages());
+        assertEquals(4, decomposed.looseUnits());
+        assertEquals("2 cx + 3 emb + 4 un", decomposed.label());
+    }
 }

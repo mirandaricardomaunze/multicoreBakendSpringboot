@@ -194,6 +194,7 @@ public class ReceiptPrintService {
             case MPESA -> "M-Pesa";
             case EMOLA -> "e-Mola";
             case CREDIT -> "Fiado";
+            case STORE_CREDIT -> "Vale de Compras";
         };
     }
 

@@ -44,6 +44,7 @@ import java.util.Map;
 public class PlataformaPanel extends JPanel {
 
     private final PlatformApiClient platformApiClient;
+    private final mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient;
 
     private DefaultTableModel companiesModel;
     private JTable companiesTable;
@@ -73,7 +74,12 @@ public class PlataformaPanel extends JPanel {
     private SimplePieChart subPlansChart;
 
     public PlataformaPanel(PlatformApiClient platformApiClient) {
+        this(platformApiClient, null);
+    }
+
+    public PlataformaPanel(PlatformApiClient platformApiClient, mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient) {
         this.platformApiClient = platformApiClient;
+        this.monitoringApiClient = monitoringApiClient;
 
         setLayout(new BorderLayout());
         setBackground(UIHelper.BG_DARK);
@@ -81,13 +87,17 @@ public class PlataformaPanel extends JPanel {
 
         JTabbedPane tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
-        tabbedPane.addTab("Empresas", UIHelper.icon("fas-building", 16, UIHelper.TEXT_LIGHT), createCompaniesTab());
-        tabbedPane.addTab("Assinaturas & Pagamentos", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Empresas", UIHelper.icon("fas-building", 16, UIHelper.ACCENT_BLUE), createCompaniesTab());
+        tabbedPane.addTab("Assinaturas & Pagamentos", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.APPROVED_GREEN),
                 createSubscriptionsTab());
-        tabbedPane.addTab("Utilizadores", UIHelper.icon("fas-users-cog", 16, UIHelper.TEXT_LIGHT), createUsersTab());
-        tabbedPane.addTab("Assistência", UIHelper.icon("fas-headset", 16, UIHelper.TEXT_LIGHT), createSupportTab());
-        tabbedPane.addTab("Versões dos Clientes", UIHelper.icon("fas-code-branch", 16, UIHelper.TEXT_LIGHT),
+        tabbedPane.addTab("Utilizadores", UIHelper.icon("fas-users-cog", 16, UIHelper.ACCENT), createUsersTab());
+        tabbedPane.addTab("Assistência", UIHelper.icon("fas-headset", 16, UIHelper.ACCENT_CYAN), createSupportTab());
+        tabbedPane.addTab("Versões dos Clientes", UIHelper.icon("fas-code-branch", 16, UIHelper.ACCENT_ORANGE),
                 createVersionsTab());
+        if (monitoringApiClient != null) {
+            tabbedPane.addTab("Saúde & Diagnóstico", UIHelper.icon("fas-heartbeat", 16, UIHelper.ACCENT_CYAN),
+                    createMonitoringTab());
+        }
         add(feedback, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -115,18 +125,9 @@ public class PlataformaPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Versões dos Clientes — quem está em quê"), BorderLayout.WEST);
         ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> loadClientVersions());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refresh);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
-
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -144,7 +145,8 @@ public class PlataformaPanel extends JPanel {
         TableFilter.install(versionsTable, search);
         JPanel bar = TableFilter.bar(search);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(bar, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Versões dos Clientes — quem está em quê", bar,
+                refresh), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         versionsSummary = new JLabel(" ");
@@ -187,25 +189,13 @@ public class PlataformaPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Empresas da Plataforma"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Empresa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-pen", 14));
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadCompanies);
         mz.multicore.erp.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCompany)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadCompanies);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(moreBtn);
-        actions.add(editBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCompany);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -232,7 +222,8 @@ public class PlataformaPanel extends JPanel {
         TableFilter.install(companiesTable, cSearch, new TableFilter.ColumnFilter(cEstado, 4));
         JPanel cBar = TableFilter.bar(cSearch, TableFilter.label("Estado:"), cEstado);
         cBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(cBar, BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Empresas da Plataforma", cBar,
+                refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -358,7 +349,7 @@ public class PlataformaPanel extends JPanel {
     /** Selector de logótipo: botão + pré-visualização. Só define bytes quando o utilizador escolhe um. */
     private javax.swing.JComponent logoPicker(byte[][] holder, boolean hasExisting) {
         javax.swing.JLabel preview = new javax.swing.JLabel(hasExisting ? "(logótipo actual definido)" : "(sem logótipo)");
-        javax.swing.JButton pick = new javax.swing.JButton("Escolher imagem…", UIHelper.icon("fas-image", 16));
+        javax.swing.JButton pick = new javax.swing.JButton("Escolher Imagem", UIHelper.icon("fas-image", 16));
         pick.addActionListener(e -> {
             javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
             fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagens (PNG, JPG)", "png", "jpg", "jpeg"));
@@ -405,29 +396,17 @@ public class PlataformaPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Assinaturas & Pagamentos"), BorderLayout.WEST);
-
         ModernButton planBtn = UIHelper.createPrimaryButton("Definir Plano/Validade");
         planBtn.setIcon(UIHelper.icon("fas-sliders-h", 14));
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadSubscriptions);
         mz.multicore.erp.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Ver Pagamentos", UIHelper.icon("fas-receipt", 14), this::showPayments)
-                .addAction("Suspender/Reactivar", UIHelper.icon("fas-power-off", 14), this::toggleSubscriptionStatus)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadSubscriptions);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(moreBtn);
-        actions.add(payBtn);
-        actions.add(planBtn);
-        header.add(actions, BorderLayout.EAST);
+                .addAction("Suspender/Reactivar", UIHelper.icon("fas-power-off", 14), this::toggleSubscriptionStatus);
 
         // Barra Executiva de KPIs de Subscrições
-        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 12, 0));
-        kpiGrid.setOpaque(false);
+        JPanel kpiGrid = KpiCard.createGrid(4);
         subMrrLabel = new JLabel("0,00 MT");
         subActiveLabel = new JLabel("0");
         subRiskLabel = new JLabel("0");
@@ -438,11 +417,7 @@ public class PlataformaPanel extends JPanel {
         kpiGrid.add(KpiCard.createMetricCard("Em Risco / Expiradas", subRiskLabel, "≤ 7 dias ou vencidas", "fas-exclamation-triangle", UIHelper.REJECTED_RED));
         kpiGrid.add(KpiCard.createMetricCard("Pagamentos Registados", subPaymentsLabel, "Histórico liquidado", "fas-receipt", UIHelper.PENDING_YELLOW));
 
-        JPanel topArea = new JPanel(new BorderLayout(0, 12));
-        topArea.setOpaque(false);
-        topArea.add(header, BorderLayout.NORTH);
-        topArea.add(kpiGrid, BorderLayout.CENTER);
-        panel.add(topArea, BorderLayout.NORTH);
+        panel.add(kpiGrid, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -477,7 +452,8 @@ public class PlataformaPanel extends JPanel {
                 new TableFilter.ColumnFilter(sEstado, 2), new TableFilter.ColumnFilter(sPlano, 1));
         JPanel sBar = TableFilter.bar(sSearch, TableFilter.label("Estado:"), sEstado, TableFilter.label("Plano:"), sPlano);
         sBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(sBar, BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Assinaturas & Pagamentos", sBar,
+                refreshBtn, moreBtn, payBtn, planBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
 
         // Gráfico Donut de Planos
@@ -873,30 +849,16 @@ public class PlataformaPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Utilizadores de Todas as Empresas"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Utilizador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
         editBtn.setIcon(UIHelper.icon("fas-pen", 14));
-        ModernButton grantBtn = UIHelper.createPrimaryButton("Conceder/Alterar Acesso");
-        grantBtn.setIcon(UIHelper.icon("fas-user-shield", 14));
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadUsers);
         mz.multicore.erp.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Revogar Acesso", UIHelper.icon("fas-user-slash", 14), this::revokeAccess)
                 .addAction("Repor Senha", UIHelper.icon("fas-key", 14), this::resetPassword)
                 .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleUserActive)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14), this::loadUsers);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(moreBtn);
-        actions.add(grantBtn);
-        actions.add(editBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
+                .addAction("Conceder/Alterar Acesso", UIHelper.icon("fas-user-shield", 14, UIHelper.ACCENT_BLUE), this::grantAccess);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -923,14 +885,13 @@ public class PlataformaPanel extends JPanel {
         TableFilter.install(usersTable, uSearch, new TableFilter.ColumnFilter(uEstado, 3));
         JPanel uBar = TableFilter.bar(uSearch, TableFilter.label("Estado:"), uEstado);
         uBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(uBar, BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Utilizadores de Todas as Empresas", uBar,
+                refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
         newBtn.addActionListener(e -> createPlatformUser());
         editBtn.addActionListener(e -> editUser());
-        grantBtn.addActionListener(e -> grantAccess());
-
         return panel;
     }
 
@@ -1144,24 +1105,12 @@ public class PlataformaPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Pedidos de Assistência"), BorderLayout.WEST);
-
         ModernButton openBtn = UIHelper.createPrimaryButton("Abrir / Responder");
         openBtn.setIcon(UIHelper.icon("fas-comments", 14));
         ModernButton statusBtn = UIHelper.createSecondaryButton("Mudar Estado");
         statusBtn.setIcon(UIHelper.icon("fas-tasks", 14));
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(statusBtn);
-        actions.add(openBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -1190,7 +1139,8 @@ public class PlataformaPanel extends JPanel {
                 new TableFilter.ColumnFilter(tEstado, 4), new TableFilter.ColumnFilter(tPrio, 3));
         JPanel tBar = TableFilter.bar(tSearch, TableFilter.label("Estado:"), tEstado, TableFilter.label("Prioridade:"), tPrio);
         tBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(tBar, BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Pedidos de Assistência", tBar,
+                refreshBtn, statusBtn, openBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
@@ -1304,5 +1254,43 @@ public class PlataformaPanel extends JPanel {
 
     private void showPlatformSuccess(String message) {
         ToastManager.success(this, message);
+    }
+
+    private JPanel createMonitoringTab() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(UIHelper.BG_DARK);
+
+        mz.multicore.erp.gui.components.ModernPanel card = new mz.multicore.erp.gui.components.ModernPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(36, 48, 36, 48));
+
+        JLabel icon = new JLabel(UIHelper.icon("fas-heartbeat", 48, UIHelper.ACCENT_CYAN));
+        icon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(icon);
+        card.add(javax.swing.Box.createVerticalStrut(16));
+
+        JLabel title = new JLabel("Consola de Observabilidade & Diagnóstico");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(UIHelper.TEXT_LIGHT);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(title);
+        card.add(javax.swing.Box.createVerticalStrut(8));
+
+        JLabel desc = new JLabel("<html><center>Monitore em tempo real a integridade da persistência, pool HikariCP,<br>memória JVM, espaço em disco e subsistemas de faturação e auditoria.</center></html>");
+        desc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        desc.setForeground(UIHelper.TEXT_MUTED);
+        desc.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(desc);
+        card.add(javax.swing.Box.createVerticalStrut(24));
+
+        mz.multicore.erp.gui.components.ModernButton btn = new mz.multicore.erp.gui.components.ModernButton(
+                "Abrir Diagnóstico do Sistema", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
+        btn.setIcon(UIHelper.icon("fas-external-link-alt", 14, Color.WHITE));
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.addActionListener(e -> new SystemMonitoringDialog(SwingUtilities.getWindowAncestor(this), monitoringApiClient).show());
+        card.add(btn);
+
+        panel.add(card);
+        return panel;
     }
 }

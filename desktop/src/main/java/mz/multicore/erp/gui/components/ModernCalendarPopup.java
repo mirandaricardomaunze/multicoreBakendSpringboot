@@ -75,10 +75,12 @@ public class ModernCalendarPopup extends JPopupMenu {
         JPanel navPanel = new JPanel(new BorderLayout(6, 0));
         navPanel.setOpaque(false);
 
-        JButton prevBtn = createNavButton("‹", "Mês anterior");
+        JButton prevBtn = createNavButton("", "Mes anterior");
+        prevBtn.setIcon(UIHelper.icon("fas-chevron-left", 11));
         prevBtn.addActionListener(e -> stepMonth(-1));
 
-        JButton nextBtn = createNavButton("›", "Mês seguinte");
+        JButton nextBtn = createNavButton("", "Mes seguinte");
+        nextBtn.setIcon(UIHelper.icon("fas-chevron-right", 11));
         nextBtn.addActionListener(e -> stepMonth(1));
 
         monthCombo = new JComboBox<>(MONTH_NAMES);

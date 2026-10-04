@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.platform.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.AuthSessionService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -86,7 +87,7 @@ class PlatformUserServiceTest {
         u.grantCompany(company(2L), "ADMIN");
         when(appUserRepository.findByUsername("ana")).thenReturn(Optional.of(u));
         when(companyRepository.findById(2L)).thenReturn(Optional.of(company(2L)));
-        when(companyAccessRepository.countByCompanyIdAndRoleIgnoreCase(2L, "ADMIN")).thenReturn(1L);
+        when(companyAccessRepository.countActiveByCompanyIdAndRole(2L, "ADMIN")).thenReturn(1L);
 
         assertThrows(BusinessRuleException.class, () -> service.revokeAccess("ana", 2L));
         assertTrue(u.hasCompany(2L)); // continua com acesso
@@ -98,7 +99,7 @@ class PlatformUserServiceTest {
         u.grantCompany(company(2L), "ADMIN");
         when(appUserRepository.findByUsername("ana")).thenReturn(Optional.of(u));
         when(companyRepository.findById(2L)).thenReturn(Optional.of(company(2L)));
-        when(companyAccessRepository.countByCompanyIdAndRoleIgnoreCase(2L, "ADMIN")).thenReturn(2L);
+        when(companyAccessRepository.countActiveByCompanyIdAndRole(2L, "ADMIN")).thenReturn(2L);
 
         service.revokeAccess("ana", 2L);
         assertFalse(u.hasCompany(2L));
@@ -110,5 +111,22 @@ class PlatformUserServiceTest {
         CurrentUserContext.setCurrentUser("joao", "MANAGER");
         assertThrows(BusinessRuleException.class, () -> service.listUsers());
         verifyNoInteractions(appUserRepository);
+    }
+
+    @Test
+    void resetPassword_revokesExistingSessions() {
+        AppUser target = user("ana", false);
+        AuthSessionService sessions = new AuthSessionService();
+        String token = sessions.create(target).token();
+        when(appUserRepository.findByUsername("ana")).thenReturn(Optional.of(target));
+        PasswordEncoder encoder = mock(PasswordEncoder.class);
+        when(encoder.encode("nova-senha")).thenReturn("hash-novo");
+        PlatformUserService withSessions = new PlatformUserService(appUserRepository, companyAccessRepository,
+                companyRepository, encoder, mock(AuditLogService.class), sessions);
+
+        withSessions.resetPassword("ana", "nova-senha");
+
+        assertEquals("hash-novo", target.getPassword());
+        assertThrows(BusinessRuleException.class, () -> sessions.requireValid(token));
     }
 }

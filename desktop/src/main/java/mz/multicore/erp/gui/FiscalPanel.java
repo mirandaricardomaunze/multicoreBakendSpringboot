@@ -15,6 +15,7 @@ import mz.multicore.erp.gui.components.DecimalField;
 import mz.multicore.erp.gui.components.FormField;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.modules.fiscal.dto.CreateTaxRateRequest;
 import mz.multicore.erp.modules.fiscal.dto.CreateWithholdingRequest;
 import mz.multicore.erp.modules.fiscal.dto.IvaSummaryDTO;
@@ -22,7 +23,6 @@ import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
 import mz.multicore.erp.modules.fiscal.dto.WithholdingRecordDTO;
 import mz.multicore.erp.modules.fiscal.dto.FiscalSalesExportDTO;
 import mz.multicore.erp.desktop.client.FiscalApiClient;
-import mz.multicore.erp.modules.printing.PdfFileSaver;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -82,11 +82,11 @@ public class FiscalPanel extends JPanel {
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
-        tabs.addTab("Apuramento IVA",   UIHelper.icon("fas-percent", 16, UIHelper.TEXT_LIGHT),       buildIvaTab());
-        tabs.addTab("Taxas Fiscais",    UIHelper.icon("fas-balance-scale", 16, UIHelper.TEXT_LIGHT), buildTaxRatesTab());
-        tabs.addTab("Retenções na Fonte", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), buildWithholdingsTab());
-        tabs.addTab("IRPS & INSS Salarial", UIHelper.icon("fas-users-cog", 16, UIHelper.TEXT_LIGHT), buildPayrollFiscalTab());
-        tabs.addTab("Declarações",      UIHelper.icon("fas-file-pdf", 16, UIHelper.TEXT_LIGHT),      buildDeclarationsTab());
+        tabs.addTab("Apuramento IVA",   UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL),       buildIvaTab());
+        tabs.addTab("Taxas Fiscais",    UIHelper.icon("fas-balance-scale", 16, UIHelper.ACCENT_BLUE), buildTaxRatesTab());
+        tabs.addTab("Retenções na Fonte", UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.APPROVED_GREEN), buildWithholdingsTab());
+        tabs.addTab("IRPS & INSS Salarial", UIHelper.icon("fas-users-cog", 16, UIHelper.ACCENT), buildPayrollFiscalTab());
+        tabs.addTab("Declarações",      UIHelper.icon("fas-file-pdf", 16, UIHelper.REJECTED_RED),      buildDeclarationsTab());
 
         add(tabs, BorderLayout.CENTER);
     }
@@ -129,7 +129,11 @@ public class FiscalPanel extends JPanel {
         controls.add(Box.createRigidArea(new Dimension(20, 0)));
         controls.add(payrollIrpsLabel);
         controls.add(payrollInssLabel);
-        tab.add(controls, BorderLayout.NORTH);
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        controls.setBorder(new EmptyBorder(0, 0, 12, 0));
+        card.add(controls, BorderLayout.NORTH);
 
         payrollFiscalModel = new DefaultTableModel(
                 new String[]{"Nº", "Colaborador", "NUIT", "Nº INSS", "Bruto", "Tributável", "IRPS", "INSS Trab.", "INSS Patronal"}, 0) {
@@ -142,7 +146,8 @@ public class FiscalPanel extends JPanel {
         }
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        tab.add(scroll, BorderLayout.CENTER);
+        card.add(scroll, BorderLayout.CENTER);
+        tab.add(card, BorderLayout.CENTER);
         return tab;
     }
 
@@ -172,8 +177,8 @@ public class FiscalPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.runWithProgress(this, "A gerar mapa fiscal…",
                 () -> fiscalApiClient.renderPayrollFiscalMap(companyId, year, month),
-                pdf -> PdfFileSaver.saveAndOpen(pdf,
-                        "mapa-fiscal-salarial-" + year + "-" + String.format("%02d", month)),
+                pdf -> PrintPreviewDialog.show(this, pdf,
+                        "mapa-fiscal-salarial-" + year + "-" + String.format("%02d", month) + ".pdf"),
                 error -> showActionError(error));
     }
 
@@ -226,8 +231,7 @@ public class FiscalPanel extends JPanel {
         center.setOpaque(false);
 
         // Standardized KPI cards (4 columns)
-        JPanel kpis = new JPanel(new GridLayout(1, 4, 12, 0));
-        kpis.setOpaque(false);
+        JPanel kpis = KpiCard.createGrid(4);
         ivaOutputLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
         ivaSalesSubLbl = new JLabel("Base: 0,00 MT", SwingConstants.LEFT);
         ivaInputLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
@@ -242,7 +246,7 @@ public class FiscalPanel extends JPanel {
         kpis.add(KpiCard.createMetricCard("IVA DEDUZIDO (COMPRAS)", ivaInputLbl, ivaPurchasesSubLbl,
                 "fas-arrow-trend-down", UIHelper.KPI_INFO_DARK));
         kpis.add(KpiCard.createMetricCard("CRÉDITO ANTERIOR", ivaPreviousCreditLbl, ivaPrevCreditSubLbl,
-                "fas-history", UIHelper.TEXT_MUTED));
+                "fas-history", UIHelper.ACCENT_BLUE));
         kpis.add(KpiCard.createMetricCard("SALDO FISCAL LÍQUIDO", ivaNetLbl, ivaStatusSubLbl,
                 "fas-scale-balanced", UIHelper.APPROVED_GREEN));
         center.add(kpis, BorderLayout.NORTH);
@@ -349,8 +353,8 @@ public class FiscalPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.runWithProgress(this, "A gerar declaração de IVA…",
                 () -> fiscalApiClient.renderIvaDeclaration(companyId, year, month, prevCredit),
-                pdf -> PdfFileSaver.saveAndOpen(pdf,
-                        "declaracao-iva-" + year + "-" + String.format("%02d", month)),
+                pdf -> PrintPreviewDialog.show(this, pdf,
+                        "declaracao-iva-" + year + "-" + String.format("%02d", month) + ".pdf"),
                 this::showActionError);
     }
 
@@ -372,10 +376,9 @@ public class FiscalPanel extends JPanel {
             UIHelper.runWithProgress(this, "A gravar SAF-T…", () -> {
                 java.nio.file.Files.writeString(target.toPath(), export.xml());
                 return target;
-            }, file -> JOptionPane.showMessageDialog(this,
-                    "Exportação SAF-T gravada (" + export.numberOfInvoices() + " faturas).\n"
-                            + "Total: " + String.format("%,.2f MT", export.totalGross()) + "\n"
-                            + file.getAbsolutePath(), "SAF-T Exportado", JOptionPane.INFORMATION_MESSAGE),
+            }, file -> ToastManager.success(this,
+                    "Exportação SAF-T gravada (" + export.numberOfInvoices() + " facturas), total "
+                            + String.format("%,.2f MT", export.totalGross()) + ": " + file.getAbsolutePath()),
                     this::showActionError);
         }, this::showActionError);
     }
@@ -388,12 +391,11 @@ public class FiscalPanel extends JPanel {
         UIHelper.runWithProgress(this, "A validar SAF-T…",
                 () -> fiscalApiClient.validateSaft(companyId, ym.atDay(1), ym.atEndOfMonth()), r -> {
             if (!r.xsdConfigured()) {
-                JOptionPane.showMessageDialog(this, r.message(), "Validação SAF-T", JOptionPane.WARNING_MESSAGE);
+                ToastManager.show(this, FeedbackType.WARNING, r.message());
                 return;
             }
             if (r.valid()) {
-                JOptionPane.showMessageDialog(this, "SAF-T válido face à XSD.", "Validação SAF-T",
-                        JOptionPane.INFORMATION_MESSAGE);
+                ToastManager.success(this, "SAF-T válido face à XSD.");
                 return;
             }
             StringBuilder sb = new StringBuilder(r.message()).append("\n\n");
@@ -415,10 +417,6 @@ public class FiscalPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Tabela de Taxas Fiscais"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Taxa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
@@ -431,14 +429,6 @@ public class FiscalPanel extends JPanel {
             if (sel != null) openTaxRateDialog(sel);
         });
         toggleBtn.addActionListener(e -> toggleSelectedTaxRate());
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(toggleBtn);
-        actions.add(editBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -458,7 +448,9 @@ public class FiscalPanel extends JPanel {
         TableFilter.install(taxRatesTable, trSearch, new TableFilter.ColumnFilter(trEstado, 5));
         JPanel trBar = TableFilter.bar(trSearch, TableFilter.label("Estado:"), trEstado);
         trBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(trBar, BorderLayout.NORTH);
+        ModernButton trRefreshBtn = UIHelper.createRefreshButton(this::loadTaxRates);
+        card.add(UIHelper.tableCardTop("Tabela de Taxas Fiscais", trBar,
+                trRefreshBtn, toggleBtn, editBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -487,7 +479,7 @@ public class FiscalPanel extends JPanel {
     private TaxRateDTO selectedTaxRate() {
         int row = TableFilter.selectedModelRow(taxRatesTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma taxa.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma taxa.");
             return null;
         }
         return taxRatesList.get(row);
@@ -560,10 +552,6 @@ public class FiscalPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Retenções na Fonte"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Registar Retenção");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton deliverBtn = UIHelper.createSuccessButton("Marcar como Entregue");
@@ -573,14 +561,6 @@ public class FiscalPanel extends JPanel {
         newBtn.addActionListener(e -> openWithholdingDialog());
         deliverBtn.addActionListener(e -> deliverWithholding());
         deleteBtn.addActionListener(e -> deleteWithholding());
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(deleteBtn);
-        actions.add(deliverBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -611,7 +591,9 @@ public class FiscalPanel extends JPanel {
                 TableFilter.label("Estado:"), whEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), whPeriodo);
         whBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(whBar, BorderLayout.NORTH);
+        ModernButton whRefreshBtn = UIHelper.createRefreshButton(this::loadWithholdings);
+        card.add(UIHelper.tableCardTop("Retenções na Fonte", whBar,
+                whRefreshBtn, deleteBtn, deliverBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -645,14 +627,14 @@ public class FiscalPanel extends JPanel {
     }
 
     private void showLoadError(String area, Throwable error) {
-        JOptionPane.showMessageDialog(this, "Não foi possível carregar " + area + ": " + error.getMessage(),
-                "Erro de ligação", JOptionPane.ERROR_MESSAGE);
+        ToastManager.show(this, FeedbackType.ERROR,
+                "Não foi possível carregar " + area + ": " + error.getMessage());
     }
 
     private WithholdingRecordDTO selectedWithholding() {
         int row = TableFilter.selectedModelRow(withholdingsTable);
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione um registo.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione um registo.");
             return null;
         }
         return withholdingsList.get(row);
@@ -725,7 +707,7 @@ public class FiscalPanel extends JPanel {
     }
 
     private void showActionError(Throwable error) {
-        JOptionPane.showMessageDialog(this, "Erro: " + error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        ToastManager.show(this, FeedbackType.ERROR, "Erro: " + error.getMessage());
     }
 
     // ─── Tab 4: Declarações ───────────────────────────────────────────────

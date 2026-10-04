@@ -21,4 +21,13 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
             + "where q.id = :id and q.company.id = :companyId")
     Optional<Quotation> findByIdWithLinesAndCompanyId(@Param("id") Long id,
                                                        @Param("companyId") Long companyId);
+
+    @Query("select distinct q from Quotation q left join fetch q.lines "
+            + "where q.company.id = :companyId and q.status in (mz.multicore.erp.modules.comercial.model.QuotationStatus.DRAFT, "
+            + "mz.multicore.erp.modules.comercial.model.QuotationStatus.SENT, "
+            + "mz.multicore.erp.modules.comercial.model.QuotationStatus.ACCEPTED) "
+            + "order by q.quotationDate desc")
+    List<Quotation> findOpenByCompanyIdWithLines(@Param("companyId") Long companyId);
+
+    Optional<Quotation> findByIdAndCompanyId(Long id, Long companyId);
 }

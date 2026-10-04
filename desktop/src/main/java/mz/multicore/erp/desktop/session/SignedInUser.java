@@ -46,4 +46,24 @@ public final class SignedInUser {
     public static boolean isSuperAdmin() {
         return SUPERADMIN.equals(role());
     }
+
+    public static boolean canAccessForensicAudit() {
+        return isManagerOrAdmin();
+    }
+
+    public static boolean canAccessCashFlowForecast() {
+        return isManagerOrAdmin();
+    }
+
+    public static boolean canAccessSystemMonitoring() {
+        return isAdmin();
+    }
+
+    public static boolean canApproveStockWaste() {
+        return isManagerOrAdmin();
+    }
+
+    public static boolean canManageCompanySettings() {
+        return isAdmin();
+    }
 }

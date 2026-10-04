@@ -49,7 +49,7 @@ public class PlatformCompanyController {
     }
 
     @PatchMapping("/{id}/active")
-    public PlatformCompanyDTO setActive(@PathVariable Long id, @RequestBody SetActiveRequest request) {
+    public PlatformCompanyDTO setActive(@PathVariable Long id, @RequestBody @Valid SetActiveRequest request) {
         return platformCompanyService.setCompanyActive(id, request.active());
     }
 

@@ -48,7 +48,7 @@ class ReceiptPrintServiceTest {
         assertEquals("2.5 x 125,00 MT",
                 ReceiptPrintService.lineDetailsLabel(line, DocumentColumnsDTO.all()));
         DocumentColumnsDTO quantityOnly = new DocumentColumnsDTO(
-                true, true, true, true, true, false, true, true, null);
+                true, true, true, true, true, false, false, false, false, true, true, null);
         assertEquals("Qtd: 2.5", ReceiptPrintService.lineDetailsLabel(line, quantityOnly));
     }
 

@@ -23,14 +23,50 @@ public class AppUserService {
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
     private final AppUserCompanyAccessRepository companyAccessRepository;
+    private final mz.multicore.erp.architecture.security.ManagerPinRateLimiter managerPinRateLimiter;
+    private final mz.multicore.erp.modules.audit.service.AuditLogService auditLogService;
+    private final mz.multicore.erp.architecture.security.AuthSessionService authSessionService;
 
     public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
                           CompanyRepository companyRepository,
                           AppUserCompanyAccessRepository companyAccessRepository) {
+        this(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository,
+                new mz.multicore.erp.architecture.security.ManagerPinRateLimiter(3, 5), null);
+    }
+
+    public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
+                          CompanyRepository companyRepository,
+                          AppUserCompanyAccessRepository companyAccessRepository,
+                          mz.multicore.erp.architecture.security.ManagerPinRateLimiter managerPinRateLimiter) {
+        this(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository,
+                managerPinRateLimiter, null);
+    }
+
+    public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
+                          CompanyRepository companyRepository,
+                          AppUserCompanyAccessRepository companyAccessRepository,
+                          mz.multicore.erp.architecture.security.ManagerPinRateLimiter managerPinRateLimiter,
+                          mz.multicore.erp.modules.audit.service.AuditLogService auditLogService) {
+        this(appUserRepository, passwordEncoder, companyRepository, companyAccessRepository,
+                managerPinRateLimiter, auditLogService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AppUserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
+                          CompanyRepository companyRepository,
+                          AppUserCompanyAccessRepository companyAccessRepository,
+                          mz.multicore.erp.architecture.security.ManagerPinRateLimiter managerPinRateLimiter,
+                          mz.multicore.erp.modules.audit.service.AuditLogService auditLogService,
+                          mz.multicore.erp.architecture.security.AuthSessionService authSessionService) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.companyRepository = companyRepository;
         this.companyAccessRepository = companyAccessRepository;
+        this.managerPinRateLimiter = managerPinRateLimiter != null
+                ? managerPinRateLimiter
+                : new mz.multicore.erp.architecture.security.ManagerPinRateLimiter(3, 5);
+        this.auditLogService = auditLogService;
+        this.authSessionService = authSessionService;
     }
 
     @Transactional(readOnly = true)
@@ -48,22 +84,19 @@ public class AppUserService {
     @Transactional
     public AppUser authenticate(String username, String password) {
         AppUser user = appUserRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+                .orElseThrow(() -> new BusinessRuleException("Utilizador ou senha incorrectos."));
 
         if (!user.isActive()) {
-            throw new BusinessRuleException("Utilizador inativo.");
+            throw new BusinessRuleException("Utilizador ou senha incorrectos.");
         }
 
         String stored = user.getPassword();
         boolean ok;
         if (isBcryptHash(stored)) {
             ok = passwordEncoder.matches(password, stored);
-            if (!ok && "admin".equalsIgnoreCase(username) && ("password".equals(password) || "admin".equals(password))) {
-                ok = true;
-            }
         } else {
             // Migração suave: password legada em texto-plano. Aceita uma vez e re-encripta.
-            ok = stored.equals(password) || ("admin".equalsIgnoreCase(username) && ("password".equals(password) || "admin".equals(password)));
+            ok = stored != null && stored.equals(password);
             if (ok) {
                 user.setPassword(passwordEncoder.encode(password));
                 appUserRepository.save(user);
@@ -71,7 +104,7 @@ public class AppUserService {
         }
 
         if (!ok) {
-            throw new BusinessRuleException("Senha incorreta.");
+            throw new BusinessRuleException("Utilizador ou senha incorrectos.");
         }
         return user;
     }
@@ -96,7 +129,11 @@ public class AppUserService {
         user.grantCompany(company, normalizedRole);
         user.setCreatedBy(CurrentUserContext.getUsername());
 
-        return appUserRepository.save(user);
+        AppUser saved = appUserRepository.save(user);
+        if (auditLogService != null) {
+            auditLogService.logCurrent("USER_CREATE", "Criado utilizador " + username + " com perfil " + normalizedRole);
+        }
+        return saved;
     }
 
     @Transactional
@@ -143,17 +180,136 @@ public class AppUserService {
 
         boolean removingAdmin = "ADMIN".equalsIgnoreCase(access.getRole())
                 && !"ADMIN".equals(normalizedRole);
-        if (removingAdmin && companyAccessRepository.countByCompanyIdAndRoleIgnoreCase(companyId, "ADMIN") <= 1) {
+        if (removingAdmin && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {
             throw new BusinessRuleException("A empresa deve manter pelo menos um administrador.");
         }
 
+        String oldRole = access.getRole();
         access.setRole(normalizedRole);
-        return appUserRepository.save(user);
+        AppUser saved = appUserRepository.save(user);
+        if (auditLogService != null) {
+            auditLogService.logCurrent("USER_ROLE_CHANGE",
+                    "Perfil do utilizador " + username + " na empresa " + companyId + " alterado de " + oldRole + " para " + normalizedRole);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public void setManagerPin(String username, String pin) {
+        requireAdmin();
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        if (pin == null || pin.trim().length() != 4 || !pin.trim().matches("\\d{4}")) {
+            throw new BusinessRuleException("O PIN de gestor deve conter exatamente 4 dígitos numéricos.");
+        }
+        AppUser user = appUserRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+        requireManagedUser(user, companyId);
+        user.setManagerPinHash(passwordEncoder.encode(pin.trim()));
+        appUserRepository.save(user);
+        if (auditLogService != null) {
+            auditLogService.logCurrent("USER_PIN_SET",
+                    "Definido/atualizado PIN de gestor para utilizador " + username);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse verifyManagerPin(String pin) {
+        return verifyManagerPin(pin, "local");
+    }
+
+    @Transactional(readOnly = true)
+    public mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse verifyManagerPin(String pin, String clientIp) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (managerPinRateLimiter.isLocked(companyId, clientIp)) {
+            long remaining = managerPinRateLimiter.getRemainingLockMinutes(companyId, clientIp);
+            return new mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse(
+                    false, null, "Demasiadas tentativas de PIN incorreto. Bloqueado por " + remaining + " minuto(s) para protecção de segurança.");
+        }
+
+        if (pin == null || pin.trim().length() != 4) {
+            managerPinRateLimiter.recordFailure(companyId, clientIp);
+            long remaining = managerPinRateLimiter.getRemainingLockMinutes(companyId, clientIp);
+            if (remaining > 0) {
+                return new mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse(
+                        false, null, "Demasiadas tentativas de PIN incorreto. Bloqueado por " + remaining + " minuto(s) para protecção de segurança.");
+            }
+            return new mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse(false, null, "PIN deve ter 4 dígitos.");
+        }
+
+        List<AppUser> users = companyId != null
+                ? appUserRepository.findDistinctByCompanyAccessesCompanyIdOrderByName(companyId)
+                : appUserRepository.findAll();
+
+        for (AppUser u : users) {
+            if (u.isActive() && u.getManagerPinHash() != null) {
+                String role = u.getRoleForCompany(companyId);
+                if (("ADMIN".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role))
+                        && passwordEncoder.matches(pin.trim(), u.getManagerPinHash())) {
+                    managerPinRateLimiter.recordSuccess(companyId, clientIp);
+                    return new mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse(true, u.getName(), "PIN de " + u.getName() + " verificado com sucesso.");
+                }
+            }
+        }
+        managerPinRateLimiter.recordFailure(companyId, clientIp);
+        long remaining = managerPinRateLimiter.getRemainingLockMinutes(companyId, clientIp);
+        if (remaining > 0) {
+            return new mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse(
+                    false, null, "Demasiadas tentativas de PIN incorreto. Bloqueado por " + remaining + " minuto(s) para protecção de segurança.");
+        }
+        return new mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs.VerifyManagerPinResponse(false, null, "PIN de gestor incorreto ou sem privilégios.");
+    }
+
+    @Transactional
+    public void resetPassword(String username, String newPassword) {
+        requireAdmin();
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 4) {
+            throw new BusinessRuleException("A nova senha deve ter pelo menos 4 caracteres.");
+        }
+        AppUser user = appUserRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+        requireManagedUser(user, companyId);
+        user.setPassword(passwordEncoder.encode(newPassword));
+        appUserRepository.save(user);
+        if (authSessionService != null) {
+            authSessionService.revokeUser(user.getUsername());
+        }
+        if (auditLogService != null) {
+            auditLogService.logCurrent("USER_PASSWORD_RESET",
+                    "Reposta senha do utilizador " + username);
+        }
+    }
+
+    @Transactional
+    public AppUser toggleUserStatus(String username, boolean active) {
+        requireAdmin();
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        AppUser user = appUserRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+        AppUserCompanyAccess access = user.findCompanyAccess(companyId)
+                .orElseThrow(() -> new BusinessRuleException("O utilizador não pertence à empresa ativa."));
+        if (!active && user.isActive() && "ADMIN".equalsIgnoreCase(access.getRole())
+                && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {
+            throw new BusinessRuleException("Não é possível desativar o único administrador da empresa.");
+        }
+        user.setActive(active);
+        AppUser saved = appUserRepository.save(user);
+        if (auditLogService != null) {
+            auditLogService.logCurrent("USER_STATUS_CHANGE",
+                    "Estado do utilizador " + username + " alterado para " + (active ? "ATIVO" : "INATIVO"));
+        }
+        return saved;
     }
 
     private void requireAdmin() {
         if (!"ADMIN".equalsIgnoreCase(CurrentUserContext.getRole())) {
             throw new BusinessRuleException("Apenas administradores podem gerir utilizadores.");
+        }
+    }
+
+    private void requireManagedUser(AppUser user, Long companyId) {
+        if (user.isPlatformAdmin() || user.findCompanyAccess(companyId).isEmpty()) {
+            throw new BusinessRuleException("O utilizador não pertence à empresa activa.");
         }
     }
 

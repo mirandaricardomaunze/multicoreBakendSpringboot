@@ -6,13 +6,28 @@ import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Point;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-/** Banner contextual reutilizavel para erro, aviso ou informacao dentro do proprio fluxo. */
+/**
+ * Banner contextual reutilizável para erro, aviso ou informação dentro do próprio fluxo.
+ * Suporta fecho manual pelo utilizador e fecho automático temporizado (com pausa ao passar o rato).
+ */
 public final class InlineFeedbackPanel extends JPanel {
+
+    public static final int DURATION_SUCCESS_MS = 5000;
+    public static final int DURATION_INFO_MS = 5000;
+    public static final int DURATION_WARNING_MS = 7000;
+    public static final int DURATION_ERROR_MS = 8000;
 
     private final JLabel icon = new JLabel();
     private final JLabel title = new JLabel();
@@ -20,6 +35,10 @@ public final class InlineFeedbackPanel extends JPanel {
     private final ModernButton actionButton = UIHelper.createSecondaryButton("Tentar novamente");
     private final ModernButton closeButton = UIHelper.createIconButton("Fechar mensagem", "fas-times");
     private FeedbackType type = FeedbackType.INFO;
+
+    private Timer autoCloseTimer;
+    private boolean autoCloseEnabled = true;
+    private boolean hovered = false;
 
     public InlineFeedbackPanel() {
         setLayout(new BorderLayout(12, 0));
@@ -37,10 +56,15 @@ public final class InlineFeedbackPanel extends JPanel {
         text.add(Box.createVerticalStrut(2));
         text.add(message);
 
+        closeButton.setPreferredSize(new Dimension(28, 28));
+        closeButton.setMinimumSize(new Dimension(28, 28));
+        closeButton.setToolTipText("Fechar mensagem");
+        closeButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeButton.addActionListener(e -> clear());
+
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         actions.setOpaque(false);
         actionButton.setVisible(false);
-        closeButton.addActionListener(e -> clear());
         actions.add(actionButton);
         actions.add(closeButton);
 
@@ -49,6 +73,18 @@ public final class InlineFeedbackPanel extends JPanel {
         add(actions, BorderLayout.EAST);
         setVisible(false);
         getAccessibleContext().setAccessibleName("Mensagem de estado");
+
+        installHoverListeners(this);
+    }
+
+    public static int defaultDurationFor(FeedbackType feedbackType) {
+        if (feedbackType == null) return DURATION_INFO_MS;
+        return switch (feedbackType) {
+            case SUCCESS -> DURATION_SUCCESS_MS;
+            case INFO -> DURATION_INFO_MS;
+            case WARNING -> DURATION_WARNING_MS;
+            case ERROR -> DURATION_ERROR_MS;
+        };
     }
 
     @Override
@@ -58,12 +94,22 @@ public final class InlineFeedbackPanel extends JPanel {
     }
 
     public void show(FeedbackType feedbackType, String detail) {
-        show(feedbackType, feedbackType.title(), detail, null, null);
+        show(feedbackType, feedbackType == null ? null : feedbackType.title(), detail, null, null, defaultDurationFor(feedbackType));
+    }
+
+    public void show(FeedbackType feedbackType, String detail, int autoCloseDurationMs) {
+        show(feedbackType, feedbackType == null ? null : feedbackType.title(), detail, null, null, autoCloseDurationMs);
     }
 
     public void show(FeedbackType feedbackType, String heading, String detail,
                      String actionLabel, Runnable action) {
+        show(feedbackType, heading, detail, actionLabel, action, defaultDurationFor(feedbackType));
+    }
+
+    public void show(FeedbackType feedbackType, String heading, String detail,
+                     String actionLabel, Runnable action, int autoCloseDurationMs) {
         Runnable update = () -> {
+            stopAutoCloseTimer();
             type = feedbackType == null ? FeedbackType.INFO : feedbackType;
             title.setText(safe(heading, type.title()));
             message.setText(toHtml(safe(detail, "Ocorreu um problema inesperado.")));
@@ -80,11 +126,37 @@ public final class InlineFeedbackPanel extends JPanel {
                 getParent().revalidate();
                 getParent().repaint();
             }
+
+            if (autoCloseEnabled && autoCloseDurationMs > 0) {
+                startAutoCloseTimer(autoCloseDurationMs);
+            }
         };
         if (SwingUtilities.isEventDispatchThread()) update.run(); else SwingUtilities.invokeLater(update);
     }
 
+    private void startAutoCloseTimer(int durationMs) {
+        stopAutoCloseTimer();
+        autoCloseTimer = new Timer(durationMs, e -> {
+            if (!hovered) {
+                clear();
+            }
+        });
+        autoCloseTimer.setRepeats(false);
+        if (!hovered) {
+            autoCloseTimer.start();
+        }
+    }
+
+    public void stopAutoCloseTimer() {
+        if (autoCloseTimer != null) {
+            autoCloseTimer.stop();
+            autoCloseTimer = null;
+        }
+    }
+
     public void clear() {
+        stopAutoCloseTimer();
+        hovered = false;
         setVisible(false);
         actionButton.setVisible(false);
         revalidate();
@@ -97,6 +169,44 @@ public final class InlineFeedbackPanel extends JPanel {
     public FeedbackType feedbackType() { return type; }
     public String messageText() { return message.getText(); }
     public boolean hasAction() { return actionButton.isVisible(); }
+    public boolean isAutoCloseEnabled() { return autoCloseEnabled; }
+    public void setAutoCloseEnabled(boolean autoCloseEnabled) {
+        this.autoCloseEnabled = autoCloseEnabled;
+        if (!autoCloseEnabled) {
+            stopAutoCloseTimer();
+        }
+    }
+    public Timer getAutoCloseTimer() { return autoCloseTimer; }
+    public boolean isHovered() { return hovered; }
+    public ModernButton getCloseButton() { return closeButton; }
+
+    private void installHoverListeners(Component c) {
+        c.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                hovered = true;
+                if (autoCloseTimer != null && autoCloseTimer.isRunning()) {
+                    autoCloseTimer.stop();
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                Point p = SwingUtilities.convertPoint(c, e.getPoint(), InlineFeedbackPanel.this);
+                if (!contains(p)) {
+                    hovered = false;
+                    if (autoCloseTimer != null && isVisible() && autoCloseEnabled) {
+                        autoCloseTimer.restart();
+                    }
+                }
+            }
+        });
+        if (c instanceof java.awt.Container container) {
+            for (Component child : container.getComponents()) {
+                installHoverListeners(child);
+            }
+        }
+    }
 
     private void applyVisualStyle() {
         title.setForeground(type.color());

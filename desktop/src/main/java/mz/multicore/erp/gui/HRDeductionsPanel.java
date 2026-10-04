@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -50,31 +51,14 @@ final class HRDeductionsPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Descontos, Adiantamentos e Empréstimos"), BorderLayout.WEST);
-
-        ModernButton advanceBtn = UIHelper.createPrimaryButton("Adiantamento");
-        advanceBtn.setIcon(UIHelper.icon("fas-hand-holding-usd", 14));
-        advanceBtn.addActionListener(e -> openDialog("ADIANTAMENTO"));
-        ModernButton loanBtn = UIHelper.createPrimaryButton("Empréstimo");
-        loanBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        loanBtn.addActionListener(e -> openDialog("EMPRESTIMO"));
-        ModernButton recurringBtn = UIHelper.createSecondaryButton("Desconto Recorrente");
-        recurringBtn.setIcon(UIHelper.icon("fas-redo", 14));
-        recurringBtn.addActionListener(e -> openDialog("RECORRENTE"));
         ModernButton stopBtn = UIHelper.createDangerButton("Desactivar");
         stopBtn.setIcon(UIHelper.icon("fas-ban", 14));
         stopBtn.addActionListener(e -> deactivate());
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(stopBtn);
-        actions.add(recurringBtn);
-        actions.add(loanBtn);
-        actions.add(advanceBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        ActionMenuButton newDeductionBtn = UIHelper.createActionMenuButton("Novo Desconto")
+                .addAction("Adiantamento Salarial", UIHelper.icon("fas-hand-holding-usd", 14), () -> openDialog("ADIANTAMENTO"))
+                .addAction("Empréstimo", UIHelper.icon("fas-file-invoice-dollar", 14), () -> openDialog("EMPRESTIMO"))
+                .addAction("Desconto Recorrente", UIHelper.icon("fas-redo", 14), () -> openDialog("RECORRENTE"));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -109,7 +93,9 @@ final class HRDeductionsPanel {
                 TableFilter.label("Estado:"), estado);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        card.add(bar, BorderLayout.NORTH);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+        card.add(UIHelper.tableCardTop("Descontos, Adiantamentos e Empréstimos", bar,
+                refreshBtn, stopBtn, newDeductionBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

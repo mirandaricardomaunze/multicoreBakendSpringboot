@@ -4,12 +4,12 @@
 > comerciais (Fatura, Encomenda, Nota de Crédito, Guia de Remessa) — que partilham o
 > `LineItemsTableRenderer`.
 
-**Última actualização:** 2026-07-04
+**Última actualização:** 2026-09-25
 
 ## Problema
 
-A tabela de linhas dos documentos tinha **8 colunas fixas** (Cód. Barras · Referência · Descrição ·
-Validade · Qtd · Preço Unit. · IVA · Subtotal). Cada loja tem preferências diferentes (ex.: não
+A tabela de linhas dos documentos tinha **11 colunas fixas** (Código · Referência · Descrição ·
+Validade · Quantidade · Embalagens · Caixas · % da Caixa · Preço Unitário · IVA · Subtotal). Cada loja tem preferências diferentes (ex.: não
 quer mostrar código de barras nem validade na fatura ao cliente). Não havia forma de configurar.
 
 ## Decisão
@@ -17,11 +17,13 @@ quer mostrar código de barras nem validade na fatura ao cliente). Não havia fo
 - **Âmbito:** documentos **comerciais** que usam `LineItemsTableRenderer` (Fatura, Encomenda, NC,
   Guia). **Só mostrar/ocultar** colunas (sem reordenar nesta iteração).
 - **Novo módulo `documents`** (SOLID, scaffold `multicore-new-module`):
-  - `DocumentColumnConfig` (entidade, extends `BaseEntity`) — **uma linha por empresa**, 8 flags
+  - `DocumentColumnConfig` (entidade, extends `BaseEntity`) — **uma linha por empresa e tipo**, 11 flags
     booleanas (`show_barcode`, `show_reference`, `show_description`, `show_expiry`, `show_quantity`,
-    `show_unit_price`, `show_tax`, `show_subtotal`), todas default `true`. Migração `V22`.
+    `show_packages`, `show_boxes`, `show_box_percentage`, `show_unit_price`, `show_tax`,
+    `show_subtotal`), todas default `true`. Embalagens/% são acrescentadas pela migração `V69` e
+    Caixas pela migração aditiva `V72`.
   - `DocumentColumnConfigRepository` (`findByCompanyId`).
-  - `DocumentColumnsDTO` (record, 8 booleanos) — valor de fronteira; `DocumentColumnsDTO.all()`.
+  - `DocumentColumnsDTO` (record, 11 booleanos) — valor de fronteira; `DocumentColumnsDTO.all()`.
   - `DocumentConfigService`: `getColumns(companyId)` (default `all()` se não existir);
     `save(companyId, dto)` (**MANAGER/ADMIN** + guarda multi-tenant + auditoria
     `DOCUMENT_COLUMNS_UPDATE`; recusa esconder **todas** as colunas).
@@ -33,7 +35,7 @@ quer mostrar código de barras nem validade na fatura ao cliente). Não havia fo
 - **Serviços de impressão** (`InvoicePrintService`, `OrderPrintService`, `CreditNotePrintService`,
   `GuideRemittancePrintService`) injectam `DocumentConfigService` e passam
   `getColumns(companyId)` ao renderer. Nenhuma mudança de cálculo.
-- **UI (`ConfigPanel`):** secção/aba "Colunas dos Documentos" — 8 checkboxes (estado actual) + botão
+- **UI (`ConfigPanel`):** secção/aba "Colunas dos Documentos" — 11 checkboxes (estado actual) + botão
   Guardar. Injecção via `MainFrame`.
 
 ## Configuração separada por tipo de documento (revisão)
@@ -56,6 +58,19 @@ A config **POS_RECEIPT** ganha um campo de texto **`footer`** — a mensagem que
 recibo (ex.: "Obrigado pela sua preferência! Trocas em 7 dias com talão."). Se vazio, usa-se o texto
 padrão. Definível em Config → Colunas dos Documentos (tipo Recibo POS). O `footer` da config
 COMMERCIAL é ignorado.
+
+### Significado das colunas de composição
+
+- **Embalagens** = `quantidade da linha ÷ unidades por embalagem`.
+- **Caixas** = `quantidade da linha ÷ unidades por caixa`.
+- **% da Caixa** = `(quantidade da linha ÷ unidades por caixa) × 100`.
+- `100%` representa uma caixa completa; valores superiores representam mais de uma caixa.
+- São valores derivados para leitura e conferência do documento. Não participam no cálculo fiscal,
+  monetário nem no movimento de stock.
+
+No PDF, os cabeçalhos são abreviados para caberem numa página A4:
+`Cód.`, `Ref.`, `Desc.`, `Val.`, `Qtd.`, `Emb.`, `Cx.`, `% Cx.`, `P. Unit.`, `IVA` e `Subt.`.
+No configurador permanecem os nomes completos para evitar ambiguidade.
 
 ## Não-objetivos
 

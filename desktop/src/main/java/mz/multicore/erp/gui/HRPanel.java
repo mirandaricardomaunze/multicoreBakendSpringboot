@@ -125,17 +125,17 @@ public class HRPanel extends JPanel {
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
 
-        tabs.addTab("Visão Geral",        UIHelper.icon("fas-chart-pie", 16, UIHelper.TEXT_LIGHT),     buildOverviewTab());
-        tabs.addTab("Colaboradores",     UIHelper.icon("fas-users", 16, UIHelper.TEXT_LIGHT),         buildEmployeesTab());
-        tabs.addTab("Contratos",         UIHelper.icon("fas-file-signature", 16, UIHelper.TEXT_LIGHT), contractsPanel.buildPanel());
-        tabs.addTab("Recibos de Salário", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.TEXT_LIGHT), buildPayslipsTab());
-        tabs.addTab("Faltas",            UIHelper.icon("fas-user-times", 16, UIHelper.TEXT_LIGHT),    buildAbsencesTab());
-        tabs.addTab("Ponto",             UIHelper.icon("fas-clock", 16, UIHelper.TEXT_LIGHT),        timeSheetPanel.buildPanel());
-        tabs.addTab("Férias",            UIHelper.icon("fas-umbrella-beach", 16, UIHelper.TEXT_LIGHT),buildVacationsTab());
-        tabs.addTab("Descontos",         UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.TEXT_LIGHT), deductionsPanel.buildPanel());
-        tabs.addTab("Retenções",         UIHelper.icon("fas-landmark", 16, UIHelper.TEXT_LIGHT),     liabilitiesPanel.buildPanel());
-        tabs.addTab("Cessações",         UIHelper.icon("fas-user-slash", 16, UIHelper.TEXT_LIGHT),   terminationsPanel.buildPanel());
-        tabs.addTab("Despesas",          UIHelper.icon("fas-receipt", 16, UIHelper.TEXT_LIGHT),       buildExpensesTab());
+        tabs.addTab("Visão Geral",        UIHelper.icon("fas-chart-pie", 16, UIHelper.ACCENT_BLUE),     buildOverviewTab());
+        tabs.addTab("Colaboradores",     UIHelper.icon("fas-users", 16, UIHelper.MODULE_HR),         buildEmployeesTab());
+        tabs.addTab("Contratos",         UIHelper.icon("fas-file-signature", 16, UIHelper.ACCENT_SKY), contractsPanel.buildPanel());
+        tabs.addTab("Recibos de Salário", UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.APPROVED_GREEN), buildPayslipsTab());
+        tabs.addTab("Faltas",            UIHelper.icon("fas-user-times", 16, UIHelper.PENDING_YELLOW),    buildAbsencesTab());
+        tabs.addTab("Ponto",             UIHelper.icon("fas-clock", 16, UIHelper.ACCENT_CYAN),        timeSheetPanel.buildPanel());
+        tabs.addTab("Férias",            UIHelper.icon("fas-umbrella-beach", 16, UIHelper.ACCENT_ORANGE),buildVacationsTab());
+        tabs.addTab("Descontos",         UIHelper.icon("fas-hand-holding-usd", 16, UIHelper.REJECTED_RED), deductionsPanel.buildPanel());
+        tabs.addTab("Retenções",         UIHelper.icon("fas-landmark", 16, UIHelper.MODULE_FISCAL),     liabilitiesPanel.buildPanel());
+        tabs.addTab("Cessações",         UIHelper.icon("fas-user-slash", 16, UIHelper.REJECTED_RED),   terminationsPanel.buildPanel());
+        tabs.addTab("Despesas",          UIHelper.icon("fas-receipt", 16, UIHelper.ACCENT_PINK),       buildExpensesTab());
 
         add(tabs, BorderLayout.CENTER);
 
@@ -324,37 +324,22 @@ public class HRPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Quadro de Colaboradores"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Colaborador");
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         newBtn.addActionListener(e -> openEmployeeDialog(null));
-        ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
-        editBtn.setIcon(UIHelper.icon("fas-edit", 14));
-        editBtn.addActionListener(e -> editSelectedEmployee());
+
         ModernButton profileBtn = UIHelper.createSecondaryButton("Ver Perfil");
         profileBtn.setIcon(UIHelper.icon("fas-id-card", 14));
         profileBtn.addActionListener(e -> openSelectedEmployeeProfile());
+
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Editar Colaborador", UIHelper.icon("fas-edit", 14), this::editSelectedEmployee)
                 .addAction("Evolução Salarial", UIHelper.icon("fas-chart-line", 14),
                         employeeActions::openSalaryHistory)
                 .addAction("Documentos", UIHelper.icon("fas-id-card", 14), employeeActions::openDocuments)
                 .addAction("Saúde Ocupacional", UIHelper.icon("fas-heartbeat", 14),
                         employeeActions::openOccupationalHealth)
-                .addAction("Alterar Estado", UIHelper.icon("fas-user-shield", 14), this::changeSelectedEmployeeStatus)
-                .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
-                        () -> exportTable("colaboradores", "Colaboradores", employeesTable));
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(moreBtn);
-        actions.add(profileBtn);
-        actions.add(editBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
-
+                .addAction("Alterar Estado", UIHelper.icon("fas-user-shield", 14), this::changeSelectedEmployeeStatus);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -379,7 +364,9 @@ public class HRPanel extends JPanel {
                 new TableFilter.ColumnFilter(empEstado, 7));
         JPanel empBar = TableFilter.bar(empSearch, TableFilter.label("Estado:"), empEstado);
         empBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(empBar, BorderLayout.NORTH);
+        ModernButton empRefreshBtn = UIHelper.createRefreshButton(this::loadEmployees);
+        card.add(UIHelper.tableCardTop("Quadro de Colaboradores", empBar,
+                empRefreshBtn, moreBtn, profileBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -429,7 +416,7 @@ public class HRPanel extends JPanel {
         CircularAvatar photoPreview = new CircularAvatar(photoHolder[0],
                 existing == null ? "+" : CircularAvatar.initials(existing.name()), 104);
         photoPreview.setCameraOverlay(true);
-        ModernButton choosePhotoButton = UIHelper.createSecondaryButton("Escolher foto…");
+        ModernButton choosePhotoButton = UIHelper.createSecondaryButton("Escolher Foto");
         choosePhotoButton.setIcon(UIHelper.icon("fas-camera", 14));
         ModernButton removePhotoButton = UIHelper.createSecondaryButton("Remover");
         removePhotoButton.setIcon(UIHelper.icon("fas-trash-alt", 14));
@@ -521,9 +508,9 @@ public class HRPanel extends JPanel {
         );
         JTabbedPane form = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(form);
-        form.addTab("Dados pessoais", UIHelper.icon("fas-user", 14, UIHelper.TEXT_LIGHT), personalForm);
-        form.addTab("Vínculo", UIHelper.icon("fas-briefcase", 14, UIHelper.TEXT_LIGHT), employmentForm);
-        form.addTab("Acesso e pagamento", UIHelper.icon("fas-credit-card", 14, UIHelper.TEXT_LIGHT), accessForm);
+        form.addTab("Dados pessoais", UIHelper.icon("fas-user", 14, UIHelper.ACCENT_BLUE), personalForm);
+        form.addTab("Vínculo", UIHelper.icon("fas-briefcase", 14, UIHelper.ACCENT_ORANGE), employmentForm);
+        form.addTab("Acesso e pagamento", UIHelper.icon("fas-credit-card", 14, UIHelper.APPROVED_GREEN), accessForm);
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
                 existing == null ? "Novo Colaborador" : "Editar Colaborador", "fas-users",
@@ -595,40 +582,23 @@ public class HRPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Recibos de Salário"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Gerar Recibo");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton approveBtn = UIHelper.createPrimaryButton("Aprovar");
-        approveBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
-        ModernButton payBtn = UIHelper.createSuccessButton("Marcar Pago");
-        payBtn.setIcon(UIHelper.icon("fas-check", 14));
-        ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos")
+        newBtn.addActionListener(e -> openCreatePayslipDialog());
+
+        ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos & Processo")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printSelectedPayslip)
-                .addAction("Exportar Lista", UIHelper.icon("fas-file-pdf", 14), () -> exportTable("recibos-salario", "Recibos de Salário", payslipsTable))
-                .addAction("Ficheiro de Pagamento", UIHelper.icon("fas-university", 14), payrollActions::bankPaymentFile);
-        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Exportar Lista", UIHelper.icon("fas-file-pdf", 14),
+                        () -> exportTable("recibos-salario", "Recibos de Salário", payslipsTable))
+                .addAction("Ficheiro de Pagamento", UIHelper.icon("fas-university", 14), payrollActions::bankPaymentFile)
+                .addAction("Processar Mês", UIHelper.icon("fas-calculator", 14, UIHelper.ACCENT_BLUE), this::processMonthlyPayroll);
+
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Operações")
+                .addAction("Aprovar Recibo", UIHelper.icon("fas-clipboard-check", 14), payrollActions::approveSelected)
+                .addAction("Marcar Pago", UIHelper.icon("fas-check", 14), this::markSelectedPayslipPaid)
                 .addAction("13.º Mês", UIHelper.icon("fas-gift", 14), bonusActions::openThirteenthMonth)
                 .addAction("Fechar Mês", UIHelper.icon("fas-lock", 14), payrollActions::closeMonth)
                 .addAction("Reabrir Mês", UIHelper.icon("fas-lock-open", 14), payrollActions::reopenMonth);
-        ModernButton processBtn = UIHelper.createPrimaryButton("Processar Mês");
-        processBtn.setIcon(UIHelper.icon("fas-calculator", 14));
-        newBtn.addActionListener(e -> openCreatePayslipDialog());
-        approveBtn.addActionListener(e -> payrollActions.approveSelected());
-        payBtn.addActionListener(e -> markSelectedPayslipPaid());
-        processBtn.addActionListener(e -> processMonthlyPayroll());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(moreBtn);
-        actions.add(documentsBtn);
-        actions.add(processBtn);
-        actions.add(payBtn);
-        actions.add(approveBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -653,11 +623,14 @@ public class HRPanel extends JPanel {
         TableFilter.install(payslipsTable, psSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(psEstado, 6)),
                 java.util.List.of(new TableFilter.PeriodFilter(psPeriodo, 7)));
-        JPanel psBar = TableFilter.bar(psSearch,
-                TableFilter.label("Estado:"), psEstado,
-                TableFilter.label("Data pag.:", "fas-calendar-alt"), psPeriodo);
+        JPanel psBar = TableFilter.toolbar(
+                new JComponent[]{psSearch, TableFilter.label("Estado:"), psEstado, TableFilter.label("Data pag.:", "fas-calendar-alt"), psPeriodo},
+                null
+        );
         psBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(psBar, BorderLayout.NORTH);
+        ModernButton psRefreshBtn = UIHelper.createRefreshButton(this::loadPayslips);
+        card.add(UIHelper.tableCardTop("Recibos de Salário", psBar,
+                psRefreshBtn, documentsBtn, actionsBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -811,30 +784,17 @@ public class HRPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Registo de Faltas"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createPrimaryButton("Registar Falta");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton justifyBtn = UIHelper.createSuccessButton("Justificar");
-        justifyBtn.setIcon(UIHelper.icon("fas-user-check", 14));
-        ModernButton deleteBtn = UIHelper.createDangerButton("Eliminar");
-        deleteBtn.setIcon(UIHelper.icon("fas-trash", 14));
+        newBtn.addActionListener(e -> openCreateAbsenceDialog());
+
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        newBtn.addActionListener(e -> openCreateAbsenceDialog());
-        justifyBtn.addActionListener(e -> employeeActions.justifyAbsence());
-        deleteBtn.addActionListener(e -> deleteSelectedAbsence());
         exportBtn.addActionListener(e -> exportTable("faltas", "Mapa de Faltas", absencesTable));
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(exportBtn);
-        actions.add(deleteBtn);
-        actions.add(justifyBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações da Falta")
+                .addAction("Justificar", UIHelper.icon("fas-user-check", 14), employeeActions::justifyAbsence)
+                .addAction("Eliminar", UIHelper.icon("fas-trash", 14), this::deleteSelectedAbsence);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -865,7 +825,9 @@ public class HRPanel extends JPanel {
                 TableFilter.label("Tipo:"), absTipo,
                 TableFilter.label("Início:", "fas-calendar-alt"), absPeriodo);
         absBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(absBar, BorderLayout.NORTH);
+        ModernButton absRefreshBtn = UIHelper.createRefreshButton(this::loadAbsences);
+        card.add(UIHelper.tableCardTop("Registo de Faltas", absBar,
+                absRefreshBtn, exportBtn, actionsBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

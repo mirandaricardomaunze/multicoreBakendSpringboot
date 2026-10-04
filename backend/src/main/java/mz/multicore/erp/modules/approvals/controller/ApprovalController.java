@@ -32,7 +32,7 @@ public class ApprovalController {
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApprovalRequestDTO> approve(
             @PathVariable Long id,
-            @RequestBody(required = false) ApprovalActionDTO action
+            @RequestBody(required = false) @Valid ApprovalActionDTO action
     ) {
         String comments = action != null ? action.comments() : "Aprovado via API.";
         return ResponseEntity.ok(approvalService.approveRequest(id, comments));

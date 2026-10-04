@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -55,31 +56,17 @@ final class HRLiabilitiesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createSubheading("Retenções por Entregar"), BorderLayout.WEST);
-
-        ModernButton deliverBtn = UIHelper.createSuccessButton("Marcar Entregue");
-        deliverBtn.setIcon(UIHelper.icon("fas-check-double", 14));
-        deliverBtn.addActionListener(e -> deliver());
-        ModernButton accrueBtn = UIHelper.createSecondaryButton("Apurar Período");
-        accrueBtn.setIcon(UIHelper.icon("fas-calculator", 14));
-        accrueBtn.addActionListener(e -> accrue());
-        ModernButton policyBtn = UIHelper.createSecondaryButton("Valores Legais");
-        policyBtn.setIcon(UIHelper.icon("fas-balance-scale", 14));
-        policyBtn.addActionListener(e -> openPolicyDialog());
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> load());
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(policyBtn);
-        actions.add(accrueBtn);
-        actions.add(deliverBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações")
+                .addAction("Apurar Período", UIHelper.icon("fas-calculator", 14), this::accrue)
+                .addAction("Valores Legais", UIHelper.icon("fas-balance-scale", 14), this::openPolicyDialog);
+
+        ModernButton deliverBtn = UIHelper.createSuccessButton("Marcar Entregue");
+        deliverBtn.setIcon(UIHelper.icon("fas-check-double", 14));
+        deliverBtn.addActionListener(e -> deliver());
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -102,7 +89,8 @@ final class HRLiabilitiesPanel {
         JPanel bar = TableFilter.bar(search, TableFilter.label("Estado:"), estado);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        card.add(bar, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Retenções por Entregar", bar,
+                refreshBtn, actionsBtn, deliverBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(buildCostBar(), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);

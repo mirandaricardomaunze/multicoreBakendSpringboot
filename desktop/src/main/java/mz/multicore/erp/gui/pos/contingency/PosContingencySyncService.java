@@ -75,7 +75,7 @@ public class PosContingencySyncService {
             return;
         }
 
-        UIHelper.runWithProgress(parent, "A sincronizar vendas em contingência…",
+        UIHelper.runWithProgress(parent, "A sincronizar vendas em contingência",
                 () -> contingencyManager.syncPendingSales(posApiClient),
                 synced -> {
                     if (synced > 0) {

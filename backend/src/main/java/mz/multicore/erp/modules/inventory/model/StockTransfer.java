@@ -21,6 +21,10 @@ public class StockTransfer extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @Column(name = "transfer_number", nullable = false)
     private String transferNumber;
 
@@ -40,18 +44,24 @@ public class StockTransfer extends BaseEntity {
     private Warehouse destinationWarehouse;
 
     /**
-     * Ciclo de vida da guia. Nasce PENDING_APPROVAL — o stock só sai do armazém de origem
+     * Ciclo de vida da guia. Nasce DRAFT — o stock só sai do armazém de origem
      * quando um MANAGER/ADMIN aprova (status APPROVED). REJECTED/CANCELLED nunca movem stock.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private TransferStatus status = TransferStatus.PENDING_APPROVAL;
+    private TransferStatus status = TransferStatus.DRAFT;
 
     @Column(name = "responsible")
     private String responsible;
 
     @Column(name = "vehicle")
     private String vehicle;
+
+    @Column(name = "driver_name", length = 120)
+    private String driverName;
+
+    @Column(name = "vehicle_plate", length = 30)
+    private String vehiclePlate;
 
     @Column(name = "notes", length = 500)
     private String notes;

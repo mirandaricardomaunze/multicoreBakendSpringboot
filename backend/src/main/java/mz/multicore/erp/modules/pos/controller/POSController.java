@@ -57,7 +57,12 @@ public class POSController {
             @RequestBody @Valid CloseSessionRequest request
     ) {
         return ResponseEntity.ok(posService.toDTO(
-                posService.closeSession(sessionId, request.closingBalanceReal(), request.depositAccountId())));
+                posService.closeSession(
+                        sessionId,
+                        request.closingBalanceReal(),
+                        request.depositAccountId(),
+                        request.notes(),
+                        request.cashBreakdownJson())));
     }
 
     @GetMapping("/sessions/{sessionId}/movements")
@@ -84,8 +89,13 @@ public class POSController {
     }
 
     @PostMapping("/returns")
-    public ResponseEntity<CreditNoteDTO> returnSale(@RequestBody @Valid POSReturnRequest request) {
+    public ResponseEntity<POSReturnResultDTO> returnSale(@RequestBody @Valid POSReturnRequest request) {
         return ResponseEntity.ok(posService.returnSale(request));
+    }
+
+    @GetMapping("/vouchers/{code}")
+    public ResponseEntity<StoreVoucherDTO> getVoucher(@PathVariable String code, @RequestParam Long companyId) {
+        return ResponseEntity.ok(posService.getVoucher(code, companyId));
     }
 
     /** Regista um pagamento posterior (fiado) sobre uma fatura em dívida. */
@@ -108,6 +118,27 @@ public class POSController {
                 .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/pdf")
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"relatorio_z_" + sessionId + ".pdf\"")
                 .body(pdf);
+    }
+
+    /** Passagem de turno entre operadores na mesma sessão de caixa. */
+    @PostMapping("/sessions/{sessionId}/shift-handover")
+    public ResponseEntity<ShiftReconciliationDTO> shiftHandover(
+            @PathVariable Long sessionId,
+            @RequestBody @Valid ShiftHandoverRequest request
+    ) {
+        // Garante que o sessionId do path é usado (segurança)
+        ShiftHandoverRequest safe = new ShiftHandoverRequest(
+                sessionId, request.outgoingOperator(), request.incomingOperator(),
+                request.countedCash(), request.cashBreakdownJson(), request.notes());
+        return ResponseEntity.ok(posService.performShiftHandover(safe));
+    }
+
+    /** Lista de reconciliações de passagem de turno de uma sessão. */
+    @GetMapping("/sessions/{sessionId}/shift-reconciliations")
+    public ResponseEntity<List<ShiftReconciliationDTO>> getShiftReconciliations(
+            @PathVariable Long sessionId
+    ) {
+        return ResponseEntity.ok(posService.getShiftReconciliations(sessionId));
     }
 
     @GetMapping("/sessions/history")

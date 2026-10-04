@@ -2,6 +2,8 @@ package mz.multicore.erp.gui.pos.contingency;
 
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.FeedbackType;
+import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.modules.pos.dto.PosContingencyStatus;
 
 import javax.swing.*;
@@ -102,9 +104,7 @@ public class PosContingencyDialog extends JDialog {
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionsPanel.setOpaque(false);
 
-        ModernButton reprintBtn = UIHelper.createSecondaryButton("Reimprimir Talão");
-        reprintBtn.setIcon(UIHelper.icon("fas-print", UIHelper.ICON_SM));
-        reprintBtn.addActionListener(e -> reprintSelected());
+        ModernButton reprintBtn = UIHelper.createButton("Reimprimir Talão", UIHelper.icon("fas-print", UIHelper.ICON_SM, Color.WHITE), UIHelper.ACCENT_CYAN, e -> reprintSelected());
 
         ModernButton syncBtn = UIHelper.createPrimaryButton("Sincronizar Agora");
         syncBtn.setIcon(UIHelper.icon("fas-sync-alt", UIHelper.ICON_SM));
@@ -114,7 +114,7 @@ public class PosContingencyDialog extends JDialog {
             }
         });
 
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
+        ModernButton closeBtn = UIHelper.createDangerButton("Fechar");
         closeBtn.addActionListener(e -> dispose());
 
         actionsPanel.add(reprintBtn);
@@ -155,8 +155,7 @@ public class PosContingencyDialog extends JDialog {
     private void reprintSelected() {
         int row = table.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecione uma venda para reimprimir o talão.",
-                    "Reimpressão", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma venda para reimprimir o talão.");
             return;
         }
         String ref = (String) tableModel.getValueAt(row, 0);
@@ -166,9 +165,7 @@ public class PosContingencyDialog extends JDialog {
 
         if (selected != null) {
             PosThermalReceiptPrinter.printSilent(selected);
-            JOptionPane.showMessageDialog(this,
-                    "Talão de contingência (" + ref + ") reenviado para a impressora.",
-                    "Reimpressão Concluída", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(this, "Talão de contingência (" + ref + ") reenviado para a impressora.");
         }
     }
 

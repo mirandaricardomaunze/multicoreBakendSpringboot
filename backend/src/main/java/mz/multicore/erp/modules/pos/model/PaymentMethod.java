@@ -11,5 +11,6 @@ public enum PaymentMethod {
     BANK_TRANSFER,   // Transferência
     MPESA,           // M-Pesa (Vodacom)
     EMOLA,           // e-Mola (Movitel)
-    CREDIT           // Fiado — cliente paga depois
+    CREDIT,          // Fiado — cliente paga depois
+    STORE_CREDIT     // Vale de compras / saldo gerado em devolução (Store Credit)
 }

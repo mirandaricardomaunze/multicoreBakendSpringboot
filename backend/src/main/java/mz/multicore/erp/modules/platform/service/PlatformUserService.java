@@ -34,17 +34,30 @@ public class PlatformUserService {
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
+    private final mz.multicore.erp.architecture.security.AuthSessionService authSessionService;
 
     public PlatformUserService(AppUserRepository appUserRepository,
                                AppUserCompanyAccessRepository companyAccessRepository,
                                CompanyRepository companyRepository,
                                PasswordEncoder passwordEncoder,
                                AuditLogService auditLogService) {
+        this(appUserRepository, companyAccessRepository, companyRepository, passwordEncoder,
+                auditLogService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PlatformUserService(AppUserRepository appUserRepository,
+                               AppUserCompanyAccessRepository companyAccessRepository,
+                               CompanyRepository companyRepository,
+                               PasswordEncoder passwordEncoder,
+                               AuditLogService auditLogService,
+                               mz.multicore.erp.architecture.security.AuthSessionService authSessionService) {
         this.appUserRepository = appUserRepository;
         this.companyAccessRepository = companyAccessRepository;
         this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
+        this.authSessionService = authSessionService;
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +113,16 @@ public class PlatformUserService {
         if (user.isPlatformAdmin() && !active) {
             throw new BusinessRuleException("Não é possível desactivar o administrador da plataforma.");
         }
+        if (!active && user.isActive()) {
+            for (AppUserCompanyAccess access : user.getCompanyAccesses()) {
+                if ("ADMIN".equalsIgnoreCase(access.getRole())
+                        && companyAccessRepository.countActiveByCompanyIdAndRole(
+                                access.getCompany().getId(), "ADMIN") <= 1) {
+                    throw new BusinessRuleException("Não é possível desactivar o único administrador da empresa "
+                            + access.getCompany().getName() + ".");
+                }
+            }
+        }
         user.setActive(active);
         appUserRepository.save(user);
         audit(username, "PLATFORM_USER_STATUS", (active ? "Activado" : "Desactivado") + " o utilizador.");
@@ -115,6 +138,9 @@ public class PlatformUserService {
         AppUser user = requireUser(username);
         user.setPassword(passwordEncoder.encode(newPassword.trim()));
         appUserRepository.save(user);
+        if (authSessionService != null) {
+            authSessionService.revokeUser(user.getUsername());
+        }
         audit(username, "PLATFORM_USER_PASSWORD", "Senha reposta pelo superadmin.");
     }
 
@@ -139,7 +165,8 @@ public class PlatformUserService {
         boolean removingAdmin = user.findCompanyAccess(companyId)
                 .map(access -> "ADMIN".equalsIgnoreCase(access.getRole()))
                 .orElse(false);
-        if (removingAdmin && companyAccessRepository.countByCompanyIdAndRoleIgnoreCase(companyId, "ADMIN") <= 1) {
+        if (removingAdmin && user.isActive()
+                && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {
             throw new BusinessRuleException("A empresa deve manter pelo menos um administrador.");
         }
         if (!user.revokeCompany(companyId)) {

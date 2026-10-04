@@ -1,11 +1,13 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.*;
+import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 
 /** Constrói a vista de listagem/editor de encomendas; o controlador permanece no painel comercial. */
@@ -20,190 +22,154 @@ final class CommercialOrdersView {
     }
 
     static JPanel create(ComercialPanel owner) {
-        // Igual às Faturas: o formulário vive num modal ('Nova Encomenda'); a lista ocupa a aba inteira.
+        // A aba alterna lista <-> editor único; criar e actualizar nunca abrem formulário modal.
         JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // ===== FORMULÁRIO (conteúdo do modal): inputs de cabeçalho + linha =====
+        // ===== EDITOR ÚNICO: inputs de cabeçalho agrupados em linha horizontal =====
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(20, 20, 20, 20));
+        formCard.setBorder(new EmptyBorder(12, 16, 10, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
 
-        // Row 1: Client & Warehouse Selection (Side by Side)
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 0.5;
-        gbc.insets = new Insets(8, 8, 2, 8);
+        // Coluna 0: Cliente
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 1.2;
+        gbc.insets = new Insets(2, 6, 2, 6);
         JLabel clientLbl = new JLabel("Cliente:");
         clientLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(clientLbl, gbc);
 
-        gbc.gridx = 1;
-        JLabel warehouseLbl = new JLabel("Armazém:");
-        warehouseLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(warehouseLbl, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 1;
-        gbc.insets = new Insets(2, 8, 12, 8);
+        gbc.gridy = 1;
+        gbc.insets = new Insets(2, 6, 4, 6);
         owner.orderClientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.orderClientCombo);
         formCard.add(owner.orderClientCombo, gbc);
 
-        gbc.gridx = 1;
+        // Coluna 1: Nome do Comprador (Walk-in se 'Consumidor Final')
+        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0;
+        gbc.insets = new Insets(2, 6, 2, 6);
+        JLabel walkInLbl = new JLabel("Comprador (se Consumidor Final):");
+        walkInLbl.setForeground(UIHelper.TEXT_MUTED);
+        formCard.add(walkInLbl, gbc);
+
+        gbc.gridy = 1;
+        gbc.insets = new Insets(2, 6, 4, 6);
+        owner.orderClientWalkInField = new JTextField();
+        UIHelper.styleTextField(owner.orderClientWalkInField);
+        owner.orderClientWalkInField.putClientProperty("JTextField.placeholderText", "Nome do comprador...");
+        formCard.add(owner.orderClientWalkInField, gbc);
+
+        // Coluna 2: Armazém Origem
+        gbc.gridx = 2; gbc.gridy = 0; gbc.weightx = 0.8;
+        gbc.insets = new Insets(2, 6, 2, 6);
+        JLabel warehouseLbl = new JLabel("Armazém:");
+        warehouseLbl.setForeground(UIHelper.TEXT_MUTED);
+        formCard.add(warehouseLbl, gbc);
+
+        gbc.gridy = 1;
+        gbc.insets = new Insets(2, 6, 4, 6);
         owner.orderWarehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.orderWarehouseCombo);
         formCard.add(owner.orderWarehouseCombo, gbc);
 
-        // Row extra: nome livre do comprador (opcional, só relevante se cliente = "Consumidor Final").
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel walkInLbl = new JLabel("Nome do comprador (opcional, se 'Consumidor Final'):");
-        walkInLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(walkInLbl, gbc);
-
-        gbc.gridy = 3;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        owner.orderClientWalkInField = new JTextField();
-        UIHelper.styleTextField(owner.orderClientWalkInField);
-        owner.orderClientWalkInField.putClientProperty("JTextField.placeholderText",
-                "Escrever nome se a encomenda for para 'Consumidor Final' (deixar vazio caso contrário)");
-        formCard.add(owner.orderClientWalkInField, gbc);
-
-        // Row: via da encomenda. É a primeira decisão do documento — decide o formato do papel, se
-        // passa por aprovação e se vai ao armazém. Ver docs/ENCOMENDA_DUAS_VIAS_SPEC.md.
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(8, 8, 2, 8);
+        // Coluna 3: Tipo de Encomenda
+        gbc.gridx = 3; gbc.gridy = 0; gbc.weightx = 0.8;
+        gbc.insets = new Insets(2, 6, 2, 6);
         JLabel kindLbl = new JLabel("Tipo de encomenda:");
         kindLbl.setForeground(UIHelper.TEXT_MUTED);
         formCard.add(kindLbl, gbc);
 
-        gbc.gridy = 5;
-        gbc.insets = new Insets(2, 8, 4, 8);
+        gbc.gridy = 1;
+        gbc.insets = new Insets(2, 6, 4, 6);
         owner.orderKindCombo = new JComboBox<>(OrderKind.values());
-        // Rótulo primeiro, tema depois: styleComboBox envolve o renderer que encontrar.
         owner.orderKindCombo.setRenderer(UIHelper.labelRenderer(OrderKind::label));
         UIHelper.styleComboBox(owner.orderKindCombo);
         owner.orderKindCombo.setSelectedItem(OrderKind.PICKING_REQUEST);
         formCard.add(owner.orderKindCombo, gbc);
 
-        gbc.gridy = 6;
-        gbc.insets = new Insets(0, 8, 12, 8);
+        // Coluna 4: Armazém Destino (visível apenas para reposição interna)
+        JLabel destLbl = new JLabel("Armazém de destino:");
+        destLbl.setForeground(UIHelper.TEXT_MUTED);
+        owner.orderDestinationCombo = new JComboBox<>();
+        UIHelper.styleComboBox(owner.orderDestinationCombo);
+
+        JPanel destPanel = new JPanel(new BorderLayout(0, 2));
+        destPanel.setOpaque(false);
+        destPanel.add(destLbl, BorderLayout.NORTH);
+        destPanel.add(owner.orderDestinationCombo, BorderLayout.CENTER);
+
+        gbc.gridx = 4; gbc.gridy = 0; gbc.gridheight = 2; gbc.weightx = 0.8;
+        gbc.insets = new Insets(2, 6, 4, 6);
+        formCard.add(destPanel, gbc);
+
+        // Linha 2: Dica contextual da via selecionada
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 5; gbc.gridheight = 1; gbc.weightx = 1.0;
+        gbc.insets = new Insets(3, 6, 2, 6);
         JLabel kindHint = new JLabel();
         kindHint.setForeground(UIHelper.TEXT_MUTED);
         kindHint.setFont(kindHint.getFont().deriveFont(11f));
+        kindHint.setIcon(UIHelper.semanticIcon("fas-info-circle", 12));
         formCard.add(kindHint, gbc);
-
-        // Destino: só a reposição interna o usa, e por isso só ela o mostra. Um campo visível que
-        // não se aplica é um convite a preenchê-lo — e um campo preenchido que ninguém lê é uma
-        // mentira no documento.
-        gbc.gridy = 100;
-        gbc.insets = new Insets(0, 8, 2, 8);
-        JLabel destLbl = new JLabel("Armazém de destino (loja que recebe):");
-        destLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(destLbl, gbc);
-
-        gbc.gridy = 101;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        owner.orderDestinationCombo = new JComboBox<>();
-        UIHelper.styleComboBox(owner.orderDestinationCombo);
-        formCard.add(owner.orderDestinationCombo, gbc);
 
         Runnable syncKind = () -> {
             OrderKind kind = owner.selectedOrderKind();
-            kindHint.setText(kindHint(kind));
+            kindHint.setText(" " + kindHint(kind));
             boolean replenishment = kind.requiresDestinationWarehouse();
-            destLbl.setVisible(replenishment);
-            owner.orderDestinationCombo.setVisible(replenishment);
+            destPanel.setVisible(replenishment);
+            GridBagLayout layout = (GridBagLayout) formCard.getLayout();
+            GridBagConstraints c = layout.getConstraints(destPanel);
+            c.weightx = replenishment ? 0.8 : 0.0;
+            layout.setConstraints(destPanel, c);
+            formCard.revalidate();
+            formCard.repaint();
         };
         owner.orderKindCombo.addActionListener(e -> syncKind.run());
         syncKind.run();
 
-        // Row 2: Product Selection (Full Width)
-        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel prodLbl = new JLabel("Produto / Serviço:");
-        prodLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(prodLbl, gbc);
-
-        gbc.gridy = 8;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        owner.orderProductCombo = new JComboBox<>();
-        UIHelper.styleComboBox(owner.orderProductCombo);
-        formCard.add(owner.orderProductCombo, gbc);
-
-        // Row 3: Qtd & Desconto % (Side by Side)
-        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 1; gbc.weightx = 0.5;
-        gbc.insets = new Insets(8, 8, 2, 8);
-        owner.orderQuantityLabel = new JLabel("Qtd total (unidades):");
-        owner.orderQuantityLabel.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(owner.orderQuantityLabel, gbc);
-
-        gbc.gridx = 1;
-        JLabel discLbl = new JLabel("Desconto %:");
-        discLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(discLbl, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 10;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        // Qtd em unidades + helper opcional "Caixas" (grosso): caixas × und/caixa → preenche a Qtd.
-        owner.orderPackageEditor = new PackageQuantityEditor();
-        owner.orderQuantityField = owner.orderPackageEditor.totalField();
-        owner.orderBoxesField = owner.orderPackageEditor.boxesField();
-        owner.orderLooseUnitsField = owner.orderPackageEditor.looseUnitsField();
-        formCard.add(owner.orderPackageEditor, gbc);
-
-        gbc.gridx = 1;
+        // Editores reutilizados apenas pelas células da grelha
+        owner.orderProductCombo = new ProductSearchComboBox();
         owner.orderDiscountField = new DecimalField("0", 2, false);
-        formCard.add(owner.orderDiscountField, gbc);
-
-        // Row 4: Lote/Validade (FEFO, read-only) e Série
-        gbc.gridx = 0; gbc.gridy = 11;
-        gbc.insets = new Insets(8, 8, 2, 8);
-        JLabel batchLbl = new JLabel("Lote / Validade (FEFO):");
-        batchLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(batchLbl, gbc);
-
-        gbc.gridx = 1;
-        JLabel serialLbl = new JLabel("Série (Opcional):");
-        serialLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(serialLbl, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 12;
-        gbc.insets = new Insets(2, 8, 12, 8);
-        owner.orderBatchField = new JTextField();
-        UIHelper.styleTextField(owner.orderBatchField);
-        owner.orderBatchField.setEditable(false);
-        owner.orderBatchField.setToolTipText("Lote a sair (FEFO) — calculado a partir do produto e armazém.");
-        owner.orderBatchField.putClientProperty("JTextField.placeholderText", "— FEFO automático —");
-        formCard.add(owner.orderBatchField, gbc);
-
-        gbc.gridx = 1;
         owner.orderSerialField = new JTextField();
         UIHelper.styleTextField(owner.orderSerialField);
-        formCard.add(owner.orderSerialField, gbc);
 
-        // Row 5: action aligned below the line fields.
-        gbc.gridx = 0; gbc.gridy = 13; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        gbc.insets = new Insets(16, 8, 12, 8);
         ModernButton addLineBtn = UIHelper.createAddLineButton();
-
-        JPanel addLineActionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        addLineActionRow.setOpaque(false);
-        addLineActionRow.add(addLineBtn);
-        formCard.add(addLineActionRow, gbc);
+        addLineBtn.setText("Adicionar linha");
 
         // ===== Cartão de rascunho: tabela de linhas + total (separado do formulário, igual às Faturas) =====
-        String[] lineCols = {"Produto", "Qtd / Caixas", "Peso kg", "% Qtd", "% Peso",
-                "Preço Unit.", "Desc %", "Lote/Série", "Total"};
+        String[] lineCols = {"Produto", "Qtd", "Emb.", "Cx.", "% Cx.", "Peso kg", "% Qtd",
+                "% Peso", "Preço Unit.", "Desc. %", "Série", "Total"};
         owner.orderLinesTableModel = new DefaultTableModel(lineCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return owner.orderGridEditable && (c <= 3 || c == 9 || c == 10);
+            }
         };
         owner.orderLinesTable = new JTable(owner.orderLinesTableModel);
         UIHelper.styleTable(owner.orderLinesTable);
+        owner.orderLinesTable.getColumnModel().getColumn(0)
+                .setCellEditor(ProductSearchComboBox.createTableCellEditor(owner.orderProductCombo));
+        owner.orderLinesTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override protected void setValue(Object value) {
+                setText(value instanceof ProductDTO product ? product.name() : "Pesquisar produto...");
+            }
+        });
+        for (int column : java.util.List.of(1, 2, 3)) {
+            owner.orderLinesTable.getColumnModel().getColumn(column)
+                    .setCellEditor(new DefaultCellEditor(new QuantityField("0", false)));
+            owner.orderLinesTable.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.quantity());
+        }
+        owner.orderLinesTable.getColumnModel().getColumn(9)
+                .setCellEditor(new DefaultCellEditor(owner.orderDiscountField));
+        owner.orderLinesTable.getColumnModel().getColumn(10)
+                .setCellEditor(new DefaultCellEditor(owner.orderSerialField));
+        owner.orderLinesTable.getColumnModel().getColumn(8).setCellRenderer(TableCellRenderers.money());
+        owner.orderLinesTable.getColumnModel().getColumn(11).setCellRenderer(TableCellRenderers.money());
+        owner.orderLinesTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+        owner.orderLinesTable.setSurrendersFocusOnKeystroke(true);
+        owner.orderLinesTable.setToolTipText("Edite Produto, Qtd, Emb., Cx., desconto e série directamente.");
         owner.orderLinesTable.setFillsViewportHeight(true);
         owner.orderLinesTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         owner.orderLinesTable.getColumnModel().getColumn(0).setPreferredWidth(180);
@@ -215,8 +181,13 @@ final class CommercialOrdersView {
         owner.orderLinesTable.getColumnModel().getColumn(6).setPreferredWidth(70);
         owner.orderLinesTable.getColumnModel().getColumn(7).setPreferredWidth(150);
         owner.orderLinesTable.getColumnModel().getColumn(8).setPreferredWidth(95);
+        owner.orderLinesTable.getColumnModel().getColumn(9).setPreferredWidth(75);
+        owner.orderLinesTable.getColumnModel().getColumn(10).setPreferredWidth(120);
+        owner.orderLinesTable.getColumnModel().getColumn(11).setPreferredWidth(95);
         JScrollPane linesScroll = new JScrollPane(owner.orderLinesTable);
         UIHelper.styleScrollPane(linesScroll);
+        linesScroll.setPreferredSize(new Dimension(0, 380));
+        linesScroll.setMinimumSize(new Dimension(0, 260));
 
         owner.orderTotalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
         owner.orderTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
@@ -232,41 +203,30 @@ final class CommercialOrdersView {
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
         draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        draftCard.setPreferredSize(new Dimension(0, 280));
+        draftCard.setPreferredSize(new Dimension(0, 520));
+        JPanel emptyFilters = new JPanel();
+        emptyFilters.setOpaque(false);
+        ModernButton removeItemBtn = UIHelper.createDangerButton("Remover item");
+        removeItemBtn.setIcon(UIHelper.icon("fas-trash-alt", 14));
+        removeItemBtn.addActionListener(e -> owner.removeSelectedDraftOrderLine());
+        JLabel lineHint = new JLabel("Edição directa na grelha; embalagens e caixas permanecem sincronizadas.");
+        lineHint.setForeground(UIHelper.TEXT_MUTED);
+        draftCard.add(UIHelper.tableCardTop("Itens da Encomenda", lineHint,
+                addLineBtn, removeItemBtn), BorderLayout.NORTH);
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(totalRow, BorderLayout.SOUTH);
 
-        // Conteúdo do modal 'Nova Encomenda': inputs (NORTH) + linhas de rascunho (CENTER).
+        // Conteúdo partilhado pelos modos criar e editar: cabeçalho (NORTH) + itens (CENTER).
         JPanel formContent = new JPanel(new BorderLayout(0, 12));
         formContent.setOpaque(false);
         formContent.add(formCard, BorderLayout.NORTH);
-        JPanel draftWrap = new JPanel(new BorderLayout(0, 8));
-        draftWrap.setOpaque(false);
-        draftWrap.add(UIHelper.createSubheading("Linhas da Encomenda (Rascunho)"), BorderLayout.NORTH);
-        draftWrap.add(draftCard, BorderLayout.CENTER);
-        formContent.add(draftWrap, BorderLayout.CENTER);
+        formContent.add(draftCard, BorderLayout.CENTER);
         owner.orderFormContent = formContent;
 
-        // ===== ABA: cabeçalho com acção 'Nova Encomenda…' + lista em ecrã inteiro (igual às Faturas) =====
-        JPanel headerBar = new JPanel(new BorderLayout(8, 0));
-        headerBar.setOpaque(false);
-        JPanel titleBlock = new JPanel();
-        titleBlock.setOpaque(false);
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.add(UIHelper.createHeading("Central de Pedidos e Separação"));
-        JLabel workflowHint = new JLabel("Atendimento → Reserva → Separação → Faturação");
-        workflowHint.setForeground(UIHelper.TEXT_MUTED);
-        titleBlock.add(workflowHint);
-        headerBar.add(titleBlock, BorderLayout.WEST);
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerActions.setOpaque(false);
-        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Novo Pedido de Cliente…");
+        // ===== ABA: acções, filtros e lista dentro do mesmo card =====
+        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Novo Pedido de Cliente");
         newOrderBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newOrderBtn.addActionListener(e -> owner.openOrderEditor());
-        headerActions.add(UIHelper.createRefreshButton(owner::loadOrdersTable));
-        headerActions.add(newOrderBtn);
-        headerBar.add(headerActions, BorderLayout.EAST);
-        panel.add(headerBar, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
@@ -318,59 +278,49 @@ final class CommercialOrdersView {
         TableFilter.install(owner.ordersTable, ecSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(ecEstado, 3)),
                 java.util.List.of(new TableFilter.PeriodFilter(ecPeriodo, ComercialPanel.ORDERS_COL_DELIVERY)));
-        JPanel ecBar = TableFilter.bar(ecSearch, TableFilter.label("Estado:"), ecEstado,
-                TableFilter.label("Entrega:", "fas-calendar-alt"), ecPeriodo);
-        ecBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(ecBar, BorderLayout.NORTH);
         listCard.add(ordersScroll, BorderLayout.CENTER);
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        btnPanel.setOpaque(false);
+        ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadOrdersTable);
+
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
-                .addAction("Ver Detalhes", UIHelper.icon("fas-eye", 14), owner::openSelectedOrderDetails)
+                .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), owner::openSelectedOrderEditor)
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedOrder)
-                .addAction("Marcar como separado", UIHelper.icon("fas-box-open", 14), owner::completeSelectedOrderSeparation)
                 .addAction("Ver histórico operacional", UIHelper.icon("fas-history", 14), owner::showSelectedOrderEvents)
                 .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportOrdersTable);
-        ModernButton billOrderBtn = UIHelper.createSuccessButton("Faturar Encomenda");
-        billOrderBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        ModernButton convertGuideBtn = UIHelper.createPrimaryButton("Converter em Guia");
-        convertGuideBtn.setIcon(UIHelper.icon("fas-truck", 14));
-        convertGuideBtn.setToolTipText("Criar uma Guia de Remessa a partir da encomenda aprovada selecionada.");
-        // A reposição interna não é facturável nem gera guia ao cliente: o que a cumpre é a
-        // transferência entre armazéns. Ver docs/REPOSICAO_INTERNA_SPEC.md.
-        ModernButton convertTransferBtn = UIHelper.createPrimaryButton("Converter em Transferência");
-        convertTransferBtn.setIcon(UIHelper.icon("fas-dolly", 14));
-        convertTransferBtn.setToolTipText("Criar a transferência entre armazéns que cumpre a "
-                + "reposição interna selecionada. O stock só se move na aprovação da transferência.");
-        ModernButton cancelOrderBtn = UIHelper.createDangerButton("Cancelar Encomenda…");
-        cancelOrderBtn.setIcon(UIHelper.icon("fas-ban", 14));
-        btnPanel.add(moreBtn);
-        btnPanel.add(billOrderBtn);
-        btnPanel.add(convertGuideBtn);
-        btnPanel.add(convertTransferBtn);
-        btnPanel.add(cancelOrderBtn);
-        listCard.add(btnPanel, BorderLayout.SOUTH);
+        ActionMenuButton convertMenu = UIHelper.createActionMenuButton("Processo")
+                .addAction("Marcar como separado", UIHelper.icon("fas-box-open", 14), owner::completeSelectedOrderSeparation)
+                .addAction("Converter em Guia", UIHelper.icon("fas-truck", 14), owner::convertSelectedOrderToGuide)
+                .addAction("Converter em Transferência", UIHelper.icon("fas-dolly", 14), owner::convertSelectedOrderToTransfer)
+                .addAction("Cancelar Encomenda", UIHelper.icon("fas-ban", 14), owner::openCancelOrderDialog)
+                .addAction("Faturar Encomenda", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.APPROVED_GREEN), owner::billSelectedOrder);
+        convertMenu.setIcon(UIHelper.icon("fas-exchange-alt", 14));
+        convertMenu.setToolTipText("Separação, conversão ou cancelamento da encomenda seleccionada.");
+
+        JPanel ecFilters = UIHelper.filterBar(
+                new JComponent[]{ecSearch, TableFilter.label("Estado:"), ecEstado,
+                        TableFilter.label("Entrega:", "fas-calendar-alt"), ecPeriodo},
+                null);
+        ecFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        listCard.add(UIHelper.tableCardTop("Central de Pedidos e Separação", ecFilters,
+                refreshBtn, moreBtn, convertMenu, newOrderBtn), BorderLayout.NORTH);
 
         panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
+        UIHelper.installDoubleClick(owner.ordersTable, owner::openSelectedOrderEditor);
+        UIHelper.installDocumentGridShortcuts(owner.orderLinesTable,
+                owner::addDraftOrderLine, owner::removeSelectedDraftOrderLine, owner::saveOrderFromEditor);
         addLineBtn.addActionListener(e -> owner.addDraftOrderLine());
-        owner.orderProductCombo.addActionListener(e -> {
-            owner.refreshOrderFEFOHint();
-            int index = owner.orderProductCombo.getSelectedIndex();
-            if (index >= 0 && index < owner.productsList.size()) {
-                int factor = owner.productsList.get(index).unitsPerBox();
-                owner.orderPackageEditor.setUnitsPerBox(factor);
-                owner.orderQuantityLabel.setText("Qtd total (" + Math.max(1, factor) + " un/caixa):");
-            }
+        owner.orderLinesTableModel.addTableModelListener(event -> {
+            if (owner.syncingOrderGrid || event.getFirstRow() < 0
+                    || event.getType() != javax.swing.event.TableModelEvent.UPDATE) return;
+            CommercialOrderEditorActions.syncLineFromGrid(owner, event.getFirstRow(), event.getColumn());
         });
-        owner.orderWarehouseCombo.addActionListener(e -> owner.refreshOrderFEFOHint());
-        billOrderBtn.addActionListener(e -> owner.billSelectedOrder());
-        convertGuideBtn.addActionListener(e -> owner.convertSelectedOrderToGuide());
-        convertTransferBtn.addActionListener(e -> owner.convertSelectedOrderToTransfer());
-        cancelOrderBtn.addActionListener(e -> owner.openCancelOrderDialog());
-
+        owner.orderClientCombo.addActionListener(e -> owner.markOrderEditorDirty());
+        owner.orderWarehouseCombo.addActionListener(e -> owner.markOrderEditorDirty());
+        owner.orderDestinationCombo.addActionListener(e -> owner.markOrderEditorDirty());
+        owner.orderKindCombo.addActionListener(e -> owner.markOrderEditorDirty());
+        UIHelper.onTextChange(owner.orderClientWalkInField, owner::markOrderEditorDirty);
         /*
          * As acções que não se aplicam à linha seleccionada ficam DESACTIVADAS, não escondidas.
          *
@@ -390,38 +340,33 @@ final class CommercialOrdersView {
             boolean replenishment = kind != null && kind.usesWarehouseTransfer();
             boolean sale = kind != null && !replenishment;
 
-            billOrderBtn.setEnabled(sale);
-            convertGuideBtn.setEnabled(sale);
-            convertTransferBtn.setEnabled(replenishment);
+            convertMenu.setEnabled(row >= 0);
+            convertMenu.setActionEnabled(0, row >= 0);
+            convertMenu.setActionEnabled(1, sale);
+            convertMenu.setActionEnabled(2, replenishment);
+            convertMenu.setActionEnabled(3, row >= 0);
+            convertMenu.setActionEnabled(4, sale);
 
-            billOrderBtn.setToolTipText(sale ? "Emitir a fatura da encomenda selecionada."
+            convertMenu.setToolTipText(sale ? "Criar uma Guia de Remessa a partir da encomenda selecionada."
+                    : replenishment ? "Criar a transferência entre armazéns que cumpre esta reposição."
                     : kind == null ? "Selecione uma encomenda na tabela."
-                    : "Uma reposição interna não se fatura: a mercadoria não sai da empresa.");
-            convertGuideBtn.setToolTipText(sale ? "Criar uma Guia de Remessa a partir da encomenda selecionada."
-                    : kind == null ? "Selecione uma encomenda na tabela."
-                    : "Uma reposição interna não tem cliente a quem entregar — converta-a em transferência.");
-            convertTransferBtn.setToolTipText(replenishment
-                    ? "Criar a transferência entre armazéns que cumpre esta reposição. O stock só se "
-                            + "move na aprovação da transferência."
-                    : kind == null ? "Selecione uma encomenda na tabela."
-                    : "Só a reposição interna se converte em transferência. Uma venda a cliente sai "
-                            + "por fatura ou por guia de remessa.");
+                    : "Opções de conversão para a encomenda selecionada.");
         };
         owner.ordersTable.getSelectionModel()
                 .addListSelectionListener(e -> syncOrderActions.run());
         syncOrderActions.run();
 
         // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
-        DocumentEditorHost orderEditor = new DocumentEditorHost(
+        owner.orderEditor = new DocumentEditorHost(
                 "Novo Pedido de Cliente", owner.orderFormContent,
                 owner::saveOrderFromEditor,
                 owner::backToOrdersList,
-                () -> !owner.draftOrderLines.isEmpty());
+                owner::isOrderEditorDirty);
         owner.encomendasCards = new CardLayout();
         owner.encomendasHost = new JPanel(owner.encomendasCards);
         owner.encomendasHost.setOpaque(false);
         owner.encomendasHost.add(panel, "list");
-        owner.encomendasHost.add(orderEditor, "editor");
+        owner.encomendasHost.add(owner.orderEditor, "editor");
         return owner.encomendasHost;
     }
 

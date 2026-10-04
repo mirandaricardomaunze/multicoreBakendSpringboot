@@ -141,7 +141,7 @@ public class GlobalSearchDialog extends JDialog {
         countLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         countLabel.setForeground(UIHelper.TEXT_MUTED);
 
-        JLabel navHelp = new JLabel("↑↓ Navegar   ↵ Abrir   ESC Fechar");
+        JLabel navHelp = new JLabel("Cima/Baixo: Navegar   Enter: Abrir   ESC: Fechar");
         navHelp.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         navHelp.setForeground(UIHelper.TEXT_MUTED);
 

@@ -60,5 +60,18 @@ class DesktopInitializationTest {
         mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser parser = Mockito.mock(mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser.class);
         POSPanel posPanel = new POSPanel(posApi, comercialApi, invApi, financeApi, promoApi, parser);
         assertNotNull(posPanel);
+
+        CRMApiClient crmApi = Mockito.mock(CRMApiClient.class);
+        CRMPanel crmPanel = new CRMPanel(crmApi, comercialApi);
+        assertNotNull(crmPanel);
+
+        HRApiClient hrApi = Mockito.mock(HRApiClient.class);
+        HRPanel hrPanel = new HRPanel(hrApi, printApi);
+        assertNotNull(hrPanel);
+
+        NotificationFeed feed = Mockito.mock(NotificationFeed.class);
+        NotificationReadStore store = new NotificationReadStore();
+        NotificationsPanel notificationsPanel = new NotificationsPanel(feed, store, m -> {}, c -> {});
+        assertNotNull(notificationsPanel);
     }
 }

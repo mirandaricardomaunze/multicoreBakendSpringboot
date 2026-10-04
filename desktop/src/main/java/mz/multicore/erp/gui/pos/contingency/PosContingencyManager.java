@@ -174,11 +174,14 @@ public class PosContingencyManager {
     public boolean handleContingencyCheckout(java.awt.Component parent, POSCheckoutRequest request,
                                             BigDecimal cartTotal, Throwable ex, Runnable onEnqueued) {
         if (!isConnectivityError(ex)) return false;
-        int opt = javax.swing.JOptionPane.showConfirmDialog(parent,
+        boolean confirmed = mz.multicore.erp.gui.components.ModernMessageDialog.confirm(
+                javax.swing.SwingUtilities.getWindowAncestor(parent),
+                mz.multicore.erp.gui.components.FeedbackType.WARNING,
+                "Modo de Contingência — POS",
                 "Falha de ligação com o servidor:\n" + ex.getMessage() + "\n\n"
                         + "Deseja emitir o talão em Regime de Contingência e gravar na fila local?",
-                "Modo de Contingência — POS", javax.swing.JOptionPane.YES_NO_OPTION, javax.swing.JOptionPane.WARNING_MESSAGE);
-        if (opt == javax.swing.JOptionPane.YES_OPTION) {
+                "Emitir em Contingência");
+        if (confirmed) {
             PosContingencySale sale = enqueue(request, cartTotal);
             mz.multicore.erp.gui.components.ToastManager.show(parent,
                     mz.multicore.erp.gui.components.FeedbackType.WARNING,

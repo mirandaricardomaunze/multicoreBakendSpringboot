@@ -25,6 +25,9 @@ public class SecurityInterceptor implements HandlerInterceptor {
         if (uri != null && uri.startsWith("/api/platform/")) {
             return handlePlatform(request, response, authorization);
         }
+        if (uri != null && uri.startsWith("/api/monitoring/")) {
+            return handleMonitoring(request, response, authorization);
+        }
 
         String companyId = request.getHeader("X-Company-Id");
         if (authorization == null || !authorization.startsWith("Bearer ")
@@ -61,6 +64,46 @@ public class SecurityInterceptor implements HandlerInterceptor {
             var user = tenantAccessService.requireSuperAdmin(username);
             CurrentUserContext.setCurrentUser(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
             return true;
+        } catch (RuntimeException ex) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
+            return false;
+        }
+    }
+
+    private boolean handleMonitoring(HttpServletRequest request, HttpServletResponse response, String authorization)
+            throws Exception {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token é obrigatório.");
+            return false;
+        }
+        try {
+            String token = authorization.substring(7).trim();
+            String username = authSessionService.requireValid(token).username();
+            String companyHeader = request.getHeader("X-Company-Id");
+            if (companyHeader == null || companyHeader.isBlank()) {
+                var user = tenantAccessService.requireSuperAdmin(username);
+                CurrentUserContext.setCurrentUser(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
+            } else {
+                Long companyId = Long.parseLong(companyHeader);
+                var user = tenantAccessService.requireAccess(username, companyId);
+                String role = user.getRoleForCompany(companyId);
+                if (!"ADMIN".equalsIgnoreCase(role)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "A monitorização exige perfil ADMIN.");
+                    return false;
+                }
+                String uri = request.getRequestURI();
+                if (uri != null && (uri.endsWith("/incidents") || uri.endsWith("/test-email-alert"))) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                            "Esta operação exige administrador da plataforma.");
+                    return false;
+                }
+                CurrentUserContext.setCurrentUser(user.getUsername(), role);
+                CurrentUserContext.setCurrentCompanyId(companyId);
+            }
+            return true;
+        } catch (NumberFormatException ex) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Empresa inválida.");
+            return false;
         } catch (RuntimeException ex) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
             return false;

@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.dto.CreateQuotationLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
+import mz.multicore.erp.modules.comercial.dto.UpdateQuotationRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
@@ -159,6 +160,49 @@ class QuotationServiceTest {
         stubCreationLookups();
         assertThrows(BusinessRuleException.class, () -> service.create(request(
                 new CreateQuotationLineRequest(100L, BigDecimal.ONE, new BigDecimal("120")))));
+    }
+
+    @Test
+    void update_rascunho_recalculaLinhasETotais_semMudarNumero() {
+        Quotation q = openQuotation(QuotationStatus.DRAFT, 10);
+        q.setVersion(3L);
+        stubLoad(q);
+        when(clientRepository.findByIdAndCompaniesId(200L, 1L)).thenReturn(Optional.of(client));
+        when(warehouseRepository.findById(10L)).thenReturn(Optional.of(warehouse));
+        when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
+        when(quotationRepository.saveAndFlush(any(Quotation.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        QuotationDTO updated = service.update(1L, new UpdateQuotationRequest(
+                3L, 200L, null, 10L, 20, "30 dias", "Entrega", 5, "revista",
+                List.of(new CreateQuotationLineRequest(100L, new BigDecimal("2"), new BigDecimal("10")))));
+
+        assertEquals("CT-2026/1", updated.quotationNumber());
+        assertEquals(1, updated.lines().size());
+        assertEquals(0, new BigDecimal("250.56").compareTo(updated.totalAmount()));
+        verify(auditLogService).logCurrent(eq("QUOTATION_UPDATE"), contains("CT-2026/1"));
+    }
+
+    @Test
+    void update_versaoDesactualizada_recusa() {
+        Quotation q = openQuotation(QuotationStatus.DRAFT, 10);
+        q.setVersion(4L);
+        stubLoad(q);
+        assertThrows(BusinessRuleException.class, () -> service.update(1L,
+                new UpdateQuotationRequest(3L, 200L, null, 10L, 10,
+                        null, null, null, null,
+                        List.of(new CreateQuotationLineRequest(100L, BigDecimal.ONE, BigDecimal.ZERO)))));
+        verify(quotationRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void update_cotacaoEnviada_recusa() {
+        Quotation q = openQuotation(QuotationStatus.SENT, 10);
+        q.setVersion(1L);
+        stubLoad(q);
+        assertThrows(BusinessRuleException.class, () -> service.update(1L,
+                new UpdateQuotationRequest(1L, 200L, null, 10L, 10,
+                        null, null, null, null,
+                        List.of(new CreateQuotationLineRequest(100L, BigDecimal.ONE, BigDecimal.ZERO)))));
     }
 
     // ────────────────────────── máquina de estados ──────────────────────────
