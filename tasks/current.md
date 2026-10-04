@@ -17,6 +17,34 @@ Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1
 
 **Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
 
+### Resolução Definitiva de Sobreposição no Cabeçalho do POS — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador submeteu captura de ecrã do POS com sobreposição dos botões `[Cotação F7]` e `[Fidelidade]` colidindo directamente sobre `[Passar Turno]` com instrução *"resolve sobreposiçao"*.
+- **Diagnóstico:**
+  1. A barra do topo continha excesso de botões horizontais (4 à esquerda e 5 à direita ao abrir sessão de caixa), exigindo ~1150px num espaço de ~1000px.
+  2. O layout utilizava `BorderLayout(12, 0)` com `WEST` e `EAST`. Em caso de estouro de largura, o AWT calcula coordenadas sobrepostas sem contenção.
+  3. `Cotação` e `Fidelidade` estavam no seletor de abas (`segmented`), criando ruído visual com 7 botões de cores distintas em choque.
+- **Implementação Realizada:**
+  1. **Especificação Técnica Canónica:** Criado [docs/POS_HEADER_OVERLAP_FIX_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/POS_HEADER_OVERLAP_FIX_SPEC.md).
+  2. **Documentação do Harness:** Criado [docs/POS_HEADER_OVERLAP_FIX_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/POS_HEADER_OVERLAP_FIX_HARNESS.md).
+  3. **Harness Automatizado:** Implementado [desktop/src/test/java/mz/multicore/erp/gui/PosHeaderLayoutHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/PosHeaderLayoutHarnessTest.java) com 5 testes aprovados (OVERLAP-01 a OVERLAP-05).
+  4. **Componentes e Layout Anti-Colisão:**
+     - `POSPanel.java`: `topBar` refatorado para `GridBagLayout` com espaçador expansível `Box.createHorizontalGlue()`, garantindo que as colunas da esquerda e direita nunca ocupem o mesmo espaço nem se sobreponham.
+     - Agrupamento das ações secundárias de `Cotação (F7)`, `Programa de Fidelidade` e `Histórico de Fechos (Z)` em `ActionMenuButton("Operações")` no seletor de vistas.
+     - Preservação intacta de atalhos de teclado (F7, F9, F11, F12, ESC) e da barra de atalhos rápidos do rodapé (`PosShortcutBar`).
+     - Preservação estrita das cores semânticas canónicas dos botões de abertura, fecho, sangria e passagem de turno.
+     - `POSPanel.java` mantido rigorosamente decomposto em 993 linhas ($\le 1000$ linhas).
+- **Validação:**
+  - `PosHeaderLayoutHarnessTest`: 5/5 testes aprovados.
+  - `PosProfessionalErgonomicsHarnessTest`: 6/6 testes aprovados.
+  - `PosButtonColourHierarchyTest`: 1/1 teste aprovado.
+  - `UiOrganizationNavigationHarnessTest`: 7/7 testes aprovados.
+  - `UiPanelDecompositionTest`: 1/1 teste aprovado (100% dos painéis $\le 1000$ linhas).
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados.
+  - Aplicação empacotada com sucesso e lançada interativamente no Windows via tarefa agendada `MulticoreERP` (PID activo e a responder).
+
 ### «Quick Peek» Silencioso em Tabelas com Tecla Espaço (Painel Deslizante Lateral) — 2026-10-04 — **concluída com sucesso**
 
 - **Contexto e Requisito:**

@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -118,6 +119,7 @@ public class POSPanel extends JPanel {
     private ModernButton tabHistBtn;
     private ModernButton contingencyBtn;
     private ModernButton quotationBtn;
+    ActionMenuButton operationsMenu;
     final PosQuotationActions quotationActions;
     Long currentQuotationId;
     String currentQuotationNumber;
@@ -221,12 +223,17 @@ public class POSPanel extends JPanel {
             contingencyBtn.setText("Contingência (" + this.contingencyManager.getPendingCount() + ")");
         }
 
+        operationsMenu = UIHelper.createActionMenuButton("Operações")
+                .addAction("Importar Cotação (F7)", UIHelper.icon("fas-file-import", 14, UIHelper.ACCENT_CYAN), () -> quotationActions.openImportDialog())
+                .addAction("Programa de Fidelidade", UIHelper.icon("fas-star", 14, UIHelper.ACCENT), this::openLoyaltyDialog)
+                .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> cashSessionActions.showSessionHistory());
+        operationsMenu.setToolTipText("Ações e ferramentas adicionais do ponto de venda");
+
         JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         segmented.setOpaque(false);
         segmented.add(tabVendaBtn);
         segmented.add(tabHistBtn);
-        segmented.add(quotationBtn);
-        segmented.add(loyaltyBtn);
+        segmented.add(operationsMenu);
         segmented.add(contingencyBtn);
 
         openSessionBtn = UIHelper.createSuccessButton("Abrir Caixa");
@@ -244,25 +251,25 @@ public class POSPanel extends JPanel {
         shiftHandoverBtn.setForeground(Color.WHITE);
         shiftHandoverBtn.setToolTipText("Passagem de turno entre operadores");
         shiftHandoverBtn.addActionListener(e -> cashSessionActions.shiftHandover()); shiftHandoverBtn.setVisible(false);
-        ModernButton historyZBtn = UIHelper.createPrimaryButton("Fechos (Z)");
-        historyZBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        historyZBtn.setToolTipText("Histórico de Fechos de Caixa (Z)");
-        historyZBtn.addActionListener(e -> cashSessionActions.showSessionHistory());
 
         JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         sessionActions.setOpaque(false);
         ModernButton refreshPosBtn = UIHelper.createRefreshButton(this::refreshOperationalData);
         sessionActions.add(refreshPosBtn);
-        sessionActions.add(historyZBtn);
         sessionActions.add(openSessionBtn);
         sessionActions.add(shiftHandoverBtn);
         sessionActions.add(cashMoveBtn);
         sessionActions.add(closeSessionBtn);
 
-        JPanel topBar = new JPanel(new BorderLayout(12, 0));
+        JPanel topBar = new JPanel(new GridBagLayout());
         topBar.setOpaque(false);
-        topBar.add(segmented, BorderLayout.WEST);
-        topBar.add(sessionActions, BorderLayout.EAST);
+        GridBagConstraints topGbc = new GridBagConstraints();
+        topGbc.gridy = 0; topGbc.gridx = 0; topGbc.anchor = GridBagConstraints.WEST; topGbc.weightx = 0.0;
+        topBar.add(segmented, topGbc);
+        topGbc.gridx = 1; topGbc.weightx = 1.0; topGbc.fill = GridBagConstraints.HORIZONTAL;
+        topBar.add(Box.createHorizontalGlue(), topGbc);
+        topGbc.gridx = 2; topGbc.weightx = 0.0; topGbc.anchor = GridBagConstraints.EAST; topGbc.fill = GridBagConstraints.NONE;
+        topBar.add(sessionActions, topGbc);
 
         statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
         statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
@@ -611,7 +618,7 @@ public class POSPanel extends JPanel {
                 this::applySessionState, error -> showPosLoadError("estado do caixa", error));
     }
 
-    private void applySessionState(Optional<TillSessionDTO> sessionOpt) {
+    void applySessionState(Optional<TillSessionDTO> sessionOpt) {
         if (sessionOpt.isPresent()) {
             activeSession = sessionOpt.get();
             String effectiveOp = activeSession.currentOperator() != null && !activeSession.currentOperator().isBlank()
