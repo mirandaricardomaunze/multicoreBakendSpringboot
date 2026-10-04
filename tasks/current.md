@@ -15,7 +15,27 @@ mvn spring-boot:run -pl backend
 Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1.0.0.jar"
 ```
 
-**Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
+### Tesouraria & Reconciliação Bancária Unificada — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador solicitou a aplicação do padrão executivo e ergonómico na tela de **Tesouraria & Conciliação Bancária** (*"coomo ficaria como outras tabelas"*, *"sim"*).
+  - Objetivos: consolidar seletores soltos e ações flutuantes no interior do card `ModernPanel(16)`, agrupar ações secundárias em `ActionMenuButton("Operações")` ($\le 5$ opções), instalar «Quick Peek» silencioso por tecla `Espaço` nos movimentos bancários, tornar os KPIs interativos com drilldown e recuperar ~150px de altura vertical eliminando barras de scroll globais.
+- **Implementação Realizada:**
+  1. **Especificação Técnica Canónica:** Criado [docs/TESOURARIA_CONCILIACAO_UNIFICADA_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/TESOURARIA_CONCILIACAO_UNIFICADA_SPEC.md).
+  2. **Documentação do Harness:** Criado [docs/TESOURARIA_CONCILIACAO_UNIFICADA_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/TESOURARIA_CONCILIACAO_UNIFICADA_HARNESS.md).
+  3. **Harness Automatizado:** Implementado [desktop/src/test/java/mz/multicore/erp/gui/BankReconciliationUnifiedHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/BankReconciliationUnifiedHarnessTest.java) com 5 testes aprovados (TRECON-01 a TRECON-05).
+  4. **Refatoração do `BankReconciliationPanel.java`:**
+     - Eliminadas as barras flutuantes exteriores (`buildControlBar` e `buildBottomActionBar`), integrando `accountCombo` e `statementCombo` no `cardHeader` (BorderLayout.NORTH do card).
+     - Agrupamento das ações secundárias no `ActionMenuButton("Operações")` (Auto-Conciliar, Conciliar Manualmente, Lançar Encargo Bancário, Desfazer Conciliação, Emitir Relatório PDF).
+     - Instalação do `TableQuickPeekController` na tabela de movimentos bancários: tecla `Espaço` e botão lateral abrem drawer com resumo detalhado e vínculo com lançamentos do ERP.
+     - KPIs com drilldown interativo (`KpiCard.createInteractiveCard`): clique em "Movimentos Pendentes" ou "Diferença" filtra a tabela para `"PENDENTE"`; clique em "Saldo no Extracto" repõe a vista total.
+     - `BankReconciliationPanel.java` mantido rigorosamente em 823 linhas ($\le 1000$ linhas).
+- **Validação:**
+  - `BankReconciliationUnifiedHarnessTest`: 5/5 testes aprovados.
+  - `PosHeaderLayoutHarnessTest`: 5/5 testes aprovados.
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados.
+  - Aplicação empacotada com sucesso (`multicore-desktop-1.0.0.jar`) e iniciada interativamente no Windows via tarefa `MulticoreERP`.
 
 ### Resolução Definitiva de Sobreposição no Cabeçalho do POS — 2026-10-04 — **concluída com sucesso**
 

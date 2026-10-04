@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.client.BankReconciliationApiClient;
 import mz.multicore.erp.desktop.client.FinanceApiClient;
+import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ArrowScrollPanel;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
@@ -10,8 +11,11 @@ import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
+import mz.multicore.erp.gui.components.QuickPeekPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
+import mz.multicore.erp.gui.components.TableQuickFilterBar;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.financeira.dto.BankReconciliationSummaryDTO;
@@ -74,22 +78,24 @@ public class BankReconciliationPanel extends JPanel {
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     // Filtros e selecção
-    private final JComboBox<TreasuryAccountDTO> accountCombo = new JComboBox<>();
-    private final JComboBox<BankStatementDTO> statementCombo = new JComboBox<>();
+    final JComboBox<TreasuryAccountDTO> accountCombo = new JComboBox<>();
+    final JComboBox<BankStatementDTO> statementCombo = new JComboBox<>();
 
     // KPI Labels
-    private final JLabel kpiBankBalance = new JLabel("0,00 MT");
-    private final JLabel kpiSystemBalance = new JLabel("0,00 MT");
-    private final JLabel kpiDifference = new JLabel("0,00 MT");
-    private final JLabel kpiPendingCount = new JLabel("0");
+    final JLabel kpiBankBalance = new JLabel("0,00 MT");
+    final JLabel kpiSystemBalance = new JLabel("0,00 MT");
+    final JLabel kpiDifference = new JLabel("0,00 MT");
+    final JLabel kpiPendingCount = new JLabel("0");
 
     // Tabela e Modelo
     private DefaultTableModel itemsModel;
-    private JTable itemsTable;
+    JTable itemsTable;
     private final List<BankStatementItemDTO> currentItems = new ArrayList<>();
     private final List<TreasuryTransactionDTO> treasuryTransactions = new ArrayList<>();
 
     // Acções de linha
+    ActionMenuButton operationsMenu;
+    JComboBox<String> statusFilter;
     private ModernButton manualMatchBtn;
     private ModernButton expenseBtn;
     private ModernButton unmatchBtn;
@@ -112,30 +118,17 @@ public class BankReconciliationPanel extends JPanel {
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainContent.add(feedback);
 
-        // 1. KPI Cards
+        // 1. KPI Cards com Drilldown Interactivo
         JPanel kpiGrid = buildKpiCards();
         kpiGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainContent.add(kpiGrid);
         mainContent.add(Box.createVerticalStrut(10));
 
-        // 2. Barra de Controlos e Filtros
-        JPanel controlBar = buildControlBar();
-        controlBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainContent.add(controlBar);
-        mainContent.add(Box.createVerticalStrut(12));
-
-        // 3. Tabela de Movimentos com altura ampla
+        // 2. Tabela de Movimentos e Ações no Card Unificado (elimina barras soltas exteriores)
         JPanel tableCard = buildTableCard();
         tableCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainContent.add(tableCard);
-        mainContent.add(Box.createVerticalStrut(10));
 
-        // 4. Barra de Ações Inferior
-        JPanel bottomBar = buildBottomActionBar();
-        bottomBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainContent.add(bottomBar);
-
-        // Painel de Scroll com rastreio de largura integral e setas suaves (SPEC-ASO-001)
         ArrowScrollPanel scroll = new ArrowScrollPanel(mainContent);
         add(scroll, BorderLayout.CENTER);
     }
@@ -144,112 +137,26 @@ public class BankReconciliationPanel extends JPanel {
         JPanel grid = KpiCard.createGrid(4);
         grid.setBorder(new EmptyBorder(0, 0, 4, 0));
 
-        grid.add(KpiCard.createCard("Saldo no Extracto", kpiBankBalance, "Posição bancária oficial", "fas-university", UIHelper.ACCENT_BLUE));
-        grid.add(KpiCard.createCard("Saldo no Sistema", kpiSystemBalance, "Tesouraria Multicore ERP", "fas-book", UIHelper.TEXT_LIGHT));
-        grid.add(KpiCard.createCard("Diferença", kpiDifference, "Zero indica conciliação perfeita", "fas-balance-scale", UIHelper.APPROVED_GREEN));
-        grid.add(KpiCard.createCard("Movimentos Pendentes", kpiPendingCount, "Itens por reconciliar", "fas-hourglass-half", UIHelper.PENDING_YELLOW));
+        JPanel cardBank = KpiCard.createInteractiveCard("Saldo no Extracto", kpiBankBalance, "Posição bancária oficial", "fas-university", UIHelper.ACCENT_BLUE,
+                "Mostrar todos os movimentos", () -> { if (statusFilter != null) statusFilter.setSelectedIndex(0); });
+        JPanel cardSys = KpiCard.createCard("Saldo no Sistema", kpiSystemBalance, "Tesouraria Multicore ERP", "fas-book", UIHelper.TEXT_LIGHT);
+        JPanel cardDiff = KpiCard.createInteractiveCard("Diferença", kpiDifference, "Zero indica conciliação perfeita", "fas-balance-scale", UIHelper.APPROVED_GREEN,
+                "Filtrar movimentos pendentes ou divergentes", () -> { if (statusFilter != null) statusFilter.setSelectedItem("PENDENTE"); });
+        JPanel cardPending = KpiCard.createInteractiveCard("Movimentos Pendentes", kpiPendingCount, "Itens por reconciliar", "fas-hourglass-half", UIHelper.PENDING_YELLOW,
+                "Filtrar movimentos por reconciliar", () -> { if (statusFilter != null) statusFilter.setSelectedItem("PENDENTE"); });
+
+        grid.add(cardBank);
+        grid.add(cardSys);
+        grid.add(cardDiff);
+        grid.add(cardPending);
 
         return grid;
-    }
-
-    private JPanel buildControlBar() {
-        JPanel container = new JPanel();
-        container.setOpaque(false);
-        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-        container.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
-        container.setBorder(new EmptyBorder(0, 0, 8, 0));
-
-        // Linha 1: Selecção de Conta e Extracto
-        JPanel selectionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        selectionRow.setOpaque(false);
-
-        JLabel accLbl = new JLabel("Conta Bancária:");
-        accLbl.setForeground(UIHelper.TEXT_LIGHT);
-        accLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        selectionRow.add(accLbl);
-
-        UIHelper.styleComboBox(accountCombo);
-        accountCombo.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
-        accountCombo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof TreasuryAccountDTO acc) {
-                    setText(acc.name() + " (" + acc.accountNumber() + ")");
-                } else {
-                    setText("Seleccionar Conta");
-                }
-                return this;
-            }
-        });
-        accountCombo.addActionListener(e -> onAccountChanged());
-        selectionRow.add(accountCombo);
-
-        JLabel stLbl = new JLabel("Extracto:");
-        stLbl.setForeground(UIHelper.TEXT_LIGHT);
-        stLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        selectionRow.add(stLbl);
-
-        UIHelper.styleComboBox(statementCombo);
-        statementCombo.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
-        statementCombo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof BankStatementDTO st) {
-                    setText(st.statementReference() + " (" + st.status() + ")");
-                } else {
-                    setText("Sem Extractos");
-                }
-                return this;
-            }
-        });
-        statementCombo.addActionListener(e -> onStatementChanged());
-        selectionRow.add(statementCombo);
-
-        // Linha 2: Barra de Acções da Reconciliação com largura plena e sem truncamento
-        JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        actionsRow.setOpaque(false);
-
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
-        actionsRow.add(refreshBtn);
-
-        ModernButton importBtn = UIHelper.createPrimaryButton("Importar Extracto");
-        importBtn.setIcon(UIHelper.icon("fas-file-import", 14));
-        importBtn.setPreferredSize(new Dimension(165, UIHelper.FORM_CONTROL_HEIGHT));
-        importBtn.addActionListener(e -> openImportDialog());
-        actionsRow.add(importBtn);
-
-        autoMatchBtn = UIHelper.createSuccessButton("Auto-Conciliar");
-        autoMatchBtn.setIcon(UIHelper.icon("fas-magic", 14));
-        autoMatchBtn.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
-        autoMatchBtn.addActionListener(e -> performAutoMatch());
-        actionsRow.add(autoMatchBtn);
-
-        reportBtn = UIHelper.createSecondaryButton("Emitir Relatório (PDF)");
-        reportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        reportBtn.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
-        reportBtn.addActionListener(e -> emitPdfReport());
-        actionsRow.add(reportBtn);
-
-        closeBtn = UIHelper.createDangerButton("Fechar Reconciliação");
-        closeBtn.setIcon(UIHelper.icon("fas-lock", 14));
-        closeBtn.setPreferredSize(new Dimension(185, UIHelper.FORM_CONTROL_HEIGHT));
-        closeBtn.addActionListener(e -> closeStatement());
-        actionsRow.add(closeBtn);
-
-        container.add(selectionRow);
-        container.add(Box.createVerticalStrut(8));
-        container.add(actionsRow);
-
-        return container;
     }
 
     private JPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(12, 12, 12, 12));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 580));
 
         String[] cols = {"Data", "Descrição do Movimento", "Referência", "Valor", "Estado", "Transacção Vinculada (ERP)"};
         itemsModel = new DefaultTableModel(cols, 0) {
@@ -280,10 +187,103 @@ public class BankReconciliationPanel extends JPanel {
 
         JScrollPane scroll = new JScrollPane(itemsTable);
         UIHelper.styleScrollPane(scroll);
-        scroll.setPreferredSize(new Dimension(0, 440));
+        scroll.setPreferredSize(new Dimension(0, 480));
 
+        // 1. Linha Superior: Seletores à esquerda e Ações à direita dentro do Card
+        JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
+        cardHeader.setOpaque(false);
+
+        JPanel selectors = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        selectors.setOpaque(false);
+
+        JLabel accLbl = new JLabel("Conta:");
+        accLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        accLbl.setForeground(UIHelper.TEXT_LIGHT);
+        selectors.add(accLbl);
+
+        UIHelper.styleComboBox(accountCombo);
+        accountCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        accountCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof TreasuryAccountDTO acc) {
+                    setText(acc.name() + " (" + acc.accountNumber() + ")");
+                } else {
+                    setText("Seleccionar Conta");
+                }
+                return this;
+            }
+        });
+        accountCombo.addActionListener(e -> onAccountChanged());
+        selectors.add(accountCombo);
+
+        JLabel stLbl = new JLabel("Extracto:");
+        stLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        stLbl.setForeground(UIHelper.TEXT_LIGHT);
+        selectors.add(stLbl);
+
+        UIHelper.styleComboBox(statementCombo);
+        statementCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        statementCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof BankStatementDTO st) {
+                    setText(st.statementReference() + " (" + st.status() + ")");
+                } else {
+                    setText("Sem Extractos");
+                }
+                return this;
+            }
+        });
+        statementCombo.addActionListener(e -> onStatementChanged());
+        selectors.add(statementCombo);
+
+        cardHeader.add(selectors, BorderLayout.WEST);
+
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
+
+        ModernButton importBtn = UIHelper.createPrimaryButton("Importar Extracto");
+        importBtn.setIcon(UIHelper.icon("fas-file-import", 14));
+        importBtn.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        importBtn.addActionListener(e -> openImportDialog());
+
+        operationsMenu = UIHelper.createActionMenuButton("Operações")
+                .addAction("Auto-Conciliar", UIHelper.icon("fas-magic", 14, UIHelper.APPROVED_GREEN), this::performAutoMatch)
+                .addAction("Conciliar Manualmente", UIHelper.icon("fas-link", 14, UIHelper.ACCENT_BLUE), this::openManualMatchDialog)
+                .addAction("Lançar Encargo Bancário", UIHelper.icon("fas-receipt", 14, UIHelper.PENDING_YELLOW), this::openExpenseDialog)
+                .addAction("Desfazer Conciliação", UIHelper.icon("fas-undo", 14, UIHelper.REJECTED_RED), this::unmatchSelectedItem)
+                .addAction("Emitir Relatório (PDF)", UIHelper.icon("fas-file-pdf", 14, UIHelper.ACCENT), this::emitPdfReport);
+
+        closeBtn = UIHelper.createDangerButton("Fechar Extracto");
+        closeBtn.setIcon(UIHelper.icon("fas-lock", 14));
+        closeBtn.setToolTipText("Fechar e trancar este extracto bancário reconciliado");
+        closeBtn.addActionListener(e -> closeStatement());
+
+        manualMatchBtn = UIHelper.createPrimaryButton("Conciliar Manualmente");
+        manualMatchBtn.addActionListener(e -> openManualMatchDialog());
+        expenseBtn = UIHelper.createSecondaryButton("Lançar Encargo");
+        expenseBtn.addActionListener(e -> openExpenseDialog());
+        unmatchBtn = UIHelper.createDangerButton("Desfazer Vínculo");
+        unmatchBtn.addActionListener(e -> unmatchSelectedItem());
+        autoMatchBtn = UIHelper.createSuccessButton("Auto-Conciliar");
+        autoMatchBtn.addActionListener(e -> performAutoMatch());
+        reportBtn = UIHelper.createSecondaryButton("Relatório");
+        reportBtn.addActionListener(e -> emitPdfReport());
+
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        headerActions.setOpaque(false);
+        headerActions.add(refreshBtn);
+        headerActions.add(importBtn);
+        headerActions.add(operationsMenu);
+        headerActions.add(closeBtn);
+
+        cardHeader.add(headerActions, BorderLayout.EAST);
+
+        // 2. Filtros e Pesquisa
         JTextField searchField = TableFilter.searchField("Filtrar descrição ou referência…");
-        JComboBox<String> statusFilter = TableFilter.combo("Todos os estados", "APROVADO", "PENDENTE", "INACTIVO");
+        statusFilter = TableFilter.combo("Todos os estados", "APROVADO", "PENDENTE", "INACTIVO");
         JComboBox<String> periodFilter = TableFilter.periodCombo();
         TableFilter.install(itemsTable, searchField,
                 List.of(new TableFilter.ColumnFilter(statusFilter, 4)),
@@ -293,38 +293,59 @@ public class BankReconciliationPanel extends JPanel {
                 TableFilter.label("Estado:"), statusFilter,
                 TableFilter.label("Data:", "fas-calendar-alt"), periodFilter
         );
-        searchBar.setBorder(new EmptyBorder(0, 0, 8, 0));
+        searchBar.setBorder(new EmptyBorder(6, 0, 8, 0));
 
-        card.add(searchBar, BorderLayout.NORTH);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da linha seleccionada (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes da linha");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel searchRow = new JPanel(new BorderLayout());
+        searchRow.setOpaque(false);
+        searchRow.add(searchBar, BorderLayout.WEST);
+        searchRow.add(peekToggleBtn, BorderLayout.EAST);
+
+        JPanel cardTop = new JPanel(new BorderLayout(0, 6));
+        cardTop.setOpaque(false);
+        cardTop.add(cardHeader, BorderLayout.NORTH);
+        cardTop.add(searchRow, BorderLayout.SOUTH);
+
+        card.add(cardTop, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+
+        // 3. Quick Peek Silencioso com Tecla Espaço
+        TableQuickPeekController reconPeek = TableQuickPeekController.install(itemsTable, card, (peek, modelRow) -> {
+            if (modelRow >= 0 && modelRow < currentItems.size()) {
+                BankStatementItemDTO item = currentItems.get(modelRow);
+                boolean isMatched = item.matchedTransactionId() != null;
+                peek.setHeaderIcon("fas-university", UIHelper.ACCENT_BLUE);
+                peek.setTitle(item.description());
+                peek.setSubtitle("Movimento Bancário");
+                peek.setStatus(isMatched ? "CONCILIADO" : "PENDENTE", isMatched ? UIHelper.APPROVED_GREEN : UIHelper.PENDING_YELLOW);
+
+                List<QuickPeekPanel.PeekItem> peekItems = new ArrayList<>();
+                peekItems.add(new QuickPeekPanel.PeekItem("Data", item.transactionDate() != null ? item.transactionDate().format(DATE_FMT) : "—", false));
+                peekItems.add(new QuickPeekPanel.PeekItem("Referência", item.reference() != null ? item.reference() : "—", false));
+                peekItems.add(new QuickPeekPanel.PeekItem("Valor", String.format("%,.2f MT", item.amount()), true));
+                if (isMatched) {
+                    String linkedTx = treasuryTransactions.stream()
+                            .filter(t -> t.id().equals(item.matchedTransactionId()))
+                            .findFirst()
+                            .map(t -> "#TX-" + t.id() + " (" + t.description() + ")")
+                            .orElse("#TX-" + item.matchedTransactionId());
+                    peekItems.add(new QuickPeekPanel.PeekItem("Transação Vinculada", linkedTx, false));
+                    peek.setOnOpenFullAction(ignored -> unmatchSelectedItem());
+                } else {
+                    peekItems.add(new QuickPeekPanel.PeekItem("Transação Vinculada", "Nenhuma (Pendente)", false));
+                    peek.setOnOpenFullAction(ignored -> openManualMatchDialog());
+                }
+                peek.setItems(peekItems);
+            }
+        });
+        peekToggleBtn.addActionListener(e -> reconPeek.toggle());
+
         return card;
-    }
-
-    private JPanel buildBottomActionBar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        bar.setOpaque(false);
-        bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        bar.setBorder(new EmptyBorder(6, 0, 0, 0));
-
-        manualMatchBtn = UIHelper.createPrimaryButton("Conciliar Manualmente");
-        manualMatchBtn.setIcon(UIHelper.icon("fas-link", 14));
-        manualMatchBtn.setEnabled(false);
-        manualMatchBtn.addActionListener(e -> openManualMatchDialog());
-        bar.add(manualMatchBtn);
-
-        expenseBtn = UIHelper.createSecondaryButton("Lançar Encargo Bancário");
-        expenseBtn.setIcon(UIHelper.icon("fas-receipt", 14));
-        expenseBtn.setEnabled(false);
-        expenseBtn.addActionListener(e -> openExpenseDialog());
-        bar.add(expenseBtn);
-
-        unmatchBtn = UIHelper.createDangerButton("Desfazer Conciliação");
-        unmatchBtn.setIcon(UIHelper.icon("fas-undo", 14));
-        unmatchBtn.setEnabled(false);
-        unmatchBtn.addActionListener(e -> unmatchSelectedItem());
-        bar.add(unmatchBtn);
-
-        return bar;
     }
 
     public void refreshData() {
@@ -492,6 +513,13 @@ public class BankReconciliationPanel extends JPanel {
             manualMatchBtn.setEnabled(false);
             expenseBtn.setEnabled(false);
             unmatchBtn.setEnabled(false);
+        }
+
+        if (operationsMenu != null) {
+            operationsMenu.setActionEnabled(0, !isClosed);
+            operationsMenu.setActionEnabled(1, manualMatchBtn.isEnabled());
+            operationsMenu.setActionEnabled(2, expenseBtn.isEnabled());
+            operationsMenu.setActionEnabled(3, unmatchBtn.isEnabled());
         }
     }
 
