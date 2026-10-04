@@ -1044,6 +1044,57 @@ public class UIHelper {
     }
 
     /**
+     * Instala manipulador de duplo clique canónico fornecendo o índice da linha no modelo.
+     */
+    public static void installRowDoubleClickHandler(JTable table, java.util.function.IntConsumer onRowDoubleClicked) {
+        if (table == null || onRowDoubleClicked == null) return;
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && javax.swing.SwingUtilities.isLeftMouseButton(e)) {
+                    int viewRow = table.rowAtPoint(e.getPoint());
+                    if (viewRow >= 0 && viewRow < table.getRowCount()) {
+                        int modelRow = table.convertRowIndexToModel(viewRow);
+                        onRowDoubleClicked.accept(modelRow);
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Instala menu de contexto limpo na tabela ao clicar com o botão direito numa linha.
+     */
+    public static void installRowContextMenu(JTable table, java.util.function.Function<Integer, javax.swing.JPopupMenu> popupProvider) {
+        if (table == null || popupProvider == null) return;
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                maybeShowPopup(e);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                maybeShowPopup(e);
+            }
+
+            private void maybeShowPopup(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int viewRow = table.rowAtPoint(e.getPoint());
+                    if (viewRow >= 0 && viewRow < table.getRowCount()) {
+                        table.setRowSelectionInterval(viewRow, viewRow);
+                        int modelRow = table.convertRowIndexToModel(viewRow);
+                        javax.swing.JPopupMenu menu = popupProvider.apply(modelRow);
+                        if (menu != null && menu.getComponentCount() > 0 && table.isShowing()) {
+                            menu.show(table, e.getX(), e.getY());
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
      * Instala atalhos de teclado universais na grelha de linhas de um documento:
      * - INSERT / Ctrl+ENTER: Adicionar linha
      * - DELETE / Ctrl+DELETE: Remover linha seleccionada (quando não em edição directa de célula)

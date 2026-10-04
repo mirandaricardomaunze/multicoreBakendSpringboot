@@ -43,6 +43,7 @@ public class PhysicalInventoryPanel extends JPanel {
     private JLabel kpiSurplusVal;
     private JLabel kpiDeficitVal;
 
+    private JTextField searchField;
     private JTable itemsTable;
     private DefaultTableModel tableModel;
 
@@ -93,10 +94,14 @@ public class PhysicalInventoryPanel extends JPanel {
         kpiSurplusVal = new JLabel("0.00 MT");
         kpiDeficitVal = new JLabel("0.00 MT");
 
-        kpiGrid.add(KpiCard.createMetricCard("Total de Produtos", kpiTotalItems, "Itens no inventário", "fas-boxes", UIHelper.ACCENT_BLUE));
-        kpiGrid.add(KpiCard.createMetricCard("Produtos Contados", kpiCountedItems, "Itens bipados/registados", "fas-tasks", UIHelper.APPROVED_GREEN));
-        kpiGrid.add(KpiCard.createMetricCard("Sobras (MT)", kpiSurplusVal, "Impacto positivo de stock", "fas-arrow-up", UIHelper.ACCENT_CYAN));
-        kpiGrid.add(KpiCard.createMetricCard("Faltas (MT)", kpiDeficitVal, "Impacto negativo de stock", "fas-arrow-down", UIHelper.REJECTED_RED));
+        kpiGrid.add(KpiCard.createInteractiveMetricCard("Total de Produtos", kpiTotalItems, "Itens no inventário", "fas-boxes", UIHelper.ACCENT_BLUE,
+                "Clique para limpar filtros e ver todos os itens", () -> { if (searchField != null) searchField.setText(""); }));
+        kpiGrid.add(KpiCard.createInteractiveMetricCard("Produtos Contados", kpiCountedItems, "Itens bipados/registados", "fas-tasks", UIHelper.APPROVED_GREEN,
+                "Clique para focar a pesquisa", () -> { if (searchField != null) searchField.requestFocusInWindow(); }));
+        kpiGrid.add(KpiCard.createInteractiveMetricCard("Sobras (MT)", kpiSurplusVal, "Impacto positivo de stock", "fas-arrow-up", UIHelper.ACCENT_CYAN,
+                "Clique para filtrar produtos com sobra", () -> { if (searchField != null) searchField.setText("+"); }));
+        kpiGrid.add(KpiCard.createInteractiveMetricCard("Faltas (MT)", kpiDeficitVal, "Impacto negativo de stock", "fas-arrow-down", UIHelper.REJECTED_RED,
+                "Clique para filtrar produtos com falta", () -> { if (searchField != null) searchField.setText("-"); }));
 
         center.add(kpiGrid, BorderLayout.NORTH);
         center.add(buildTableCard(), BorderLayout.CENTER);
@@ -139,7 +144,7 @@ public class PhysicalInventoryPanel extends JPanel {
         countModeLabel.setFont(new Font(UIHelper.FONT, Font.ITALIC, 11));
         countModeLabel.setForeground(UIHelper.ACCENT_BLUE);
 
-        JTextField searchField = TableFilter.searchField("Pesquisar na contagem…");
+        searchField = TableFilter.searchField("Pesquisar na contagem…");
         searchField.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(itemsTable, searchField);
 
@@ -229,6 +234,40 @@ public class PhysicalInventoryPanel extends JPanel {
         for (int i = 0; i < itemsTable.getColumnCount(); i++) {
             itemsTable.getColumnModel().getColumn(i).setCellRenderer(renderer);
         }
+
+        UIHelper.installRowDoubleClickHandler(itemsTable, modelRow -> {
+            if (modelRow >= 0 && modelRow < tableModel.getRowCount()) {
+                String code = String.valueOf(tableModel.getValueAt(modelRow, 0));
+                if (barcodeScanField != null) {
+                    barcodeScanField.setText(code);
+                    barcodeScanField.requestFocusInWindow();
+                }
+            }
+        });
+
+        UIHelper.installRowContextMenu(itemsTable, modelRow -> {
+            if (modelRow < 0 || modelRow >= tableModel.getRowCount()) return null;
+            String code = String.valueOf(tableModel.getValueAt(modelRow, 0));
+            JPopupMenu menu = new JPopupMenu();
+            JMenuItem copyCode = new JMenuItem("Copiar Código (" + code + ")");
+            copyCode.setIcon(UIHelper.icon("fas-copy", 12, UIHelper.ACCENT_BLUE));
+            copyCode.addActionListener(e -> {
+                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(code);
+                java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, sel);
+                ToastManager.show(PhysicalInventoryPanel.this, FeedbackType.INFO, "Código copiado: " + code);
+            });
+            JMenuItem selectItem = new JMenuItem("Bipar / Contar Produto");
+            selectItem.setIcon(UIHelper.icon("fas-barcode", 12, UIHelper.APPROVED_GREEN));
+            selectItem.addActionListener(e -> {
+                if (barcodeScanField != null) {
+                    barcodeScanField.setText(code);
+                    barcodeScanField.requestFocusInWindow();
+                }
+            });
+            menu.add(copyCode);
+            menu.add(selectItem);
+            return menu;
+        });
 
         // Listener para edição direta na célula de Contado
         tableModel.addTableModelListener(e -> {

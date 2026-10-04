@@ -17,6 +17,26 @@ Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1
 
 **Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
 
+### KPI Drilldown Interativo e Ergonomia Silenciosa de Tabelas — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador solicitou melhorias de UI de alto valor com o princípio de não gerar ruído visual ("SIM BASTA NAO FAZER RUIDO NA UI , QUERO QUE SEJA PROFISSIONAL").
+- **Implementação Realizada:**
+  1. **Especificação Técnica Canónica:** Criado [docs/KPI_DRILLDOWN_E_ERGONOMIA_SILENCIOSA_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/KPI_DRILLDOWN_E_ERGONOMIA_SILENCIOSA_SPEC.md).
+  2. **Documentação do Harness:** Criado [docs/KPI_DRILLDOWN_E_ERGONOMIA_SILENCIOSA_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/KPI_DRILLDOWN_E_ERGONOMIA_SILENCIOSA_HARNESS.md).
+  3. **Harness Automatizado:** Criado [desktop/src/test/java/mz/multicore/erp/gui/components/KpiDrilldownAndTableErgonomicsHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/components/KpiDrilldownAndTableErgonomicsHarnessTest.java) cobrindo cursor de mão, hover de borda, acessibilidade por teclado (`ENTER`/`SPACE`), duplo clique seguro com conversão de índice de modelo e menu de contexto do rato.
+  4. **Componentes Nucleares:**
+     - [KpiCard.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/KpiCard.java): métodos `makeInteractive`, `createInteractiveCard` e `createInteractiveMetricCard`, mantendo rigorosamente a proporção de 96px de altura sem ruído visual.
+     - [UIHelper.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/UIHelper.java): métodos `installRowDoubleClickHandler` e `installRowContextMenu` com selecção automática de linha e protecção `table.isShowing()`.
+     - [PhysicalInventoryPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/inventory/PhysicalInventoryPanel.java): cartões de KPI interactivos (filtro por sobras `+`, faltas `-` e total) e duplo-clique para bipar/contar produto na grelha.
+- **Validação:**
+  - `KpiDrilldownAndTableErgonomicsHarnessTest`: 5/5 testes aprovados.
+  - `PhysicalInventoryPanelHarnessTest`: 4/4 testes aprovados.
+  - `BrightButtonsHarnessTest`: 5/5 testes aprovados.
+  - `UiPanelDecompositionTest`: 100% aprovado.
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados.
+
 ### Eliminação Global de Botões Escuros no Sistema com SPEC e HARNESS — 2026-10-04 — **concluída com sucesso**
 
 - **Contexto e Requisito:**

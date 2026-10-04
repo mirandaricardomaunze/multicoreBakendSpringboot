@@ -4,15 +4,21 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.util.Locale;
 
@@ -396,6 +402,71 @@ public final class KpiCard {
     public static ModernPanel createMetricCard(String title, String value, String subtitle, String iconName, Color iconColor, BigDecimal trendPercent) {
         JLabel val = new JLabel(value != null ? value : "—");
         return createMetricCard(title, val, subtitle, iconName, iconColor, trendPercent);
+    }
+
+    /**
+     * Torna um cartão de KPI interactivo para acções de drilldown/filtro rápido.
+     * Altera o cursor para HAND_CURSOR, adiciona realce subtil de borda no hover
+     * e executa a acção ao clicar com o botão esquerdo ou pressionar Enter/Espaço.
+     */
+    public static ModernPanel makeInteractive(ModernPanel card, String tooltip, Runnable onClickAction) {
+        if (card == null || onClickAction == null) return card;
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        card.setFocusable(true);
+        if (tooltip != null && !tooltip.isBlank()) {
+            card.setToolTipText(tooltip);
+        } else {
+            card.setToolTipText("Clique para filtrar ou ver detalhes deste indicador");
+        }
+
+        Color normalBorder = (Color) card.getClientProperty("card.border");
+        Color hoverBorder = normalBorder != null ? normalBorder.brighter() : new Color(255, 255, 255, 140);
+
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                card.putClientProperty("card.border", hoverBorder);
+                card.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                card.putClientProperty("card.border", normalBorder);
+                card.repaint();
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    onClickAction.run();
+                }
+            }
+        });
+
+        card.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    onClickAction.run();
+                }
+            }
+        });
+
+        return card;
+    }
+
+    public static ModernPanel createInteractiveCard(String title, JLabel valueLabel, String subtitle,
+                                                    String iconName, Color iconColor,
+                                                    String tooltip, Runnable onClickAction) {
+        ModernPanel card = createCard(title, valueLabel, subtitle, iconName, iconColor);
+        return makeInteractive(card, tooltip, onClickAction);
+    }
+
+    public static ModernPanel createInteractiveMetricCard(String title, JLabel valueLabel, String subtitle,
+                                                          String iconName, Color iconColor,
+                                                          String tooltip, Runnable onClickAction) {
+        ModernPanel card = createMetricCard(title, valueLabel, subtitle, iconName, iconColor);
+        return makeInteractive(card, tooltip, onClickAction);
     }
 
     /**
