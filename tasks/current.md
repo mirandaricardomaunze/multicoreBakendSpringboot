@@ -17,6 +17,30 @@ Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1
 
 **Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
 
+### Substituição do Ícone da Aplicação por Emblema Corporativo Executivo (.ICO e Mipmaps) — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador solicitou a substituição do ícone `.ico` por um emblema corporativo profissional e executivo, sem aspecto gerado por IA: *"troca icon ico por um outro mais profissional sem parecer da ia"*.
+- **Implementação Realizada:**
+  1. **Concepção da Identidade Visual Multicore:**
+     - Afastamento de renderizações 3D futuristas com circuitos de neon ou estética de IA generativa.
+     - Criação de um emblema corporativo de precisão geométrica em formato *squircle* moderno (raio 22%), contorno de vidro refinado (`Sky-400`/`Indigo-500`) e fundo ardósia/safira profundo (`Slate-900` `#0F172A` a `Slate-800` `#1E293B`).
+     - Emblema central representando a convergência "MULTICORE" com 4 núcleos executivos perfeitamente equilibrados:
+       - Azul Real Executivo (Comercial / Vendas)
+       - Esmeralda Financeira (Stock / Tesouraria)
+       - Âmbar Radiante (Facturação / Fiscal)
+       - Violeta Tecnológico (POS / RH)
+       - Hub central iluminado e linhas de sincronização vectorial puras.
+  2. **Geração Multi-Resolução Canónica:**
+     - Gerado novo conjunto de ícones em 7 resoluções: 16x16, 24x24, 32x32, 48x48, 64x64, 128x128 e 256x256 px.
+     - Compilação binária de `app-icon.ico` (34.823 bytes) contendo todos os 7 mipmaps compactados em 32-bit ARGB PNG nativo do Windows.
+     - Atualização nos directórios `desktop/src/main/resources/icons/` e `installer/app-icon.ico`.
+     - Atualização do atalho no ambiente de trabalho `C:\Users\miran\Desktop\Multicore ERP.lnk`.
+- **Validação:**
+  - `AppIconHarnessTest`: 3/3 testes aprovados.
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - Aplicação empacotada e reiniciada via tarefa interactiva `MulticoreERP` (PID activo e a responder).
+
 ### Inicialização e Ecrã de Login em Modo Claro (Light Theme) — 2026-10-04 — **concluída com sucesso**
 
 - **Contexto e Requisito:**
