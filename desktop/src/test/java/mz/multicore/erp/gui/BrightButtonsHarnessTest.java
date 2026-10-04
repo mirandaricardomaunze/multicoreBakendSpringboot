@@ -19,9 +19,9 @@ class BrightButtonsHarnessTest {
         Color darkGray600 = new Color(75, 85, 99);
         Color darkSlate700 = new Color(51, 65, 85);
 
-        // SECONDARY deve ser luminoso (Sky-500 #0EA5E9), nunca cinzento escuro
+        // SECONDARY deve ser luminoso (Sky-700 #0369A1), nunca cinzento escuro
         assertThat(UIHelper.SECONDARY).isNotEqualTo(darkGray600);
-        assertThat(UIHelper.SECONDARY).isEqualTo(new Color(14, 165, 233));
+        assertThat(UIHelper.SECONDARY).isEqualTo(new Color(3, 105, 161));
 
         // BUTTON_NEUTRAL deve ser vivo (Indigo-500 #6366F1), nunca ardósia escura
         assertThat(UIHelper.BUTTON_NEUTRAL).isNotEqualTo(darkSlate700);
@@ -39,7 +39,7 @@ class BrightButtonsHarnessTest {
     @Test
     void createRefreshButtonInstantiatesBrightActionButton() {
         ModernButton btn = UIHelper.createRefreshButton(() -> {});
-        assertThat(btn.getBackground()).isEqualTo(new Color(3, 105, 161));
+        assertThat(btn.getBackground()).isEqualTo(UIHelper.SECONDARY);
         assertThat(btn.getForeground()).isEqualTo(Color.WHITE);
         assertThat(btn.getIcon()).isNotNull();
         assertThat(btn.getText()).isEqualTo("Actualizar");

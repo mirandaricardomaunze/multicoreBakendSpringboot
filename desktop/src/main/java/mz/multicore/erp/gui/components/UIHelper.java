@@ -82,8 +82,8 @@ public class UIHelper {
     public static final Color KPI_DANGER_END = new Color(185, 28, 28);
     public static final Color KPI_ORANGE_DARK = new Color(194, 65, 12);
     public static final Color KPI_ORANGE_END = new Color(234, 88, 12);
-    public static final Color SECONDARY = new Color(14, 165, 233);          // Sky-500 (#0EA5E9)
-    public static final Color SECONDARY_HOVER = new Color(2, 132, 199);    // Sky-600 (#0284C7)
+    public static final Color SECONDARY = new Color(3, 105, 161);          // Sky-700 (#0369A1)
+    public static final Color SECONDARY_HOVER = new Color(7, 89, 133);     // Sky-800 (#075985)
     public static final Color BUTTON_NEUTRAL = new Color(99, 102, 241);       // Indigo-500 (#6366F1)
     public static final Color BUTTON_NEUTRAL_HOVER = new Color(79, 70, 229); // Indigo-600 (#4F46E5)
 
@@ -491,9 +491,7 @@ public class UIHelper {
     /** Acção canónica de recarga manual para vistas partilhadas entre vários utilizadores. */
     public static ModernButton createRefreshButton(Runnable refreshAction) {
         Objects.requireNonNull(refreshAction, "A acção de actualização é obrigatória.");
-        Color refreshBase = new Color(3, 105, 161);
-        Color refreshHover = new Color(7, 89, 133);
-        ModernButton button = new ModernButton("Actualizar", refreshBase, refreshHover);
+        ModernButton button = new ModernButton("Actualizar", SECONDARY, SECONDARY_HOVER);
         button.setIcon(icon("fas-sync-alt", 14, Color.WHITE));
         button.setForeground(Color.WHITE);
         button.setToolTipText("Carregar os dados mais recentes");

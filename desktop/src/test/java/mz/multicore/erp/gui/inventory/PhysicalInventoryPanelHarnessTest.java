@@ -65,8 +65,16 @@ public class PhysicalInventoryPanelHarnessTest {
 
     @Test
     void testTopBarActionCountAndMenuContainment() {
+        mz.multicore.erp.gui.components.ModernPanel card = findTableCard(panel);
+        assertNotNull(card, "O card da tabela deve existir");
+        BorderLayout cardLayout = (BorderLayout) card.getLayout();
+        java.awt.Component top = cardLayout.getLayoutComponent(BorderLayout.NORTH);
+        assertTrue(top instanceof java.awt.Container, "O topo do card deve conter filtros e ações");
+        java.awt.Container topContainer = (java.awt.Container) top;
+        java.awt.Container header = (java.awt.Container) ((BorderLayout) topContainer.getLayout()).getLayoutComponent(BorderLayout.NORTH);
+        java.awt.Container actions = (java.awt.Container) ((BorderLayout) header.getLayout()).getLayoutComponent(BorderLayout.EAST);
         java.util.List<javax.swing.AbstractButton> buttons = new java.util.ArrayList<>();
-        collectButtons(panel, buttons);
+        collectButtons(actions, buttons);
         boolean hasActionMenu = buttons.stream()
                 .anyMatch(mz.multicore.erp.gui.components.ActionMenuButton.class::isInstance);
         long buttonCount = buttons.stream().filter(button -> button.isShowing() || button.isVisible()).count();
@@ -74,6 +82,19 @@ public class PhysicalInventoryPanelHarnessTest {
         assertTrue(buttonCount <= 3,
                 "A barra de ações do cabeçalho deve ter no máximo 3 botões visíveis, mas tem: " + buttonCount);
         assertTrue(hasActionMenu, "As ações do ciclo da sessão devem estar agrupadas em ActionMenuButton");
+    }
+
+    private static mz.multicore.erp.gui.components.ModernPanel findTableCard(java.awt.Container root) {
+        for (java.awt.Component component : root.getComponents()) {
+            if (component instanceof mz.multicore.erp.gui.components.ModernPanel panel
+                    && panel.getLayout() instanceof BorderLayout layout
+                    && layout.getLayoutComponent(BorderLayout.CENTER) instanceof JScrollPane) return panel;
+            if (component instanceof java.awt.Container child) {
+                var found = findTableCard(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private static void collectButtons(java.awt.Container root, java.util.List<javax.swing.AbstractButton> buttons) {

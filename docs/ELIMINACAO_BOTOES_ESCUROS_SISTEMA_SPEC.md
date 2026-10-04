@@ -21,9 +21,9 @@ Como resultado:
 ### 1.2 Princípios de Desenho e Solução
 1. **Zero Botões Escuros/Cinzentos:** Nenhum botão operacional ou secundário na aplicação deve apresentar fundo cinzento escuro ou ardósia preta (`Gray-600` ou `Slate-700`).
 2. **Cores Semânticas e Vivas:**
-   - **Botões Secundários (`createSecondaryButton`):** Assumem tonalidade azul-celeste vibrante (`ACCENT_SKY` — `#0EA5E9`), garantindo que todos os botões secundários herdados fiquem claros, visíveis e atraentes.
+   - **Botões Secundários (`createSecondaryButton`):** Assumem tonalidade azul petróleo oceânico luminoso (`Sky-700` — `#0369A1`), garantindo que todos os botões secundários herdados fiquem claros, visíveis e atraentes.
    - **Botões Neutros (`BUTTON_NEUTRAL`):** Assumem tonalidade índigo vibrante (`Indigo-500` — `#6366F1`), com excelente contraste e legibilidade.
-   - **Botões de Recarga ("Actualizar"):** Utilizam `ACCENT_SKY` ou `ACCENT_BLUE` com ícone branco `fas-sync-alt`, com luminosidade instantânea no topo de todas as tabelas.
+   - **Botões de Recarga ("Actualizar"):** Utilizam `SECONDARY` (`Sky-700`) com ícone branco `fas-sync-alt`, com luminosidade instantânea no topo de todas as tabelas.
    - **Botões de Cancelar / Fechar:** Botões de anulação, descarte ou cancelamento de formulários devem usar rigorosamente o botão vermelho canónico (`createDangerButton` — `REJECTED_RED` `#EF4444`).
    - **Texto e Ícones:** Todo o texto e ícones sobre botões coloridos usam `Color.WHITE`, em conformidade estrita com o padrão WCAG 2.1 AA.
 
@@ -35,8 +35,8 @@ Como resultado:
 // Em UIHelper.java
 public static final Color BUTTON_NEUTRAL = new Color(99, 102, 241);       // Indigo-500 (#6366F1)
 public static final Color BUTTON_NEUTRAL_HOVER = new Color(79, 70, 229); // Indigo-600 (#4F46E5)
-private static final Color SECONDARY = new Color(14, 165, 233);          // Sky-500 (#0EA5E9)
-private static final Color SECONDARY_HOVER = new Color(2, 132, 199);    // Sky-600 (#0284C7)
+public static final Color SECONDARY = new Color(3, 105, 161);            // Sky-700 (#0369A1)
+public static final Color SECONDARY_HOVER = new Color(7, 89, 133);       // Sky-800 (#075985)
 
 public static ModernButton createSecondaryButton(String text) {
     return new ModernButton(text, SECONDARY, SECONDARY_HOVER);

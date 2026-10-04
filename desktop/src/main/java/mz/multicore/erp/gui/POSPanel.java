@@ -239,7 +239,7 @@ public class POSPanel extends JPanel {
         cashMoveBtn = UIHelper.createWarningButton("Sangria / Suprimento");
         cashMoveBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
         cashMoveBtn.addActionListener(e -> cashSessionActions.manageCashMovements()); cashMoveBtn.setVisible(false);
-        shiftHandoverBtn = new ModernButton("Passar Turno", new Color(13, 148, 136), new Color(15, 118, 110));
+        shiftHandoverBtn = new ModernButton("Passar Turno", UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN_HOVER);
         shiftHandoverBtn.setIcon(UIHelper.icon("fas-people-arrows", 14, Color.WHITE));
         shiftHandoverBtn.setForeground(Color.WHITE);
         shiftHandoverBtn.setToolTipText("Passagem de turno entre operadores");
@@ -579,7 +579,7 @@ public class POSPanel extends JPanel {
         }
         Color active = UIHelper.ACCENT_BLUE, activeHover = UIHelper.ACCENT_BLUE_HOVER;
         Color activeHist = UIHelper.ACCENT, activeHistHover = UIHelper.ACCENT_HOVER;
-        Color idle = new Color(99, 102, 241), idleHover = new Color(79, 70, 229);
+        Color idle = new Color(99, 102, 241), idleHover = new Color(79, 70, 229); // Indigo-500
         tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
         tabHistBtn.setColors(history ? activeHist : idle, history ? activeHistHover : idleHover);
         tabVendaBtn.setForeground(Color.WHITE);
