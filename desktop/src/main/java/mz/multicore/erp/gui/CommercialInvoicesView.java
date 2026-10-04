@@ -190,6 +190,8 @@ final class CommercialInvoicesView {
 
         // LISTENERS
         UIHelper.installDoubleClick(owner.invoicesTable, owner::printSelectedInvoice);
+        TableQuickPeekController invPeek = UIHelper.installQuickPeek(owner.invoicesTable, listCard);
+        invPeek.setOnOpenFullCallback(modelRow -> owner.printSelectedInvoice());
         UIHelper.installDocumentGridShortcuts(owner.linesTable,
                 owner::addDraftLine, owner::removeSelectedInvoiceDraftLine, owner::saveInvoiceFromEditor);
         addLineBtn.addActionListener(e -> owner.addDraftLine());

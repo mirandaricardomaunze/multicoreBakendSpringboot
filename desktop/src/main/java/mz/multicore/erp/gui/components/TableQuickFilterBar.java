@@ -269,6 +269,33 @@ public class TableQuickFilterBar extends JPanel {
         return countLabel;
     }
 
+    /**
+     * Anexa o botão discreto de alternância do «Quick Peek» no lado direito da barra de filtros.
+     */
+    public void attachQuickPeek(TableQuickPeekController controller) {
+        if (controller == null) return;
+        JButton peekBtn = UIHelper.createSecondaryButton("");
+        peekBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekBtn.setToolTipText("Espreitar detalhes da linha seleccionada (Espaço)");
+        peekBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes da linha");
+        peekBtn.setPreferredSize(new Dimension(30, 30));
+        peekBtn.addActionListener(e -> controller.toggle());
+
+        Component eastComp = ((BorderLayout) getLayout()).getLayoutComponent(BorderLayout.EAST);
+        if (eastComp != null) {
+            remove(eastComp);
+            JPanel eastBox = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+            eastBox.setOpaque(false);
+            eastBox.add(eastComp);
+            eastBox.add(peekBtn);
+            add(eastBox, BorderLayout.EAST);
+        } else {
+            add(peekBtn, BorderLayout.EAST);
+        }
+        revalidate();
+        repaint();
+    }
+
     public static TableQuickFilterBar attach(JTable table) {
         return new TableQuickFilterBar(table);
     }

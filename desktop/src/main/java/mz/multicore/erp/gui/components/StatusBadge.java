@@ -21,6 +21,10 @@ public class StatusBadge extends JLabel {
     private final Color badgeBg;
     private final Color badgeBorder;
 
+    public StatusBadge(String text, Color color) {
+        this(text, color, null);
+    }
+
     public StatusBadge(String text, Color color, String iconCode) {
         super(text != null ? text.toUpperCase() : "");
         this.badgeColor = color != null ? color : UIHelper.TEXT_MUTED;

@@ -17,6 +17,39 @@ Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1
 
 **Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
 
+### «Quick Peek» Silencioso em Tabelas com Tecla Espaço (Painel Deslizante Lateral) — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador escolheu a opção 3 das sugestões de UI de alto valor ergonómico: *«Quick Peek» / Visualização Rápida de Detalhes sem Abrir Modais (Tecla Espaço / Painel Deslizante Lateral)*, com o imperativo de zero ruído visual e máxima sobriedade profissional (*"SIM BASTA NAO FAZER RUIDO NA UI , QUERO QUE SEJA PROFISSIONAL"*).
+- **Implementação Realizada:**
+  1. **Especificação Técnica Canónica:** Criado [docs/QUICK_PEEK_SILENCIOSO_SPEC.md](file:///c:/Users/miran/Desktop/manager/docs/QUICK_PEEK_SILENCIOSO_SPEC.md).
+  2. **Documentação do Harness:** Criado [docs/QUICK_PEEK_SILENCIOSO_HARNESS.md](file:///c:/Users/miran/Desktop/manager/docs/QUICK_PEEK_SILENCIOSO_HARNESS.md).
+  3. **Harness Automatizado:** Implementado [desktop/src/test/java/mz/multicore/erp/gui/components/TableQuickPeekHarnessTest.java](file:///c:/Users/miran/Desktop/manager/desktop/src/test/java/mz/multicore/erp/gui/components/TableQuickPeekHarnessTest.java) com 7 testes dedicados (PEEK-01 a PEEK-07):
+     - `peek01_panelStartsHiddenAndTogglesWithSpace`: Valida abertura e fecho por tecla `SPACE` com drawer acoplado em `BorderLayout.EAST`.
+     - `peek02_escClosesQuickPeekDrawer`: Valida dismiss imediato por `ESC`.
+     - `peek03_selectionChangeUpdatesPeekContentReactively`: Valida atualização reativa ao navegar linhas com setas do teclado (`UP`/`DOWN`).
+     - `peek04_statusBadgePreservesSemanticColoring`: Valida badge de estado com contraste e cor semântica.
+     - `peek05_actionButtonTriggersFullDetailsAction`: Valida botão "Ver Detalhes Completos" acionando o fluxo correspondente.
+     - `peek06_noSelectionClearsOrHidesPeekSafely`: Valida comportamento gracioso quando a tabela perde seleção.
+     - `peek07_quickFilterBarColumnToggleButtonTogglesDrawer`: Valida botão discreto de alternância na barra de filtros.
+  4. **Componentes Nucleares:**
+     - [QuickPeekPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/QuickPeekPanel.java): Gaveta lateral elegante (340px) acoplada em `BorderLayout.EAST` do card da tabela, com cabeçalho limpo, badge semântico, pares de chave-valor scrolláveis, realce tipográfico para montantes monetários e botão de ação primária.
+     - [TableQuickPeekController.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/TableQuickPeekController.java): Controlador universal sem poluição visual, interceptando `SPACE` e `ESC` via `ActionMap`/`InputMap`, ouvindo `ListSelectionListener` para atualizar o drawer em tempo real.
+     - [StatusBadge.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/StatusBadge.java): Construtor sobrecarregado `StatusBadge(String text, Color color)` para compatibilidade retroativa com cores semânticas diretas.
+     - [TableQuickFilterBar.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/TableQuickFilterBar.java): Método `attachQuickPeek(...)` integrando um botão discreto de alternância de painel lateral (ícone `fas-columns`).
+     - [UIHelper.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/components/UIHelper.java): Método `installQuickPeek(JTable table, JPanel container)` e definição de token `ACCENT_ORANGE_HOVER = new Color(234, 88, 12)`.
+  5. **Integração nas Principais Tabelas Operacionais:**
+     - [CommercialInvoicesView.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/CommercialInvoicesView.java): Visualização instantânea de faturas (número, cliente, NUIT, total com realce verde, estado e data) via tecla `SPACE`.
+     - [CommercialOrdersView.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/CommercialOrdersView.java): Inspeção rápida de encomendas de clientes (código, cliente, total, prazo e estado).
+     - [PosSalesHistoryPanel.java](file:///c:/Users/miran/Desktop/manager/desktop/src/main/java/mz/multicore/erp/gui/PosSalesHistoryPanel.java): Inspeção rápida de vendas POS (recibo, operador, caixa, pagamento e total).
+- **Validação:**
+  - `TableQuickPeekHarnessTest`: 7/7 testes aprovados.
+  - `FinalUiUniformityHarnessTest`: 5/5 testes aprovados.
+  - `UiPanelDecompositionTest`: 100% aprovado (todas as classes $\le 1000$ linhas).
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados.
+  - Aplicação empacotada com sucesso e lançada interativamente no Windows via `schtasks /run /tn "MulticoreERP"`.
+
 ### Substituição do Ícone da Aplicação por Emblema Corporativo Executivo (.ICO e Mipmaps) — 2026-10-04 — **concluída com sucesso**
 
 - **Contexto e Requisito:**

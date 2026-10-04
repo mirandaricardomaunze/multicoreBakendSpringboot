@@ -61,6 +61,7 @@ public class UIHelper {
     public static final Color PENDING_YELLOW = new Color(245, 158, 11);  // Amber-500 (#F59E0B)
     public static final Color ACCENT_CYAN = new Color(6, 182, 212);      // Cyan-500 (#06B6D4)
     public static final Color ACCENT_ORANGE = new Color(249, 115, 22);   // Orange-500 (#F97316)
+    public static final Color ACCENT_ORANGE_HOVER = new Color(234, 88, 12); // Orange-600 (#EA580C)
     public static final Color ACCENT_PINK = new Color(236, 72, 153);     // Pink-500 (#EC4899)
     public static final Color ACCENT_SKY = new Color(14, 165, 233);      // Sky-500 (#0EA5E9)
     public static final Color KPI_INFO_SOFT = new Color(224, 242, 254);
@@ -1097,6 +1098,14 @@ public class UIHelper {
                 }
             }
         });
+    }
+
+    /**
+     * Instala o controlador de visualização rápida («Quick Peek») na tabela e no seu contentor.
+     * Permite alternar o painel lateral com a tecla Espaço (SPACE) e fechá-lo com ESC.
+     */
+    public static TableQuickPeekController installQuickPeek(JTable table, JPanel container) {
+        return TableQuickPeekController.install(table, container);
     }
 
     /**

@@ -75,7 +75,7 @@ final class PosSalesHistoryPanel {
                     ex -> owner.showPosNotice(FeedbackType.ERROR, "Não foi possível gerar o recibo", ex.getMessage()));
         });
 
-        ModernButton returnBtn = new ModernButton("Devolver / Trocar", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE.darker());
+        ModernButton returnBtn = new ModernButton("Devolver / Trocar", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE_HOVER);
         returnBtn.setIcon(UIHelper.icon("fas-undo", 14, Color.WHITE));
         returnBtn.setForeground(Color.WHITE);
         returnBtn.addActionListener(e -> owner.showReturnDialog());
@@ -133,6 +133,7 @@ final class PosSalesHistoryPanel {
         tableCard.add(shBar, BorderLayout.NORTH);
         tableCard.add(scroll, BorderLayout.CENTER);
         tableCard.add(pager, BorderLayout.SOUTH);
+        UIHelper.installQuickPeek(owner.salesHistoryTable, tableCard);
 
         JPanel summaryPanel = new JPanel(new BorderLayout(0, 4));
         summaryPanel.setOpaque(false);

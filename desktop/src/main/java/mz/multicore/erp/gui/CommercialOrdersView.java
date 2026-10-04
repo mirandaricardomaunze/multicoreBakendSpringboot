@@ -279,6 +279,8 @@ final class CommercialOrdersView {
                 java.util.List.of(new TableFilter.ColumnFilter(ecEstado, 3)),
                 java.util.List.of(new TableFilter.PeriodFilter(ecPeriodo, ComercialPanel.ORDERS_COL_DELIVERY)));
         listCard.add(ordersScroll, BorderLayout.CENTER);
+        TableQuickPeekController ordersPeek = UIHelper.installQuickPeek(owner.ordersTable, listCard);
+        ordersPeek.setOnOpenFullCallback(modelRow -> owner.openSelectedOrderEditor());
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadOrdersTable);
 
