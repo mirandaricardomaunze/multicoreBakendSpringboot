@@ -579,7 +579,7 @@ public class POSPanel extends JPanel {
         }
         Color active = UIHelper.ACCENT_BLUE, activeHover = UIHelper.ACCENT_BLUE_HOVER;
         Color activeHist = UIHelper.ACCENT, activeHistHover = UIHelper.ACCENT_HOVER;
-        Color idle = new Color(99, 102, 241), idleHover = new Color(79, 70, 229); // Indigo-500
+        Color idle = UIHelper.BUTTON_NEUTRAL, idleHover = UIHelper.BUTTON_NEUTRAL_HOVER; // Indigo-500
         tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
         tabHistBtn.setColors(history ? activeHist : idle, history ? activeHistHover : idleHover);
         tabVendaBtn.setForeground(Color.WHITE);

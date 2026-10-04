@@ -30,6 +30,7 @@ public class LoginDialog extends JFrame {
     private final AuthApiClient authApiClient;
     private final Consumer<DesktopSession> onAuthenticated;
 
+    private ModernPanel card;
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton togglePasswordBtn;
@@ -60,7 +61,7 @@ public class LoginDialog extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setAlwaysOnTop(false);
         setIconImages(UIHelper.getAppIcons());
-        getContentPane().setBackground(UIHelper.BG_DARK);
+        getContentPane().setBackground(new Color(248, 250, 252));
 
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -145,6 +146,10 @@ public class LoginDialog extends JFrame {
         return passwordVisible;
     }
 
+    public ModernPanel getCard() {
+        return card;
+    }
+
     private JPanel buildTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setOpaque(false);
@@ -155,13 +160,13 @@ public class LoginDialog extends JFrame {
         brandBox.add(new JLabel(new ImageIcon(UIHelper.getAppIcon(28))));
         JLabel brandName = new JLabel("MULTICORE ERP");
         brandName.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
-        brandName.setForeground(new Color(241, 245, 249, 230));
+        brandName.setForeground(new Color(15, 23, 42));
         brandBox.add(brandName);
         bar.add(brandBox, BorderLayout.WEST);
 
-        JLabel escHint = new JLabel("Pressione ESC para cancelar", UIHelper.icon("fas-info-circle", 12, new Color(203, 213, 225, 200)), SwingConstants.RIGHT);
+        JLabel escHint = new JLabel("Pressione ESC para cancelar", UIHelper.icon("fas-info-circle", 12, new Color(100, 116, 139)), SwingConstants.RIGHT);
         escHint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        escHint.setForeground(new Color(203, 213, 225, 200));
+        escHint.setForeground(new Color(71, 85, 105));
         bar.add(escHint, BorderLayout.EAST);
 
         return bar;
@@ -174,7 +179,7 @@ public class LoginDialog extends JFrame {
 
         JLabel info = new JLabel("Multicore ERP • Sistema Integrado de Gestão Empresarial • Moçambique");
         info.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        info.setForeground(new Color(226, 232, 240, 170));
+        info.setForeground(new Color(71, 85, 105));
         footer.add(info);
 
         return footer;
@@ -190,9 +195,9 @@ public class LoginDialog extends JFrame {
         g.gridy = 0;
         g.anchor = GridBagConstraints.CENTER;
 
-        // Cartão de credenciais com cantos arredondados e transparência moderna
-        ModernPanel card = new ModernPanel(20, new Color(18, 26, 44, 235));
-        card.putClientProperty("card.border", new Color(255, 255, 255, 40));
+        // Cartão de credenciais em branco puro frosted / acrylic com cantos arredondados
+        card = new ModernPanel(20, new Color(255, 255, 255, 248));
+        card.putClientProperty("card.border", new Color(203, 213, 225, 220));
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(28, 32, 26, 32));
         card.setPreferredSize(new Dimension(460, 540));
@@ -212,7 +217,7 @@ public class LoginDialog extends JFrame {
         c.insets = new Insets(10, 0, 0, 0);
         JLabel brand = new JLabel("MULTICORE");
         brand.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
-        brand.setForeground(UIHelper.TEXT_LIGHT);
+        brand.setForeground(new Color(15, 23, 42));
         brand.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(brand, c);
 
@@ -220,7 +225,7 @@ public class LoginDialog extends JFrame {
         c.insets = new Insets(2, 0, 18, 0);
         JLabel subtitle = new JLabel("Centro de Operações e Gestão Comercial");
         subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
+        subtitle.setForeground(new Color(100, 116, 139));
         subtitle.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(subtitle, c);
 
@@ -339,7 +344,7 @@ public class LoginDialog extends JFrame {
     }
 
     private JButton buildPasswordToggleButton() {
-        JButton btn = new JButton(UIHelper.icon("fas-eye", 14, Color.WHITE));
+        JButton btn = new JButton(UIHelper.icon("fas-eye", 14, new Color(100, 116, 139)));
         btn.setPreferredSize(new Dimension(34, 34));
         btn.setFocusable(false);
         btn.setBorderPainted(false);
@@ -354,7 +359,8 @@ public class LoginDialog extends JFrame {
     void togglePasswordVisibility() {
         passwordVisible = !passwordVisible;
         passwordField.setEchoChar(passwordVisible ? (char) 0 : '•');
-        togglePasswordBtn.setIcon(UIHelper.icon(passwordVisible ? "fas-eye-slash" : "fas-eye", 14, Color.WHITE));
+        Color eyeColor = passwordVisible ? UIHelper.ACCENT_BLUE : new Color(100, 116, 139);
+        togglePasswordBtn.setIcon(UIHelper.icon(passwordVisible ? "fas-eye-slash" : "fas-eye", 14, eyeColor));
         togglePasswordBtn.setToolTipText(passwordVisible ? "Ocultar senha" : "Mostrar senha");
         togglePasswordBtn.getAccessibleContext().setAccessibleName(passwordVisible ? "Ocultar senha" : "Mostrar senha");
     }
@@ -377,7 +383,7 @@ public class LoginDialog extends JFrame {
 
         JLabel title = new JLabel("Ambiente de demonstração — clique para entrar:");
         title.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        title.setForeground(UIHelper.TEXT_MUTED);
+        title.setForeground(new Color(100, 116, 139));
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(title);
         panel.add(Box.createRigidArea(new Dimension(0, 6)));
@@ -400,11 +406,11 @@ public class LoginDialog extends JFrame {
     }
 
     private ModernButton createDemoChip(String label, String username, String password) {
-        ModernButton btn = new ModernButton(label, UIHelper.FIELD_BG, UIHelper.SELECTION_BG);
+        ModernButton btn = new ModernButton(label, new Color(241, 245, 249), new Color(226, 232, 240));
         btn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        btn.setForeground(UIHelper.TEXT_LIGHT);
+        btn.setForeground(new Color(30, 41, 59));
         btn.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(UIHelper.BORDER, 1, true),
+                new LineBorder(new Color(203, 213, 225), 1, true),
                 new EmptyBorder(4, 8, 4, 8)
         ));
         btn.setToolTipText("Entrar imediatamente como " + username);
@@ -425,22 +431,22 @@ public class LoginDialog extends JFrame {
     private JLabel fieldLabel(String text) {
         JLabel l = new JLabel(text);
         l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        l.setForeground(UIHelper.TEXT_MUTED);
+        l.setForeground(new Color(51, 65, 85));
         return l;
     }
 
     private JPanel iconField(String iconCode, JComponent field, JComponent trailing) {
         JPanel p = new JPanel(new BorderLayout(6, 0));
-        p.setBackground(UIHelper.FIELD_BG);
-        p.setBorder(new LineBorder(UIHelper.BORDER, 1, true));
-        JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 15, UIHelper.TEXT_MUTED));
+        p.setBackground(Color.WHITE);
+        p.setBorder(new LineBorder(new Color(203, 213, 225), 1, true));
+        JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 15, new Color(100, 116, 139)));
         iconLabel.setBorder(new EmptyBorder(0, 10, 0, 0));
         field.setBorder(new EmptyBorder(8, 4, 8, trailing != null ? 4 : 10));
         if (field instanceof JTextField tf) {
-            tf.setBackground(UIHelper.FIELD_BG);
-            tf.setCaretColor(UIHelper.TEXT_LIGHT);
+            tf.setBackground(Color.WHITE);
+            tf.setCaretColor(new Color(15, 23, 42));
         }
-        field.setForeground(UIHelper.TEXT_LIGHT);
+        field.setForeground(new Color(15, 23, 42));
         p.add(iconLabel, BorderLayout.WEST);
         p.add(field, BorderLayout.CENTER);
         if (trailing != null) {
@@ -531,14 +537,14 @@ public class LoginDialog extends JFrame {
 
                 g2.drawImage(image, x, y, drawW, drawH, null);
 
-                // Sobreposição de escurecimento para contraste do cartão
-                g2.setColor(new Color(15, 23, 42, 125));
+                // Sobreposição translúcida luminosa clara para tema claro acolhedor
+                g2.setColor(new Color(255, 255, 255, 80));
                 g2.fillRect(0, 0, w, h);
 
-                // Gradiente vertical para dar profundidade estética e conforto visual
+                // Gradiente vertical subtil para claridade, suavidade e elegância visual
                 GradientPaint gp = new GradientPaint(
-                        0, 0, new Color(15, 23, 42, 90),
-                        0, h, new Color(10, 15, 30, 210)
+                        0, 0, new Color(255, 255, 255, 50),
+                        0, h, new Color(241, 245, 249, 140)
                 );
                 g2.setPaint(gp);
                 g2.fillRect(0, 0, w, h);
@@ -546,7 +552,7 @@ public class LoginDialog extends JFrame {
                 g2.dispose();
             } else {
                 Graphics2D g2 = (Graphics2D) g.create();
-                GradientPaint gp = new GradientPaint(0, 0, UIHelper.BG_DARK, 0, h, new Color(10, 15, 26));
+                GradientPaint gp = new GradientPaint(0, 0, new Color(248, 250, 252), 0, h, new Color(226, 232, 240));
                 g2.setPaint(gp);
                 g2.fillRect(0, 0, w, h);
                 g2.dispose();

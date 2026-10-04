@@ -27,6 +27,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UiOrganizationNavigationHarnessTest {
 
     @Test
+    void nav00_loginDialogHasLightCardAndLuminousThemeDefaults() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            UIHelper.loadAndApplySavedTheme();
+            assertTrue(UIHelper.isLight(), "O tema por defeito no arranque deve ser LIGHT");
+
+            LoginDialog dialog = new LoginDialog(null);
+            assertThat(dialog.getCard()).isNotNull();
+
+            java.awt.Color cardBg = dialog.getCard().getBackground();
+            assertTrue(cardBg.getRed() >= 240 && cardBg.getGreen() >= 240 && cardBg.getBlue() >= 240,
+                    "O cartão central de login deve possuir fundo claro/frosted (>= 240 RGB)");
+
+            assertEquals(java.awt.Color.WHITE, dialog.getUsernameField().getBackground(),
+                    "O campo de utilizador deve ter fundo branco claro");
+            assertEquals(java.awt.Color.WHITE, dialog.getPasswordField().getBackground(),
+                    "O campo de senha deve ter fundo branco claro");
+
+            dialog.dispose();
+        });
+    }
+
+    @Test
     void nav01And02_loginDialogProvidesAccessibleFieldsAndVisibilityToggle() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             LoginDialog dialog = new LoginDialog(null);

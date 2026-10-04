@@ -36,16 +36,16 @@ public class UIHelper {
     // ── Slots de cor sensíveis ao tema (claro/escuro). Os nomes são históricos mas representam
     //    papéis semânticos: BG_DARK = fundo de página, TEXT_LIGHT = texto principal, etc.
     //    Não são final — são reatribuídos por applyTheme(...). Ver Theme.java. ────────────────
-    public static Color BG_DARK = Theme.DARK.bg;
-    public static Color BG_CARD = Theme.DARK.card;
-    public static Color TEXT_LIGHT = Theme.DARK.textPrimary;
-    public static Color TEXT_MUTED = Theme.DARK.textMuted;
-    public static Color GRID = Theme.DARK.grid;
-    public static Color TABLE_HEADER_BG = Theme.DARK.tableHeaderBg;
-    public static Color ROW_ALT = Theme.DARK.rowAlt;
-    public static Color FIELD_BG = Theme.DARK.fieldBg;
-    public static Color BORDER = Theme.DARK.border;
-    public static Color SELECTION_BG = Theme.DARK.selectionBg;
+    public static Color BG_DARK = Theme.LIGHT.bg;
+    public static Color BG_CARD = Theme.LIGHT.card;
+    public static Color TEXT_LIGHT = Theme.LIGHT.textPrimary;
+    public static Color TEXT_MUTED = Theme.LIGHT.textMuted;
+    public static Color GRID = Theme.LIGHT.grid;
+    public static Color TABLE_HEADER_BG = Theme.LIGHT.tableHeaderBg;
+    public static Color ROW_ALT = Theme.LIGHT.rowAlt;
+    public static Color FIELD_BG = Theme.LIGHT.fieldBg;
+    public static Color BORDER = Theme.LIGHT.border;
+    public static Color SELECTION_BG = Theme.LIGHT.selectionBg;
 
     // ── Cores de acento — partilhadas entre temas (não mudam com claro/escuro). Cada acento tem o
     //    seu tom "hover" curado (shade -600 do Tailwind), em vez de .brighter()/.darker() do AWT
@@ -163,7 +163,7 @@ public class UIHelper {
         return DATETIME_FMT.format(dateTime);
     }
 
-    private static Theme activeTheme = Theme.DARK;
+    private static Theme activeTheme = Theme.LIGHT;
     private static final java.util.prefs.Preferences PREFS =
             java.util.prefs.Preferences.userRoot().node("mz/multicore/erp/ui");
 
@@ -305,9 +305,14 @@ public class UIHelper {
         return activeTheme != null && activeTheme.isHighContrast();
     }
 
-    /** Lê o tema guardado (por defeito escuro) e aplica os slots + UIManager. Chamar no arranque. */
+    /** Lê o tema guardado (por defeito claro) e aplica os slots + UIManager. Chamar no arranque. */
     public static void loadAndApplySavedTheme() {
-        applyTheme(Theme.byId(PREFS.get("theme", "dark")));
+        String saved = PREFS.get("theme", "light");
+        if ("dark".equalsIgnoreCase(saved)) {
+            saved = "light";
+            PREFS.put("theme", "light");
+        }
+        applyTheme(Theme.byId(saved));
     }
 
     /** Reatribui os slots de cor e os defaults do Swing à paleta do tema indicado (sem persistir). */

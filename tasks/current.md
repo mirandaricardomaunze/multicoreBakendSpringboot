@@ -17,6 +17,35 @@ Start-Process "C:\Users\miran\Desktop\manager\desktop\target\multicore-desktop-1
 
 **Atalho rápido:** duplo-clique em `C:\Users\miran\Desktop\Multicore ERP.bat`
 
+### Inicialização e Ecrã de Login em Modo Claro (Light Theme) — 2026-10-04 — **concluída com sucesso**
+
+- **Contexto e Requisito:**
+  - O utilizador solicitou que o ecrã e formulário de login abram sempre em modo claro (Light theme): *"o login o formulario ou tela esta em dark sempre quando abre eu quero ligth"*.
+- **Implementação Realizada:**
+  1. **Configuração Canónica de Tema Inicial (`UIHelper.java`):**
+     - Alterado o valor padrão de `activeTheme` de `Theme.DARK` para `Theme.LIGHT`.
+     - Slots semânticos estáticos (`BG_DARK`, `BG_CARD`, `TEXT_LIGHT`, `TEXT_MUTED`, etc.) inicializados com a paleta canónica de `Theme.LIGHT`.
+     - Em `loadAndApplySavedTheme()`, leitura da preferência com padrão `"light"` e sobrescrita de quaisquer valores residuais `"dark"` no arranque.
+  2. **Ecrã de Login Acolhedor e Luminoso (`LoginDialog.java`):**
+     - O `BackgroundPanel` aplica agora uma sobreposição translúcida luminosa branca (`new Color(255, 255, 255, 80)`) e gradiente suave vertical claro, mantendo a fotografia corporativa nítida, amigável e luminosa.
+     - Cartão central `ModernPanel` em branco puro frosted (`new Color(255, 255, 255, 248)`) com contorno subtil `Slate-300` (`new Color(203, 213, 225, 220)`).
+     - Tipografia de alto contraste: Título MULTICORE em `Slate-900` (`#0F172A`), subtítulo em `Slate-500` (`#64748B`) e rótulos de campos em `Slate-700` (`#334155`).
+     - Campos de entrada de utilizador e senha com fundo branco puro, texto escuro `Slate-900`, cursor escuro, contorno `Slate-300` e ícones `Slate-500`.
+     - Botão de alternância de visibilidade da senha com ícone de olho em tom contrastante visível sobre fundo branco.
+     - Botões de acção "Entrar" (`UIHelper.ACCENT_BLUE`) e "Cancelar" (`UIHelper.REJECTED_RED`) mantidos com alto contraste e elegância visual.
+  3. **Adesão a Padrões de Código (`POSPanel.java` e `PosPaymentDialog.java`):**
+     - Substituição de literais `new Color(99, 102, 241)` pelos tokens canónicos `UIHelper.BUTTON_NEUTRAL` e `UIHelper.BUTTON_NEUTRAL_HOVER`.
+  4. **Harness Automatizado (`UiOrganizationNavigationHarnessTest.java`):**
+     - Adicionado o teste `nav00_loginDialogHasLightCardAndLuminousThemeDefaults()` que valida o tema Light padrão e o fundo claro/frosted do cartão central de login.
+- **Validação:**
+  - `UiOrganizationNavigationHarnessTest`: 7/7 testes aprovados.
+  - `HighContrastThemeHarnessTest`: 8/8 testes aprovados.
+  - `DesktopThinContextTest`: 2/2 testes aprovados.
+  - `FinalUiUniformityHarnessTest`: 5/5 testes aprovados.
+  - `MultiModuleArchitectureHarnessTest`: 6/6 testes aprovados.
+  - `UiPanelDecompositionTest`: 100% aprovado.
+  - Aplicação empacotada com sucesso e reiniciada via `schtasks /run /tn "MulticoreERP"`, com processo `javaw` activo e a responder.
+
 ### KPI Drilldown Interativo e Ergonomia Silenciosa de Tabelas — 2026-10-04 — **concluída com sucesso**
 
 - **Contexto e Requisito:**
