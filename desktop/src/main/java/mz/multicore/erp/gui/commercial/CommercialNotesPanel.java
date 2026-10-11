@@ -4,9 +4,11 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.CreditNoteApiClient;
 import mz.multicore.erp.desktop.client.DebitNoteApiClient;
+import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
+import mz.multicore.erp.modules.printing.dto.SensitiveDocumentType;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -30,6 +32,7 @@ public final class CommercialNotesPanel {
     private final CreditNoteApiClient creditApiClient;
     private final DebitNoteApiClient debitApiClient;
     private final Supplier<List<WarehouseDTO>> warehouses;
+    private final PrintApiClient printApiClient;
     private final JPanel creditTab;
     private final JPanel debitTab;
     private final DefaultTableModel creditModel;
@@ -43,12 +46,19 @@ public final class CommercialNotesPanel {
 
     public CommercialNotesPanel(ComercialApiClient comercialApiClient, CreditNoteApiClient creditApiClient,
                                 DebitNoteApiClient debitApiClient, Supplier<List<WarehouseDTO>> warehouses) {
+        this(comercialApiClient, creditApiClient, debitApiClient, warehouses, null);
+    }
+
+    public CommercialNotesPanel(ComercialApiClient comercialApiClient, CreditNoteApiClient creditApiClient,
+                                DebitNoteApiClient debitApiClient, Supplier<List<WarehouseDTO>> warehouses,
+                                PrintApiClient printApiClient) {
         this.comercialApiClient = comercialApiClient;
         this.creditApiClient = creditApiClient;
         this.debitApiClient = debitApiClient;
         this.warehouses = warehouses;
-        creditModel = readOnlyModel("Nº Nota", "Data", "Fatura", "Cliente", "Motivo", "Armazém", "Total", "Estado");
-        debitModel = readOnlyModel("Nº Nota", "Data", "Fatura", "Cliente", "Motivo", "Total", "Estado");
+        this.printApiClient = printApiClient;
+        creditModel = readOnlyModel("Nº Nota", "Data", "Fatura", "Cliente", "Motivo", "Armazém", "Total", "Estado", "Impressões", "Negócio");
+        debitModel = readOnlyModel("Nº Nota", "Data", "Fatura", "Cliente", "Motivo", "Total", "Estado", "Impressões", "Negócio");
         creditTable = configuredTable(creditModel, 6, 7);
         debitTable = configuredTable(debitModel, 5, 6);
         creditTab = buildCreditTab();
@@ -114,7 +124,7 @@ public final class CommercialNotesPanel {
         UIHelper.styleComboBox(reason);
         reason.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JComboBox<String> status = TableFilter.combo("Todos os estados", "PENDING", "APPROVED", "REJECTED");
+        JComboBox<String> status = TableFilter.combo("Todos os estados", "Pendente", "Aprovado", "Rejeitado");
         UIHelper.styleComboBox(status);
         status.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
 
@@ -126,30 +136,34 @@ public final class CommercialNotesPanel {
                 List.of(new TableFilter.ColumnFilter(reason, reasonColumn), new TableFilter.ColumnFilter(status, statusColumn)),
                 List.of(new TableFilter.PeriodFilter(period, 1)));
 
-        JPanel filters = new JPanel(new GridBagLayout());
-        filters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
-
-        g.gridx = 0; g.weightx = 0; filters.add(filterLabel("Motivo"), g);
-        g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Estado"), g);
-        g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Período"), g);
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        filters.add(filterLabel("Pesquisa"), g);
-
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; filters.add(reason, g);
-        g.gridx = 1; g.weightx = 0; filters.add(status, g);
-        g.gridx = 2; g.weightx = 0; filters.add(period, g);
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        filters.add(search, g);
-
+        UIHelper.ensureHeadersFit(table);
+        JPanel filters = TableFilter.bar(
+                search,
+                TableFilter.label("Motivo:"), reason,
+                TableFilter.label("Estado:"), status,
+                TableFilter.label("Período:"), period
+        );
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-file-invoice", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(table.getModel().getValueAt(row, 0)));
+            peek.setSubtitle("Cliente: " + table.getModel().getValueAt(row, 2) + " • Data: " + table.getModel().getValueAt(row, 1));
+            peek.setStatus(String.valueOf(table.getModel().getValueAt(row, statusColumn)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Fatura Associada", String.valueOf(table.getModel().getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Motivo", String.valueOf(table.getModel().getValueAt(row, reasonColumn)), false));
+            int moneyCol = table == creditTable ? 6 : 5;
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Total", String.valueOf(table.getModel().getValueAt(row, moneyCol)), true));
+            int printCol = table == creditTable ? 8 : 7;
+            if (printCol < table.getModel().getColumnCount()) {
+                items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Vias Impressas", String.valueOf(table.getModel().getValueAt(row, printCol)), false));
+            }
+            peek.setItems(items);
+        });
+
         card.add(UIHelper.tableCardTop(title, filters, buttons), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
@@ -162,10 +176,42 @@ public final class CommercialNotesPanel {
         UIHelper.loadAsync(creditTab, () -> creditApiClient.findByCompany(companyId), loaded -> {
             creditNotes = loaded;
             creditModel.setRowCount(0);
-            for (CreditNoteDTO note : loaded) creditModel.addRow(new Object[]{note.noteNumber(),
+            for (CreditNoteDTO note : loaded) {
+                String bu = note.businessUnitName() != null && !note.businessUnitName().isBlank() ? note.businessUnitName() : "—";
+                creditModel.addRow(new Object[]{note.noteNumber(),
                     note.issueDate().format(DATE_TIME), note.invoiceNumber(), note.clientName(), note.reason(),
-                    note.warehouseName() == null ? "-" : note.warehouseName(), note.totalAmount(), note.status()});
+                    note.warehouseName() == null ? "-" : note.warehouseName(), note.totalAmount(), note.status(),
+                    printApiClient == null ? "—" : "A verificar…", bu});
+            }
+            UIHelper.ensureHeadersFit(creditTable);
+            if (printApiClient != null && !loaded.isEmpty()) {
+                List<Long> ids = loaded.stream().map(CreditNoteDTO::id).toList();
+                UIHelper.loadAsync(creditTab,
+                        () -> printApiClient.getPrintStatuses(SensitiveDocumentType.CREDIT_NOTE, ids),
+                        this::applyCreditPrintStatuses,
+                        error -> {
+                            for (int r = 0; r < creditModel.getRowCount(); r++) {
+                                creditModel.setValueAt("Indisponível", r, 8);
+                            }
+                        });
+            }
         }, error -> showError(creditTab, "carregar notas de crédito", error));
+    }
+
+    private void applyCreditPrintStatuses(List<mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> statuses) {
+        Map<Long, mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> byId = statuses.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO::documentId, s -> s));
+        for (int row = 0; row < creditNotes.size() && row < creditModel.getRowCount(); row++) {
+            Long id = creditNotes.get(row).id();
+            mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO st = byId.get(id);
+            if (st == null || st.printCount() == 0) {
+                creditModel.setValueAt("Não impressa", row, 8);
+            } else {
+                String label = st.printCount() == 1 ? "1 via" : st.printCount() + " vias";
+                creditModel.setValueAt(label, row, 8);
+            }
+        }
     }
 
     private void loadDebits() {
@@ -175,8 +221,37 @@ public final class CommercialNotesPanel {
             debitModel.setRowCount(0);
             for (DebitNoteDTO note : loaded) debitModel.addRow(new Object[]{note.noteNumber(),
                     note.issueDate().format(DATE_TIME), note.invoiceNumber(), note.clientName(), note.reason(),
-                    note.totalAmount(), note.status()});
+                    note.totalAmount(), note.status(),
+                    printApiClient == null ? "—" : "A verificar…"});
+            UIHelper.ensureHeadersFit(debitTable);
+            if (printApiClient != null && !loaded.isEmpty()) {
+                List<Long> ids = loaded.stream().map(DebitNoteDTO::id).toList();
+                UIHelper.loadAsync(debitTab,
+                        () -> printApiClient.getPrintStatuses(SensitiveDocumentType.DEBIT_NOTE, ids),
+                        this::applyDebitPrintStatuses,
+                        error -> {
+                            for (int r = 0; r < debitModel.getRowCount(); r++) {
+                                debitModel.setValueAt("Indisponível", r, 7);
+                            }
+                        });
+            }
         }, error -> showError(debitTab, "carregar notas de débito", error));
+    }
+
+    private void applyDebitPrintStatuses(List<mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> statuses) {
+        Map<Long, mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> byId = statuses.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO::documentId, s -> s));
+        for (int row = 0; row < debitNotes.size() && row < debitModel.getRowCount(); row++) {
+            Long id = debitNotes.get(row).id();
+            mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO st = byId.get(id);
+            if (st == null || st.printCount() == 0) {
+                debitModel.setValueAt("Não impressa", row, 7);
+            } else {
+                String label = st.printCount() == 1 ? "1 via" : st.printCount() + " vias";
+                debitModel.setValueAt(label, row, 7);
+            }
+        }
     }
 
     private CreditNoteDTO selectedCredit() {
@@ -219,9 +294,9 @@ public final class CommercialNotesPanel {
     private void printCredit() {
         CreditNoteDTO selected = selectedCredit();
         if (selected == null) return;
-        UIHelper.runWithProgress(creditTab, "A gerar nota de crédito…", () -> creditApiClient.renderCreditNote(selected.id()),
-                pdf -> PrintPreviewDialog.show(creditTab, pdf, "nota-credito-" + selected.noteNumber()),
-                error -> showError(creditTab, "gerar nota de crédito", error));
+        sensitivePrint(creditTab, SensitiveDocumentType.CREDIT_NOTE, selected.id(),
+                "Nota de crédito " + selected.noteNumber(), "nota-credito-" + selected.noteNumber(),
+                () -> creditApiClient.renderCreditNote(selected.id()), this::loadCredits);
     }
 
     private void approveDebit() {
@@ -246,9 +321,21 @@ public final class CommercialNotesPanel {
     private void printDebit() {
         DebitNoteDTO selected = selectedDebit();
         if (selected == null) return;
-        UIHelper.runWithProgress(debitTab, "A gerar nota de débito…", () -> debitApiClient.renderDebitNote(selected.id()),
-                pdf -> PrintPreviewDialog.show(debitTab, pdf, "nota-debito-" + selected.noteNumber()),
-                error -> showError(debitTab, "gerar nota de débito", error));
+        sensitivePrint(debitTab, SensitiveDocumentType.DEBIT_NOTE, selected.id(),
+                "Nota de débito " + selected.noteNumber(), "nota-debito-" + selected.noteNumber(),
+                () -> debitApiClient.renderDebitNote(selected.id()), this::loadDebits);
+    }
+
+    private void sensitivePrint(JComponent owner, SensitiveDocumentType type, Long id,
+                                String label, String fileName,
+                                java.util.concurrent.Callable<byte[]> renderer, Runnable refresh) {
+        if (printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar documento…", renderer,
+                    pdf -> PrintPreviewDialog.show(owner, pdf, fileName),
+                    error -> showError(owner, "gerar documento", error));
+            return;
+        }
+        SensitivePrintCoordinator.print(owner, printApiClient, type, id, label, fileName, renderer, refresh);
     }
 
     private void loadInvoices(java.util.function.Consumer<List<InvoiceDTO>> consumer) {

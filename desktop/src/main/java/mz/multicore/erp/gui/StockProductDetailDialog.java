@@ -1,8 +1,10 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.RecordDetailsDialog;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
@@ -43,15 +45,15 @@ public class StockProductDetailDialog {
         dialog.getContentPane().setBackground(UIHelper.BG_DARK);
         dialog.setIconImage(UIHelper.iconImage("fas-box-open", 24, UIHelper.MODULE_STOCK));
 
-        JPanel mainPanel = new JPanel(new BorderLayout(0, 16));
+        JPanel mainPanel = new JPanel(new BorderLayout(0, 12));
         mainPanel.setBackground(UIHelper.BG_DARK);
-        mainPanel.setBorder(new EmptyBorder(20, 24, 20, 24));
+        mainPanel.setBorder(new EmptyBorder(14, 20, 14, 20));
 
         // 1. Cabeçalho Executivo
         mainPanel.add(buildHeader(), BorderLayout.NORTH);
 
         // 2. Corpo: Hero com Imagem + KPIs + Abas de Detalhe
-        JPanel body = new JPanel(new BorderLayout(0, 14));
+        JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
         body.add(buildHeroSection(), BorderLayout.NORTH);
         body.add(buildTabsSection(), BorderLayout.CENTER);
@@ -62,8 +64,8 @@ public class StockProductDetailDialog {
 
         dialog.setContentPane(mainPanel);
         dialog.pack();
-        dialog.setSize(new Dimension(840, 680));
-        dialog.setLocationRelativeTo(owner);
+        dialog.setMinimumSize(new Dimension(800, 520));
+        UIHelper.applyStandardModalBounds(dialog, 960, 610);
     }
 
     public void showDialog() {
@@ -127,7 +129,7 @@ public class StockProductDetailDialog {
     }
 
     private JComponent buildHeroSection() {
-        JPanel hero = new JPanel(new BorderLayout(18, 0));
+        JPanel hero = new JPanel(new BorderLayout(10, 0));
         hero.setOpaque(false);
 
         // A. Card de Fotografia em Alta Resolução (Esquerda)
@@ -140,20 +142,20 @@ public class StockProductDetailDialog {
     }
 
     private JComponent buildImageCard() {
-        ModernPanel card = new ModernPanel(14);
-        card.setLayout(new BorderLayout(0, 8));
-        card.setPreferredSize(new Dimension(210, 210));
-        card.setBorder(new EmptyBorder(10, 10, 10, 10));
+        ModernPanel card = new ModernPanel(16);
+        card.setLayout(new BorderLayout(0, 4));
+        card.setPreferredSize(new Dimension(96, KpiCard.STANDARD_CARD_HEIGHT));
+        card.setBorder(new EmptyBorder(6, 6, 6, 6));
 
         JLabel imgLabel = new JLabel("", SwingConstants.CENTER);
         imgLabel.setHorizontalAlignment(SwingConstants.CENTER);
         imgLabel.setVerticalAlignment(SwingConstants.CENTER);
 
         if (product.image() != null && product.image().length > 0) {
-            ImageIcon icon = UIHelper.imageIconFromBytes(product.image(), 185, 185);
+            ImageIcon icon = UIHelper.imageIconFromBytes(product.image(), 80, 80);
             if (icon != null) {
                 imgLabel.setIcon(icon);
-                imgLabel.setToolTipText("Fotografia oficial do artigo");
+                imgLabel.setToolTipText("Fotografia oficial do artigo • Clique para ampliar");
                 imgLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 imgLabel.addMouseListener(new java.awt.event.MouseAdapter() {
                     @Override
@@ -173,12 +175,12 @@ public class StockProductDetailDialog {
     }
 
     private void renderPlaceholderImage(JLabel label) {
-        label.setIcon(UIHelper.icon("fas-box-open", 54, UIHelper.TEXT_MUTED));
-        label.setText("Sem fotografia");
+        label.setIcon(UIHelper.icon("fas-box-open", 28, UIHelper.TEXT_MUTED));
+        label.setText("Sem foto");
         label.setHorizontalTextPosition(SwingConstants.CENTER);
         label.setVerticalTextPosition(SwingConstants.BOTTOM);
         label.setForeground(UIHelper.TEXT_MUTED);
-        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        label.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
     }
 
     private void openFullImageModal() {
@@ -197,7 +199,7 @@ public class StockProductDetailDialog {
     }
 
     private JComponent buildKpiGrid() {
-        JPanel grid = KpiCard.createGrid(2, 10, 10);
+        JPanel grid = KpiCard.createGrid(4, 8, 8);
 
         // 1. Preço de Venda
         BigDecimal sellPrice = product.unitPrice() != null ? product.unitPrice() : BigDecimal.ZERO;
@@ -246,26 +248,24 @@ public class StockProductDetailDialog {
         return tabs;
     }
 
-    private JPanel buildSpecsTab() {
-        JPanel p = new JPanel(new GridLayout(0, 2, 16, 8));
-        p.setOpaque(false);
-        p.setBorder(new EmptyBorder(12, 12, 12, 12));
+    private JComponent buildSpecsTab() {
+        String boxGrossWeight = (product.grossBoxWeightKg() != null && product.grossBoxWeightKg().signum() > 0)
+                ? product.grossBoxWeightKg() + " kg" : "—";
 
-        p.add(specRow("Tipo de Venda:", "WEIGHT".equalsIgnoreCase(product.saleType()) ? "Venda ao Peso (Balança / Kg)" : "Venda por Unidade"));
-        p.add(specRow("Rastreio de Stock:", product.stockTracked() ? "Activo (Controlo rigoroso)" : "Inactivo (Serviço/Sem stock)"));
-        p.add(specRow("Stock Mínimo de Alerta:", product.minStock() != null ? product.minStock() + " unidades" : "0"));
-        p.add(specRow("Embalagens por Caixa:", String.valueOf(product.packagesPerBox())));
-        p.add(specRow("Unidades por Embalagem:", String.valueOf(product.unitsPerPackage())));
-        p.add(specRow("Total de Unidades por Caixa:", String.valueOf(product.unitsPerBox())));
-        p.add(specRow("Peso Líquido Unitário:", product.netUnitWeightKg() != null ? product.netUnitWeightKg() + " kg" : "—"));
-        p.add(specRow("Peso Bruto Unitário:", product.grossUnitWeightKg() != null ? product.grossUnitWeightKg() + " kg" : "—"));
-        p.add(specRow("Peso Total da Caixa:", product.grossBoxWeightKg().signum() > 0 ? product.grossBoxWeightKg() + " kg" : "—"));
-        p.add(specRow("Descrição / Notas:", product.description() != null && !product.description().isBlank() ? product.description() : "Sem notas adicionais."));
+        java.util.List<RecordDetailsDialog.PropertyItem> items = java.util.List.of(
+                new RecordDetailsDialog.PropertyItem("Tipo de Venda Comercial", "WEIGHT".equalsIgnoreCase(product.saleType()) ? "Venda ao Peso (Balança / Kg)" : "Venda por Unidade"),
+                new RecordDetailsDialog.PropertyItem("Rastreio Físico de Stock", product.stockTracked() ? "Activo (Controlo rigoroso)" : "Inactivo (Serviço / Sem stock)"),
+                new RecordDetailsDialog.PropertyItem("Stock Mínimo de Alerta", (product.minStock() != null ? product.minStock() : "0") + " unidades"),
+                new RecordDetailsDialog.PropertyItem("Embalagens Intermédias por Caixa", String.valueOf(product.packagesPerBox())),
+                new RecordDetailsDialog.PropertyItem("Unidades por Embalagem", String.valueOf(product.unitsPerPackage())),
+                new RecordDetailsDialog.PropertyItem("Total de Unidades por Caixa", String.valueOf(product.unitsPerBox())),
+                new RecordDetailsDialog.PropertyItem("Peso Líquido Unitário", product.netUnitWeightKg() != null ? product.netUnitWeightKg() + " kg" : "—"),
+                new RecordDetailsDialog.PropertyItem("Peso Bruto Unitário", product.grossUnitWeightKg() != null ? product.grossUnitWeightKg() + " kg" : "—"),
+                new RecordDetailsDialog.PropertyItem("Peso Total da Caixa Fechada", boxGrossWeight),
+                new RecordDetailsDialog.PropertyItem("Descrição / Notas Técnicas", product.description() != null && !product.description().isBlank() ? product.description() : "Sem notas adicionais.")
+        );
 
-        JPanel wrap = new JPanel(new BorderLayout());
-        wrap.setOpaque(false);
-        wrap.add(p, BorderLayout.NORTH);
-        return wrap;
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private JPanel buildWarehousesTab() {
@@ -287,7 +287,9 @@ public class StockProductDetailDialog {
         }
 
         JTable table = new JTable(model);
+        table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
 
         JPanel p = new JPanel(new BorderLayout());
@@ -327,7 +329,9 @@ public class StockProductDetailDialog {
         }
 
         JTable table = new JTable(model);
+        table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.status());
 
         JPanel p = new JPanel(new BorderLayout());
@@ -339,22 +343,7 @@ public class StockProductDetailDialog {
         return p;
     }
 
-    private JPanel specRow(String key, String value) {
-        JPanel r = new JPanel(new BorderLayout(8, 0));
-        r.setOpaque(false);
 
-        JLabel k = new JLabel(key);
-        k.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        k.setForeground(UIHelper.TEXT_MUTED);
-
-        JLabel v = new JLabel(value);
-        v.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        v.setForeground(UIHelper.TEXT_LIGHT);
-
-        r.add(k, BorderLayout.WEST);
-        r.add(v, BorderLayout.CENTER);
-        return r;
-    }
 
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new BorderLayout());

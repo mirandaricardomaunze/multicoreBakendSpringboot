@@ -16,6 +16,8 @@ final class StockAlertsPanel {
     private static final String MASK = "•••";
     private final StockPanel owner;
     private JLabel outSummary;
+    private JComboBox<String> expBusinessUnitCombo;
+    private JComboBox<String> outBusinessUnitCombo;
 
     StockAlertsPanel(StockPanel owner) {
         this.owner = owner;
@@ -32,7 +34,7 @@ final class StockAlertsPanel {
         // ==========================================
         // 1. Sub-aba: Lotes Expirados e a Expirar
         // ==========================================
-        String[] expCols = {"SKU", "Nome do Artigo", "Nº Lote", "Armazém", "Validade", "Dias", "Qtd", "Estado"};
+        String[] expCols = {"SKU", "Nome do Artigo", "Nº Lote", "Armazém", "Validade", "Dias", "Qtd", "Estado", "Negócio"};
         owner.alertsExpModel = new DefaultTableModel(expCols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -61,29 +63,22 @@ final class StockAlertsPanel {
         expCard.add(expScroll, BorderLayout.CENTER);
         expCard.add(ClientTablePagination.install(owner.alertsExpTable), BorderLayout.SOUTH);
 
-        // Grade de filtros de Validades (Padrão GridBagLayout das outras tabelas)
-        JPanel expFilters = new JPanel(new GridBagLayout());
-        expFilters.setOpaque(false);
-        GridBagConstraints gExp = new GridBagConstraints();
-        gExp.fill = GridBagConstraints.HORIZONTAL;
-        gExp.insets = new Insets(0, 0, 0, 12);
-
+        UIHelper.ensureHeadersFit(owner.alertsExpTable);
         JComboBox<String> expEstado = new JComboBox<>(new String[]{"Todos os estados", "Expirado", "A expirar"});
         UIHelper.styleComboBox(expEstado);
-        expEstado.setPreferredSize(new Dimension(220, UIHelper.FORM_CONTROL_HEIGHT));
+        expEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
+        expBusinessUnitCombo = TableFilter.combo("Todos os negócios");
         SearchField expSearch = new SearchField("Pesquisar por SKU, nome ou lote…");
-        TableFilter.install(owner.alertsExpTable, expSearch, new TableFilter.ColumnFilter(expEstado, 7));
+        TableFilter.install(owner.alertsExpTable, expSearch,
+                new TableFilter.ColumnFilter(expEstado, 7),
+                new TableFilter.ColumnFilter(expBusinessUnitCombo, 8));
 
-        gExp.gridy = 0;
-        gExp.gridx = 0; gExp.weightx = 0; expFilters.add(filterLabel("Estado do Lote"), gExp);
-        gExp.gridx = 1; gExp.weightx = 1.0; gExp.insets = new Insets(0, 0, 0, 0);
-        expFilters.add(filterLabel("Pesquisa"), gExp);
-
-        gExp.gridy = 1; gExp.insets = new Insets(4, 0, 0, 12);
-        gExp.gridx = 0; gExp.weightx = 0; expFilters.add(expEstado, gExp);
-        gExp.gridx = 1; gExp.weightx = 1.0; gExp.insets = new Insets(4, 0, 0, 0);
-        expFilters.add(expSearch, gExp);
+        JPanel expFilters = TableFilter.bar(
+                expSearch,
+                TableFilter.label("Negócio:"), expBusinessUnitCombo,
+                TableFilter.label("Estado do Lote:"), expEstado
+        );
 
         owner.alertsSummary = new JLabel("A carregar alertas de stock…");
         owner.alertsSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
@@ -103,7 +98,7 @@ final class StockAlertsPanel {
         // ==========================================
         // 2. Sub-aba: Produtos Esgotados
         // ==========================================
-        String[] outCols = {"Artigo (SKU)", "Nome do Artigo", "Stock Actual"};
+        String[] outCols = {"Artigo (SKU)", "Nome do Artigo", "Stock Actual", "Negócio"};
         owner.alertsOutModel = new DefaultTableModel(outCols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -117,26 +112,31 @@ final class StockAlertsPanel {
 
         JScrollPane outScroll = new JScrollPane(owner.alertsOutTable);
         UIHelper.styleScrollPane(outScroll);
+        TableQuickPeekController outPeekController = TableQuickPeekController.install(owner.alertsOutTable, outCard, (peek, mr) -> {
+            int row = owner.alertsOutTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-ban", UIHelper.REJECTED_RED);
+            peek.setTitle(String.valueOf(owner.alertsOutModel.getValueAt(row, 1)));
+            peek.setSubtitle("SKU: " + owner.alertsOutModel.getValueAt(row, 0));
+            peek.setStatus("ESGOTADO", UIHelper.REJECTED_RED);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Artigo", String.valueOf(owner.alertsOutModel.getValueAt(row, 1)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Stock Actual", String.valueOf(owner.alertsOutModel.getValueAt(row, 2)), true));
+            peek.setItems(items);
+        });
+
         outCard.add(outScroll, BorderLayout.CENTER);
         outCard.add(ClientTablePagination.install(owner.alertsOutTable), BorderLayout.SOUTH);
 
-        // Grade de filtros de Esgotados
-        JPanel outFilters = new JPanel(new GridBagLayout());
-        outFilters.setOpaque(false);
-        GridBagConstraints gOut = new GridBagConstraints();
-        gOut.fill = GridBagConstraints.HORIZONTAL;
-
+        UIHelper.ensureHeadersFit(owner.alertsOutTable);
+        outBusinessUnitCombo = TableFilter.combo("Todos os negócios");
         SearchField outSearch = new SearchField("Pesquisar por SKU ou nome do artigo esgotado…");
-        TableFilter.install(owner.alertsOutTable, outSearch);
+        TableFilter.install(owner.alertsOutTable, outSearch,
+                new TableFilter.ColumnFilter(outBusinessUnitCombo, 3));
 
-        gOut.gridy = 0;
-        gOut.gridx = 0; gOut.weightx = 1.0;
-        outFilters.add(filterLabel("Pesquisa"), gOut);
-
-        gOut.gridy = 1;
-        gOut.insets = new Insets(4, 0, 0, 0);
-        gOut.gridx = 0; gOut.weightx = 1.0;
-        outFilters.add(outSearch, gOut);
+        JPanel outFilters = TableFilter.bar(
+                outSearch,
+                TableFilter.label("Negócio:"), outBusinessUnitCombo
+        );
 
         outSummary = new JLabel(" ");
         outSummary.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
@@ -170,10 +170,21 @@ final class StockAlertsPanel {
     private void applyAlerts(StockAlerts alerts, boolean hide) {
         var esgotados = alerts.outOfStock();
         owner.alertsOutModel.setRowCount(0);
+        java.util.Set<String> outBus = new java.util.TreeSet<>();
         for (var a : esgotados) {
+            String buName = a.businessUnitName() != null && !a.businessUnitName().isBlank() ? a.businessUnitName() : "—";
+            if (!"—".equals(buName)) outBus.add(buName);
             owner.alertsOutModel.addRow(new Object[]{
                     a.sku(), a.name(),
-                    hide ? MASK : (a.currentStock() == null ? "0" : a.currentStock().toPlainString())});
+                    hide ? MASK : (a.currentStock() == null ? "0" : a.currentStock().toPlainString()),
+                    buName});
+        }
+        if (outBusinessUnitCombo != null) {
+            Object prev = outBusinessUnitCombo.getSelectedItem();
+            outBusinessUnitCombo.removeAllItems();
+            outBusinessUnitCombo.addItem("Todos os negócios");
+            for (String b : outBus) outBusinessUnitCombo.addItem(b);
+            if (prev != null) outBusinessUnitCombo.setSelectedItem(prev);
         }
 
         var expiring = alerts.expiring();
@@ -201,7 +212,18 @@ final class StockAlertsPanel {
                 owner.alertsSummary.setText("Nenhum lote expirado ou a expirar nos próximos 30 dias.");
             } else {
                 owner.alertsSummary.setForeground(expired > 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
-                owner.alertsSummary.setText(String.format("%d lote(s) expirado(s)  ·  %d a expirar em ≤ 30 dias", expired, soon));
+                if (expBusinessUnitCombo != null) {
+            Object prev = expBusinessUnitCombo.getSelectedItem();
+            java.util.Set<String> expBus = new java.util.TreeSet<>();
+            for (var b : expiring) {
+                if (b.businessUnitName() != null && !b.businessUnitName().isBlank()) expBus.add(b.businessUnitName());
+            }
+            expBusinessUnitCombo.removeAllItems();
+            expBusinessUnitCombo.addItem("Todos os negócios");
+            for (String b : expBus) expBusinessUnitCombo.addItem(b);
+            if (prev != null) expBusinessUnitCombo.setSelectedItem(prev);
+        }
+        owner.alertsSummary.setText(String.format("%d lote(s) expirado(s)  ·  %d a expirar em ≤ 30 dias", expired, soon));
             }
         }
 

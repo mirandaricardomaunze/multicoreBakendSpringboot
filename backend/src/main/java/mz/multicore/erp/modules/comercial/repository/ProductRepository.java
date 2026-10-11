@@ -22,6 +22,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByBarcodeAndCompaniesId(String barcode, Long companyId);
     Optional<Product> findByIdAndCompaniesId(Long id, Long companyId);
     List<Product> findDistinctByCompaniesIdOrderByName(Long companyId);
+    long countByBusinessUnitId(Long businessUnitId);
+    List<Product> findByBusinessUnitId(Long businessUnitId);
 
     @Query("""
             select distinct p from Product p join p.companies c
@@ -38,5 +40,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("query") String query,
             @Param("availableOnly") boolean availableOnly,
             @Param("sellableIds") Collection<Long> sellableIds,
+            Pageable pageable);
+
+    @Query("""
+            select distinct p from Product p join p.companies c
+            where c.id = :companyId
+              and (:query = '' or lower(p.name) like lower(concat('%', :query, '%'))
+                   or lower(p.sku) like lower(concat('%', :query, '%'))
+                   or lower(coalesce(p.reference, '')) like lower(concat('%', :query, '%'))
+                   or lower(coalesce(p.barcode, '')) like lower(concat('%', :query, '%')))
+              and (:categoryId is null or p.category.id = :categoryId)
+            order by p.name
+            """)
+    Page<Product> findCatalogPage(
+            @Param("companyId") Long companyId,
+            @Param("query") String query,
+            @Param("categoryId") Long categoryId,
             Pageable pageable);
 }

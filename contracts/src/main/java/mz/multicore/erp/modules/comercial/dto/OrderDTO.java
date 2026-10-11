@@ -47,8 +47,28 @@ public record OrderDTO(
     Long stockTransferId,
     String transferNumber,
     /** Versão optimista usada para impedir que uma edição sobreponha alterações de outro posto. */
-    long version
+    long version,
+    Long businessUnitId,
+    String businessUnitName
 ) {
+    /** Construtor retrocompatível sem unidade de negócio. */
+    public OrderDTO(Long id, String orderNumber, Long clientId, String clientName, String clientTaxId,
+                    String walkInName, BigDecimal totalBeforeTax, BigDecimal taxAmount, BigDecimal totalAmount,
+                    String status, Long invoiceId, List<OrderLineDTO> lines, LocalDateTime createdAt,
+                    LocalDateTime printedAt, int printCount, String lastPrintedBy,
+                    OrderKind kind, String kindLabel, String statusLabel,
+                    Long quotationId, String quotationNumber, String paymentTerms,
+                    String deliveryTerms, LocalDate expectedDeliveryDate, boolean deliveryOverdue,
+                    Long warehouseId, String warehouseName, Long destinationWarehouseId,
+                    String destinationWarehouseName, Long stockTransferId, String transferNumber,
+                    long version) {
+        this(id, orderNumber, clientId, clientName, clientTaxId, walkInName, totalBeforeTax, taxAmount,
+                totalAmount, status, invoiceId, lines, createdAt, printedAt, printCount, lastPrintedBy,
+                kind, kindLabel, statusLabel, quotationId, quotationNumber, paymentTerms, deliveryTerms,
+                expectedDeliveryDate, deliveryOverdue, warehouseId, warehouseName, destinationWarehouseId,
+                destinationWarehouseName, stockTransferId, transferNumber, version, null, null);
+    }
+
     /** Construtor retrocompatível para quem construía o DTO antes da via existir. */
     public OrderDTO(Long id, String orderNumber, Long clientId, String clientName, String clientTaxId,
                     String walkInName, BigDecimal totalBeforeTax, BigDecimal taxAmount, BigDecimal totalAmount,
@@ -68,6 +88,6 @@ public record OrderDTO(
         this(id, orderNumber, clientId, clientName, clientTaxId, walkInName, totalBeforeTax, taxAmount,
                 totalAmount, status, invoiceId, lines, createdAt, printedAt, printCount, lastPrintedBy,
                 kind, kindLabel, OrderStatusLabel.of(status), null, null, null, null, null, false,
-                null, null, null, null, null, null, 0L);
+                null, null, null, null, null, null, 0L, null, null);
     }
 }

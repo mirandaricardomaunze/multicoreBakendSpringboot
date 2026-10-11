@@ -14,11 +14,13 @@ import mz.multicore.erp.gui.components.SimplePieChart;
 import mz.multicore.erp.gui.components.StrategicPulseWidget;
 import mz.multicore.erp.gui.components.TopProductsWidget;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.OperationalPulseWidget;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.desktop.client.CashFlowForecastApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
+import mz.multicore.erp.desktop.client.DashboardApiClient;
 import mz.multicore.erp.desktop.client.FinanceApiClient;
 import mz.multicore.erp.desktop.client.ForensicAuditApiClient;
 import mz.multicore.erp.desktop.client.InventoryApiClient;
@@ -109,6 +111,7 @@ public class DashboardPanel extends JPanel {
     private TopProductsWidget topProductsWidget;
     private RecentActivityWidget recentActivityWidget;
     private final StrategicPulseWidget strategicPulseWidget;
+    private final OperationalPulseWidget operationalPulseWidget;
 
     public DashboardPanel(
             ComercialApiClient comercialApiClient,
@@ -119,7 +122,7 @@ public class DashboardPanel extends JPanel {
             InventoryApiClient inventoryApiClient
     ) {
         this(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     public DashboardPanel(
@@ -135,6 +138,24 @@ public class DashboardPanel extends JPanel {
             PerformanceApiClient performanceApiClient,
             Consumer<String> navigationHandler
     ) {
+        this(comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient,
+                forensicAuditApiClient, cashFlowForecastApiClient, creditRiskApiClient, performanceApiClient, null, navigationHandler);
+    }
+
+    public DashboardPanel(
+            ComercialApiClient comercialApiClient,
+            FinanceApiClient financeApiClient,
+            ApprovalApiClient approvalApiClient,
+            CRMApiClient crmApiClient,
+            PurchaseApiClient purchaseApiClient,
+            InventoryApiClient inventoryApiClient,
+            ForensicAuditApiClient forensicAuditApiClient,
+            CashFlowForecastApiClient cashFlowForecastApiClient,
+            CreditRiskApiClient creditRiskApiClient,
+            PerformanceApiClient performanceApiClient,
+            DashboardApiClient dashboardApiClient,
+            Consumer<String> navigationHandler
+    ) {
         this.comercialApiClient = comercialApiClient;
         this.financeApiClient = financeApiClient;
         this.approvalApiClient = approvalApiClient;
@@ -147,6 +168,10 @@ public class DashboardPanel extends JPanel {
                 cashFlowForecastApiClient,
                 creditRiskApiClient,
                 performanceApiClient,
+                navigationHandler
+        );
+        this.operationalPulseWidget = new OperationalPulseWidget(
+                dashboardApiClient,
                 navigationHandler
         );
 
@@ -266,6 +291,8 @@ public class DashboardPanel extends JPanel {
         centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
 
         centerContainer.add(strategicPulseWidget);
+        centerContainer.add(Box.createVerticalStrut(14));
+        centerContainer.add(operationalPulseWidget);
         centerContainer.add(Box.createVerticalStrut(14));
 
         // Gráficos 2x2
@@ -409,6 +436,9 @@ public class DashboardPanel extends JPanel {
     public void refreshData() {
         if (strategicPulseWidget != null) {
             strategicPulseWidget.loadData();
+        }
+        if (operationalPulseWidget != null) {
+            operationalPulseWidget.loadData();
         }
 
         if (financeApiClient == null || comercialApiClient == null || approvalApiClient == null || crmApiClient == null || purchaseApiClient == null || inventoryApiClient == null) {
@@ -671,6 +701,10 @@ public class DashboardPanel extends JPanel {
 
     public StrategicPulseWidget getStrategicPulseWidget() {
         return strategicPulseWidget;
+    }
+
+    public OperationalPulseWidget getOperationalPulseWidget() {
+        return operationalPulseWidget;
     }
 
     private record DashboardData(BigDecimal totalBalance, BigDecimal totalSales,

@@ -194,7 +194,9 @@ public class ProductBatchService {
                 b.getBatchNumber(),
                 b.getExpirationDate(),
                 b.getEntryDate(),
-                b.getQuantity()
+                b.getQuantity(),
+                b.getProduct().getBusinessUnit() != null ? b.getProduct().getBusinessUnit().getId() : null,
+                b.getProduct().getBusinessUnit() != null ? b.getProduct().getBusinessUnit().getName() : null
         );
     }
 

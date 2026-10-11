@@ -72,6 +72,7 @@ public class ReceiptPrintService {
         ThermalReceiptRenderer.companyHeader(doc, invoice.getCompany());
 
         addCentered(doc, "RECIBO POS", PdfTheme.boldFont());
+        addCentered(doc, "1.ª VIA — ORIGINAL (CLIENTE)", PdfTheme.smallFont());
         addCentered(doc, invoice.getInvoiceNumber(), PdfTheme.bodyFont());
         addCentered(doc, invoice.getCreatedAt() != null ? invoice.getCreatedAt().format(DATE_FMT) : "", PdfTheme.smallFont());
         addCentered(doc, "Cliente: " + buyerName(invoice), PdfTheme.smallFont());

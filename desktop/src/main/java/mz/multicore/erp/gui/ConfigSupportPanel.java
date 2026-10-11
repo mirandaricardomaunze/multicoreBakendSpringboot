@@ -22,24 +22,12 @@ final class ConfigSupportPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.add(UIHelper.createHeading("Pedidos de Assistência à Plataforma"), BorderLayout.WEST);
-
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         ModernButton viewBtn = UIHelper.createPrimaryButton("Ver / Responder");
         viewBtn.setIcon(UIHelper.icon("fas-comments", 14));
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setOpaque(false);
-        actions.add(refreshBtn);
-        actions.add(viewBtn);
-        actions.add(newBtn);
-        header.add(actions, BorderLayout.EAST);
-        panel.add(header, BorderLayout.NORTH);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -52,6 +40,7 @@ final class ConfigSupportPanel {
         };
         owner.supportTable = new JTable(owner.supportModel);
         UIHelper.styleTable(owner.supportTable);
+        UIHelper.ensureHeadersFit(owner.supportTable);
         owner.supportTable.putClientProperty("noRowInspector", Boolean.TRUE);
         owner.supportTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -66,8 +55,25 @@ final class ConfigSupportPanel {
         TableFilter.install(owner.supportTable, supSearch);
         JPanel supBar = TableFilter.bar(supSearch);
         supBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(supBar, BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Pedidos de Assistência à Plataforma", supBar, refreshBtn, viewBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
+        TableQuickPeekController.install(owner.supportTable, listCard, (peek, row) -> {
+            String id = String.valueOf(owner.supportModel.getValueAt(row, 0));
+            String subj = String.valueOf(owner.supportModel.getValueAt(row, 1));
+            String prio = String.valueOf(owner.supportModel.getValueAt(row, 2));
+            String status = String.valueOf(owner.supportModel.getValueAt(row, 3));
+            String msgs = String.valueOf(owner.supportModel.getValueAt(row, 4));
+            peek.setHeaderIcon("fas-headset", UIHelper.ACCENT_CYAN);
+            peek.setTitle(subj);
+            peek.setSubtitle("Ticket #" + id);
+            peek.setStatus(status, UIHelper.ACCENT_BLUE);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Prioridade", prio, false),
+                    new QuickPeekPanel.PeekItem("Mensagens", msgs, false)
+            ));
+            peek.getOpenFullButton().setText("Ver / Responder");
+            peek.setOnOpenFullAction(v -> viewSupportTicket());
+        });
         panel.add(listCard, BorderLayout.CENTER);
 
         newBtn.addActionListener(e -> newSupportTicket());

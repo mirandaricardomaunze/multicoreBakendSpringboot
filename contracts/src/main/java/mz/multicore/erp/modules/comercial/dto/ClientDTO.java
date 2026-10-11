@@ -29,4 +29,9 @@ public record ClientDTO(
     }
 
     public String nuit() { return taxId; }
+
+    @Override
+    public String toString() {
+        return name != null && !name.isBlank() ? name : "Cliente #" + id;
+    }
 }

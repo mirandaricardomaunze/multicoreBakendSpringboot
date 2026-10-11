@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.financeira.controller;
 
+import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.financeira.dto.*;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import jakarta.validation.Valid;
@@ -26,6 +27,13 @@ public class FinanceController {
     @GetMapping("/transactions")
     public ResponseEntity<List<TreasuryTransactionDTO>> getTransactions() {
         return ResponseEntity.ok(financeService.getAllTransactions());
+    }
+
+    @GetMapping("/transactions/page")
+    public ResponseEntity<PageResponse<TreasuryTransactionDTO>> getTransactionsPage(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size) {
+        return ResponseEntity.ok(financeService.getTransactionsPage(page, size));
     }
 
     @PostMapping("/pay-invoice")

@@ -192,6 +192,7 @@ final class HREmployeeProfileDialog {
     private static JTable table(DefaultTableModel model) {
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         return table;
     }
 
@@ -202,7 +203,7 @@ final class HREmployeeProfileDialog {
     }
 
     private static ModernPanel section(String title, String icon, JLabel... rows) {
-        ModernPanel panel = new ModernPanel(14);
+        ModernPanel panel = new ModernPanel(16);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(new EmptyBorder(14, 16, 14, 16));
         JLabel heading = new JLabel(title, UIHelper.icon(icon, 14, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);

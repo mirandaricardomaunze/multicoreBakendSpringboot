@@ -36,16 +36,31 @@ final class HRExpensesPanel {
         owner.expensesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        owner.expensesTable = new JTable(owner.expensesModel);
-        UIHelper.styleTable(owner.expensesTable);
-        owner.expensesTable.getColumnModel().getColumn(1).setCellRenderer(TableCellRenderers.money());
-        owner.expensesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
-        JScrollPane scroll = new JScrollPane(owner.expensesTable);
+        JTable table = new JTable(owner.expensesModel);
+        owner.expensesTable = table;
+        UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
+        table.getColumnModel().getColumn(1).setCellRenderer(TableCellRenderers.money());
+        table.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
+        JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-receipt", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(owner.expensesModel.getValueAt(row, 0)));
+            peek.setSubtitle(String.valueOf(owner.expensesModel.getValueAt(row, 2)));
+            peek.setStatus(String.valueOf(owner.expensesModel.getValueAt(row, 3)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Reembolsável", String.valueOf(owner.expensesModel.getValueAt(row, 1)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Categoria", String.valueOf(owner.expensesModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Motivo de Rejeição", String.valueOf(owner.expensesModel.getValueAt(row, 4)), false));
+            peek.setItems(items);
+        });
 
         JTextField expSearch = TableFilter.searchField("Colaborador, categoria ou motivo…");
         JComboBox<String> expEstado = TableFilter.combo("Todos os estados",
-                "PENDING_APPROVAL", "APPROVED", "REJECTED");
+                "Pendente de aprovação", "Aprovado", "Rejeitado");
         TableFilter.install(owner.expensesTable, expSearch,
                 new TableFilter.ColumnFilter(expEstado, 3));
         JPanel expBar = TableFilter.bar(expSearch, TableFilter.label("Estado:"), expEstado);
@@ -75,6 +90,7 @@ final class HRExpensesPanel {
                     c.rejectionReason() == null ? "" : c.rejectionReason()
             });
         }
+        UIHelper.ensureHeadersFit(owner.expensesTable);
         owner.refreshOverview();
     }
 

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.AboutDialog;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -13,6 +14,8 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.util.function.Consumer;
@@ -177,9 +180,17 @@ public class LoginDialog extends JFrame {
         footer.setOpaque(false);
         footer.setBorder(new EmptyBorder(8, 20, 16, 20));
 
-        JLabel info = new JLabel("Multicore ERP • Sistema Integrado de Gestão Empresarial • Moçambique");
+        JLabel info = new JLabel("Multicore ERP v1.0.0 • Sistema Integrado de Gestão Empresarial • Moçambique");
         info.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         info.setForeground(new Color(71, 85, 105));
+        info.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        info.setToolTipText("Multicore ERP • Clique para ver detalhes e licença do sistema");
+        info.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                AboutDialog.show(LoginDialog.this);
+            }
+        });
         footer.add(info);
 
         return footer;

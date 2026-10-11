@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.client.*;
 import mz.multicore.erp.gui.components.ClientTablePagination;
+import mz.multicore.erp.gui.components.TablePager;
 import mz.multicore.erp.gui.components.UIHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -134,6 +135,30 @@ public class UniversalTablePaginationHarnessTest {
                 assertTrue(hasPagination || isDisabled || hasNoFooter,
                         "Tabela de ClientesPanel deve ter paginação instalada ou opt-out configurado");
             }
+        });
+    }
+
+    @Test
+    @DisplayName("UPAG-06: Paginação remota com TablePager não sofre duplicação com ClientTablePagination")
+    void testTablePagerDoesNotDuplicatePagination() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Nome"}, 0);
+            for (int i = 0; i < 20; i++) model.addRow(new Object[]{i, "Pedido " + i});
+            JTable table = new JTable(model);
+            UIHelper.styleTable(table);
+
+            JScrollPane sp = new JScrollPane(table);
+            JPanel card = new JPanel(new BorderLayout());
+            card.add(sp, BorderLayout.CENTER);
+
+            // Adiciona TablePager posteriormente ao BorderLayout.SOUTH (mesmo padrão de CommercialOrdersView)
+            TablePager pager = new TablePager((p, s) -> {});
+            card.add(pager, BorderLayout.SOUTH);
+
+            Component south = ((BorderLayout) card.getLayout()).getLayoutComponent(BorderLayout.SOUTH);
+            assertThat(south).isSameAs(pager);
+            assertThat(south).isNotInstanceOf(UIHelper.PaginationSouthComposite.class);
+            assertTrue(Boolean.TRUE.equals(table.getClientProperty(ClientTablePagination.DISABLED)));
         });
     }
 

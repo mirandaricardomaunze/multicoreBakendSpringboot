@@ -313,6 +313,24 @@ public class CreditNoteService {
                         l.getLineTotal(),
                         l.getBatchNumber()
                 )).toList();
+        Long buId = n.getInvoice() != null && n.getInvoice().getBusinessUnit() != null ? n.getInvoice().getBusinessUnit().getId() : null;
+        String buName = n.getInvoice() != null && n.getInvoice().getBusinessUnit() != null ? n.getInvoice().getBusinessUnit().getName() : null;
+        if (buId == null && n.getLines() != null && !n.getLines().isEmpty()) {
+            java.util.Set<String> bus = new java.util.HashSet<>();
+            for (CreditNoteLine l : n.getLines()) {
+                if (l.getProduct() != null && l.getProduct().getBusinessUnit() != null) {
+                    bus.add(l.getProduct().getBusinessUnit().getName());
+                    if (buId == null) {
+                        buId = l.getProduct().getBusinessUnit().getId();
+                        buName = l.getProduct().getBusinessUnit().getName();
+                    }
+                }
+            }
+            if (bus.size() > 1) {
+                buId = null;
+                buName = "Misto";
+            }
+        }
         return new CreditNoteDTO(
                 n.getId(),
                 n.getNoteNumber(),
@@ -333,7 +351,9 @@ public class CreditNoteService {
                 n.getApprovedBy(),
                 n.getApprovedAt(),
                 n.getRejectionReason(),
-                lineDTOs
+                lineDTOs,
+                buId,
+                buName
         );
     }
 }

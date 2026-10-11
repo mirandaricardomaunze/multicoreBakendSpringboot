@@ -1,7 +1,11 @@
 package mz.multicore.erp.modules.pos.repository;
 
+import jakarta.persistence.LockModeType;
 import mz.multicore.erp.modules.pos.model.TillSession;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,6 +16,10 @@ import java.time.LocalDateTime;
 public interface TillSessionRepository extends JpaRepository<TillSession, Long> {
     Optional<TillSession> findByOperatorAndStatusAndCompanyId(String operator, String status, Long companyId);
     Optional<TillSession> findByCurrentOperatorAndStatusAndCompanyId(String currentOperator, String status, Long companyId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from TillSession s where s.id = :id and s.company.id = :companyId")
+    Optional<TillSession> lockByIdAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
 
     @org.springframework.data.jpa.repository.Query("SELECT s FROM TillSession s WHERE s.status = :status AND s.company.id = :companyId " +
             "AND ((s.currentOperator IS NOT NULL AND s.currentOperator = :operator) " +

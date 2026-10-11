@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -23,6 +24,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
 
 /**
  * Separador de contratos de trabalho. Ver docs/RH_COMPLETO_SPEC.md §B1.
@@ -58,8 +60,9 @@ final class HRContractsPanel {
         ActionMenuButton manageBtn = UIHelper.createActionMenuButton("Gestão do Contrato")
                 .addAction("Activar", UIHelper.icon("fas-check", 14), () -> withSelection(this::activateContract))
                 .addAction("Renovar", UIHelper.icon("fas-redo", 14), () -> withSelection(this::renewContract))
-                .addAction("Cessar", UIHelper.icon("fas-ban", 14), () -> withSelection(this::terminateContract))
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14, UIHelper.ACCENT_BLUE), this::load);
+                .addAction("Cessar", UIHelper.icon("fas-ban", 14), () -> withSelection(this::terminateContract));
+
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
 
         ModernButton newBtn = UIHelper.createPrimaryButton("Novo Contrato");
         newBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
@@ -75,11 +78,26 @@ final class HRContractsPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-file-signature", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(model.getValueAt(row, 1)));
+            peek.setSubtitle("Contrato " + model.getValueAt(row, 0) + " • " + model.getValueAt(row, 3));
+            peek.setStatus(String.valueOf(model.getValueAt(row, 7)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Tipo", String.valueOf(model.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Início", String.valueOf(model.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Fim", String.valueOf(model.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Salário Acordado", String.valueOf(model.getValueAt(row, 6)), true));
+            peek.setItems(items);
+        });
 
         JTextField search = TableFilter.searchField("Nº, colaborador ou função…");
         JComboBox<String> statusFilter = TableFilter.combo("Todos os estados",
@@ -90,7 +108,7 @@ final class HRContractsPanel {
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
         card.add(UIHelper.tableCardTop("Contratos de Trabalho", bar,
-                manageBtn, printBtn, newBtn), BorderLayout.NORTH);
+                refreshBtn, manageBtn, printBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
 
@@ -119,6 +137,7 @@ final class HRContractsPanel {
                     c.expired() ? "Prazo terminado" : c.statusLabel()
             });
         }
+        UIHelper.ensureHeadersFit(table);
     }
 
     /** Corre a acção sobre o contrato seleccionado, ou avisa que falta seleccionar. */
@@ -132,10 +151,18 @@ final class HRContractsPanel {
     }
 
     private void printContract(EmploymentContractDTO contract) {
-        UIHelper.runWithProgress(owner, "A gerar contrato…",
-                () -> owner.hrApiClient.renderContract(contract.id()),
-                pdf -> PrintPreviewDialog.show(owner, pdf, "contrato-" + contract.contractNumber()),
-                owner::showActionError);
+        if (owner.printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar contrato…",
+                    () -> owner.hrApiClient.renderContract(contract.id()),
+                    pdf -> PrintPreviewDialog.show(owner, pdf, "contrato-" + contract.contractNumber()),
+                    owner::showActionError);
+            return;
+        }
+        SensitivePrintCoordinator.print(owner, owner.printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.EMPLOYMENT_CONTRACT,
+                contract.id(), "Contrato " + contract.contractNumber(),
+                "contrato-" + contract.contractNumber(),
+                () -> owner.hrApiClient.renderContract(contract.id()), this::load);
     }
 
     private void activateContract(EmploymentContractDTO contract) {

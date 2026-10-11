@@ -23,9 +23,9 @@ final class CommercialOrdersView {
 
     static JPanel create(ComercialPanel owner) {
         // A aba alterna lista <-> editor único; criar e actualizar nunca abrem formulário modal.
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         // ===== EDITOR ÚNICO: inputs de cabeçalho agrupados em linha horizontal =====
         ModernPanel formCard = new ModernPanel(16);
@@ -209,10 +209,13 @@ final class CommercialOrdersView {
         ModernButton removeItemBtn = UIHelper.createDangerButton("Remover item");
         removeItemBtn.setIcon(UIHelper.icon("fas-trash-alt", 14));
         removeItemBtn.addActionListener(e -> owner.removeSelectedDraftOrderLine());
-        JLabel lineHint = new JLabel("Edição directa na grelha; embalagens e caixas permanecem sincronizadas.");
+        ModernButton orderLookupBtn = UIHelper.createProductLookupButton(owner::openOrderProductLookup);
+        JLabel lineHint = new JLabel("Edição directa na grelha ou leitura rápida de código de barras (F2).");
         lineHint.setForeground(UIHelper.TEXT_MUTED);
+        owner.orderBarcodeField = new mz.multicore.erp.gui.components.BarcodeScanField(
+                "Bipar código / SKU (F2)...", code -> CommercialOrderEditorActions.handleBarcodeScanned(owner, code));
         draftCard.add(UIHelper.tableCardTop("Itens da Encomenda", lineHint,
-                addLineBtn, removeItemBtn), BorderLayout.NORTH);
+                owner.orderBarcodeField, orderLookupBtn, addLineBtn, removeItemBtn), BorderLayout.NORTH);
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(totalRow, BorderLayout.SOUTH);
 
@@ -221,6 +224,12 @@ final class CommercialOrdersView {
         formContent.setOpaque(false);
         formContent.add(formCard, BorderLayout.NORTH);
         formContent.add(draftCard, BorderLayout.CENTER);
+        formContent.registerKeyboardAction(e -> {
+            if (owner.orderBarcodeField != null && owner.orderBarcodeField.isEnabled()) {
+                owner.orderBarcodeField.requestFocusInWindow();
+                owner.orderBarcodeField.selectAll();
+            }
+        }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F2, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         owner.orderFormContent = formContent;
 
         // ===== ABA: acções, filtros e lista dentro do mesmo card =====
@@ -229,18 +238,20 @@ final class CommercialOrdersView {
         newOrderBtn.addActionListener(e -> owner.openOrderEditor());
 
         ModernPanel listCard = new ModernPanel(16);
-        listCard.setLayout(new BorderLayout(0, 10));
-        listCard.setBorder(new EmptyBorder(20, 20, 20, 20));
+        listCard.setLayout(new BorderLayout(0, 6));
+        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         // Colunas novas vão sempre para o fim, para não deslocar os índices já usados pelas acções.
         String[] ordersCols = {"ID", "Nº Encomenda", "Cliente", "Estado", "Total", "Impressões", "Tipo",
-                "Origem", "Entrega prevista"};
+                "Origem", "Entrega prevista", "Negócio"};
         owner.ordersTableModel = new DefaultTableModel(ordersCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.ordersTable = new JTable(owner.ordersTableModel);
+        owner.ordersTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(owner.ordersTable);
+        UIHelper.ensureHeadersFit(owner.ordersTable);
         owner.ordersTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
         owner.ordersTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
         // A célula guarda o OrderKind; o renderer mostra o rótulo PT-MZ. Assim as acções lêem a
@@ -266,29 +277,95 @@ final class CommercialOrdersView {
                 .setPreferredWidth(110);                                        // Origem
         owner.ordersTable.getColumnModel().getColumn(ComercialPanel.ORDERS_COL_DELIVERY)
                 .setPreferredWidth(130);                                        // Entrega prevista
+        owner.ordersTable.getColumnModel().getColumn(9).setPreferredWidth(120);  // Negócio
 
         JScrollPane ordersScroll = new JScrollPane(owner.ordersTable);
         UIHelper.styleScrollPane(ordersScroll);
 
         JTextField ecSearch = TableFilter.searchField("Nº encomenda ou cliente…");
+        owner.ecBusinessUnitCombo = TableFilter.combo("Todos os negócios", "—");
+        if (owner.businessUnitsList != null) {
+            for (mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO bu : owner.businessUnitsList) {
+                owner.ecBusinessUnitCombo.addItem(bu.name());
+            }
+        }
         JComboBox<String> ecEstado = TableFilter.combo("Todos os estados",
-                "AWAITING_SEPARATION", "IN_SEPARATION", "SEPARATED", "INVOICED",
-                "PENDING", "PENDING_APPROVAL", "GUIDE_PENDING", "GUIDED", "BILLED", "CANCELLED");
+                "Pendente", "Pendente de aprovação", "Aguarda separação", "Em separação",
+                "Separado", "Guia por aprovar", "Expedido por guia", "Facturado", "Cancelado");
         JComboBox<String> ecPeriodo = TableFilter.periodCombo();
         TableFilter.install(owner.ordersTable, ecSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(ecEstado, 3)),
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(owner.ecBusinessUnitCombo, 9),
+                        new TableFilter.ColumnFilter(ecEstado, 3)),
                 java.util.List.of(new TableFilter.PeriodFilter(ecPeriodo, ComercialPanel.ORDERS_COL_DELIVERY)));
         listCard.add(ordersScroll, BorderLayout.CENTER);
         TableQuickPeekController ordersPeek = UIHelper.installQuickPeek(owner.ordersTable, listCard);
-        ordersPeek.setOnOpenFullCallback(modelRow -> owner.openSelectedOrderEditor());
+        owner.ordersTable.putClientProperty("customDetailAction", (Runnable) owner::openSelectedOrderDetails);
+        ordersPeek.setCustomPopulator((peekPanel, modelRow) -> {
+            if (modelRow < 0 || modelRow >= owner.ordersTableModel.getRowCount()) return;
+            Long orderId = (Long) owner.ordersTableModel.getValueAt(modelRow, 0);
+            mz.multicore.erp.modules.comercial.dto.OrderDTO order = owner.findCachedOrder(orderId);
+            if (order == null) {
+                peekPanel.setTitle(String.valueOf(owner.ordersTableModel.getValueAt(modelRow, 1)));
+                peekPanel.setSubtitle(String.valueOf(owner.ordersTableModel.getValueAt(modelRow, 2)));
+                peekPanel.setStatus(UIHelper.humanStatus(String.valueOf(owner.ordersTableModel.getValueAt(modelRow, 3))), UIHelper.ACCENT_BLUE);
+                return;
+            }
+
+            peekPanel.setTitle("Encomenda " + order.orderNumber());
+            String sub = order.clientName();
+            if (order.walkInName() != null && !order.walkInName().isBlank()) {
+                sub += " (" + order.walkInName() + ")";
+            }
+            peekPanel.setSubtitle(sub);
+
+            Color statusColor = "BILLED".equals(order.status()) ? UIHelper.APPROVED_GREEN
+                    : "CANCELLED".equals(order.status()) ? UIHelper.REJECTED_RED
+                    : "PENDING".equals(order.status()) ? UIHelper.PENDING_YELLOW : UIHelper.ACCENT_BLUE;
+            peekPanel.setStatus(order.statusLabel() != null ? order.statusLabel() : UIHelper.humanStatus(order.status()), statusColor);
+
+            java.util.List<QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new QuickPeekPanel.PeekItem("Total da Encomenda", String.format("%.2f MT", order.totalAmount()), true));
+            if (order.kindLabel() != null) {
+                items.add(new QuickPeekPanel.PeekItem("Via / Tipo", order.kindLabel(), false));
+            }
+            if (order.warehouseName() != null) {
+                items.add(new QuickPeekPanel.PeekItem("Armazém Origem", order.warehouseName(), false));
+            }
+            if (order.paymentTerms() != null) {
+                items.add(new QuickPeekPanel.PeekItem("Termos de Pagamento", order.paymentTerms(), false));
+            }
+            if (order.expectedDeliveryDate() != null) {
+                String deliv = order.expectedDeliveryDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                if (order.deliveryOverdue()) deliv += " (em atraso)";
+                items.add(new QuickPeekPanel.PeekItem("Entrega Prevista", deliv, false));
+            }
+            if (order.businessUnitName() != null && !order.businessUnitName().isBlank()) {
+                items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", order.businessUnitName(), false));
+            }
+
+            if (order.lines() != null && !order.lines().isEmpty()) {
+                items.add(new QuickPeekPanel.PeekItem("— ARTIGOS DA ENCOMENDA —", order.lines().size() + " produto(s)", false));
+                for (var line : order.lines()) {
+                    String lineDesc = line.quantity() + " un. × " + String.format("%.2f MT", line.unitPrice());
+                    if (line.batchNumber() != null && !line.batchNumber().isBlank() && !line.batchNumber().startsWith("LEGACY")) {
+                        lineDesc += " [Lote: " + line.batchNumber() + "]";
+                    }
+                    items.add(new QuickPeekPanel.PeekItem(line.productName(), lineDesc + " = " + String.format("%.2f MT", line.lineTotal()), false));
+                }
+            }
+            peekPanel.setItems(items);
+        });
+        ordersPeek.setOnOpenFullCallback(modelRow -> owner.openSelectedOrderDetails());
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadOrdersTable);
 
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Ver Ficha Completa", UIHelper.icon("fas-file-alt", 14, UIHelper.APPROVED_GREEN), owner::openSelectedOrderDetails)
                 .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), owner::openSelectedOrderEditor)
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedOrder)
-                .addAction("Ver histórico operacional", UIHelper.icon("fas-history", 14), owner::showSelectedOrderEvents)
-                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14), owner::exportOrdersTable);
+                .addAction("Gerar Ordem de Fabrico", UIHelper.icon("fas-industry", 14, UIHelper.ACCENT_CYAN), owner::generateProductionOrderFromSelectedOrder)
+                .addAction("Ver histórico operacional", UIHelper.icon("fas-history", 14), owner::showSelectedOrderEvents);
         ActionMenuButton convertMenu = UIHelper.createActionMenuButton("Processo")
                 .addAction("Marcar como separado", UIHelper.icon("fas-box-open", 14), owner::completeSelectedOrderSeparation)
                 .addAction("Converter em Guia", UIHelper.icon("fas-truck", 14), owner::convertSelectedOrderToGuide)
@@ -299,19 +376,24 @@ final class CommercialOrdersView {
         convertMenu.setToolTipText("Separação, conversão ou cancelamento da encomenda seleccionada.");
 
         JPanel ecFilters = UIHelper.filterBar(
-                new JComponent[]{ecSearch, TableFilter.label("Estado:"), ecEstado,
+                new JComponent[]{ecSearch,
+                        TableFilter.label("Negócio:"), owner.ecBusinessUnitCombo,
+                        TableFilter.label("Estado:"), ecEstado,
                         TableFilter.label("Entrega:", "fas-calendar-alt"), ecPeriodo},
                 null);
         ecFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        owner.ordersTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
+        owner.ordersPager = new TablePager(owner::loadOrdersPage);
+        listCard.add(owner.ordersPager, BorderLayout.SOUTH);
         listCard.add(UIHelper.tableCardTop("Central de Pedidos e Separação", ecFilters,
                 refreshBtn, moreBtn, convertMenu, newOrderBtn), BorderLayout.NORTH);
 
         panel.add(listCard, BorderLayout.CENTER);
 
-        // LISTENERS
-        UIHelper.installDoubleClick(owner.ordersTable, owner::openSelectedOrderEditor);
+        // LISTENERS (o duplo clique e Enter na tabela já são geridos pelo RowDetailsInspector via customDetailAction)
         UIHelper.installDocumentGridShortcuts(owner.orderLinesTable,
-                owner::addDraftOrderLine, owner::removeSelectedDraftOrderLine, owner::saveOrderFromEditor);
+                owner::addDraftOrderLine, owner::removeSelectedDraftOrderLine, owner::saveOrderFromEditor,
+                owner::openOrderProductLookup);
         addLineBtn.addActionListener(e -> owner.addDraftOrderLine());
         owner.orderLinesTableModel.addTableModelListener(event -> {
             if (owner.syncingOrderGrid || event.getFirstRow() < 0

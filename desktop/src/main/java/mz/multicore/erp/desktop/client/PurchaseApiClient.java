@@ -119,4 +119,27 @@ public class PurchaseApiClient {
         return clientFactory.authenticatedClient()
                 .getList("/api/purchases/reorder-suggestions?companyId=" + companyId, ReorderSuggestionDTO.class);
     }
+
+    // ─── Gestão de Negócios / Linhas de Distribuição ─────────────────────────
+    public List<mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO> getBusinessUnitsByCompany(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/business-units?companyId=" + companyId, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
+    }
+
+    public List<mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO> getActiveBusinessUnits(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/business-units/active?companyId=" + companyId, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
+    }
+
+    public mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO createBusinessUnit(mz.multicore.erp.modules.purchases.dto.CreateBusinessUnitRequest request) {
+        return clientFactory.authenticatedClient().post("/api/business-units", request, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
+    }
+
+    public mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO updateBusinessUnit(Long id, mz.multicore.erp.modules.purchases.dto.UpdateBusinessUnitRequest request) {
+        return clientFactory.authenticatedClient().put("/api/business-units/" + id, request, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
+    }
+
+    public void toggleActiveBusinessUnit(Long id) {
+        clientFactory.authenticatedClient().post("/api/business-units/" + id + "/toggle-active", null, Void.class);
+    }
 }

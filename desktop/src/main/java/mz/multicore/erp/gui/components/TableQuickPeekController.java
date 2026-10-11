@@ -161,7 +161,7 @@ public class TableQuickPeekController {
             String colName = table.getColumnName(c);
             Object rawVal = table.getValueAt(viewRow, c);
             if (rawVal == null) continue;
-            String valStr = rawVal.toString().trim();
+            String valStr = RecordDetailsDialog.valueText(rawVal).trim();
             if (valStr.isEmpty()) continue;
 
             String lower = colName.toLowerCase();

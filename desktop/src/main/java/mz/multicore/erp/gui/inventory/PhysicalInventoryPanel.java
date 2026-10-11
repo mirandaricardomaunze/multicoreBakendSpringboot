@@ -2,12 +2,14 @@ package mz.multicore.erp.gui.inventory;
 
 import mz.multicore.erp.desktop.client.InventoryPhysicalCountingApiClient;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -37,6 +39,7 @@ public class PhysicalInventoryPanel extends JPanel {
     private ActionMenuButton sessionActionsMenu;
     private ModernButton printPdfBtn;
     private ModernButton newSessionBtn;
+    private ModernButton refreshBtn;
 
     private JLabel kpiTotalItems;
     private JLabel kpiCountedItems;
@@ -52,9 +55,9 @@ public class PhysicalInventoryPanel extends JPanel {
 
     public PhysicalInventoryPanel(InventoryPhysicalCountingApiClient apiClient) {
         this.apiClient = apiClient;
-        setLayout(new BorderLayout(0, 10));
+        setLayout(new BorderLayout(0, 6));
         setOpaque(false);
-        setBorder(new EmptyBorder(15, 5, 5, 5));
+        setBorder(new EmptyBorder(6, 4, 4, 4));
 
         initTable();
         initActions();
@@ -72,8 +75,9 @@ public class PhysicalInventoryPanel extends JPanel {
         sessionActionsMenu = UIHelper.createActionMenuButton("Ciclo da Sessão")
                 .addAction("Iniciar Contagem", UIHelper.icon("fas-play", 13, UIHelper.APPROVED_GREEN), this::handleStartCounting)
                 .addAction("Fecho & Acerto", UIHelper.icon("fas-check-double", 13, UIHelper.PENDING_YELLOW), this::handleCloseSession)
-                .addAction("Cancelar Sessão", UIHelper.icon("fas-times", 13, UIHelper.REJECTED_RED), this::handleCancelSession)
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 13, UIHelper.ACCENT_BLUE), this::refreshSessions);
+                .addAction("Cancelar Sessão", UIHelper.icon("fas-times", 13, UIHelper.REJECTED_RED), this::handleCancelSession);
+
+        refreshBtn = UIHelper.createRefreshButton(this::refreshSessions);
 
         printPdfBtn = UIHelper.createSecondaryButton("Dossiê PDF");
         printPdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 13, Color.WHITE));
@@ -83,7 +87,7 @@ public class PhysicalInventoryPanel extends JPanel {
     }
 
     private JPanel buildCenterPanel() {
-        JPanel center = new JPanel(new BorderLayout(0, 10));
+        JPanel center = new JPanel(new BorderLayout(0, 6));
         center.setOpaque(false);
 
         // KPI Section — grid canónico com altura compacta e fundo unificado
@@ -108,17 +112,39 @@ public class PhysicalInventoryPanel extends JPanel {
         return center;
     }
 
+    private ModernButton peekToggleBtn;
+
     private ModernPanel buildTableCard() {
         ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setLayout(new BorderLayout(0, 6));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         card.add(UIHelper.tableCardTop("Inventário Físico & Reconciliação", buildCardToolbar(),
-                printPdfBtn, sessionActionsMenu, newSessionBtn), BorderLayout.NORTH);
+                refreshBtn, printPdfBtn, sessionActionsMenu, newSessionBtn), BorderLayout.NORTH);
+
+        UIHelper.ensureHeadersFit(itemsTable);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(itemsTable, card, (peek, mr) -> {
+            int row = itemsTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-boxes", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
+            peek.setSubtitle("SKU: " + tableModel.getValueAt(row, 0));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Qtd Sistema", String.valueOf(tableModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Qtd Contada", String.valueOf(tableModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Divergência", String.valueOf(tableModel.getValueAt(row, 4)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Impacto Financeiro", String.valueOf(tableModel.getValueAt(row, 5)), true));
+            peek.setItems(items);
+        });
+        if (peekToggleBtn != null) {
+            peekToggleBtn.addActionListener(e -> peekController.toggle());
+        }
 
         JScrollPane scroll = new JScrollPane(itemsTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(itemsTable), BorderLayout.SOUTH);
         return card;
     }
 
@@ -185,11 +211,18 @@ public class PhysicalInventoryPanel extends JPanel {
         recordCountBtn.setIcon(UIHelper.icon("fas-barcode", 13, Color.WHITE));
         recordCountBtn.addActionListener(e -> handleBarcodeScan());
 
+        peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar item seleccionado (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar item");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
         right.add(barcodeLbl);
         right.add(barcodeScanField);
         right.add(qtyLbl);
         right.add(manualQtyField);
         right.add(recordCountBtn);
+        right.add(peekToggleBtn);
         bar.add(right, BorderLayout.EAST);
 
         return bar;

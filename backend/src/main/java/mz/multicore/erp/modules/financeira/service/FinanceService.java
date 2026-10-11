@@ -1,6 +1,9 @@
 package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.paging.PageQuery;
+import mz.multicore.erp.architecture.paging.PageResponse;
+import mz.multicore.erp.architecture.paging.PageResponseMapper;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.comercial.model.Invoice;
@@ -51,6 +54,19 @@ public class FinanceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Histórico crescente de tesouraria com paginação executada pela base de dados.
+     * O método legado permanece disponível apenas para clientes desktop anteriores.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<TreasuryTransactionDTO> getTransactionsPage(Integer page, Integer size) {
+        var pageable = PageQuery.of(page, size);
+        var transactions = transactionRepository
+                .findByTreasuryAccountCompanyIdOrderByTransactionDateDesc(
+                        CurrentUserContext.requireCurrentCompanyId(), pageable);
+        return PageResponseMapper.from(transactions, this::toDTO);
+    }
+
     @Transactional
     public TreasuryTransactionDTO registerTransaction(Long accountId, String type, BigDecimal amount, String description) {
         TransactionType transactionType;
@@ -97,10 +113,9 @@ public class FinanceService {
         // Liquidar uma fatura é movimento de dinheiro: exige gerente, como anular recibo.
         PermissionGuard.requireManagerOrAdmin("liquidar fatura");
 
-        Invoice invoice = invoiceRepository.findById(invoiceId)
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
-
-        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         if (!invoice.getStatus().isCollectable()) {
             throw new BusinessRuleException("Apenas faturas por cobrar podem ser liquidadas. Estado atual: " + invoice.getStatus());
         }

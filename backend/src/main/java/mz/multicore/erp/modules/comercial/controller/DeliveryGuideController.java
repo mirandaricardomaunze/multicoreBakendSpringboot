@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.comercial.controller;
 
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
+import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.service.DeliveryGuideService;
 import jakarta.validation.Valid;
@@ -37,6 +38,13 @@ public class DeliveryGuideController {
     @PostMapping
     public ResponseEntity<DeliveryGuideDTO> create(@RequestBody @Valid CreateDeliveryGuideRequest request) {
         return ResponseEntity.ok(deliveryGuideService.createFromOrder(request));
+    }
+
+    @PostMapping("/standalone")
+    public ResponseEntity<DeliveryGuideDTO> createStandalone(
+            @RequestBody @Valid CreateStandaloneDeliveryGuideRequest request) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(deliveryGuideService.createStandalone(request));
     }
 
     @PostMapping("/{id}/approve")

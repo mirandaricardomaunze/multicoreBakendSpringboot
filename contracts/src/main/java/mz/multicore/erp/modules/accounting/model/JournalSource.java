@@ -32,7 +32,16 @@ public enum JournalSource {
      * porque a chave anti-duplicação é <b>fonte + id do documento</b>: com a mesma fonte, o recibo
      * nº 12 e a retenção nº 12 seriam o mesmo lançamento aos olhos do sistema.
      */
-    PAYROLL_DELIVERY("Entrega de retenções");
+    PAYROLL_DELIVERY("Entrega de retenções"),
+
+    /** Conclusão de ordem de produção (entrada de produto acabado e variação de produção). */
+    PRODUCTION("Produção industrial"),
+
+    /** Quota de amortização / depreciação periódica de activo fixo. */
+    ASSET_DEPRECIATION("Depreciação de activo"),
+
+    /** Abastecimento de combustível de viatura da frota. */
+    FLEET_FUEL("Combustível de frota");
 
     private final String label;
 

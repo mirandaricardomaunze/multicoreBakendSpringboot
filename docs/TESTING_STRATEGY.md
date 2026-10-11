@@ -1,6 +1,10 @@
-# Estrategia de Testes - Multicore ERP
+# Estratégia de Testes — Multicore ERP
 
-Este documento define como testar sem transformar a suite num peso inutil.
+Estado: **canónico**  
+Última revisão: 2026-10-10
+
+Este documento define como obter confiança proporcional ao risco sem transformar a suite num peso
+inútil.
 
 ## Piramide
 
@@ -57,6 +61,28 @@ Usar quando precisa validar:
 - Handlers REST.
 - Security/interceptors.
 - Migrations.
+
+## Gates obrigatórios por tipo de alteração
+
+| Alteração | Verificação mínima obrigatória |
+|-----------|--------------------------------|
+| POM, fronteira entre módulos, DTO ou classe movida | `MultiModuleArchitectureHarnessTest` |
+| UI Swing ou construtor de painel | `DesktopThinContextTest` |
+| Regra fiscal, stock, POS, caixa, salários ou permissões | Teste unitário da regra e teste de integração quando houver JPA, transacção ou segurança |
+| Migration Flyway ou mapeamento JPA | Teste de integração com arranque do contexto e aplicação das migrations |
+| Contrato HTTP | Teste do Controller/handler, incluindo status, payload de sucesso e erro |
+
+Uma alteração não deve reduzir cobertura de uma regra crítica. Cobertura percentual é um indicador,
+não substitui cenários de negócio explícitos, isolamento por empresa e verificação de efeitos.
+
+## Concorrência, idempotência e compatibilidade
+
+- Operações repetíveis por rede devem testar idempotência ou rejeição segura da segunda chamada.
+- Escritas com versão optimista devem cobrir `409 Conflict` para versão desactualizada.
+- Numeração, checkout, aprovação e movimentos de stock devem ter testes concorrentes quando a
+  implementação puder receber pedidos simultâneos.
+- Alterações em records de `contracts` devem testar desserialização e construtores retrocompatíveis
+  usados pela versão desktop anterior.
 
 ## Dados de teste
 

@@ -1,6 +1,9 @@
 package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.paging.PageQuery;
+import mz.multicore.erp.architecture.paging.PageResponse;
+import mz.multicore.erp.architecture.paging.PageResponseMapper;
 import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -106,7 +109,9 @@ public class InventoryService {
             BigDecimal total = totals.getOrDefault(p.getId(), BigDecimal.ZERO);
             if (total.signum() <= 0) {
                 out.add(new mz.multicore.erp.modules.inventory.dto.StockAlertDTO(
-                        p.getId(), p.getSku(), p.getName(), total));
+                        p.getId(), p.getSku(), p.getName(), total,
+                        p.getBusinessUnit() != null ? p.getBusinessUnit().getId() : null,
+                        p.getBusinessUnit() != null ? p.getBusinessUnit().getName() : null));
             }
         }
         return out;
@@ -218,7 +223,7 @@ public class InventoryService {
                         : "Stock destrancado (quantidades visíveis para todos).");
     }
 
-    private Warehouse loadWarehouseForActiveCompany(Long id) {
+    public Warehouse loadWarehouseForActiveCompany(Long id) {
         Warehouse warehouse = warehouseRepository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
         CurrentUserContext.requireCompany(warehouse.getCompany() != null ? warehouse.getCompany().getId() : null);
@@ -508,6 +513,16 @@ public class InventoryService {
         return stockMovementRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
     }
 
+    /** Histórico crescente paginado na base de dados; preserva o endpoint legado em paralelo. */
+    @Transactional(readOnly = true)
+    public PageResponse<StockMovementDTO> findMovementsPageByCompany(
+            Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return PageResponseMapper.from(
+                stockMovementRepository.findPageByCompanyId(companyId, PageQuery.of(page, size)),
+                this::toDTO);
+    }
+
     @Transactional(readOnly = true)
     public List<mz.multicore.erp.modules.inventory.dto.ProductBatchDTO> findBatchesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
@@ -561,7 +576,9 @@ public class InventoryService {
                 product.getMinStock() != null ? product.getMinStock() : BigDecimal.ZERO,
                 product.getCategory() != null ? product.getCategory().getName() : null,
                 product.getUnitPrice() != null ? product.getUnitPrice() : BigDecimal.ZERO,
-                product.getUnitsPerBox()
+                product.getUnitsPerBox(),
+                product.getBusinessUnit() != null ? product.getBusinessUnit().getId() : null,
+                product.getBusinessUnit() != null ? product.getBusinessUnit().getName() : null
         );
     }
 
@@ -577,7 +594,9 @@ public class InventoryService {
                 m.getBatchNumber(),
                 m.getSerialNumber(),
                 m.getDescription(),
-                m.getMovementDate()
+                m.getMovementDate(),
+                m.getProduct().getBusinessUnit() != null ? m.getProduct().getBusinessUnit().getId() : null,
+                m.getProduct().getBusinessUnit() != null ? m.getProduct().getBusinessUnit().getName() : null
         );
     }
 }

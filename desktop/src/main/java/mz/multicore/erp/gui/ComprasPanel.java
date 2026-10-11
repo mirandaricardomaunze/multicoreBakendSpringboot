@@ -30,6 +30,8 @@ import mz.multicore.erp.modules.purchases.dto.PurchaseOrderLineDTO;
 import mz.multicore.erp.modules.purchases.dto.ReceivePurchaseOrderRequest;
 import mz.multicore.erp.desktop.client.PurchaseApiClient;
 import mz.multicore.erp.modules.purchases.dto.SupplierDTO;
+import mz.multicore.erp.gui.components.QuickPeekPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.modules.purchases.dto.PurchaseDTO;
 
 import javax.swing.*;
@@ -48,6 +50,7 @@ public class ComprasPanel extends JPanel {
 
     final PurchaseApiClient purchaseApiClient;
     private final PurchaseSuppliersPanel suppliersPanel;
+    private final PurchaseBusinessUnitsPanel businessUnitsPanel;
     final PurchaseReorderPanel reorderPanel;
     private final PurchasePayablesPanel payablesPanel;
     final PurchaseOrdersPanel purchaseOrdersPanel;
@@ -75,6 +78,7 @@ public class ComprasPanel extends JPanel {
     private DefaultTableModel poListModel;
     private JTable poListTable;
     JTextField poSearchField;
+    JComboBox<String> poBusinessUnitCombo;
     final List<CreatePurchaseOrderLineRequest> poDraftLines = new ArrayList<>();
     List<PurchaseOrderDTO> poList = new ArrayList<>();
     JPanel poFormContent;                   // área de trabalho tabular da encomenda
@@ -104,6 +108,7 @@ public class ComprasPanel extends JPanel {
     private DefaultTableModel draftLinesModel;
     private JTable draftLinesTable;
     private JLabel totalLabel;
+    JComboBox<String> histBusinessUnitCombo;
     
     private DefaultTableModel purchasesModel;
     private JTable purchasesTable;
@@ -148,6 +153,7 @@ public class ComprasPanel extends JPanel {
         this.comercialApiClient = comercialApiClient;
         this.financeApiClient = financeApiClient;
         this.suppliersPanel = new PurchaseSuppliersPanel(this);
+        this.businessUnitsPanel = new PurchaseBusinessUnitsPanel(this);
         this.reorderPanel = new PurchaseReorderPanel(this);
         this.payablesPanel = new PurchasePayablesPanel(this);
         this.purchaseOrdersPanel = new PurchaseOrdersPanel(this);
@@ -177,6 +183,9 @@ public class ComprasPanel extends JPanel {
         JPanel tabFornecedores = createFornecedoresTab();
         tabbedPane.addTab("Gestão de Fornecedores", UIHelper.icon("fas-truck-loading", 16, UIHelper.ACCENT), tabFornecedores);
 
+        // Tab: Gestão de Negócios
+        tabbedPane.addTab("Gestão de Negócios", UIHelper.icon("fas-briefcase", 16, UIHelper.ACCENT), businessUnitsPanel.buildPanel());
+
         if (supplierStatementPanel != null) {
             tabbedPane.addTab("Conta Corrente & Reconciliação", UIHelper.icon("fas-file-invoice", 16, UIHelper.ACCENT_CYAN), supplierStatementPanel);
         }
@@ -195,9 +204,9 @@ public class ComprasPanel extends JPanel {
     }
 
     private JPanel createComprasTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         // Host do formulário (vai para modal): transparente e a acompanhar a largura do viewport.
         VScrollForm formCard = new VScrollForm(new GridBagLayout());
@@ -344,6 +353,7 @@ public class ComprasPanel extends JPanel {
         };
         draftLinesTable = new JTable(draftLinesModel);
         UIHelper.styleTable(draftLinesTable);
+        UIHelper.ensureHeadersFit(draftLinesTable);
         JScrollPane scroll = new JScrollPane(draftLinesTable);
         UIHelper.styleEmbeddedTableScrollPane(scroll, draftLinesTable, 4);
         formCard.add(scroll, gbc);
@@ -374,34 +384,59 @@ public class ComprasPanel extends JPanel {
         newPurchaseBtn.addActionListener(e -> openPurchaseFormDialog());
 
         ModernPanel historyCard = new ModernPanel(16);
-        historyCard.setLayout(new BorderLayout(0, 10));
-        historyCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        historyCard.setLayout(new BorderLayout(0, 6));
+        historyCard.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        String[] historyCols = {"Nº Documento", "Fornecedor", "Armazém", "Total Faturado", "Imposto", "Data"};
+        String[] historyCols = {"Nº Documento", "Fornecedor", "Armazém", "Total Faturado", "Imposto", "Data", "Negócio"};
         purchasesModel = new DefaultTableModel(historyCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         purchasesTable = new JTable(purchasesModel);
         UIHelper.styleTable(purchasesTable);
+        UIHelper.ensureHeadersFit(purchasesTable);
         purchasesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         purchasesTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
+        purchasesTable.getColumnModel().getColumn(6).setPreferredWidth(110);
         JScrollPane histScroll = new JScrollPane(purchasesTable);
         UIHelper.styleScrollPane(histScroll);
 
         JTextField histSearch = TableFilter.searchField("Nº doc, fornecedor ou armazém…");
+        histBusinessUnitCombo = TableFilter.combo("Todos os negócios");
         JComboBox<String> histPeriodo = TableFilter.periodCombo();
         TableFilter.install(purchasesTable, histSearch,
-                java.util.List.of(),
+                java.util.List.of(new TableFilter.ColumnFilter(histBusinessUnitCombo, 6)),
                 java.util.List.of(new TableFilter.PeriodFilter(histPeriodo, 5)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadPurchasesHistory);
         JPanel histFilters = UIHelper.filterBar(
-                new JComponent[]{histSearch, TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo},
+                new JComponent[]{histSearch,
+                        TableFilter.label("Negócio:"), histBusinessUnitCombo,
+                        TableFilter.label("Data:", "fas-calendar-alt"), histPeriodo},
                 null);
-        histFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+        histFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
         historyCard.add(UIHelper.tableCardTop("Faturas de Compra Registadas", histFilters,
                 refreshBtn, newPurchaseBtn), BorderLayout.NORTH);
         historyCard.add(histScroll, BorderLayout.CENTER);
+        TableQuickPeekController.install(purchasesTable, historyCard, (peek, row) -> {
+            String doc = String.valueOf(purchasesModel.getValueAt(row, 0));
+            String sup = String.valueOf(purchasesModel.getValueAt(row, 1));
+            String wh = String.valueOf(purchasesModel.getValueAt(row, 2));
+            String total = String.valueOf(purchasesModel.getValueAt(row, 3));
+            String imp = String.valueOf(purchasesModel.getValueAt(row, 4));
+            String data = String.valueOf(purchasesModel.getValueAt(row, 5));
+            String bu = String.valueOf(purchasesModel.getValueAt(row, 6));
+            peek.setHeaderIcon("fas-file-invoice-dollar", UIHelper.MODULE_COMPRAS);
+            peek.setTitle(doc);
+            peek.setSubtitle("Fornecedor: " + sup);
+            peek.setStatus("REGISTADO", UIHelper.APPROVED_GREEN);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Armazém Destino", wh, false),
+                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu, false),
+                    new QuickPeekPanel.PeekItem("Data Compra", data, false),
+                    new QuickPeekPanel.PeekItem("Total Imposto", imp, false),
+                    new QuickPeekPanel.PeekItem("Total Faturado", total, true)
+            ));
+        });
 
         // Histórico de compras ocupa a tab inteira; o formulário vive no modal.
         panel.add(historyCard, BorderLayout.CENTER);
@@ -453,6 +488,7 @@ public class ComprasPanel extends JPanel {
         loadPurchaseOrders();
         loadPayables();
         loadReorderSuggestions();
+        loadBusinessUnits();
     }
 
     // ===== Reposição automática =====
@@ -470,6 +506,10 @@ public class ComprasPanel extends JPanel {
     private JPanel createPurchaseOrdersTab() { return purchaseOrdersPanel.buildPanel(); }
 
     private void loadPurchaseOrders() { purchaseOrdersPanel.refresh(); }
+
+    void loadBusinessUnits() {
+        businessUnitsPanel.loadBusinessUnits();
+    }
 
     void loadSuppliers() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
@@ -740,16 +780,29 @@ public class ComprasPanel extends JPanel {
     private void applyPurchasesHistory(List<PurchaseDTO> purchases) {
         purchasesModel.setRowCount(0);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        java.util.Set<String> bus = new java.util.TreeSet<>();
 
         for (PurchaseDTO p : purchases) {
+            String buName = p.businessUnitName() != null && !p.businessUnitName().isBlank() ? p.businessUnitName() : "—";
+            if (!"—".equals(buName)) bus.add(buName);
             purchasesModel.addRow(new Object[]{
                     p.purchaseNumber(),
                     p.supplierName(),
                     warehouseName(p.warehouseId()),
                     p.totalAmount(),
                     p.taxAmount(),
-                    p.purchaseDate().format(dtf)
+                    p.purchaseDate().format(dtf),
+                    buName
             });
+        }
+
+        if (histBusinessUnitCombo != null) {
+            Object prev = histBusinessUnitCombo.getSelectedItem();
+            histBusinessUnitCombo.removeAllItems();
+            histBusinessUnitCombo.addItem("Todos os negócios");
+            histBusinessUnitCombo.addItem("—");
+            for (String b : bus) histBusinessUnitCombo.addItem(b);
+            if (prev != null) histBusinessUnitCombo.setSelectedItem(prev);
         }
     }
 

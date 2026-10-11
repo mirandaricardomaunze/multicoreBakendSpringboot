@@ -79,6 +79,7 @@ final class PosReturnDialog {
         }
         JTable linesTable = new JTable(linesModel);
         UIHelper.styleTable(linesTable);
+        UIHelper.ensureHeadersFit(linesTable);
         linesTable.getColumnModel().getColumn(0).setMinWidth(0);
         linesTable.getColumnModel().getColumn(0).setMaxWidth(0);
         linesTable.getColumnModel().getColumn(0).setWidth(0);
@@ -197,7 +198,7 @@ final class PosReturnDialog {
     }
 
     private void showVoucherIssuedModal(StoreVoucherDTO voucher, CreditNoteDTO note) {
-        ModernPanel card = new ModernPanel(14);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(new EmptyBorder(16, 20, 16, 20));
 
@@ -237,10 +238,10 @@ final class PosReturnDialog {
 
         ModernButton printBtn = UIHelper.createPrimaryButton("Imprimir Vale (80mm)");
         printBtn.setIcon(UIHelper.icon("fas-print", 12));
-        printBtn.addActionListener(e -> UIHelper.runWithProgress(owner, "A gerar talão do vale",
-                () -> owner.posApiClient.renderVoucher(voucher.id()),
-                pdf -> PrintPreviewDialog.show(owner, pdf, "vale-" + voucher.code()),
-                err -> owner.showPosNotice(FeedbackType.ERROR, "Erro ao imprimir vale", err.getMessage())));
+        printBtn.addActionListener(e -> SensitivePrintCoordinator.print(owner, owner.printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.STORE_VOUCHER,
+                voucher.id(), "Vale de compras " + voucher.code(), "vale-" + voucher.code(),
+                () -> owner.posApiClient.renderVoucher(voucher.id()), null));
 
         btnRow.add(copyBtn);
         btnRow.add(printBtn);

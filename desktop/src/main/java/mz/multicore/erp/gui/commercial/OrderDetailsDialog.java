@@ -2,6 +2,7 @@ package mz.multicore.erp.gui.commercial;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
+import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.ComercialPanel;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.OrderDTO;
@@ -25,17 +26,35 @@ public final class OrderDetailsDialog {
 
     private final JComponent owner;
     private final ComercialApiClient apiClient;
+    private final PrintApiClient printApiClient;
     private final Runnable afterPrint;
+    private boolean loadingOrOpen = false;
 
     public OrderDetailsDialog(JComponent owner, ComercialApiClient apiClient, Runnable afterPrint) {
+        this(owner, apiClient, null, afterPrint);
+    }
+
+    public OrderDetailsDialog(JComponent owner, ComercialApiClient apiClient,
+                              PrintApiClient printApiClient, Runnable afterPrint) {
         this.owner = owner;
         this.apiClient = apiClient;
+        this.printApiClient = printApiClient;
         this.afterPrint = afterPrint;
     }
 
     public void open(Long orderId) {
-        UIHelper.loadAsync(owner, () -> apiClient.getOrderById(orderId), this::show,
-                error -> showError("Não foi possível carregar os detalhes da encomenda", error));
+        if (loadingOrOpen) return;
+        loadingOrOpen = true;
+        UIHelper.loadAsync(owner, () -> apiClient.getOrderById(orderId), order -> {
+            try {
+                show(order);
+            } finally {
+                loadingOrOpen = false;
+            }
+        }, error -> {
+            loadingOrOpen = false;
+            showError("Não foi possível carregar os detalhes da encomenda", error);
+        });
     }
 
     public void print(Long orderId) {
@@ -132,6 +151,7 @@ public final class OrderDetailsDialog {
 
         JTable table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         p.add(scroll, BorderLayout.CENTER);
@@ -139,106 +159,62 @@ public final class OrderDetailsDialog {
     }
 
     private JComponent buildLogisticsTab(OrderDTO order) {
-        JPanel p = new JPanel(new GridLayout(2, 2, 14, 14));
-        p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        p.add(buildInfoCard("Termos de Pagamento", "fas-credit-card", UIHelper.ACCENT_BLUE,
-                order.paymentTerms() != null ? order.paymentTerms() : "Não especificado"));
-
-        p.add(buildInfoCard("Prazo de Entrega Acordado", "fas-shipping-fast", UIHelper.APPROVED_GREEN,
-                order.deliveryTerms() != null ? order.deliveryTerms() : "Entrega standard"));
-
         String deliveryDateText = order.expectedDeliveryDate() != null
                 ? order.expectedDeliveryDate().format(DATE_ONLY) : "Não agendada";
         if (order.deliveryOverdue()) {
-            deliveryDateText += " (EM ATRASO)";
+            deliveryDateText += " [EM ATRASO]";
         }
-        p.add(buildInfoCard("Data de Entrega Prevista", "fas-calendar-alt",
-                order.deliveryOverdue() ? UIHelper.REJECTED_RED : UIHelper.ACCENT_CYAN, deliveryDateText));
 
         String buyer = (order.walkInName() != null && !order.walkInName().isBlank())
-                ? order.walkInName() : order.clientName();
-        p.add(buildInfoCard("Destinatário / Comprador", "fas-user-check", UIHelper.ACCENT_ORANGE, buyer));
+                ? order.walkInName() : "Não aplicável";
 
-        return p;
+        String quotation = (order.quotationNumber() != null && !order.quotationNumber().isBlank())
+                ? order.quotationNumber() : "Venda Direta";
+
+        java.util.List<RecordDetailsDialog.PropertyItem> items = java.util.List.of(
+                new RecordDetailsDialog.PropertyItem("Termos de Pagamento", order.paymentTerms() != null ? order.paymentTerms() : "Pronto Pagamento"),
+                new RecordDetailsDialog.PropertyItem("Condições de Entrega Acordadas", order.deliveryTerms() != null ? order.deliveryTerms() : "Entrega standard"),
+                new RecordDetailsDialog.PropertyItem("Data de Entrega Prevista", deliveryDateText),
+                new RecordDetailsDialog.PropertyItem("Cliente Titular", order.clientName() != null ? order.clientName() : "—"),
+                new RecordDetailsDialog.PropertyItem("Destinatário / Comprador no Balcão", buyer),
+                new RecordDetailsDialog.PropertyItem("Cotação de Origem", quotation)
+        );
+
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private JComponent buildPrintAuditTab(OrderDTO order) {
-        JPanel p = new JPanel(new BorderLayout(0, 14));
-        p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
+        String printStatus = order.printCount() > 0
+                ? "Documento impresso " + order.printCount() + " vez(es)"
+                : "Sem registo de emissão em papel";
 
-        ModernPanel card = new ModernPanel(14);
-        card.setLayout(new GridLayout(3, 1, 0, 8));
-        card.setBorder(new EmptyBorder(16, 18, 16, 18));
+        String lastPrint = order.printedAt() != null
+                ? order.printedAt().format(DATE_TIME)
+                : "—";
 
-        JLabel l1 = new JLabel("Histórico de Impressão Oficial:");
-        l1.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        l1.setForeground(UIHelper.TEXT_LIGHT);
+        java.util.List<RecordDetailsDialog.PropertyItem> items = java.util.List.of(
+                new RecordDetailsDialog.PropertyItem("Estado de Emissão Física", printStatus),
+                new RecordDetailsDialog.PropertyItem("Contador de Impressões Oficiais", String.valueOf(order.printCount())),
+                new RecordDetailsDialog.PropertyItem("Data da Última Impressão", lastPrint),
+                new RecordDetailsDialog.PropertyItem("Último Utilizador a Imprimir", order.lastPrintedBy() != null ? order.lastPrintedBy() : "—"),
+                new RecordDetailsDialog.PropertyItem("Armazém de Expedição", order.warehouseName() != null ? order.warehouseName() : "—"),
+                new RecordDetailsDialog.PropertyItem("Via / Natureza do Documento", order.kindLabel() != null ? order.kindLabel() : "Encomenda Formal")
+        );
 
-        JLabel l2 = new JLabel(order.printCount() > 0
-                ? "Esta encomenda já foi impressa " + order.printCount() + " vez(es)."
-                : "Esta encomenda ainda não foi impressa.");
-        l2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        l2.setForeground(order.printCount() > 0 ? UIHelper.PENDING_YELLOW : UIHelper.APPROVED_GREEN);
-
-        String printDetails = order.printedAt() != null
-                ? "Última impressão: " + order.printedAt().format(DATE_TIME) + (order.lastPrintedBy() != null ? " por " + order.lastPrintedBy() : "")
-                : "Sem registo de emissão em papel.";
-        JLabel l3 = new JLabel(printDetails);
-        l3.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        l3.setForeground(UIHelper.TEXT_MUTED);
-
-        card.add(l1);
-        card.add(l2);
-        card.add(l3);
-
-        p.add(card, BorderLayout.NORTH);
-        return p;
-    }
-
-    private ModernPanel buildInfoCard(String title, String icon, Color iconColor, String content) {
-        ModernPanel p = new ModernPanel(12);
-        p.setLayout(new BorderLayout(0, 6));
-        p.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        top.setOpaque(false);
-        top.add(new JLabel(UIHelper.icon(icon, 15, iconColor)));
-        JLabel t = new JLabel(title);
-        t.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        t.setForeground(UIHelper.TEXT_MUTED);
-        top.add(t);
-
-        JLabel c = new JLabel("<html><body style='width:240px;'>" + content + "</body></html>");
-        c.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        c.setForeground(UIHelper.TEXT_LIGHT);
-
-        p.add(top, BorderLayout.NORTH);
-        p.add(c, BorderLayout.CENTER);
-        return p;
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private void printWithConfirmation(OrderDTO order) {
-        if (order.printCount() > 0) {
-            String last = order.printedAt() == null ? "—" : new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm")
-                    .format(Date.from(order.printedAt().atZone(ZoneId.systemDefault()).toInstant()));
-            int answer = JOptionPane.showConfirmDialog(owner,
-                    String.format("Esta encomenda já foi impressa %d vez(es) (última em %s%s).%n%nTem a certeza que pretende imprimir novamente?",
-                            order.printCount(), last, order.lastPrintedBy() != null ? " por " + order.lastPrintedBy() : ""),
-                    "Confirmar reimpressão", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (answer != JOptionPane.YES_OPTION) return;
+        if (printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar encomenda em PDF…", () -> apiClient.renderOrder(order.id()),
+                    pdf -> PrintPreviewDialog.show(owner, pdf, "encomenda-" + order.orderNumber()),
+                    error -> showError("Não foi possível gerar a encomenda em PDF", error));
+            return;
         }
-        String username = CurrentUserContext.getUsername();
-        UIHelper.runWithProgress(owner, "A gerar encomenda em PDF…", () -> {
-            byte[] pdf = apiClient.renderOrder(order.id());
-            apiClient.markOrderPrinted(order.id(), username);
-            return pdf;
-        }, pdf -> {
-            PrintPreviewDialog.show(owner, pdf, "encomenda-" + order.orderNumber());
-            afterPrint.run();
-        }, error -> showError("Não foi possível gerar a encomenda em PDF", error));
+        SensitivePrintCoordinator.print(owner, printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.ORDER,
+                order.id(), "Encomenda " + order.orderNumber(),
+                "encomenda-" + order.orderNumber(), () -> apiClient.renderOrder(order.id()), afterPrint);
     }
 
     private void showError(String action, Throwable error) {

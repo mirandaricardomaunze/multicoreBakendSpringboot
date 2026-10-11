@@ -7,6 +7,8 @@ import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
+import mz.multicore.erp.gui.components.QuickPeekPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.Theme;
 import mz.multicore.erp.gui.components.UiDensity;
 import mz.multicore.erp.gui.components.UiDensityManager;
@@ -191,9 +193,6 @@ public class ConfigPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JLabel title = UIHelper.createHeading("Registo de Auditoria de Ações Críticas");
-        panel.add(title, BorderLayout.NORTH);
-
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -205,6 +204,7 @@ public class ConfigPanel extends JPanel {
         };
         auditTable = new JTable(auditTableModel);
         UIHelper.styleTable(auditTable);
+        UIHelper.ensureHeadersFit(auditTable);
         JScrollPane scroll = new JScrollPane(auditTable);
         UIHelper.styleScrollPane(scroll);
 
@@ -214,12 +214,24 @@ public class ConfigPanel extends JPanel {
                 java.util.List.of(),
                 java.util.List.of(new TableFilter.PeriodFilter(auditPeriodo, 0)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadAuditLogs);
-        JPanel auditToolbar = UIHelper.filterBar(
-                new JComponent[]{auditSearch, TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo},
-                new JComponent[]{refreshBtn});
+        JPanel auditToolbar = TableFilter.bar(auditSearch, TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo);
         auditToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(auditToolbar, BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Registo de Auditoria de Ações Críticas", auditToolbar, refreshBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+        TableQuickPeekController.install(auditTable, card, (peek, row) -> {
+            String data = String.valueOf(auditTableModel.getValueAt(row, 0));
+            String user = String.valueOf(auditTableModel.getValueAt(row, 1));
+            String acao = String.valueOf(auditTableModel.getValueAt(row, 2));
+            String det = String.valueOf(auditTableModel.getValueAt(row, 3));
+            peek.setHeaderIcon("fas-history", UIHelper.ACCENT_CYAN);
+            peek.setTitle(acao);
+            peek.setSubtitle("Utilizador: " + user);
+            peek.setStatus("LOG AUDITORIA", UIHelper.TEXT_MUTED);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Data/Hora", data, false),
+                    new QuickPeekPanel.PeekItem("Detalhes", det, false)
+            ));
+        });
 
         panel.add(card, BorderLayout.CENTER);
 
@@ -279,7 +291,6 @@ public class ConfigPanel extends JPanel {
         // RIGHT: BACKUPS ARCHIVE LIST
         JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
         rightPanel.setOpaque(false);
-        rightPanel.add(UIHelper.createHeading("Ficheiros de Cópia de Segurança (.json)"), BorderLayout.NORTH);
 
         ModernPanel archiveCard = new ModernPanel(16);
         archiveCard.setLayout(new BorderLayout(0, 10));
@@ -292,16 +303,29 @@ public class ConfigPanel extends JPanel {
         };
         backupFilesTable = new JTable(backupFilesModel);
         UIHelper.styleTable(backupFilesTable);
+        UIHelper.ensureHeadersFit(backupFilesTable);
         JScrollPane archiveScroll = new JScrollPane(backupFilesTable);
         UIHelper.styleScrollPane(archiveScroll);
         ModernButton verifyBackupBtn = UIHelper.createPrimaryButton("Verificar Backup");
         verifyBackupBtn.setIcon(UIHelper.icon("fas-shield-alt", 14));
         ModernButton refreshArchiveBtn = UIHelper.createRefreshButton(this::loadBackupFilesList);
-        JPanel archiveToolbar = UIHelper.filterBar(null,
-                new JComponent[]{refreshArchiveBtn, verifyBackupBtn});
-        archiveToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        archiveCard.add(archiveToolbar, BorderLayout.NORTH);
+        archiveCard.add(UIHelper.tableCardTop("Ficheiros de Cópia de Segurança (.json)", null,
+                refreshArchiveBtn, verifyBackupBtn), BorderLayout.NORTH);
         archiveCard.add(archiveScroll, BorderLayout.CENTER);
+        TableQuickPeekController.install(backupFilesTable, archiveCard, (peek, row) -> {
+            String nome = String.valueOf(backupFilesModel.getValueAt(row, 0));
+            String tam = String.valueOf(backupFilesModel.getValueAt(row, 1));
+            peek.setHeaderIcon("fas-file-archive", UIHelper.APPROVED_GREEN);
+            peek.setTitle(nome);
+            peek.setSubtitle("Tamanho: " + tam + " KB");
+            peek.setStatus("BACKUP LÓGICO", UIHelper.ACCENT_BLUE);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Nome Ficheiro", nome, false),
+                    new QuickPeekPanel.PeekItem("Tamanho", tam + " KB", true)
+            ));
+            peek.getOpenFullButton().setText("Verificar");
+            peek.setOnOpenFullAction(v -> verifySelectedBackup());
+        });
 
         rightPanel.add(archiveCard, BorderLayout.CENTER);
         panel.add(rightPanel);

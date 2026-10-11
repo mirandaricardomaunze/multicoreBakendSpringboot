@@ -17,9 +17,9 @@ final class StockCategoriesPanel {
     StockCategoriesPanel(StockPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Categoria");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -36,24 +36,12 @@ final class StockCategoriesPanel {
         // Pesquisa por código/nome
         owner.categorySearchField = TableFilter.searchField("Pesquisar categoria por código ou nome…");
         UIHelper.onTextChange(owner.categorySearchField, () -> filterCategories(owner.categorySearchField.getText()));
-        JPanel searchRow = new JPanel(new GridBagLayout());
-        searchRow.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.gridx = 0; g.weightx = 1.0;
-        JLabel lbl = new JLabel("Pesquisa");
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lbl.setForeground(UIHelper.TEXT_MUTED);
-        searchRow.add(lbl, g);
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 0);
-        searchRow.add(owner.categorySearchField, g);
-        searchRow.setBorder(new EmptyBorder(0, 0, 12, 0));
+        JPanel searchRow = TableFilter.bar(owner.categorySearchField);
+        searchRow.setBorder(new EmptyBorder(0, 0, 4, 0));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
         card.add(UIHelper.tableCardTop("Categorias de Produto", searchRow,
                 refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         String[] cols = {"Código", "Nome", "Cor", "Produtos", "Estado"};
@@ -67,8 +55,25 @@ final class StockCategoriesPanel {
         // Coluna "Cor" com amostra visível da cor da categoria
         owner.categoriesTable.getColumnModel().getColumn(2).setCellRenderer(new ColorCellRenderer());
         owner.categoriesTable.getColumnModel().getColumn(3).setMaxWidth(90);
+
+        UIHelper.ensureHeadersFit(owner.categoriesTable);
+        UIHelper.ensureHeadersFit(owner.categoriesTable);
         JScrollPane scroll = new JScrollPane(owner.categoriesTable);
         UIHelper.styleScrollPane(scroll);
+        TableQuickPeekController peekController = TableQuickPeekController.install(owner.categoriesTable, card, (peek, mr) -> {
+            int row = owner.categoriesTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-tags", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(owner.categoriesModel.getValueAt(row, 1)));
+            peek.setSubtitle("Código: " + owner.categoriesModel.getValueAt(row, 0));
+            peek.setStatus(String.valueOf(owner.categoriesModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Código", String.valueOf(owner.categoriesModel.getValueAt(row, 0)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Designação", String.valueOf(owner.categoriesModel.getValueAt(row, 1)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Cor Hex", String.valueOf(owner.categoriesModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Produtos", String.valueOf(owner.categoriesModel.getValueAt(row, 3)), true));
+            peek.setItems(items);
+        });
+
         card.add(scroll, BorderLayout.CENTER);
         card.add(mz.multicore.erp.gui.components.ClientTablePagination.install(owner.categoriesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);

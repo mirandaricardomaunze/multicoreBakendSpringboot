@@ -67,7 +67,7 @@ class FinanceServiceTest {
     void payInvoice_semPerfilAutorizado_bloqueia() {
         CurrentUserContext.setCurrentUser("caixa", "EMPLOYEE");
         Invoice invoice = invoice(InvoiceStatus.APPROVED, "1000", "0");
-        when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.lockByIdAndCompanyId(INVOICE_ID, COMPANY_ID)).thenReturn(Optional.of(invoice));
 
         assertThrows(BusinessRuleException.class, () -> service.payInvoice(INVOICE_ID, ACCOUNT_ID));
 
@@ -79,7 +79,7 @@ class FinanceServiceTest {
     @Test // RP-21
     void payInvoice_comPerfilAutorizado_liquidaERegistaEntrada() {
         Invoice invoice = invoice(InvoiceStatus.APPROVED, "1000", "0");
-        when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.lockByIdAndCompanyId(INVOICE_ID, COMPANY_ID)).thenReturn(Optional.of(invoice));
 
         service.payInvoice(INVOICE_ID, ACCOUNT_ID);
 
@@ -92,7 +92,7 @@ class FinanceServiceTest {
     void payInvoice_faturaParcialmentePaga_recebeSoOSaldoEmDivida() {
         // 1000 de total com 400 já recebidos por recibo: só faltam 600.
         Invoice invoice = invoice(InvoiceStatus.PARTIALLY_PAID, "1000", "400");
-        when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.lockByIdAndCompanyId(INVOICE_ID, COMPANY_ID)).thenReturn(Optional.of(invoice));
 
         service.payInvoice(INVOICE_ID, ACCOUNT_ID);
 
@@ -106,7 +106,7 @@ class FinanceServiceTest {
     @Test // RP-23
     void payInvoice_faturaJaPaga_bloqueia() {
         Invoice invoice = invoice(InvoiceStatus.PAID, "1000", "1000");
-        when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.lockByIdAndCompanyId(INVOICE_ID, COMPANY_ID)).thenReturn(Optional.of(invoice));
 
         assertThrows(BusinessRuleException.class, () -> service.payInvoice(INVOICE_ID, ACCOUNT_ID));
         verify(transactionRepository, never()).save(any());

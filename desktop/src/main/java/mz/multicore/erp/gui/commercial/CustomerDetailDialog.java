@@ -80,58 +80,24 @@ public class CustomerDetailDialog {
     }
 
     private JComponent buildInfoTab() {
-        JPanel p = new JPanel(new GridLayout(2, 2, 14, 14));
-        p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        p.add(buildCard("Nome Comercial / Razão Social", "fas-building", UIHelper.ACCENT_BLUE, client.name()));
-        p.add(buildCard("NUIT / NIF", "fas-passport", UIHelper.APPROVED_GREEN, client.taxId() != null ? client.taxId() : "Consumidor Final"));
-        p.add(buildCard("Correio Eletrónico (E-mail)", "fas-envelope", UIHelper.ACCENT_CYAN, client.email() != null && !client.email().isBlank() ? client.email() : "Não registado"));
-        p.add(buildCard("Endereço / Sede", "fas-map-marker-alt", UIHelper.ACCENT_ORANGE, client.address() != null && !client.address().isBlank() ? client.address() : "Não especificado"));
-
-        return p;
+        java.util.List<RecordDetailsDialog.PropertyItem> items = new java.util.ArrayList<>();
+        items.add(new RecordDetailsDialog.PropertyItem("Nome / Razão Social", client.name()));
+        items.add(new RecordDetailsDialog.PropertyItem("NUIT / NIF", client.taxId() != null ? client.taxId() : "Consumidor Final"));
+        items.add(new RecordDetailsDialog.PropertyItem("Correio Electrónico (E-mail)", client.email() != null && !client.email().isBlank() ? client.email() : "Não registado"));
+        items.add(new RecordDetailsDialog.PropertyItem("Endereço / Sede", client.address() != null && !client.address().isBlank() ? client.address() : "Não especificado"));
+        items.add(new RecordDetailsDialog.PropertyItem("Código de Registo", "#" + client.id()));
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private JComponent buildCommercialTab() {
-        JPanel p = new JPanel(new GridLayout(2, 2, 14, 14));
-        p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        p.add(buildCard("Prazo de Pagamento", "fas-clock", UIHelper.ACCENT_BLUE,
-                client.paymentTermsDays() > 0 ? client.paymentTermsDays() + " dias" : "Pronto Pagamento"));
-
+        java.util.List<RecordDetailsDialog.PropertyItem> items = new java.util.ArrayList<>();
+        items.add(new RecordDetailsDialog.PropertyItem("Prazo de Pagamento Acordado", client.paymentTermsDays() > 0 ? client.paymentTermsDays() + " dias" : "Pronto Pagamento"));
         String limit = client.creditLimit() != null ? String.format("%,.2f MT", client.creditLimit()) : "Crédito Livre";
-        p.add(buildCard("Limite de Crédito Atribuído", "fas-shield-alt", UIHelper.APPROVED_GREEN, limit));
-
-        p.add(buildCard("Programa de Fidelidade", "fas-award", UIHelper.ACCENT_ORANGE,
-                client.loyaltyPoints() != null ? client.loyaltyPoints() + " pontos" : "0 pontos"));
-
-        p.add(buildCard("Código do Cartão", "fas-barcode", UIHelper.ACCENT,
-                client.code() != null ? client.code() : "Sem cartão associado"));
-
-        return p;
-    }
-
-    private ModernPanel buildCard(String title, String icon, Color iconColor, String content) {
-        ModernPanel p = new ModernPanel(12);
-        p.setLayout(new BorderLayout(0, 6));
-        p.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        top.setOpaque(false);
-        top.add(new JLabel(UIHelper.icon(icon, 15, iconColor)));
-        JLabel t = new JLabel(title);
-        t.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        t.setForeground(UIHelper.TEXT_MUTED);
-        top.add(t);
-
-        JLabel c = new JLabel("<html><body style='width:240px;'>" + content + "</body></html>");
-        c.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        c.setForeground(UIHelper.TEXT_LIGHT);
-
-        p.add(top, BorderLayout.NORTH);
-        p.add(c, BorderLayout.CENTER);
-        return p;
+        items.add(new RecordDetailsDialog.PropertyItem("Limite de Crédito Atribuído", limit));
+        BigDecimal pts = client.loyaltyPoints() != null ? client.loyaltyPoints() : BigDecimal.ZERO;
+        items.add(new RecordDetailsDialog.PropertyItem("Pontos de Fidelização", pts.toPlainString() + " pontos"));
+        items.add(new RecordDetailsDialog.PropertyItem("Código do Cartão / Referência", client.code() != null && !client.code().isBlank() ? client.code() : "Sem cartão associado"));
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private String extractInitials(String name) {

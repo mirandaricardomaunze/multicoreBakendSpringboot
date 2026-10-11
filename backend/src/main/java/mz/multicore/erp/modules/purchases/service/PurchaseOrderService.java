@@ -431,6 +431,16 @@ public class PurchaseOrderService {
                 l.getExpirationDate(),
                 l.getSerialNumber()
         )).toList();
+
+        java.util.Set<String> bus = o.getLines().stream()
+                .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
+        Long buId = bus.size() == 1 ? o.getLines().stream()
+                .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
+                .filter(java.util.Objects::nonNull).findFirst().orElse(null) : null;
+
         return new PurchaseOrderDTO(
                 o.getId(),
                 o.getOrderNumber(),
@@ -446,7 +456,9 @@ public class PurchaseOrderService {
                 o.getStatus(),
                 o.getNotes(),
                 lines,
-                o.getVersion()
+                o.getVersion(),
+                buId,
+                buName
         );
     }
 }

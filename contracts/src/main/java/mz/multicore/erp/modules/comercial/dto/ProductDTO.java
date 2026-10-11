@@ -29,7 +29,10 @@ public record ProductDTO(
     byte[] image,
     BigDecimal netUnitWeightKg,
     BigDecimal grossUnitWeightKg,
-    Long version
+    Long version,
+    Long businessUnitId,
+    String businessUnitName,
+    String businessUnitCode
 ) {
     public ProductDTO {
         unitsPerBox = Math.max(1, unitsPerBox);
@@ -46,11 +49,27 @@ public record ProductDTO(
             int packagesPerBox, int unitsPerPackage, String saleType, boolean stockTracked,
             Long categoryId, String categoryName, Long taxRateId, BigDecimal taxRate,
             String taxRateLabel, String description, byte[] image, BigDecimal netUnitWeightKg,
+            BigDecimal grossUnitWeightKg, Long version) {
+        this(id, sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                wholesalePrice, wholesaleMinQty, unitsPerBox, packagesPerBox, unitsPerPackage,
+                saleType, stockTracked, categoryId, categoryName, taxRateId, taxRate,
+                taxRateLabel, description, image, netUnitWeightKg, grossUnitWeightKg, version,
+                null, null, null);
+    }
+
+    public ProductDTO(
+            Long id, String sku, String reference, String barcode, String name,
+            BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, int unitsPerBox,
+            int packagesPerBox, int unitsPerPackage, String saleType, boolean stockTracked,
+            Long categoryId, String categoryName, Long taxRateId, BigDecimal taxRate,
+            String taxRateLabel, String description, byte[] image, BigDecimal netUnitWeightKg,
             BigDecimal grossUnitWeightKg) {
         this(id, sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
                 wholesalePrice, wholesaleMinQty, unitsPerBox, packagesPerBox, unitsPerPackage,
                 saleType, stockTracked, categoryId, categoryName, taxRateId, taxRate,
-                taxRateLabel, description, image, netUnitWeightKg, grossUnitWeightKg, 0L);
+                taxRateLabel, description, image, netUnitWeightKg, grossUnitWeightKg, 0L,
+                null, null, null);
     }
 
     /** Construtor compatível para código cliente que ainda conhece apenas unidades por caixa. */
@@ -79,5 +98,10 @@ public record ProductDTO(
      */
     public BigDecimal effectiveTaxRate() {
         return taxRate != null ? taxRate : TaxRates.STANDARD_VAT;
+    }
+
+    @Override
+    public String toString() {
+        return name != null && !name.isBlank() ? name : (reference != null ? reference : "Produto #" + id);
     }
 }

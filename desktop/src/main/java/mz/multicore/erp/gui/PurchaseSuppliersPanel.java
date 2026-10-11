@@ -16,9 +16,9 @@ final class PurchaseSuppliersPanel {
     PurchaseSuppliersPanel(ComprasPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações")
                 .addAction("Editar", UIHelper.icon("fas-edit", 14), () -> {
@@ -37,8 +37,8 @@ final class PurchaseSuppliersPanel {
 
         // Table full-width
         ModernPanel listCard = new ModernPanel(16);
-        listCard.setLayout(new BorderLayout(0, 10));
-        listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        listCard.setLayout(new BorderLayout(0, 6));
+        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Telefone", "Contacto", "Correio Eletrónico", "Endereço", "Estado"};
         owner.suppliersModel = new DefaultTableModel(supCols, 0) {
@@ -48,41 +48,63 @@ final class PurchaseSuppliersPanel {
         owner.suppliersTable = new JTable(owner.suppliersModel);
         UIHelper.styleTable(owner.suppliersTable);
         owner.suppliersTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
+        UIHelper.ensureHeadersFit(owner.suppliersTable);
         JScrollPane scroll = new JScrollPane(owner.suppliersTable);
         UIHelper.styleScrollPane(scroll);
 
         supplierSearchField = TableFilter.searchField("Nome ou NUIT…");
         JComboBox<String> supEstado = TableFilter.combo("Todos os estados", "Activo", "Inactivo");
-        UIHelper.styleComboBox(supEstado);
-        supEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(owner.suppliersTable, supplierSearchField,
                 new TableFilter.ColumnFilter(supEstado, 6));
 
-        JPanel supFilters = new JPanel(new GridBagLayout());
-        supFilters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
+        JPanel supFilters = TableFilter.bar(
+                supplierSearchField,
+                TableFilter.label("Estado:"), supEstado);
 
-        g.gridx = 0; g.weightx = 0; supFilters.add(filterLabel("Estado"), g);
-        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        supFilters.add(filterLabel("Pesquisa"), g);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes do fornecedor (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; supFilters.add(supEstado, g);
-        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        supFilters.add(supplierSearchField, g);
+        JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
+        filtersRow.setOpaque(false);
+        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.add(supFilters, BorderLayout.WEST);
+        filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
-        supFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(UIHelper.tableCardTop("Fornecedores Cadastrados", supFilters,
+        listCard.add(UIHelper.tableCardTop("Fornecedores Cadastrados", filtersRow,
                 refreshSupsBtn, actionsMenu, newSupBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         listCard.add(ClientTablePagination.install(owner.suppliersTable), BorderLayout.SOUTH);
+
+        TableQuickPeekController peek = TableQuickPeekController.install(owner.suppliersTable, listCard, this::populatePeek);
+        peekToggleBtn.addActionListener(e -> peek.toggle());
+
         panel.add(listCard, BorderLayout.CENTER);
         return panel;
+    }
+
+    private void populatePeek(QuickPeekPanel peek, int modelRow) {
+        if (owner.suppliersList == null || modelRow < 0 || modelRow >= owner.suppliersList.size()) return;
+        SupplierDTO sup = owner.suppliersList.get(modelRow);
+        boolean active = sup.active();
+        peek.setHeaderIcon("fas-truck-loading", UIHelper.ACCENT_BLUE);
+        peek.setTitle(sup.name() != null ? sup.name() : "");
+        peek.setSubtitle("NUIT: " + (sup.taxId() != null ? sup.taxId() : "—"));
+        peek.setStatus(active ? "ACTIVO" : "INACTIVO", active ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
+
+        java.util.List<QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+        items.add(new QuickPeekPanel.PeekItem("NUIT / NIF", sup.taxId() != null ? sup.taxId() : "-", false));
+        items.add(new QuickPeekPanel.PeekItem("Pessoa de Contacto", sup.contactPerson() != null ? sup.contactPerson() : "-", false));
+        items.add(new QuickPeekPanel.PeekItem("Telefone", sup.phone() != null ? sup.phone() : "-", false));
+        items.add(new QuickPeekPanel.PeekItem("Correio Eletrónico", sup.email() != null ? sup.email() : "-", false));
+        items.add(new QuickPeekPanel.PeekItem("Endereço", sup.address() != null ? sup.address() : "-", false));
+        peek.setItems(items);
+
+        peek.getOpenFullButton().setText("Editar Fornecedor");
+        peek.setOnOpenFullAction(ignored -> openSupplierDialog(sup));
     }
 
     private SupplierDTO selectedSupplier() {

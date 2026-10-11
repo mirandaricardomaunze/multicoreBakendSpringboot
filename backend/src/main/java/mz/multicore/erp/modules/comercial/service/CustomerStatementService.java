@@ -80,6 +80,8 @@ public class CustomerStatementService {
             LocalDate invDate = inv.issueDate() != null ? inv.issueDate() : (inv.getCreatedAt() != null ? inv.getCreatedAt().toLocalDate() : LocalDate.now());
             LocalDateTime ts = inv.getCreatedAt() != null ? inv.getCreatedAt() : invDate.atStartOfDay();
             BigDecimal amount = inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO;
+            Long buId = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getId() : null;
+            String buName = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getName() : null;
             events.add(new RawMovement(
                     invDate,
                     "FT",
@@ -88,7 +90,9 @@ public class CustomerStatementService {
                     inv.getInvoiceNumber(),
                     amount,
                     BigDecimal.ZERO,
-                    ts
+                    ts,
+                    buId,
+                    buName
             ));
 
             if (inv.getDueDate() != null && inv.getDueDate().isBefore(to)) {
@@ -113,6 +117,8 @@ public class CustomerStatementService {
             BigDecimal amount = dn.getTotalAmount() != null ? dn.getTotalAmount() : BigDecimal.ZERO;
             String desc = "Nota de Débito" + (dn.getDescription() != null && !dn.getDescription().isBlank() ? " — " + dn.getDescription() : "");
             String ref = dn.getInvoice() != null ? dn.getInvoice().getInvoiceNumber() : "-";
+            Long buId = dn.getInvoice() != null && dn.getInvoice().getBusinessUnit() != null ? dn.getInvoice().getBusinessUnit().getId() : null;
+            String buName = dn.getInvoice() != null && dn.getInvoice().getBusinessUnit() != null ? dn.getInvoice().getBusinessUnit().getName() : null;
             events.add(new RawMovement(
                     dnDate,
                     "ND",
@@ -121,7 +127,9 @@ public class CustomerStatementService {
                     ref,
                     amount,
                     BigDecimal.ZERO,
-                    ts
+                    ts,
+                    buId,
+                    buName
             ));
         }
 
@@ -140,6 +148,8 @@ public class CustomerStatementService {
             String method = rc.getPaymentMethod() != null ? rc.getPaymentMethod() : "Liquidada";
             String desc = "Recibo (" + method + ")";
             String ref = rc.getInvoice().getInvoiceNumber();
+            Long buId = rc.getInvoice() != null && rc.getInvoice().getBusinessUnit() != null ? rc.getInvoice().getBusinessUnit().getId() : null;
+            String buName = rc.getInvoice() != null && rc.getInvoice().getBusinessUnit() != null ? rc.getInvoice().getBusinessUnit().getName() : null;
             events.add(new RawMovement(
                     rcDate,
                     "RC",
@@ -148,7 +158,9 @@ public class CustomerStatementService {
                     ref,
                     BigDecimal.ZERO,
                     amount,
-                    ts
+                    ts,
+                    buId,
+                    buName
             ));
         }
 
@@ -167,6 +179,8 @@ public class CustomerStatementService {
             String reason = cn.getReason() != null ? cn.getReason().name() : "Regularização";
             String desc = "Nota de Crédito (" + reason + ")";
             String ref = cn.getInvoice() != null ? cn.getInvoice().getInvoiceNumber() : "-";
+            Long buId = cn.getInvoice() != null && cn.getInvoice().getBusinessUnit() != null ? cn.getInvoice().getBusinessUnit().getId() : null;
+            String buName = cn.getInvoice() != null && cn.getInvoice().getBusinessUnit() != null ? cn.getInvoice().getBusinessUnit().getName() : null;
             events.add(new RawMovement(
                     cnDate,
                     "NC",
@@ -175,7 +189,9 @@ public class CustomerStatementService {
                     ref,
                     BigDecimal.ZERO,
                     amount,
-                    ts
+                    ts,
+                    buId,
+                    buName
             ));
         }
 
@@ -210,7 +226,9 @@ public class CustomerStatementService {
                         mov.reference(),
                         mov.debit(),
                         mov.credit(),
-                        running
+                        running,
+                        mov.businessUnitId(),
+                        mov.businessUnitName()
                 ));
             }
         }
@@ -243,6 +261,8 @@ public class CustomerStatementService {
             String reference,
             BigDecimal debit,
             BigDecimal credit,
-            LocalDateTime timestamp
+            LocalDateTime timestamp,
+            Long businessUnitId,
+            String businessUnitName
     ) {}
 }

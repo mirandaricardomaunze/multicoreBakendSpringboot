@@ -62,6 +62,15 @@ public class SupplierStatementService {
             LocalDate pDate = p.getPurchaseDate().toLocalDate();
             LocalDateTime ts = p.getCreatedAt() != null ? p.getCreatedAt() : p.getPurchaseDate();
 
+            java.util.Set<String> bus = p.getLines() != null ? p.getLines().stream()
+                    .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet()) : java.util.Collections.emptySet();
+            String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
+            Long buId = bus.size() == 1 && p.getLines() != null ? p.getLines().stream()
+                    .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
+                    .filter(java.util.Objects::nonNull).findFirst().orElse(null) : null;
+
             // 1. Factura de Compra (Crédito = Dívida a pagar)
             events.add(new RawSupplierMovement(
                     pDate,
@@ -72,7 +81,9 @@ public class SupplierStatementService {
                     BigDecimal.ZERO,
                     p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO,
                     ts,
-                    1
+                    1,
+                    buId,
+                    buName
             ));
 
             // 2. Pagamento efetuado (Débito = Amortização)
@@ -86,7 +97,9 @@ public class SupplierStatementService {
                         p.getAmountPaid(),
                         BigDecimal.ZERO,
                         ts.plusSeconds(1),
-                        2
+                        2,
+                        buId,
+                        buName
                 ));
             }
         }
@@ -122,7 +135,9 @@ public class SupplierStatementService {
                         mov.reference(),
                         mov.debit(),
                         mov.credit(),
-                        running
+                        running,
+                        mov.businessUnitId(),
+                        mov.businessUnitName()
                 ));
             }
         }
@@ -155,6 +170,8 @@ public class SupplierStatementService {
             BigDecimal debit,
             BigDecimal credit,
             LocalDateTime timestamp,
-            int orderPriority
+            int orderPriority,
+            Long businessUnitId,
+            String businessUnitName
     ) {}
 }

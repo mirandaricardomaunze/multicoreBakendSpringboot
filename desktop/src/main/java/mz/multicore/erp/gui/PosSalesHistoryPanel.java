@@ -20,13 +20,14 @@ final class PosSalesHistoryPanel {
     private JLabel salesHistorySummary;
     private TablePager pager;
     private JComboBox<String> periodCombo;
+    private JComboBox<String> shBusinessUnitCombo;
     private JLabel salesCountValue;
     private JLabel salesTotalValue;
     private JLabel salesVariationValue;
     PosSalesHistoryPanel(POSPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
-        String[] cols = {"ID", "Nº Venda", "Data", "Operador", "Cliente", "Total", "Estado"};
+        String[] cols = {"ID", "Nº Venda", "Data", "Operador", "Cliente", "Total", "Estado", "Negócio"};
         owner.salesHistoryModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -50,6 +51,7 @@ final class PosSalesHistoryPanel {
         owner.salesHistoryTable.getColumnModel().getColumn(4).setPreferredWidth(160);  // Cliente
         owner.salesHistoryTable.getColumnModel().getColumn(5).setPreferredWidth(100);  // Total
         owner.salesHistoryTable.getColumnModel().getColumn(6).setPreferredWidth(80);   // Estado
+        owner.salesHistoryTable.getColumnModel().getColumn(7).setPreferredWidth(110);  // Negócio
 
         JScrollPane scroll = new JScrollPane(owner.salesHistoryTable);
         UIHelper.styleScrollPane(scroll);
@@ -69,10 +71,10 @@ final class PosSalesHistoryPanel {
             }
             Long invoiceId = (Long) owner.salesHistoryModel.getValueAt(row, 0);
             String invNum = String.valueOf(owner.salesHistoryModel.getValueAt(row, 1));
-            UIHelper.runWithProgress(owner, "A gerar recibo",
-                    () -> owner.posApiClient.renderReceipt(invoiceId),
-                    pdf -> PrintPreviewDialog.show(owner, pdf, "recibo-" + invNum),
-                    ex -> owner.showPosNotice(FeedbackType.ERROR, "Não foi possível gerar o recibo", ex.getMessage()));
+            SensitivePrintCoordinator.print(owner, owner.printApiClient,
+                    mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.RECEIPT,
+                    invoiceId, "Recibo da venda " + invNum, "recibo-" + invNum,
+                    () -> owner.posApiClient.renderReceipt(invoiceId), this::refresh);
         });
 
         ModernButton returnBtn = new ModernButton("Devolver / Trocar", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE_HOVER);
@@ -89,40 +91,31 @@ final class PosSalesHistoryPanel {
 
         JTextField shSearch = TableFilter.searchField("Nº venda, operador ou cliente");
         JComboBox<String> shEstado = TableFilter.combo("Todos os estados",
-                "PAID", "APPROVED", "PARTIALLY_PAID", "CANCELLED");
+                "Paga", "Aprovado", "Parcialmente paga", "Cancelado");
         UIHelper.styleComboBox(shEstado);
         shEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
+        shBusinessUnitCombo = TableFilter.combo("Todos os negócios");
         periodCombo = TableFilter.periodCombo();
         UIHelper.styleComboBox(periodCombo);
         periodCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(owner.salesHistoryTable, shSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(shEstado, 6)),
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(shEstado, 6),
+                        new TableFilter.ColumnFilter(shBusinessUnitCombo, 7)),
                 java.util.List.of());
         periodCombo.addActionListener(e -> {
             if (pager != null) pager.reload();
         });
 
-        JPanel shBar = new JPanel(new GridBagLayout());
-        shBar.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
-
-        g.gridx = 0; g.weightx = 0; shBar.add(filterLabel("Estado"), g);
-        g.gridx = 1; g.weightx = 0; shBar.add(filterLabel("Período"), g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        shBar.add(filterLabel("Pesquisa"), g);
-
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; shBar.add(shEstado, g);
-        g.gridx = 1; g.weightx = 0; shBar.add(periodCombo, g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        shBar.add(shSearch, g);
-
+        UIHelper.ensureHeadersFit(owner.salesHistoryTable);
+        JPanel shBar = TableFilter.bar(
+                shSearch,
+                TableFilter.label("Negócio:"), shBusinessUnitCombo,
+                TableFilter.label("Estado:"), shEstado,
+                TableFilter.label("Período:"), periodCombo
+        );
         shBar.setBorder(new EmptyBorder(0, 0, 8, 0));
 
         pager = new TablePager(this::loadPage);
@@ -178,6 +171,7 @@ final class PosSalesHistoryPanel {
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         owner.salesHistoryModel.setRowCount(0);
         for (var inv : owner.salesHistoryList) {
+            String buName = inv.businessUnitName() != null && !inv.businessUnitName().isBlank() ? inv.businessUnitName() : "—";
             owner.salesHistoryModel.addRow(new Object[]{
                     inv.id(),
                     inv.invoiceNumber(),
@@ -185,7 +179,8 @@ final class PosSalesHistoryPanel {
                     inv.createdBy() != null ? inv.createdBy() : "—",
                     inv.clientName() != null ? inv.clientName() : "—",
                     inv.totalAmount(),
-                    inv.status() != null ? inv.status().name() : "—"
+                    inv.status() != null ? inv.status().name() : "—",
+                    buName
             });
         }
         BigDecimal total = owner.salesHistoryList.stream()
@@ -196,6 +191,19 @@ final class PosSalesHistoryPanel {
                 "<html><b>%d</b> vendas POS nesta página (de %d) — total da página <b>%,.2f MT</b></html>",
                 owner.salesHistoryList.size(), totalOnServer, total));
         applySummary(summary);
+        if (shBusinessUnitCombo != null) {
+            Object prev = shBusinessUnitCombo.getSelectedItem();
+            java.util.Set<String> bus = new java.util.TreeSet<>();
+            for (var inv : owner.salesHistoryList) {
+                if (inv.businessUnitName() != null && !inv.businessUnitName().isBlank()) {
+                    bus.add(inv.businessUnitName());
+                }
+            }
+            shBusinessUnitCombo.removeAllItems();
+            shBusinessUnitCombo.addItem("Todos os negócios");
+            for (String b : bus) shBusinessUnitCombo.addItem(b);
+            if (prev != null) shBusinessUnitCombo.setSelectedItem(prev);
+        }
     }
 
     private DateRange selectedDateRange() {

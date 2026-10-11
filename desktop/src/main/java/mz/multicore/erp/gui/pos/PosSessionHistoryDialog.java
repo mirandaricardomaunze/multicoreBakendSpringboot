@@ -1,11 +1,13 @@
 package mz.multicore.erp.gui.pos;
 
 import mz.multicore.erp.desktop.client.POSApiClient;
+import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
 import mz.multicore.erp.modules.pos.dto.PosSessionSummaryDTO;
 
 import javax.swing.*;
@@ -25,19 +27,24 @@ public class PosSessionHistoryDialog extends JDialog {
 
     private final POSApiClient posApiClient;
     private final Long companyId;
+    private final PrintApiClient printApiClient;
 
     private JTable table;
     private DefaultTableModel tableModel;
     private List<PosSessionSummaryDTO> currentList;
 
     public PosSessionHistoryDialog(Window owner, POSApiClient posApiClient, Long companyId) {
+        this(owner, posApiClient, companyId, null);
+    }
+
+    public PosSessionHistoryDialog(Window owner, POSApiClient posApiClient, Long companyId,
+                                   PrintApiClient printApiClient) {
         super(owner, "Histórico & Auditoria de Fechos de Caixa (Z)", ModalityType.APPLICATION_MODAL);
         this.posApiClient = posApiClient;
         this.companyId = companyId;
-
-        setSize(980, 580);
-        setLocationRelativeTo(owner);
+        this.printApiClient = printApiClient;
         setLayout(new BorderLayout());
+        UIHelper.applyStandardModalBounds(this, 960, 580);
 
         add(createHeaderPanel(), BorderLayout.NORTH);
         add(createCenterPanel(), BorderLayout.CENTER);
@@ -77,6 +84,7 @@ public class PosSessionHistoryDialog extends JDialog {
 
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
 
         // Align right for currency columns
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
@@ -152,12 +160,11 @@ public class PosSessionHistoryDialog extends JDialog {
         }
 
         PosSessionSummaryDTO s = currentList.get(selectedRow);
-        try {
-            byte[] pdfBytes = posApiClient.renderZReport(s.sessionId());
-            PrintPreviewDialog.show(this, pdfBytes, "relatorio-z-" + s.sessionId() + ".pdf");
-        } catch (Exception ex) {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao gerar PDF do Relatório Z: " + ex.getMessage());
-        }
+        SensitivePrintCoordinator.print(this, printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.POS_Z_REPORT,
+                s.sessionId(), "Relatório Z da sessão " + s.sessionId(),
+                "relatorio-z-" + s.sessionId(),
+                () -> posApiClient.renderZReport(s.sessionId()), this::loadData);
     }
 
     private static String fmt(BigDecimal v) {

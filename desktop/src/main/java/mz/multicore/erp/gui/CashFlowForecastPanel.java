@@ -26,7 +26,7 @@ public class CashFlowForecastPanel extends JPanel {
     private final JLabel lblPayablesVal = new JLabel("0,00 MT");
     private final JLabel lblNetVal = new JLabel("0,00 MT");
 
-    private final ModernPanel alertBanner = new ModernPanel(10);
+    private final ModernPanel alertBanner = new ModernPanel(16);
     private final JLabel lblAlertTitle = new JLabel("A carregar posição de tesouraria...");
     private final JLabel lblAlertRecommendation = new JLabel("");
 
@@ -140,7 +140,7 @@ public class CashFlowForecastPanel extends JPanel {
     }
 
     private ModernPanel buildBucketsCard() {
-        ModernPanel card = new ModernPanel(10);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
@@ -172,6 +172,7 @@ public class CashFlowForecastPanel extends JPanel {
         for (int c : new int[]{1, 2, 3, 4}) {
             bucketsTable.getColumnModel().getColumn(c).setCellRenderer(new MoneyCellRenderer(c == 4));
         }
+        UIHelper.ensureHeadersFit(bucketsTable);
 
         JScrollPane scroll = new JScrollPane(bucketsTable);
         UIHelper.styleScrollPane(scroll);
@@ -184,7 +185,7 @@ public class CashFlowForecastPanel extends JPanel {
     }
 
     private ModernPanel buildDetailsCard() {
-        ModernPanel card = new ModernPanel(10);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
@@ -202,6 +203,7 @@ public class CashFlowForecastPanel extends JPanel {
         UIHelper.styleTable(topReceivablesTable);
         topReceivablesTable.setPreferredScrollableViewportSize(new Dimension(100, 260));
         topReceivablesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
+        UIHelper.ensureHeadersFit(topReceivablesTable);
         JScrollPane rScroll = new JScrollPane(topReceivablesTable);
         UIHelper.styleScrollPane(rScroll);
         tabs.addTab("Maiores Recebimentos Previstos", UIHelper.icon("fas-hand-holding-usd", 13, UIHelper.APPROVED_GREEN), rScroll);
@@ -217,9 +219,13 @@ public class CashFlowForecastPanel extends JPanel {
         UIHelper.styleTable(topPayablesTable);
         topPayablesTable.setPreferredScrollableViewportSize(new Dimension(100, 260));
         topPayablesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
+        UIHelper.ensureHeadersFit(topPayablesTable);
         JScrollPane pScroll = new JScrollPane(topPayablesTable);
         UIHelper.styleScrollPane(pScroll);
         tabs.addTab("Maiores Pagamentos a Fornecedores", UIHelper.icon("fas-file-invoice-dollar", 13, UIHelper.REJECTED_RED), pScroll);
+
+        UIHelper.installQuickPeek(topReceivablesTable, card);
+        UIHelper.installQuickPeek(topPayablesTable, card);
 
         card.add(tabs, BorderLayout.CENTER);
         card.setPreferredSize(new Dimension(0, 360));

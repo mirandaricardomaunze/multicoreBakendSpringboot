@@ -23,5 +23,17 @@ public record DeliveryGuideDTO(
         String approvedBy,
         LocalDateTime approvedAt,
         String rejectionReason,
-        List<DeliveryGuideLineDTO> lines
-) {}
+        List<DeliveryGuideLineDTO> lines,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public DeliveryGuideDTO(Long id, String guideNumber, LocalDateTime guideDate, Long companyId,
+                            Long orderId, String orderNumber, Long clientId, String clientName,
+                            Long warehouseId, String warehouseName, String status, BigDecimal totalAmount,
+                            String responsible, String vehicle, String notes, String approvedBy,
+                            LocalDateTime approvedAt, String rejectionReason, List<DeliveryGuideLineDTO> lines) {
+        this(id, guideNumber, guideDate, companyId, orderId, orderNumber, clientId, clientName,
+                warehouseId, warehouseName, status, totalAmount, responsible, vehicle, notes,
+                approvedBy, approvedAt, rejectionReason, lines, null, null);
+    }
+}

@@ -1,21 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.ClientTablePagination;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.DateField;
-import mz.multicore.erp.gui.components.FormField;
-import mz.multicore.erp.gui.components.MoneyField;
-import mz.multicore.erp.gui.components.QuantityField;
-import mz.multicore.erp.gui.components.ProductSearchComboBox;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.InlineFeedbackPanel;
-import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PromotionApiClient;
 import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
@@ -49,6 +35,7 @@ public class PromotionsPanel extends JPanel {
     private final DefaultTableModel model;
     private final JTable table;
     private final ModernButton toggleBtn;
+    private JComboBox<String> promoBusinessUnitCombo;
     private List<PromotionDTO> promotions = new ArrayList<>();
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
@@ -72,13 +59,14 @@ public class PromotionsPanel extends JPanel {
 
         add(feedback, BorderLayout.NORTH);
 
-        String[] cols = {"Nome", "Tipo", "Alcance", "Benefício", "Início", "Fim", "Estado"};
+        String[] cols = {"Nome", "Tipo", "Alcance", "Benefício", "Início", "Fim", "Estado", "Negócio"};
         model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
         table.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
+        table.getColumnModel().getColumn(7).setPreferredWidth(120);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -87,38 +75,61 @@ public class PromotionsPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
 
         JTextField promoSearch = TableFilter.searchField("Nome, alcance ou benefício…");
+        promoBusinessUnitCombo = TableFilter.combo("Todos os negócios");
         JComboBox<String> promoTipo = TableFilter.combo("Todos os tipos", "Percentagem", "Leve X, pague Y");
         UIHelper.styleComboBox(promoTipo);
         promoTipo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JComboBox<String> promoEstado = TableFilter.combo("Todos os estados", "ACTIVA", "INACTIVA");
+        JComboBox<String> promoEstado = TableFilter.combo("Todos os estados", "Activa", "Inactiva");
         UIHelper.styleComboBox(promoEstado);
         promoEstado.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(table, promoSearch,
                 new TableFilter.ColumnFilter(promoTipo, 1),
-                new TableFilter.ColumnFilter(promoEstado, 6));
+                new TableFilter.ColumnFilter(promoEstado, 6),
+                new TableFilter.ColumnFilter(promoBusinessUnitCombo, 7));
 
-        JPanel promoFilters = new JPanel(new GridBagLayout());
-        promoFilters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da promoção (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar promoção");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridx = 0; g.weightx = 0; promoFilters.add(filterLabel("Tipo de Promoção"), g);
-        g.gridx = 1; g.weightx = 0; promoFilters.add(filterLabel("Estado"), g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        promoFilters.add(filterLabel("Pesquisa"), g);
-
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; promoFilters.add(promoTipo, g);
-        g.gridx = 1; g.weightx = 0; promoFilters.add(promoEstado, g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        promoFilters.add(promoSearch, g);
-
+        JPanel promoFilters = TableFilter.bar(
+                promoSearch,
+                TableFilter.label("Negócio:"), promoBusinessUnitCombo,
+                TableFilter.label("Tipo:"), promoTipo,
+                TableFilter.label("Estado:"), promoEstado,
+                peekToggleBtn
+        );
         promoFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
+
+        UIHelper.ensureHeadersFit(table);
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            if (mr < 0 || mr >= model.getRowCount()) return;
+            String name = String.valueOf(model.getValueAt(mr, 0));
+            String tipo = String.valueOf(model.getValueAt(mr, 1));
+            String scope = String.valueOf(model.getValueAt(mr, 2));
+            String benefit = String.valueOf(model.getValueAt(mr, 3));
+            String start = String.valueOf(model.getValueAt(mr, 4));
+            String end = String.valueOf(model.getValueAt(mr, 5));
+            String status = String.valueOf(model.getValueAt(mr, 6));
+
+            peek.setTitle(name);
+            peek.setSubtitle(tipo + " • " + scope);
+            String bu = mr < model.getRowCount() ? String.valueOf(model.getValueAt(mr, 7)) : "—";
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Benefício", benefit, true),
+                    new QuickPeekPanel.PeekItem("Data Início", start, false),
+                    new QuickPeekPanel.PeekItem("Data Fim", end, false),
+                    new QuickPeekPanel.PeekItem("Estado", status, false),
+                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu, false)
+            ));
+            peek.getOpenFullButton().setText("Activar / Desactivar");
+            peek.setOnOpenFullAction(v -> toggleBtn.doClick());
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
+
         card.add(UIHelper.tableCardTop("Promoções de Loja", promoFilters,
                 refreshBtn, toggleBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -139,7 +150,10 @@ public class PromotionsPanel extends JPanel {
     private void applyPromotions(List<PromotionDTO> loaded) {
         promotions = loaded;
         model.setRowCount(0);
+        java.util.Set<String> bus = new java.util.TreeSet<>();
         for (PromotionDTO p : promotions) {
+            String buName = p.businessUnitName() != null && !p.businessUnitName().isBlank() ? p.businessUnitName() : "—";
+            if (!"—".equals(buName)) bus.add(buName);
             model.addRow(new Object[]{
                     p.name(),
                     "PERCENT".equals(p.type()) ? "Percentagem" : "Leve X, pague Y",
@@ -148,8 +162,16 @@ public class PromotionsPanel extends JPanel {
                     benefit(p),
                     p.startDate() != null ? p.startDate().format(FMT) : "—",
                     p.endDate() != null ? p.endDate().format(FMT) : "—",
-                    p.active() ? "ACTIVA" : "INACTIVA"
+                    p.active() ? "ACTIVA" : "INACTIVA",
+                    buName
             });
+        }
+        if (promoBusinessUnitCombo != null) {
+            Object prev = promoBusinessUnitCombo.getSelectedItem();
+            promoBusinessUnitCombo.removeAllItems();
+            promoBusinessUnitCombo.addItem("Todos os negócios");
+            for (String b : bus) promoBusinessUnitCombo.addItem(b);
+            if (prev != null) promoBusinessUnitCombo.setSelectedItem(prev);
         }
     }
 

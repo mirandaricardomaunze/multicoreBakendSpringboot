@@ -1,21 +1,9 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.session.SignedInUser;
+import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.ClientTablePagination;
-import mz.multicore.erp.gui.components.ModernFormDialog;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.SearchField;
-import mz.multicore.erp.gui.components.ProductSearchComboBox;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.InlineFeedbackPanel;
-import mz.multicore.erp.gui.components.ToastManager;
-import mz.multicore.erp.gui.components.DocumentEditorHost;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.InventoryApiClient;
 import mz.multicore.erp.desktop.client.InventoryCountApiClient;
@@ -35,6 +23,8 @@ import mz.multicore.erp.modules.inventory.dto.UpdateWarehouseRequest;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.inventory.dto.StockAlertDTO;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
+import mz.multicore.erp.modules.inventory.dto.StockTransferLineDTO;
+import java.time.LocalDateTime;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -46,7 +36,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import mz.multicore.erp.gui.components.PrintPreviewDialog;
+import java.util.Locale;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 
 public class StockPanel extends JPanel {
@@ -81,6 +71,12 @@ public class StockPanel extends JPanel {
     DocumentEditorHost transferEditorHost;
     StockTransferEditorForm transferEditorForm;
 
+    // KPI labels para a aba de transferências
+    private final JLabel kpiTransfersSeparation = new JLabel("0");
+    private final JLabel kpiTransfersPending = new JLabel("0");
+    private final JLabel kpiTransfersCompleted = new JLabel("0");
+    private final JLabel kpiTransfersTotalValue = new JLabel("0.00 MT");
+
     // Warehouses list
     private JComboBox<String> warehouseFilterCombo;
     List<WarehouseDTO> warehousesList = new ArrayList<>();
@@ -107,6 +103,10 @@ public class StockPanel extends JPanel {
     // Movements log
     private DefaultTableModel movementsModel;
     private JTable movementsTable;
+    private TablePager movementsPager;
+    private JComboBox<String> movementProductFilter;
+    private JComboBox<String> movementBusinessUnitFilter;
+    private JComboBox<String> transferBusinessUnitCombo;
 
     // Categorias
     DefaultTableModel categoriesModel;
@@ -154,9 +154,9 @@ public class StockPanel extends JPanel {
         this.batchesPanel = new StockBatchesPanel(this);
         this.wastePanel = new StockWastePanel(stockWasteApiClient, inventoryApiClient, comercialApiClient);
 
-        setLayout(new BorderLayout(0, 15));
+        setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBorder(new EmptyBorder(8, 12, 8, 12));
 
         // TOP BAR: heading + globally-relevant catalogue buttons
         JPanel topBar = new JPanel(new BorderLayout());
@@ -243,6 +243,7 @@ public class StockPanel extends JPanel {
     private JTextField stockSearchField;
     private JComboBox<String> stockStatusCombo;
     private JComboBox<String> stockCategoryCombo;
+    private JComboBox<String> stockBusinessUnitCombo;
 
     // Batches tab
     DefaultTableModel alertsOutModel;
@@ -256,6 +257,7 @@ public class StockPanel extends JPanel {
     JTextField batchSearchField;
     JComboBox<String> batchExpirationCombo;
     JComboBox<String> batchWarehouseCombo;
+    JComboBox<String> batchBusinessUnitCombo;
     JLabel batchesSummary;
     List<mz.multicore.erp.modules.inventory.dto.ProductBatchDTO> batchesList = new ArrayList<>();
 
@@ -272,13 +274,20 @@ public class StockPanel extends JPanel {
     private void loadBatches() { batchesPanel.refresh(); }
 
     private JPanel buildLevelsTab() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        ModernButton printInventoryBtn = UIHelper.createSecondaryButton("Imprimir Inventário");
-        printInventoryBtn.setIcon(UIHelper.icon("fas-print", 14));
-        printInventoryBtn.addActionListener(e -> printInventoryReport());
+        ActionMenuButton printMenu = UIHelper.createActionMenuButton("Imprimir")
+                .addAction("Inventário de Stock", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printInventoryReport)
+                .addAction("Livro Valorizado (PGC-NIRF)", UIHelper.icon("fas-book", 14, UIHelper.APPROVED_GREEN), this::printValuedInventoryBook);
+        printMenu.setToolTipText("Relatórios e mapas de existências");
+
+        ActionMenuButton barcodeMenu = UIHelper.createActionMenuButton("Leitor & Código")
+                .addAction("Modo Coletor (Auditoria)", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT_BLUE), this::openInventoryBarcodeCollector)
+                .addAction("Imprimir Etiquetas", UIHelper.icon("fas-tags", 14, UIHelper.APPROVED_GREEN), this::openLabelDialog);
+        barcodeMenu.setToolTipText("Leitura contínua por scanner e emissão de etiquetas");
+
         ModernButton refreshLevelsBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshLevelsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshLevelsBtn.setToolTipText("Recarregar saldos de stock e armazéns");
@@ -287,22 +296,11 @@ public class StockPanel extends JPanel {
             loadStocks();
             refreshStockLock();
         });
-        // Multi-row filter bar
-        JPanel filters = new JPanel(new GridBagLayout());
-        filters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
-
-        // Warehouse
         warehouseFilterCombo = new JComboBox<>();
         UIHelper.styleComboBox(warehouseFilterCombo);
-        warehouseFilterCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        warehouseFilterCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         warehouseFilterCombo.addActionListener(e -> filterStocks());
-        g.gridx = 0; g.weightx = 0; filters.add(filterLabel("Armazém"), g);
 
-        // Stock status
         stockStatusCombo = new JComboBox<>(new String[]{
                 "Todos os artigos",
                 "Em stock",
@@ -310,40 +308,51 @@ public class StockPanel extends JPanel {
                 "Sem stock"
         });
         UIHelper.styleComboBox(stockStatusCombo);
-        stockStatusCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        stockStatusCombo.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
         stockStatusCombo.addActionListener(e -> filterStocks());
-        g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Estado"), g);
 
-        // Categoria
+        stockBusinessUnitCombo = new JComboBox<>();
+        stockBusinessUnitCombo.addItem("Todos os negócios");
+        UIHelper.styleComboBox(stockBusinessUnitCombo);
+        stockBusinessUnitCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
+        stockBusinessUnitCombo.addActionListener(e -> filterStocks());
+
         stockCategoryCombo = new JComboBox<>();
         stockCategoryCombo.addItem("Todas as categorias");
         UIHelper.styleComboBox(stockCategoryCombo);
-        stockCategoryCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        stockCategoryCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         stockCategoryCombo.addActionListener(e -> filterStocks());
-        g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Categoria"), g);
 
-        // Search
-        stockSearchField = new SearchField("Pesquisar por SKU ou nome…");
+        stockSearchField = TableFilter.searchField("Pesquisar por SKU ou nome…");
+        stockSearchField.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
         stockSearchField.getDocument().addDocumentListener(simpleDocumentListener(this::filterStocks));
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        filters.add(filterLabel("Pesquisa"), g);
 
-        // Row 1: controls aligned below their labels
-        g.gridy = 1; g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; filters.add(warehouseFilterCombo, g);
-        g.gridx = 1; g.weightx = 0; filters.add(stockStatusCombo, g);
-        g.gridx = 2; g.weightx = 0; filters.add(stockCategoryCombo, g);
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        filters.add(stockSearchField, g);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar artigo seleccionado (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar artigo");
+        peekToggleBtn.setPreferredSize(new Dimension(34, UIHelper.FORM_CONTROL_HEIGHT));
 
-        filters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        JPanel filtersLeft = TableFilter.bar(
+                stockSearchField,
+                TableFilter.label("Negócio:"), stockBusinessUnitCombo,
+                TableFilter.label("Armazém:"), warehouseFilterCombo,
+                TableFilter.label("Estado:"), stockStatusCombo,
+                TableFilter.label("Categoria:"), stockCategoryCombo
+        );
+        JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
+        filtersRow.setOpaque(false);
+        filtersRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filtersRow.add(filtersLeft, BorderLayout.CENTER);
+        filtersRow.add(peekToggleBtn, BorderLayout.EAST);
+
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Níveis de Stock", filters,
-                refreshLevelsBtn, printInventoryBtn), BorderLayout.NORTH);
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
+        card.add(UIHelper.tableCardTop("Níveis de Stock", filtersRow,
+                refreshLevelsBtn, barcodeMenu, printMenu), BorderLayout.NORTH);
 
-        String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado"};
+        String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Negócio", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado"};
         stockModel = new DefaultTableModel(stockCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -352,8 +361,8 @@ public class StockPanel extends JPanel {
         UIHelper.styleTable(stockTable);
         stockTable.setAutoCreateRowSorter(true);
         stockTable.putClientProperty("noRowInspector", Boolean.TRUE);
-        stockTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
-        stockTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
+        stockTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.money());
+        stockTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
         // Duplo-clique ou Enter numa linha → abre a Ficha Executiva do Artigo com fotografia e métricas.
         stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -371,6 +380,38 @@ public class StockPanel extends JPanel {
                 if (id != null) showProductDetailDialog(id);
             }
         });
+        UIHelper.ensureHeadersFit(stockTable);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(stockTable, card, (peek, mr) -> {
+            if (mr < 0 || mr >= stockModel.getRowCount()) return;
+            String barcode = String.valueOf(stockModel.getValueAt(mr, 0));
+            String ref = String.valueOf(stockModel.getValueAt(mr, 1));
+            String name = String.valueOf(stockModel.getValueAt(mr, 2));
+            String bu = String.valueOf(stockModel.getValueAt(mr, 3));
+            String qtdUnits = String.valueOf(stockModel.getValueAt(mr, 4));
+            String qtdBoxes = String.valueOf(stockModel.getValueAt(mr, 5));
+            String price = String.valueOf(stockModel.getValueAt(mr, 6));
+            String status = String.valueOf(stockModel.getValueAt(mr, 7));
+
+            peek.setTitle(name);
+            peek.setSubtitle("SKU/Ref: " + ref);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Código de Barras", barcode, false),
+                    new QuickPeekPanel.PeekItem("Referência", ref, false),
+                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu, true),
+                    new QuickPeekPanel.PeekItem("Qtd Unidades", qtdUnits, true),
+                    new QuickPeekPanel.PeekItem("Qtd Embalagens", qtdBoxes, false),
+                    new QuickPeekPanel.PeekItem("Preço de Venda", price, false),
+                    new QuickPeekPanel.PeekItem("Estado", status, false)
+            ));
+            peek.getOpenFullButton().setText("Ficha Executiva");
+            peek.setOnOpenFullAction(v -> {
+                Long id = selectedStockProductId();
+                if (id != null) showProductDetailDialog(id);
+            });
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
+
         JScrollPane stockScroll = new JScrollPane(stockTable);
         UIHelper.styleScrollPane(stockScroll);
         card.add(stockScroll, BorderLayout.CENTER);
@@ -406,64 +447,74 @@ public class StockPanel extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] movCols = {"Data", "Artigo", "Armazém", "Qtd Movimentada", "Tipo Mov.", "Nº Lote", "Nº Série", "Descrição"};
+        String[] movCols = {"Data", "Artigo", "Armazém", "Qtd Movimentada", "Tipo Mov.", "Nº Lote", "Nº Série", "Descrição", "Negócio"};
         movementsModel = new DefaultTableModel(movCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         movementsTable = new JTable(movementsModel);
+        movementsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(movementsTable);
         movementsTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
-        JTextField mvSearch = TableFilter.searchField("Artigo, lote, série ou descrição…");
+        JTextField mvSearch = TableFilter.searchField("Lote, série ou descrição…");
+        mvSearch.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
+
         // Valores crus: o TableFilter compara com o VALOR DO MODELO, não com a renderização.
         JComboBox<String> mvTipo = TableFilter.combo("Todos os tipos",
                 "PURCHASE", "ENTRY", "SALE", "TRANSFER", "ADJUSTMENT", "RETURN", "REVERSAL");
         UIHelper.styleComboBox(mvTipo);
-        mvTipo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        mvTipo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JComboBox<String> mvPeriodo = TableFilter.periodCombo();
-        UIHelper.styleComboBox(mvPeriodo);
-        mvPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+        movementProductFilter = TableFilter.combo("Todos os artigos");
+        movementProductFilter.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
 
+        movementBusinessUnitFilter = TableFilter.combo("Todos os negócios");
+        movementBusinessUnitFilter.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+
+        DateField movementFrom = new DateField(null);
+        DateField movementTo = new DateField(null);
+        movementFrom.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
+        movementTo.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
+        movementFrom.putClientProperty("JTextField.placeholderText", "aaaa-mm-dd");
+        movementTo.putClientProperty("JTextField.placeholderText", "aaaa-mm-dd");
+
+        UIHelper.ensureHeadersFit(movementsTable);
         TableFilter.install(movementsTable, mvSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(mvTipo, 4)),
-                java.util.List.of(new TableFilter.PeriodFilter(mvPeriodo, 0)));
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(movementProductFilter, 1),
+                        new TableFilter.ColumnFilter(mvTipo, 4),
+                        new TableFilter.ColumnFilter(movementBusinessUnitFilter, 8)),
+                java.util.List.of(),
+                java.util.List.of(new TableFilter.DateRangeFilter(movementFrom, movementTo, 0)));
 
-        JPanel mvFilters = new JPanel(new GridBagLayout());
-        mvFilters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
-
-        g.gridx = 0; g.weightx = 0; mvFilters.add(filterLabel("Tipo de Movimento"), g);
-        g.gridx = 1; g.weightx = 0; mvFilters.add(filterLabel("Período"), g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        mvFilters.add(filterLabel("Pesquisa"), g);
-
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; mvFilters.add(mvTipo, g);
-        g.gridx = 1; g.weightx = 0; mvFilters.add(mvPeriodo, g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        mvFilters.add(mvSearch, g);
-
-        mvFilters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        JPanel mvFilters = TableFilter.bar(
+                mvSearch,
+                TableFilter.label("Negócio:"), movementBusinessUnitFilter,
+                TableFilter.label("Artigo:"), movementProductFilter,
+                TableFilter.label("Tipo:"), mvTipo,
+                TableFilter.label("De:"), movementFrom,
+                TableFilter.label("Até:"), movementTo
+        );
+        mvFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
         ModernButton refreshMovBtn = UIHelper.createRefreshButton(this::loadMovements);
+        ModernButton printMovBtn = UIHelper.createSecondaryButton("Imprimir movimentos");
+        printMovBtn.setIcon(UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE));
         card.add(UIHelper.tableCardTop("Rastreabilidade e Movimentos (Lotes & Séries)", mvFilters,
-                refreshMovBtn, adjustmentBtn), BorderLayout.NORTH);
+                refreshMovBtn, printMovBtn, adjustmentBtn), BorderLayout.NORTH);
         card.add(movScroll, BorderLayout.CENTER);
-        card.add(ClientTablePagination.install(movementsTable), BorderLayout.SOUTH);
+        movementsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
+        movementsPager = new TablePager(this::loadMovementsPage);
+        card.add(movementsPager, BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
 
     private JPanel buildTransfersTab() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(15, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         ModernButton transferBtn = UIHelper.createPrimaryButton("Nova Transferência");
         transferBtn.setIcon(UIHelper.icon("fas-truck", 14));
@@ -477,15 +528,18 @@ public class StockPanel extends JPanel {
                 .addAction("Cancelar", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), () -> transferActions.cancelSelectedTransfer());
 
         ActionMenuButton transferDocuments = UIHelper.createActionMenuButton("Documentos")
-                .addAction("Imprimir Guia", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printSelectedTransfer)
-                .addAction("Registar Encomenda", UIHelper.icon("fas-clipboard-check", 14, UIHelper.ACCENT_BLUE), () -> transferActions.recordOrderForSelectedTransfer())
-                .addAction("Actualizar", UIHelper.icon("fas-sync-alt", 14, UIHelper.ACCENT_BLUE), this::loadTransfers);
+                .addAction("Guia de Separação", UIHelper.icon("fas-clipboard-list", 14, UIHelper.ACCENT_BLUE), () -> transferActions.printPickingSheetForSelected())
+                .addAction("Concluir Separação", UIHelper.icon("fas-tasks", 14, UIHelper.APPROVED_GREEN), () -> transferActions.completeSeparationForSelected())
+                .addAction("Imprimir Guia (3 Vias)", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printSelectedTransfer)
+                .addAction("Registar Encomenda", UIHelper.icon("fas-clipboard-check", 14, UIHelper.ACCENT_BLUE), () -> transferActions.recordOrderForSelectedTransfer());
+
+        ModernButton refreshTransfersBtn = UIHelper.createRefreshButton(this::loadTransfers);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        String[] transferCols = {"Nº Guia", "Data", "Origem", "Destino", "Motorista", "Matrícula", "Linhas", "Estado"};
+        String[] transferCols = {"Nº Guia", "Data", "Origem", "Destino", "Motorista", "Matrícula", "Linhas", "Estado", "Negócio"};
         transferModel = new DefaultTableModel(transferCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -493,60 +547,49 @@ public class StockPanel extends JPanel {
         transferTable = new JTable(transferModel);
         UIHelper.styleTable(transferTable);
         transferTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
-        transferTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    transferActions.openSelectedEditor();
-                }
-            }
-        });
-        transferTable.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "viewTransferLines");
-        transferTable.getActionMap().put("viewTransferLines", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
-                transferActions.openSelectedEditor();
-            }
-        });
         JScrollPane transferScroll = new JScrollPane(transferTable);
         UIHelper.styleScrollPane(transferScroll);
         JTextField trSearch = TableFilter.searchField("Nº guia, armazém, motorista ou matrícula…");
         JComboBox<String> trEstado = TableFilter.combo("Todos os estados",
-                "DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED");
+                "Rascunho", "Aguarda separação", "Em separação", "Separado", "Pendente de aprovação", "Aprovado", "Rejeitado", "Cancelado");
         UIHelper.styleComboBox(trEstado);
         trEstado.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> trPeriodo = TableFilter.periodCombo();
         UIHelper.styleComboBox(trPeriodo);
         trPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+        transferBusinessUnitCombo = TableFilter.combo("Todos os negócios");
 
+        UIHelper.ensureHeadersFit(transferTable);
         TableFilter.install(transferTable, trSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(trEstado, 7)),
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(trEstado, 7),
+                        new TableFilter.ColumnFilter(transferBusinessUnitCombo, 8)),
                 java.util.List.of(new TableFilter.PeriodFilter(trPeriodo, 1)));
 
-        JPanel trFilters = new JPanel(new GridBagLayout());
-        trFilters.setOpaque(false);
-        GridBagConstraints tg = new GridBagConstraints();
-        tg.gridy = 0;
-        tg.fill = GridBagConstraints.HORIZONTAL;
-        tg.insets = new Insets(0, 0, 0, 12);
-
-        tg.gridx = 0; tg.weightx = 0; trFilters.add(filterLabel("Estado"), tg);
-        tg.gridx = 1; tg.weightx = 0; trFilters.add(filterLabel("Período"), tg);
-        tg.gridx = 2; tg.weightx = 1.0; tg.insets = new Insets(0, 0, 0, 0);
-        trFilters.add(filterLabel("Pesquisa"), tg);
-
-        tg.gridy = 1;
-        tg.insets = new Insets(4, 0, 0, 12);
-        tg.gridx = 0; tg.weightx = 0; trFilters.add(trEstado, tg);
-        tg.gridx = 1; tg.weightx = 0; trFilters.add(trPeriodo, tg);
-        tg.gridx = 2; tg.weightx = 1.0; tg.insets = new Insets(4, 0, 0, 0);
-        trFilters.add(trSearch, tg);
-
-        trFilters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        JPanel trFilters = TableFilter.bar(
+                trSearch,
+                TableFilter.label("Negócio:"), transferBusinessUnitCombo,
+                TableFilter.label("Estado:"), trEstado,
+                TableFilter.label("Período:"), trPeriodo
+        );
+        trFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
         card.add(UIHelper.tableCardTop("Transferências entre Armazéns", trFilters,
-                transferDocuments, transferMenu, transferBtn), BorderLayout.NORTH);
+                refreshTransfersBtn, transferDocuments, transferMenu, transferBtn), BorderLayout.NORTH);
         card.add(transferScroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(transferTable), BorderLayout.SOUTH);
+
+        JPanel kpiGrid = KpiCard.createGrid(4);
+        kpiGrid.add(KpiCard.createCard("Aguarda Separação", kpiTransfersSeparation,
+                "Picking pendente no armazém", "fas-dolly", UIHelper.PENDING_YELLOW));
+        kpiGrid.add(KpiCard.createCard("Aguarda Decisão", kpiTransfersPending,
+                "Guias prontas para aprovação", "fas-clock", UIHelper.ACCENT_BLUE));
+        kpiGrid.add(KpiCard.createCard("Concluídas (Mês)", kpiTransfersCompleted,
+                "Transferências finalizadas no período", "fas-check-circle", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createCard("Valor Movimentado", kpiTransfersTotalValue,
+                "Total valorizado em mercadoria", "fas-coins", UIHelper.MODULE_STOCK));
+
+        tab.add(kpiGrid, BorderLayout.NORTH);
         tab.add(card, BorderLayout.CENTER);
 
         transferEditorForm = new StockTransferEditorForm(this);
@@ -654,24 +697,67 @@ public class StockPanel extends JPanel {
 
     private void applyTransfers(List<StockTransferDTO> loaded) {
         transferModel.setRowCount(0);
-        transfersList = loaded;
+        transfersList = loaded != null ? loaded : List.of();
+
+        int separationCount = 0;
+        int pendingCount = 0;
+        int completedCount = 0;
+        BigDecimal totalValue = BigDecimal.ZERO;
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
 
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (StockTransferDTO t : transfersList) {
+            String status = t.status() != null ? t.status() : "";
+            if ("AWAITING_SEPARATION".equals(status) || "IN_SEPARATION".equals(status)) {
+                separationCount++;
+            } else if ("SEPARATED".equals(status) || "PENDING_APPROVAL".equals(status) || "DRAFT".equals(status)) {
+                pendingCount++;
+            } else if ("APPROVED".equals(status)) {
+                if (t.transferDate() == null || t.transferDate().isAfter(thirtyDaysAgo)) {
+                    completedCount++;
+                }
+            }
+
+            if (t.lines() != null) {
+                for (StockTransferLineDTO line : t.lines()) {
+                    BigDecimal qty = line.quantity() != null ? line.quantity() : BigDecimal.ZERO;
+                    BigDecimal price = line.safeUnitPrice();
+                    totalValue = totalValue.add(qty.multiply(price));
+                }
+            }
+
             String driver = t.driverName() != null ? t.driverName()
                     : (t.responsible() != null ? t.responsible() : "-");
             String plate = t.vehiclePlate() != null ? t.vehiclePlate()
                     : (t.vehicle() != null ? t.vehicle() : "-");
+            String trBu = t.businessUnitName() != null && !t.businessUnitName().isBlank() ? t.businessUnitName() : "—";
             transferModel.addRow(new Object[]{
                     t.transferNumber(),
-                    t.transferDate().format(dtf),
+                    t.transferDate() != null ? t.transferDate().format(dtf) : "-",
                     t.originWarehouseName(),
                     t.destinationWarehouseName(),
                     driver,
                     plate,
                     t.lines() == null ? 0 : t.lines().size(),
-                    t.status()
+                    t.status(),
+                    trBu
             });
+        }
+
+        kpiTransfersSeparation.setText(String.valueOf(separationCount));
+        kpiTransfersPending.setText(String.valueOf(pendingCount));
+        kpiTransfersCompleted.setText(String.valueOf(completedCount));
+        kpiTransfersTotalValue.setText(MultiCurrencyEngine.formatCurrency(totalValue, MultiCurrencyEngine.Currency.MZN));
+        if (transferBusinessUnitCombo != null) {
+            Object prev = transferBusinessUnitCombo.getSelectedItem();
+            java.util.Set<String> bus = new java.util.TreeSet<>();
+            for (StockTransferDTO t : transfersList) {
+                if (t.businessUnitName() != null && !t.businessUnitName().isBlank()) bus.add(t.businessUnitName());
+            }
+            transferBusinessUnitCombo.removeAllItems();
+            transferBusinessUnitCombo.addItem("Todos os negócios");
+            for (String b : bus) transferBusinessUnitCombo.addItem(b);
+            if (prev != null) transferBusinessUnitCombo.setSelectedItem(prev);
         }
     }
 
@@ -707,6 +793,7 @@ public class StockPanel extends JPanel {
     private void applyStocks(List<StockDTO> loaded) {
         stocksList = loaded;
         syncCategoryCombo();
+        syncBusinessUnitCombo();
         filterStocks();
     }
 
@@ -724,6 +811,23 @@ public class StockPanel extends JPanel {
         stockCategoryCombo.addItem("Todas as categorias");
         for (String n : names) stockCategoryCombo.addItem(n);
         if (selected != null) stockCategoryCombo.setSelectedItem(selected);
+    }
+
+    /** Popula o combo de unidades de negócio com as linhas comerciais distintas presentes no stock. */
+    private void syncBusinessUnitCombo() {
+        if (stockBusinessUnitCombo == null) return;
+        Object selected = stockBusinessUnitCombo.getSelectedItem();
+        java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (StockDTO s : stocksList) {
+            if (s.businessUnitName() != null && !s.businessUnitName().isBlank()) {
+                names.add(s.businessUnitName());
+            }
+        }
+        stockBusinessUnitCombo.removeAllItems();
+        stockBusinessUnitCombo.addItem("Todos os negócios");
+        for (String n : names) stockBusinessUnitCombo.addItem(n);
+        stockBusinessUnitCombo.addItem("Sem Linha (Livre)");
+        if (selected != null) stockBusinessUnitCombo.setSelectedItem(selected);
     }
 
     private void filterStocks() {
@@ -744,12 +848,24 @@ public class StockPanel extends JPanel {
         String wantCategory = stockCategoryCombo != null && stockCategoryCombo.getSelectedIndex() > 0
                 ? String.valueOf(stockCategoryCombo.getSelectedItem()) : null;
 
+        String wantBusinessUnit = stockBusinessUnitCombo != null && stockBusinessUnitCombo.getSelectedIndex() > 0
+                ? String.valueOf(stockBusinessUnitCombo.getSelectedItem()) : null;
+
         for (StockDTO s : stocksList) {
             if (filterWarehouseId != null && !filterWarehouseId.equals(s.warehouseId())) continue;
 
             if (wantCategory != null) {
                 String cat = s.categoryName() == null ? "" : s.categoryName();
                 if (!wantCategory.equalsIgnoreCase(cat)) continue;
+            }
+
+            if (wantBusinessUnit != null) {
+                if ("Sem Linha (Livre)".equalsIgnoreCase(wantBusinessUnit)) {
+                    if (s.businessUnitName() != null && !s.businessUnitName().isBlank()) continue;
+                } else {
+                    String bu = s.businessUnitName() == null ? "" : s.businessUnitName();
+                    if (!wantBusinessUnit.equalsIgnoreCase(bu)) continue;
+                }
             }
 
             if (!query.isEmpty()) {
@@ -782,10 +898,13 @@ public class StockPanel extends JPanel {
             else if (minStk != null && minStk.signum() > 0 && qty.compareTo(minStk) < 0) estado = "BAIXO";
             else estado = "EM STOCK";
 
+            String buName = s.businessUnitName() != null && !s.businessUnitName().isBlank() ? s.businessUnitName() : "—";
+
             stockModel.addRow(new Object[]{
                     s.barcode() == null ? "—" : s.barcode(),
                     s.reference() == null ? s.sku() : s.reference(),
                     s.productName(),
+                    buName,
                     hide ? MASK : String.format("%,.2f", qty),
                     hide ? MASK : String.format("%,.2f", qtyBoxes),
                     price,
@@ -806,18 +925,70 @@ public class StockPanel extends JPanel {
     }
 
     private void loadMovements() {
+        if (movementsPager != null) {
+            movementsPager.reload();
+        } else {
+            loadMovementsPage(0, 50);
+        }
+    }
+
+    private void loadMovementsPage(int page, int size) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.loadAsync(this, () -> inventoryApiClient.getMovementsByCompany(companyId), this::applyMovements,
+        UIHelper.loadAsync(this, () -> inventoryApiClient.getMovementsPageByCompany(companyId, page, size), this::applyMovementsPage,
                 error -> showStockLoadError("movimentos", error));
+    }
+
+    private void applyMovementsPage(PageResponse<StockMovementDTO> response) {
+        if (movementsPager != null) movementsPager.apply(response);
+        applyMovements(response != null ? response.items() : List.of());
     }
 
     private void applyMovements(List<StockMovementDTO> movements) {
         movementsModel.setRowCount(0);
 
+        Object selectedProduct = movementProductFilter == null ? null : movementProductFilter.getSelectedItem();
+        java.util.TreeSet<String> productNames = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        if (movements != null) {
+            for (StockMovementDTO movement : movements) {
+                if (movement.productName() != null && !movement.productName().isBlank()) {
+                    productNames.add(movement.productName());
+                }
+            }
+        }
+        if (catalogProducts != null) {
+            for (ProductDTO prod : catalogProducts) {
+                if (prod.name() != null && !prod.name().isBlank()) {
+                    productNames.add(prod.name());
+                }
+            }
+        }
+        if (movementProductFilter != null) {
+            movementProductFilter.removeAllItems();
+            movementProductFilter.addItem("Todos os artigos");
+            productNames.forEach(movementProductFilter::addItem);
+            if (selectedProduct != null) movementProductFilter.setSelectedItem(selectedProduct);
+        }
+        if (movementBusinessUnitFilter != null) {
+            Object prevBu = movementBusinessUnitFilter.getSelectedItem();
+            java.util.Set<String> bus = new java.util.TreeSet<>();
+            if (movements != null) {
+                for (StockMovementDTO movement : movements) {
+                    if (movement.businessUnitName() != null && !movement.businessUnitName().isBlank()) {
+                        bus.add(movement.businessUnitName());
+                    }
+                }
+            }
+            movementBusinessUnitFilter.removeAllItems();
+            movementBusinessUnitFilter.addItem("Todos os negócios");
+            for (String b : bus) movementBusinessUnitFilter.addItem(b);
+            if (prevBu != null) movementBusinessUnitFilter.setSelectedItem(prevBu);
+        }
+
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (StockMovementDTO m : movements) {
+        for (StockMovementDTO m : movements == null ? List.<StockMovementDTO>of() : movements) {
             BigDecimal qty = m.quantity();
             String formattedQty = (qty.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + String.format("%,.2f", qty);
+            String buName = m.businessUnitName() != null && !m.businessUnitName().isBlank() ? m.businessUnitName() : "—";
             movementsModel.addRow(new Object[]{
                     m.movementDate().format(dtf),
                     m.productName(),
@@ -826,11 +997,55 @@ public class StockPanel extends JPanel {
                     m.movementType(),
                     m.batchNumber() != null ? m.batchNumber() : "-",
                     m.serialNumber() != null ? m.serialNumber() : "-",
-                    m.description()
+                    m.description(),
+                    buName
             });
         }
     }
 
+
+    private void printFilteredMovements(JComboBox<String> productFilter,
+                                        DateField fromField,
+                                        DateField toField) {
+        String product = productFilter != null && productFilter.getSelectedIndex() > 0
+                ? String.valueOf(productFilter.getSelectedItem()) : null;
+        LocalDate fromDate = fromField != null ? fromField.getDate() : null;
+        LocalDate toDate = toField != null ? toField.getDate() : null;
+
+        StringBuilder titleBuilder = new StringBuilder("Movimentos de Stock");
+        StringBuilder baseNameBuilder = new StringBuilder("movimentos-stock");
+
+        if (product != null && !product.isBlank()) {
+            titleBuilder.append(" — Artigo: ").append(product);
+            String prodSlug = product.toLowerCase(Locale.ROOT)
+                    .replaceAll("[^a-z0-9]+", "-")
+                    .replaceAll("^-|-$", "");
+            if (prodSlug.length() > 24) prodSlug = prodSlug.substring(0, 24);
+            if (!prodSlug.isBlank()) {
+                baseNameBuilder.append("-").append(prodSlug);
+            }
+        }
+
+        if (fromDate != null || toDate != null) {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            DateTimeFormatter fileFmt = DateTimeFormatter.ofPattern("yyyyMMdd");
+            String dateLabel;
+            if (fromDate != null && toDate != null) {
+                dateLabel = fromDate.format(fmt) + " a " + toDate.format(fmt);
+                baseNameBuilder.append("-").append(fromDate.format(fileFmt)).append("-").append(toDate.format(fileFmt));
+            } else if (fromDate != null) {
+                dateLabel = "desde " + fromDate.format(fmt);
+                baseNameBuilder.append("-desde-").append(fromDate.format(fileFmt));
+            } else {
+                dateLabel = "até " + toDate.format(fmt);
+                baseNameBuilder.append("-ate-").append(toDate.format(fileFmt));
+            }
+            titleBuilder.append(" (").append(dateLabel).append(")");
+        }
+
+        TableExportAction.export(this, printApiClient, movementsTable,
+                titleBuilder.toString(), baseNameBuilder.toString());
+    }
 
     private JPanel buildWarehousesTab() { return warehousesPanel.buildPanel(); }
 
@@ -847,7 +1062,14 @@ public class StockPanel extends JPanel {
     }
 
     void openLabelDialog() {
-        java.util.List<ProductDTO> products = new ArrayList<>(catalogProducts);
+        Long selectedId = selectedStockProductId();
+        java.util.List<ProductDTO> products = new ArrayList<>();
+        if (selectedId != null) {
+            catalogProducts.stream().filter(p -> p.id().equals(selectedId)).findFirst().ifPresent(products::add);
+        }
+        if (products.isEmpty()) {
+            products.addAll(catalogProducts);
+        }
         if (products.isEmpty()) {
             showStockNotice(FeedbackType.WARNING, "Produto necessário", "Registe um produto antes de criar etiquetas.");
             return;
@@ -976,6 +1198,31 @@ public class StockPanel extends JPanel {
                 () -> inventoryApiClient.renderInventoryReport(companyId, selectedWarehouseId),
                 pdf -> PrintPreviewDialog.show(this, pdf, "inventario-stock-" + suffix),
                 this::showStockError);
+    }
+
+    private void printValuedInventoryBook() {
+        if (printApiClient == null) {
+            showStockNotice(FeedbackType.INFO, "Impressão indisponível", "O cliente de impressão não está inicializado.");
+            return;
+        }
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        int year = java.time.LocalDate.now().getYear();
+        UIHelper.runWithProgress(this, "A gerar Livro de Inventário Valorizado (PGC-NIRF)…",
+                () -> printApiClient.renderValuedInventoryBook(companyId, year),
+                pdf -> PrintPreviewDialog.show(this, pdf, "livro-inventario-valorizado-" + year),
+                this::showStockError);
+    }
+
+    private void openInventoryBarcodeCollector() {
+        var collectorDialog = new BarcodeScannerCollectorDialog(
+                SwingUtilities.getWindowAncestor(this),
+                BarcodeScannerCollectorDialog.CollectorMode.INVENTORY,
+                comercialApiClient,
+                null,
+                inventoryApiClient,
+                this::loadStocks
+        );
+        collectorDialog.showDialog();
     }
 
     void showStockLoadError(String area, Throwable error) {

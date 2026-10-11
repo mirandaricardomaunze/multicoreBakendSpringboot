@@ -1,5 +1,6 @@
 package mz.multicore.erp.desktop.client;
 
+import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.financeira.dto.PayInvoiceRequest;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
@@ -28,6 +29,12 @@ public class FinanceApiClient {
 
     public List<TreasuryTransactionDTO> getAllTransactions() {
         return clientFactory.authenticatedClient().getList("/api/finance/transactions", TreasuryTransactionDTO.class);
+    }
+
+    public PageResponse<TreasuryTransactionDTO> getTransactionsPage(int page, int size) {
+        return clientFactory.authenticatedClient().getGeneric(
+                "/api/finance/transactions/page?page=" + page + "&size=" + size,
+                PageResponse.class, TreasuryTransactionDTO.class);
     }
 
     public void payInvoice(Long invoiceId, Long accountId) {

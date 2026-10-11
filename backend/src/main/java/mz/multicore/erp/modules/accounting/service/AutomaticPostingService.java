@@ -382,6 +382,87 @@ public class AutomaticPostingService {
         journalService.save(entry, event.companyId());
     }
 
+    /** Conclusão de Ordem de Produção: D Produtos Acabados (3401), C Variação de Produção (7301). */
+    @EventListener
+    @Transactional
+    public void onProductionCompleted(mz.multicore.erp.architecture.events.ProductionCompletedEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (!chartOfAccountsService.hasAccounts(event.companyId(), PgcNirfChart.PRODUTOS_ACABADOS, PgcNirfChart.VARIACAO_PRODUCAO)) {
+            return;
+        }
+        if (alreadyPosted(event.companyId(), JournalSource.PRODUCTION, event.productionOrderId())) return;
+
+        BigDecimal cip = safe(event.totalCipCost());
+        if (cip.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date() != null ? event.date() : java.time.LocalDate.now());
+        entry.setDescription("Conclusão de Produção " + event.orderNumber());
+        entry.setSource(JournalSource.PRODUCTION);
+        entry.setSourceDocumentId(event.productionOrderId());
+        entry.setSourceDocumentNumber(event.orderNumber());
+        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.PRODUTOS_ACABADOS),
+                cip, "Entrada de produto acabado no armazém"));
+        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.VARIACAO_PRODUCAO),
+                cip, "Apuramento da variação de produção"));
+
+        journalService.save(entry, event.companyId());
+    }
+
+    /** Quota de Depreciação: D Amortizações do Exercício (6501), C Amortizações Acumuladas (2801). */
+    @EventListener
+    @Transactional
+    public void onAssetDepreciated(mz.multicore.erp.architecture.events.AssetDepreciatedEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (!chartOfAccountsService.hasAccounts(event.companyId(), PgcNirfChart.DEPRECIACAO_EXERCICIO, PgcNirfChart.AMORTIZACOES_ACUMULADAS)) {
+            return;
+        }
+        if (alreadyPosted(event.companyId(), JournalSource.ASSET_DEPRECIATION, event.assetId())) return;
+
+        BigDecimal amount = safe(event.depreciationAmount());
+        if (amount.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date() != null ? event.date() : java.time.LocalDate.now());
+        entry.setDescription("Amortização do Activo " + event.assetCode());
+        entry.setSource(JournalSource.ASSET_DEPRECIATION);
+        entry.setSourceDocumentId(event.assetId());
+        entry.setSourceDocumentNumber(event.assetCode());
+        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.DEPRECIACAO_EXERCICIO),
+                amount, "Gasto com amortizações do exercício"));
+        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.AMORTIZACOES_ACUMULADAS),
+                amount, "Quota de amortização acumulada"));
+
+        journalService.save(entry, event.companyId());
+    }
+
+    /** Abastecimento de Frota: D Combustíveis da Frota (6221), C Caixa/Banco. */
+    @EventListener
+    @Transactional
+    public void onFleetFuelLogged(mz.multicore.erp.architecture.events.FleetFuelLoggedEvent event) {
+        if (!canPost(event.companyId())) return;
+        if (!chartOfAccountsService.hasAccounts(event.companyId(), PgcNirfChart.FROTA_COMBUSTIVEIS, PgcNirfChart.CAIXA)) {
+            return;
+        }
+        if (alreadyPosted(event.companyId(), JournalSource.FLEET_FUEL, event.fuelLogId())) return;
+
+        BigDecimal cost = safe(event.totalCost());
+        if (cost.signum() <= 0) return;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(event.date() != null ? event.date() : java.time.LocalDate.now());
+        entry.setDescription("Abastecimento Viatura " + event.licensePlate());
+        entry.setSource(JournalSource.FLEET_FUEL);
+        entry.setSourceDocumentId(event.fuelLogId());
+        entry.setSourceDocumentNumber(event.licensePlate());
+        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.FROTA_COMBUSTIVEIS),
+                cost, "Consumo de combustível da frota"));
+        entry.addLine(JournalLine.credit(cashAccount(event.companyId(), event.cashPayment()),
+                cost, "Saída de tesouraria"));
+
+        journalService.save(entry, event.companyId());
+    }
+
     private boolean canPost(Long companyId) {
         return companyId != null && chartOfAccountsService.hasChart(companyId);
     }

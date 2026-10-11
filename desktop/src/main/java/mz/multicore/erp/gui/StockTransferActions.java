@@ -99,25 +99,71 @@ final class StockTransferActions {
                     "Apenas transferências em rascunho podem ser submetidas.");
             return;
         }
-        int confirm = JOptionPane.showConfirmDialog(owner,
-                "Submeter a guia " + selected.transferNumber() + " para aprovação?\n"
-                        + "Depois da submissão, o conteúdo fica bloqueado para edição.",
-                "Submeter transferência", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        boolean confirm = ModernMessageDialog.confirm(
+                SwingUtilities.getWindowAncestor(owner),
+                FeedbackType.INFO,
+                "Submeter Transferência",
+                "Submeter a guia " + selected.transferNumber() + " para separação no armazém?\n\n"
+                        + "Depois da submissão, os artigos devem ser separados antes da aprovação final.",
+                "Submeter Guia"
+        );
+        if (!confirm) return;
         UIHelper.runWithProgress(owner, "A submeter transferência…",
                 () -> owner.stockTransferApiClient.submit(selected.id()), ignored -> {
                     owner.onPanelSelected();
-                    owner.showStockSuccess("Guia " + selected.transferNumber() + " submetida para aprovação.");
+                    owner.showStockSuccess("Guia " + selected.transferNumber() + " submetida para separação no armazém.");
                 }, owner::showStockError);
+    }
+
+    void printPickingSheetForSelected() {
+        StockTransferDTO selected = selected("Seleccione uma transferência",
+                "Escolha uma transferência na tabela para emitir a guia de separação.");
+        if (selected == null) return;
+        if (owner.printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar guia de separação…",
+                    () -> owner.stockTransferApiClient.renderPickingSheet(selected.id()),
+                    pdf -> PrintPreviewDialog.show(owner, pdf,
+                            "separacao-transferencia-" + selected.transferNumber()),
+                    owner::showStockError);
+            return;
+        }
+        SensitivePrintCoordinator.print(owner, owner.printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.STOCK_TRANSFER_PICKING,
+                selected.id(), "Guia de separação " + selected.transferNumber(),
+                "separacao-transferencia-" + selected.transferNumber(),
+                () -> owner.stockTransferApiClient.renderPickingSheet(selected.id()), owner::onPanelSelected);
+    }
+
+    void completeSeparationForSelected() {
+        StockTransferDTO selected = selected("Seleccione uma transferência",
+                "Escolha uma transferência para concluir a separação de artigos.");
+        if (selected == null) return;
+        if (!"AWAITING_SEPARATION".equals(selected.status()) && !"IN_SEPARATION".equals(selected.status())) {
+            owner.showStockNotice(FeedbackType.INFO, "Estado incompatível",
+                    "Apenas transferências a aguardar ou em separação podem ser concluídas. Estado atual: " + selected.status());
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(owner,
+                "Confirmar que todos os artigos da guia " + selected.transferNumber() + " foram separados e conferidos no armazém?\n"
+                        + "A transferência ficará pronta para aprovação final da gerência.",
+                "Concluir separação de transferência", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        UIHelper.runWithProgress(owner, "A concluir separação…",
+                () -> owner.stockTransferApiClient.completeSeparation(selected.id()),
+                updated -> {
+                    owner.onPanelSelected();
+                    owner.showStockSuccess("Separação da guia " + selected.transferNumber() + " concluída · pronta para aprovação.");
+                },
+                owner::showStockError);
     }
 
     void cancelSelectedTransfer() {
         StockTransferDTO selected = selected("Seleccione uma guia",
-                "Escolha uma transferência em rascunho ou pendente para cancelar.");
+                "Escolha uma transferência para cancelar.");
         if (selected == null) return;
-        if (!"DRAFT".equals(selected.status()) && !"PENDING_APPROVAL".equals(selected.status())) {
+        if ("APPROVED".equals(selected.status()) || "REJECTED".equals(selected.status()) || "CANCELLED".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.INFO, "Estado incompatível",
-                    "Apenas transferências em rascunho ou pendentes podem ser canceladas.");
+                    "Transferências concluídas, rejeitadas ou já canceladas não podem ser canceladas.");
             return;
         }
         int confirm = JOptionPane.showConfirmDialog(owner,
@@ -205,10 +251,19 @@ final class StockTransferActions {
         JScrollPane linesScroll = new JScrollPane(linesTable);
         linesScroll.setPreferredSize(new Dimension(740, 200));
 
+        JLabel loadInfoLabel = new JLabel("Carga: a calcular…");
+        loadInfoLabel.setIcon(UIHelper.icon("fas-truck", 16, UIHelper.ACCENT_BLUE));
+        loadInfoLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        loadInfoLabel.setForeground(UIHelper.TEXT_LIGHT);
+        ModernPanel loadInfoPanel = new ModernPanel(8);
+        loadInfoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 6));
+        loadInfoPanel.add(loadInfoLabel);
+
         Runnable refreshTransferFEFO = () -> {
             int wIdx = originCombo.getSelectedIndex();
             WarehouseDTO origin = (wIdx >= 0 && wIdx < owner.warehousesList.size()) ? owner.warehousesList.get(wIdx) : null;
             List<ProductDTO> selectedProducts = new ArrayList<>();
+            BigDecimal totalLoadWeight = BigDecimal.ZERO;
             for (int i = 0; i < linesModel.getRowCount(); i++) {
                 Object productValue = linesModel.getValueAt(i, 0);
                 ProductDTO product = productValue instanceof ProductDTO selected ? selected : null;
@@ -232,6 +287,11 @@ final class StockTransferActions {
                     linesModel.setValueAt(pkgs.stripTrailingZeros().toPlainString(), i, 2);
                     linesModel.setValueAt(boxes.stripTrailingZeros().toPlainString(), i, 3);
                     linesModel.setValueAt(pct.stripTrailingZeros().toPlainString() + "%", i, 4);
+
+                    BigDecimal w = product.grossUnitWeightKg() != null ? product.grossUnitWeightKg() : product.netUnitWeightKg();
+                    if (w != null) {
+                        totalLoadWeight = totalLoadWeight.add(w.multiply(qty));
+                    }
                 } else {
                     linesModel.setValueAt("—", i, 2);
                     linesModel.setValueAt("—", i, 3);
@@ -241,6 +301,17 @@ final class StockTransferActions {
                 linesModel.setValueAt("A carregar…", i, 5);
                 linesModel.setValueAt("", i, 6);
             }
+
+            if (totalLoadWeight.compareTo(BigDecimal.ZERO) > 0) {
+                String vehicleType = mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.recommendedVehicleType(totalLoadWeight);
+                BigDecimal tons = totalLoadWeight.divide(BigDecimal.valueOf(1000), 2, java.math.RoundingMode.HALF_UP);
+                loadInfoLabel.setText("Carga Estimada: " + totalLoadWeight.setScale(2, java.math.RoundingMode.HALF_UP)
+                        + " kg (" + tons.stripTrailingZeros().toPlainString() + " Ton)  |  Viatura Recomendada: " + vehicleType);
+                vehicleField.putClientProperty("JTextField.placeholderText", "Sugerido: " + vehicleType);
+            } else {
+                loadInfoLabel.setText("Carga Total: Aferir peso na balança para alocação de viatura");
+            }
+
             if (origin == null) return;
             Long originId = origin.id();
             UIHelper.loadAsync(owner, () -> {
@@ -301,6 +372,7 @@ final class StockTransferActions {
                 "Motorista *:", driverField,
                 "Matrícula do Veículo *:", vehiclePlateField,
                 "Responsável:", responsibleField,
+                "Viatura / Transporte:", vehicleField,
                 "Observações:", notesField
         );
 
@@ -315,6 +387,7 @@ final class StockTransferActions {
         linesHeader.add(lineButtons, BorderLayout.EAST);
         linesWrap.add(linesHeader, BorderLayout.NORTH);
         linesWrap.add(linesScroll, BorderLayout.CENTER);
+        linesWrap.add(loadInfoPanel, BorderLayout.SOUTH);
         dialogPanel.add(linesWrap, BorderLayout.CENTER);
 
         ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Nova Transferência de Stock", "fas-exchange-alt", "Mova stock entre armazéns", dialogPanel);
@@ -410,15 +483,7 @@ final class StockTransferActions {
                     plate.isEmpty() ? null : plate);
         UIHelper.runWithProgress(owner, "A criar transferência…", () -> owner.stockTransferApiClient.create(request), created -> {
             owner.onPanelSelected();
-
-            int print = JOptionPane.showConfirmDialog(owner,
-                    "Guia " + created.transferNumber() + " registada e PENDENTE DE APROVAÇÃO.\n"
-                            + "O stock só sai do armazém de origem após aprovação de um Gestor ou Administrador.\n\n"
-                            + "Deseja imprimir a Guia de Transferência agora?",
-                    "Sucesso", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
-            if (print == JOptionPane.YES_OPTION) {
-                printTransfer(created.id(), created.transferNumber());
-            }
+            owner.showStockSuccess("Guia " + created.transferNumber() + " criada em rascunho.\nSubmeta-a para encaminhar a separação de artigos no armazém.");
         }, owner::showStockError);
     }
 
@@ -430,15 +495,34 @@ final class StockTransferActions {
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
-        int confirm = JOptionPane.showConfirmDialog(owner,
-                "Aprovar a guia " + selected.transferNumber() + "?\n"
+        if (!"SEPARATED".equals(selected.status()) && !"PENDING_APPROVAL".equals(selected.status())) {
+            owner.showStockNotice(FeedbackType.WARNING, "Separação necessária",
+                    "A transferência " + selected.transferNumber() + " ainda não tem a separação concluída (Estado: " + selected.status() + ").\n"
+                            + "Emita a Guia de Separação e marque 'Concluir Separação' antes da aprovação.");
+            return;
+        }
+        boolean confirm = ModernMessageDialog.confirm(
+                SwingUtilities.getWindowAncestor(owner),
+                FeedbackType.INFO,
+                "Confirmar Aprovação",
+                "Aprovar a guia " + selected.transferNumber() + "?\n\n"
                         + "O stock vai sair de '" + selected.originWarehouseName()
                         + "' e entrar em '" + selected.destinationWarehouseName() + "'.",
-                "Confirmar aprovação", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
-        UIHelper.runWithProgress(owner, "A aprovar transferência…", () -> owner.stockTransferApiClient.approve(selected.id()), ignored -> {
+                "Aprovar Guia"
+        );
+        if (!confirm) return;
+        UIHelper.runWithProgress(owner, "A aprovar transferência…", () -> owner.stockTransferApiClient.approve(selected.id()), approved -> {
             owner.onPanelSelected();
             owner.showStockSuccess("Guia " + selected.transferNumber() + " aprovada · stock movimentado.");
+            boolean print = ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner),
+                    FeedbackType.INFO,
+                    "Impressão de Guia",
+                    "Guia " + selected.transferNumber() + " aprovada com sucesso!\n\n"
+                            + "Deseja imprimir a Guia de Transferência Oficial (3 vias) agora?",
+                    "Imprimir");
+            if (print) {
+                printTransfer(approved.id(), approved.transferNumber());
+            }
         }, owner::showStockError);
     }
 
@@ -467,6 +551,12 @@ final class StockTransferActions {
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
+        if (!"APPROVED".equals(selected.status())) {
+            owner.showStockNotice(FeedbackType.INFO, "Guia oficial bloqueada",
+                    "A Guia de Transferência oficial (3 vias) só pode ser emitida após a separação e aprovação.\n"
+                            + "Para conferência física no armazém, utilize a opção 'Guia de Separação'.");
+            return;
+        }
         printTransfer(selected.id(), selected.transferNumber());
     }
 
@@ -526,7 +616,7 @@ final class StockTransferActions {
         panel.setOpaque(false);
 
         // Cartão resumo de transporte e armazéns
-        ModernPanel infoCard = new ModernPanel(12);
+        ModernPanel infoCard = new ModernPanel(16);
         infoCard.setLayout(new GridLayout(2, 3, 14, 8));
         infoCard.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
@@ -564,7 +654,8 @@ final class StockTransferActions {
                     : (line.productSku() != null ? line.productSku() : "—");
             String barcode = line.barcode() != null && !line.barcode().isBlank() ? line.barcode() : "—";
             String prod = line.productName() != null ? line.productName() : "—";
-            if (line.batchNumber() != null && !line.batchNumber().isBlank() && !"-".equals(line.batchNumber())) {
+            if (line.batchNumber() != null && !line.batchNumber().isBlank()
+                    && !"-".equals(line.batchNumber()) && !line.batchNumber().toUpperCase().startsWith("LEGACY")) {
                 prod += " [Lote: " + line.batchNumber() + "]";
             }
 
@@ -628,7 +719,7 @@ final class StockTransferActions {
         totalTax = totalTax.setScale(2, java.math.RoundingMode.HALF_UP);
         BigDecimal totalGross = totalNet.add(totalTax);
 
-        ModernPanel totalsCard = new ModernPanel(12);
+        ModernPanel totalsCard = new ModernPanel(16);
         totalsCard.setLayout(new FlowLayout(FlowLayout.RIGHT, 18, 8));
         totalsCard.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
 
@@ -651,6 +742,11 @@ final class StockTransferActions {
         );
         dlg.asReadOnly("Fechar");
 
+        ModernButton volumeBtn = UIHelper.createSecondaryButton("Etiquetas de Volume");
+        volumeBtn.setIcon(UIHelper.icon("fas-tags", 14));
+        volumeBtn.addActionListener(e -> StockTransferVolumeLabelsDialog.show(SwingUtilities.getWindowAncestor(owner), transfer));
+        dlg.addActionButton(volumeBtn);
+
         ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Guia");
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> {
@@ -661,6 +757,13 @@ final class StockTransferActions {
 
         dlg.setSize(940, 540);
         dlg.showDialog();
+    }
+
+    public void printVolumeLabelsForSelected() {
+        StockTransferDTO selected = selected("Seleccione uma transferência",
+                "Escolha uma transferência na tabela para emitir etiquetas de volume.");
+        if (selected == null) return;
+        StockTransferVolumeLabelsDialog.show(SwingUtilities.getWindowAncestor(owner), selected);
     }
 
     private JPanel createMetaItem(String label, String value) {
@@ -692,10 +795,18 @@ final class StockTransferActions {
     }
 
     private void printTransfer(Long transferId, String transferNumber) {
-        UIHelper.runWithProgress(owner, "A gerar guia de transferência…",
-                () -> owner.stockTransferApiClient.renderTransfer(transferId),
-                pdf -> PrintPreviewDialog.show(owner, pdf, "transferencia-" + transferNumber),
-                owner::showStockError);
+        if (owner.printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar guia de transferência…",
+                    () -> owner.stockTransferApiClient.renderTransfer(transferId),
+                    pdf -> PrintPreviewDialog.show(owner, pdf, "transferencia-" + transferNumber),
+                    owner::showStockError);
+            return;
+        }
+        SensitivePrintCoordinator.print(owner, owner.printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.STOCK_TRANSFER,
+                transferId, "Guia de transferência " + transferNumber,
+                "transferencia-" + transferNumber,
+                () -> owner.stockTransferApiClient.renderTransfer(transferId), owner::onPanelSelected);
     }
 
     private record FefoPreview(String batch, String expiration) {}

@@ -20,6 +20,45 @@ public final class LogisticsLoadCalculator {
                 percentage(lineWeight(input), totalWeight))).toList();
     }
 
+    public static BigDecimal totalWeight(List<Input> inputs) {
+        if (inputs == null || inputs.isEmpty()) return BigDecimal.ZERO;
+        return inputs.stream().map(LogisticsLoadCalculator::lineWeight)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Recomenda o porte de viatura e capacidade de transporte com base no peso total da carga.
+     * Apoia o armazém e logística na alocação da viatura adequada para o carregamento.
+     */
+    public static String recommendedVehicleType(BigDecimal totalWeightKg) {
+        if (totalWeightKg == null || totalWeightKg.signum() <= 0) {
+            return "Sem peso registado (aferir na balança)";
+        }
+        if (totalWeightKg.compareTo(BigDecimal.valueOf(1000)) <= 0) {
+            return "Veículo Ligeiro / Pick-up (até 1 Ton)";
+        }
+        if (totalWeightKg.compareTo(BigDecimal.valueOf(3500)) <= 0) {
+            return "Comercial Ligeiro / Carrinha 3.5T (ex: Canter / Dyna / Isuzu)";
+        }
+        if (totalWeightKg.compareTo(BigDecimal.valueOf(10000)) <= 0) {
+            return "Camião Médio (até 10 Ton - ex: Isuzu FTR / Hino 500)";
+        }
+        if (totalWeightKg.compareTo(BigDecimal.valueOf(28000)) <= 0) {
+            return "Camião Pesado (até 28 Ton - Trucado / 3 Eixos)";
+        }
+        return "Carga Excedente / Requer Articulado Pesado ou Múltiplos Carros";
+    }
+
+    public static String formatWeightWithVehicle(BigDecimal totalWeightKg) {
+        if (totalWeightKg == null || totalWeightKg.signum() <= 0) {
+            return "0 kg";
+        }
+        BigDecimal tons = totalWeightKg.divide(BigDecimal.valueOf(1000), 2, RoundingMode.HALF_UP);
+        return totalWeightKg.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+                + " kg (" + tons.stripTrailingZeros().toPlainString() + " Ton) — "
+                + recommendedVehicleType(totalWeightKg);
+    }
+
     public static void validateWeights(BigDecimal netKg, BigDecimal grossKg) {
         if (negative(netKg) || negative(grossKg)) throw new BusinessRuleException("Os pesos nao podem ser negativos.");
         if (netKg != null && grossKg != null && grossKg.compareTo(netKg) < 0) {

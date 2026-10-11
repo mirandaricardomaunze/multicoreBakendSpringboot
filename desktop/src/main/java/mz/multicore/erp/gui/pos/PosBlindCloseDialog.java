@@ -2,12 +2,14 @@ package mz.multicore.erp.gui.pos;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mz.multicore.erp.desktop.client.POSApiClient;
+import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
 import mz.multicore.erp.modules.pos.dto.CashDenominationDTO;
 import mz.multicore.erp.modules.pos.dto.PosZReportDTO;
 import mz.multicore.erp.modules.pos.dto.TillSessionDTO;
@@ -50,6 +52,7 @@ public class PosBlindCloseDialog extends JDialog {
     private final POSApiClient posApiClient;
     private final TillSessionDTO session;
     private final Runnable onCloseSuccess;
+    private final PrintApiClient printApiClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Denominações e campos de contagem
@@ -83,10 +86,16 @@ public class PosBlindCloseDialog extends JDialog {
     private ModernButton btnCancel;
 
     public PosBlindCloseDialog(Window owner, POSApiClient posApiClient, TillSessionDTO session, Runnable onCloseSuccess) {
+        this(owner, posApiClient, session, onCloseSuccess, null);
+    }
+
+    public PosBlindCloseDialog(Window owner, POSApiClient posApiClient, TillSessionDTO session,
+                               Runnable onCloseSuccess, PrintApiClient printApiClient) {
         super(owner, "Fecho Cego de Caixa — Sessão #" + session.id(), ModalityType.APPLICATION_MODAL);
         this.posApiClient = posApiClient;
         this.session = session;
         this.onCloseSuccess = onCloseSuccess;
+        this.printApiClient = printApiClient;
 
         setSize(720, 760);
         setMinimumSize(new Dimension(680, 680));
@@ -671,11 +680,10 @@ public class PosBlindCloseDialog extends JDialog {
     }
 
     private void printZReport() {
-        try {
-            byte[] pdfBytes = posApiClient.renderZReport(session.id());
-            PrintPreviewDialog.show(this, pdfBytes, "relatorio-z-" + session.id() + ".pdf");
-        } catch (Exception ex) {
-            ToastManager.show(this, FeedbackType.ERROR, "Erro ao gerar PDF do Relatório Z: " + ex.getMessage());
-        }
+        SensitivePrintCoordinator.print(this, printApiClient,
+                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.POS_Z_REPORT,
+                session.id(), "Relatório Z da sessão " + session.id(),
+                "relatorio-z-" + session.id(),
+                () -> posApiClient.renderZReport(session.id()), null);
     }
 }

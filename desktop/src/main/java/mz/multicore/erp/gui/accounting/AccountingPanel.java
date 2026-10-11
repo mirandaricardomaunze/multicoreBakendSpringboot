@@ -113,6 +113,7 @@ public final class AccountingPanel extends JPanel {
         JPanel chartToolbar = UIHelper.filterBar(null, new JComponent[]{refresh, create, seed});
         JPanel chartNorth = new JPanel(new BorderLayout(0, 8));
         chartNorth.setOpaque(false);
+        chartNorth.setBorder(new EmptyBorder(0, 0, 10, 0));
         chartNorth.add(emptyChartWarning, BorderLayout.NORTH);
         chartNorth.add(chartToolbar, BorderLayout.CENTER);
         card.add(chartNorth, BorderLayout.NORTH);
@@ -184,7 +185,7 @@ public final class AccountingPanel extends JPanel {
     // ─────────────────────────── Diário ───────────────────────────
 
     private JPanel buildJournalTab() {
-        JTable table = styledTable(journalModel);
+        JTable table = styledTable(journalModel, true);
         table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         money(table, 5, 6);
         JPanel card = card(table);
@@ -447,10 +448,15 @@ public final class AccountingPanel extends JPanel {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
     }
-
     private JTable styledTable(DefaultTableModel model) {
+        return styledTable(model, false);
+    }
+
+    private JTable styledTable(DefaultTableModel model, boolean disablePagination) {
         JTable table = new JTable(model);
+        if (disablePagination) table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.setAutoCreateRowSorter(true);
         return table;
     }
@@ -468,6 +474,25 @@ public final class AccountingPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
+
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-book", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(table.getModel().getValueAt(row, 0)));
+            if (table.getModel().getColumnCount() > 1) {
+                peek.setSubtitle(String.valueOf(table.getModel().getValueAt(row, 1)));
+            }
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            for (int col = 0; col < table.getModel().getColumnCount(); col++) {
+                items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem(
+                        table.getModel().getColumnName(col),
+                        String.valueOf(table.getModel().getValueAt(row, col)),
+                        col == table.getModel().getColumnCount() - 1
+                ));
+            }
+            peek.setItems(items);
+        });
+
         return card;
     }
 

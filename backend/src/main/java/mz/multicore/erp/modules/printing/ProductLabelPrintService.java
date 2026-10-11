@@ -47,6 +47,14 @@ public class ProductLabelPrintService {
      */
     @Transactional(readOnly = true)
     public byte[] render(Long companyId, List<Long> productIds, int copies) {
+        return render(companyId, productIds, copies, null, null, "A4");
+    }
+
+    /**
+     * Renderiza etiquetas com suporte a número de lote, validade e formatos A4 ou térmicos.
+     */
+    @Transactional(readOnly = true)
+    public byte[] render(Long companyId, List<Long> productIds, int copies, String lotNumber, String expiryDate, String layoutFormat) {
         Company company = companyService.getCompanyById(companyId);
         if (company == null) {
             throw new BusinessRuleException("Empresa não encontrada.");
@@ -64,8 +72,26 @@ public class ProductLabelPrintService {
         }
 
         String stamp = "ETQ-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        boolean isThermal = layoutFormat != null && layoutFormat.toUpperCase().contains("THERMAL");
+
+        if (isThermal) {
+            // Bobina térmica contínua de 80mm
+            return PdfDocumentBuilder.buildReceipt(doc -> {
+                doc.add(CompanyHeaderRenderer.build(company, "Etiquetas de Lote / Produto", stamp));
+                PdfPTable grid = new PdfPTable(1);
+                grid.setWidthPercentage(100);
+                grid.setSpacingBefore(6f);
+                for (ProductDTO p : products) {
+                    for (int c = 0; c < copiesClamped; c++) {
+                        grid.addCell(labelCell(p, lotNumber, expiryDate));
+                    }
+                }
+                doc.add(grid);
+            });
+        }
+
         return PdfDocumentBuilder.buildA4(doc -> {
-            doc.add(CompanyHeaderRenderer.build(company, "Etiquetas de Produtos", stamp));
+            doc.add(CompanyHeaderRenderer.build(company, "Etiquetas de Produtos e Lotes", stamp));
             PdfPTable grid = new PdfPTable(COLUMNS);
             grid.setWidthPercentage(100);
             grid.setSpacingBefore(8f);
@@ -73,7 +99,7 @@ public class ProductLabelPrintService {
             int cells = 0;
             for (ProductDTO p : products) {
                 for (int c = 0; c < copiesClamped; c++) {
-                    grid.addCell(labelCell(p));
+                    grid.addCell(labelCell(p, lotNumber, expiryDate));
                     cells++;
                 }
             }
@@ -85,7 +111,7 @@ public class ProductLabelPrintService {
         });
     }
 
-    private PdfPCell labelCell(ProductDTO product) {
+    private PdfPCell labelCell(ProductDTO product, String lotNumber, String expiryDate) {
         String code = codeOf(product);
 
         PdfPCell cell = new PdfPCell();
@@ -96,7 +122,7 @@ public class ProductLabelPrintService {
 
         Paragraph name = new Paragraph(truncate(product.name(), 30), PdfTheme.tableHeaderFont());
         name.setAlignment(Element.ALIGN_CENTER);
-        name.setSpacingAfter(7f); // afasta o nome do código de barras (não "colar")
+        name.setSpacingAfter(6f); // afasta o nome do código de barras
         cell.addElement(name);
 
         Image barcode = barcodeImage(code);
@@ -107,14 +133,28 @@ public class ProductLabelPrintService {
 
         Paragraph codeText = new Paragraph(code, PdfTheme.smallFont());
         codeText.setAlignment(Element.ALIGN_CENTER);
-        codeText.setSpacingBefore(3f);
+        codeText.setSpacingBefore(2f);
         cell.addElement(codeText);
+
+        if (lotNumber != null && !lotNumber.isBlank()) {
+            Paragraph lot = new Paragraph("Lote/OP: " + lotNumber.trim(), PdfTheme.smallFont());
+            lot.setAlignment(Element.ALIGN_CENTER);
+            lot.setSpacingBefore(2f);
+            cell.addElement(lot);
+        }
+
+        if (expiryDate != null && !expiryDate.isBlank()) {
+            Paragraph exp = new Paragraph("Val: " + expiryDate.trim(), PdfTheme.smallFont());
+            exp.setAlignment(Element.ALIGN_CENTER);
+            exp.setSpacingBefore(1f);
+            cell.addElement(exp);
+        }
 
         Paragraph price = new Paragraph(
                 product.unitPrice() == null ? "" : String.format("%,.2f MT", product.unitPrice()),
                 PdfTheme.subtitleFont());
         price.setAlignment(Element.ALIGN_CENTER);
-        price.setSpacingBefore(5f);
+        price.setSpacingBefore(4f);
         cell.addElement(price);
         return cell;
     }

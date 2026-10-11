@@ -58,6 +58,8 @@ public class ComercialService {
     private final mz.multicore.erp.modules.fiscal.repository.TaxRateRepository taxRateRepository;
     private final ReceivablesService receivablesService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final OrderRiskEvaluator orderRiskEvaluator;
+    private final mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository businessUnitRepository;
 
     public ComercialService(
             ClientRepository clientRepository,
@@ -80,6 +82,38 @@ public class ComercialService {
             ReceivablesService receivablesService,
             org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
+        this(clientRepository, productRepository, productCategoryRepository, invoiceRepository,
+                approvalService, companyRepository, warehouseRepository, inventoryService,
+                receiptRepository, financeService, treasuryAccountRepository, orderRepository,
+                orderLineRepository, walkInClientProvider, documentNumberService, auditLogService,
+                taxRateRepository, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ComercialService(
+            ClientRepository clientRepository,
+            ProductRepository productRepository,
+            mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository productCategoryRepository,
+            InvoiceRepository invoiceRepository,
+            @Lazy ApprovalService approvalService,
+            CompanyRepository companyRepository,
+            WarehouseRepository warehouseRepository,
+            @Lazy InventoryService inventoryService,
+            ReceiptRepository receiptRepository,
+            @Lazy FinanceService financeService,
+            TreasuryAccountRepository treasuryAccountRepository,
+            OrderRepository orderRepository,
+            OrderLineRepository orderLineRepository,
+            WalkInClientProvider walkInClientProvider,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            mz.multicore.erp.modules.fiscal.repository.TaxRateRepository taxRateRepository,
+            ReceivablesService receivablesService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            OrderRiskEvaluator orderRiskEvaluator,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository businessUnitRepository
+    ) {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
@@ -99,6 +133,8 @@ public class ComercialService {
         this.taxRateRepository = taxRateRepository;
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
+        this.orderRiskEvaluator = orderRiskEvaluator != null ? orderRiskEvaluator : new OrderRiskEvaluator(invoiceRepository);
+        this.businessUnitRepository = businessUnitRepository;
     }
 
     /**
@@ -222,10 +258,19 @@ public class ComercialService {
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
+        mz.multicore.erp.modules.purchases.model.BusinessUnit restrictedBu = null;
+        if (request.businessUnitId() != null && businessUnitRepository != null) {
+            restrictedBu = businessUnitRepository.findByIdAndCompanyId(request.businessUnitId(), request.companyId())
+                    .orElseThrow(() -> new BusinessRuleException("Linha de negócio restrita não encontrada."));
+        }
+
         Invoice invoice = new Invoice();
         invoice.setClient(client);
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
+        if (restrictedBu != null) {
+            invoice.setBusinessUnit(restrictedBu);
+        }
         // Vencimento: o do pedido, ou o prazo acordado com o cliente. A regra vive no domínio
         // (Invoice.assignDueDate) — as três portas que emitem fatura chamam a mesma.
         invoice.assignDueDate(LocalDate.now(), request.dueDate());
@@ -238,6 +283,16 @@ public class ComercialService {
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
+
+            if (restrictedBu != null) {
+                var prodBu = product.getBusinessUnit();
+                if (prodBu == null || !restrictedBu.getId().equals(prodBu.getId())) {
+                    String prodBuName = prodBu != null ? prodBu.getName() : "Sem linha";
+                    throw new BusinessRuleException("A fatura está restrita à linha de negócio '" + restrictedBu.getName()
+                            + "' e não aceita o produto '" + product.getName()
+                            + "' (pertencente a: " + prodBuName + "). Desmarque o filtro de negócio para emitir produtos mistos.");
+                }
+            }
 
             // Preço efectivo: aplica grosso quando a quantidade atinge a mínima de grosso.
             BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
@@ -338,10 +393,9 @@ public class ComercialService {
      */
     @Transactional
     public ReceiptDTO createReceipt(Long invoiceId, Long treasuryAccountId, String paymentMethod, BigDecimal amountPaid) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
-
-        CurrentUserContext.requireCompany(invoice.getCompany().getId());
         if (!invoice.getStatus().isCollectable()) {
             throw new BusinessRuleException("Apenas faturas por cobrar podem ter recibo. Estado atual: " + invoice.getStatus());
         }
@@ -405,10 +459,9 @@ public class ComercialService {
             throw new BusinessRuleException("É necessário indicar o motivo da anulação do recibo.");
         }
 
-        Receipt receipt = receiptRepository.findById(receiptId)
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        Receipt receipt = receiptRepository.lockByIdAndCompanyId(receiptId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
-
-        CurrentUserContext.requireCompany(receipt.getCompany().getId());
         if ("CANCELLED".equals(receipt.getStatus())) {
             throw new BusinessRuleException("Este recibo já se encontra anulado.");
         }
@@ -419,7 +472,8 @@ public class ComercialService {
 
         // Devolve só o valor deste recibo. Com vários recibos na mesma fatura, anular um não
         // pode apagar os outros — o estado volta a derivar do que continua pago.
-        Invoice invoice = receipt.getInvoice();
+        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(receipt.getInvoice().getId(), companyId)
+                .orElseThrow(() -> new BusinessRuleException("Fatura do recibo não encontrada."));
         BigDecimal remaining = invoice.getAmountPaid().subtract(receipt.getAmountPaid());
         invoice.setAmountPaid(remaining.compareTo(BigDecimal.ZERO) > 0
                 ? remaining.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
@@ -613,6 +667,8 @@ public class ComercialService {
 
     /** Recibo → DTO (achata fatura/cliente) para a fronteira HTTP. */
     public mz.multicore.erp.modules.comercial.dto.ReceiptDTO toDTO(Receipt r) {
+        Long buId = r.getInvoice() != null && r.getInvoice().getBusinessUnit() != null ? r.getInvoice().getBusinessUnit().getId() : null;
+        String buName = r.getInvoice() != null && r.getInvoice().getBusinessUnit() != null ? r.getInvoice().getBusinessUnit().getName() : null;
         return new mz.multicore.erp.modules.comercial.dto.ReceiptDTO(
                 r.getId(),
                 r.getReceiptNumber(),
@@ -622,7 +678,9 @@ public class ComercialService {
                 r.getAmountPaid(),
                 r.getPaymentMethod(),
                 r.getStatus(),
-                r.getReceiptDate());
+                r.getReceiptDate(),
+                buId,
+                buName);
     }
 
     @Transactional(readOnly = true)
@@ -683,6 +741,19 @@ public class ComercialService {
     public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(
             String query, boolean availableOnly, Integer page, Integer size) {
         return getPOSCatalogPage(query, availableOnly, null, page, size);
+    }
+
+    /**
+     * Página do catálogo geral de produtos com pesquisa multi-termo e filtro de categoria no servidor.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<ProductDTO> getProductsPage(
+            String query, Long categoryId, Integer page, Integer size) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        String normalizedQuery = query == null ? "" : query.trim();
+        var result = productRepository.findCatalogPage(
+                companyId, normalizedQuery, categoryId, PageQuery.of(page, size));
+        return mz.multicore.erp.architecture.paging.PageResponseMapper.from(result, this::toDTO);
     }
 
     @Transactional(readOnly = true)
@@ -819,6 +890,27 @@ public class ComercialService {
         return toDTO(productRepository.save(product));
     }
 
+    @Transactional
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name,
+            BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            Integer packagesPerBox, Integer unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
+            BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
+            Long businessUnitId) {
+        ProductDTO created = createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId,
+                description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg);
+        if (businessUnitId != null && businessUnitRepository != null) {
+            Product product = productRepository.findByIdAndCompaniesId(created.id(), CurrentUserContext.getCurrentCompanyId())
+                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+            product.setBusinessUnit(businessUnitRepository.findByIdAndCompanyId(businessUnitId, CurrentUserContext.getCurrentCompanyId())
+                    .orElseThrow(() -> new BusinessRuleException("Linha de negócio não encontrada.")));
+            return toDTO(productRepository.save(product));
+        }
+        return created;
+    }
+
     /**
      * Actualiza os dados de um produto da empresa activa. O SKU é imutável (identidade do artigo);
      * referência e código de barras revalidam unicidade excluindo o próprio. Não toca no stock — só
@@ -893,12 +985,31 @@ public class ComercialService {
             Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
             BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
+        return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock, unitsPerBox,
+                packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId,
+                description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+    }
+
+    @Transactional
+    public ProductDTO updateProduct(Long id, String reference, String barcode, String name,
+            BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            Integer packagesPerBox, Integer unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
+            BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
+            Long businessUnitId) {
         updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock, unitsPerBox,
                 categoryId, saleType, stockTracked, taxRateId, description, wholesalePrice, wholesaleMinQty);
         Product product = productRepository.findByIdAndCompaniesId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
         assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
+        if (businessUnitId != null && businessUnitRepository != null) {
+            product.setBusinessUnit(businessUnitRepository.findByIdAndCompanyId(businessUnitId, CurrentUserContext.getCurrentCompanyId())
+                    .orElseThrow(() -> new BusinessRuleException("Linha de negócio não encontrada.")));
+        } else {
+            product.setBusinessUnit(null);
+        }
         return toDTO(productRepository.save(product));
     }
 
@@ -993,7 +1104,10 @@ public class ComercialService {
                 p.getImageData(),
                 p.getNetUnitWeightKg(),
                 p.getGrossUnitWeightKg(),
-                p.getVersion()
+                p.getVersion(),
+                p.getBusinessUnit() != null ? p.getBusinessUnit().getId() : null,
+                p.getBusinessUnit() != null ? p.getBusinessUnit().getName() : null,
+                p.getBusinessUnit() != null ? p.getBusinessUnit().getCode() : null
         );
     }
 
@@ -1073,7 +1187,9 @@ public class ComercialService {
                 invoice.getCreatedBy(),
                 invoice.effectiveDueDate(),
                 invoice.daysOverdue(LocalDate.now()),
-                invoice.agingBucket(LocalDate.now())
+                invoice.agingBucket(LocalDate.now()),
+                invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getId() : null,
+                invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getName() : null
         );
     }
 
@@ -1203,9 +1319,8 @@ public class ComercialService {
         order = orderRepository.saveAndFlush(order);
 
         if (kind.requiresApproval()) {
-            String description = String.format("Encomenda %s actualizada para %s - Total: %s MT",
-                    order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
-            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), description);
+            OrderRiskAssessment assessment = orderRiskEvaluator.evaluate(order, order.getCompany() != null ? order.getCompany().getId() : CurrentUserContext.getCurrentCompanyId());
+            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), assessment.description());
         }
         auditLogService.logCurrent("ORDER_UPDATE",
                 "Encomenda " + order.getOrderNumber() + " actualizada com " + order.getLines().size() + " linha(s).");
@@ -1375,11 +1490,8 @@ public class ComercialService {
         order = orderRepository.save(order);
 
         if (kind.requiresApproval()) {
-            // Submete à Engine de Aprovações. O encaminhamento por valor (auto ≤50 / MANAGER / ADMIN)
-            // e a promoção a PENDING (faturável) acontecem em OrderApprovalCallback.
-            String approvalDesc = String.format("Encomenda %s para %s - Total: %s MT",
-                    order.getOrderNumber(), order.getClient().getName(), order.getTotalAmount());
-            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), approvalDesc);
+            OrderRiskAssessment assessment = orderRiskEvaluator.evaluate(order, order.getCompany() != null ? order.getCompany().getId() : CurrentUserContext.getCurrentCompanyId());
+            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), assessment.description());
         }
 
         return toDTO(order);
@@ -1387,10 +1499,19 @@ public class ComercialService {
 
     @Transactional
     public InvoiceDTO billOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        Long currentCompanyId = CurrentUserContext.requireCurrentCompanyId();
+        Order order = orderRepository.findForUpdate(orderId, currentCompanyId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
 
         CurrentUserContext.requireCompany(order.getCompany().getId());
+
+        if (order.getInvoiceId() != null || "BILLED".equalsIgnoreCase(order.getStatus()) || "INVOICED".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber()
+                    + " já foi faturada anteriormente"
+                    + (order.getInvoiceId() != null ? " (Fatura ID: " + order.getInvoiceId() + ")" : "")
+                    + ". Não é permitido faturar a mesma encomenda novamente.");
+        }
+
         // A trava que impede o stock de sair duas vezes: uma reposição interna termina em
         // transferência entre armazéns. Se também pudesse ser facturada, a mercadoria saía na
         // aprovação da transferência e outra vez na facturação — a segunda de um armazém de onde
@@ -1524,6 +1645,15 @@ public class ComercialService {
         return orderRepository.findByCompanyId(companyId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    /** Encomendas paginadas na base de dados para escalabilidade multiutilizador. */
+    @Transactional(readOnly = true)
+    public PageResponse<OrderDTO> getOrdersPageByCompany(Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return mz.multicore.erp.architecture.paging.PageResponseMapper.from(
+                orderRepository.findPageByCompanyId(companyId, PageQuery.of(page, size)),
+                this::toDTO);
+    }
+
     /**
      * Encomendas que ainda podem ser canceladas (não faturadas nem já canceladas), localizadas por
      * nº ou cliente (pesquisa parcial). Cobre tanto PENDING_APPROVAL como PENDING. Usado pelo diálogo
@@ -1573,6 +1703,72 @@ public class ComercialService {
         orderRepository.save(order);
         auditLogService.logCurrent("ORDER_CANCEL",
                 "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
+    }
+
+    @Transactional
+    public OrderDTO approveOrder(Long orderId, String comments) {
+        PermissionGuard.requireManagerOrAdmin("aprovar encomenda");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        CurrentUserContext.requireCompany(order.getCompany().getId());
+
+        if (!"PENDING_APPROVAL".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Apenas encomendas no estado \"Pendente de Aprovação\" podem ser aprovadas. Estado actual: "
+                    + OrderStatusLabel.of(order.getStatus()) + ".");
+        }
+
+        // Procura se existe pedido de aprovação pendente para esta encomenda no motor de aprovações
+        List<mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO> pendings = approvalService.getPendingRequests();
+        Long reqId = pendings.stream()
+                .filter(r -> "ORDER".equalsIgnoreCase(r.documentType()) && orderId.equals(r.documentId()))
+                .map(mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO::id)
+                .findFirst()
+                .orElse(null);
+
+        if (reqId != null) {
+            approvalService.approveRequest(reqId, comments != null && !comments.isBlank() ? comments : "Aprovado via Central Comercial.");
+        } else {
+            order.setStatus("PENDING");
+            order = orderRepository.save(order);
+        }
+
+        auditLogService.logCurrent("ORDER_APPROVE",
+                "Encomenda " + order.getOrderNumber() + " aprovada por " + CurrentUserContext.getUsername() + ".");
+        return toDTO(orderRepository.findById(orderId).orElse(order));
+    }
+
+    @Transactional
+    public OrderDTO rejectOrder(Long orderId, String reason) {
+        PermissionGuard.requireManagerOrAdmin("rejeitar encomenda");
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessRuleException("É obrigatório indicar o motivo da rejeição da encomenda.");
+        }
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
+        CurrentUserContext.requireCompany(order.getCompany().getId());
+
+        if (!"PENDING_APPROVAL".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Apenas encomendas no estado \"Pendente de Aprovação\" podem ser rejeitadas. Estado actual: "
+                    + OrderStatusLabel.of(order.getStatus()) + ".");
+        }
+
+        List<mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO> pendings = approvalService.getPendingRequests();
+        Long reqId = pendings.stream()
+                .filter(r -> "ORDER".equalsIgnoreCase(r.documentType()) && orderId.equals(r.documentId()))
+                .map(mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO::id)
+                .findFirst()
+                .orElse(null);
+
+        if (reqId != null) {
+            approvalService.rejectRequest(reqId, reason);
+        } else {
+            order.setStatus("CANCELLED");
+            order = orderRepository.save(order);
+        }
+
+        auditLogService.logCurrent("ORDER_REJECT",
+                "Encomenda " + order.getOrderNumber() + " rejeitada por " + CurrentUserContext.getUsername() + ". Motivo: " + reason);
+        return toDTO(orderRepository.findById(orderId).orElse(order));
     }
 
     /**
@@ -1772,7 +1968,9 @@ public class ComercialService {
                 order.getDestinationWarehouse() == null ? null : order.getDestinationWarehouse().getName(),
                 order.getStockTransferId(),
                 order.getTransferNumber(),
-                order.getVersion()
+                order.getVersion(),
+                order.getBusinessUnit() == null ? null : order.getBusinessUnit().getId(),
+                order.getBusinessUnit() == null ? null : order.getBusinessUnit().getName()
         );
     }
 

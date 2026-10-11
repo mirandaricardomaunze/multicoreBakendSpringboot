@@ -72,7 +72,7 @@ Mas erros de utilizador devem ser tratados antes no Service com `BusinessRuleExc
 - [ ] Indices foram adicionados para consultas importantes.
 - [ ] Migration nova foi criada.
 - [ ] Service cobre regras antes de persistir.
-# Saúde ocupacional
+## Exemplo de persistência: saúde ocupacional
 
 - `occupational_health_exams` guarda o histórico por `company_id` e `employee_id`.
 - `fitness_result` aceita `FIT`, `FIT_WITH_RESTRICTIONS` ou `UNFIT`; o estado de validade é
@@ -82,3 +82,10 @@ Mas erros de utilizador devem ser tratados antes no Service com `BusinessRuleExc
   `suppliers`), `cost`, `invoice_number` e `paid_at`. O prestador é o cadastro de fornecedores, não
   um cadastro próprio do RH; `clinic` em texto livre fica para clínicas não cadastradas e para os
   registos anteriores à V59.
+
+## Guias de remessa avulsas
+
+- A migration `V87__standalone_delivery_guides.sql` torna `delivery_guides.order_id` anulável.
+- `order_id` nulo identifica uma guia avulsa; as linhas continuam obrigatórias em
+  `delivery_guide_lines` e mantêm FK para produto.
+- A migration é aditiva e não transforma nem elimina guias existentes.

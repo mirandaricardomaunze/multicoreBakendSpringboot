@@ -14,6 +14,33 @@ public record MovimentoDTO(
         String cliente,
         LocalDateTime data,
         String estado,
-        BigDecimal total
+        BigDecimal total,
+        String artigos,
+        BigDecimal quantidade,
+        String armazem
 ) {
+    public MovimentoDTO(
+            MovimentoTipo tipo,
+            Long documentId,
+            String numero,
+            String cliente,
+            LocalDateTime data,
+            String estado,
+            BigDecimal total
+    ) {
+        this(tipo, documentId, numero, cliente, data, estado, total, "", BigDecimal.ZERO, "—");
+    }
+
+    public MovimentoDTO(
+            MovimentoTipo tipo,
+            Long documentId,
+            String numero,
+            String cliente,
+            LocalDateTime data,
+            String estado,
+            BigDecimal total,
+            String artigos
+    ) {
+        this(tipo, documentId, numero, cliente, data, estado, total, artigos, BigDecimal.ZERO, "—");
+    }
 }

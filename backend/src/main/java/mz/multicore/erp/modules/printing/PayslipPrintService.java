@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.Month;
+import java.util.List;
 import java.util.Locale;
 
 /** Generates the PDF for an employee salary receipt (Recibo de Salário). */
@@ -34,36 +35,72 @@ public class PayslipPrintService {
         this.payrollDeductionService = payrollDeductionService;
     }
 
+    public static final List<String> PAYSLIP_COPIES = List.of(
+            "1.ª VIA — ORIGINAL (Trabalhador)",
+            "2.ª VIA — DUPLICADO (Recursos Humanos / Arquivo)"
+    );
+
     @Transactional(readOnly = true)
     public byte[] render(Long payslipId) {
         Payslip p = hrService.loadPayslipForPrint(payslipId);
         Company company = p.getEmployee().getCompany();
 
         return PdfDocumentBuilder.buildA4(doc -> {
-            doc.add(CompanyHeaderRenderer.build(
-                    company,
-                    "Recibo de Salário",
-                    p.getPayslipNumber()
-            ));
-            doc.add(buildEmployeeBlock(p));
-            doc.add(buildEarningsTable(p));
-            doc.add(buildDeductionsTable(p));
-            doc.add(PdfDocumentBuilder.spacer(6f));
-            doc.add(buildNetPayBlock(p));
-            if (p.getNotes() != null && !p.getNotes().isBlank()) {
-                doc.add(PdfDocumentBuilder.spacer(10f));
-                doc.add(new Paragraph("Observações: " + p.getNotes(), PdfTheme.bodyFont()));
-            }
-            if (p.getTaxConfigName() != null) {
-                doc.add(PdfDocumentBuilder.spacer(8f));
-                doc.add(new Paragraph("Configuração fiscal: " + p.getTaxConfigName(), PdfTheme.smallFont()));
-                if (p.getTaxLegalBasis() != null) {
-                    doc.add(new Paragraph("Base legal/configuração: " + p.getTaxLegalBasis(), PdfTheme.smallFont()));
+            for (int i = 0; i < PAYSLIP_COPIES.size(); i++) {
+                if (i > 0) {
+                    doc.newPage();
                 }
+                renderPayslipCopy(doc, p, company, PAYSLIP_COPIES.get(i));
             }
-            doc.add(PdfDocumentBuilder.spacer(30f));
-            doc.add(buildSignatureBlock());
         });
+    }
+
+    private void renderPayslipCopy(com.lowagie.text.Document doc, Payslip p, Company company, String copyLabel) {
+        doc.add(CompanyHeaderRenderer.build(
+                company,
+                "Recibo de Salário",
+                p.getPayslipNumber()
+        ));
+        doc.add(buildCopyBadge(copyLabel));
+        doc.add(buildEmployeeBlock(p));
+        doc.add(buildEarningsTable(p));
+        doc.add(buildDeductionsTable(p));
+        doc.add(PdfDocumentBuilder.spacer(6f));
+        doc.add(buildNetPayBlock(p));
+        if (p.getNotes() != null && !p.getNotes().isBlank()) {
+            doc.add(PdfDocumentBuilder.spacer(10f));
+            doc.add(new Paragraph("Observações: " + p.getNotes(), PdfTheme.bodyFont()));
+        }
+        if (p.getTaxConfigName() != null) {
+            doc.add(PdfDocumentBuilder.spacer(8f));
+            doc.add(new Paragraph("Configuração fiscal: " + p.getTaxConfigName(), PdfTheme.smallFont()));
+            if (p.getTaxLegalBasis() != null) {
+                doc.add(new Paragraph("Base legal/configuração: " + p.getTaxLegalBasis(), PdfTheme.smallFont()));
+            }
+        }
+        doc.add(PdfDocumentBuilder.spacer(30f));
+        doc.add(buildSignatureBlock());
+    }
+
+    private static PdfPTable buildCopyBadge(String copyText) {
+        PdfPTable table = new PdfPTable(1);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(2f);
+        table.setSpacingAfter(8f);
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(new java.awt.Color(241, 245, 249)); // Slate-100
+        cell.setBorderColor(new java.awt.Color(203, 213, 225));     // Slate-300
+        cell.setBorderWidth(1f);
+        cell.setPadding(5f);
+
+        com.lowagie.text.Font badgeFont = new com.lowagie.text.Font(
+                com.lowagie.text.Font.HELVETICA, 8.5f, com.lowagie.text.Font.BOLD, new java.awt.Color(30, 41, 59));
+        Paragraph p = new Paragraph(copyText, badgeFont);
+        p.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(p);
+        table.addCell(cell);
+        return table;
     }
 
     private PdfPTable buildEmployeeBlock(Payslip p) {

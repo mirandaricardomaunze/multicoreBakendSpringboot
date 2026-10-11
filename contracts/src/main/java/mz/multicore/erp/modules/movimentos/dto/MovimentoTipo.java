@@ -7,11 +7,14 @@ package mz.multicore.erp.modules.movimentos.dto;
 public enum MovimentoTipo {
 
     FATURA("Fatura"),
+    VENDA_POS("Venda POS"),
     COTACAO("Cotação"),
     ENCOMENDA("Encomenda"),
     GUIA_REMESSA("Guia de Remessa"),
     NOTA_CREDITO("Nota de Crédito"),
-    NOTA_DEBITO("Nota de Débito");
+    NOTA_DEBITO("Nota de Débito"),
+    RECIBO("Recibo"),
+    TRANSFERENCIA("Transferência");
 
     private final String label;
 

@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -47,6 +48,8 @@ final class HRVacationsPanel {
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         exportBtn.addActionListener(e -> owner.exportTable("ferias", "Mapa de Férias", owner.vacationsTable));
 
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+
         ActionMenuButton decisionBtn = UIHelper.createActionMenuButton("Decisão & Subsídio")
                 .addAction("Aprovar", UIHelper.icon("fas-check", 14), () -> decideVacation(true))
                 .addAction("Rejeitar", UIHelper.icon("fas-times", 14), () -> decideVacation(false))
@@ -60,15 +63,31 @@ final class HRVacationsPanel {
         owner.vacationsModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        owner.vacationsTable = new JTable(owner.vacationsModel);
-        UIHelper.styleTable(owner.vacationsTable);
-        owner.vacationsTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
-        JScrollPane scroll = new JScrollPane(owner.vacationsTable);
+        JTable table = new JTable(owner.vacationsModel);
+        owner.vacationsTable = table;
+        UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
+        table.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
+        JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-plane-departure", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(owner.vacationsModel.getValueAt(row, 1)));
+            peek.setSubtitle("Férias Ref. " + owner.vacationsModel.getValueAt(row, 5) + " • " + owner.vacationsModel.getValueAt(row, 4) + " dias");
+            peek.setStatus(String.valueOf(owner.vacationsModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Início", String.valueOf(owner.vacationsModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Fim", String.valueOf(owner.vacationsModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dias Marcados", String.valueOf(owner.vacationsModel.getValueAt(row, 4)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Decidido Por", String.valueOf(owner.vacationsModel.getValueAt(row, 7)), false));
+            peek.setItems(items);
+        });
 
         JTextField vacSearch = TableFilter.searchField("Colaborador ou decisor…");
         JComboBox<String> vacEstado = TableFilter.combo("Todos os estados",
-                "PENDING", "APPROVED", "REJECTED", "CANCELLED");
+                "Pendente", "Aprovado", "Rejeitado", "Cancelado");
         JComboBox<String> vacPeriodo = TableFilter.periodCombo();
         TableFilter.install(owner.vacationsTable, vacSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(vacEstado, 6)),
@@ -77,7 +96,6 @@ final class HRVacationsPanel {
                 TableFilter.label("Estado:"), vacEstado,
                 TableFilter.label("Início:", "fas-calendar-alt"), vacPeriodo);
         vacBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
         card.add(UIHelper.tableCardTop("Pedidos de Férias", vacBar,
                 refreshBtn, exportBtn, decisionBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -101,6 +119,7 @@ final class HRVacationsPanel {
                     v.decisionBy() == null ? "-" : v.decisionBy()
             });
         }
+        UIHelper.ensureHeadersFit(owner.vacationsTable);
         owner.refreshOverview();
     }
 

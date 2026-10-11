@@ -2,6 +2,7 @@ package mz.multicore.erp.gui.commercial;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
+import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.gui.ComercialPanel;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
@@ -20,13 +21,20 @@ public final class BillOrderDialog {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final JComponent owner;
     private final ComercialApiClient apiClient;
+    private final PrintApiClient printApiClient;
     private final Runnable invoicesRefresh;
     private final Runnable ordersRefresh;
 
     public BillOrderDialog(JComponent owner, ComercialApiClient apiClient,
                            Runnable invoicesRefresh, Runnable ordersRefresh) {
+        this(owner, apiClient, null, invoicesRefresh, ordersRefresh);
+    }
+
+    public BillOrderDialog(JComponent owner, ComercialApiClient apiClient, PrintApiClient printApiClient,
+                           Runnable invoicesRefresh, Runnable ordersRefresh) {
         this.owner = owner;
         this.apiClient = apiClient;
+        this.printApiClient = printApiClient;
         this.invoicesRefresh = invoicesRefresh;
         this.ordersRefresh = ordersRefresh;
     }
@@ -52,6 +60,7 @@ public final class BillOrderDialog {
         };
         JTable table = new JTable(lines);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
         JScrollPane scroll = new JScrollPane(table);
@@ -90,7 +99,7 @@ public final class BillOrderDialog {
         });
         rebuild.run();
         JPanel selector = UIHelper.createDialogForm("Pesquisar (nº ou cliente):", search, "Encomenda a faturar:", combo);
-        ModernPanel summary = new ModernPanel(14);
+        ModernPanel summary = new ModernPanel(16);
         summary.setLayout(new GridLayout(2, 4, 12, 4));
         summary.setBorder(new EmptyBorder(14, 16, 14, 16));
         summary.add(label("Encomenda")); summary.add(label("Cliente")); summary.add(label("Data")); summary.add(label("Total"));
@@ -113,6 +122,22 @@ public final class BillOrderDialog {
                 "Fatura " + invoice.invoiceNumber() + " emitida a partir da encomenda " + order.orderNumber() + ".");
         invoicesRefresh.run();
         ordersRefresh.run();
+
+        boolean emitGuide = ModernMessageDialog.confirm(
+                SwingUtilities.getWindowAncestor(owner),
+                FeedbackType.INFO,
+                "Emitir Guia de Transporte",
+                "Fatura " + invoice.invoiceNumber() + " emitida com sucesso a partir da encomenda " + order.orderNumber() + "!\n"
+                + "O stock foi movimentado pelo faturador.\n\n"
+                + "Deseja emitir e visualizar a Guia de Remessa / Transporte agora para acompanhar a mercadoria?",
+                "Emitir Guia");
+        if (emitGuide) {
+            SensitivePrintCoordinator.print(owner, printApiClient,
+                    mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.REMITTANCE_GUIDE,
+                    invoice.id(), "Guia de remessa da fatura " + invoice.invoiceNumber(),
+                    "guia-remessa-" + invoice.invoiceNumber(),
+                    () -> apiClient.renderGuide(invoice.id()), null);
+        }
     }
 
     private static JLabel label(String text) {

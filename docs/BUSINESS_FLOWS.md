@@ -99,6 +99,22 @@ Regras:
 - Transferencia nao deve duplicar movimentos ao confirmar duas vezes.
 - Cancelamento deve respeitar o estado actual.
 
+## Guia de remessa avulsa
+
+1. Utilizador selecciona cliente e armazém de saída.
+2. Produtos são pesquisados no catálogo paginado e adicionados à grelha com quantidade positiva.
+3. A guia recebe numeração própria e nasce `PENDING_APPROVAL`, sem movimentar stock.
+4. Gestor ou administrador revê cliente, armazém, transporte e linhas.
+5. Só a aprovação consome stock por FEFO no armazém seleccionado.
+6. Rejeição ou cancelamento de guia pendente não movimenta stock.
+
+Regras:
+
+- A guia avulsa não exige encomenda e não cria factura, dívida ou lançamento fiscal.
+- Cliente, armazém e produtos devem pertencer à empresa activa.
+- A aprovação é atómica: se uma linha não tiver stock suficiente, nenhuma linha é expedida.
+- Guia aprovada não pode ser cancelada pelo fluxo normal.
+
 ## Fecho de caixa
 
 1. Operador informa valores de fecho.

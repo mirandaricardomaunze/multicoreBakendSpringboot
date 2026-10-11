@@ -22,6 +22,8 @@ public class LineRowMapper {
         this.batchRepository = batchRepository;
     }
 
+    private static final java.time.format.DateTimeFormatter DATE_FMT = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     public LineItemsTableRenderer.Row map(
             Product product,
             String batchNumber,
@@ -34,11 +36,23 @@ public class LineRowMapper {
         String barcode = product == null ? null : product.getBarcode();
         String reference = product == null ? null : product.getReference();
         String description = product == null ? null : product.getName();
+
+        String effectiveBatch = (batchNumber != null && !batchNumber.isBlank() && !"-".equals(batchNumber))
+                ? batchNumber.trim()
+                : resolveActiveBatch(product);
+
+        LocalDate expiry = isDisplayableBatch(effectiveBatch) ? resolveExpiry(product, effectiveBatch) : null;
+
+        if (isDisplayableBatch(effectiveBatch)) {
+            String batchTag = "\n[Lote: " + effectiveBatch + "]";
+            description = (description != null ? description : "") + batchTag;
+        }
+
         return new LineItemsTableRenderer.Row(
                 barcode,
                 reference,
                 description,
-                resolveExpiry(product, batchNumber),
+                expiry,
                 quantity,
                 product == null ? null : product.getPackagesPerBox(),
                 product == null ? null : product.getUnitsPerPackage(),
@@ -47,6 +61,25 @@ public class LineRowMapper {
                 discountPercentage,
                 lineTotal
         );
+    }
+
+    public static boolean isDisplayableBatch(String batch) {
+        if (batch == null || batch.isBlank()) return false;
+        String b = batch.trim().toUpperCase();
+        return !b.startsWith("LEGACY") && !b.startsWith("DEF") && !b.startsWith("PADR")
+                && !b.startsWith("SEM-LOTE") && !"-".equals(b) && !"—".equals(b)
+                && !"N/A".equals(b) && !"NONE".equals(b);
+    }
+
+    private String resolveActiveBatch(Product product) {
+        if (product == null || product.getId() == null) return null;
+        try {
+            return batchRepository.findFirstByProductIdOrderByExpirationDateAsc(product.getId())
+                    .map(ProductBatch::getBatchNumber)
+                    .orElse(null);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private LocalDate resolveExpiry(Product product, String batchNumber) {

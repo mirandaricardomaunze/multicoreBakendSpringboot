@@ -160,7 +160,9 @@ public class ReorderService {
                     supplierId,
                     supplierName,
                     estPrice,
-                    estTotalCost
+                    estTotalCost,
+                    p.getBusinessUnit() != null ? p.getBusinessUnit().getId() : null,
+                    p.getBusinessUnit() != null ? p.getBusinessUnit().getName() : null
             ));
         }
 

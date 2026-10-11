@@ -50,6 +50,11 @@ public class StockTransferController {
         return ResponseEntity.ok(stockTransferService.submit(id));
     }
 
+    @PostMapping("/{id}/complete-separation")
+    public ResponseEntity<StockTransferDTO> completeSeparation(@PathVariable Long id) {
+        return ResponseEntity.ok(stockTransferService.completeSeparation(id));
+    }
+
     @PostMapping("/{id}/approve")
     public ResponseEntity<StockTransferDTO> approve(@PathVariable Long id) {
         return ResponseEntity.ok(stockTransferService.approve(id));

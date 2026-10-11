@@ -5,12 +5,14 @@ import mz.multicore.erp.gui.components.DocumentEditorHost;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.ProductSearchComboBox;
 import mz.multicore.erp.gui.components.DecimalField;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.ProductLookupDialog;
 import mz.multicore.erp.gui.components.CustomerCreditValidator;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
@@ -23,6 +25,7 @@ import mz.multicore.erp.gui.commercial.QuotationsPanel;
 import mz.multicore.erp.gui.commercial.ReceiptsPanel;
 import mz.multicore.erp.gui.commercial.BillOrderDialog;
 import mz.multicore.erp.gui.commercial.CancelOrderDialog;
+import mz.multicore.erp.gui.commercial.CommercialProductionOrderDialog;
 import mz.multicore.erp.gui.commercial.OrderDetailsDialog;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.CreditNoteApiClient;
@@ -36,6 +39,7 @@ import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
+import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -49,11 +53,19 @@ import java.util.List;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.TableExportAction;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
+import mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO;
+import mz.multicore.erp.modules.printing.dto.SensitiveDocumentType;
 
 public class ComercialPanel extends JPanel {
 
+    public record BusinessUnitOption(Long id, String name) {
+        @Override
+        public String toString() { return name; }
+    }
+
     final ComercialApiClient comercialApiClient;
-    private final PrintApiClient printApiClient;
+    final PrintApiClient printApiClient;
     private final InventoryApiClient inventoryApiClient;
     private final FinanceApiClient financeApiClient;
     private final JTabbedPane commercialTabs;
@@ -62,15 +74,19 @@ public class ComercialPanel extends JPanel {
     // TAB 1: FATURAÇÃO ELEMENTS
     JComboBox<String> clientCombo;
     JComboBox<String> warehouseCombo;
+    JComboBox<BusinessUnitOption> invoiceBusinessUnitCombo;
+    List<BusinessUnitDTO> businessUnitsList = new ArrayList<>();
     ProductSearchComboBox productCombo;
     DecimalField discountField;
     JTextField serialField;
+    mz.multicore.erp.gui.components.BarcodeScanField invoiceBarcodeField;
     DefaultTableModel linesTableModel;
     JTable linesTable;
     JLabel totalLabel;
     boolean invoiceGridEditable;
     boolean syncingInvoiceGrid;
 
+    JComboBox<String> invBusinessUnitCombo;
     DefaultTableModel invoicesTableModel;
     mz.multicore.erp.gui.components.TablePager invoicesPager;
     JTable invoicesTable;
@@ -89,12 +105,15 @@ public class ComercialPanel extends JPanel {
     ProductSearchComboBox orderProductCombo;
     DecimalField orderDiscountField;
     JTextField orderSerialField;
+    mz.multicore.erp.gui.components.BarcodeScanField orderBarcodeField;
     DefaultTableModel orderLinesTableModel;
     JTable orderLinesTable;
     JLabel orderTotalLabel;
     JLabel orderLoadLabel;
 
+    JComboBox<String> ecBusinessUnitCombo;
     DefaultTableModel ordersTableModel;
+    mz.multicore.erp.gui.components.TablePager ordersPager;
     JTable ordersTable;
 
     /** Colunas da tabela de encomendas lidas pelas acções. Nomeadas para o índice não andar solto. */
@@ -103,6 +122,7 @@ public class ComercialPanel extends JPanel {
     static final int ORDERS_COL_KIND = 6;
     static final int ORDERS_COL_ORIGIN = 7;
     static final int ORDERS_COL_DELIVERY = 8;
+    static final int ORDERS_COL_BUSINESS_UNIT = 9;
 
     // TAB 5: GUIAS DE REMESSA ELEMENTS
 
@@ -137,6 +157,7 @@ public class ComercialPanel extends JPanel {
     boolean orderGridEditable;
     boolean syncingOrderGrid;
     OrderDTO lastCreatedOrder;
+    private List<OrderDTO> cachedOrders = new ArrayList<>();
     CardLayout encomendasCards;             // alterna lista <-> editor na aba Encomendas
     JPanel encomendasHost;
     CardLayout faturacaoCards;              // alterna lista <-> editor na aba Faturação
@@ -151,6 +172,8 @@ public class ComercialPanel extends JPanel {
     private final CancelOrderDialog cancelOrderDialog;
     final OrderDetailsDialog orderDetailsDialog;
     private final PromotionsPanel promotionsPanel;
+    private final mz.multicore.erp.desktop.client.ProductionApiClient productionApiClient;
+    private final mz.multicore.erp.desktop.client.FleetApiClient fleetApiClient;
 
     public ComercialPanel(
             ComercialApiClient comercialApiClient,
@@ -162,7 +185,44 @@ public class ComercialPanel extends JPanel {
             MovimentosApiClient movimentosApiClient,
             PromotionApiClient promotionApiClient,
             PrintApiClient printApiClient,
-            /** Atalho para as transferências entre armazéns (Stock); {@code null} desliga-o. */
+            Runnable openWarehouseTransfers
+    ) {
+        this(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient,
+                posApiClient, movimentosApiClient, promotionApiClient, printApiClient, openWarehouseTransfers,
+                null, null);
+    }
+
+    public ComercialPanel(
+            ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient,
+            FinanceApiClient financeApiClient,
+            CreditNoteApiClient creditNoteApiClient,
+            DebitNoteApiClient debitNoteApiClient,
+            POSApiClient posApiClient,
+            MovimentosApiClient movimentosApiClient,
+            PromotionApiClient promotionApiClient,
+            PrintApiClient printApiClient,
+            Runnable openWarehouseTransfers,
+            mz.multicore.erp.desktop.client.ProductionApiClient productionApiClient,
+            mz.multicore.erp.desktop.client.FleetApiClient fleetApiClient
+    ) {
+        this(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient,
+                posApiClient, movimentosApiClient, promotionApiClient, printApiClient,
+                productionApiClient, fleetApiClient, openWarehouseTransfers);
+    }
+
+    public ComercialPanel(
+            ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient,
+            FinanceApiClient financeApiClient,
+            CreditNoteApiClient creditNoteApiClient,
+            DebitNoteApiClient debitNoteApiClient,
+            POSApiClient posApiClient,
+            MovimentosApiClient movimentosApiClient,
+            PromotionApiClient promotionApiClient,
+            PrintApiClient printApiClient,
+            mz.multicore.erp.desktop.client.ProductionApiClient productionApiClient,
+            mz.multicore.erp.desktop.client.FleetApiClient fleetApiClient,
             Runnable openWarehouseTransfers
     ) {
         this.comercialApiClient = comercialApiClient;
@@ -171,19 +231,24 @@ public class ComercialPanel extends JPanel {
         this.financeApiClient = financeApiClient;
         this.posApiClient = posApiClient;
         this.movimentosApiClient = movimentosApiClient;
-        this.movementsPanel = new CommercialMovementsPanel(movimentosApiClient);
+        this.productionApiClient = productionApiClient;
+        this.fleetApiClient = fleetApiClient;
+        this.movementsPanel = new CommercialMovementsPanel(movimentosApiClient, printApiClient, inventoryApiClient);
         this.outstandingAccountsPanel = new OutstandingAccountsPanel(comercialApiClient, financeApiClient, posApiClient);
         this.notesPanel = new CommercialNotesPanel(comercialApiClient, creditNoteApiClient, debitNoteApiClient,
-                () -> List.copyOf(warehousesList));
+                () -> List.copyOf(warehousesList), printApiClient);
         this.deliveryGuidesPanel = new DeliveryGuidesPanel(comercialApiClient, this::loadOrdersTable,
-                openWarehouseTransfers);
+                openWarehouseTransfers, () -> List.copyOf(clientsList), () -> List.copyOf(warehousesList),
+                printApiClient);
         this.receiptsPanel = new ReceiptsPanel(comercialApiClient, this::loadInvoicesTable);
         this.quotationsPanel = new QuotationsPanel(comercialApiClient, () -> List.copyOf(clientsList),
-                () -> List.copyOf(productsList), () -> List.copyOf(warehousesList), this::loadOrdersTable);
-        this.billOrderDialog = new BillOrderDialog(this, comercialApiClient,
+                () -> List.copyOf(productsList), () -> List.copyOf(warehousesList), this::loadOrdersTable,
+                productionApiClient);
+        this.billOrderDialog = new BillOrderDialog(this, comercialApiClient, printApiClient,
                 this::loadInvoicesTable, this::loadOrdersTable);
         this.cancelOrderDialog = new CancelOrderDialog(this, comercialApiClient, this::loadOrdersTable);
-        this.orderDetailsDialog = new OrderDetailsDialog(this, comercialApiClient, this::loadOrdersTable);
+        this.orderDetailsDialog = new OrderDetailsDialog(this, comercialApiClient, printApiClient,
+                this::loadOrdersTable);
         this.promotionsPanel = new PromotionsPanel(promotionApiClient, comercialApiClient);
 
         setLayout(new BorderLayout());
@@ -239,6 +304,18 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    public void showMovements() {
+        for (int index = 0; index < commercialTabs.getTabCount(); index++) {
+            if (commercialTabs.getTitleAt(index).startsWith("Movimentos")) {
+                commercialTabs.setSelectedIndex(index);
+                if (movementsPanel != null) {
+                    movementsPanel.refresh();
+                }
+                return;
+            }
+        }
+    }
+
 
     private JPanel createFaturacaoTab() {
         return CommercialInvoicesView.create(this);
@@ -256,6 +333,7 @@ public class ComercialPanel extends JPanel {
         resetInvoiceDraft();
         lastCreatedInvoice = null;
         invoiceGridEditable = true;
+        if (invoiceBarcodeField != null) invoiceBarcodeField.setEnabled(true);
         if (faturacaoCards != null && faturacaoHost != null) {
             faturacaoCards.show(faturacaoHost, "editor");
         }
@@ -266,6 +344,7 @@ public class ComercialPanel extends JPanel {
             faturacaoCards.show(faturacaoHost, "list");
         }
         invoiceGridEditable = false;
+        if (invoiceBarcodeField != null) invoiceBarcodeField.setEnabled(false);
     }
 
     /** Guardar a partir do editor: valida+cria, informa, recarrega a lista e volta. Erro mantém o editor. */
@@ -305,6 +384,7 @@ public class ComercialPanel extends JPanel {
     public void onPanelSelected() {
         loadClientsAndProducts();
         loadWarehouses();
+        loadBusinessUnits();
         loadInvoicesTable();
         receiptsPanel.refresh();
         loadOrdersTable();
@@ -368,6 +448,44 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    private void loadBusinessUnits() {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        if (companyId == null) return;
+        UIHelper.loadAsync(this, () -> comercialApiClient.getActiveBusinessUnits(companyId), this::applyBusinessUnits,
+                error -> { /* linhas opcionais, falha suave */ });
+    }
+
+    private void applyBusinessUnits(List<BusinessUnitDTO> loaded) {
+        businessUnitsList = loaded != null ? loaded : new ArrayList<>();
+        if (invoiceBusinessUnitCombo != null) {
+            invoiceBusinessUnitCombo.removeAllItems();
+            invoiceBusinessUnitCombo.addItem(new BusinessUnitOption(null, "— Misto (Sem restrição) —"));
+            for (BusinessUnitDTO bu : businessUnitsList) {
+                invoiceBusinessUnitCombo.addItem(new BusinessUnitOption(bu.id(), bu.code() + " - " + bu.name()));
+            }
+        }
+        if (invBusinessUnitCombo != null) {
+            Object current = invBusinessUnitCombo.getSelectedItem();
+            invBusinessUnitCombo.removeAllItems();
+            invBusinessUnitCombo.addItem("Todos os negócios");
+            invBusinessUnitCombo.addItem("Misto");
+            for (BusinessUnitDTO bu : businessUnitsList) {
+                invBusinessUnitCombo.addItem(bu.name());
+            }
+            if (current != null) invBusinessUnitCombo.setSelectedItem(current);
+        }
+        if (ecBusinessUnitCombo != null) {
+            Object current = ecBusinessUnitCombo.getSelectedItem();
+            ecBusinessUnitCombo.removeAllItems();
+            ecBusinessUnitCombo.addItem("Todos os negócios");
+            ecBusinessUnitCombo.addItem("—");
+            for (BusinessUnitDTO bu : businessUnitsList) {
+                ecBusinessUnitCombo.addItem(bu.name());
+            }
+            if (current != null) ecBusinessUnitCombo.setSelectedItem(current);
+        }
+    }
+
 
     void addDraftLine() {
         if (!invoiceGridEditable) return;
@@ -408,9 +526,77 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    void handleInvoiceBarcodeScanned(String code) {
+        if (!invoiceGridEditable) return;
+        ProductDTO product = productsList.stream().filter(p ->
+                code.equalsIgnoreCase(p.barcode())
+                || code.equalsIgnoreCase(p.sku())
+                || (p.reference() != null && code.equalsIgnoreCase(p.reference()))
+        ).findFirst().orElse(null);
+
+        if (product == null) {
+            Toolkit.getDefaultToolkit().beep();
+            showCommercialNotice(FeedbackType.WARNING, "Artigo não encontrado",
+                    "Nenhum produto cadastrado com o código ou SKU: " + code);
+            return;
+        }
+
+        int existingIndex = -1;
+        for (int i = 0; i < draftLines.size(); i++) {
+            if (product.id().equals(draftLines.get(i).productId())) {
+                existingIndex = i;
+                break;
+            }
+        }
+
+        if (existingIndex >= 0) {
+            CreateInvoiceLineRequest current = draftLines.get(existingIndex);
+            BigDecimal newQty = current.quantity().add(BigDecimal.ONE);
+            draftLines.set(existingIndex, new CreateInvoiceLineRequest(
+                    product.id(), newQty, current.taxRate(), current.discountPercentage(),
+                    current.batchNumber(), current.serialNumber()));
+            syncInvoiceLineFromGrid(existingIndex, 1);
+            linesTable.setRowSelectionInterval(existingIndex, existingIndex);
+            linesTable.scrollRectToVisible(linesTable.getCellRect(existingIndex, 0, true));
+        } else {
+            stopInvoiceCellEditing();
+            draftLines.add(new CreateInvoiceLineRequest(
+                    product.id(), BigDecimal.ONE, product.effectiveTaxRate(), BigDecimal.ZERO, null, null));
+            refreshInvoiceGrid();
+            int newRow = linesTableModel.getRowCount() - 1;
+            if (newRow >= 0) {
+                linesTable.setRowSelectionInterval(newRow, newRow);
+                linesTable.scrollRectToVisible(linesTable.getCellRect(newRow, 0, true));
+            }
+        }
+    }
+
     void syncInvoiceLineFromGrid(int row, int column) {
-        if (row < 0 || row >= draftLines.size()) return;
-        ProductDTO product = linesTableModel.getValueAt(row, 0) instanceof ProductDTO selected ? selected : null;
+        if (syncingInvoiceGrid || row < 0 || row >= draftLines.size()) return;
+        CreateInvoiceLineRequest previous = draftLines.get(row);
+        Object cellProduct = linesTableModel.getValueAt(row, 0);
+        ProductDTO product = null;
+        if (cellProduct instanceof ProductDTO selected) {
+            product = selected;
+        } else if (productCombo != null) {
+            product = productCombo.resolve(cellProduct);
+        }
+        if (product == null && cellProduct != null) {
+            String label = String.valueOf(cellProduct).trim();
+            if (!label.isBlank() && !"Pesquisar produto...".equalsIgnoreCase(label)) {
+                product = productsList.stream().filter(p ->
+                        label.equalsIgnoreCase(p.name())
+                        || (p.reference() != null && label.equalsIgnoreCase(p.reference()))
+                        || (p.sku() != null && label.equalsIgnoreCase(p.sku()))
+                        || (p.barcode() != null && label.equalsIgnoreCase(p.barcode()))
+                ).findFirst().orElse(null);
+            }
+        }
+        if (product == null && previous.productId() != null && previous.productId() > 0) {
+            final Long prevId = previous.productId();
+            product = productsList.stream().filter(p -> prevId.equals(p.id())).findFirst().orElse(null);
+        }
+
         int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
         BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
                 : (long) Math.max(1, product.packagesPerBox()) * unitsPerPackage);
@@ -419,12 +605,40 @@ public class ComercialPanel extends JPanel {
                 .multiply(BigDecimal.valueOf(unitsPerPackage));
         else if (column == 3) quantity = decimalGrid(linesTableModel.getValueAt(row, 3)).multiply(unitsPerBox);
         else quantity = decimalGrid(linesTableModel.getValueAt(row, 1));
+        if (quantity.signum() <= 0) quantity = BigDecimal.ONE;
+
         BigDecimal discount = decimalGrid(linesTableModel.getValueAt(row, 7));
         String serial = String.valueOf(linesTableModel.getValueAt(row, 8)).trim();
         if (serial.isEmpty() || "—".equals(serial)) serial = null;
         draftLines.set(row, new CreateInvoiceLineRequest(product == null ? 0L : product.id(), quantity,
                 product == null ? BigDecimal.ZERO : product.effectiveTaxRate(), discount, null, serial));
-        refreshInvoiceGrid();
+
+        syncingInvoiceGrid = true;
+        try {
+            BigDecimal price = product == null || product.unitPrice() == null ? BigDecimal.ZERO : product.unitPrice();
+            BigDecimal subtotal = price.multiply(quantity)
+                    .multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2)));
+            BigDecimal tax = subtotal.multiply(product == null ? BigDecimal.ZERO : product.effectiveTaxRate());
+            BigDecimal total = subtotal.add(tax).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal packages = quantity.divide(BigDecimal.valueOf(unitsPerPackage), 2, RoundingMode.HALF_UP);
+            BigDecimal boxes = quantity.divide(unitsPerBox, 2, RoundingMode.HALF_UP);
+            BigDecimal percentage = quantity.multiply(BigDecimal.valueOf(100))
+                    .divide(unitsPerBox, 1, RoundingMode.HALF_UP);
+
+            linesTableModel.setValueAt(product, row, 0);
+            linesTableModel.setValueAt(quantity, row, 1);
+            linesTableModel.setValueAt(packages, row, 2);
+            linesTableModel.setValueAt(boxes, row, 3);
+            linesTableModel.setValueAt(percentage.stripTrailingZeros().toPlainString() + "%", row, 4);
+            linesTableModel.setValueAt(price, row, 5);
+            linesTableModel.setValueAt(product == null ? "0%" : product.effectiveTaxRate().movePointRight(2) + "%", row, 6);
+            linesTableModel.setValueAt(discount, row, 7);
+            linesTableModel.setValueAt(serial == null ? "" : serial, row, 8);
+            linesTableModel.setValueAt(total, row, 9);
+        } finally {
+            syncingInvoiceGrid = false;
+        }
+        recalculateInvoiceTotals();
     }
 
     void removeSelectedInvoiceDraftLine() {
@@ -437,10 +651,7 @@ public class ComercialPanel extends JPanel {
         refreshInvoiceGrid();
     }
 
-    private void refreshInvoiceGrid() {
-        syncingInvoiceGrid = true;
-        try {
-            linesTableModel.setRowCount(0);
+    private void recalculateInvoiceTotals() {
         draftSubtotal = BigDecimal.ZERO;
         draftTax = BigDecimal.ZERO;
         draftTotal = BigDecimal.ZERO;
@@ -453,25 +664,42 @@ public class ComercialPanel extends JPanel {
                     .multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2)));
             BigDecimal tax = subtotal.multiply(product == null ? line.taxRate() : product.effectiveTaxRate());
             BigDecimal total = subtotal.add(tax).setScale(2, RoundingMode.HALF_UP);
-            int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
-            BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
-                    : (long) Math.max(1, product.packagesPerBox()) * unitsPerPackage);
-            BigDecimal packages = line.quantity().divide(BigDecimal.valueOf(unitsPerPackage), 2, RoundingMode.HALF_UP);
-            BigDecimal boxes = line.quantity().divide(unitsPerBox, 2, RoundingMode.HALF_UP);
-            BigDecimal percentage = line.quantity().multiply(BigDecimal.valueOf(100))
-                    .divide(unitsPerBox, 1, RoundingMode.HALF_UP);
-            linesTableModel.addRow(new Object[]{product, line.quantity(), packages, boxes,
-                    percentage.stripTrailingZeros().toPlainString() + "%", price,
-                    product == null ? "0%" : product.effectiveTaxRate().movePointRight(2) + "%",
-                    discount, line.serialNumber() == null ? "" : line.serialNumber(), total});
             draftSubtotal = draftSubtotal.add(subtotal);
             draftTax = draftTax.add(tax);
             draftTotal = draftTotal.add(total);
         }
+        totalLabel.setText(String.format("Total Rascunho: %,.2f MT (incl. IVA)", draftTotal));
+    }
+
+    private void refreshInvoiceGrid() {
+        syncingInvoiceGrid = true;
+        try {
+            linesTableModel.setRowCount(0);
+            for (CreateInvoiceLineRequest line : draftLines) {
+                ProductDTO product = productsList.stream().filter(item -> item.id().equals(line.productId()))
+                        .findFirst().orElse(null);
+                BigDecimal price = product == null || product.unitPrice() == null ? BigDecimal.ZERO : product.unitPrice();
+                BigDecimal discount = line.discountPercentage() == null ? BigDecimal.ZERO : line.discountPercentage();
+                BigDecimal subtotal = price.multiply(line.quantity())
+                        .multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2)));
+                BigDecimal tax = subtotal.multiply(product == null ? line.taxRate() : product.effectiveTaxRate());
+                BigDecimal total = subtotal.add(tax).setScale(2, RoundingMode.HALF_UP);
+                int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
+                BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
+                        : (long) Math.max(1, product.packagesPerBox()) * unitsPerPackage);
+                BigDecimal packages = line.quantity().divide(BigDecimal.valueOf(unitsPerPackage), 2, RoundingMode.HALF_UP);
+                BigDecimal boxes = line.quantity().divide(unitsPerBox, 2, RoundingMode.HALF_UP);
+                BigDecimal percentage = line.quantity().multiply(BigDecimal.valueOf(100))
+                        .divide(unitsPerBox, 1, RoundingMode.HALF_UP);
+                linesTableModel.addRow(new Object[]{product, line.quantity(), packages, boxes,
+                        percentage.stripTrailingZeros().toPlainString() + "%", price,
+                        product == null ? "0%" : product.effectiveTaxRate().movePointRight(2) + "%",
+                        discount, line.serialNumber() == null ? "" : line.serialNumber(), total});
+            }
         } finally {
             syncingInvoiceGrid = false;
         }
-        totalLabel.setText(String.format("Total Rascunho: %,.2f MT (incl. IVA)", draftTotal));
+        recalculateInvoiceTotals();
     }
 
     /** Abre o formulário de nova fatura num modal responsivo (com scroll). */
@@ -499,7 +727,11 @@ public class ComercialPanel extends JPanel {
         ClientDTO client = clientsList.get(clientIdx);
         WarehouseDTO warehouse = warehousesList.get(whIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        return new CreateInvoiceRequest(client.id(), companyId, warehouse.id(), new ArrayList<>(draftLines));
+        Long businessUnitId = null;
+        if (invoiceBusinessUnitCombo != null && invoiceBusinessUnitCombo.getSelectedItem() instanceof BusinessUnitOption opt) {
+            businessUnitId = opt.id();
+        }
+        return new CreateInvoiceRequest(client.id(), companyId, warehouse.id(), new ArrayList<>(draftLines), null, businessUnitId);
     }
 
     private void resetInvoiceDraft() {
@@ -567,8 +799,8 @@ public class ComercialPanel extends JPanel {
 
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = (String) invoicesTableModel.getValueAt(row, 1);
-        String statusStr = (String) invoicesTableModel.getValueAt(row, 4);
-        BigDecimal invoiceTotal = (BigDecimal) invoicesTableModel.getValueAt(row, 6);
+        String statusStr = (String) invoicesTableModel.getValueAt(row, 5);
+        BigDecimal invoiceTotal = (BigDecimal) invoicesTableModel.getValueAt(row, 7);
 
         // Uma fatura parcialmente paga continua a receber recibos até o saldo chegar a zero.
         if (!"APPROVED".equalsIgnoreCase(statusStr) && !"PARTIALLY_PAID".equalsIgnoreCase(statusStr)) {
@@ -607,14 +839,47 @@ public class ComercialPanel extends JPanel {
         invoicesTableModel.setRowCount(0);
         for (InvoiceDTO invoice : invoices) {
             String dateStr = invoice.createdAt() != null ? invoice.createdAt().format(INVOICE_DATE_FMT) : "—";
+            String buLabel = invoice.businessUnitName() != null && !invoice.businessUnitName().isBlank()
+                    ? invoice.businessUnitName() : "Misto";
             invoicesTableModel.addRow(new Object[]{
                     invoice.id(),
                     invoice.invoiceNumber(),
                     invoice.clientName(),
                     dateStr,
+                    buLabel,
                     invoice.status().name(),
-                    invoice.totalAmount(), invoice.outstandingAmount()
+                    invoice.totalAmount(), invoice.outstandingAmount(),
+                    printApiClient == null ? "—" : "A verificar…"
             });
+        }
+        if (printApiClient != null && !invoices.isEmpty()) {
+            List<Long> ids = invoices.stream().map(InvoiceDTO::id).toList();
+            UIHelper.loadAsync(this,
+                    () -> printApiClient.getPrintStatuses(SensitiveDocumentType.INVOICE, ids),
+                    this::applyInvoicePrintStatuses,
+                    error -> {
+                        // A lista de faturas continua utilizável se apenas o indicador falhar.
+                        for (int row = 0; row < invoicesTableModel.getRowCount(); row++) {
+                            if (ids.contains(invoicesTableModel.getValueAt(row, 0))) {
+                                invoicesTableModel.setValueAt("Indisponível", row, 8);
+                            }
+                        }
+                    });
+        }
+    }
+
+    private void applyInvoicePrintStatuses(List<DocumentPrintStatusDTO> statuses) {
+        java.util.Map<Long, DocumentPrintStatusDTO> byId = statuses.stream()
+                .collect(java.util.stream.Collectors.toMap(DocumentPrintStatusDTO::documentId, status -> status));
+        for (int row = 0; row < invoicesTableModel.getRowCount(); row++) {
+            Long id = (Long) invoicesTableModel.getValueAt(row, 0);
+            DocumentPrintStatusDTO status = byId.get(id);
+            if (status == null || status.printCount() == 0) {
+                invoicesTableModel.setValueAt("Não impressa", row, 8);
+            } else {
+                String label = status.printCount() == 1 ? "1 via" : status.printCount() + " vias";
+                invoicesTableModel.setValueAt(label, row, 8);
+            }
         }
     }
 
@@ -631,6 +896,7 @@ public class ComercialPanel extends JPanel {
         editingOrder = null;
         lastCreatedOrder = null;
         orderGridEditable = true;
+        if (orderBarcodeField != null) orderBarcodeField.setEnabled(true);
         orderKindCombo.setEnabled(true);
         orderEditor.setEditorTitle("Nova Encomenda");
         orderEditor.setSaveText("Guardar encomenda");
@@ -651,6 +917,7 @@ public class ComercialPanel extends JPanel {
         }
         editingOrder = null;
         orderGridEditable = false;
+        if (orderBarcodeField != null) orderBarcodeField.setEnabled(false);
         orderEditorDirty = false;
     }
 
@@ -668,6 +935,89 @@ public class ComercialPanel extends JPanel {
 
     void clearOrderEditorDirty() {
         orderEditorDirty = false;
+    }
+
+    void openInvoiceProductLookup() {
+        if (!invoiceGridEditable) return;
+        stopInvoiceCellEditing();
+        List<ProductDTO> selected;
+        if (comercialApiClient != null) {
+            selected = ProductLookupDialog.showMultiRemote(
+                    linesTable,
+                    (query, categoryId, page, size) -> comercialApiClient.getProductsPage(query, categoryId, page, size)
+            );
+        } else {
+            List<ProductDTO> catalog = productsList;
+            if (catalog == null || catalog.isEmpty()) {
+                showCommercialNotice(FeedbackType.WARNING, "Catálogo Vazio", "Não existem produtos registados no sistema.");
+                return;
+            }
+            selected = ProductLookupDialog.showMulti(linesTable, catalog);
+        }
+        if (selected != null && !selected.isEmpty()) {
+            applyInvoiceProductsFromLookup(selected);
+        }
+    }
+
+    void applyInvoiceProductsFromLookup(List<ProductDTO> selected) {
+        if (selected == null || selected.isEmpty() || !invoiceGridEditable) return;
+        stopInvoiceCellEditing();
+        int viewRow = linesTable.getSelectedRow();
+        int modelRow = viewRow >= 0 ? linesTable.convertRowIndexToModel(viewRow) : -1;
+        boolean fillCurrent = (modelRow >= 0 && modelRow < draftLines.size()
+                && (draftLines.get(modelRow).productId() == null || draftLines.get(modelRow).productId() <= 0));
+
+        int targetModelRow = modelRow;
+        for (int i = 0; i < selected.size(); i++) {
+            ProductDTO p = selected.get(i);
+            if (i == 0 && fillCurrent) {
+                draftLines.set(modelRow, new CreateInvoiceLineRequest(
+                        p.id(), BigDecimal.ONE, p.effectiveTaxRate(), BigDecimal.ZERO, null, null));
+                targetModelRow = modelRow;
+            } else {
+                draftLines.add(new CreateInvoiceLineRequest(
+                        p.id(), BigDecimal.ONE, p.effectiveTaxRate(), BigDecimal.ZERO, null, null));
+                targetModelRow = draftLines.size() - 1;
+            }
+        }
+        refreshInvoiceGrid();
+        if (targetModelRow >= 0 && targetModelRow < linesTable.getRowCount()) {
+            final int finalRow = targetModelRow;
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    int vr = linesTable.convertRowIndexToView(finalRow);
+                    linesTable.setRowSelectionInterval(vr, vr);
+                    linesTable.scrollRectToVisible(linesTable.getCellRect(vr, 1, true));
+                    linesTable.editCellAt(vr, 1);
+                    Component comp = linesTable.getEditorComponent();
+                    if (comp != null) comp.requestFocusInWindow();
+                } catch (Exception ignored) {
+                }
+            });
+        }
+    }
+
+    void openOrderProductLookup() {
+        if (!orderGridEditable) return;
+        if (orderLinesTable.isEditing()) orderLinesTable.getCellEditor().stopCellEditing();
+        List<ProductDTO> selected;
+        Component parent = orderFormContent != null ? orderFormContent : ordersTable;
+        if (comercialApiClient != null) {
+            selected = ProductLookupDialog.showMultiRemote(
+                    parent,
+                    (query, categoryId, page, size) -> comercialApiClient.getProductsPage(query, categoryId, page, size)
+            );
+        } else {
+            List<ProductDTO> catalog = productsList;
+            if (catalog == null || catalog.isEmpty()) {
+                showCommercialNotice(FeedbackType.WARNING, "Catálogo Vazio", "Não existem produtos registados no sistema.");
+                return;
+            }
+            selected = ProductLookupDialog.showMulti(parent, catalog);
+        }
+        if (selected != null && !selected.isEmpty()) {
+            CommercialOrderEditorActions.applyProductsFromLookup(this, selected);
+        }
     }
 
     void addDraftOrderLine() {
@@ -712,19 +1062,111 @@ public class ComercialPanel extends JPanel {
         String orderNum = (String) ordersTableModel.getValueAt(row, 1);
         String statusStr = (String) ordersTableModel.getValueAt(row, 3);
 
-        if (!"SEPARATED".equalsIgnoreCase(statusStr)) {
+        Object kindObj = ordersTableModel.getValueAt(row, ORDERS_COL_KIND);
+        mz.multicore.erp.modules.comercial.model.OrderKind kind = kindObj instanceof mz.multicore.erp.modules.comercial.model.OrderKind k
+                ? k : mz.multicore.erp.modules.comercial.model.OrderKind.FORMAL_ORDER;
+
+        if ("BILLED".equalsIgnoreCase(statusStr) || "INVOICED".equalsIgnoreCase(statusStr)
+                || "Facturado".equalsIgnoreCase(statusStr) || "Faturado".equalsIgnoreCase(statusStr)) {
+            showCommercialNotice(FeedbackType.WARNING, "Encomenda já faturada",
+                    "A encomenda " + orderNum + " já foi faturada anteriormente. Não é permitido faturar a mesma encomenda novamente.");
+            return;
+        }
+
+        if (!"SEPARATED".equalsIgnoreCase(statusStr) && !(!"PENDING".equalsIgnoreCase(statusStr) ? false : !kind.usesSeparationFlow())) {
+            if ("PENDING_APPROVAL".equalsIgnoreCase(statusStr)) {
+                boolean choice = ModernMessageDialog.confirm(
+                        SwingUtilities.getWindowAncestor(this),
+                        FeedbackType.INFO,
+                        "Aprovação de Encomenda Pendente",
+                        "A encomenda " + orderNum + " está com aprovação pendente (retida por alçada ou risco de crédito/desconto).\n\n"
+                        + "Deseja analisar e autorizar/aprovar esta encomenda agora?",
+                        "Analisar"
+                );
+                if (choice) {
+                    promptApproveOrRejectOrder(orderId, orderNum);
+                }
+                return;
+            }
             showCommercialNotice(FeedbackType.WARNING, "Encomenda ainda não separada",
                     "Apenas pedidos separados podem ser faturados. Estado actual: " + UIHelper.humanStatus(statusStr) + ".");
             return;
         }
 
-        UIHelper.runWithProgress(this, "A faturar pedido separado…",
-                () -> comercialApiClient.billFulfillmentOrder(orderId, CustomerOrderFulfillmentActions.terminalName()), invoice -> {
+        java.util.concurrent.Callable<InvoiceDTO> billAction = kind.usesSeparationFlow()
+                ? () -> comercialApiClient.billFulfillmentOrder(orderId, CustomerOrderFulfillmentActions.terminalName())
+                : () -> comercialApiClient.billOrder(orderId);
+
+        UIHelper.runWithProgress(this, "A faturar encomenda…", billAction, invoice -> {
             ToastManager.success(this, "Encomenda " + orderNum + " faturada · fatura " + invoice.invoiceNumber() + ".");
 
             loadOrdersTable();
             loadInvoicesTable();
+
+            boolean choice = ModernMessageDialog.confirm(
+                    SwingUtilities.getWindowAncestor(this),
+                    FeedbackType.INFO,
+                    "Emitir Guia de Transporte",
+                    "Encomenda " + orderNum + " faturada com sucesso!\n"
+                    + "Fatura: " + invoice.invoiceNumber() + " (stock movimentado pelo faturador).\n\n"
+                    + "Deseja emitir e visualizar a Guia de Remessa / Transporte agora para acompanhar a mercadoria?",
+                    "Emitir Guia"
+            );
+            if (choice) {
+                SensitivePrintCoordinator.print(this, printApiClient,
+                        SensitiveDocumentType.REMITTANCE_GUIDE, invoice.id(),
+                        "Guia de remessa da fatura " + invoice.invoiceNumber(),
+                        "guia-remessa-" + invoice.invoiceNumber(),
+                        () -> comercialApiClient.renderGuide(invoice.id()), null);
+            }
         }, error -> showCommercialError("faturar encomenda", error));
+    }
+
+    void promptApproveOrRejectOrder(Long orderId, String orderNum) {
+        boolean approveChoice = ModernMessageDialog.confirm(
+                SwingUtilities.getWindowAncestor(this),
+                FeedbackType.INFO,
+                "Aprovação de Encomenda — " + orderNum,
+                "Decisão de Alçada e Risco Corporativo para a Encomenda " + orderNum + ":\n\n"
+                + "• Clique em 'Aprovar Encomenda' para libertar a encomenda para separação e faturação (Green Lane).\n"
+                + "• Para rejeitar ou cancelar, clique em 'Cancelar'.",
+                "Aprovar Encomenda"
+        );
+
+        if (approveChoice) {
+            String notes = UIHelper.promptRequiredText("Aprovar Encomenda", "fas-check-circle",
+                    "Encomenda " + orderNum, "Justificação da aprovação:");
+            if (notes == null) return;
+
+            UIHelper.runWithProgress(this, "A aprovar encomenda…",
+                    () -> comercialApiClient.approveOrder(orderId, notes),
+                    approved -> {
+                        ToastManager.success(this, "Encomenda " + orderNum + " aprovada com sucesso! Liberada para o armazém.");
+                        loadOrdersTable();
+                    },
+                    error -> showCommercialError("aprovar encomenda", error));
+        } else {
+            boolean wantReject = ModernMessageDialog.confirm(
+                    SwingUtilities.getWindowAncestor(this),
+                    FeedbackType.WARNING,
+                    "Rejeitar Encomenda — " + orderNum,
+                    "Deseja rejeitar formalmente a Encomenda " + orderNum + "?\nSerá solicitado o motivo da rejeição para arquivo e auditoria.",
+                    "Rejeitar Encomenda"
+            );
+            if (!wantReject) return;
+
+            String reason = UIHelper.promptRequiredText("Rejeitar Encomenda", "fas-times-circle",
+                    "Encomenda " + orderNum, "Indique o motivo da rejeição:");
+            if (reason == null || reason.trim().isBlank()) return;
+
+            UIHelper.runWithProgress(this, "A rejeitar encomenda…",
+                    () -> comercialApiClient.rejectOrder(orderId, reason.trim()),
+                    rejected -> {
+                        ToastManager.show(this, FeedbackType.WARNING, "Encomenda " + orderNum + " rejeitada com sucesso.");
+                        loadOrdersTable();
+                    },
+                    error -> showCommercialError("rejeitar encomenda", error));
+        }
     }
 
     void convertSelectedOrderToGuide() {
@@ -781,10 +1223,36 @@ public class ComercialPanel extends JPanel {
         JScrollPane notesScroll = new JScrollPane(notesArea);
         UIHelper.styleScrollPane(notesScroll);
 
+        JComboBox<String> fleetCombo = UIHelper.createComboBox(
+                new String[]{"(Viatura externa / digitação manual)"}, s -> s);
+        if (fleetApiClient != null) {
+            UIHelper.loadAsync(this, fleetApiClient::listVehicles, vehicles -> {
+                if (vehicles != null && !vehicles.isEmpty()) {
+                    vehicles.forEach(v -> fleetCombo.addItem(v.licensePlate() + " • " + v.make() + " " + v.model()
+                            + (v.assignedDriverName() != null && !v.assignedDriverName().isBlank() ? " (" + v.assignedDriverName() + ")" : "")));
+                }
+            }, null);
+            fleetCombo.addActionListener(e -> {
+                int idx = fleetCombo.getSelectedIndex();
+                if (idx > 0) {
+                    String selected = (String) fleetCombo.getSelectedItem();
+                    if (selected != null) {
+                        String[] parts = selected.split(" • ");
+                        if (parts.length > 0) vehicleField.setText(parts[0].trim());
+                        if (selected.contains("(") && selected.contains(")")) {
+                            String driver = selected.substring(selected.lastIndexOf('(') + 1, selected.lastIndexOf(')'));
+                            responsibleField.setText(driver);
+                        }
+                    }
+                }
+            });
+        }
+
         JPanel form = UIHelper.createDialogForm(
                 "Encomenda:", orderField,
                 "Cliente:", clientField,
                 "Total:", totalField,
+                "Viatura da Frota:", fleetCombo,
                 "Responsável pelo transporte *:", responsibleField,
                 "Viatura / Matrícula *:", vehicleField,
                 "Observações:", notesScroll
@@ -818,22 +1286,66 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    void generateProductionOrderFromSelectedOrder() {
+        int row = TableFilter.selectedModelRow(ordersTable);
+        if (row < 0) {
+            showCommercialNotice(FeedbackType.WARNING, "Seleccione uma encomenda",
+                    "Escolha na tabela a encomenda para gerar a Ordem de Fabrico.");
+            return;
+        }
+        if (productionApiClient == null) {
+            showCommercialNotice(FeedbackType.INFO, "Manufatura Indisponível",
+                    "O módulo de Produção não está inicializado nesta sessão.");
+            return;
+        }
+
+        Long orderId = (Long) ordersTableModel.getValueAt(row, ORDERS_COL_ID);
+        UIHelper.loadAsync(this, () -> comercialApiClient.getOrderById(orderId), order -> {
+            List<CommercialProductionOrderDialog.DocumentItem> items = new ArrayList<>();
+            for (OrderLineDTO line : order.lines()) {
+                items.add(new CommercialProductionOrderDialog.DocumentItem(
+                        line.productId(), line.productName(), line.quantity()));
+            }
+            CommercialProductionOrderDialog.open(
+                    this,
+                    productionApiClient,
+                    "Encomenda " + order.orderNumber(),
+                    items,
+                    warehousesList,
+                    this::loadOrdersTable
+            );
+        }, error -> showCommercialLoadError("encomenda", error));
+    }
+
     private static String blankToNull(String value) {
         if (value == null || value.isBlank()) return null;
         return value.trim();
     }
 
     public void loadOrdersTable() {
+        if (ordersPager != null) {
+            ordersPager.reload();
+        } else {
+            loadOrdersPage(0, 50);
+        }
+    }
+
+    void loadOrdersPage(int page, int size) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.loadAsync(this, () -> comercialApiClient.getOrdersByCompany(companyId), this::applyOrders,
+        UIHelper.loadAsync(this, () -> comercialApiClient.getOrdersPage(companyId, page, size),
+                response -> {
+                    if (ordersPager != null) ordersPager.apply(response);
+                    applyOrders(response != null ? response.items() : List.of());
+                },
                 error -> showCommercialLoadError("encomendas", error));
     }
 
     private void applyOrders(List<OrderDTO> orders) {
+        this.cachedOrders = orders != null ? new ArrayList<>(orders) : new ArrayList<>();
         ordersTableModel.setRowCount(0);
         java.time.format.DateTimeFormatter dtfShort =
                 java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        for (OrderDTO order : orders) {
+        for (OrderDTO order : this.cachedOrders) {
             String clientLabel = order.clientName();
             if (order.walkInName() != null && !order.walkInName().isBlank()) {
                 clientLabel += " — " + order.walkInName();
@@ -857,9 +1369,19 @@ public class ComercialPanel extends JPanel {
                     impressoes,
                     order.kind(),
                     order.quotationNumber() == null ? "—" : order.quotationNumber(),
-                    formatExpectedDelivery(order)
+                    formatExpectedDelivery(order),
+                    order.businessUnitName() != null && !order.businessUnitName().isBlank()
+                            ? order.businessUnitName() : "—"
             });
         }
+    }
+
+    public OrderDTO findCachedOrder(Long orderId) {
+        if (orderId == null) return null;
+        for (OrderDTO o : cachedOrders) {
+            if (orderId.equals(o.id())) return o;
+        }
+        return null;
     }
 
     /** Data prometida, com o atraso que o <b>servidor</b> calculou — o painel não compara datas. */
@@ -889,9 +1411,28 @@ public class ComercialPanel extends JPanel {
         }
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
-        UIHelper.runWithProgress(this, "A gerar fatura em PDF…", () -> comercialApiClient.renderInvoice(invoiceId),
-                pdf -> PrintPreviewDialog.show(this, pdf, "fatura-" + invoiceNum),
-                error -> showCommercialError("gerar fatura em PDF", error));
+
+        String[] options = {"Folha A4 Oficial (4 Vias)", "Talão Térmico (80mm)"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Selecione o formato de impressão da Fatura " + invoiceNum + ":",
+                "Imprimir Fatura",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+        if (choice < 0) return;
+
+        boolean thermal = (choice == 1);
+        String taskMsg = thermal ? "A gerar fatura térmica 80mm…" : "A gerar fatura em PDF A4…";
+        SensitivePrintCoordinator.print(this, printApiClient, SensitiveDocumentType.INVOICE, invoiceId,
+                "Fatura " + invoiceNum,
+                "fatura-" + (thermal ? "80mm-" : "") + invoiceNum,
+                () -> thermal ? comercialApiClient.renderInvoiceThermal(invoiceId)
+                        : comercialApiClient.renderInvoice(invoiceId),
+                this::loadInvoicesTable);
     }
 
     void printSelectedGuide() {
@@ -902,9 +1443,11 @@ public class ComercialPanel extends JPanel {
         }
         Long invoiceId = (Long) invoicesTableModel.getValueAt(row, 0);
         String invoiceNum = String.valueOf(invoicesTableModel.getValueAt(row, 1));
-        UIHelper.runWithProgress(this, "A gerar guia em PDF…", () -> comercialApiClient.renderGuide(invoiceId),
-                pdf -> PrintPreviewDialog.show(this, pdf, "guia-remessa-" + invoiceNum),
-                error -> showCommercialError("gerar guia em PDF", error));
+        SensitivePrintCoordinator.print(this, printApiClient,
+                SensitiveDocumentType.REMITTANCE_GUIDE, invoiceId,
+                "Guia de remessa da fatura " + invoiceNum,
+                "guia-remessa-" + invoiceNum,
+                () -> comercialApiClient.renderGuide(invoiceId), null);
     }
 
     void exportInvoicesTable() {
@@ -928,6 +1471,9 @@ public class ComercialPanel extends JPanel {
         if (row < 0) {
             showCommercialNotice(FeedbackType.WARNING, "Seleccione uma encomenda", "Escolha uma encomenda na tabela para continuar.");
             return;
+        }
+        if (encomendasCards != null && encomendasHost != null) {
+            encomendasCards.show(encomendasHost, "list");
         }
         orderDetailsDialog.open((Long) ordersTableModel.getValueAt(row, 0));
     }

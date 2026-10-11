@@ -22,8 +22,22 @@ public record ReorderSuggestionDTO(
         Long supplierId,
         String supplierName,
         BigDecimal estimatedUnitPrice,
-        BigDecimal estimatedTotalCost
+        BigDecimal estimatedTotalCost,
+        Long businessUnitId,
+        String businessUnitName
 ) {
+    /** Construtor de compatibilidade para código que utiliza 15 argumentos (sem unidade de negócio). */
+    public ReorderSuggestionDTO(
+            Long productId, String sku, String name, BigDecimal currentStock, BigDecimal minStock,
+            int unitsPerBox, BigDecimal suggestedBoxes, BigDecimal suggestedUnits,
+            BigDecimal dailySalesRate, Integer daysRemaining, String urgencyStatus,
+            Long supplierId, String supplierName, BigDecimal estimatedUnitPrice,
+            BigDecimal estimatedTotalCost
+    ) {
+        this(productId, sku, name, currentStock, minStock, unitsPerBox, suggestedBoxes, suggestedUnits,
+                dailySalesRate, daysRemaining, urgencyStatus, supplierId, supplierName,
+                estimatedUnitPrice, estimatedTotalCost, null, null);
+    }
     /** Construtor de compatibilidade para código ou testes que utilizam assinatura simplificada. */
     public ReorderSuggestionDTO(
             Long productId,

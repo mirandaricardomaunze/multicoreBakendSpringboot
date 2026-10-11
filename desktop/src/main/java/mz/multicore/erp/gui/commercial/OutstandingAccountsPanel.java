@@ -33,6 +33,7 @@ public final class OutstandingAccountsPanel extends JPanel {
     private final JTable table;
     private final JLabel agingSummary;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+    private JComboBox<String> businessUnit;
     private List<InvoiceDTO> invoices = new ArrayList<>();
 
     public OutstandingAccountsPanel(ComercialApiClient comercialApiClient,
@@ -52,12 +53,11 @@ public final class OutstandingAccountsPanel extends JPanel {
         refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refresh.addActionListener(e -> refresh());
         add(feedback, BorderLayout.NORTH);
-
-        ModernPanel card = new ModernPanel(16);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         model = new DefaultTableModel(
-                new String[]{"Nº Fatura", "Data", "Cliente", "NUIT", "Total", "Pago", "Em Dívida",
+                new String[]{"Nº Fatura", "Data", "Negócio", "Cliente", "NUIT", "Total", "Pago", "Em Dívida",
                         "Vencimento", "Dias em Atraso", "Antiguidade", "Estado"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -67,17 +67,22 @@ public final class OutstandingAccountsPanel extends JPanel {
         // O rotulo mais longo da antiguidade — "Corrente (por vencer)" — nao cabia e saia
         // "Corrente (por …", que e o mesmo que nao dizer nada: todos os escaloes comecam por
         // "Corrente" ou por um numero.
-        UIHelper.ensureColumnFits(table, 9, "Corrente (por vencer)");
+        UIHelper.ensureColumnFits(table, 10, "Corrente (por vencer)");
         // E o estado, pela mesma razao: "Parcialmente paga" e o rotulo mais longo, e distingui-lo
         // de "Paga" e o que a coluna existe para fazer. O espaco sai do Cliente, que e texto livre
         // e vai truncar de qualquer maneira — ali a ficha do cliente resolve; aqui nao ha para onde ir.
-        UIHelper.ensureColumnFits(table, 10, "Parcialmente paga");
-        for (int column : new int[]{4, 5, 6}) table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
-        table.getColumnModel().getColumn(10).setCellRenderer(TableCellRenderers.status());
+        UIHelper.ensureColumnFits(table, 11, "Parcialmente paga");
+        for (int column : new int[]{5, 6, 7}) table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
+        table.getColumnModel().getColumn(11).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         JTextField search = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
-        JComboBox<String> status = TableFilter.combo("Todos os estados", "APPROVED", "PARTIALLY_PAID");
+
+        businessUnit = TableFilter.combo("Todos os negócios");
+        UIHelper.styleComboBox(businessUnit);
+        businessUnit.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JComboBox<String> status = TableFilter.combo("Todos os estados", "Aprovado", "Parcialmente paga");
         UIHelper.styleComboBox(status);
         status.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
@@ -90,30 +95,27 @@ public final class OutstandingAccountsPanel extends JPanel {
         period.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(table, search,
-                List.of(new TableFilter.ColumnFilter(status, 10), new TableFilter.ColumnFilter(aging, 9)),
+                List.of(
+                        new TableFilter.ColumnFilter(businessUnit, 2),
+                        new TableFilter.ColumnFilter(status, 11),
+                        new TableFilter.ColumnFilter(aging, 10)
+                ),
                 List.of(new TableFilter.PeriodFilter(period, 1)));
 
-        JPanel filters = new JPanel(new GridBagLayout());
-        filters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da conta (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar conta");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridx = 0; g.weightx = 0; filters.add(filterLabel("Estado"), g);
-        g.gridx = 1; g.weightx = 0; filters.add(filterLabel("Antiguidade"), g);
-        g.gridx = 2; g.weightx = 0; filters.add(filterLabel("Período"), g);
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        filters.add(filterLabel("Pesquisa"), g);
-
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; filters.add(status, g);
-        g.gridx = 1; g.weightx = 0; filters.add(aging, g);
-        g.gridx = 2; g.weightx = 0; filters.add(period, g);
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        filters.add(search, g);
-
+        JPanel filters = TableFilter.bar(
+                search,
+                TableFilter.label("Negócio:"), businessUnit,
+                TableFilter.label("Estado:"), status,
+                TableFilter.label("Antiguidade:"), aging,
+                TableFilter.label("Período:"), period,
+                peekToggleBtn
+        );
         filters.setBorder(new EmptyBorder(0, 0, 8, 0));
         agingSummary = new JLabel(" ");
         agingSummary.setForeground(UIHelper.TEXT_LIGHT);
@@ -122,6 +124,41 @@ public final class OutstandingAccountsPanel extends JPanel {
         filterHeader.setOpaque(false);
         filterHeader.add(filters, BorderLayout.NORTH);
         filterHeader.add(agingSummary, BorderLayout.SOUTH);
+
+        UIHelper.ensureHeadersFit(table);
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            if (mr < 0 || mr >= model.getRowCount()) return;
+            String num = String.valueOf(model.getValueAt(mr, 0));
+            String date = String.valueOf(model.getValueAt(mr, 1));
+            String bu = String.valueOf(model.getValueAt(mr, 2));
+            String client = String.valueOf(model.getValueAt(mr, 3));
+            String nuit = String.valueOf(model.getValueAt(mr, 4));
+            String total = String.valueOf(model.getValueAt(mr, 5));
+            String paid = String.valueOf(model.getValueAt(mr, 6));
+            String balance = String.valueOf(model.getValueAt(mr, 7));
+            String due = String.valueOf(model.getValueAt(mr, 8));
+            String days = String.valueOf(model.getValueAt(mr, 9));
+            String bucket = String.valueOf(model.getValueAt(mr, 10));
+            String state = String.valueOf(model.getValueAt(mr, 11));
+
+            peek.setTitle("Fatura " + num);
+            peek.setSubtitle(client + " (NUIT " + nuit + ")");
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Data de Emissão", date, false),
+                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu != null && !"-".equals(bu) ? bu : "Geral", false),
+                    new QuickPeekPanel.PeekItem("Vencimento", due, false),
+                    new QuickPeekPanel.PeekItem("Total Fatura", total, false),
+                    new QuickPeekPanel.PeekItem("Valor Pago", paid, false),
+                    new QuickPeekPanel.PeekItem("Saldo Devedor", balance, true),
+                    new QuickPeekPanel.PeekItem("Dias Atraso", days, false),
+                    new QuickPeekPanel.PeekItem("Antiguidade", bucket, false),
+                    new QuickPeekPanel.PeekItem("Estado", state, false)
+            ));
+            peek.getOpenFullButton().setText("Liquidar Fatura");
+            peek.setOnOpenFullAction(v -> pay.doClick());
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
+
         card.add(UIHelper.tableCardTop("Contas Correntes — Faturas com Saldo em Dívida", filterHeader,
                 refresh, pay), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -151,19 +188,30 @@ public final class OutstandingAccountsPanel extends JPanel {
     private void apply(List<InvoiceDTO> loaded) {
         invoices = loaded;
         model.setRowCount(0);
+        java.util.Set<String> bus = new java.util.TreeSet<>();
         for (InvoiceDTO invoice : invoices) {
             BigDecimal paid = invoice.amountPaid() == null ? BigDecimal.ZERO : invoice.amountPaid();
+            String bu = invoice.businessUnitName() == null || invoice.businessUnitName().isBlank() ? "-" : invoice.businessUnitName();
+            if (!"-".equals(bu)) bus.add(bu);
             model.addRow(new Object[]{invoice.invoiceNumber(),
                     // Data e nao data-hora: a coluna nao tem largura para as duas e via-se
                     // "29/08/2026 22…" — a hora a comer a data numa tabela de dividas, onde a hora
                     // de emissao nao decide nada e a data decide tudo.
                     invoice.createdAt() == null ? "-" : invoice.createdAt().format(DATE),
+                    bu,
                     invoice.clientName(), invoice.clientTaxId(), invoice.totalAmount(), paid,
                     invoice.outstandingAmount(),
                     invoice.dueDate() == null ? "-" : invoice.dueDate().format(DATE),
                     invoice.daysOverdue() == 0 ? "—" : invoice.daysOverdue(),
                     invoice.agingBucket() == null ? "-" : invoice.agingBucket().label(),
                     invoice.status().name()});
+        }
+        if (businessUnit != null) {
+            String selectedBu = (String) businessUnit.getSelectedItem();
+            businessUnit.removeAllItems();
+            businessUnit.addItem("Todos os negócios");
+            for (String b : bus) businessUnit.addItem(b);
+            if (selectedBu != null) businessUnit.setSelectedItem(selectedBu);
         }
     }
 

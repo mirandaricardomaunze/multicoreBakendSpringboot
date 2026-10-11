@@ -22,5 +22,17 @@ public record DebitNoteDTO(
         String approvedBy,
         LocalDateTime approvedAt,
         String rejectionReason,
-        List<DebitNoteLineDTO> lines
-) {}
+        List<DebitNoteLineDTO> lines,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public DebitNoteDTO(Long id, String noteNumber, LocalDateTime issueDate, Long companyId,
+                        Long clientId, String clientName, Long invoiceId, String invoiceNumber,
+                        String reason, String status, BigDecimal totalBeforeTax, BigDecimal taxAmount,
+                        BigDecimal totalAmount, String description, String approvedBy,
+                        LocalDateTime approvedAt, String rejectionReason, List<DebitNoteLineDTO> lines) {
+        this(id, noteNumber, issueDate, companyId, clientId, clientName, invoiceId, invoiceNumber,
+                reason, status, totalBeforeTax, taxAmount, totalAmount, description, approvedBy,
+                approvedAt, rejectionReason, lines, null, null);
+    }
+}

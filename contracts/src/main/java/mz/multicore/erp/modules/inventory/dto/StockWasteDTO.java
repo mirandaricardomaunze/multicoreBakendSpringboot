@@ -26,5 +26,18 @@ public record StockWasteDTO(
         String approvedBy,
         LocalDateTime createdAt,
         LocalDateTime approvedAt,
-        Long stockMovementId
-) {}
+        Long stockMovementId,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public StockWasteDTO(Long id, Long companyId, Long warehouseId, String warehouseName,
+                         Long productId, String productSku, String productName, Long batchId,
+                         String batchNumber, BigDecimal quantity, BigDecimal unitCost,
+                         BigDecimal totalCost, WasteReason reason, WasteStatus status,
+                         String notes, String registeredBy, String approvedBy,
+                         LocalDateTime createdAt, LocalDateTime approvedAt, Long stockMovementId) {
+        this(id, companyId, warehouseId, warehouseName, productId, productSku, productName,
+                batchId, batchNumber, quantity, unitCost, totalCost, reason, status, notes,
+                registeredBy, approvedBy, createdAt, approvedAt, stockMovementId, null, null);
+    }
+}

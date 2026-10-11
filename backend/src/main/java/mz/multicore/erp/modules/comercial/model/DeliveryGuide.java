@@ -38,8 +38,8 @@ public class DeliveryGuide extends BaseEntity {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    /** Encomenda de origem (a guia expede exactamente as suas linhas). */
-    @Column(name = "order_id", nullable = false)
+    /** Encomenda de origem; nula quando a guia é emitida avulsa. */
+    @Column(name = "order_id")
     private Long orderId;
 
     @Column(name = "order_number")

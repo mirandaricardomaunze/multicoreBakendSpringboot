@@ -277,10 +277,24 @@ class StockTransferServiceTest {
 
         StockTransferDTO dto = service.submit(1L);
 
-        assertEquals(TransferStatus.PENDING_APPROVAL.name(), dto.status());
+        assertEquals(TransferStatus.AWAITING_SEPARATION.name(), dto.status());
         verify(productBatchService, never()).consumeFEFO(any(), any(), any());
         verify(stockMovementRepository, never()).save(any());
         verify(auditLogService).logCurrent(eq("STOCK_TRANSFER_SUBMIT"), contains("submetida"));
+    }
+
+    @Test
+    void completeSeparation_marcaComoSeparada() {
+        StockTransfer awaiting = pendingTransfer(new BigDecimal("5"));
+        awaiting.setStatus(TransferStatus.AWAITING_SEPARATION);
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(awaiting));
+        when(productBatchService.sumQuantity(100L, 10L)).thenReturn(new BigDecimal("50"));
+        when(transferRepository.save(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        StockTransferDTO dto = service.completeSeparation(1L);
+
+        assertEquals(TransferStatus.SEPARATED.name(), dto.status());
+        verify(auditLogService).logCurrent(eq("STOCK_TRANSFER_SEPARATED"), contains("concluída"));
     }
 
     @Test
@@ -318,6 +332,17 @@ class StockTransferServiceTest {
     }
 
     @Test
+    void approve_semSeparacaoConcluida_lancaExcecao() {
+        StockTransfer awaiting = pendingTransfer(new BigDecimal("5"));
+        awaiting.setStatus(TransferStatus.AWAITING_SEPARATION);
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(awaiting));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.approve(1L));
+        assertTrue(ex.getMessage().contains("separação concluída"));
+        verify(productBatchService, never()).consumeFEFO(any(), any(), any());
+    }
+
+    @Test
     void approve_semPerfilAutorizado_lancaExcecao_eNaoMoveStock() {
         CurrentUserContext.setCurrentUser("caixa", "CASHIER");
         StockTransfer pending = pendingTransfer(new BigDecimal("5"));
@@ -346,6 +371,16 @@ class StockTransferServiceTest {
 
         assertThrows(BusinessRuleException.class, () -> service.approve(1L));
         verify(productBatchService, never()).consumeFEFO(any(), any(), any());
+    }
+
+    @Test
+    void loadForPrint_recusaSeNaoAprovada() {
+        StockTransfer pending = pendingTransfer(new BigDecimal("5"));
+        pending.setStatus(TransferStatus.SEPARATED);
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(pending));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> service.loadForPrint(1L));
+        assertTrue(ex.getMessage().contains("só pode ser emitida após a separação e aprovação"));
     }
 
     // ────────────────────────── reject / cancel ──────────────────────────

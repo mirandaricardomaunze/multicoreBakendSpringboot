@@ -501,6 +501,15 @@ public class QuotationService {
                         Math.max(1, l.getProduct().getUnitsPerBox())))
                 .toList();
 
+        java.util.Set<String> bus = q.getLines().stream()
+                .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
+        Long buId = bus.size() == 1 ? q.getLines().stream()
+                .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
+                .filter(java.util.Objects::nonNull).findFirst().orElse(null) : null;
+
         return new QuotationDTO(
                 q.getId(),
                 q.getQuotationNumber(),
@@ -535,6 +544,8 @@ public class QuotationService {
                 lines,
                 q.getInvoiceId(),
                 q.getInvoiceNumber(),
-                q.getVersion());
+                q.getVersion(),
+                buId,
+                buName);
     }
 }

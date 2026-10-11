@@ -27,5 +27,19 @@ public record CreateProductRequest(
         BigDecimal wholesalePrice,
         BigDecimal wholesaleMinQty,
         BigDecimal netUnitWeightKg,
-        BigDecimal grossUnitWeightKg
-) {}
+        BigDecimal grossUnitWeightKg,
+        Long businessUnitId
+) {
+    public CreateProductRequest(
+            String sku, String reference, String barcode, String name,
+            BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+            int unitsPerBox, Integer packagesPerBox, Integer unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId,
+            String description, BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
+            BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
+        this(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType,
+                stockTracked, taxRateId, description, wholesalePrice, wholesaleMinQty,
+                netUnitWeightKg, grossUnitWeightKg, null);
+    }
+}

@@ -5,6 +5,7 @@ import mz.multicore.erp.gui.NotificationFeed.NotificationItem;
 import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -78,6 +79,7 @@ public class NotificationsPanel extends JPanel {
         };
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.setFillsViewportHeight(true);
         table.putClientProperty("emptyText", "Sem notificações.");
         table.getColumnModel().getColumn(0).setPreferredWidth(100);
@@ -85,6 +87,21 @@ public class NotificationsPanel extends JPanel {
         table.getColumnModel().getColumn(2).setPreferredWidth(330);
         table.getColumnModel().getColumn(3).setPreferredWidth(120);
         table.getColumnModel().getColumn(4).setPreferredWidth(80);
+
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-bell", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
+            peek.setSubtitle("Tipo: " + tableModel.getValueAt(row, 0) + " • " + tableModel.getValueAt(row, 3));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Tipo", String.valueOf(tableModel.getValueAt(row, 0)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data / Estado", String.valueOf(tableModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Detalhes Completos", String.valueOf(tableModel.getValueAt(row, 2)), true));
+            peek.setItems(items);
+            peek.getOpenFullButton().setText("Abrir Módulo");
+            peek.setOnOpenFullAction(v -> openSelectedModule());
+        });
 
         JTextField search = TableFilter.searchField("Pesquisar notificações…");
         JComboBox<String> type = TableFilter.combo("Todos os tipos",

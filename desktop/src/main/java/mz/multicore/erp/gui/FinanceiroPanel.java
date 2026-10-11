@@ -5,12 +5,17 @@ import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
+import mz.multicore.erp.gui.components.QuickPeekPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.ClientTablePagination;
+import mz.multicore.erp.gui.components.TablePager;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.FinanceApiClient;
+import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
@@ -40,6 +45,7 @@ public class FinanceiroPanel extends JPanel {
     // Transaction movements list
     private DefaultTableModel movementsModel;
     private JTable movementsTable;
+    private TablePager movementsPager;
 
     private List<InvoiceDTO> approvedInvoicesList = new ArrayList<>();
     private List<TreasuryAccountDTO> accountsList = new ArrayList<>();
@@ -106,6 +112,7 @@ public class FinanceiroPanel extends JPanel {
         };
         accountsTable = new JTable(accountsModel);
         UIHelper.styleTable(accountsTable);
+        UIHelper.ensureHeadersFit(accountsTable);
         accountsTable.getColumnModel().getColumn(1).setCellRenderer(TableCellRenderers.status());
         accountsTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         JScrollPane accScroll = new JScrollPane(accountsTable);
@@ -114,8 +121,22 @@ public class FinanceiroPanel extends JPanel {
         TableFilter.install(accountsTable, aSearch);
         JPanel aBar = TableFilter.bar(aSearch);
         aBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        accountsCard.add(aBar, BorderLayout.NORTH);
+        accountsCard.add(UIHelper.tableCardTop("Contas de Tesouraria & Saldos", aBar), BorderLayout.NORTH);
         accountsCard.add(accScroll, BorderLayout.CENTER);
+        TableQuickPeekController.install(accountsTable, accountsCard, (peek, row) -> {
+            String nome = String.valueOf(accountsModel.getValueAt(row, 0));
+            String tipo = String.valueOf(accountsModel.getValueAt(row, 1));
+            String iban = String.valueOf(accountsModel.getValueAt(row, 2));
+            String saldo = String.valueOf(accountsModel.getValueAt(row, 3));
+            peek.setHeaderIcon("fas-wallet", UIHelper.APPROVED_GREEN);
+            peek.setTitle(nome);
+            peek.setSubtitle("Tipo: " + tipo);
+            peek.setStatus(tipo, UIHelper.ACCENT_BLUE);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("IBAN / Conta", iban, false),
+                    new QuickPeekPanel.PeekItem("Saldo Actual", saldo, true)
+            ));
+        });
         panel.add(accountsCard, BorderLayout.CENTER);
         return panel;
     }
@@ -126,14 +147,9 @@ public class FinanceiroPanel extends JPanel {
         movementsPanel.setOpaque(false);
         movementsPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
-        JPanel movHeader = new JPanel(new BorderLayout());
-        movHeader.setOpaque(false);
-        movHeader.add(UIHelper.createSubheading("Histórico de Fluxo de Caixa"), BorderLayout.WEST);
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Recebimento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         payBtn.addActionListener(e -> registerReceipt());
-        movHeader.add(UIHelper.actionsBar(payBtn), BorderLayout.EAST);
-        movementsPanel.add(movHeader, BorderLayout.NORTH);
 
         ModernPanel movementsCard = new ModernPanel(16);
         movementsCard.setLayout(new BorderLayout());
@@ -145,13 +161,15 @@ public class FinanceiroPanel extends JPanel {
             public boolean isCellEditable(int r, int c) { return false; }
         };
         movementsTable = new JTable(movementsModel);
+        movementsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(movementsTable);
+        UIHelper.ensureHeadersFit(movementsTable);
         movementsTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.status());
         movementsTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
         JTextField mSearch = TableFilter.searchField("Conta ou descrição…");
-        JComboBox<String> mTipo = TableFilter.combo("Todos os tipos", "DEBIT", "CREDIT");
+        JComboBox<String> mTipo = TableFilter.combo("Todos os tipos", "Débito", "Crédito");
         JComboBox<String> mPeriodo = TableFilter.periodCombo();
         TableFilter.install(movementsTable, mSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(mTipo, 3)),
@@ -159,19 +177,70 @@ public class FinanceiroPanel extends JPanel {
         JPanel mBar = TableFilter.bar(mSearch, TableFilter.label("Tipo:"), mTipo,
                 TableFilter.label("Data:", "fas-calendar-alt"), mPeriodo);
         mBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        movementsCard.add(mBar, BorderLayout.NORTH);
+        movementsCard.add(UIHelper.tableCardTop("Histórico de Fluxo de Caixa", mBar, payBtn), BorderLayout.NORTH);
         movementsCard.add(movScroll, BorderLayout.CENTER);
+        movementsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
+        movementsPager = new TablePager(this::loadTransactionsPage);
+        movementsCard.add(movementsPager, BorderLayout.SOUTH);
+        TableQuickPeekController.install(movementsTable, movementsCard, (peek, row) -> {
+            String data = String.valueOf(movementsModel.getValueAt(row, 0));
+            String conta = String.valueOf(movementsModel.getValueAt(row, 1));
+            String desc = String.valueOf(movementsModel.getValueAt(row, 2));
+            String tipo = String.valueOf(movementsModel.getValueAt(row, 3));
+            String val = String.valueOf(movementsModel.getValueAt(row, 4));
+            peek.setHeaderIcon("fas-exchange-alt", UIHelper.ACCENT_BLUE);
+            peek.setTitle(desc);
+            peek.setSubtitle("Conta: " + conta);
+            peek.setStatus(tipo, "CREDIT".equalsIgnoreCase(tipo) ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Data Operação", data, false),
+                    new QuickPeekPanel.PeekItem("Tipo Movimento", tipo, false),
+                    new QuickPeekPanel.PeekItem("Valor", val, true)
+            ));
+        });
         movementsPanel.add(movementsCard, BorderLayout.CENTER);
         return movementsPanel;
     }
 
     public void refreshData() {
         UIHelper.loadAsync(this,
-                () -> new FinanceData(financeApiClient.getAllAccounts(), financeApiClient.getAllTransactions(),
-                        comercialApiClient.getAllInvoices()),
+                () -> new FinanceData(financeApiClient.getAllAccounts(), comercialApiClient.getAllInvoices()),
                 this::applyData,
                 error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar a tesouraria",
                         error.getMessage(), "Tentar novamente", this::refreshData));
+        if (movementsPager != null) {
+            movementsPager.reload();
+        } else {
+            loadTransactionsPage(0, 50);
+        }
+    }
+
+    private void loadTransactionsPage(int page, int size) {
+        UIHelper.loadAsync(this,
+                () -> financeApiClient.getTransactionsPage(page, size),
+                this::applyTransactionsPage,
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar transações",
+                        error.getMessage(), "Tentar novamente", () -> {
+                            if (movementsPager != null) movementsPager.reload();
+                        }));
+    }
+
+    private void applyTransactionsPage(PageResponse<TreasuryTransactionDTO> response) {
+        if (movementsPager != null) {
+            movementsPager.apply(response);
+        }
+        movementsModel.setRowCount(0);
+        if (response == null || response.items() == null) return;
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        for (TreasuryTransactionDTO tx : response.items()) {
+            movementsModel.addRow(new Object[]{
+                    tx.transactionDate().format(dtf),
+                    tx.accountName(),
+                    tx.description(),
+                    tx.transactionType(),
+                    tx.transactionType().equalsIgnoreCase("DEBIT") ? tx.amount() : tx.amount().negate()
+            });
+        }
     }
 
     private void applyData(FinanceData data) {
@@ -186,17 +255,6 @@ public class FinanceiroPanel extends JPanel {
                     acc.balance()
             });
         }
-        movementsModel.setRowCount(0);
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (TreasuryTransactionDTO tx : data.transactions()) {
-            movementsModel.addRow(new Object[]{
-                    tx.transactionDate().format(dtf),
-                    tx.accountName(),
-                    tx.description(),
-                    tx.transactionType(),
-                    tx.transactionType().equalsIgnoreCase("DEBIT") ? tx.amount() : tx.amount().negate()
-            });
-        }
         approvedInvoicesList.clear();
         for (InvoiceDTO invoice : data.invoices()) {
             if (invoice.status().isCollectable()) {
@@ -206,7 +264,6 @@ public class FinanceiroPanel extends JPanel {
     }
 
     private record FinanceData(List<TreasuryAccountDTO> accounts,
-                               List<TreasuryTransactionDTO> transactions,
                                List<InvoiceDTO> invoices) {}
 
     /** Registo de recebimento (liquidação de fatura aprovada) em modal profissional. */

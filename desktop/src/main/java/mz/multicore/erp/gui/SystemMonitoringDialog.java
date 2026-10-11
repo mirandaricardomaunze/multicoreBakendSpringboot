@@ -254,6 +254,7 @@ public class SystemMonitoringDialog {
         table.getColumnModel().getColumn(1).setPreferredWidth(120);
         table.getColumnModel().getColumn(2).setPreferredWidth(90);
         table.getColumnModel().getColumn(3).setPreferredWidth(450);
+        UIHelper.ensureHeadersFit(table);
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
@@ -341,6 +342,7 @@ public class SystemMonitoringDialog {
         table.getColumnModel().getColumn(3).setPreferredWidth(100);
         table.getColumnModel().getColumn(4).setPreferredWidth(150);
         table.getColumnModel().getColumn(5).setPreferredWidth(140);
+        UIHelper.ensureHeadersFit(table);
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
@@ -430,6 +432,7 @@ public class SystemMonitoringDialog {
         table.getColumnModel().getColumn(4).setPreferredWidth(320);
         table.getColumnModel().getColumn(5).setPreferredWidth(140);
         table.getColumnModel().getColumn(6).setPreferredWidth(80);
+        UIHelper.ensureHeadersFit(table);
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));

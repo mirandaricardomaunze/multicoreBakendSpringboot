@@ -61,8 +61,9 @@ public final class LoadSummaryRenderer {
                     + " (" + share.quantityPercentage() + "% qtd; " + share.weightPercentage() + "% peso)";
         }).collect(Collectors.joining(" | "));
 
+        String vehicleRec = LogisticsLoadCalculator.recommendedVehicleType(totalWeight);
         Paragraph paragraph = new Paragraph(
-                "Carga total: " + totalWeight + " kg. Volumes: " + detail, PdfTheme.smallFont());
+                "Carga total: " + totalWeight + " kg [" + vehicleRec + "]. Volumes: " + detail, PdfTheme.smallFont());
         paragraph.setSpacingBefore(5f);
         return paragraph;
     }

@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.comercial.dto.OrderActionRequest;
 import mz.multicore.erp.modules.comercial.dto.OrderEventDTO;
 import mz.multicore.erp.modules.comercial.dto.ReprintAuthorizationRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
+import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateProductRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateReceiptRequest;
@@ -118,6 +119,20 @@ public class ComercialApiClient {
         return clientFactory.authenticatedClient().getList("/api/comercial/products", ProductDTO.class);
     }
 
+    /** Catálogo paginado no servidor com pesquisa multi-termo e categoria. */
+    @SuppressWarnings("unchecked")
+    public PageResponse<ProductDTO> getProductsPage(String query, Long categoryId, int page, int size) {
+        StringBuilder path = new StringBuilder("/api/comercial/products/page?page=").append(page)
+                .append("&size=").append(size);
+        if (query != null && !query.isBlank()) {
+            path.append("&query=").append(URLEncoder.encode(query.trim(), StandardCharsets.UTF_8));
+        }
+        if (categoryId != null) {
+            path.append("&categoryId=").append(categoryId);
+        }
+        return clientFactory.authenticatedClient().getGeneric(path.toString(), PageResponse.class, ProductDTO.class);
+    }
+
     public List<ClientDTO> getAllClients() {
         return getClients();
     }
@@ -183,11 +198,22 @@ public class ComercialApiClient {
             int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
             boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
             BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
+                taxRateId, description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+    }
+
+    public ProductDTO createProduct(String sku, String reference, String barcode, String name, BigDecimal unitPrice,
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
+            boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
+            BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
+            Long businessUnitId) {
         return clientFactory.authenticatedClient().post("/api/comercial/products",
                 new CreateProductRequest(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
                         unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
                         taxRateId, description, wholesalePrice,
-                        wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg), ProductDTO.class);
+                        wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId), ProductDTO.class);
     }
 
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
@@ -195,11 +221,22 @@ public class ComercialApiClient {
             int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
             boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
             BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
+        return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
+                taxRateId, description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+    }
+
+    public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
+            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
+            boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
+            BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
+            Long businessUnitId) {
         return clientFactory.authenticatedClient().put("/api/comercial/products/" + id,
                 new CreateProductRequest(null, reference, barcode, name, unitPrice, purchasePrice, minStock,
                         unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
                         taxRateId, description, wholesalePrice,
-                        wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg), ProductDTO.class);
+                        wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId), ProductDTO.class);
     }
 
     public void updateProductImage(Long productId, byte[] imageData) {
@@ -235,6 +272,12 @@ public class ComercialApiClient {
     public List<OrderDTO> getOrdersByCompany(Long companyId) {
         return clientFactory.authenticatedClient()
                 .getList("/api/comercial/orders?companyId=" + companyId, OrderDTO.class);
+    }
+
+    public PageResponse<OrderDTO> getOrdersPage(Long companyId, int page, int size) {
+        return clientFactory.authenticatedClient()
+                .getGeneric("/api/comercial/orders/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
+                        PageResponse.class, OrderDTO.class);
     }
 
     public List<OrderDTO> getPendingOrdersByCompany(Long companyId) {
@@ -301,6 +344,20 @@ public class ComercialApiClient {
     public void cancelOrder(Long orderId, String reason) {
         clientFactory.authenticatedClient()
                 .post("/api/comercial/orders/" + orderId + "/cancel", new CancelReasonRequest(reason));
+    }
+
+    public OrderDTO approveOrder(Long orderId, String comments) {
+        return clientFactory.authenticatedClient().post(
+                "/api/comercial/orders/" + orderId + "/approve",
+                new mz.multicore.erp.modules.approvals.dto.ApprovalActionDTO(comments),
+                OrderDTO.class);
+    }
+
+    public OrderDTO rejectOrder(Long orderId, String reason) {
+        return clientFactory.authenticatedClient().post(
+                "/api/comercial/orders/" + orderId + "/reject",
+                new CancelReasonRequest(reason),
+                OrderDTO.class);
     }
 
     public OrderDTO markOrderPrinted(Long orderId, String operator) {
@@ -376,6 +433,10 @@ public class ComercialApiClient {
         return clientFactory.authenticatedClient().getBytes("/api/print/quotation/" + id);
     }
 
+    public byte[] renderQuotationThermal(Long id) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/quotation/" + id + "/thermal");
+    }
+
     // ─── Guias de Remessa (GR) ───────────────────────────────────────────────
     public List<DeliveryGuideDTO> getDeliveryGuidesByCompany(Long companyId) {
         return clientFactory.authenticatedClient()
@@ -406,6 +467,11 @@ public class ComercialApiClient {
     public DeliveryGuideDTO createDeliveryGuide(Long orderId, String responsible, String vehicle, String notes) {
         return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides",
                 new CreateDeliveryGuideRequest(orderId, responsible, vehicle, notes), DeliveryGuideDTO.class);
+    }
+
+    public DeliveryGuideDTO createStandaloneDeliveryGuide(CreateStandaloneDeliveryGuideRequest request) {
+        return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides/standalone",
+                request, DeliveryGuideDTO.class);
     }
 
     public DeliveryGuideDTO approveDeliveryGuide(Long id) {
@@ -449,12 +515,21 @@ public class ComercialApiClient {
         return clientFactory.authenticatedClient().getBytes("/api/print/invoice/" + invoiceId);
     }
 
+    public byte[] renderInvoiceThermal(Long invoiceId) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/invoice/" + invoiceId + "/thermal");
+    }
+
     public byte[] renderOrder(Long orderId) {
         return clientFactory.authenticatedClient().getBytes("/api/print/order/" + orderId);
     }
 
     public byte[] renderGuide(Long invoiceId) {
         return clientFactory.authenticatedClient().getBytes("/api/print/guide/" + invoiceId);
+    }
+
+    public List<mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO> getActiveBusinessUnits(Long companyId) {
+        return clientFactory.authenticatedClient()
+                .getList("/api/business-units/active?companyId=" + companyId, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
     }
 
     private static String enc(String value) {

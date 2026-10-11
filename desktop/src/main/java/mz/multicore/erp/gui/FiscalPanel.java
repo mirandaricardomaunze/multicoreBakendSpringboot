@@ -8,6 +8,7 @@ import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.DateField;
@@ -74,9 +75,9 @@ public class FiscalPanel extends JPanel {
     public FiscalPanel(FiscalApiClient fiscalApiClient) {
         this.fiscalApiClient = fiscalApiClient;
 
-        setLayout(new BorderLayout(0, 10));
+        setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBorder(new EmptyBorder(8, 12, 8, 12));
 
         add(UIHelper.createHeading("Área Fiscal — Moçambique"), BorderLayout.NORTH);
 
@@ -284,7 +285,7 @@ public class FiscalPanel extends JPanel {
         JPanel wrap = new JPanel(new BorderLayout(0, 6));
         wrap.setOpaque(false);
         wrap.add(UIHelper.createSubheading(title), BorderLayout.NORTH);
-        ModernPanel card = new ModernPanel(14);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(10, 10, 10, 10));
         JScrollPane scroll = new JScrollPane(table);
@@ -440,11 +441,24 @@ public class FiscalPanel extends JPanel {
         };
         taxRatesTable = new JTable(taxRatesModel);
         UIHelper.styleTable(taxRatesTable);
+        UIHelper.ensureHeadersFit(taxRatesTable);
         JScrollPane scroll = new JScrollPane(taxRatesTable);
         UIHelper.styleScrollPane(scroll);
 
+        TableQuickPeekController peekController = TableQuickPeekController.install(taxRatesTable, card, (peek, mr) -> {
+            int row = taxRatesTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-balance-scale", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(taxRatesModel.getValueAt(row, 1)));
+            peek.setSubtitle("Código: " + taxRatesModel.getValueAt(row, 0) + " • " + taxRatesModel.getValueAt(row, 2));
+            peek.setStatus(String.valueOf(taxRatesModel.getValueAt(row, 5)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Taxa Aplicável", String.valueOf(taxRatesModel.getValueAt(row, 3)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Base Legal", String.valueOf(taxRatesModel.getValueAt(row, 4)), false));
+            peek.setItems(items);
+        });
+
         JTextField trSearch = TableFilter.searchField("Código, designação, tipo ou base legal…");
-        JComboBox<String> trEstado = TableFilter.combo("Todos os estados", "ATIVA", "INATIVA");
+        JComboBox<String> trEstado = TableFilter.combo("Todos os estados", "Activa", "Inactiva");
         TableFilter.install(taxRatesTable, trSearch, new TableFilter.ColumnFilter(trEstado, 5));
         JPanel trBar = TableFilter.bar(trSearch, TableFilter.label("Estado:"), trEstado);
         trBar.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -573,6 +587,7 @@ public class FiscalPanel extends JPanel {
         };
         withholdingsTable = new JTable(withholdingsModel);
         UIHelper.styleTable(withholdingsTable);
+        UIHelper.ensureHeadersFit(withholdingsTable);
         for (int column : new int[]{5, 7, 8}) {
             withholdingsTable.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         }
@@ -580,9 +595,26 @@ public class FiscalPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(withholdingsTable);
         UIHelper.styleScrollPane(scroll);
 
+        TableQuickPeekController whPeekController = TableQuickPeekController.install(withholdingsTable, card, (peek, mr) -> {
+            int row = withholdingsTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-hand-holding-usd", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(withholdingsModel.getValueAt(row, 1)));
+            peek.setSubtitle("NUIT: " + withholdingsModel.getValueAt(row, 2) + " • " + withholdingsModel.getValueAt(row, 4));
+            peek.setStatus(String.valueOf(withholdingsModel.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data", String.valueOf(withholdingsModel.getValueAt(row, 0)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Descrição", String.valueOf(withholdingsModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Base Tributável", String.valueOf(withholdingsModel.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Taxa Retenção", String.valueOf(withholdingsModel.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Retido", String.valueOf(withholdingsModel.getValueAt(row, 7)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Líquido", String.valueOf(withholdingsModel.getValueAt(row, 8)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Entregue em", String.valueOf(withholdingsModel.getValueAt(row, 10)), false));
+            peek.setItems(items);
+        });
+
         JTextField whSearch = TableFilter.searchField("Beneficiário, NUIT, descrição ou categoria…");
         JComboBox<String> whEstado = TableFilter.combo("Todos os estados",
-                "PENDING", "DELIVERED", "CANCELLED");
+                "Pendente", "Entregue", "Cancelado");
         JComboBox<String> whPeriodo = TableFilter.periodCombo();
         TableFilter.install(withholdingsTable, whSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(whEstado, 9)),
@@ -713,13 +745,13 @@ public class FiscalPanel extends JPanel {
     // ─── Tab 4: Declarações ───────────────────────────────────────────────
 
     private JPanel buildDeclarationsTab() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(20, 20, 20, 20));
+        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(new EmptyBorder(24, 24, 24, 24));
+        card.setLayout(new BorderLayout(0, 8));
+        card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JLabel title = new JLabel("Documentos para a Autoridade Tributária");
         title.setFont(new Font(UIHelper.FONT, Font.BOLD, 18));

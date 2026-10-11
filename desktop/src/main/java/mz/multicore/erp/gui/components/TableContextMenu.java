@@ -63,9 +63,13 @@ public final class TableContextMenu {
         copyCell.setEnabled(row >= 0 && col >= 0);
         menu.add(copyRow);
         menu.add(copyCell);
-        menu.addSeparator();
-        JMenuItem exportCsv = item("Exportar para CSV", "fas-file-csv",
-                () -> TableCsvExporter.exportWithDialog(table, table, "export_tabela"));
+        JMenuItem exportExcel = item("Exportar para Excel (.xls)", "fas-file-excel",
+                () -> TableDataExporter.exportToExcelWithDialog(table, table, "export_tabela"));
+        exportExcel.setEnabled(table.getRowCount() > 0);
+        menu.add(exportExcel);
+
+        JMenuItem exportCsv = item("Exportar para CSV (.csv)", "fas-file-csv",
+                () -> TableDataExporter.exportToCsvWithDialog(table, table, "export_tabela"));
         exportCsv.setEnabled(table.getRowCount() > 0);
         menu.add(exportCsv);
         menu.addSeparator();

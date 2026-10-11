@@ -39,6 +39,7 @@ final class PurchaseReorderPanel {
 
     JComboBox<String> urgencyFilterCombo;
     JComboBox<String> supplierFilterCombo;
+    JComboBox<String> businessUnitFilterCombo;
 
     PurchaseReorderPanel(ComprasPanel owner) {
         this.owner = owner;
@@ -72,7 +73,7 @@ final class PurchaseReorderPanel {
         String[] cols = {
                 "Produto", "SKU", "Stock Atual", "Mínimo", "Venda/Dia",
                 "Dias Stock", "Und/Cx", "Sugerido (cx)", "Sugerido (und)",
-                "Fornecedor Habitual", "Preço Unit.", "Custo Total", "Urgência"
+                "Fornecedor Habitual", "Preço Unit.", "Custo Total", "Urgência", "Negócio"
         };
         owner.reorderModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -81,7 +82,7 @@ final class PurchaseReorderPanel {
         UIHelper.styleTable(reorderTable);
         reorderTable.putClientProperty("noRowInspector", Boolean.TRUE);
 
-        int[] widths = {200, 90, 90, 80, 100, 90, 70, 100, 110, 160, 100, 110, 100};
+        int[] widths = {200, 90, 90, 80, 100, 90, 70, 100, 110, 160, 100, 110, 100, 110};
         for (int i = 0; i < widths.length; i++) {
             reorderTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
@@ -107,15 +108,18 @@ final class PurchaseReorderPanel {
 
         // Barra de filtros numa única linha horizontal
         JTextField reorderSearch = TableFilter.searchField("Pesquisar produto, SKU ou fornecedor…");
+        businessUnitFilterCombo = TableFilter.combo("Todos os negócios");
         urgencyFilterCombo = TableFilter.combo(ALL_URGENCIES, "ESGOTADO", "CRÍTICO", "BAIXO");
         supplierFilterCombo = TableFilter.combo("Todos os fornecedores");
 
         TableFilter.install(reorderTable, reorderSearch,
+                new TableFilter.ColumnFilter(businessUnitFilterCombo, 13),
                 new TableFilter.ColumnFilter(urgencyFilterCombo, 12),
                 new TableFilter.ColumnFilter(supplierFilterCombo, 9));
 
         JPanel reorderFilters = TableFilter.bar(
                 reorderSearch,
+                TableFilter.label("Negócio:"), businessUnitFilterCombo,
                 TableFilter.label("Urgência:"), urgencyFilterCombo,
                 TableFilter.label("Fornecedor:"), supplierFilterCombo);
 
@@ -187,6 +191,9 @@ final class PurchaseReorderPanel {
         BigDecimal totalCost = s.estimatedTotalCost() != null ? s.estimatedTotalCost() : BigDecimal.ZERO;
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
+        if (s.businessUnitName() != null && !s.businessUnitName().isBlank()) {
+            items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", s.businessUnitName(), false));
+        }
         items.add(new QuickPeekPanel.PeekItem("Fornecedor habitual", supplier, false));
         items.add(new QuickPeekPanel.PeekItem("Stock actual / mínimo",
                 String.format(Locale.ROOT, "%,.2f / %,.2f", s.currentStock(), s.minStock()), false));
@@ -220,6 +227,7 @@ final class PurchaseReorderPanel {
         int criticosCount = 0;
         BigDecimal totalCostSum = BigDecimal.ZERO;
         java.util.Set<String> uniqueSuppliers = new java.util.TreeSet<>();
+        java.util.Set<String> uniqueBusinessUnits = new java.util.TreeSet<>();
 
         for (ReorderSuggestionDTO s : owner.reorderList) {
             String status = s.urgencyStatus() != null ? s.urgencyStatus() : (s.currentStock().signum() <= 0 ? "ESGOTADO" : "BAIXO");
@@ -235,6 +243,11 @@ final class PurchaseReorderPanel {
             String supName = (s.supplierName() != null && !s.supplierName().isBlank()) ? s.supplierName() : "—";
             if (!"—".equals(supName)) {
                 uniqueSuppliers.add(supName);
+            }
+
+            String buName = (s.businessUnitName() != null && !s.businessUnitName().isBlank()) ? s.businessUnitName() : "—";
+            if (!"—".equals(buName)) {
+                uniqueBusinessUnits.add(buName);
             }
 
             String daysStr = s.daysRemaining() != null ? (s.daysRemaining() + (s.daysRemaining() == 1 ? " dia" : " dias")) : "—";
@@ -253,8 +266,22 @@ final class PurchaseReorderPanel {
                     supName,
                     s.estimatedUnitPrice() != null ? s.estimatedUnitPrice() : BigDecimal.ZERO,
                     estCost,
-                    status
+                    status,
+                    buName
             });
+        }
+
+        if (businessUnitFilterCombo != null) {
+            Object prevBu = businessUnitFilterCombo.getSelectedItem();
+            businessUnitFilterCombo.removeAllItems();
+            businessUnitFilterCombo.addItem("Todos os negócios");
+            businessUnitFilterCombo.addItem("—");
+            for (String bu : uniqueBusinessUnits) {
+                businessUnitFilterCombo.addItem(bu);
+            }
+            if (prevBu != null) {
+                businessUnitFilterCombo.setSelectedItem(prevBu);
+            }
         }
 
         // Actualizar KPI Cards

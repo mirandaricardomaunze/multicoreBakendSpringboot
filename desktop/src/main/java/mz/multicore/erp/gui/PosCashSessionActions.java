@@ -34,7 +34,8 @@ final class PosCashSessionActions {
                 SwingUtilities.getWindowAncestor(owner),
                 owner.posApiClient,
                 owner.activeSession,
-                owner::refreshSessionState
+                owner::refreshSessionState,
+                owner.printApiClient
         );
         dialog.setVisible(true);
     }
@@ -45,7 +46,8 @@ final class PosCashSessionActions {
         PosSessionHistoryDialog dialog = new PosSessionHistoryDialog(
                 SwingUtilities.getWindowAncestor(owner),
                 owner.posApiClient,
-                companyId
+                companyId,
+                owner.printApiClient
         );
         dialog.setVisible(true);
     }

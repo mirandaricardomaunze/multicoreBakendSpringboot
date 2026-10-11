@@ -315,6 +315,16 @@ public class PurchaseService {
                 l.getExpirationDate(),
                 l.getSerialNumber()
         )).toList();
+
+        java.util.Set<String> bus = p.getLines().stream()
+                .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
+        Long buId = bus.size() == 1 ? p.getLines().stream()
+                .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
+                .filter(java.util.Objects::nonNull).findFirst().orElse(null) : null;
+
         return new PurchaseDTO(
                 p.getId(),
                 p.getPurchaseNumber(),
@@ -327,7 +337,9 @@ public class PurchaseService {
                 p.getAmountPaid(),
                 p.getStatus(),
                 p.getPurchaseDate(),
-                lines
+                lines,
+                buId,
+                buName
         );
     }
 
@@ -339,15 +351,27 @@ public class PurchaseService {
         return purchaseRepository.findByCompanyId(companyId).stream()
                 .filter(p -> !"CANCELLED".equals(p.getStatus()))
                 .filter(p -> p.getOutstanding().signum() > 0)
-                .map(p -> new PayableDTO(
-                        p.getId(),
-                        p.getPurchaseNumber(),
-                        p.getSupplier().getId(),
-                        p.getSupplier().getName(),
-                        p.getTotalAmount(),
-                        p.getAmountPaid(),
-                        p.getOutstanding(),
-                        p.getPurchaseDate()))
+                .map(p -> {
+                    java.util.Set<String> bus = p.getLines() != null ? p.getLines().stream()
+                            .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
+                            .filter(java.util.Objects::nonNull)
+                            .collect(java.util.stream.Collectors.toSet()) : java.util.Collections.emptySet();
+                    String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
+                    Long buId = bus.size() == 1 && p.getLines() != null ? p.getLines().stream()
+                            .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
+                            .filter(java.util.Objects::nonNull).findFirst().orElse(null) : null;
+                    return new PayableDTO(
+                            p.getId(),
+                            p.getPurchaseNumber(),
+                            p.getSupplier().getId(),
+                            p.getSupplier().getName(),
+                            p.getTotalAmount(),
+                            p.getAmountPaid(),
+                            p.getOutstanding(),
+                            p.getPurchaseDate(),
+                            buId,
+                            buName);
+                })
                 .toList();
     }
 

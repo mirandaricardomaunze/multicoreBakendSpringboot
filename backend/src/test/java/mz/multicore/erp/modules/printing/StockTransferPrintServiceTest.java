@@ -115,6 +115,45 @@ class StockTransferPrintServiceTest {
         assertTrue(text.contains("Total Geral"), "Devia conter total geral: " + text);
     }
 
+    @Test
+    void render_imprimeTresViasNominais() throws Exception {
+        StockTransfer transfer = sampleTransfer();
+        StockTransferService service = mock(StockTransferService.class);
+        when(service.loadForPrint(4L)).thenReturn(transfer);
+
+        StockTransferPrintService printService = new StockTransferPrintService(service);
+        byte[] pdf = printService.render(4L);
+
+        PdfReader reader = new PdfReader(pdf);
+        try {
+            assertEquals(3, reader.getNumberOfPages(), "A guia de transferência deve ter 3 vias (3 páginas)");
+        } finally {
+            reader.close();
+        }
+
+        String text = extract(pdf);
+        assertTrue(text.contains("1.ª VIA — ORIGINAL"), "Devia conter 1.ª Via Original: " + text);
+        assertTrue(text.contains("2.ª VIA — DUPLICADO"), "Devia conter 2.ª Via Duplicado: " + text);
+        assertTrue(text.contains("3.ª VIA — TRIPLICADO"), "Devia conter 3.ª Via Triplicado: " + text);
+    }
+
+    @Test
+    void renderPickingSheet_emiteGuiaDeSeparacaoInterna() throws Exception {
+        StockTransfer transfer = sampleTransfer();
+        transfer.setStatus(TransferStatus.IN_SEPARATION);
+        StockTransferService service = mock(StockTransferService.class);
+        when(service.loadForPickingPrint(5L)).thenReturn(transfer);
+
+        StockTransferPrintService printService = new StockTransferPrintService(service);
+        byte[] pdf = printService.renderPickingSheet(5L);
+
+        String text = extract(pdf);
+        assertTrue(text.toUpperCase().contains("GUIA DE SEPARA"), "Devia conter título Guia de Separação: " + text);
+        assertTrue(text.contains("DOCUMENTO INTERNO DE ARMAZÉM"), "Devia conter tarja interna: " + text);
+        assertTrue(text.contains("Separado por (Operador de Armazém)"), "Devia conter assinatura de separador: " + text);
+        assertTrue(text.contains("Conferido por (Encarregado / Gestor)"), "Devia conter assinatura de conferente: " + text);
+    }
+
     private static StockTransfer sampleTransfer() {
         Company company = new Company();
         company.setId(1L);
@@ -145,7 +184,7 @@ class StockTransferPrintServiceTest {
         transfer.setCompany(company);
         transfer.setOriginWarehouse(origin);
         transfer.setDestinationWarehouse(dest);
-        transfer.setStatus(TransferStatus.PENDING_APPROVAL);
+        transfer.setStatus(TransferStatus.APPROVED);
 
         StockTransferLine line = new StockTransferLine();
         line.setTransfer(transfer);

@@ -71,8 +71,18 @@ public class StockTransferApiClient {
                 mz.multicore.erp.modules.comercial.dto.OrderDTO.class);
     }
 
+    public StockTransferDTO completeSeparation(Long id) {
+        return clientFactory.authenticatedClient()
+                .post("/api/inventory/transfers/" + id + "/complete-separation", null, StockTransferDTO.class);
+    }
+
     public byte[] renderTransfer(Long transferId) {
         return clientFactory.authenticatedClient().getBytes("/api/print/stock-transfer/" + transferId);
+    }
+
+    /** PDF da guia de separação de transferência ({@code /api/print/stock-transfer/{id}/picking}). */
+    public byte[] renderPickingSheet(Long transferId) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/stock-transfer/" + transferId + "/picking");
     }
 
     record RejectRequest(String rejectionReason) {}

@@ -85,6 +85,20 @@ public class RankingTab extends JPanel {
 
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
+
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-trophy", UIHelper.PENDING_YELLOW);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
+            peek.setSubtitle("Posição #" + tableModel.getValueAt(row, 0));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 5)), UIHelper.APPROVED_GREEN);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Volume Total", String.valueOf(tableModel.getValueAt(row, 2)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Vendas", String.valueOf(tableModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Ticket Médio", String.valueOf(tableModel.getValueAt(row, 4)), false));
+            peek.setItems(items);
+        });
 
         JScrollPane scrollPane = new JScrollPane(table);
         UIHelper.styleScrollPane(scrollPane);

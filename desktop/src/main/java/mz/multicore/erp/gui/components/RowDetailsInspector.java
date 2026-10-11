@@ -28,16 +28,25 @@ public final class RowDetailsInspector {
         });
     }
 
+    private static final java.util.concurrent.atomic.AtomicBoolean OPENING = new java.util.concurrent.atomic.AtomicBoolean(false);
+
     public static void open(JTable table) {
         if (table == null || table.getSelectedRow() < 0
                 || Boolean.TRUE.equals(table.getClientProperty("noRowInspector"))) return;
 
-        Runnable customAction = (Runnable) table.getClientProperty("customDetailAction");
-        if (customAction != null) {
-            customAction.run();
+        if (!OPENING.compareAndSet(false, true)) {
             return;
         }
+        try {
+            Runnable customAction = (Runnable) table.getClientProperty("customDetailAction");
+            if (customAction != null) {
+                customAction.run();
+                return;
+            }
 
-        RecordDetailsDialog.show(table);
+            RecordDetailsDialog.show(table);
+        } finally {
+            SwingUtilities.invokeLater(() -> OPENING.set(false));
+        }
     }
 }

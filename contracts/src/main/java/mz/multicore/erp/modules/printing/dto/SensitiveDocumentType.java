@@ -1,0 +1,20 @@
+package mz.multicore.erp.modules.printing.dto;
+
+public enum SensitiveDocumentType {
+    INVOICE,
+    RECEIPT,
+    CREDIT_NOTE,
+    DEBIT_NOTE,
+    DELIVERY_GUIDE,
+    REMITTANCE_GUIDE,
+    STOCK_TRANSFER,
+    STOCK_TRANSFER_PICKING,
+    ORDER,
+    ORDER_PICKING,
+    PAYSLIP,
+    EMPLOYMENT_CONTRACT,
+    TERMINATION_SETTLEMENT,
+    TERMINATION_CERTIFICATE,
+    STORE_VOUCHER,
+    POS_Z_REPORT
+}

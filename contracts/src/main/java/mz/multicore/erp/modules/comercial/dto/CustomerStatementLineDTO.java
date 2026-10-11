@@ -14,5 +14,21 @@ public record CustomerStatementLineDTO(
         String reference,         // Ex: Referência a documento original
         BigDecimal debit,         // Aumenta dívida do cliente (FT, ND)
         BigDecimal credit,        // Reduz dívida do cliente (RC, NC)
-        BigDecimal runningBalance // Saldo progressivo acumulado após este lançamento
-) {}
+        BigDecimal runningBalance, // Saldo progressivo acumulado após este lançamento
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public CustomerStatementLineDTO(
+            LocalDate date,
+            String documentType,
+            String documentNumber,
+            String description,
+            String reference,
+            BigDecimal debit,
+            BigDecimal credit,
+            BigDecimal runningBalance
+    ) {
+        this(date, documentType, documentNumber, description, reference, debit, credit, runningBalance, null, null);
+    }
+}
+

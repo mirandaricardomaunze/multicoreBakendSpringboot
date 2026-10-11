@@ -44,7 +44,8 @@ public class OrderPrintService {
             doc.add(CompanyHeaderRenderer.build(
                     order.getCompany(),
                     "Encomenda",
-                    order.getOrderNumber()
+                    order.getOrderNumber(),
+                    OrderStatusLabel.of(order.getStatus())
             ));
             doc.add(ClientBlockRenderer.build(order.getClient(), order.getWalkInName(),
                     order.getCreatedAt(), order.getWarehouse()));
@@ -55,20 +56,25 @@ public class OrderPrintService {
                 origin.setSpacingAfter(8f);
                 doc.add(origin);
             }
-            doc.add(LineItemsTableRenderer.build(toRows(order.getLines()),
+            List<LineItemsTableRenderer.Row> rows = toRows(order.getLines());
+            doc.add(LineItemsTableRenderer.build(rows,
                     documentConfigService.getColumns(order.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
             java.math.BigDecimal grossWeight = order.getLines().stream()
                     .map(line -> line.getProduct().getGrossUnitWeightKg() == null ? java.math.BigDecimal.ZERO
                             : line.getQuantity().multiply(line.getProduct().getGrossUnitWeightKg()))
                     .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-            Paragraph weight = new Paragraph("Peso bruto total: "
-                    + grossWeight.setScale(3, java.math.RoundingMode.HALF_UP) + " kg", PdfTheme.boldFont());
-            weight.setAlignment(Element.ALIGN_RIGHT);
-            doc.add(weight);
+            if (grossWeight.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                Paragraph weight = new Paragraph("Peso bruto total: "
+                        + grossWeight.setScale(3, java.math.RoundingMode.HALF_UP) + " kg", PdfTheme.boldFont());
+                weight.setAlignment(Element.ALIGN_RIGHT);
+                weight.setSpacingAfter(4f);
+                doc.add(weight);
+            }
             doc.add(TotalsBlockRenderer.build(
                     order.getTotalBeforeTax(),
                     order.getTaxAmount(),
-                    order.getTotalAmount()
+                    order.getTotalAmount(),
+                    TotalsBlockRenderer.calculateBreakdowns(rows)
             ));
             doc.add(PdfDocumentBuilder.spacer(10f));
             // Condições acordadas + data prometida. Mesmo bloco da cotação — é o mesmo acordo.
@@ -79,9 +85,6 @@ public class OrderPrintService {
             }
             doc.add(PdfDocumentBuilder.spacer(18f));
             doc.add(SignatureBlockRenderer.build("Pela empresa", "Confirmação do cliente"));
-            doc.add(PdfDocumentBuilder.spacer(8f));
-            // Estado em PT-MZ: este documento vai para o cliente e imprimia "PENDING_APPROVAL".
-            doc.add(new Paragraph("Estado: " + OrderStatusLabel.of(order.getStatus()), PdfTheme.boldFont()));
         });
     }
 

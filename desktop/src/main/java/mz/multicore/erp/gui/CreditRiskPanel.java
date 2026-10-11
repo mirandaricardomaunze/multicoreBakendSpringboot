@@ -2,10 +2,12 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.gui.components.TableFilter;
@@ -58,51 +60,23 @@ public class CreditRiskPanel extends JPanel {
     List<ClientCreditRiskDTO> allClientsRisk = new ArrayList<>();
     List<ClientCreditRiskDTO> visibleClientsRisk = new ArrayList<>();
 
+    private ModernButton refreshBtn;
+    private ModernButton pdfBtn;
+    private ModernButton exceptionBtn;
+
     public CreditRiskPanel(CreditRiskApiClient creditRiskApiClient) {
         this.creditRiskApiClient = creditRiskApiClient;
 
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        add(buildHeader(), BorderLayout.NORTH);
-
-        JPanel centerPanel = new JPanel(new BorderLayout(0, 14));
-        centerPanel.setOpaque(false);
-        centerPanel.add(buildKpiBar(), BorderLayout.NORTH);
-        centerPanel.add(buildMainCard(), BorderLayout.CENTER);
-
-        add(centerPanel, BorderLayout.CENTER);
-    }
-
-    private JPanel buildHeader() {
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-
-        JPanel titles = new JPanel();
-        titles.setLayout(new BoxLayout(titles, BoxLayout.Y_AXIS));
-        titles.setOpaque(false);
-
-        JLabel title = UIHelper.createHeading("Centro de Risco de Crédito & Cobrança");
-        JLabel subtitle = new JLabel("Matriz de Aging, monitorização de limites, cartas de cobrança e excepções de crédito");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-
-        titles.add(title);
-        titles.add(Box.createVerticalStrut(2));
-        titles.add(subtitle);
-
-        header.add(titles, BorderLayout.WEST);
+        setBorder(new EmptyBorder(10, 12, 10, 12));
 
         busyBar = UIHelper.createBusyBar();
         busyBar.setVisible(false);
-        busyBar.setPreferredSize(new Dimension(160, 6));
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
-        right.setOpaque(false);
-        right.add(busyBar);
-        header.add(right, BorderLayout.EAST);
+        busyBar.setPreferredSize(new Dimension(140, 6));
 
-        return header;
+        add(buildKpiBar(), BorderLayout.NORTH);
+        add(buildMainCard(), BorderLayout.CENTER);
     }
 
     private JPanel buildKpiBar() {
@@ -118,10 +92,70 @@ public class CreditRiskPanel extends JPanel {
 
     private JPanel buildMainCard() {
         ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(new EmptyBorder(16, 16, 16, 16));
+        card.setLayout(new BorderLayout(0, 8));
+        card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
-        card.add(buildFilterBar(), BorderLayout.NORTH);
+        // Filtros
+        JLabel dateLbl = new JLabel("Data Ref:");
+        dateLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        dateLbl.setForeground(UIHelper.TEXT_MUTED);
+
+        dateField = new JTextField(LocalDate.now().toString());
+        dateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleTextField(dateField);
+
+        riskFilterCombo = new JComboBox<>(new String[]{
+                "Todos os Riscos", "Apenas Crítico / Alto", "Apenas Bloqueados",
+                "CRITICAL - Crítico", "HIGH - Alto", "MEDIUM - Médio", "LOW - Baixo"
+        });
+        riskFilterCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(riskFilterCombo);
+
+        searchField = TableFilter.searchField("Pesquisar cliente, NUIT, email...");
+        searchField.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
+
+        refreshBtn = UIHelper.createRefreshButton(this::refreshData);
+
+        pdfBtn = UIHelper.createPrimaryButton("Carta Cobrança (PDF)");
+        pdfBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
+        pdfBtn.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
+        pdfBtn.setEnabled(false);
+        pdfBtn.setToolTipText("Selecione um cliente para emitir carta de cobrança");
+
+        exceptionBtn = UIHelper.createSuccessButton("Pedir Excepção");
+        exceptionBtn.setIcon(UIHelper.icon("fas-unlock-alt", 14));
+        exceptionBtn.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
+        exceptionBtn.setEnabled(false);
+        exceptionBtn.setToolTipText("Selecione um cliente para pedir excepção");
+
+        // Eventos
+        pdfBtn.addActionListener(e -> emitDebtCollectionNoticePdf());
+        exceptionBtn.addActionListener(e -> openCreditExceptionDialog());
+
+        riskFilterCombo.addActionListener(e -> applyFilters());
+        dateField.addActionListener(e -> refreshData());
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { applyFilters(); }
+            @Override public void removeUpdate(DocumentEvent e) { applyFilters(); }
+            @Override public void changedUpdate(DocumentEvent e) { applyFilters(); }
+        });
+
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar cliente seleccionado (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar cliente");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel filterInputs = TableFilter.bar(dateLbl, dateField, TableFilter.label("Risco:"), riskFilterCombo, searchField);
+        JPanel filterBar = new JPanel(new BorderLayout(8, 0));
+        filterBar.setOpaque(false);
+        filterBar.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filterBar.add(filterInputs, BorderLayout.WEST);
+        filterBar.add(peekToggleBtn, BorderLayout.EAST);
+
+        card.add(UIHelper.tableCardTop("Matriz de Aging & Gestão de Risco", filterBar,
+                busyBar, refreshBtn, pdfBtn, exceptionBtn), BorderLayout.NORTH);
 
         String[] columns = {
                 "ID", "Cliente", "NUIT", "Limite (MT)", "Dívida Total", "Disponível",
@@ -138,6 +172,7 @@ public class CreditRiskPanel extends JPanel {
 
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.putClientProperty("noRowInspector", Boolean.TRUE);
 
         if (table.getColumnModel().getColumnCount() > 0) {
@@ -164,61 +199,40 @@ public class CreditRiskPanel extends JPanel {
             }
         });
 
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                boolean hasSel = table.getSelectedRow() >= 0;
+                pdfBtn.setEnabled(hasSel);
+                exceptionBtn.setEnabled(hasSel);
+                pdfBtn.setToolTipText(hasSel ? "Emitir carta de cobrança para o cliente selecionado" : "Selecione um cliente para emitir carta de cobrança");
+                exceptionBtn.setToolTipText(hasSel ? "Pedir excepção de crédito para o cliente selecionado" : "Selecione um cliente para pedir excepção");
+            }
+        });
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-wallet", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
+            peek.setSubtitle("NUIT: " + tableModel.getValueAt(row, 2) + " • " + tableModel.getValueAt(row, 13));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 14)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Limite Autorizado", String.valueOf(tableModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dívida Total", String.valueOf(tableModel.getValueAt(row, 4)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Crédito Disponível", String.valueOf(tableModel.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total em Mora", String.valueOf(tableModel.getValueAt(row, 11)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Maior Atraso", String.valueOf(tableModel.getValueAt(row, 12)), false));
+            peek.setItems(items);
+            peek.getOpenFullButton().setText("Ficha de Cobrança");
+            peek.setOnOpenFullAction(v -> emitDebtCollectionNoticePdf());
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
+
         JScrollPane scrollPane = new JScrollPane(table);
         UIHelper.styleScrollPane(scrollPane);
         card.add(scrollPane, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
 
         return card;
-    }
-
-    private JPanel buildFilterBar() {
-        JLabel dateLbl = new JLabel("Data Ref:");
-        dateLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        dateLbl.setForeground(UIHelper.TEXT_MUTED);
-
-        dateField = new JTextField(LocalDate.now().toString());
-        dateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleTextField(dateField);
-
-        riskFilterCombo = new JComboBox<>(new String[]{
-                "Todos os Riscos", "Apenas Crítico / Alto", "Apenas Bloqueados",
-                "CRITICAL - Crítico", "HIGH - Alto", "MEDIUM - Médio", "LOW - Baixo"
-        });
-        riskFilterCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleComboBox(riskFilterCombo);
-
-        searchField = TableFilter.searchField("Pesquisar cliente, NUIT, email...");
-        searchField.setPreferredSize(new Dimension(230, UIHelper.FORM_CONTROL_HEIGHT));
-
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
-
-        ModernButton pdfBtn = UIHelper.createPrimaryButton("Carta Cobrança (PDF)");
-        pdfBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        pdfBtn.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
-
-        ModernButton exceptionBtn = UIHelper.createSuccessButton("Pedir Excepção");
-        exceptionBtn.setIcon(UIHelper.icon("fas-unlock-alt", 14));
-        exceptionBtn.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
-
-        JPanel bar = TableFilter.toolbar(
-                new JComponent[]{dateLbl, dateField, riskFilterCombo, searchField},
-                new JComponent[]{refreshBtn, pdfBtn, exceptionBtn}
-        );
-
-        // Eventos
-        pdfBtn.addActionListener(e -> emitDebtCollectionNoticePdf());
-        exceptionBtn.addActionListener(e -> openCreditExceptionDialog());
-
-        riskFilterCombo.addActionListener(e -> applyFilters());
-        dateField.addActionListener(e -> refreshData());
-
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { applyFilters(); }
-            @Override public void removeUpdate(DocumentEvent e) { applyFilters(); }
-            @Override public void changedUpdate(DocumentEvent e) { applyFilters(); }
-        });
-
-        return bar;
     }
 
     public void refreshData() {
@@ -313,6 +327,16 @@ public class CreditRiskPanel extends JPanel {
                     statusLabel
             });
         }
+        UIHelper.ensureHeadersFit(table);
+        if (pdfBtn != null) {
+            pdfBtn.setEnabled(false);
+            pdfBtn.setToolTipText("Selecione um cliente para emitir carta de cobrança");
+        }
+        if (exceptionBtn != null) {
+            exceptionBtn.setEnabled(false);
+            exceptionBtn.setToolTipText("Selecione um cliente para pedir excepção");
+        }
+        table.clearSelection();
     }
 
     private ClientCreditRiskDTO getSelectedClientRisk() {

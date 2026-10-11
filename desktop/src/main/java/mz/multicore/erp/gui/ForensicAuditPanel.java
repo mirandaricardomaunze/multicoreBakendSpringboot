@@ -6,6 +6,7 @@ import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ToastManager;
@@ -57,13 +58,13 @@ public class ForensicAuditPanel extends JPanel {
     public ForensicAuditPanel(ForensicAuditApiClient apiClient) {
         this.apiClient = apiClient;
 
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBorder(new EmptyBorder(8, 12, 8, 12));
 
         add(buildHeader(), BorderLayout.NORTH);
 
-        JPanel centerPanel = new JPanel(new BorderLayout(0, 14));
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 8));
         centerPanel.setOpaque(false);
         centerPanel.add(buildKpiBar(), BorderLayout.NORTH);
         centerPanel.add(buildMainCard(), BorderLayout.CENTER);
@@ -115,8 +116,8 @@ public class ForensicAuditPanel extends JPanel {
 
     private JPanel buildMainCard() {
         ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout(0, 12));
-        card.setBorder(new EmptyBorder(16, 16, 16, 16));
+        card.setLayout(new BorderLayout(0, 6));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         card.add(buildFilterBar(), BorderLayout.NORTH);
 
@@ -134,6 +135,7 @@ public class ForensicAuditPanel extends JPanel {
 
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.putClientProperty("noRowInspector", Boolean.TRUE);
 
         if (table.getColumnModel().getColumnCount() > 0) {
@@ -156,6 +158,22 @@ public class ForensicAuditPanel extends JPanel {
                     showAnomalyDetails(table.getSelectedRow());
                 }
             }
+        });
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-shield-alt", UIHelper.REJECTED_RED);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 2)));
+            peek.setSubtitle("Ref: " + tableModel.getValueAt(row, 3) + " • " + tableModel.getValueAt(row, 0));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 1)), UIHelper.REJECTED_RED);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Operador", String.valueOf(tableModel.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Impacto Financeiro", String.valueOf(tableModel.getValueAt(row, 5)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Detalhes da Ocorrência", String.valueOf(tableModel.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Recomendação Preventiva", String.valueOf(tableModel.getValueAt(row, 7)), false));
+            peek.setItems(items);
+            peek.getOpenFullButton().setText("Ver Ficha Completa");
+            peek.setOnOpenFullAction(v -> showAnomalyDetails(row));
         });
 
         JScrollPane scrollPane = new JScrollPane(table);

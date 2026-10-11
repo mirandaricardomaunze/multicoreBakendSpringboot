@@ -143,6 +143,47 @@ class MovimentosServiceTest {
                 deliveryGuideRepository);
     }
 
+    @Test
+    void listar_incluiPosTransferenciaERecibos() {
+        var receiptRepo = mock(mz.multicore.erp.modules.comercial.repository.ReceiptRepository.class);
+        var transferRepo = mock(mz.multicore.erp.modules.inventory.repository.StockTransferRepository.class);
+
+        var fullService = new MovimentosService(invoiceRepository, orderRepository,
+                creditNoteRepository, debitNoteRepository, deliveryGuideRepository, quotationRepository,
+                receiptRepo, transferRepo);
+
+        var posInv = invoice("VD-1", clientNamed("Carlos"), null, days(2), InvoiceStatus.PAID, "80");
+        posInv.setSalesChannel(mz.multicore.erp.modules.comercial.model.SalesChannel.POS);
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(posInv));
+
+        var rec = new mz.multicore.erp.modules.comercial.model.Receipt();
+        rec.setReceiptNumber("RC-1");
+        rec.setAmountPaid(new java.math.BigDecimal("150.00"));
+        rec.setReceiptDate(days(3));
+        rec.setStatus("COMPLETED");
+        rec.setInvoice(posInv);
+        when(receiptRepo.findByCompanyId(COMPANY_ID)).thenReturn(List.of(rec));
+
+        var whOrig = new mz.multicore.erp.modules.inventory.model.Warehouse();
+        whOrig.setName("Armazém Central");
+        var whDest = new mz.multicore.erp.modules.inventory.model.Warehouse();
+        whDest.setName("Loja Baixa");
+        var trf = new mz.multicore.erp.modules.inventory.model.StockTransfer();
+        trf.setTransferNumber("TRF-1");
+        trf.setOriginWarehouse(whOrig);
+        trf.setDestinationWarehouse(whDest);
+        trf.setTransferDate(days(4));
+        trf.setStatus(mz.multicore.erp.modules.inventory.model.TransferStatus.APPROVED);
+        when(transferRepo.findByCompanyId(COMPANY_ID)).thenReturn(List.of(trf));
+
+        List<MovimentoDTO> r = fullService.listar(COMPANY_ID, null, null, null);
+        assertEquals(3, r.size());
+        assertTrue(r.stream().anyMatch(m -> m.tipo() == MovimentoTipo.VENDA_POS && "VD-1".equals(m.numero())));
+        assertTrue(r.stream().anyMatch(m -> m.tipo() == MovimentoTipo.RECIBO && "RC-1".equals(m.numero())));
+        assertTrue(r.stream().anyMatch(m -> m.tipo() == MovimentoTipo.TRANSFERENCIA && "TRF-1".equals(m.numero())
+                && m.cliente().contains("Armazém Central → Loja Baixa")));
+    }
+
     // ---- builders ----
 
     private static LocalDateTime days(int d) {

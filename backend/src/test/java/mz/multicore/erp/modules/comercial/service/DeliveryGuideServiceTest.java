@@ -4,6 +4,8 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
+import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideLineRequest;
+import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
@@ -13,7 +15,9 @@ import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
+import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -41,6 +45,8 @@ class DeliveryGuideServiceTest {
 
     private DeliveryGuideRepository guideRepository;
     private OrderRepository orderRepository;
+    private ClientRepository clientRepository;
+    private ProductRepository productRepository;
     private InventoryService inventoryService;
     private DocumentNumberService documentNumberService;
     private AuditLogService auditLogService;
@@ -55,11 +61,13 @@ class DeliveryGuideServiceTest {
     void setUp() {
         guideRepository = mock(DeliveryGuideRepository.class);
         orderRepository = mock(OrderRepository.class);
+        clientRepository = mock(ClientRepository.class);
+        productRepository = mock(ProductRepository.class);
         inventoryService = mock(InventoryService.class);
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
 
-        service = new DeliveryGuideService(guideRepository, orderRepository, inventoryService,
+        service = new DeliveryGuideService(guideRepository, orderRepository, clientRepository, productRepository, inventoryService,
                 documentNumberService, auditLogService);
 
         company = company(1L);
@@ -112,6 +120,29 @@ class DeliveryGuideServiceTest {
         verify(guideRepository, never()).save(any());
     }
 
+    @Test
+    void createStandalone_ficaPendente_eNaoMoveStock() {
+        when(clientRepository.findByIdAndCompaniesId(200L, 1L)).thenReturn(Optional.of(client));
+        when(productRepository.findByIdAndCompaniesId(100L, 1L)).thenReturn(Optional.of(product));
+        when(inventoryService.loadWarehouseForActiveCompany(10L)).thenReturn(warehouse);
+        when(documentNumberService.next(any())).thenReturn("GR-2026/2");
+        when(guideRepository.save(any(DeliveryGuide.class))).thenAnswer(inv -> {
+            DeliveryGuide guide = inv.getArgument(0);
+            guide.setId(2L);
+            return guide;
+        });
+
+        DeliveryGuideDTO dto = service.createStandalone(new CreateStandaloneDeliveryGuideRequest(
+                200L, 10L, "João", "AAA-11-MC", null,
+                List.of(new CreateStandaloneDeliveryGuideLineRequest(100L, new BigDecimal("3")))));
+
+        assertNull(dto.orderId());
+        assertEquals(DeliveryGuideStatus.PENDING_APPROVAL.name(), dto.status());
+        assertEquals(1, dto.lines().size());
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+        verify(orderRepository, never()).save(any());
+    }
+
     // ────────────────────────── approve ──────────────────────────
 
     @Test
@@ -131,6 +162,22 @@ class DeliveryGuideServiceTest {
         verify(inventoryService).registerMovement(eq(product), eq(warehouse),
                 eq(new BigDecimal("5").negate()), eq("SALE"), any(), any(), any());
         assertEquals("GUIDED", order.getStatus());
+    }
+
+    @Test
+    void approve_guiaAvulsa_moveStock_semProcurarEncomenda() {
+        DeliveryGuide guide = pendingGuide(new BigDecimal("2"));
+        guide.setOrderId(null);
+        guide.setOrderNumber(null);
+        when(guideRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(guide));
+        when(guideRepository.save(any(DeliveryGuide.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DeliveryGuideDTO dto = service.approve(1L);
+
+        assertEquals(DeliveryGuideStatus.APPROVED.name(), dto.status());
+        verify(inventoryService).registerMovement(eq(product), eq(warehouse),
+                eq(new BigDecimal("2").negate()), eq("SALE"), any(), any(), contains("Guia avulsa"));
+        verify(orderRepository, never()).findById(any());
     }
 
     @Test

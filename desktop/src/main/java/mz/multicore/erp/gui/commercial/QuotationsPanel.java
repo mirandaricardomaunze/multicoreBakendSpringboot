@@ -2,16 +2,7 @@ package mz.multicore.erp.gui.commercial;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.InlineFeedbackPanel;
-import mz.multicore.erp.gui.components.ToastManager;
-import mz.multicore.erp.gui.components.DocumentEditorHost;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
@@ -25,9 +16,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import mz.multicore.erp.gui.components.PrintPreviewDialog;
 
 /**
  * Cotações ao cliente: listagem, decisão e conversão em encomenda.
@@ -58,23 +49,35 @@ public final class QuotationsPanel extends JPanel {
     private final CardLayout pages = new CardLayout();
     private final QuotationEditorForm editorForm;
     private final DocumentEditorHost editorHost;
+    private final mz.multicore.erp.desktop.client.ProductionApiClient productionApiClient;
+    private final JComboBox<String> businessUnitCombo;
 
     public QuotationsPanel(ComercialApiClient apiClient,
                            Supplier<List<ClientDTO>> clients,
                            Supplier<List<ProductDTO>> products,
                            Supplier<List<WarehouseDTO>> warehouses,
                            Runnable ordersRefresh) {
+        this(apiClient, clients, products, warehouses, ordersRefresh, null);
+    }
+
+    public QuotationsPanel(ComercialApiClient apiClient,
+                           Supplier<List<ClientDTO>> clients,
+                           Supplier<List<ProductDTO>> products,
+                           Supplier<List<WarehouseDTO>> warehouses,
+                           Runnable ordersRefresh,
+                           mz.multicore.erp.desktop.client.ProductionApiClient productionApiClient) {
         this.apiClient = apiClient;
         this.clients = clients;
         this.products = products;
         this.warehouses = warehouses;
         this.ordersRefresh = ordersRefresh;
+        this.productionApiClient = productionApiClient;
 
         setLayout(pages);
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        JPanel listPage = new JPanel(new BorderLayout(0, 15));
+        JPanel listPage = new JPanel(new BorderLayout(0, 8));
         listPage.setOpaque(false);
 
         ModernButton newBtn = UIHelper.createPrimaryButton("Nova Cotação");
@@ -83,49 +86,86 @@ public final class QuotationsPanel extends JPanel {
         listPage.add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout(0, 10));
-        card.setBorder(new EmptyBorder(20, 20, 20, 20));
+        card.setLayout(new BorderLayout(0, 6));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         model = new DefaultTableModel(new String[]{
-                "ID", "Nº Cotação", "Data", "Cliente", "NUIT", "Total", "Estado", "Validade", "Encomenda"}, 0) {
+                "ID", "Nº Cotação", "Data", "Cliente", "NUIT", "Total", "Estado", "Validade", "Encomenda", "Negócio"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
-        table.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) openSelectedEditor();
-            }
-        });
         table.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(COL_STATUS).setCellRenderer(TableCellRenderers.status());
         hideColumn(COL_ID);
 
         JTextField search = TableFilter.searchField("Nº cotação, cliente ou NUIT…");
+        businessUnitCombo = TableFilter.combo("Todos os negócios");
         JComboBox<String> status = TableFilter.combo("Todos os estados",
                 "Rascunho", "Enviada", "Aceite", "Recusada", "Convertida", "Cancelada");
         JComboBox<String> periodo = TableFilter.periodCombo();
         TableFilter.install(table, search,
-                java.util.List.of(new TableFilter.ColumnFilter(status, COL_STATUS)),
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(businessUnitCombo, 9),
+                        new TableFilter.ColumnFilter(status, COL_STATUS)),
                 java.util.List.of(new TableFilter.PeriodFilter(periodo, 2)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
         ActionMenuButton more = UIHelper.createActionMenuButton("Operações")
                 .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
                 .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), this::openSelectedEditor)
                 .addAction("Marcar como enviada", UIHelper.icon("fas-paper-plane", 14), this::send)
-                .addAction("Estender validade", UIHelper.icon("fas-calendar-plus", 14), this::extendValidity);
+                .addAction("Estender validade", UIHelper.icon("fas-calendar-plus", 14), this::extendValidity)
+                .addAction("Gerar Ordem de Fabrico", UIHelper.icon("fas-industry", 14, UIHelper.ACCENT_CYAN), this::generateProductionOrderFromSelectedQuotation);
         ActionMenuButton decision = UIHelper.createActionMenuButton("Decisão")
                 .addAction("Recusada pelo cliente", UIHelper.icon("fas-times", 14), this::reject)
                 .addAction("Aceite pelo cliente", UIHelper.icon("fas-check", 14), this::accept)
                 .addAction("Cancelar cotação", UIHelper.icon("fas-ban", 14), this::cancel)
                 .addAction("Converter em Encomenda", UIHelper.icon("fas-exchange-alt", 14, UIHelper.ACCENT_BLUE), this::convert)
                 .addAction("Converter em Factura", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.APPROVED_GREEN), this::convertToInvoice);
-        JPanel filters = UIHelper.filterBar(
-                new JComponent[]{search, TableFilter.label("Estado:"), status,
-                        TableFilter.label("Data:", "fas-calendar-alt"), periodo},
-                null);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da cotação (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar cotação");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel filters = TableFilter.bar(
+                search,
+                TableFilter.label("Negócio:"), businessUnitCombo,
+                TableFilter.label("Estado:"), status,
+                TableFilter.label("Data:"), periodo,
+                peekToggleBtn
+        );
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         card.add(UIHelper.tableCardTop("Cotações", filters, refreshBtn, more, decision, newBtn), BorderLayout.NORTH);
+
+        UIHelper.ensureHeadersFit(table);
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            if (mr < 0 || mr >= model.getRowCount()) return;
+            String id = String.valueOf(model.getValueAt(mr, COL_ID));
+            String num = String.valueOf(model.getValueAt(mr, 1));
+            String date = String.valueOf(model.getValueAt(mr, 2));
+            String client = String.valueOf(model.getValueAt(mr, 3));
+            String nuit = String.valueOf(model.getValueAt(mr, 4));
+            String total = String.valueOf(model.getValueAt(mr, 5));
+            String state = String.valueOf(model.getValueAt(mr, COL_STATUS));
+            String validity = String.valueOf(model.getValueAt(mr, 7));
+            String bu = String.valueOf(model.getValueAt(mr, 9));
+
+            peek.setTitle("Cotação " + num);
+            peek.setSubtitle(client + (nuit != null && !nuit.isBlank() ? " • NUIT: " + nuit : ""));
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Data de Emissão", date, false),
+                    new QuickPeekPanel.PeekItem("Cliente", client, false),
+                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu, false),
+                    new QuickPeekPanel.PeekItem("NUIT", nuit, false),
+                    new QuickPeekPanel.PeekItem("Validade", validity, false),
+                    new QuickPeekPanel.PeekItem("Valor Total", total, true),
+                    new QuickPeekPanel.PeekItem("Estado", state, false)
+            ));
+            peek.getOpenFullButton().setText("Editar / Consultar");
+            peek.setOnOpenFullAction(v -> openSelectedEditor());
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
@@ -152,7 +192,10 @@ public final class QuotationsPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.loadAsync(this, () -> apiClient.getQuotationsByCompany(companyId), quotations -> {
             model.setRowCount(0);
+            java.util.Set<String> bus = new java.util.TreeSet<>();
             for (QuotationDTO q : quotations) {
+                String buName = q.businessUnitName() != null && !q.businessUnitName().isBlank() ? q.businessUnitName() : "Misto";
+                if (!"Misto".equals(buName)) bus.add(buName);
                 model.addRow(new Object[]{
                         q.id(),
                         q.quotationNumber(),
@@ -162,7 +205,16 @@ public final class QuotationsPanel extends JPanel {
                         q.totalAmount(),
                         q.statusLabel(),
                         validityLabel(q),
-                        blank(q.invoiceNumber() != null ? q.invoiceNumber() : q.orderNumber())});
+                        blank(q.invoiceNumber() != null ? q.invoiceNumber() : q.orderNumber()),
+                        buName});
+            }
+            if (businessUnitCombo != null) {
+                Object prev = businessUnitCombo.getSelectedItem();
+                businessUnitCombo.removeAllItems();
+                businessUnitCombo.addItem("Todos os negócios");
+                businessUnitCombo.addItem("Misto");
+                for (String b : bus) businessUnitCombo.addItem(b);
+                if (prev != null) businessUnitCombo.setSelectedItem(prev);
             }
         }, error -> showError("carregar cotações", error));
     }
@@ -323,6 +375,33 @@ public final class QuotationsPanel extends JPanel {
                 }, error -> showError("estender a validade", error));
     }
 
+    private void generateProductionOrderFromSelectedQuotation() {
+        int row = selected("gerar ordem de fabrico");
+        if (row < 0) return;
+        if (productionApiClient == null) {
+            showNotice(FeedbackType.INFO, "Manufatura Indisponível",
+                    "O módulo de Produção não está inicializado nesta sessão.");
+            return;
+        }
+
+        Long quotationId = (Long) model.getValueAt(row, COL_ID);
+        UIHelper.loadAsync(this, () -> apiClient.getQuotationById(quotationId), quotation -> {
+            List<CommercialProductionOrderDialog.DocumentItem> items = new ArrayList<>();
+            for (var line : quotation.lines()) {
+                items.add(new CommercialProductionOrderDialog.DocumentItem(
+                        line.productId(), line.productName(), line.quantity()));
+            }
+            CommercialProductionOrderDialog.open(
+                    this,
+                    productionApiClient,
+                    "Cotação " + quotation.quotationNumber(),
+                    items,
+                    warehouses.get(),
+                    this::refresh
+            );
+        }, error -> showError("carregar cotação", error));
+    }
+
     /**
      * Converte na encomenda. O aviso diz o que vai acontecer a seguir — a encomenda gerada é formal
      * e fica pendente de aprovação, coisa que quem converte precisa de saber para não ficar à espera
@@ -379,8 +458,25 @@ public final class QuotationsPanel extends JPanel {
         if (row < 0) return;
         Long id = (Long) model.getValueAt(row, COL_ID);
         String number = String.valueOf(model.getValueAt(row, COL_NUMBER));
-        UIHelper.runWithProgress(this, "A gerar cotação em PDF…", () -> apiClient.renderQuotation(id),
-                pdf -> PrintPreviewDialog.show(this, pdf, "cotacao-" + number),
+
+        String[] options = {"Folha A4 Oficial", "Talão Térmico (80mm)"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Selecione o formato de impressão da Cotação " + number + ":",
+                "Imprimir Cotação",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+        if (choice < 0) return;
+
+        boolean thermal = (choice == 1);
+        String taskMsg = thermal ? "A gerar talão térmico 80mm…" : "A gerar cotação em PDF A4…";
+        UIHelper.runWithProgress(this, taskMsg,
+                () -> thermal ? apiClient.renderQuotationThermal(id) : apiClient.renderQuotation(id),
+                pdf -> PrintPreviewDialog.show(this, pdf, "cotacao-" + (thermal ? "80mm-" : "") + number),
                 error -> showError("gerar a cotação em PDF", error));
     }
 

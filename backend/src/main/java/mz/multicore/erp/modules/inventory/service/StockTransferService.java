@@ -55,6 +55,7 @@ public class StockTransferService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final mz.multicore.erp.modules.approvals.service.ApprovalService approvalService;
 
     public StockTransferService(
             StockTransferRepository transferRepository,
@@ -68,6 +69,25 @@ public class StockTransferService {
             AuditLogService auditLogService,
             org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
+        this(transferRepository, warehouseRepository, companyRepository, productRepository,
+                stockRepository, stockMovementRepository, productBatchService, documentNumberService,
+                auditLogService, eventPublisher, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public StockTransferService(
+            StockTransferRepository transferRepository,
+            WarehouseRepository warehouseRepository,
+            CompanyRepository companyRepository,
+            ProductRepository productRepository,
+            StockRepository stockRepository,
+            StockMovementRepository stockMovementRepository,
+            ProductBatchService productBatchService,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            @org.springframework.context.annotation.Lazy mz.multicore.erp.modules.approvals.service.ApprovalService approvalService
+    ) {
         this.eventPublisher = eventPublisher;
         this.transferRepository = transferRepository;
         this.warehouseRepository = warehouseRepository;
@@ -78,6 +98,7 @@ public class StockTransferService {
         this.productBatchService = productBatchService;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.approvalService = approvalService;
     }
 
     @Transactional
@@ -201,19 +222,79 @@ public class StockTransferService {
         return toDTO(saved);
     }
 
-    /** Fecha a edição do rascunho e encaminha-o para decisão. */
+    /** Fecha a edição do rascunho e encaminha-o para separação no armazém. */
     @Transactional
     public StockTransferDTO submit(Long id) {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(
                         id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
-        requireDraft(transfer, "submetida");
+        requireDraft(transfer, "submetida para separação");
         validateAvailability(transfer);
-        transfer.setStatus(TransferStatus.PENDING_APPROVAL);
+        transfer.setStatus(TransferStatus.AWAITING_SEPARATION);
         StockTransfer saved = transferRepository.save(transfer);
+        ensureApprovalRequest(saved);
         auditLogService.logCurrent("STOCK_TRANSFER_SUBMIT",
-                "Guia " + saved.getTransferNumber() + " submetida para aprovação.");
+                "Guia " + saved.getTransferNumber() + " submetida para separação no armazém.");
         return toDTO(saved);
+    }
+
+    /**
+     * Marca a separação física dos artigos como concluída e conferida no armazém de origem,
+     * deixando a guia apta para aprovação final.
+     */
+    @Transactional
+    public StockTransferDTO completeSeparation(Long id) {
+        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(
+                        id, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        if (transfer.getStatus() != TransferStatus.AWAITING_SEPARATION
+                && transfer.getStatus() != TransferStatus.IN_SEPARATION) {
+            throw new BusinessRuleException(
+                    "Apenas guias a aguardar ou em separação podem ser marcadas como separadas. Estado atual: "
+                            + transfer.getStatus().getLabel());
+        }
+        validateAvailability(transfer);
+        transfer.setStatus(TransferStatus.SEPARATED);
+        StockTransfer saved = transferRepository.save(transfer);
+        ensureApprovalRequest(saved);
+        auditLogService.logCurrent("STOCK_TRANSFER_SEPARATED",
+                "Separação física da guia " + saved.getTransferNumber() + " concluída e conferida.");
+        return toDTO(saved);
+    }
+
+    public BigDecimal calculateEstimatedAmount(StockTransfer transfer) {
+        if (transfer == null || transfer.getLines() == null) return BigDecimal.ZERO;
+        return transfer.getLines().stream()
+                .map(line -> {
+                    BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal price = BigDecimal.ZERO;
+                    if (line.getProduct() != null) {
+                        if (line.getProduct().getUnitPrice() != null && line.getProduct().getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            price = line.getProduct().getUnitPrice();
+                        } else if (line.getProduct().getPurchasePrice() != null) {
+                            price = line.getProduct().getPurchasePrice();
+                        }
+                    }
+                    return qty.multiply(price);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void ensureApprovalRequest(StockTransfer transfer) {
+        if (approvalService != null && transfer != null) {
+            BigDecimal totalAmount = calculateEstimatedAmount(transfer);
+            String originName = transfer.getOriginWarehouse() != null ? transfer.getOriginWarehouse().getName() : "Origem";
+            String destName = transfer.getDestinationWarehouse() != null ? transfer.getDestinationWarehouse().getName() : "Destino";
+            String desc = "Transferência " + transfer.getTransferNumber() + " de '" + originName + "' para '" + destName + "'";
+            approvalService.submitRequest(
+                    "STOCK_TRANSFER",
+                    transfer.getId(),
+                    totalAmount,
+                    desc,
+                    "MANAGER",
+                    false
+            );
+        }
     }
 
     /**
@@ -240,15 +321,18 @@ public class StockTransferService {
     /**
      * Aprova a guia e move efetivamente o stock origem → destino (FEFO), gravando os movimentos
      * de stock {@code TRANSFER} que aparecem na rastreabilidade. Só MANAGER/ADMIN podem aprovar.
+     * Trava estrita: exige que a separação física tenha sido concluída no armazém.
      */
     @Transactional
     public StockTransferDTO approve(Long id) {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
         requireApproverRole();
-        if (transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
+        if (!transfer.getStatus().isSeparatedOrPending()) {
             throw new BusinessRuleException(
-                    "Apenas guias pendentes podem ser aprovadas. Estado atual: " + transfer.getStatus().getLabel());
+                    "Apenas guias com separação concluída podem ser aprovadas. "
+                            + "Emita a Guia de Separação e conclua a separação física primeiro. Estado atual: "
+                            + transfer.getStatus().getLabel());
         }
 
         Warehouse origin = transfer.getOriginWarehouse();
@@ -262,9 +346,63 @@ public class StockTransferService {
         transfer.setApprovedBy(CurrentUserContext.getUsername());
         transfer.setApprovedAt(LocalDateTime.now());
         StockTransfer saved = transferRepository.save(transfer);
+        if (approvalService != null) {
+            approvalService.cancelPendingForDocument("STOCK_TRANSFER", id, "Aprovada diretamente na gestão de stock.");
+        }
         auditLogService.logCurrent("STOCK_TRANSFER_APPROVE",
                 "Guia " + saved.getTransferNumber() + " aprovada.");
         announce(saved, StockTransferResolvedEvent.Outcome.APPROVED);
+        return toDTO(saved);
+    }
+
+    /**
+     * Executado pelo workflow central de aprovações (ApprovalsPanel) quando a guia é autorizada.
+     */
+    @Transactional
+    public StockTransferDTO approveFromWorkflow(Long id) {
+        StockTransfer transfer = transferRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada ID: " + id));
+        if (transfer.getStatus() == TransferStatus.APPROVED) {
+            return toDTO(transfer);
+        }
+        validateAvailability(transfer);
+
+        Warehouse origin = transfer.getOriginWarehouse();
+        Warehouse destination = transfer.getDestinationWarehouse();
+        for (StockTransferLine line : transfer.getLines()) {
+            String batchSummary = moveProduct(transfer, line.getProduct(), origin, destination, line.getQuantity());
+            line.setBatchNumber(batchSummary);
+        }
+
+        transfer.setStatus(TransferStatus.APPROVED);
+        String approver = CurrentUserContext.getUsername();
+        transfer.setApprovedBy(approver != null && !approver.isBlank() ? approver : "GESTOR_WORKFLOW");
+        transfer.setApprovedAt(LocalDateTime.now());
+        StockTransfer saved = transferRepository.save(transfer);
+        auditLogService.logEvent(saved.getApprovedBy(), saved.getCompany().getId(), "STOCK_TRANSFER_APPROVE",
+                "Guia " + saved.getTransferNumber() + " aprovada via Central de Aprovações.");
+        announce(saved, StockTransferResolvedEvent.Outcome.APPROVED);
+        return toDTO(saved);
+    }
+
+    /**
+     * Executado pelo workflow central de aprovações (ApprovalsPanel) quando a guia é rejeitada.
+     */
+    @Transactional
+    public StockTransferDTO rejectFromWorkflow(Long id, String reason) {
+        StockTransfer transfer = transferRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada ID: " + id));
+        if (transfer.getStatus() == TransferStatus.REJECTED) {
+            return toDTO(transfer);
+        }
+        transfer.setStatus(TransferStatus.REJECTED);
+        transfer.setRejectionReason(reason);
+        transfer.setApprovedBy(CurrentUserContext.getUsername());
+        transfer.setApprovedAt(LocalDateTime.now());
+        StockTransfer saved = transferRepository.save(transfer);
+        auditLogService.logEvent(saved.getApprovedBy(), saved.getCompany().getId(), "STOCK_TRANSFER_REJECT",
+                "Guia " + saved.getTransferNumber() + " rejeitada via Central de Aprovações. Motivo: " + reason);
+        announce(saved, StockTransferResolvedEvent.Outcome.REJECTED);
         return toDTO(saved);
     }
 
@@ -295,15 +433,18 @@ public class StockTransferService {
         eventPublisher.publishEvent(new StockTransferResolvedEvent(transfer.getOrderId(), outcome));
     }
 
-    /** Rejeita uma guia pendente — não move stock. Só MANAGER/ADMIN. */
+    /** Rejeita uma guia em fluxo — não move stock. Só MANAGER/ADMIN. */
     @Transactional
     public StockTransferDTO reject(Long id, String rejectionReason) {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
         requireApproverRole();
-        if (transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
+        if (transfer.getStatus() != TransferStatus.AWAITING_SEPARATION
+                && transfer.getStatus() != TransferStatus.IN_SEPARATION
+                && transfer.getStatus() != TransferStatus.SEPARATED
+                && transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
             throw new BusinessRuleException(
-                    "Apenas guias pendentes podem ser rejeitadas. Estado atual: " + transfer.getStatus().getLabel());
+                    "Apenas guias em separação ou pendentes podem ser rejeitadas. Estado atual: " + transfer.getStatus().getLabel());
         }
         if (rejectionReason == null || rejectionReason.isBlank()) {
             throw new BusinessRuleException("É obrigatório indicar o motivo da rejeição.");
@@ -313,25 +454,34 @@ public class StockTransferService {
         transfer.setApprovedBy(CurrentUserContext.getUsername());
         transfer.setApprovedAt(LocalDateTime.now());
         StockTransfer saved = transferRepository.save(transfer);
+        if (approvalService != null) {
+            approvalService.cancelPendingForDocument("STOCK_TRANSFER", id, rejectionReason);
+        }
         auditLogService.logCurrent("STOCK_TRANSFER_REJECT",
                 "Guia " + saved.getTransferNumber() + " rejeitada. Motivo: " + rejectionReason);
         announce(saved, StockTransferResolvedEvent.Outcome.REJECTED);
         return toDTO(saved);
     }
 
-    /** Cancela um rascunho ou uma guia pendente (sem efeito no stock). */
+    /** Cancela um rascunho ou uma guia em separação/pendente (sem efeito no stock). */
     @Transactional
     public StockTransferDTO cancel(Long id) {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
         if (transfer.getStatus() != TransferStatus.DRAFT
+                && transfer.getStatus() != TransferStatus.AWAITING_SEPARATION
+                && transfer.getStatus() != TransferStatus.IN_SEPARATION
+                && transfer.getStatus() != TransferStatus.SEPARATED
                 && transfer.getStatus() != TransferStatus.PENDING_APPROVAL) {
             throw new BusinessRuleException(
-                    "Apenas guias em rascunho ou pendentes podem ser canceladas. Estado atual: "
+                    "Apenas guias em rascunho, em separação ou pendentes podem ser canceladas. Estado atual: "
                             + transfer.getStatus().getLabel());
         }
         transfer.setStatus(TransferStatus.CANCELLED);
         StockTransfer saved = transferRepository.save(transfer);
+        if (approvalService != null) {
+            approvalService.cancelPendingForDocument("STOCK_TRANSFER", id, "Cancelada pelo utilizador.");
+        }
         auditLogService.logCurrent("STOCK_TRANSFER_CANCEL",
                 "Guia " + saved.getTransferNumber() + " cancelada.");
         announce(saved, StockTransferResolvedEvent.Outcome.CANCELLED);
@@ -472,8 +622,36 @@ public class StockTransferService {
 
     @Transactional(readOnly = true)
     public StockTransfer loadForPrint(Long id) {
-        return transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
+        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        if (transfer.getStatus() != TransferStatus.APPROVED) {
+            throw new BusinessRuleException(
+                    "A Guia de Transferência oficial (documento de transporte em 3 vias) só pode ser emitida "
+                            + "após a separação e aprovação da transferência. "
+                            + "Para conferência física no armazém, emita a Guia de Separação.");
+        }
+        return transfer;
+    }
+
+    /**
+     * Carrega a transferência para emissão da Guia de Separação de armazém.
+     * Se estiver a aguardar separação, avança automaticamente o estado para EM SEPARAÇÃO.
+     */
+    @Transactional
+    public StockTransfer loadForPickingPrint(Long id) {
+        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        if (transfer.getStatus() == TransferStatus.CANCELLED || transfer.getStatus() == TransferStatus.REJECTED) {
+            throw new BusinessRuleException("Não é possível emitir guia de separação para uma transferência "
+                    + transfer.getStatus().getLabel().toLowerCase() + ".");
+        }
+        if (transfer.getStatus() == TransferStatus.AWAITING_SEPARATION) {
+            transfer.setStatus(TransferStatus.IN_SEPARATION);
+            transfer = transferRepository.save(transfer);
+            auditLogService.logCurrent("STOCK_TRANSFER_SEPARATION_START",
+                    "Guia de separação emitida; separação iniciada para a guia " + transfer.getTransferNumber());
+        }
+        return transfer;
     }
 
     private String generateTransferNumber() {
@@ -512,6 +690,25 @@ public class StockTransferService {
                             tax
                     );
                 }).toList();
+        Long buId = null;
+        String buName = null;
+        if (t.getLines() != null && !t.getLines().isEmpty()) {
+            java.util.Set<String> bus = new java.util.HashSet<>();
+            for (StockTransferLine l : t.getLines()) {
+                if (l.getProduct() != null && l.getProduct().getBusinessUnit() != null) {
+                    bus.add(l.getProduct().getBusinessUnit().getName());
+                    if (buId == null) {
+                        buId = l.getProduct().getBusinessUnit().getId();
+                        buName = l.getProduct().getBusinessUnit().getName();
+                    }
+                }
+            }
+            if (bus.size() > 1) {
+                buId = null;
+                buName = "Misto";
+            }
+        }
+
         return new StockTransferDTO(
                 t.getId(),
                 t.getTransferNumber(),
@@ -533,7 +730,9 @@ public class StockTransferService {
                 t.getOrderNumber(),
                 t.getDriverName(),
                 t.getVehiclePlate(),
-                t.getVersion()
+                t.getVersion(),
+                buId,
+                buName
         );
     }
 }

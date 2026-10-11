@@ -82,51 +82,22 @@ public class SupplierDetailDialog {
     }
 
     private JComponent buildCompanyInfoTab() {
-        JPanel p = new JPanel(new GridLayout(2, 2, 14, 14));
-        p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        p.add(buildCard("Razão Social / Nome da Entidade", "fas-building", UIHelper.APPROVED_GREEN, supplier.name()));
-        p.add(buildCard("NUIT / NIF", "fas-passport", UIHelper.ACCENT_CYAN, supplier.taxId() != null ? supplier.taxId() : "—"));
-        p.add(buildCard("Pessoa de Contacto", "fas-user-tie", UIHelper.ACCENT_BLUE, supplier.contactPerson() != null && !supplier.contactPerson().isBlank() ? supplier.contactPerson() : "Departamento Comercial"));
-        p.add(buildCard("Estado do Fornecedor", "fas-check-circle", supplier.active() ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED, supplier.active() ? "Fornecedor Habilitado para Compras" : "Bloqueado / Inativo"));
-
-        return p;
+        java.util.List<RecordDetailsDialog.PropertyItem> items = new java.util.ArrayList<>();
+        items.add(new RecordDetailsDialog.PropertyItem("Razão Social / Entidade", supplier.name()));
+        items.add(new RecordDetailsDialog.PropertyItem("NUIT / NIF", supplier.taxId() != null ? supplier.taxId() : "—"));
+        items.add(new RecordDetailsDialog.PropertyItem("Pessoa de Contacto", supplier.contactPerson() != null && !supplier.contactPerson().isBlank() ? supplier.contactPerson() : "Departamento Comercial"));
+        items.add(new RecordDetailsDialog.PropertyItem("Estado do Fornecedor", supplier.active() ? "Habilitado para Compras" : "Bloqueado / Inativo"));
+        items.add(new RecordDetailsDialog.PropertyItem("Identificador Único", "#" + supplier.id()));
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private JComponent buildContactTab() {
-        JPanel p = new JPanel(new GridLayout(2, 2, 14, 14));
-        p.setBackground(UIHelper.BG_DARK);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        p.add(buildCard("Telefone de Contacto", "fas-phone", UIHelper.APPROVED_GREEN, supplier.phone() != null && !supplier.phone().isBlank() ? supplier.phone() : "Não especificado"));
-        p.add(buildCard("Correio Eletrónico (E-mail)", "fas-envelope", UIHelper.ACCENT_CYAN, supplier.email() != null && !supplier.email().isBlank() ? supplier.email() : "Não especificado"));
-        p.add(buildCard("Endereço Físico / Instalações", "fas-map-marker-alt", UIHelper.ACCENT_ORANGE, supplier.address() != null && !supplier.address().isBlank() ? supplier.address() : "Não especificado"));
-        p.add(buildCard("Canal de Aquisição", "fas-truck-loading", UIHelper.ACCENT, "Logística e Distribuição Comercial"));
-
-        return p;
-    }
-
-    private ModernPanel buildCard(String title, String icon, Color iconColor, String content) {
-        ModernPanel p = new ModernPanel(12);
-        p.setLayout(new BorderLayout(0, 6));
-        p.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        top.setOpaque(false);
-        top.add(new JLabel(UIHelper.icon(icon, 15, iconColor)));
-        JLabel t = new JLabel(title);
-        t.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        t.setForeground(UIHelper.TEXT_MUTED);
-        top.add(t);
-
-        JLabel c = new JLabel("<html><body style='width:240px;'>" + content + "</body></html>");
-        c.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        c.setForeground(UIHelper.TEXT_LIGHT);
-
-        p.add(top, BorderLayout.NORTH);
-        p.add(c, BorderLayout.CENTER);
-        return p;
+        java.util.List<RecordDetailsDialog.PropertyItem> items = new java.util.ArrayList<>();
+        items.add(new RecordDetailsDialog.PropertyItem("Telefone de Contacto", supplier.phone() != null && !supplier.phone().isBlank() ? supplier.phone() : "Não especificado"));
+        items.add(new RecordDetailsDialog.PropertyItem("Correio Electrónico (E-mail)", supplier.email() != null && !supplier.email().isBlank() ? supplier.email() : "Não especificado"));
+        items.add(new RecordDetailsDialog.PropertyItem("Endereço Físico / Sede", supplier.address() != null && !supplier.address().isBlank() ? supplier.address() : "Não especificado"));
+        items.add(new RecordDetailsDialog.PropertyItem("Canal de Aquisição", "Logística e Distribuição Comercial"));
+        return RecordDetailsDialog.buildPropertySheet(items);
     }
 
     private String extractInitials(String name) {

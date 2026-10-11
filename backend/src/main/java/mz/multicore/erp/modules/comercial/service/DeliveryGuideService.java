@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
+import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideLineDTO;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
@@ -13,7 +14,9 @@ import mz.multicore.erp.modules.comercial.model.DeliveryGuideStatus;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
+import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -39,20 +42,90 @@ public class DeliveryGuideService {
 
     private final DeliveryGuideRepository guideRepository;
     private final OrderRepository orderRepository;
+    private final ClientRepository clientRepository;
+    private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
     public DeliveryGuideService(DeliveryGuideRepository guideRepository,
                                 OrderRepository orderRepository,
+                                ClientRepository clientRepository,
+                                ProductRepository productRepository,
                                 InventoryService inventoryService,
                                 DocumentNumberService documentNumberService,
                                 AuditLogService auditLogService) {
         this.guideRepository = guideRepository;
         this.orderRepository = orderRepository;
+        this.clientRepository = clientRepository;
+        this.productRepository = productRepository;
         this.inventoryService = inventoryService;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+    }
+
+    /** Cria uma guia avulsa. O stock só é movimentado na aprovação. */
+    @Transactional
+    public DeliveryGuideDTO createStandalone(CreateStandaloneDeliveryGuideRequest request) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        var client = clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
+                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado na empresa activa."));
+        var warehouse = inventoryService.loadWarehouseForActiveCompany(request.warehouseId());
+
+        if (request.responsible() == null || request.responsible().isBlank()) {
+            throw new BusinessRuleException("O transportador / responsável é obrigatório para emitir a guia de remessa.");
+        }
+        if (request.vehicle() == null || request.vehicle().isBlank()) {
+            throw new BusinessRuleException("A viatura / matrícula é obrigatória para emitir a guia de remessa.");
+        }
+        if (request.lines() == null || request.lines().isEmpty()) {
+            throw new BusinessRuleException("Adicione pelo menos um produto à guia.");
+        }
+
+        DeliveryGuide guide = new DeliveryGuide();
+        guide.setGuideNumber(documentNumberService.next(DocumentSeries.DELIVERY_GUIDE));
+        guide.setGuideDate(LocalDateTime.now());
+        guide.setCompany(warehouse.getCompany());
+        guide.setClient(client);
+        guide.setWarehouse(warehouse);
+        guide.setStatus(DeliveryGuideStatus.PENDING_APPROVAL);
+        guide.setResponsible(blankToNull(request.responsible()));
+        guide.setVehicle(blankToNull(request.vehicle()));
+        guide.setNotes(blankToNull(request.notes()));
+        guide.setCreatedBy(CurrentUserContext.getUsername());
+
+        BigDecimal total = BigDecimal.ZERO;
+        java.util.Set<Long> productIds = new java.util.HashSet<>();
+        for (var requestedLine : request.lines()) {
+            if (requestedLine.quantity() == null || requestedLine.quantity().signum() <= 0) {
+                throw new BusinessRuleException("A quantidade de cada produto deve ser positiva.");
+            }
+            if (!productIds.add(requestedLine.productId())) {
+                throw new BusinessRuleException("O mesmo produto não pode aparecer em mais de uma linha da guia.");
+            }
+            var product = productRepository.findByIdAndCompaniesId(requestedLine.productId(), companyId)
+                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado na empresa activa."));
+            BigDecimal unitPrice = product.getUnitPrice() == null ? BigDecimal.ZERO : product.getUnitPrice();
+            BigDecimal taxRate = product.effectiveTaxRate();
+            var amounts = mz.multicore.erp.architecture.pricing.LineCalculator.compute(
+                    unitPrice, requestedLine.quantity(), BigDecimal.ZERO, taxRate);
+
+            DeliveryGuideLine line = new DeliveryGuideLine();
+            line.setProduct(product);
+            line.setQuantity(requestedLine.quantity());
+            line.setUnitPrice(unitPrice);
+            line.setTaxRate(taxRate);
+            line.setDiscountPercentage(BigDecimal.ZERO);
+            line.setLineTotal(amounts.total());
+            guide.addLine(line);
+            total = total.add(amounts.total());
+        }
+        guide.setTotalAmount(total);
+
+        DeliveryGuide saved = guideRepository.save(guide);
+        auditLogService.logCurrent("DELIVERY_GUIDE_STANDALONE_CREATE",
+                "Guia de remessa avulsa " + saved.getGuideNumber() + " criada para " + client.getName() + ".");
+        return toDTO(saved);
     }
 
     /** Cria a guia a partir de uma encomenda aprovada ({@code PENDING}). Não move stock. */
@@ -137,8 +210,10 @@ public class DeliveryGuideService {
         }
 
         for (DeliveryGuideLine line : guide.getLines()) {
-            String desc = String.format("Saída Guia %s (Encomenda %s) - Cliente %s",
-                    guide.getGuideNumber(), guide.getOrderNumber(), clientLabel(guide));
+            String origin = guide.getOrderNumber() == null
+                    ? "Guia avulsa" : "Encomenda " + guide.getOrderNumber();
+            String desc = String.format("Saída Guia %s (%s) - Cliente %s",
+                    guide.getGuideNumber(), origin, clientLabel(guide));
             inventoryService.registerMovement(
                     line.getProduct(),
                     guide.getWarehouse(),
@@ -155,7 +230,7 @@ public class DeliveryGuideService {
         guide.setApprovedAt(LocalDateTime.now());
         DeliveryGuide saved = guideRepository.save(guide);
 
-        markOrder(saved.getOrderId(), "GUIDED", saved.getId());
+        if (saved.getOrderId() != null) markOrder(saved.getOrderId(), "GUIDED", saved.getId());
 
         auditLogService.logCurrent("DELIVERY_GUIDE_APPROVE",
                 "Guia de remessa " + saved.getGuideNumber() + " aprovada — stock expedido.");
@@ -180,7 +255,7 @@ public class DeliveryGuideService {
         guide.setApprovedAt(LocalDateTime.now());
         DeliveryGuide saved = guideRepository.save(guide);
 
-        releaseOrder(saved.getOrderId());
+        if (saved.getOrderId() != null) releaseOrder(saved.getOrderId());
 
         auditLogService.logCurrent("DELIVERY_GUIDE_REJECT",
                 "Guia de remessa " + saved.getGuideNumber() + " rejeitada. Motivo: " + rejectionReason);
@@ -201,7 +276,7 @@ public class DeliveryGuideService {
         guide.setStatus(DeliveryGuideStatus.CANCELLED);
         DeliveryGuide saved = guideRepository.save(guide);
 
-        releaseOrder(saved.getOrderId());
+        if (saved.getOrderId() != null) releaseOrder(saved.getOrderId());
 
         auditLogService.logCurrent("DELIVERY_GUIDE_CANCEL",
                 "Guia de remessa " + saved.getGuideNumber() + " cancelada.");
@@ -280,6 +355,25 @@ public class DeliveryGuideService {
                         l.getProduct().getNetUnitWeightKg(), l.getProduct().getGrossUnitWeightKg(),
                         share.lineWeightKg(), share.quantityPercentage(), share.weightPercentage());
                 }).toList();
+        Long buId = null;
+        String buName = null;
+        if (g.getLines() != null && !g.getLines().isEmpty()) {
+            java.util.Set<String> bus = new java.util.HashSet<>();
+            for (DeliveryGuideLine l : g.getLines()) {
+                if (l.getProduct() != null && l.getProduct().getBusinessUnit() != null) {
+                    bus.add(l.getProduct().getBusinessUnit().getName());
+                    if (buId == null) {
+                        buId = l.getProduct().getBusinessUnit().getId();
+                        buName = l.getProduct().getBusinessUnit().getName();
+                    }
+                }
+            }
+            if (bus.size() > 1) {
+                buId = null;
+                buName = "Misto";
+            }
+        }
+
         return new DeliveryGuideDTO(
                 g.getId(),
                 g.getGuideNumber(),
@@ -299,7 +393,9 @@ public class DeliveryGuideService {
                 g.getApprovedBy(),
                 g.getApprovedAt(),
                 g.getRejectionReason(),
-                lineDTOs
+                lineDTOs,
+                buId,
+                buName
         );
     }
 }

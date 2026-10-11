@@ -214,17 +214,68 @@ public class UIHelper {
     public static Window mainWindow;
 
     /**
+     * Devolve a área útil da tela do dispositivo gráfico, descontando a barra de tarefas do SO (ScreenInsets).
+     */
+    public static Rectangle getUsableScreenBounds(Component ref) {
+        try {
+            GraphicsConfiguration gc = ref != null ? ref.getGraphicsConfiguration() : null;
+            if (gc == null && mainWindow != null) {
+                gc = mainWindow.getGraphicsConfiguration();
+            }
+            if (gc == null) {
+                GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                if (!ge.isHeadlessInstance()) {
+                    gc = ge.getDefaultScreenDevice().getDefaultConfiguration();
+                }
+            }
+            if (gc != null) {
+                Rectangle bounds = gc.getBounds();
+                Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
+                return new Rectangle(
+                        bounds.x + insets.left,
+                        bounds.y + insets.top,
+                        bounds.width - insets.left - insets.right,
+                        bounds.height - insets.top - insets.bottom
+                );
+            }
+        } catch (Exception ignored) {}
+        try {
+            Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
+            return new Rectangle(0, 0, sz.width, Math.max(600, sz.height - 48));
+        } catch (Exception ignored) {
+            return new Rectangle(0, 0, 1280, 800);
+        }
+    }
+
+    /**
+     * Aplica o padrão corporativo canónico de dimensões para qualquer diálogo modal do sistema:
+     * 1. Limita a altura a um valor seguro (máx. 610px ou usableHeight - 40px), prevenindo que botões
+     *    fiquem ocultos atrás da barra de tarefas do Windows (inclusive em 768p ou escala 125%/150%).
+     * 2. Ajusta a largura responsivamente à tela.
+     * 3. Centra e garante contenção estrita na viewport visível do utilizador.
+     */
+    public static void applyStandardModalBounds(Window dialog, int preferredWidth, int preferredHeight) {
+        if (dialog == null) return;
+        Rectangle usable = getUsableScreenBounds(dialog);
+        int targetW = Math.min(preferredWidth, Math.max(600, usable.width - 32));
+        int targetH = Math.min(preferredHeight, Math.max(480, usable.height - 40));
+        dialog.setSize(new Dimension(targetW, targetH));
+        containWithinMain(dialog);
+    }
+
+    /**
      * Garante que um diálogo modal fica totalmente contido na janela principal: limita o tamanho a
-     * ~94% da janela e centra-o sobre ela (sem ultrapassar as margens). Se a janela principal ainda
-     * não estiver registada/visível, usa o ecrã como referência.
+     * ~94% da janela e centra-o sobre ela (sem ultrapassar as margens). Garante que a barra de
+     * tarefas do Windows e insets do SO nunca são invadidos.
      */
     public static void containWithinMain(Window dialog) {
         if (dialog == null) {
             return;
         }
+        Rectangle usable = getUsableScreenBounds(dialog);
         Rectangle area = mainArea();
-        int maxW = (int) (area.width * 0.94);
-        int maxH = (int) (area.height * 0.94);
+        int maxW = Math.min((int) (area.width * 0.94), usable.width - 24);
+        int maxH = Math.min((int) (area.height * 0.94), usable.height - 36);
         int w = Math.min(dialog.getWidth(), maxW);
         int h = Math.min(dialog.getHeight(), maxH);
         if (w > 0 && h > 0) {
@@ -232,6 +283,11 @@ public class UIHelper {
         }
         int x = area.x + Math.max(0, (area.width - dialog.getWidth()) / 2);
         int y = area.y + Math.max(0, (area.height - dialog.getHeight()) / 2);
+
+        // Clamp para nunca sobrepor a barra de tarefas do Windows
+        x = Math.max(usable.x + 8, Math.min(x, usable.x + usable.width - dialog.getWidth() - 8));
+        y = Math.max(usable.y + 8, Math.min(y, usable.y + usable.height - dialog.getHeight() - 8));
+
         dialog.setLocation(x, y);
     }
 
@@ -240,7 +296,7 @@ public class UIHelper {
         if (mainWindow != null && mainWindow.isShowing() && mainWindow.getWidth() > 0) {
             return mainWindow.getBounds();
         }
-        return new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+        return getUsableScreenBounds(null);
     }
 
     private static boolean modalContainmentInstalled = false;
@@ -506,6 +562,18 @@ public class UIHelper {
         return button;
     }
 
+    /** Acção canónica de exportação tabular para folha de cálculo Excel ou CSV. */
+    public static ModernButton createExportButton(JTable table, String defaultBaseName) {
+        Objects.requireNonNull(table, "A tabela para exportação é obrigatória.");
+        ModernButton button = new ModernButton("Exportar", SECONDARY, SECONDARY_HOVER);
+        button.setIcon(icon("fas-file-excel", 14, APPROVED_GREEN));
+        button.setForeground(Color.WHITE);
+        button.setToolTipText("Exportar dados da tabela para Excel (.xls) ou CSV");
+        button.getAccessibleContext().setAccessibleName("Exportar dados");
+        button.addActionListener(event -> TableDataExporter.exportToExcelWithDialog(button, table, defaultBaseName));
+        return button;
+    }
+
     /**
      * Barra de acções canónica: painel com botões alinhados à direita, gap 8px uniforme.
      * Substitui o padrão ad-hoc de 3 linhas em todo o sistema.
@@ -521,12 +589,13 @@ public class UIHelper {
      * linha de pesquisa com botões.
      */
     public static JPanel tableCardTop(String title, JComponent filters, JComponent... actions) {
-        JPanel top = new JPanel(new BorderLayout(0, 10));
+        JPanel top = new JPanel(new BorderLayout(0, 8));
         top.setOpaque(false);
+        top.setBorder(new EmptyBorder(0, 0, filters != null ? 6 : 4, 0));
 
         JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
-        header.add(createSubheading(title), BorderLayout.WEST);
+        header.add(createSubheading(title), BorderLayout.CENTER);
         if (actions != null && actions.length > 0) {
             header.add(actionsBar(actions), BorderLayout.EAST);
         }
@@ -1028,6 +1097,7 @@ public class UIHelper {
 
         installRowSelector(table);
         installListingFooter(table);
+        TableHorizontalScrollSupport.install(table);
     }
 
     /**
@@ -1117,9 +1187,34 @@ public class UIHelper {
      * @param table grelha de linhas
      * @param onAdd acção de adicionar linha
      * @param onRemove acção de remover linha
-     * @param onSave acção de gravar documento (opcional)
+    /**
+     * Botão canónico de pesquisa no catálogo de artigos com paginação (F3) para grelhas documentais (DRY).
      */
-    public static void installDocumentGridShortcuts(JTable table, Runnable onAdd, Runnable onRemove, Runnable onSave) {
+    public static ModernButton createProductLookupButton(Runnable onLookup) {
+        ModernButton btn = createSecondaryButton("Pesquisar Catálogo (F3)");
+        btn.setIcon(icon("fas-search", 14, ACCENT_BLUE));
+        btn.setToolTipText("Abrir catálogo paginado para pesquisar e seleccionar artigos (F3)");
+        if (onLookup != null) {
+            btn.addActionListener(e -> onLookup.run());
+        }
+        return btn;
+    }
+
+    /**
+     * Instala os atalhos de teclado de uma grelha documental padrão:
+     * - INSERT / Ctrl+ENTER: Adicionar linha
+     * - DELETE / Ctrl+DELETE: Remover linha
+     * - Ctrl+S / F10: Gravar documento
+     * - F3: Pesquisar catálogo de artigos (opcional)
+     * - TAB / ENTER / SHIFT+TAB: Navegação por células estilo folha de cálculo
+     *
+     * @param table grelha documental
+     * @param onAdd acção de adicionar linha (opcional)
+     * @param onRemove acção de remover linha (opcional)
+     * @param onSave acção de gravar documento (opcional)
+     * @param onLookup acção de abrir catálogo de artigos com pesquisa e paginação (opcional)
+     */
+    public static void installDocumentGridShortcuts(JTable table, Runnable onAdd, Runnable onRemove, Runnable onSave, Runnable onLookup) {
         if (table == null) return;
         InputMap im = table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         ActionMap am = table.getActionMap();
@@ -1156,7 +1251,20 @@ public class UIHelper {
             });
         }
 
+        if (onLookup != null) {
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F3, 0), "gridLookupProduct");
+            am.put("gridLookupProduct", new AbstractAction() {
+                @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                    onLookup.run();
+                }
+            });
+        }
+
         installCellNavigationKeys(table, onAdd);
+    }
+
+    public static void installDocumentGridShortcuts(JTable table, Runnable onAdd, Runnable onRemove, Runnable onSave) {
+        installDocumentGridShortcuts(table, onAdd, onRemove, onSave, null);
     }
 
     /**
@@ -1325,6 +1433,25 @@ public class UIHelper {
         });
         table.addPropertyChangeListener("rowSorter", e -> maybeAddListingFooter(table));
         table.addPropertyChangeListener("model", e -> maybeAddListingFooter(table));
+        table.addPropertyChangeListener(ClientTablePagination.DISABLED, evt -> {
+            if (Boolean.TRUE.equals(evt.getNewValue())) {
+                JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, table);
+                if (sp != null && sp.getParent() instanceof JComponent parent) {
+                    Object prop = parent.getClientProperty("paginationSouthComposite");
+                    if (prop instanceof PaginationSouthComposite comp) {
+                        JComponent extra = comp.getExtraFooter();
+                        parent.remove(comp);
+                        parent.putClientProperty("paginationSouthComposite", null);
+                        if (extra != null) {
+                            comp.setExtraFooter(null);
+                            parent.add(extra, BorderLayout.SOUTH);
+                        }
+                        parent.revalidate();
+                        parent.repaint();
+                    }
+                }
+            }
+        });
     }
 
     private static void maybeAddListingFooter(JTable table) {
@@ -1375,6 +1502,11 @@ public class UIHelper {
         if (Boolean.TRUE.equals(table.getClientProperty(ClientTablePagination.DISABLED))) return;
 
         Component currentSouth = bl.getLayoutComponent(BorderLayout.SOUTH);
+        if (currentSouth instanceof TablePager) {
+            table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
+            return;
+        }
+
         JPanel pager = ClientTablePagination.install(table);
 
         if (currentSouth instanceof PaginationSouthComposite composite) {
@@ -1410,6 +1542,21 @@ public class UIHelper {
 
                 if (parent.getLayout() instanceof BorderLayout bl) {
                     if (bl.getLayoutComponent(BorderLayout.SOUTH) == child && child instanceof JComponent extra) {
+                        if (extra instanceof TablePager
+                                || Boolean.TRUE.equals(table.getClientProperty(ClientTablePagination.DISABLED))
+                                || Boolean.TRUE.equals(table.getClientProperty("noTableFooter"))) {
+                            if (extra instanceof TablePager) {
+                                table.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
+                            }
+                            Object prop = parent.getClientProperty("paginationSouthComposite");
+                            if (prop instanceof PaginationSouthComposite existing) {
+                                parent.remove(existing);
+                                parent.putClientProperty("paginationSouthComposite", null);
+                                parent.revalidate();
+                                parent.repaint();
+                            }
+                            return;
+                        }
                         rearranging = true;
                         try {
                             parent.remove(extra);
@@ -1858,6 +2005,7 @@ public class UIHelper {
         TableNavigator.install(scroll);   // barra lateral (fora da tabela) + auto-hide + teclado
         TableEmptyState.install(scroll);  // "Sem registos." quando vazio
         TableContextMenu.install(scroll); // botão direito: copiar/ir topo-fundo
+        TableHorizontalScrollSupport.install(scroll); // rolagem horizontal adaptativa DRY para tabelas com muitas colunas
     }
 
     /**
@@ -2358,6 +2506,38 @@ public class UIHelper {
     }
 
     /**
+     * Cria e estiliza um JComboBox reutilizável com o mesmo design corporativo do ERP.
+     */
+    public static <T> JComboBox<T> createComboBox(T[] items, java.util.function.Function<T, String> labelExtractor) {
+        JComboBox<T> combo = new JComboBox<>(items);
+        if (labelExtractor != null) {
+            combo.setRenderer(labelRenderer(labelExtractor));
+        }
+        styleComboBox(combo);
+        return combo;
+    }
+
+    /**
+     * Aplica o design corporativo (fundo, texto, altura e foco) a um JSpinner.
+     */
+    public static void styleSpinner(JSpinner spinner) {
+        spinner.setBackground(FIELD_BG);
+        spinner.setForeground(TEXT_LIGHT);
+        spinner.setFont(new Font(FONT, Font.PLAIN, 13));
+        installFocusBorder(spinner);
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor de) {
+            JTextField tf = de.getTextField();
+            tf.setBackground(FIELD_BG);
+            tf.setForeground(TEXT_LIGHT);
+            tf.setCaretColor(TEXT_LIGHT);
+            tf.setFont(new Font(FONT, Font.PLAIN, 13));
+            tf.setBorder(new EmptyBorder(0, 4, 0, 4));
+        }
+        applyFormControlHeight(spinner);
+    }
+
+    /**
      * Garante que nenhum cabeçalho de coluna fica truncado: mede o título e usa-o como largura
      * mínima da coluna.
      *
@@ -2386,6 +2566,7 @@ public class UIHelper {
                 column.setPreferredWidth(needed);
             }
         }
+        TableHorizontalScrollSupport.update(table);
     }
 
     /**
@@ -2446,45 +2627,78 @@ public class UIHelper {
         return spinner;
     }
 
-    /** Tradução central de estados frequentes; valores desconhecidos ficam legíveis. */
+    /** Tradução central de estados frequentes em PT-MZ; valores desconhecidos ficam legíveis. */
     public static String humanStatus(String status) {
         if (status == null || status.isBlank()) return "—";
-        return switch (status.trim().toUpperCase()) {
-            case "ACTIVE" -> "Activo";
-            case "INACTIVE" -> "Inactivo";
+        String s = status.trim().toUpperCase(Locale.ROOT);
+        return switch (s) {
+            case "ACTIVE", "ACTIVO" -> "Activo";
             case "ACTIVA" -> "Activa";
+            case "INACTIVE", "INACTIVO" -> "Inactivo";
             case "INACTIVA" -> "Inactiva";
-            case "OPEN" -> "Aberto";
-            case "IN_PROGRESS" -> "Em curso";
-            case "RESOLVED" -> "Resolvido";
-            case "CLOSED" -> "Fechado";
-            case "DRAFT" -> "Rascunho";
-            case "PENDING", "PENDING_APPROVAL" -> "Pendente";
-            case "APPROVED" -> "Aprovado";
-            case "REJECTED" -> "Rejeitado";
-            case "CANCELLED" -> "Anulado";
-            case "PAID" -> "Paga";
-            case "PARTIALLY_PAID" -> "Parcialmente paga";
-            case "OVERDUE" -> "Em atraso";
-            // Tipos de falta (§B2). Estavam a chegar ao ecrã em bruto e em inglês:
-            // "PENDING_JUSTIFIC…" na tabela de Faltas e "hoje PENDING_JUSTIFICATION" no diálogo
-            // de justificação — num módulo cujas mensagens são todas em PT-MZ.
-            case "PENDING_JUSTIFICATION" -> "Por justificar";
-            case "JUSTIFIED" -> "Justificada";
-            case "UNJUSTIFIED" -> "Injustificada";
-            case "SICK" -> "Baixa médica";
-            case "MATERNITY" -> "Maternidade";
-            case "UNPAID_LEAVE" -> "Licença sem vencimento";
-            // Tipos de movimento de stock. Apareciam em bruto na coluna "Tipo Mov." da
-            // rastreabilidade — PURCHASE, SALE, ADJUSTMENT — numa aplicação em PT-MZ, e num ecrã
-            // que existe para alguém perceber PORQUE é que o stock mexeu.
-            case "PURCHASE" -> "Compra";
-            case "ENTRY" -> "Entrada";
-            case "SALE" -> "Venda";
-            case "TRANSFER" -> "Transferência";
-            case "ADJUSTMENT" -> "Ajuste";
-            case "RETURN" -> "Devolução";
-            case "REVERSAL" -> "Estorno";
+            case "OPEN", "ABERTO" -> "Aberto";
+            case "IN_PROGRESS", "EM_CURSO", "EM CURSO" -> "Em curso";
+            case "RESOLVED", "RESOLVIDO" -> "Resolvido";
+            case "CLOSED", "FECHADO" -> "Fechado";
+            case "DRAFT", "RASCUNHO" -> "Rascunho";
+            case "PENDING", "PENDENTE" -> "Pendente";
+            case "PENDING_APPROVAL", "PENDENTE_APROVACAO", "PENDENTE DE APROVAÇÃO", "PENDENTE DE APROVACAO" -> "Pendente de aprovação";
+            case "PENDING_DISCOUNT_APPROVAL" -> "Aprovação de desconto";
+            case "POR_FACTURAR", "POR_FATURAR", "POR FACTURAR", "POR FATURAR" -> "Por facturar";
+            case "AWAITING_SEPARATION", "AGUARDA_SEPARACAO", "AGUARDA SEPARAÇÃO", "AGUARDA SEPARACAO" -> "Aguarda separação";
+            case "IN_SEPARATION", "EM_SEPARACAO", "EM SEPARAÇÃO", "EM SEPARACAO" -> "Em separação";
+            case "SEPARATED", "SEPARADO" -> "Separado";
+            case "GUIDE_PENDING", "GUIA_POR_APROVAR", "GUIA POR APROVAR" -> "Guia por aprovar";
+            case "GUIDED", "EXPEDIDO_POR_GUIA", "EXPEDIDO POR GUIA" -> "Expedido por guia";
+            case "TRANSFER_PENDING", "TRANSFERENCIA_POR_APROVAR", "TRANSFERÊNCIA POR APROVAR" -> "Transferência por aprovar";
+            case "TRANSFERRED", "TRANSFERIDO", "TRANSFERIDO PARA A LOJA" -> "Transferido para a loja";
+            case "BILLED", "INVOICED", "FACTURADO", "FACTURADA", "FATURADO", "FATURADA" -> "Facturado";
+            case "APPROVED", "APROVADO", "APROVADA" -> "Aprovado";
+            case "REJECTED", "REJEITADO", "REJEITADA" -> "Rejeitado";
+            case "CANCELLED", "CANCELADO", "CANCELADA", "ANULADO", "ANULADA" -> "Cancelado";
+            case "PAID", "PAGA", "PAGO" -> "Paga";
+            case "PARTIALLY_PAID", "PARCIALMENTE_PAGA", "PARCIALMENTE PAGA" -> "Parcialmente paga";
+            case "OVERDUE", "EM_ATRASO", "EM ATRASO" -> "Em atraso";
+            case "ORDERED", "ENCOMENDADO" -> "Encomendado";
+            case "PARTIALLY_RECEIVED", "PARCIALMENTE_RECEBIDO", "PARCIALMENTE RECEBIDO" -> "Parcialmente recebido";
+            case "RECEIVED", "RECEBIDO" -> "Recebido";
+            case "COMPLETED", "CONCLUIDO", "CONCLUÍDO", "CONCLUIDA", "CONCLUÍDA" -> "Concluído";
+            case "SUSPENDED", "SUSPENSO", "SUSPENSA" -> "Suspenso";
+            case "EXPIRED", "EXPIRADO", "EXPIRADA" -> "Expirado";
+            case "OPERATIONAL", "OPERACIONAL" -> "Operacional";
+            case "MAINTENANCE", "MANUTENCAO", "MANUTENÇÃO" -> "Manutenção";
+            case "INSPECTION", "INSPECCAO", "INSPECÇÃO" -> "Inspecção";
+            case "OUT_OF_SERVICE", "FORA_DE_SERVICO", "FORA DE SERVIÇO" -> "Fora de serviço";
+            case "SOLD", "VENDIDO" -> "Vendido";
+            case "PLANEADA" -> "Planeada";
+            case "EM_PRODUCAO", "EM PRODUÇÃO", "EM PRODUCAO" -> "Em produção";
+            case "ISSUED", "EMITIDA", "EMITIDO" -> "Emitida";
+            case "SHIPPED", "ENVIADO", "EM TRANSITO", "EM TRÂNSITO" -> "Em trânsito";
+            case "DELIVERED", "ENTREGUE" -> "Entregue";
+            case "MATCHED", "CONCILIADO" -> "Conciliado";
+            case "UNMATCHED", "POR_CONCILIAR", "POR CONCILIAR" -> "Por conciliar";
+            // Tipos de falta (§B2)
+            case "PENDING_JUSTIFICATION", "POR JUSTIFICAR" -> "Por justificar";
+            case "JUSTIFIED", "JUSTIFICADA" -> "Justificada";
+            case "UNJUSTIFIED", "INJUSTIFICADA" -> "Injustificada";
+            case "SICK", "BAIXA MEDICA", "BAIXA MÉDICA" -> "Baixa médica";
+            case "MATERNITY", "MATERNIDADE" -> "Maternidade";
+            case "UNPAID_LEAVE", "LICENCA SEM VENCIMENTO", "LICENÇA SEM VENCIMENTO" -> "Licença sem vencimento";
+            // Tipos de movimento de stock
+            case "PURCHASE", "COMPRA" -> "Compra";
+            case "ENTRY", "ENTRADA" -> "Entrada";
+            case "SALE", "VENDA" -> "Venda";
+            case "TRANSFER", "TRANSFERENCIA", "TRANSFERÊNCIA" -> "Transferência";
+            case "ADJUSTMENT", "AJUSTE" -> "Ajuste";
+            case "RETURN", "DEVOLUCAO", "DEVOLUÇÃO" -> "Devolução";
+            case "REVERSAL", "ESTORNO" -> "Estorno";
+            case "ESGOTADO" -> "Esgotado";
+            case "CRITICO", "CRÍTICO" -> "Crítico";
+            case "BAIXO" -> "Baixo";
+            case "TERMINATED", "RESCINDIDO", "DEMITIDO" -> "Rescindido";
+            case "SUPERADMIN" -> "SuperAdmin";
+            case "DEBIT", "DEBITO", "DÉBITO" -> "Débito";
+            case "CREDIT", "CREDITO", "CRÉDITO" -> "Crédito";
             default -> status.trim().replace('_', ' ');
         };
     }
@@ -2639,6 +2853,8 @@ public class UIHelper {
                     }
                 } else if (c instanceof JComboBox) {
                     styleComboBox((JComboBox<?>) c);
+                } else if (c instanceof JSpinner) {
+                    styleSpinner((JSpinner) c);
                 } else if (c instanceof JTextArea) {
                     styleTextArea((JTextArea) c);
                 }

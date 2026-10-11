@@ -86,10 +86,10 @@ public final class TableEmptyState {
         panel.setOpaque(false);
         panel.setFocusable(false);
 
-        // Ícone grande (fas-inbox, 48px)
-        JLabel iconLbl = new JLabel(UIHelper.icon("fas-inbox", UIHelper.ICON_HERO, UIHelper.TEXT_MUTED));
+        // Ícone elegante proporcional (fas-inbox, 32px)
+        JLabel iconLbl = new JLabel(UIHelper.icon("fas-inbox", 32, UIHelper.TEXT_MUTED));
         iconLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 14, 0));
+        iconLbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 6, 0));
         panel.add(iconLbl);
 
         // Título em negrito

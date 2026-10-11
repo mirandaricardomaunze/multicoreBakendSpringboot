@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
 
 /**
  * Separador das <b>cessações e acertos finais</b>. Ver docs/RH_COMPLETO_SPEC.md §B3.
@@ -68,6 +70,8 @@ final class HRTerminationsPanel {
         payBtn.setIcon(UIHelper.icon("fas-money-check-alt", 14));
         payBtn.addActionListener(e -> paySettlement());
 
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+
         ActionMenuButton docsBtn = UIHelper.createActionMenuButton("Documentos")
                 .addAction("Acerto PDF", UIHelper.icon("fas-file-pdf", 14), this::printSettlement)
                 .addAction("Certificado de Trabalho", UIHelper.icon("fas-file-alt", 14), this::printCertificate);
@@ -83,12 +87,29 @@ final class HRTerminationsPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         for (int column : new int[]{6, 7, 8}) {
             table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         }
         table.getColumnModel().getColumn(9).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-user-minus", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(model.getValueAt(row, 2)));
+            peek.setSubtitle("Acerto " + model.getValueAt(row, 1) + " • " + model.getValueAt(row, 4));
+            peek.setStatus(String.valueOf(model.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data de Saída", String.valueOf(model.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Motivo", String.valueOf(model.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Aviso Prévio", String.valueOf(model.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Ganhos", String.valueOf(model.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Descontos", String.valueOf(model.getValueAt(row, 7)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Líquido", String.valueOf(model.getValueAt(row, 8)), true));
+            peek.setItems(items);
+        });
 
         JTextField search = TableFilter.searchField("Colaborador ou acerto…");
         JComboBox<String> estado = TableFilter.combo("Todos os estados", "Por pagar", "Pago");
@@ -99,7 +120,6 @@ final class HRTerminationsPanel {
                 TableFilter.label("Saída:", "fas-calendar-alt"), periodo);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
         card.add(UIHelper.tableCardTop("Cessações e Acertos Finais", bar,
                 refreshBtn, docsBtn, payBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
@@ -235,10 +255,10 @@ final class HRTerminationsPanel {
         if (sel == null) {
             return;
         }
-        UIHelper.runWithProgress(owner, "A gerar o acerto…",
-                () -> owner.hrApiClient.renderSettlement(sel.id()),
-                pdf -> PrintPreviewDialog.show(owner, pdf, "acerto-final-" + sel.settlementNumber()),
-                owner::showActionError);
+        sensitivePrint(mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.TERMINATION_SETTLEMENT,
+                sel.id(), "Acerto final " + sel.settlementNumber(),
+                "acerto-final-" + sel.settlementNumber(),
+                () -> owner.hrApiClient.renderSettlement(sel.id()));
     }
 
     private void printCertificate() {
@@ -246,10 +266,22 @@ final class HRTerminationsPanel {
         if (sel == null) {
             return;
         }
-        UIHelper.runWithProgress(owner, "A gerar o certificado…",
-                () -> owner.hrApiClient.renderWorkCertificate(sel.id()),
-                pdf -> PrintPreviewDialog.show(owner, pdf, "certificado-" + sel.settlementNumber()),
-                owner::showActionError);
+        sensitivePrint(mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.TERMINATION_CERTIFICATE,
+                sel.id(), "Certificado de trabalho " + sel.settlementNumber(),
+                "certificado-" + sel.settlementNumber(),
+                () -> owner.hrApiClient.renderWorkCertificate(sel.id()));
+    }
+
+    private void sensitivePrint(mz.multicore.erp.modules.printing.dto.SensitiveDocumentType type,
+                                Long id, String label, String fileName,
+                                java.util.concurrent.Callable<byte[]> renderer) {
+        if (owner.printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar documento…", renderer,
+                    pdf -> PrintPreviewDialog.show(owner, pdf, fileName), owner::showActionError);
+            return;
+        }
+        SensitivePrintCoordinator.print(owner, owner.printApiClient, type, id, label, fileName,
+                renderer, this::load);
     }
 
     private TerminationDTO selected() {

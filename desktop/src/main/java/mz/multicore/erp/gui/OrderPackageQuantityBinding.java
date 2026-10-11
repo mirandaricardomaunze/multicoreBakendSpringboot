@@ -30,8 +30,9 @@ final class OrderPackageQuantityBinding {
             owner.orderLinesTableModel.setValueAt(share.weightPercentage() + "%", index, 7);
             totalWeight = totalWeight.add(share.lineWeightKg());
         }
-        owner.orderTotalLabel.setToolTipText("Peso bruto estimado da carga: " + totalWeight + " kg");
-        owner.orderLoadLabel.setText("Carga: " + totalWeight.setScale(2, java.math.RoundingMode.HALF_UP) + " kg");
+        String vehicleRec = LogisticsLoadCalculator.recommendedVehicleType(totalWeight);
+        owner.orderTotalLabel.setToolTipText("Peso bruto estimado: " + totalWeight.setScale(2, java.math.RoundingMode.HALF_UP) + " kg | Viatura sugerida: " + vehicleRec);
+        owner.orderLoadLabel.setText("Carga: " + totalWeight.setScale(2, java.math.RoundingMode.HALF_UP) + " kg (" + vehicleRec + ")");
     }
 
 }

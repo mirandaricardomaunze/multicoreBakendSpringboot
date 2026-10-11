@@ -27,6 +27,7 @@ class LineItemsTableRendererTest {
     void expiry_isDashWhenNull() {
         assertEquals("—", LineItemsTableRenderer.formatExpiry(null));
         assertEquals("31/12/2026", LineItemsTableRenderer.formatExpiry(LocalDate.of(2026, 12, 31)));
+        assertEquals("—", LineItemsTableRenderer.formatExpiry(LocalDate.of(9999, 12, 31)));
     }
 
     @Test

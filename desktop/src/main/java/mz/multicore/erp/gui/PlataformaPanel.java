@@ -138,6 +138,7 @@ public class PlataformaPanel extends JPanel {
         };
         versionsTable = new JTable(versionsModel);
         UIHelper.styleTable(versionsTable);
+        UIHelper.ensureHeadersFit(versionsTable);
         JScrollPane scroll = new JScrollPane(versionsTable);
         UIHelper.styleScrollPane(scroll);
 
@@ -191,10 +192,9 @@ public class PlataformaPanel extends JPanel {
 
         ModernButton newBtn = UIHelper.createSuccessButton("Nova Empresa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
-        ModernButton editBtn = UIHelper.createPrimaryButton("Editar");
-        editBtn.setIcon(UIHelper.icon("fas-pen", 14));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadCompanies);
         mz.multicore.erp.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Editar Empresa", UIHelper.icon("fas-pen", 14), this::editSelectedCompany)
                 .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedCompany);
 
         ModernPanel listCard = new ModernPanel(16);
@@ -208,6 +208,7 @@ public class PlataformaPanel extends JPanel {
         };
         companiesTable = new JTable(companiesModel);
         UIHelper.styleTable(companiesTable);
+        UIHelper.ensureHeadersFit(companiesTable);
         companiesTable.putClientProperty("noRowInspector", Boolean.TRUE);
         companiesTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -218,17 +219,16 @@ public class PlataformaPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(companiesTable);
         UIHelper.styleScrollPane(scroll);
         JTextField cSearch = TableFilter.searchField("Nome, NUIT ou email…");
-        JComboBox<String> cEstado = TableFilter.combo("Todos os estados", "ACTIVA", "SUSPENSA");
+        JComboBox<String> cEstado = TableFilter.combo("Todos os estados", "Activa", "Suspensa");
         TableFilter.install(companiesTable, cSearch, new TableFilter.ColumnFilter(cEstado, 4));
         JPanel cBar = TableFilter.bar(cSearch, TableFilter.label("Estado:"), cEstado);
         cBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         listCard.add(UIHelper.tableCardTop("Empresas da Plataforma", cBar,
-                refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
+                refreshBtn, moreBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         panel.add(listCard, BorderLayout.CENTER);
 
         newBtn.addActionListener(e -> createCompany());
-        editBtn.addActionListener(e -> editSelectedCompany());
 
         return panel;
     }
@@ -396,12 +396,11 @@ public class PlataformaPanel extends JPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        ModernButton planBtn = UIHelper.createPrimaryButton("Definir Plano/Validade");
-        planBtn.setIcon(UIHelper.icon("fas-sliders-h", 14));
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadSubscriptions);
         mz.multicore.erp.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
+                .addAction("Definir Plano/Validade", UIHelper.icon("fas-sliders-h", 14), this::defineSubscription)
                 .addAction("Ver Pagamentos", UIHelper.icon("fas-receipt", 14), this::showPayments)
                 .addAction("Suspender/Reactivar", UIHelper.icon("fas-power-off", 14), this::toggleSubscriptionStatus);
 
@@ -430,6 +429,7 @@ public class PlataformaPanel extends JPanel {
         };
         subsTable = new JTable(subsModel);
         UIHelper.styleTable(subsTable);
+        UIHelper.ensureHeadersFit(subsTable);
         // Destaque: linhas a vermelho (expirada/suspensa) ou amarelo (expira em ≤7 dias). Delega no
         // renderer do tema (fundo/selecção) e só troca a cor do texto para as linhas em risco.
         javax.swing.table.TableCellRenderer baseRenderer = subsTable.getDefaultRenderer(Object.class);
@@ -452,15 +452,15 @@ public class PlataformaPanel extends JPanel {
                 new TableFilter.ColumnFilter(sEstado, 2), new TableFilter.ColumnFilter(sPlano, 1));
         JPanel sBar = TableFilter.bar(sSearch, TableFilter.label("Estado:"), sEstado, TableFilter.label("Plano:"), sPlano);
         sBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        listCard.add(UIHelper.tableCardTop("Assinaturas & Pagamentos", sBar,
-                refreshBtn, moreBtn, payBtn, planBtn), BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Subscrições das Empresas", sBar,
+                refreshBtn, moreBtn, payBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
 
         // Gráfico Donut de Planos
         ModernPanel chartCard = new ModernPanel(16);
         chartCard.setLayout(new BorderLayout());
         chartCard.setBorder(new EmptyBorder(12, 14, 12, 14));
-        chartCard.setPreferredSize(new Dimension(320, 0));
+        chartCard.setPreferredSize(new Dimension(280, 0));
         subPlansChart = new SimplePieChart("Distribuição por Plano", true);
         chartCard.add(subPlansChart, BorderLayout.CENTER);
 
@@ -471,7 +471,6 @@ public class PlataformaPanel extends JPanel {
 
         panel.add(centerSplit, BorderLayout.CENTER);
 
-        planBtn.addActionListener(e -> defineSubscription());
         payBtn.addActionListener(e -> recordPayment());
 
         return panel;
@@ -871,6 +870,7 @@ public class PlataformaPanel extends JPanel {
         };
         usersTable = new JTable(usersModel);
         UIHelper.styleTable(usersTable);
+        UIHelper.ensureHeadersFit(usersTable);
         usersTable.putClientProperty("noRowInspector", Boolean.TRUE);
         usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -881,7 +881,7 @@ public class PlataformaPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(usersTable);
         UIHelper.styleScrollPane(scroll);
         JTextField uSearch = TableFilter.searchField("Utilizador, nome ou empresa…");
-        JComboBox<String> uEstado = TableFilter.combo("Todos os estados", "ACTIVO", "INATIVO", "SUPERADMIN");
+        JComboBox<String> uEstado = TableFilter.combo("Todos os estados", "Activo", "Inactivo", "SuperAdmin");
         TableFilter.install(usersTable, uSearch, new TableFilter.ColumnFilter(uEstado, 3));
         JPanel uBar = TableFilter.bar(uSearch, TableFilter.label("Estado:"), uEstado);
         uBar.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -1123,6 +1123,7 @@ public class PlataformaPanel extends JPanel {
         };
         ticketsTable = new JTable(ticketsModel);
         UIHelper.styleTable(ticketsTable);
+        UIHelper.ensureHeadersFit(ticketsTable);
         ticketsTable.putClientProperty("noRowInspector", Boolean.TRUE);
         ticketsTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override

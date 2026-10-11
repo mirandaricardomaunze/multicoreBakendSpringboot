@@ -191,3 +191,105 @@ Em janelas modais complexas (ex.: Emissão de Guias de Transferência, Guias de 
      ```
 2. **Prevenção de Perda de Dados:**
    - Quando `IllegalArgumentException` é lançada dentro de `setOnSave`, o `ModernFormDialog` captura o erro internamente, apresenta a mensagem no seu `feedbackPanel` com destaque vermelho e mantém a janela totalmente aberta, preservando intactas todas as linhas, produtos e lotes inseridos.
+
+---
+
+## 11. Padrão Canónico de Painéis de Tabela e Prevenção de Sobreposição
+
+### O Problema
+Painéis de tabelas que criam cartões de métricas privados (`createKpiCard`, `ModernPanel(10)`), duplicam títulos e botões no topo externo e no topo interno do card, empilham filtros em múltiplas linhas (`GridBagLayout`) ou colocam seletores largos junto de 4+ botões na mesma linha de cabeçalho geram quebra visual, truncamento de colunas e sobreposição de elementos em resoluções padrão.
+
+### Regra Obrigatória
+1. **KPI Cards:** Exclusivamente via `KpiCard.createGrid` / `createCard` / `createInteractiveCard` (proibido criar cartões privados ou com `ModernPanel` de raio diferente de 16).
+2. **Card Único:** Um único card `ModernPanel(16)` contendo cabeçalho, filtros e tabela (`BorderLayout.NORTH` para `UIHelper.tableCardTop` com filtros, `CENTER` para o scroll da tabela).
+3. **Zero Duplicação:** Título e botões nunca duplicados fora do card.
+4. **Filtros em Linha Única:** Barra de pesquisa e seletores consolidados numa única linha horizontal (`TableFilter.bar`).
+5. **Calibração de Colunas:** Larguras preferenciais definidas em cada coluna com chamada obrigatória a `UIHelper.ensureHeadersFit(table)`.
+6. **«Quick Peek» Silencioso:** Integração do `TableQuickPeekController.install(table, container, ...)` com tecla `Espaço` e botão lateral discreto (ícone `fas-columns`).
+7. **Cabeçalhos sem Congestionamento:** Cabeçalhos de card nunca juntam combos largos e mais de 2 botões na mesma linha. Seletores e botão `Actualizar` à esquerda (`BorderLayout.WEST`), ações primárias (máx. 2) à direita (`BorderLayout.EAST`), e ações de fecho/secundárias junto da linha de filtros.
+
+---
+
+## 12. Regra de Varredura em Painéis Vizinhos
+
+Ao corrigir qualquer defeito visual ou não-conformidade num painel (ex.: cartões de KPI fora do padrão, filtros em múltiplas linhas, ausência de Quick Peek ou sobreposição de botões), deve-se ativamente realizar uma busca (`grep`) por padrões idênticos nos painéis vizinhos (`createKpiCard(`, `new ModernPanel(10)`, `GridBagLayout` em filtros, etc.) para corrigir de forma preventiva todas as ocorrências no sistema, em vez de atuar de forma isolada.
+
+---
+
+## 13. Padrão Universal e Reutilizável para Inputs e Selects (`JComboBox`, `JTextField`, `JSpinner`)
+
+### O Problema
+Instanciar componentes brutos do Swing (`new JComboBox<>()`, `new JTextField()`, `new JSpinner()`) sem os componentes de fábrica ou sem aplicar a estilização do Design System faz com que o FlatLaf / Java 2D renderize caixas cinzentas genéricas, com alturas desiguais (24px a 28px em vez de 34px/36px), bordas quadradas sem foco do tema e listas suspensas com fundo escuro e texto ilegível.
+
+### Regras Obrigatórias
+
+1. **Filtros de Tabela:**
+   - Todo e qualquer seletor na barra de filtros (`TableFilter.bar`) **DEVE** ser instanciado via fábrica canónica `TableFilter.combo(...)`:
+     ```java
+     // Correto: altura de 34px, borda arredondada, cores e foco do tema automáticos
+     private final JComboBox<String> fuelFilterCombo = TableFilter.combo(
+         "Todos os Combustíveis", "Gasóleo (Diesel)", "Gasolina", "Híbrido", "Elétrico");
+     ```
+   - **Proibido** instanciar `new JComboBox<>()` cru em barras de filtros.
+
+2. **Selects em Formulários e Diálogos Modais:**
+   - Usar `UIHelper.createComboBox(items, labelExtractor)` ou aplicar imediatamente `UIHelper.styleComboBox(combo)`:
+     ```java
+     // Fábrica canónica com renderizador humanizado em pt-MZ:
+     JComboBox<FuelType> fuelCombo = UIHelper.createComboBox(
+         FuelType.values(), FuelType::label);
+     ```
+   - Nunca exibir nomes crus de enums em maiúsculas (`DIESEL`, `MONTHLY`); usar sempre métodos com rótulos amigáveis (`.label()`).
+
+3. **Inputs de Texto e Senhas:**
+   - `UIHelper.createDialogForm(...)` já aplica automaticamente `styleTextField` e `styleComboBox`. Caso o input seja utilizado fora do form, invocar explicitamente `UIHelper.styleTextField(field)` ou `TableFilter.searchField(placeholder)`.
+
+4. **Seletores Numéricos ou Periódicos (`JSpinner` vs `JComboBox`):**
+   - Para seleções discretas (dias do mês de 1 a 31, anos, quantidades típicas), preferir `UIHelper.createComboBox(...)` para manter exatamente a mesma ergonomia visual dos selects do formulário.
+   - Caso `JSpinner` seja estritamente necessário, invocar `UIHelper.styleSpinner(spinner)` (definindo altura de 36px, fundo `FIELD_BG` e foco corporativo).
+
+---
+
+## 14. Ergonomia de Abas Corporativas e Proibição de Scroll Infinito Vertical
+
+### O Problema
+Painéis complexos que reúnem múltiplas responsabilidades funcionais (ex.: Análise/IA vs Rascunhos vs Elaboração de Documentos vs Arquivo Histórico; ou Ordens de Produção vs Fichas Técnicas vs Apontamentos) frequentemente empilham 5 ou mais cartões verticais dentro de uma barra de rolagem global (`ArrowScrollPanel` ou `JScrollPane`). Isso resulta em:
+1. Desorientação do operador ao ter que rolar ecrãs de 2000px+ para encontrar ações.
+2. Mistura de dados operacionais rápidos com relatórios e histórico.
+3. Dificuldade de redimensionamento e perda de espaço útil de tabelas.
+
+### Regra Obrigatória
+1. **Estrutura Canónica em Abas (`JTabbedPane`):**
+   - Painéis multifuncionais devem ser decompostos em abas limpas e ergonómicas:
+     ```java
+     JTabbedPane tabs = new JTabbedPane();
+     UIHelper.styleTabbedPaneMulticore(tabs);
+     tabs.addTab("Consulta & Análise", UIHelper.icon("fas-brain", 16, UIHelper.ACCENT_BLUE), buildAnalysisTab());
+     tabs.addTab("Rascunhos Operacionais", UIHelper.icon("fas-magic", 16, UIHelper.PENDING_YELLOW), buildDraftsTab());
+     tabs.addTab("Documentos Institucionais", UIHelper.icon("fas-file-alt", 16, UIHelper.APPROVED_GREEN), buildDocumentsTab());
+     tabs.addTab("Arquivo & Versões", UIHelper.icon("fas-history", 16, UIHelper.MODULE_ACCOUNTING), buildHistoryTab());
+     add(tabs, BorderLayout.CENTER);
+     ```
+2. **Ícones Semânticos Vibrantes:**
+   - Cada aba deve possuir um ícone FontAwesome 5 Solid com cor semântica vibrante (Azul, Verde, Âmbar, Roxo; proibido usar cinzento desbotado ou emojis).
+3. **Scroll Interno Apenas Onde Necessário:**
+   - O scroll global do painel é eliminado; cada aba preenche o espaço útil da janela (`BorderLayout.CENTER`), contendo internamente tabelas ou áreas de texto com seu próprio `JScrollPane`.
+
+---
+
+## 15. Rastreabilidade de Chão de Fábrica & Armazém: Coletor de Scanner e Emissão de Etiquetas de Lote
+
+### O Ciclo Completo
+A cadeia operacional entre Produção (`manufacturing`), Armazém (`stock`) e Compras (`purchasing`) deve fechar o ciclo de ponta a ponta:
+1. **Apontamento Ágil:** Uso do `BarcodeScannerCollectorDialog` com foco automático contínuo para leitores ópticos (USB/Bluetooth) tanto no Chão de Fábrica (criação/início de OP por bip) quanto no Armazém (auditoria e conferência física).
+2. **Emissão Imediata de Etiquetas de Lote (`ShelfLabelsDialog.showWithBatch`):**
+   - Ao concluir uma Ordem de Fabrico ou rececionar mercadorias, disponibilizar ação de 1-toque com ícone `fas-barcode`:
+     ```java
+     ShelfLabelsDialog.showWithBatch(parent, List.of(product), order.orderNumber(), copies);
+     ```
+   - O cartão da etiqueta (`createSingleLabelCard`) deve exibir nitidamente o **Lote/OP** e a **Validade** sem quebrar a proporção canónica exata de `240x130`.
+   - Suporte duplo obrigatório: tanto **Folha A4 em Grelha 3x8** quanto **Bobina Térmica Contínua / Rolo (80mm / 50x30mm)** para impressoras térmicas (Zebra, Xprinter, Argox, Elgin).
+3. **Isolamento de Camadas (PDF):**
+   - O módulo `desktop` nunca deve compilar nem referenciar OpenPDF em runtime (`scope=test` apenas). Toda composição de arquivos PDF é de responsabilidade do `backend` (`ProductLabelPrintService`), enquanto o desktop consome os bytes e renderiza com PDFBox / `PrintPreviewDialog` ou imprime direto via `PrinterJob`.
+
+

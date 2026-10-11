@@ -24,6 +24,8 @@ public class ApprovalService {
     private final ApprovalHistoryRepository historyRepository;
     private final List<ApprovalCallback> callbacks;
     private final CompanyRepository companyRepository;
+    private final org.springframework.beans.factory.ObjectProvider<mz.multicore.erp.modules.inventory.repository.StockTransferRepository> stockTransferRepository;
+    private final org.springframework.beans.factory.ObjectProvider<mz.multicore.erp.modules.inventory.repository.StockWasteRepository> stockWasteRepository;
 
     public ApprovalService(
             ApprovalRequestRepository requestRepository,
@@ -31,46 +33,100 @@ public class ApprovalService {
             List<ApprovalCallback> callbacks,
             CompanyRepository companyRepository
     ) {
+        this(requestRepository, historyRepository, callbacks, companyRepository, null, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ApprovalService(
+            ApprovalRequestRepository requestRepository,
+            ApprovalHistoryRepository historyRepository,
+            List<ApprovalCallback> callbacks,
+            CompanyRepository companyRepository,
+            org.springframework.beans.factory.ObjectProvider<mz.multicore.erp.modules.inventory.repository.StockTransferRepository> stockTransferRepository,
+            org.springframework.beans.factory.ObjectProvider<mz.multicore.erp.modules.inventory.repository.StockWasteRepository> stockWasteRepository
+    ) {
         this.requestRepository = requestRepository;
         this.historyRepository = historyRepository;
         this.callbacks = callbacks;
         this.companyRepository = companyRepository;
+        this.stockTransferRepository = stockTransferRepository;
+        this.stockWasteRepository = stockWasteRepository;
     }
+
+    public static final BigDecimal BASE_AUTO_APPROVE_LIMIT = new BigDecimal("50000.00");
+    public static final BigDecimal BASE_MANAGER_LIMIT = new BigDecimal("250000.00");
 
     @Transactional
     public ApprovalRequestDTO submitRequest(String documentType, Long documentId, BigDecimal amount, String description) {
+        BigDecimal amt = amount != null ? amount : BigDecimal.ZERO;
+        String requiredRole = "MANAGER";
+        boolean autoApproved = false;
+
+        if (description != null && description.contains("(Requer ADMIN)")) {
+            requiredRole = "ADMIN";
+            autoApproved = false;
+        } else if (description != null && description.contains("(Requer MANAGER)")) {
+            requiredRole = "MANAGER";
+            autoApproved = false;
+        } else if (description != null && description.contains("Green Lane")) {
+            autoApproved = true;
+            requiredRole = "NONE";
+        } else if (amt.compareTo(BASE_AUTO_APPROVE_LIMIT) <= 0) {
+            autoApproved = true;
+            requiredRole = "NONE";
+        } else if (amt.compareTo(BASE_MANAGER_LIMIT) <= 0) {
+            requiredRole = "MANAGER";
+            autoApproved = false;
+        } else {
+            requiredRole = "ADMIN";
+            autoApproved = false;
+        }
+
+        return submitRequest(documentType, documentId, amt, description, requiredRole, autoApproved);
+    }
+
+    @Transactional
+    public ApprovalRequestDTO submitRequest(
+            String documentType,
+            Long documentId,
+            BigDecimal amount,
+            String description,
+            String requiredRole,
+            boolean autoApproved
+    ) {
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        List<ApprovalRequest> existingPending = requestRepository.findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
+                companyId, documentType, documentId, ApprovalStatus.PENDING);
+        if (!existingPending.isEmpty()) {
+            ApprovalRequest existing = existingPending.get(0);
+            existing.setAmount(amount != null ? amount : BigDecimal.ZERO);
+            existing.setDescription(description);
+            return toDTO(requestRepository.save(existing));
+        }
+
         ApprovalRequest request = new ApprovalRequest();
-        request.setCompany(companyRepository.getReferenceById(CurrentUserContext.getCurrentCompanyId()));
+        request.setCompany(companyRepository.getReferenceById(companyId));
         request.setDocumentType(documentType);
         request.setDocumentId(documentId);
-        request.setAmount(amount);
+        request.setAmount(amount != null ? amount : BigDecimal.ZERO);
         request.setSubmitter(CurrentUserContext.getUsername());
         request.setDescription(description);
         request.setCreatedBy(CurrentUserContext.getUsername());
 
-        // Approval routing rules:
-        // <= 50.00: Auto-approved
-        // > 50.00 and <= 500.00: Requires MANAGER
-        // > 500.00: Requires ADMIN
-        if (amount.compareTo(new BigDecimal("50.00")) <= 0) {
+        if (autoApproved) {
             request.setStatus(ApprovalStatus.APPROVED);
             request.setRequiredRole("NONE");
             request = requestRepository.save(request);
 
-            logHistory(request, "SUBMIT", "Auto-aprovado (valor menor ou igual a 50.00)");
+            logHistory(request, "SUBMIT", description != null ? description : "Auto-aprovado pela Matriz Corporativa");
             triggerCallback(request, true, null);
-        } else if (amount.compareTo(new BigDecimal("500.00")) <= 0) {
-            request.setStatus(ApprovalStatus.PENDING);
-            request.setRequiredRole("MANAGER");
-            request = requestRepository.save(request);
-
-            logHistory(request, "SUBMIT", "Submetido para aprovação. Requer perfil MANAGER.");
         } else {
+            String role = requiredRole != null && !requiredRole.isBlank() ? requiredRole.toUpperCase(java.util.Locale.ROOT) : "MANAGER";
             request.setStatus(ApprovalStatus.PENDING);
-            request.setRequiredRole("ADMIN");
+            request.setRequiredRole(role);
             request = requestRepository.save(request);
 
-            logHistory(request, "SUBMIT", "Submetido para aprovação. Requer perfil ADMIN.");
+            logHistory(request, "SUBMIT", "Submetido para aprovação. Requer perfil " + role + ".");
         }
 
         return toDTO(request);
@@ -159,12 +215,54 @@ public class ApprovalService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ApprovalRequestDTO> getPendingRequests() {
-        return requestRepository.findByCompanyIdAndStatus(CurrentUserContext.getCurrentCompanyId(), ApprovalStatus.PENDING)
+        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        syncUnindexedPendingDocuments(companyId);
+        return requestRepository.findByCompanyIdAndStatus(companyId, ApprovalStatus.PENDING)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    private void syncUnindexedPendingDocuments(Long companyId) {
+        if (companyId == null) return;
+        if (stockTransferRepository != null && stockTransferRepository.getIfAvailable() != null) {
+            var transferRepo = stockTransferRepository.getIfAvailable();
+            for (var transfer : transferRepo.findByCompanyId(companyId)) {
+                if (transfer.getStatus() != null && transfer.getStatus().isSeparatedOrPending()) {
+                    List<ApprovalRequest> existing = requestRepository.findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
+                            companyId, "STOCK_TRANSFER", transfer.getId(), ApprovalStatus.PENDING);
+                    if (existing.isEmpty()) {
+                        String originName = transfer.getOriginWarehouse() != null ? transfer.getOriginWarehouse().getName() : "Origem";
+                        String destName = transfer.getDestinationWarehouse() != null ? transfer.getDestinationWarehouse().getName() : "Destino";
+                        BigDecimal amount = BigDecimal.ZERO;
+                        if (transfer.getLines() != null) {
+                            for (var line : transfer.getLines()) {
+                                BigDecimal price = line.getProduct() != null && line.getProduct().getUnitPrice() != null ? line.getProduct().getUnitPrice() : BigDecimal.ZERO;
+                                amount = amount.add(price.multiply(line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO));
+                            }
+                        }
+                        submitRequest("STOCK_TRANSFER", transfer.getId(), amount,
+                                "Transferência " + transfer.getTransferNumber() + " de '" + originName + "' para '" + destName + "'",
+                                "MANAGER", false);
+                    }
+                }
+            }
+        }
+        if (stockWasteRepository != null && stockWasteRepository.getIfAvailable() != null) {
+            var wasteRepo = stockWasteRepository.getIfAvailable();
+            for (var waste : wasteRepo.findByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, mz.multicore.erp.modules.inventory.model.WasteStatus.PENDING_APPROVAL)) {
+                List<ApprovalRequest> existing = requestRepository.findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
+                        companyId, "STOCK_WASTE", waste.getId(), ApprovalStatus.PENDING);
+                if (existing.isEmpty()) {
+                    String prodName = waste.getProduct() != null ? waste.getProduct().getName() : "Artigo";
+                    submitRequest("STOCK_WASTE", waste.getId(), waste.getTotalCost(),
+                            "Quebra de stock #" + waste.getId() + " - " + prodName + " (" + waste.getReason() + ")",
+                            "MANAGER", false);
+                }
+            }
+        }
     }
 
     @Transactional(readOnly = true)

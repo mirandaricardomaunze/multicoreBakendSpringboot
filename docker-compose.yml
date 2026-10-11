@@ -42,6 +42,12 @@ services:
       BACKUP_PG_BIN_DIR: /usr/bin
       BACKUP_DIR: /app/backups
       TRUSTED_PROXY_HOST: caddy
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-20}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-5}
+      HTTP_MAX_THREADS: ${HTTP_MAX_THREADS:-200}
+      HTTP_MAX_CONNECTIONS: ${HTTP_MAX_CONNECTIONS:-8192}
+      HTTP_ACCEPT_COUNT: ${HTTP_ACCEPT_COUNT:-100}
+      SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-30s}
     volumes:
       - ./data/backups:/app/backups
     networks: [internal]

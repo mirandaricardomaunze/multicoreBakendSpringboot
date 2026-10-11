@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -45,6 +46,8 @@ import java.util.TreeMap;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.TableExportAction;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
+import mz.multicore.erp.modules.printing.dto.SensitiveDocumentType;
 
 public class HRPanel extends JPanel {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -112,9 +115,9 @@ public class HRPanel extends JPanel {
                 this::selectedAbsence, this::loadAbsences);
         this.bonusActions = new HRBonusActions(this);
 
-        setLayout(new BorderLayout(0, 10));
+        setLayout(new BorderLayout(0, 8));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBorder(new EmptyBorder(8, 12, 8, 12));
 
         JPanel north = new JPanel(); north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
@@ -328,10 +331,6 @@ public class HRPanel extends JPanel {
         newBtn.setIcon(UIHelper.icon("fas-user-plus", 14));
         newBtn.addActionListener(e -> openEmployeeDialog(null));
 
-        ModernButton profileBtn = UIHelper.createSecondaryButton("Ver Perfil");
-        profileBtn.setIcon(UIHelper.icon("fas-id-card", 14));
-        profileBtn.addActionListener(e -> openSelectedEmployeeProfile());
-
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Editar Colaborador", UIHelper.icon("fas-edit", 14), this::editSelectedEmployee)
                 .addAction("Evolução Salarial", UIHelper.icon("fas-chart-line", 14),
@@ -350,6 +349,7 @@ public class HRPanel extends JPanel {
         };
         employeesTable = new JTable(employeesModel);
         UIHelper.styleTable(employeesTable);
+        UIHelper.ensureHeadersFit(employeesTable);
         employeesTable.setToolTipText("Selecione uma linha e use Ver Perfil para abrir a ficha completa");
         employeesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.role());
         employeesTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
@@ -357,16 +357,36 @@ public class HRPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(employeesTable);
         UIHelper.styleScrollPane(scroll);
 
+        TableQuickPeekController peekController = TableQuickPeekController.install(employeesTable, card, (peek, mr) -> {
+            int row = employeesTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-user-tie", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(employeesModel.getValueAt(row, 1)));
+            peek.setSubtitle("Nº " + employeesModel.getValueAt(row, 0) + " • " + employeesModel.getValueAt(row, 5));
+            peek.setStatus(String.valueOf(employeesModel.getValueAt(row, 7)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Email", String.valueOf(employeesModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Telefone", String.valueOf(employeesModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Departamento", String.valueOf(employeesModel.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Admissão", String.valueOf(employeesModel.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Salário Base", String.valueOf(employeesModel.getValueAt(row, 8)), true));
+            peek.setItems(items);
+            peek.getOpenFullButton().setText("Ver Perfil Completo");
+            peek.setOnOpenFullAction(v -> openSelectedEmployeeProfile());
+        });
+
         JTextField empSearch = TableFilter.searchField("Nome, email, departamento ou cargo…");
         JComboBox<String> empEstado = TableFilter.combo("Todos os estados",
-                "ACTIVE", "SUSPENDED", "TERMINATED");
+                "Activo", "Suspenso", "Rescindido");
         TableFilter.install(employeesTable, empSearch,
                 new TableFilter.ColumnFilter(empEstado, 7));
         JPanel empBar = TableFilter.bar(empSearch, TableFilter.label("Estado:"), empEstado);
         empBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        ModernButton empRefreshBtn = UIHelper.createRefreshButton(this::loadEmployees);
+        ModernButton refreshEmployeesBtn = UIHelper.createRefreshButton(this::loadEmployees);
+        ActionMenuButton consultationBtn = UIHelper.createActionMenuButton("Consulta")
+                .addAction("Alternar Detalhes", UIHelper.icon("fas-columns", 14), peekController::toggle)
+                .addAction("Ver Perfil", UIHelper.icon("fas-id-card", 14), this::openSelectedEmployeeProfile);
         card.add(UIHelper.tableCardTop("Quadro de Colaboradores", empBar,
-                empRefreshBtn, moreBtn, profileBtn, newBtn), BorderLayout.NORTH);
+                refreshEmployeesBtn, consultationBtn, moreBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -586,6 +606,8 @@ public class HRPanel extends JPanel {
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> openCreatePayslipDialog());
 
+        ModernButton refreshPayslipsBtn = UIHelper.createRefreshButton(this::loadPayslips);
+
         ActionMenuButton documentsBtn = UIHelper.createActionMenuButton("Documentos & Processo")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), this::printSelectedPayslip)
                 .addAction("Exportar Lista", UIHelper.icon("fas-file-pdf", 14),
@@ -618,7 +640,7 @@ public class HRPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
 
         JTextField psSearch = TableFilter.searchField("Nº recibo, colaborador ou período…");
-        JComboBox<String> psEstado = TableFilter.combo("Todos os estados", "DRAFT", "APPROVED", "PAID", "CANCELLED");
+        JComboBox<String> psEstado = TableFilter.combo("Todos os estados", "Rascunho", "Aprovado", "Paga", "Cancelado");
         JComboBox<String> psPeriodo = TableFilter.periodCombo();
         TableFilter.install(payslipsTable, psSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(psEstado, 6)),
@@ -628,9 +650,8 @@ public class HRPanel extends JPanel {
                 null
         );
         psBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        ModernButton psRefreshBtn = UIHelper.createRefreshButton(this::loadPayslips);
         card.add(UIHelper.tableCardTop("Recibos de Salário", psBar,
-                psRefreshBtn, documentsBtn, actionsBtn, newBtn), BorderLayout.NORTH);
+                refreshPayslipsBtn, documentsBtn, actionsBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
@@ -762,9 +783,15 @@ public class HRPanel extends JPanel {
     }
 
     private void printPayslip(Long id, String number) {
-        UIHelper.runWithProgress(this, "A gerar recibo em PDF…", () -> hrApiClient.renderPayslip(id),
-                pdf -> PrintPreviewDialog.show(this, pdf, "recibo-salario-" + number),
-                error -> showNotice(FeedbackType.ERROR, "Não foi possível gerar o PDF", error.getMessage()));
+        if (printApiClient == null) {
+            UIHelper.runWithProgress(this, "A gerar recibo em PDF…", () -> hrApiClient.renderPayslip(id),
+                    pdf -> PrintPreviewDialog.show(this, pdf, "recibo-salario-" + number),
+                    error -> showNotice(FeedbackType.ERROR, "Não foi possível gerar o PDF", error.getMessage()));
+            return;
+        }
+        SensitivePrintCoordinator.print(this, printApiClient, SensitiveDocumentType.PAYSLIP,
+                id, "Recibo de salário " + number, "recibo-salario-" + number,
+                () -> hrApiClient.renderPayslip(id), this::loadPayslips);
     }
 
     private PayslipDTO selectedPayslip() {
@@ -791,6 +818,8 @@ public class HRPanel extends JPanel {
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         exportBtn.addActionListener(e -> exportTable("faltas", "Mapa de Faltas", absencesTable));
+
+        ModernButton refreshAbsencesBtn = UIHelper.createRefreshButton(this::loadAbsences);
 
         ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações da Falta")
                 .addAction("Justificar", UIHelper.icon("fas-user-check", 14), employeeActions::justifyAbsence)
@@ -825,9 +854,8 @@ public class HRPanel extends JPanel {
                 TableFilter.label("Tipo:"), absTipo,
                 TableFilter.label("Início:", "fas-calendar-alt"), absPeriodo);
         absBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        ModernButton absRefreshBtn = UIHelper.createRefreshButton(this::loadAbsences);
         card.add(UIHelper.tableCardTop("Registo de Faltas", absBar,
-                absRefreshBtn, exportBtn, actionsBtn, newBtn), BorderLayout.NORTH);
+                refreshAbsencesBtn, exportBtn, actionsBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;

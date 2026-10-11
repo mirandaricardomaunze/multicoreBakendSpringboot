@@ -7,6 +7,9 @@ package mz.multicore.erp.modules.inventory.model;
  */
 public enum TransferStatus {
     DRAFT("Rascunho"),
+    AWAITING_SEPARATION("Aguarda Separação"),
+    IN_SEPARATION("Em Separação"),
+    SEPARATED("Separada"),
     PENDING_APPROVAL("Pendente de Aprovação"),
     APPROVED("Aprovada"),
     REJECTED("Rejeitada"),
@@ -21,5 +24,13 @@ public enum TransferStatus {
     /** Rótulo legível (PT-MZ) para apresentação em UI/PDF. */
     public String getLabel() {
         return label;
+    }
+
+    public boolean canEdit() {
+        return this == DRAFT;
+    }
+
+    public boolean isSeparatedOrPending() {
+        return this == SEPARATED || this == PENDING_APPROVAL;
     }
 }

@@ -16,4 +16,9 @@ public record WarehouseDTO(
         String manager,
         String phone,
         boolean active
-) {}
+) {
+    @Override
+    public String toString() {
+        return name != null && !name.isBlank() ? name : "Armazém #" + id;
+    }
+}

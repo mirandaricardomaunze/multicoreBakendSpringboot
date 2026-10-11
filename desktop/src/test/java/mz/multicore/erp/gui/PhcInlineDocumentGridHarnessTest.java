@@ -20,7 +20,7 @@ class PhcInlineDocumentGridHarnessTest {
         String view = gui("CommercialOrdersView.java");
         String actions = gui("CommercialOrderEditorActions.java");
         assertThat(view).contains("owner.orderGridEditable && (c <= 3 || c == 9 || c == 10)")
-                .contains("new DefaultCellEditor(owner.orderProductCombo)")
+                .contains("ProductSearchComboBox.createTableCellEditor(owner.orderProductCombo)")
                 .contains("Adicionar linha", "Edição directa na grelha")
                 .doesNotContain("editItemBtn");
         assertThat(actions).contains("static void syncLineFromGrid", "static void addBlankLine")

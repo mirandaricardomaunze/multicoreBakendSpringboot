@@ -13,12 +13,14 @@ public final class MoneyFormat {
 
     private static final DecimalFormatSymbols SYMBOLS;
     private static final DecimalFormat AMOUNT;
+    private static final DecimalFormat QTY;
 
     static {
         SYMBOLS = new DecimalFormatSymbols(new Locale("pt", "MZ"));
         SYMBOLS.setDecimalSeparator(',');
         SYMBOLS.setGroupingSeparator('.');
         AMOUNT = new DecimalFormat("#,##0.00", SYMBOLS);
+        QTY = new DecimalFormat("#,##0.###", SYMBOLS);
     }
 
     private MoneyFormat() {}
@@ -31,5 +33,10 @@ public final class MoneyFormat {
     public static String formatPlain(BigDecimal value) {
         if (value == null) return "0,00";
         return AMOUNT.format(value);
+    }
+
+    public static String formatQty(BigDecimal value) {
+        if (value == null) return "0";
+        return QTY.format(value);
     }
 }

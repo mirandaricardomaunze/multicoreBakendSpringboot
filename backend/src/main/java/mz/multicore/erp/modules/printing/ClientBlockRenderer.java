@@ -59,11 +59,14 @@ public final class ClientBlockRenderer {
             cell.addElement(new Paragraph(name, PdfTheme.bodyFont()));
         }
         if (client != null) {
-            if (client.getTaxId() != null) {
-                cell.addElement(new Paragraph("NUIT: " + client.getTaxId(), PdfTheme.bodyFont()));
+            if (client.getTaxId() != null && !client.getTaxId().isBlank()) {
+                cell.addElement(new Paragraph("NUIT: " + client.getTaxId().trim(), PdfTheme.bodyFont()));
             }
             if (client.getAddress() != null) {
-                cell.addElement(new Paragraph(client.getAddress(), PdfTheme.bodyFont()));
+                String addr = client.getAddress().trim();
+                if (!addr.isBlank() && !"-".equals(addr) && !"—".equals(addr) && !"n/a".equalsIgnoreCase(addr)) {
+                    cell.addElement(new Paragraph(addr, PdfTheme.bodyFont()));
+                }
             }
         }
         return cell;

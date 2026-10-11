@@ -19,6 +19,10 @@ public final class CompanyHeaderRenderer {
     private CompanyHeaderRenderer() {}
 
     public static PdfPTable build(Company company, String documentTitle, String documentNumber) {
+        return build(company, documentTitle, documentNumber, null);
+    }
+
+    public static PdfPTable build(Company company, String documentTitle, String documentNumber, String statusLabel) {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         try {
@@ -27,7 +31,7 @@ public final class CompanyHeaderRenderer {
         table.setSpacingAfter(14f);
 
         table.addCell(companyCell(company));
-        table.addCell(documentCell(documentTitle, documentNumber));
+        table.addCell(documentCell(documentTitle, documentNumber, statusLabel));
         return table;
     }
 
@@ -75,7 +79,7 @@ public final class CompanyHeaderRenderer {
         return value != null && !value.isBlank();
     }
 
-    private static PdfPCell documentCell(String title, String number) {
+    private static PdfPCell documentCell(String title, String number, String statusLabel) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(PdfPCell.NO_BORDER);
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -89,6 +93,12 @@ public final class CompanyHeaderRenderer {
             Paragraph num = new Paragraph(new Phrase(new Chunk(number, PdfTheme.subtitleFont())));
             num.setAlignment(Element.ALIGN_RIGHT);
             cell.addElement(num);
+        }
+        if (statusLabel != null && !statusLabel.isBlank()) {
+            Paragraph st = new Paragraph(new Phrase(new Chunk("Estado: " + statusLabel.trim(), PdfTheme.bodyFont())));
+            st.setAlignment(Element.ALIGN_RIGHT);
+            st.setSpacingBefore(4f);
+            cell.addElement(st);
         }
         return cell;
     }

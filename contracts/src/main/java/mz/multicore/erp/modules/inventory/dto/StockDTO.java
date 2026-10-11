@@ -15,5 +15,15 @@ public record StockDTO(
         BigDecimal minStock,
         String categoryName,
         BigDecimal unitPrice,
-        int unitsPerBox
-) {}
+        int unitsPerBox,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public StockDTO(Long id, Long productId, String sku, String reference, String barcode,
+                    String productName, Long warehouseId, String warehouseName,
+                    BigDecimal quantity, BigDecimal minStock, String categoryName,
+                    BigDecimal unitPrice, int unitsPerBox) {
+        this(id, productId, sku, reference, barcode, productName, warehouseId, warehouseName,
+                quantity, minStock, categoryName, unitPrice, unitsPerBox, null, null);
+    }
+}

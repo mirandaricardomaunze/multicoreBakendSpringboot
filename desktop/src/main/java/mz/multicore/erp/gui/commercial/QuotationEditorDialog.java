@@ -198,6 +198,7 @@ public final class QuotationEditorDialog {
         };
         linesTable = new JTable(linesModel);
         UIHelper.styleTable(linesTable);
+        UIHelper.ensureHeadersFit(linesTable);
         JScrollPane scroll = new JScrollPane(linesTable);
         UIHelper.styleScrollPane(scroll);
         scroll.setPreferredSize(new Dimension(900, 220));

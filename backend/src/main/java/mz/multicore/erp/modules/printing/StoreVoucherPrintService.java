@@ -40,9 +40,20 @@ public class StoreVoucherPrintService {
 
     @Transactional(readOnly = true)
     public byte[] renderByCode(String code) {
-        StoreVoucher voucher = storeVoucherRepository.findByCode(code)
-                .orElseThrow(() -> new BusinessRuleException("Vale de compras não encontrado para o código: " + code));
+        StoreVoucher voucher = requireByCode(code);
         return renderVoucher(voucher);
+    }
+
+    @Transactional(readOnly = true)
+    public Long findIdByCode(String code) {
+        StoreVoucher voucher = requireByCode(code);
+        CurrentUserContext.requireCompany(voucher.getCompany().getId());
+        return voucher.getId();
+    }
+
+    private StoreVoucher requireByCode(String code) {
+        return storeVoucherRepository.findByCode(code)
+                .orElseThrow(() -> new BusinessRuleException("Vale de compras não encontrado para o código: " + code));
     }
 
     private byte[] renderVoucher(StoreVoucher voucher) {

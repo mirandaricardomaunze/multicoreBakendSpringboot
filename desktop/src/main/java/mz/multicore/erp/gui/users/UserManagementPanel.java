@@ -58,7 +58,7 @@ public class UserManagementPanel extends JPanel {
 
         // Filtros (esquerda)
         searchField = TableFilter.searchField("Pesquisar utilizador, nome ou perfil…");
-        JComboBox<String> estadoCombo = TableFilter.combo("Todos os estados", "ACTIVE", "SUSPENDED");
+        JComboBox<String> estadoCombo = TableFilter.combo("Todos os estados", "Activo", "Suspenso");
 
         // Acções (direita)
         ModernButton createBtn = UIHelper.createPrimaryButton("Novo Utilizador");
@@ -89,10 +89,25 @@ public class UserManagementPanel extends JPanel {
 
         usersTable = new JTable(tableModel);
         UIHelper.styleTable(usersTable);
+        UIHelper.ensureHeadersFit(usersTable);
         ClientTablePagination.install(usersTable);
         RowDetailsInspector.install(usersTable);
         TableFilter.install(usersTable, searchField,
                 new TableFilter.ColumnFilter(estadoCombo, 4));
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(usersTable, card, (peek, mr) -> {
+            int row = usersTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-user-shield", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 2)));
+            peek.setSubtitle("Utilizador: " + tableModel.getValueAt(row, 1) + " • ID " + tableModel.getValueAt(row, 0));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Nome de Utilizador", String.valueOf(tableModel.getValueAt(row, 1)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Perfil / Role", String.valueOf(tableModel.getValueAt(row, 3)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Estado", String.valueOf(tableModel.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("PIN de Gestor", String.valueOf(tableModel.getValueAt(row, 5)), false));
+            peek.setItems(items);
+        });
 
         JScrollPane scroll = new JScrollPane(usersTable);
         UIHelper.styleScrollPane(scroll);

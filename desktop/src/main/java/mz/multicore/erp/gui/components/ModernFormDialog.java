@@ -181,6 +181,15 @@ public class ModernFormDialog {
         return this;
     }
 
+    /** Personaliza o botão de cancelamento (texto + ícone). */
+    public ModernFormDialog setCancelButton(String label, String iconCode) {
+        cancelBtn.setText(label);
+        if (iconCode != null) {
+            cancelBtn.setIcon(UIHelper.icon(iconCode, 14));
+        }
+        return this;
+    }
+
     public ModernFormDialog setSize(int width, int height) {
         Dimension area = UIHelper.mainArea().getSize();
         int w = Math.min((int) (area.width * 0.94), Math.max(MIN_WIDTH, width));
@@ -233,6 +242,13 @@ public class ModernFormDialog {
             }
         }
         return saved;
+    }
+
+    /** Executa a confirmação do modal programaticamente (ex.: duplo clique ou Enter na tabela). */
+    public void submit() {
+        if (saveBtn != null && saveBtn.isEnabled() && saveBtn.getParent() != null) {
+            attemptSave();
+        }
     }
 
     private void attemptSave() {

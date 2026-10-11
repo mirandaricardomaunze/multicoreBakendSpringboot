@@ -146,7 +146,7 @@ class EditableDocumentEditorsHttpIntegrationTest {
 
         JsonNode submitted = json(postJson("/api/inventory/transfers/" + id + "/submit", context, "")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL")));
+                .andExpect(jsonPath("$.status").value("AWAITING_SEPARATION")));
         putJson("/api/inventory/transfers/" + id, context,
                 transferUpdate(context, destinationId, submitted.get("version").asLong(), 4,
                         "Tentativa bloqueada"))

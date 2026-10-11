@@ -18,6 +18,7 @@ import java.util.List;
 final class PurchasePayablesPanel {
     private final ComprasPanel owner;
     private JLabel payablesFooter;
+    private JComboBox<String> businessUnitCombo;
     PurchasePayablesPanel(ComprasPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
@@ -25,62 +26,58 @@ final class PurchasePayablesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(12, 5, 5, 5));
 
-        JPanel header = new JPanel(new BorderLayout()); header.setOpaque(false);
-        header.add(UIHelper.createHeading("Contas a Pagar a Fornecedores"), BorderLayout.WEST);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); actions.setOpaque(false);
         ModernButton payBtn = UIHelper.createSuccessButton("Registar Pagamento");
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         payBtn.addActionListener(e -> openSupplierPaymentDialog());
+
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refresh());
-        actions.add(refreshBtn); actions.add(payBtn);
-        header.add(actions, BorderLayout.EAST);
-        tab.add(header, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        String[] cols = {"Nº Compra", "Fornecedor", "Total", "Pago", "Em Dívida", "Data"};
+        String[] cols = {"Nº Compra", "Negócio", "Fornecedor", "Total", "Pago", "Em Dívida", "Data"};
         owner.payablesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.payablesTable = new JTable(owner.payablesModel);
         UIHelper.styleTable(owner.payablesTable);
-        for (int column : new int[]{2, 3, 4}) {
+        for (int column : new int[]{3, 4, 5}) {
             owner.payablesTable.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         }
+        UIHelper.ensureHeadersFit(owner.payablesTable);
         JScrollPane scroll = new JScrollPane(owner.payablesTable);
         UIHelper.styleScrollPane(scroll);
 
         JTextField paySearch = TableFilter.searchField("Nº compra ou fornecedor…");
+        businessUnitCombo = TableFilter.combo("Todos os negócios");
+        businessUnitCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(businessUnitCombo);
         JComboBox<String> payPeriodo = TableFilter.periodCombo();
-        UIHelper.styleComboBox(payPeriodo);
-        payPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(owner.payablesTable, paySearch,
-                java.util.List.of(),
-                java.util.List.of(new TableFilter.PeriodFilter(payPeriodo, 5)));
+                java.util.List.of(new TableFilter.ColumnFilter(businessUnitCombo, 1)),
+                java.util.List.of(new TableFilter.PeriodFilter(payPeriodo, 6)));
 
-        JPanel payFilters = new JPanel(new GridBagLayout());
-        payFilters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
+        JPanel payFilters = TableFilter.bar(
+                paySearch,
+                TableFilter.label("Negócio:"), businessUnitCombo,
+                TableFilter.label("Período:"), payPeriodo);
 
-        g.gridx = 0; g.weightx = 0; payFilters.add(filterLabel("Período"), g);
-        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        payFilters.add(filterLabel("Pesquisa"), g);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da conta a pagar (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; payFilters.add(payPeriodo, g);
-        g.gridx = 1; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        payFilters.add(paySearch, g);
+        JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
+        filtersRow.setOpaque(false);
+        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.add(payFilters, BorderLayout.WEST);
+        filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
-        payFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(UIHelper.tableCardTop("Contas a Pagar a Fornecedores", payFilters,
+        card.add(UIHelper.tableCardTop("Contas a Pagar a Fornecedores", filtersRow,
                 refreshBtn, payBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         payablesFooter = new JLabel(" ");
@@ -91,8 +88,42 @@ final class PurchasePayablesPanel {
         southPanel.add(ClientTablePagination.install(owner.payablesTable), BorderLayout.NORTH);
         southPanel.add(payablesFooter, BorderLayout.SOUTH);
         card.add(southPanel, BorderLayout.SOUTH);
+
+        TableQuickPeekController peek = TableQuickPeekController.install(owner.payablesTable, card, this::populatePeek);
+        peekToggleBtn.addActionListener(e -> peek.toggle());
+
         tab.add(card, BorderLayout.CENTER);
         return tab;
+    }
+
+    private void populatePeek(QuickPeekPanel peek, int modelRow) {
+        if (owner.payablesList == null || modelRow < 0 || modelRow >= owner.payablesList.size()) return;
+        var pa = owner.payablesList.get(modelRow);
+        boolean inDebt = pa.outstanding() != null && pa.outstanding().signum() > 0;
+        peek.setHeaderIcon("fas-file-invoice-dollar", UIHelper.REJECTED_RED);
+        peek.setTitle("Compra " + (pa.purchaseNumber() != null ? pa.purchaseNumber() : ""));
+        peek.setSubtitle(pa.supplierName() != null ? pa.supplierName() : "—");
+        peek.setStatus(inDebt ? "EM DÍVIDA" : "LIQUIDADO", inDebt ? UIHelper.REJECTED_RED : UIHelper.APPROVED_GREEN);
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        java.util.List<QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+        items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", pa.businessUnitName() != null ? pa.businessUnitName() : "Geral", false));
+        items.add(new QuickPeekPanel.PeekItem("Fornecedor", pa.supplierName() != null ? pa.supplierName() : "-", false));
+        BigDecimal total = pa.totalAmount() != null ? pa.totalAmount() : BigDecimal.ZERO;
+        items.add(new QuickPeekPanel.PeekItem("Total da Compra", String.format("%,.2f MT", total), false));
+        BigDecimal paid = pa.amountPaid() != null ? pa.amountPaid() : BigDecimal.ZERO;
+        items.add(new QuickPeekPanel.PeekItem("Total Já Pago", String.format("%,.2f MT", paid), false));
+        items.add(new QuickPeekPanel.PeekItem("Data da Compra", pa.purchaseDate() != null ? pa.purchaseDate().format(dtf) : "-", false));
+        BigDecimal debt = pa.outstanding() != null ? pa.outstanding() : BigDecimal.ZERO;
+        items.add(new QuickPeekPanel.PeekItem("Valor em Dívida", String.format("%,.2f MT", debt), true));
+        peek.setItems(items);
+
+        if (inDebt) {
+            peek.getOpenFullButton().setText("Registar Pagamento");
+            peek.setOnOpenFullAction(ignored -> openSupplierPaymentDialog());
+        } else {
+            peek.setOnOpenFullAction(null);
+        }
     }
 
     public void refresh() {
@@ -107,13 +138,23 @@ final class PurchasePayablesPanel {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         BigDecimal totalDivida = BigDecimal.ZERO;
         owner.payablesModel.setRowCount(0);
+        java.util.Set<String> bus = new java.util.TreeSet<>();
         for (var pa : owner.payablesList) {
+            String bu = (pa.businessUnitName() != null && !pa.businessUnitName().isBlank()) ? pa.businessUnitName() : "Geral";
+            bus.add(bu);
             totalDivida = totalDivida.add(pa.outstanding());
             owner.payablesModel.addRow(new Object[]{
-                    pa.purchaseNumber(), pa.supplierName(),
+                    pa.purchaseNumber(),
+                    bu,
+                    pa.supplierName(),
                     pa.totalAmount(), pa.amountPaid(), pa.outstanding(),
                     pa.purchaseDate() == null ? "-" : pa.purchaseDate().format(dtf)});
         }
+        Object sel = businessUnitCombo.getSelectedItem();
+        businessUnitCombo.removeAllItems();
+        businessUnitCombo.addItem("Todos os negócios");
+        for (String b : bus) businessUnitCombo.addItem(b);
+        if (sel != null) businessUnitCombo.setSelectedItem(sel);
         payablesFooter.setText(String.format("%d fatura(s) em dívida · Total a pagar: %,.2f MT",
                 owner.payablesList.size(), totalDivida));
     }

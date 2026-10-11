@@ -66,12 +66,42 @@ public class StatusBar extends JPanel {
         right.add(clockLabel);
         add(right, BorderLayout.EAST);
 
+        // Centro — Identificação institucional do produto com atalho para Sobre o Sistema
+        JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
+        center.setOpaque(false);
+        JLabel aboutIcon = iconLabel("fas-info-circle", UIHelper.ACCENT_CYAN);
+        aboutIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        aboutIcon.setToolTipText("Sobre o Multicore ERP (F12) • Clique para ver detalhes e licença do sistema");
+        JLabel brandLabel = slimLabel("Multicore ERP • v1.0.0");
+        brandLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        brandLabel.setToolTipText("Sobre o Multicore ERP (F12) • Clique para ver detalhes e licença do sistema");
+        java.awt.event.MouseAdapter aboutClickAdapter = new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                AboutDialog.show(StatusBar.this);
+            }
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                brandLabel.setForeground(UIHelper.ACCENT_CYAN);
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                brandLabel.setForeground(UIHelper.TEXT_MUTED);
+            }
+        };
+        aboutIcon.addMouseListener(aboutClickAdapter);
+        brandLabel.addMouseListener(aboutClickAdapter);
+        center.add(aboutIcon);
+        center.add(brandLabel);
+        add(center, BorderLayout.CENTER);
+
         // Timer de hora — dispara a cada minuto no EDT
         new javax.swing.Timer(60_000, e -> {
             clockLabel.setText(LocalTime.now().format(TIME_FMT));
             setBackground(barBg());  // acompanha troca de tema em runtime
             left.setBackground(barBg());
             right.setBackground(barBg());
+            center.setBackground(barBg());
         }).start();
     }
 

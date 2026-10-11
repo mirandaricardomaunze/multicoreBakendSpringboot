@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -75,12 +76,24 @@ final class HRDeductionsPanel {
             table.getColumnModel().getColumn(column).setCellRenderer(TableCellRenderers.money());
         }
         table.getColumnModel().getColumn(9).setCellRenderer(TableCellRenderers.status());
-        // Dez colunas a dividir a largura por igual deixavam "Descontado (MT)" cortado a meio, em
-        // "Descontado (…". Medir o cabeçalho e usá-lo como mínimo garante que o título nunca fica
-        // ilegível — que numa coluna de dinheiro é a diferença entre saber e adivinhar o que se lê.
         UIHelper.ensureHeadersFit(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-hand-holding-usd", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(model.getValueAt(row, 1)));
+            peek.setSubtitle(String.valueOf(model.getValueAt(row, 2)) + " • " + model.getValueAt(row, 3));
+            peek.setStatus(String.valueOf(model.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Capital Inicial", String.valueOf(model.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Prestação Mensal", String.valueOf(model.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total Descontado", String.valueOf(model.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dívida Restante", String.valueOf(model.getValueAt(row, 7)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data Início", String.valueOf(model.getValueAt(row, 8)), false));
+            peek.setItems(items);
+        });
 
         JTextField search = TableFilter.searchField("Colaborador ou descrição…");
         JComboBox<String> tipo = TableFilter.combo("Todos os tipos",

@@ -9,6 +9,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
 import mz.multicore.erp.gui.components.PrintPreviewDialog;
+import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
+import mz.multicore.erp.modules.printing.dto.SensitiveDocumentType;
 
 final class CustomerOrderFulfillmentActions {
     private CustomerOrderFulfillmentActions() {}
@@ -25,6 +27,38 @@ final class CustomerOrderFulfillmentActions {
         if (row < 0) { warn(owner); return; }
         Long id = (Long) owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_ID);
         String status = String.valueOf(owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_STATUS));
+
+        if ("INVOICED".equalsIgnoreCase(status) || "BILLED".equalsIgnoreCase(status)) {
+            String[] options = {"Guia de Remessa / Transporte", "Folha de Encomenda (A4)"};
+            int opt = JOptionPane.showOptionDialog(owner,
+                    "A encomenda já se encontra faturada.\nSelecione o documento que pretende emitir:",
+                    "Imprimir Documento",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]);
+            if (opt == 0) {
+                UIHelper.loadAsync(owner, () -> api.getOrderById(id), order -> {
+                    if (order.invoiceId() != null) {
+                        SensitivePrintCoordinator.print(owner, owner.printApiClient,
+                                SensitiveDocumentType.REMITTANCE_GUIDE, order.invoiceId(),
+                                "Guia de remessa da encomenda " + order.orderNumber(),
+                                "guia-remessa-" + order.orderNumber(),
+                                () -> api.renderGuide(order.invoiceId()), owner::loadOrdersTable);
+                    } else {
+                        printA4(owner, api, id);
+                    }
+                }, error -> showError(owner, "consultar encomenda", error));
+                return;
+            } else if (opt == 1) {
+                printA4(owner, api, id);
+                return;
+            } else {
+                return;
+            }
+        }
+
         if (!kindOf(owner, row).isThermal()) {
             printA4(owner, api, id);
             return;
@@ -44,9 +78,15 @@ final class CustomerOrderFulfillmentActions {
     }
 
     private static void printA4(ComercialPanel owner, ComercialApiClient api, Long id) {
-        UIHelper.runWithProgress(owner, "A gerar encomenda em PDF…", () -> api.renderOrder(id),
-                pdf -> PrintPreviewDialog.show(owner, pdf, "encomenda-" + id),
-                error -> showError(owner, "imprimir encomenda", error));
+        if (owner.printApiClient == null) {
+            UIHelper.runWithProgress(owner, "A gerar encomenda em PDF…", () -> api.renderOrder(id),
+                    pdf -> PrintPreviewDialog.show(owner, pdf, "encomenda-" + id),
+                    error -> showError(owner, "imprimir encomenda", error));
+            return;
+        }
+        SensitivePrintCoordinator.print(owner, owner.printApiClient, SensitiveDocumentType.ORDER,
+                id, "Encomenda " + id, "encomenda-" + id,
+                () -> api.renderOrder(id), owner::loadOrdersTable);
     }
 
     /** A via da linha seleccionada. Encomendas antigas sem via declarada contam como A4. */

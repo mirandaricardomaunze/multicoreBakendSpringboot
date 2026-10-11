@@ -82,43 +82,43 @@ public final class LineItemsTableRenderer {
     private static List<Column> activeColumns(DocumentColumnsDTO cols) {
         List<Column> columns = new ArrayList<>();
         if (cols.barcode()) {
-            columns.add(new Column(11f, "Cód.", Element.ALIGN_LEFT, r -> safe(r.barcode())));
+            columns.add(new Column(13f, "Cód.", Element.ALIGN_LEFT, r -> safe(r.barcode())));
         }
         if (cols.reference()) {
-            columns.add(new Column(8f, "Ref.", Element.ALIGN_LEFT, r -> safe(r.reference())));
+            columns.add(new Column(7f, "Ref.", Element.ALIGN_LEFT, r -> safe(r.reference())));
         }
         if (cols.description()) {
-            columns.add(new Column(23f, "Desc.", Element.ALIGN_LEFT, r -> safe(r.description())));
+            columns.add(new Column(26f, "Desc.", Element.ALIGN_LEFT, r -> safe(r.description())));
         }
         if (cols.expiry()) {
-            columns.add(new Column(8f, "Val.", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
+            columns.add(new Column(9.5f, "Val.", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
         }
         if (cols.quantity()) {
-            columns.add(new Column(6f, "Qtd.", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
+            columns.add(new Column(5.5f, "Qtd.", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
         }
         if (cols.packages()) {
-            columns.add(new Column(7f, "Emb.", Element.ALIGN_RIGHT,
+            columns.add(new Column(5f, "Emb.", Element.ALIGN_RIGHT,
                     LineItemsTableRenderer::formatPackages));
         }
         if (cols.boxes()) {
-            columns.add(new Column(6f, "Cx.", Element.ALIGN_RIGHT,
+            columns.add(new Column(4.5f, "Cx.", Element.ALIGN_RIGHT,
                     LineItemsTableRenderer::formatBoxes));
         }
         if (cols.boxPercentage()) {
-            columns.add(new Column(9f, "% Cx.", Element.ALIGN_RIGHT,
+            columns.add(new Column(6f, "% Cx.", Element.ALIGN_RIGHT,
                     LineItemsTableRenderer::formatBoxPercentage));
         }
         if (cols.unitPrice()) {
-            columns.add(new Column(10f, "P. Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
+            columns.add(new Column(9.5f, "P. Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
         }
         if (cols.tax()) {
-            columns.add(new Column(6f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
+            columns.add(new Column(5f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
         }
         if (cols.subtotal()) {
-            columns.add(new Column(13f, "Subt.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
+            columns.add(new Column(11f, "Subt.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
         }
         if (columns.isEmpty()) {
-            columns.add(new Column(24f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+            columns.add(new Column(26f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
         }
         return columns;
     }
@@ -134,15 +134,21 @@ public final class LineItemsTableRenderer {
         cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
         cell.setBorderColor(PdfTheme.BORDER);
         cell.setHorizontalAlignment(align);
-        cell.setPadding(5f);
+        cell.setPaddingTop(3.5f);
+        cell.setPaddingBottom(3.5f);
+        cell.setPaddingLeft(2.5f);
+        cell.setPaddingRight(2.5f);
         table.addCell(cell);
     }
 
     private static void body(PdfPTable table, String text, int align) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.bodyFont()));
+        PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.tableBodyFont()));
         cell.setBorderColor(PdfTheme.BORDER);
         cell.setHorizontalAlignment(align);
-        cell.setPadding(4f);
+        cell.setPaddingTop(3f);
+        cell.setPaddingBottom(3f);
+        cell.setPaddingLeft(2.5f);
+        cell.setPaddingRight(2.5f);
         table.addCell(cell);
     }
 
@@ -151,7 +157,10 @@ public final class LineItemsTableRenderer {
     }
 
     static String formatExpiry(LocalDate expiry) {
-        return expiry == null ? "—" : expiry.format(DATE_FMT);
+        if (expiry == null || expiry.getYear() >= 9900) {
+            return "—";
+        }
+        return expiry.format(DATE_FMT);
     }
 
     private static String formatRate(BigDecimal rate) {

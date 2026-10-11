@@ -1,6 +1,11 @@
-# Contratos API - Multicore ERP
+# Contratos API — Multicore ERP
 
-Este documento define o padrao para endpoints REST. A API deve ser estavel para permitir que o desktop migre de chamadas directas a Services para HTTPS.
+Estado: **canónico**  
+Âmbito: fronteiras HTTP entre o backend e os seus clientes  
+Última revisão: 2026-10-10
+
+Este documento define o padrão dos endpoints REST. O desktop comunica exclusivamente com o
+backend por HTTP/HTTPS e nunca chama Services ou Repositories do backend.
 
 ## URL e versionamento
 
@@ -82,13 +87,16 @@ public record CreateProductRequest(
 |------|--------|
 | Criacao com sucesso | `201 Created` |
 | Leitura/listagem | `200 OK` |
-| Actualizacao | `200 OK` ou `204 No Content` |
-| Remocao logica/anulacao | `200 OK` ou `204 No Content` |
+| Actualização com representação no corpo | `200 OK` |
+| Actualização sem corpo | `204 No Content` |
+| Anulação com representação no corpo | `200 OK` |
+| Remoção lógica sem corpo | `204 No Content` |
 | Validacao sintactica | `400 Bad Request` |
-| Regra de negocio | `400 Bad Request` ou status definido pelo handler |
+| Regra de negócio geral | `400 Bad Request` |
+| Conflito de estado ou versão optimista | `409 Conflict` |
 | Sem autenticacao | `401 Unauthorized` |
 | Sem permissao | `403 Forbidden` |
-| Nao encontrado | `404 Not Found` quando houver handler proprio |
+| Não encontrado | `404 Not Found` |
 
 ## Autorizacao e sessoes
 
@@ -139,21 +147,27 @@ Filtros devem ter nomes estaveis e em ingles:
 
 ## Compatibilidade com desktop
 
-Como o Swing vai migrar para clients HTTP:
+Como o Swing usa clientes HTTP:
 
 - Nao devolver HTML.
 - Nao depender de sessao de servidor para dados de negocio.
 - Contratos devem ser previsiveis para `RestClient` ou `WebClient`.
-- Mudancas de DTO devem preservar compatibilidade quando possivel.
+- Mudanças de DTO devem preservar compatibilidade com pelo menos a versão desktop anterior.
 - Operacoes atomicas devem existir como endpoints de caso de uso, nao como sequencia fragil de chamadas UI.
-# Catálogo POS paginado
+
+## Contratos específicos implementados
+
+As secções seguintes registam extensões relevantes do contrato. A regra de negócio completa vive
+na SPEC indicada, evitando transformar este documento num histórico de implementação.
+
+### Catálogo POS paginado
 
 - `GET /api/comercial/products/pos-catalog/page?query=&availableOnly=false&page=0&size=36`
   devolve `PageResponse<POSCatalogItemDTO>`.
 - `GET /api/comercial/products/pos-catalog/by-barcode?barcode=...` devolve um item com produto e
   disponibilidade, permitindo ao scanner operar fora da página visível.
 
-# Editor de encomendas
+### Editor de encomendas
 
 - `PUT /api/comercial/orders/{id}` actualiza cliente, armazém, destino e linhas de uma encomenda
   ainda editável. Recebe `UpdateOrderRequest` com a versão optimista e devolve `OrderDTO`.
@@ -162,7 +176,16 @@ Como o Swing vai migrar para clients HTTP:
 - Número e tipo da encomenda não são editáveis. Estados fechados são recusados pelo Service.
 - Ver `docs/ORDER_EDITOR_SPEC.md`.
 
-# Editores de documentos pré-emissão
+### Guia de remessa avulsa
+
+- `POST /api/comercial/delivery-guides/standalone` cria uma guia sem encomenda, com cliente,
+  armazém, dados de transporte e linhas explícitas.
+- A criação devolve `201 Created`, não movimenta stock e deixa a guia em `PENDING_APPROVAL`.
+- `POST /api/comercial/delivery-guides/{id}/approve` consome stock por FEFO; rejeitar ou cancelar
+  uma guia pendente não movimenta stock.
+- Ver [STANDALONE_DELIVERY_GUIDE_SPEC.md](STANDALONE_DELIVERY_GUIDE_SPEC.md).
+
+### Editores de documentos pré-emissão
 
 - `PUT /api/comercial/quotations/{id}` actualiza integralmente uma cotação em `DRAFT`.
   Recebe `UpdateQuotationRequest`, incluindo `version`, e devolve `QuotationDTO` com a nova versão.
@@ -173,7 +196,7 @@ Como o Swing vai migrar para clients HTTP:
   desactualizadas. Número, data de emissão e estado nunca são alterados pelo cliente.
 - Ver `docs/EDITABLE_DOCUMENT_EDITORS_SPEC.md`.
 
-# Saúde ocupacional
+### Saúde ocupacional
 
 - `GET /api/hr/occupational-health/employee/{id}/summary` — resumo não clínico do último exame.
   Restrito a gestor/admin **e ao próprio trabalhador**: a aptidão é dado de saúde.

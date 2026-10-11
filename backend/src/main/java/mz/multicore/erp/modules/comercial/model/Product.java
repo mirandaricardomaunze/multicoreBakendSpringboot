@@ -83,6 +83,10 @@ public class Product extends BaseEntity {
     @JoinColumn(name = "category_id")
     private ProductCategory category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_unit_id")
+    private mz.multicore.erp.modules.purchases.model.BusinessUnit businessUnit;
+
     /**
      * Taxa de IVA do produto (IVA dinâmico). Aponta para uma {@link TaxRate} configurável
      * (normal 16%, reduzida, isento). Quando nula, aplica-se a taxa-padrão do sistema.

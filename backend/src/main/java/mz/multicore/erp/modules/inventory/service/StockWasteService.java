@@ -37,6 +37,7 @@ public class StockWasteService {
     private final InvoiceRepository invoiceRepository;
     private final CompanyRepository companyRepository;
     private final mz.multicore.erp.modules.audit.service.AuditLogService auditLogService;
+    private final mz.multicore.erp.modules.approvals.service.ApprovalService approvalService;
 
     public StockWasteService(
             StockWasteRepository wasteRepository,
@@ -48,7 +49,21 @@ public class StockWasteService {
             CompanyRepository companyRepository
     ) {
         this(wasteRepository, productRepository, warehouseRepository, batchRepository,
-                inventoryService, invoiceRepository, companyRepository, null);
+                inventoryService, invoiceRepository, companyRepository, null, null);
+    }
+
+    public StockWasteService(
+            StockWasteRepository wasteRepository,
+            ProductRepository productRepository,
+            WarehouseRepository warehouseRepository,
+            ProductBatchRepository batchRepository,
+            InventoryService inventoryService,
+            InvoiceRepository invoiceRepository,
+            CompanyRepository companyRepository,
+            mz.multicore.erp.modules.audit.service.AuditLogService auditLogService
+    ) {
+        this(wasteRepository, productRepository, warehouseRepository, batchRepository,
+                inventoryService, invoiceRepository, companyRepository, auditLogService, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -60,7 +75,8 @@ public class StockWasteService {
             InventoryService inventoryService,
             InvoiceRepository invoiceRepository,
             CompanyRepository companyRepository,
-            mz.multicore.erp.modules.audit.service.AuditLogService auditLogService
+            mz.multicore.erp.modules.audit.service.AuditLogService auditLogService,
+            @org.springframework.context.annotation.Lazy mz.multicore.erp.modules.approvals.service.ApprovalService approvalService
     ) {
         this.wasteRepository = wasteRepository;
         this.productRepository = productRepository;
@@ -70,6 +86,7 @@ public class StockWasteService {
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
         this.auditLogService = auditLogService;
+        this.approvalService = approvalService;
     }
 
     @Transactional
@@ -141,6 +158,16 @@ public class StockWasteService {
         }
 
         StockWaste saved = wasteRepository.save(waste);
+        if (saved.getStatus() == WasteStatus.PENDING_APPROVAL && approvalService != null) {
+            approvalService.submitRequest(
+                    "STOCK_WASTE",
+                    saved.getId(),
+                    saved.getTotalCost(),
+                    "Quebra de stock #" + saved.getId() + " - " + product.getName() + " (" + req.reason() + ")",
+                    "MANAGER",
+                    false
+            );
+        }
         if (auditLogService != null) {
             auditLogService.logEvent(saved.getRegisteredBy(), company.getId(), "STOCK_WASTE_REGISTER",
                     "Registo de quebra de stock #" + saved.getId() + " (" + product.getSku() + " - " + product.getName()
@@ -189,6 +216,9 @@ public class StockWasteService {
         }
 
         StockWaste saved = wasteRepository.save(waste);
+        if (approvalService != null) {
+            approvalService.cancelPendingForDocument("STOCK_WASTE", id, "Decidido diretamente na gestão de quebras.");
+        }
         if (auditLogService != null) {
             String action = (req != null && req.approved()) ? "STOCK_WASTE_APPROVE" : "STOCK_WASTE_REJECT";
             auditLogService.logEvent(approver, saved.getCompany().getId(), action,
@@ -363,7 +393,9 @@ public class StockWasteService {
                 w.getApprovedBy(),
                 w.getCreatedAt(),
                 w.getApprovedAt(),
-                w.getStockMovement() != null ? w.getStockMovement().getId() : null
+                w.getStockMovement() != null ? w.getStockMovement().getId() : null,
+                w.getProduct() != null && w.getProduct().getBusinessUnit() != null ? w.getProduct().getBusinessUnit().getId() : null,
+                w.getProduct() != null && w.getProduct().getBusinessUnit() != null ? w.getProduct().getBusinessUnit().getName() : null
         );
     }
 }

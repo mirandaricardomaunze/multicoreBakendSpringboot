@@ -15,6 +15,10 @@ import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.dto.UpdateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
+import mz.multicore.erp.modules.inventory.dto.StockDTO;
+import mz.multicore.erp.gui.components.BarcodeScanField;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
+import mz.multicore.erp.gui.components.ProductLookupDialog;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -63,6 +67,9 @@ final class StockTransferEditorForm {
 
     // Grelha de itens
     private final ProductSearchComboBox productCellEditor = new ProductSearchComboBox();
+    private final BarcodeScanField barcodeScanField;
+    private final ModernButton searchCatalogButton = UIHelper.createSecondaryButton("Pesquisar Catálogo (F3)");
+    private final ModernButton suggestReplenishmentButton = UIHelper.createSecondaryButton("Sugerir Reposição");
     private final ModernButton addButton = UIHelper.createAddLineButton();
     private final ModernButton removeButton = UIHelper.createDangerButton("Remover item");
     private final DefaultTableModel linesModel;
@@ -113,8 +120,11 @@ final class StockTransferEditorForm {
         linesTable.putClientProperty("noTableFooter", Boolean.TRUE);
         linesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(linesTable);
-        UIHelper.installDocumentGridShortcuts(linesTable, this::addLineAndStartEditing, this::removeSelectedLine, owner::saveTransferEditor);
+        UIHelper.ensureHeadersFit(linesTable);
+        UIHelper.installDocumentGridShortcuts(linesTable, this::addLineAndStartEditing,
+                this::removeSelectedLine, owner::saveTransferEditor, this::openProductCatalogLookup);
         configureGridEditors();
+        barcodeScanField = new BarcodeScanField("Bipar código / SKU (F2)...", this::handleBarcodeScanned);
         content.add(buildLinesSection(), BorderLayout.CENTER);
         installListeners();
     }
@@ -329,6 +339,15 @@ final class StockTransferEditorForm {
         JLabel instruction = new JLabel(
                 "Edite directamente na grelha. Qtd, Emb. e Cx. mantêm-se sincronizadas.");
         instruction.setForeground(UIHelper.TEXT_MUTED);
+
+        barcodeScanField.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
+        searchCatalogButton.setIcon(UIHelper.icon("fas-search", 14, UIHelper.ACCENT_BLUE));
+        searchCatalogButton.setToolTipText("Abrir catálogo paginado para pesquisar e seleccionar artigos (F3)");
+        searchCatalogButton.addActionListener(event -> openProductCatalogLookup());
+        suggestReplenishmentButton.setIcon(UIHelper.icon("fas-magic", 14, UIHelper.ACCENT_BLUE));
+        suggestReplenishmentButton.setToolTipText("Carrega produtos em falta no armazém de destino");
+        suggestReplenishmentButton.addActionListener(event -> suggestReplenishmentForDestination());
+
         addButton.setText("Adicionar linha");
         addButton.setIcon(UIHelper.icon("fas-plus", 14));
         addButton.addActionListener(event -> addLineAndStartEditing());
@@ -341,7 +360,8 @@ final class StockTransferEditorForm {
         scroll.setPreferredSize(new Dimension(0, 330));
         JPanel tableArea = new JPanel(new BorderLayout(0, 8));
         tableArea.setOpaque(false);
-        tableArea.add(UIHelper.tableCardTop("Itens da Transferência", instruction, addButton, removeButton),
+        tableArea.add(UIHelper.tableCardTop("Itens da Transferência", instruction,
+                barcodeScanField, searchCatalogButton, suggestReplenishmentButton, addButton, removeButton),
                 BorderLayout.NORTH);
         tableArea.add(scroll, BorderLayout.CENTER);
 
@@ -402,6 +422,62 @@ final class StockTransferEditorForm {
         linesModel.addRow(new Object[]{product, quantity, BigDecimal.ZERO, BigDecimal.ZERO,
                 "0%", "—", "—", BigDecimal.ZERO, "0%", BigDecimal.ZERO});
         recalculateRow(linesModel.getRowCount() - 1, COL_QUANTITY);
+    }
+
+    private void openProductCatalogLookup() {
+        if (!tableEditable) return;
+        stopCellEditing();
+        List<ProductDTO> catalog = (products != null && !products.isEmpty())
+                ? products
+                : owner.catalogProducts;
+        if (catalog == null || catalog.isEmpty()) {
+            owner.showStockNotice(FeedbackType.WARNING, "Catálogo Vazio",
+                    "Não existem produtos registados no sistema.");
+            return;
+        }
+        List<ProductDTO> selected = ProductLookupDialog.showMulti(content, catalog);
+        if (selected != null && !selected.isEmpty()) {
+            applySelectedProducts(selected);
+        }
+    }
+
+    private void applySelectedProducts(List<ProductDTO> selected) {
+        if (selected == null || selected.isEmpty()) return;
+        stopCellEditing();
+        int viewRow = linesTable.getSelectedRow();
+        int modelRow = viewRow >= 0 ? linesTable.convertRowIndexToModel(viewRow) : -1;
+        boolean fillCurrent = (modelRow >= 0 && modelRow < linesModel.getRowCount()
+                && linesModel.getValueAt(modelRow, COL_PRODUCT) == null);
+
+        int targetModelRow = modelRow;
+        for (int i = 0; i < selected.size(); i++) {
+            ProductDTO p = selected.get(i);
+            if (i == 0 && fillCurrent) {
+                linesModel.setValueAt(p, modelRow, COL_PRODUCT);
+                recalculateRow(modelRow, COL_PRODUCT);
+                targetModelRow = modelRow;
+            } else {
+                addLineRow(p, BigDecimal.ONE);
+                targetModelRow = linesModel.getRowCount() - 1;
+            }
+        }
+
+        if (targetModelRow >= 0 && targetModelRow < linesModel.getRowCount()) {
+            final int finalRow = targetModelRow;
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    int vr = linesTable.convertRowIndexToView(finalRow);
+                    linesTable.setRowSelectionInterval(vr, vr);
+                    linesTable.scrollRectToVisible(linesTable.getCellRect(vr, COL_QUANTITY, true));
+                    linesTable.editCellAt(vr, COL_QUANTITY);
+                    Component comp = linesTable.getEditorComponent();
+                    if (comp != null) comp.requestFocusInWindow();
+                } catch (Exception ignored) {
+                }
+            });
+        }
+        dirty = true;
+        updateTotals();
     }
 
     private void removeSelectedLine() {
@@ -494,11 +570,28 @@ final class StockTransferEditorForm {
     private void updateTotals() {
         BigDecimal sumQty = BigDecimal.ZERO;
         BigDecimal sumTotal = BigDecimal.ZERO;
+        BigDecimal sumWeight = BigDecimal.ZERO;
         for (int i = 0; i < linesModel.getRowCount(); i++) {
-            sumQty = sumQty.add(decimal(linesModel.getValueAt(i, COL_QUANTITY)));
+            BigDecimal qty = decimal(linesModel.getValueAt(i, COL_QUANTITY));
+            sumQty = sumQty.add(qty);
             sumTotal = sumTotal.add(decimal(linesModel.getValueAt(i, COL_TOTAL)));
+            Object cellValue = linesModel.getValueAt(i, COL_PRODUCT);
+            ProductDTO product = productCellEditor.resolve(cellValue);
+            if (product != null && qty.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal w = product.grossUnitWeightKg() != null ? product.grossUnitWeightKg() : product.netUnitWeightKg();
+                if (w != null) sumWeight = sumWeight.add(w.multiply(qty));
+            }
         }
-        totalLinesLabel.setText("Itens: " + linesModel.getRowCount() + " | Qtd Total: " + sumQty.stripTrailingZeros().toPlainString());
+        String vehicleInfo = "";
+        if (sumWeight.compareTo(BigDecimal.ZERO) > 0) {
+            String vehicleType = mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator.recommendedVehicleType(sumWeight);
+            BigDecimal tons = sumWeight.divide(BigDecimal.valueOf(1000), 2, RoundingMode.HALF_UP);
+            vehicleInfo = " | Carga: " + sumWeight.setScale(2, RoundingMode.HALF_UP) + " kg (" + tons.stripTrailingZeros().toPlainString() + " Ton) — Viatura Sugerida: " + vehicleType;
+            if (vehicleField.getText().trim().isEmpty()) {
+                vehicleField.putClientProperty("JTextField.placeholderText", "Sugerido: " + vehicleType);
+            }
+        }
+        totalLinesLabel.setText("Itens: " + linesModel.getRowCount() + " | Qtd Total: " + sumQty.stripTrailingZeros().toPlainString() + vehicleInfo);
         totalValueLabel.setText("Total da Transferência: " + sumTotal.setScale(2, RoundingMode.HALF_UP) + " MT");
     }
 
@@ -570,9 +663,163 @@ final class StockTransferEditorForm {
         responsibleField.setEditable(editable);
         vehicleField.setEditable(editable);
         notesField.setEditable(editable);
+        if (barcodeScanField != null) barcodeScanField.setEnabled(editable);
+        if (searchCatalogButton != null) searchCatalogButton.setEnabled(editable);
+        if (suggestReplenishmentButton != null) suggestReplenishmentButton.setEnabled(editable);
         addButton.setEnabled(editable);
         removeButton.setEnabled(editable);
         linesTable.repaint();
+    }
+
+    private void handleBarcodeScanned(String code) {
+        if (!tableEditable) return;
+        ProductDTO product = products.stream().filter(p ->
+                code.equalsIgnoreCase(p.barcode())
+                || code.equalsIgnoreCase(p.sku())
+                || (p.reference() != null && code.equalsIgnoreCase(p.reference()))
+        ).findFirst().orElse(null);
+
+        if (product == null) {
+            Toolkit.getDefaultToolkit().beep();
+            owner.showStockNotice(FeedbackType.WARNING, "Artigo não encontrado",
+                    "Nenhum produto cadastrado com o código ou SKU: " + code);
+            return;
+        }
+
+        stopCellEditing();
+        int existingIndex = -1;
+        for (int i = 0; i < linesModel.getRowCount(); i++) {
+            Object val = linesModel.getValueAt(i, COL_PRODUCT);
+            ProductDTO p = productCellEditor.resolve(val);
+            if (p != null && product.id().equals(p.id())) {
+                existingIndex = i;
+                break;
+            }
+        }
+
+        if (existingIndex >= 0) {
+            BigDecimal currentQty = decimal(linesModel.getValueAt(existingIndex, COL_QUANTITY));
+            BigDecimal newQty = currentQty.add(BigDecimal.ONE);
+            linesModel.setValueAt(newQty, existingIndex, COL_QUANTITY);
+            recalculateRow(existingIndex, COL_QUANTITY);
+            linesTable.setRowSelectionInterval(existingIndex, existingIndex);
+        } else {
+            if (linesModel.getRowCount() == 1) {
+                Object val = linesModel.getValueAt(0, COL_PRODUCT);
+                if (val == null || (val instanceof String s && s.isBlank())) {
+                    linesModel.removeRow(0);
+                }
+            }
+            addLineRow(product, BigDecimal.ONE);
+            int newRow = linesModel.getRowCount() - 1;
+            if (newRow >= 0 && newRow < linesTable.getRowCount()) {
+                linesTable.setRowSelectionInterval(newRow, newRow);
+            }
+        }
+        dirty = true;
+        updateTotals();
+    }
+
+    private void suggestReplenishmentForDestination() {
+        if (!tableEditable) return;
+        int originIdx = originCombo.getSelectedIndex();
+        int destIdx = destinationCombo.getSelectedIndex();
+        if (originIdx < 0 || destIdx < 0 || originIdx >= warehouses.size() || destIdx >= warehouses.size()) {
+            owner.showStockNotice(FeedbackType.WARNING, "Armazéns necessários",
+                    "Seleccione os armazéns de origem e de destino antes de pedir a sugestão.");
+            return;
+        }
+        if (originIdx == destIdx) {
+            owner.showStockNotice(FeedbackType.WARNING, "Armazéns iguais",
+                    "O armazém de origem e o de destino devem ser diferentes.");
+            return;
+        }
+
+        WarehouseDTO origin = warehouses.get(originIdx);
+        WarehouseDTO dest = warehouses.get(destIdx);
+
+        UIHelper.loadAsync(owner, () -> owner.inventoryApiClient.getStocksByCompany(CurrentUserContext.getCurrentCompanyId()), loadedStocks -> {
+            applyReplenishmentSuggestions(origin, dest, loadedStocks);
+        }, owner::showStockError);
+    }
+
+    private void applyReplenishmentSuggestions(WarehouseDTO origin, WarehouseDTO dest, List<StockDTO> loadedStocks) {
+        if (loadedStocks == null || loadedStocks.isEmpty()) {
+            owner.showStockNotice(FeedbackType.INFO, "Sem dados de stock",
+                    "Não foram encontrados dados de saldo para calcular a reposição.");
+            return;
+        }
+
+        java.util.Map<Long, BigDecimal> destStock = new java.util.HashMap<>();
+        java.util.Map<Long, BigDecimal> destMinStock = new java.util.HashMap<>();
+        java.util.Map<Long, BigDecimal> originStock = new java.util.HashMap<>();
+
+        for (StockDTO s : loadedStocks) {
+            if (dest.id().equals(s.warehouseId())) {
+                destStock.put(s.productId(), s.quantity() != null ? s.quantity() : BigDecimal.ZERO);
+                if (s.minStock() != null && s.minStock().compareTo(BigDecimal.ZERO) > 0) {
+                    destMinStock.put(s.productId(), s.minStock());
+                }
+            } else if (origin.id().equals(s.warehouseId())) {
+                originStock.put(s.productId(), s.quantity() != null ? s.quantity() : BigDecimal.ZERO);
+            }
+        }
+
+        record SuggestionItem(ProductDTO product, BigDecimal qtyNeeded, BigDecimal qtyOrigin) {}
+        List<SuggestionItem> suggestions = new ArrayList<>();
+
+        for (ProductDTO product : products) {
+            BigDecimal currentDest = destStock.getOrDefault(product.id(), BigDecimal.ZERO);
+            BigDecimal min = destMinStock.get(product.id());
+
+            BigDecimal needed = BigDecimal.ZERO;
+            if (min != null && currentDest.compareTo(min) < 0) {
+                needed = min.subtract(currentDest);
+            } else if (currentDest.compareTo(BigDecimal.ZERO) <= 0) {
+                int unitsPerBox = product.packagesPerBox() > 0 && product.unitsPerPackage() > 0
+                        ? product.packagesPerBox() * product.unitsPerPackage() : 1;
+                needed = BigDecimal.valueOf(unitsPerBox);
+            }
+
+            if (needed.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal availableOrigin = originStock.getOrDefault(product.id(), BigDecimal.ZERO);
+                if (availableOrigin.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal transferQty = needed.min(availableOrigin);
+                    suggestions.add(new SuggestionItem(product, transferQty, availableOrigin));
+                }
+            }
+        }
+
+        if (suggestions.isEmpty()) {
+            owner.showStockNotice(FeedbackType.INFO, "Reposição desnecessária",
+                    "Nenhum produto em falta no armazém '" + dest.name() + "' tem saldo disponível em '" + origin.name() + "'.");
+            return;
+        }
+
+        boolean confirm = ModernMessageDialog.confirm(
+                SwingUtilities.getWindowAncestor(content),
+                FeedbackType.INFO,
+                "Sugestão de Reposição Inteligente",
+                "Foram identificados " + suggestions.size() + " produto(s) com necessidade de reposição no armazém '" + dest.name() + "'.\n\n"
+                        + "Deseja carregar estes artigos automaticamente na grelha da transferência?",
+                "Carregar Itens"
+        );
+        if (!confirm) return;
+
+        stopCellEditing();
+        if (linesModel.getRowCount() == 1) {
+            Object val = linesModel.getValueAt(0, COL_PRODUCT);
+            if (val == null || (val instanceof String s && s.isBlank())) {
+                linesModel.removeRow(0);
+            }
+        }
+
+        for (SuggestionItem item : suggestions) {
+            addLineRow(item.product(), item.qtyNeeded());
+        }
+        dirty = true;
+        updateTotals();
+        owner.showStockSuccess(suggestions.size() + " artigo(s) carregados por sugestão de reposição.");
     }
 
     private void stopCellEditing() {

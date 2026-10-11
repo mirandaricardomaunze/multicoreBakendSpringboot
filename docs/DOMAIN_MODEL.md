@@ -58,6 +58,7 @@ Evitar:
 | Regra | Dono |
 |-------|------|
 | Preco, desconto, cliente, documento comercial | `comercial` |
+| Guia de remessa ligada a encomenda ou avulsa | `comercial` |
 | Existencia de stock, lote, validade, FEFO, transferencia | `inventory` |
 | Abertura/fecho de caixa, entrada/saida de dinheiro POS | `pos` |
 | Impostos, taxas e resumos fiscais | `fiscal` |
@@ -72,10 +73,12 @@ Evitar:
 - Toda operacao sensivel deve estar no tenant/empresa actual.
 - Documentos comerciais oficiais nao devem ser apagados; devem ser anulados ou compensados.
 - Movimentos de stock devem ser rastreaveis ate ao documento que os gerou.
+- Guias de remessa avulsas pertencem a `comercial`; apenas a aprovação solicita a saída FEFO ao
+  Service público de `inventory`.
 - Movimentos financeiros devem ter origem clara: POS, factura, recibo, ajuste ou tesouraria.
 - Numeracao oficial nao pode reutilizar numeros.
 - Regra fiscal deve ser explicita, testavel e documentada quando nao for obvia.
-# Saúde ocupacional
+## Saúde ocupacional
 
 - `OccupationalHealthExam` pertence ao domínio RH e à empresa activa.
 - Cada renovação cria um novo exame; registos anteriores não são substituídos, preservando o

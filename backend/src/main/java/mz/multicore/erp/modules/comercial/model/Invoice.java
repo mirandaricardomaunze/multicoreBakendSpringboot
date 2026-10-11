@@ -47,6 +47,10 @@ public class Invoice extends BaseEntity {
     @JoinColumn(name = "warehouse_id")
     private Warehouse warehouse;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_unit_id")
+    private mz.multicore.erp.modules.purchases.model.BusinessUnit businessUnit;
+
     @Column(name = "cancellation_reason")
     private String cancellationReason;
 

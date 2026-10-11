@@ -69,9 +69,14 @@ public class ExecutiveDetailDialog {
 
     private void initUi() {
         if (dialog != null) {
-            dialog.setSize(940, 660);
-            dialog.setMinimumSize(new Dimension(800, 540));
+            UIHelper.applyStandardModalBounds(dialog, 960, 610);
+            dialog.setMinimumSize(new Dimension(800, 520));
             dialog.getContentPane().setBackground(UIHelper.BG_DARK);
+            dialog.getRootPane().registerKeyboardAction(
+                    e -> dispose(),
+                    KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                    JComponent.WHEN_IN_FOCUSED_WINDOW
+            );
         }
 
         JPanel root = new JPanel(new BorderLayout(0, 14));

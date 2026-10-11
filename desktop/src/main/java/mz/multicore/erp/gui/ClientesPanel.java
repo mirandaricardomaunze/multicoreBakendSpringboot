@@ -4,21 +4,7 @@ import mz.multicore.erp.desktop.client.AccountStatementApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.ClientTablePagination;
-import mz.multicore.erp.gui.components.FormField;
-import mz.multicore.erp.gui.components.InlineFeedbackPanel;
-import mz.multicore.erp.gui.components.IntegerField;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.MoneyField;
-import mz.multicore.erp.gui.components.NuitValidator;
-import mz.multicore.erp.gui.components.TableExportAction;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.ToastManager;
-import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 
 import javax.swing.*;
@@ -103,9 +89,9 @@ public class ClientesPanel extends JPanel {
     }
 
     private JPanel buildDirectoryTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        panel.setBorder(new EmptyBorder(10, 12, 10, 12));
 
         ModernButton viewBtn = UIHelper.createSecondaryButton("Ver Ficha");
         viewBtn.setIcon(UIHelper.icon("fas-id-card", 14, UIHelper.ACCENT_CYAN));
@@ -138,21 +124,19 @@ public class ClientesPanel extends JPanel {
         panel.add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setLayout(new BorderLayout(0, 8));
+        card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         searchField = TableFilter.searchField("Filtrar por nome, NUIT, email ou endereço…");
-        JPanel searchRow = new JPanel(new GridBagLayout());
-        searchRow.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.gridx = 0; g.weightx = 1.0;
-        searchRow.add(filterLabel("Pesquisa"), g);
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 0);
-        searchRow.add(searchField, g);
-        searchRow.setBorder(new EmptyBorder(0, 0, 12, 0));
+
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar dados do cliente (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar cliente");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel searchRow = TableFilter.bar(searchField, peekToggleBtn);
+        searchRow.setBorder(new EmptyBorder(0, 0, 4, 0));
         card.add(UIHelper.tableCardTop("Gestão de Clientes", searchRow, refreshBtn, moreBtn, newBtn), BorderLayout.NORTH);
 
         String[] cols = {"ID", "Nome", "NUIT / NIF", "Email", "Endereço", "Prazo (dias)", "Limite de Crédito"};
@@ -168,9 +152,35 @@ public class ClientesPanel extends JPanel {
         if (table.getColumnModel().getColumnCount() > 0) {
             table.getColumnModel().getColumn(0).setMaxWidth(60);
         }
+        UIHelper.ensureHeadersFit(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         TableFilter.install(table, searchField);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            if (mr < 0 || mr >= model.getRowCount()) return;
+            String id = String.valueOf(model.getValueAt(mr, 0));
+            String name = String.valueOf(model.getValueAt(mr, 1));
+            String nuit = String.valueOf(model.getValueAt(mr, 2));
+            String email = String.valueOf(model.getValueAt(mr, 3));
+            String address = String.valueOf(model.getValueAt(mr, 4));
+            String term = String.valueOf(model.getValueAt(mr, 5));
+            String limit = String.valueOf(model.getValueAt(mr, 6));
+
+            peek.setTitle(name);
+            peek.setSubtitle("NUIT: " + nuit);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("ID", id, false),
+                    new QuickPeekPanel.PeekItem("Email", email, false),
+                    new QuickPeekPanel.PeekItem("Endereço", address, false),
+                    new QuickPeekPanel.PeekItem("Prazo de Pagamento", term + " dias", false),
+                    new QuickPeekPanel.PeekItem("Limite de Crédito", limit, true)
+            ));
+            peek.getOpenFullButton().setText("Ver Ficha");
+            peek.setOnOpenFullAction(v -> viewBtn.doClick());
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
+
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         panel.add(card, BorderLayout.CENTER);

@@ -188,6 +188,8 @@ public class DebitNoteService {
                         l.getTaxRate(),
                         l.getLineTotal()
                 )).toList();
+        Long buId = n.getInvoice() != null && n.getInvoice().getBusinessUnit() != null ? n.getInvoice().getBusinessUnit().getId() : null;
+        String buName = n.getInvoice() != null && n.getInvoice().getBusinessUnit() != null ? n.getInvoice().getBusinessUnit().getName() : null;
         return new DebitNoteDTO(
                 n.getId(),
                 n.getNoteNumber(),
@@ -206,7 +208,9 @@ public class DebitNoteService {
                 n.getApprovedBy(),
                 n.getApprovedAt(),
                 n.getRejectionReason(),
-                lineDTOs
+                lineDTOs,
+                buId,
+                buName
         );
     }
 }

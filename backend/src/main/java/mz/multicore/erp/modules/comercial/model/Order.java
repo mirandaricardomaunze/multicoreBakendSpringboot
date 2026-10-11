@@ -46,6 +46,10 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "warehouse_id")
     private Warehouse warehouse;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_unit_id")
+    private mz.multicore.erp.modules.purchases.model.BusinessUnit businessUnit;
+
     @Column(name = "total_before_tax", nullable = false)
     private BigDecimal totalBeforeTax = BigDecimal.ZERO;
 

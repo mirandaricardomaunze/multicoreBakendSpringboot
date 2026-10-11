@@ -68,13 +68,10 @@ public class ModernButton extends JButton {
                 if (b.isEnabled()) {
                     g.setColor(b.getForeground());
                 } else {
-                    Color bg = b.getBackground();
-                    Color readable = UIHelper.readableTextOn(bg != null ? bg : Color.WHITE);
-                    if (Color.WHITE.equals(readable)) {
-                        g.setColor(new Color(255, 255, 255, 140));
-                    } else {
-                        g.setColor(new Color(107, 114, 128, 180));
-                    }
+                    Color disabledFg = UIHelper.isLight()
+                            ? new Color(148, 163, 184)
+                            : new Color(100, 116, 139);
+                    g.setColor(disabledFg);
                 }
                 String drawText = text;
                 if (drawText != null && (drawText.endsWith("...") || drawText.endsWith("…"))) {
@@ -131,6 +128,13 @@ public class ModernButton extends JButton {
             }
         });
         setBackground(normalColor);
+    }
+
+    @Override
+    public void setEnabled(boolean b) {
+        super.setEnabled(b);
+        setCursor(new Cursor(b ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        repaint();
     }
 
     public float getHoverProgress() {
@@ -342,34 +346,47 @@ public class ModernButton extends JButton {
         Color bg = getBackground() != null ? getBackground() : new Color(59, 130, 246);
 
         // Button background
-        if (isGradient && hoverProgress > 0.0f) {
+        // Button background
+        if (!isEnabled()) {
+            Color disabledBg = UIHelper.isLight()
+                    ? new Color(226, 232, 240) // Slate-200
+                    : new Color(51, 65, 85);    // Slate-700
+            g2.setColor(disabledBg);
+            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
+            g2.setColor(UIHelper.BORDER);
+            g2.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
+        } else if (isGradient && hoverProgress > 0.0f) {
             Color s = UIHelper.blendColors(start, start.brighter(), hoverProgress);
             Color e = UIHelper.blendColors(end, end.brighter(), hoverProgress);
             GradientPaint gp = new GradientPaint(0, 0, s, 0, height, e);
             g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
         } else if (isGradient) {
             GradientPaint gp = new GradientPaint(0, 0, start, 0, height, end);
             g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
         } else {
             g2.setColor(bg);
+            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
         }
 
-        g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
         g2.dispose();
 
         // Salvaguarda visual inegociável: nunca renderizar texto branco sobre fundo claro
         Color currentFg = getForeground();
-        if (bg != null && (currentFg == null || UIHelper.contrastRatio(bg, currentFg) < 3.0)) {
+        if (!isEnabled()) {
+            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
+                Color disabledIcon = UIHelper.isLight()
+                        ? new Color(148, 163, 184)
+                        : new Color(100, 116, 139);
+                fi.setIconColor(disabledIcon);
+            }
+        } else if (bg != null && (currentFg == null || UIHelper.contrastRatio(bg, currentFg) < 3.0)) {
             Color safeFg = UIHelper.readableTextOn(bg);
             super.setForeground(safeFg);
             this.textColor = safeFg;
             if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
                 fi.setIconColor(safeFg);
-            }
-        } else if (!isEnabled()) {
-            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-                Color baseIconColor = this.textColor != null ? this.textColor : Color.WHITE;
-                fi.setIconColor(new Color(baseIconColor.getRed(), baseIconColor.getGreen(), baseIconColor.getBlue(), 120));
             }
         } else {
             if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {

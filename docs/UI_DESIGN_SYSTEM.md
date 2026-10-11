@@ -98,13 +98,13 @@ Regras Obrigatorias:
 - UI deve mostrar estado de carregamento ou desactivar a accao durante execucao.
 - Nunca actualizar componentes Swing fora do EDT.
 
-## Separacao de responsabilidades
+## Separação de responsabilidades
 
 Painel Swing pode:
 
 - Montar UI.
 - Ler valores dos campos.
-- Chamar Service ou, no futuro, Client HTTP.
+- Chamar clientes HTTP do módulo `desktop`.
 - Apresentar DTOs.
 - Mostrar mensagens.
 
@@ -113,5 +113,5 @@ Painel Swing nao pode:
 - Calcular imposto, stock, salario ou totais oficiais.
 - Persistir directamente.
 - Chamar Repository.
-- Decidir permissao sensivel sem Service.
-- Conter regra que precise sobreviver a migracao para backend.
+- Decidir permissão sensível sem confirmação do backend.
+- Conter regra de negócio que pertença ao backend.

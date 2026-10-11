@@ -52,6 +52,16 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getAllProducts());
     }
 
+    /** Catálogo geral de produtos com paginação server-side e pesquisa multi-termo. */
+    @GetMapping("/products/page")
+    public ResponseEntity<PageResponse<ProductDTO>> getProductsPage(
+            @RequestParam(defaultValue = "") String query,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size) {
+        return ResponseEntity.ok(comercialService.getProductsPage(query, categoryId, page, size));
+    }
+
     /** Produtos vendáveis no POS (com stock rastreado e activos). */
     @GetMapping("/products/sellable")
     public ResponseEntity<List<ProductDTO>> getSellableProducts() {
@@ -87,7 +97,8 @@ public class ComercialController {
                 r.sku(), r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
                 r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
                 r.stockTracked(), r.taxRateId(), r.description(),
-                r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg()));
+                r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg(),
+                r.businessUnitId()));
     }
 
     @PutMapping("/products/{id}")
@@ -96,7 +107,8 @@ public class ComercialController {
                 id, r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
                 r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
                 r.stockTracked(), r.taxRateId(), r.description(),
-                r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg()));
+                r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg(),
+                r.businessUnitId()));
     }
 
     @PostMapping(value = "/products/{id}/image", consumes = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -182,6 +194,14 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getOrdersByCompany(companyId));
     }
 
+    @GetMapping("/orders/page")
+    public ResponseEntity<PageResponse<OrderDTO>> getOrdersPage(
+            @RequestParam Long companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(comercialService.getOrdersPageByCompany(companyId, page, size));
+    }
+
     @GetMapping("/orders/pending")
     public ResponseEntity<List<OrderDTO>> getPendingOrders(@RequestParam Long companyId) {
         return ResponseEntity.ok(comercialService.getPendingOrdersByCompany(companyId));
@@ -230,6 +250,21 @@ public class ComercialController {
     public ResponseEntity<Void> cancelOrder(@PathVariable Long id, @RequestBody @Valid CancelReasonRequest request) {
         comercialService.cancelOrder(id, request.reason());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/orders/{id}/approve")
+    public ResponseEntity<OrderDTO> approveOrder(
+            @PathVariable Long id,
+            @RequestBody(required = false) @Valid mz.multicore.erp.modules.approvals.dto.ApprovalActionDTO action) {
+        String comments = action != null ? action.comments() : "Aprovado via Central Comercial.";
+        return ResponseEntity.ok(comercialService.approveOrder(id, comments));
+    }
+
+    @PostMapping("/orders/{id}/reject")
+    public ResponseEntity<OrderDTO> rejectOrder(
+            @PathVariable Long id,
+            @RequestBody @Valid CancelReasonRequest request) {
+        return ResponseEntity.ok(comercialService.rejectOrder(id, request.reason()));
     }
 
     @PostMapping("/orders/{id}/print")

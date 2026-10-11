@@ -59,22 +59,29 @@ public class DocumentTableInteractionHarnessTest {
     }
 
     @Test
-    @DisplayName("DTI-01: Tabelas de listagem possuem duplo clique configurado")
+    @DisplayName("DTI-01: Tabelas de listagem possuem estilo corporativo e detalhes protegidos contra redirecionamento")
     void dti01_listingTablesHaveDoubleClick() throws IOException {
         String ordersView = readSource("desktop/src/main/java/mz/multicore/erp/gui/CommercialOrdersView.java");
-        assertThat(ordersView).contains("installDoubleClick(owner.ordersTable, owner::openSelectedOrderEditor)");
+        assertThat(ordersView).contains("UIHelper.styleTable(owner.ordersTable)")
+                .contains("customDetailAction")
+                .doesNotContain("installDoubleClick(owner.ordersTable, owner::openSelectedOrderEditor)");
 
         String invoicesView = readSource("desktop/src/main/java/mz/multicore/erp/gui/CommercialInvoicesView.java");
-        assertThat(invoicesView).contains("installDoubleClick(owner.invoicesTable, owner::printSelectedInvoice)");
+        assertThat(invoicesView).contains("UIHelper.styleTable(owner.invoicesTable)")
+                .doesNotContain("installDoubleClick(owner.invoicesTable, owner::printSelectedInvoice)");
 
         String quotationsPanel = readSource("desktop/src/main/java/mz/multicore/erp/gui/commercial/QuotationsPanel.java");
-        assertThat(quotationsPanel).contains("openSelectedEditor()");
+        assertThat(quotationsPanel).contains("UIHelper.styleTable(table)")
+                .contains("openSelectedEditor()");
 
         String purchasePanel = readSource("desktop/src/main/java/mz/multicore/erp/gui/PurchaseOrdersPanel.java");
-        assertThat(purchasePanel).contains("installDoubleClick(poListTable, this::openSelectedEditor)");
+        assertThat(purchasePanel).contains("UIHelper.styleTable(poListTable)")
+                .contains("openSelectedEditor()")
+                .doesNotContain("installDoubleClick(poListTable, this::openSelectedEditor)");
 
         String stockPanel = readSource("desktop/src/main/java/mz/multicore/erp/gui/StockPanel.java");
-        assertThat(stockPanel).contains("transferActions.openSelectedEditor()");
+        assertThat(stockPanel).contains("UIHelper.styleTable(transferTable)")
+                .contains("transferActions.openSelectedEditor()");
     }
 
     @Test

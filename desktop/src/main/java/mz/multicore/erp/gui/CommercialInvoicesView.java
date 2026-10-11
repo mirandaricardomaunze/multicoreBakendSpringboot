@@ -14,9 +14,9 @@ final class CommercialInvoicesView {
     private CommercialInvoicesView() {}
 
     static JPanel create(ComercialPanel owner) {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBackground(UIHelper.BG_DARK);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         ModernPanel formCard = new ModernPanel(16);
         formCard.setLayout(new FlowLayout(FlowLayout.LEFT, 16, 6));
@@ -25,11 +25,15 @@ final class CommercialInvoicesView {
         owner.clientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.clientCombo);
 
-        owner.warehouseCombo = new JComboBox<>();
+owner.warehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.warehouseCombo);
 
-        formCard.add(fieldGroup("Cliente:", owner.clientCombo, 340));
-        formCard.add(fieldGroup("Armazém de Expedição:", owner.warehouseCombo, 260));
+        owner.invoiceBusinessUnitCombo = new JComboBox<>();
+        UIHelper.styleComboBox(owner.invoiceBusinessUnitCombo);
+
+        formCard.add(fieldGroup("Cliente:", owner.clientCombo, 320));
+        formCard.add(fieldGroup("Armazém de Expedição:", owner.warehouseCombo, 220));
+        formCard.add(fieldGroup("Linha de Negócio:", owner.invoiceBusinessUnitCombo, 250));
 
         owner.productCombo = new ProductSearchComboBox();
 
@@ -58,7 +62,7 @@ final class CommercialInvoicesView {
         owner.linesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         owner.linesTable.putClientProperty("noTableFooter", Boolean.TRUE);
         owner.linesTable.getColumnModel().getColumn(0)
-                .setCellEditor(new DefaultCellEditor(owner.productCombo));
+                .setCellEditor(ProductSearchComboBox.createTableCellEditor(owner.productCombo));
         owner.linesTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
             @Override protected void setValue(Object value) {
                 setText(value instanceof ProductDTO product ? product.name() : "Pesquisar produto...");
@@ -101,9 +105,13 @@ final class CommercialInvoicesView {
         draftCard.setLayout(new BorderLayout(0, 10));
         draftCard.setBorder(new EmptyBorder(15, 15, 15, 15));
         draftCard.setPreferredSize(new Dimension(0, 280));
-        JLabel lineHint = new JLabel("Preparação tabular: edite as células; depois de emitida a fatura é imutável.");
+        JLabel lineHint = new JLabel("Preparação tabular: edite na grelha ou bipe o código de barras (F2).");
         lineHint.setForeground(UIHelper.TEXT_MUTED);
-        draftCard.add(UIHelper.tableCardTop("Linhas da Fatura", lineHint, addLineBtn, removeLineBtn), BorderLayout.NORTH);
+        ModernButton invoiceLookupBtn = UIHelper.createProductLookupButton(owner::openInvoiceProductLookup);
+        owner.invoiceBarcodeField = new mz.multicore.erp.gui.components.BarcodeScanField(
+                "Bipar código / SKU (F2)...", owner::handleInvoiceBarcodeScanned);
+        draftCard.add(UIHelper.tableCardTop("Linhas da Fatura", lineHint,
+                owner.invoiceBarcodeField, invoiceLookupBtn, addLineBtn, removeLineBtn), BorderLayout.NORTH);
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(totalRow, BorderLayout.SOUTH);
 
@@ -116,16 +124,22 @@ final class CommercialInvoicesView {
         draftWrap.add(UIHelper.createSubheading("Linhas da Fatura (Rascunho)"), BorderLayout.NORTH);
         draftWrap.add(draftCard, BorderLayout.CENTER);
         formContent.add(draftWrap, BorderLayout.CENTER);
+        formContent.registerKeyboardAction(e -> {
+            if (owner.invoiceBarcodeField != null && owner.invoiceBarcodeField.isEnabled()) {
+                owner.invoiceBarcodeField.requestFocusInWindow();
+                owner.invoiceBarcodeField.selectAll();
+            }
+        }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F2, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         owner.invoiceFormContent = formContent;
 
         // TAB: uma única unidade visual, com acções, filtros, tabela e paginação no mesmo card.
         ModernButton refreshBtn = UIHelper.createRefreshButton(owner::loadInvoicesTable);
 
         ModernPanel listCard = new ModernPanel(16);
-        listCard.setLayout(new BorderLayout(0, 10));
-        listCard.setBorder(new EmptyBorder(20, 20, 20, 20));
+        listCard.setLayout(new BorderLayout(0, 6));
+        listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        String[] invoicesCols = {"ID", "Nº Fatura", "Cliente", "Data", "Estado", "Total", "Em Dívida"};
+        String[] invoicesCols = {"ID", "Nº Fatura", "Cliente", "Data", "Negócio", "Estado", "Total", "Em Dívida", "Impressão"};
         owner.invoicesTableModel = new DefaultTableModel(invoicesCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -133,9 +147,12 @@ final class CommercialInvoicesView {
         owner.invoicesTable = new JTable(owner.invoicesTableModel);
         owner.invoicesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(owner.invoicesTable);
-        owner.invoicesTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
-        owner.invoicesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
+        UIHelper.ensureHeadersFit(owner.invoicesTable);
+        owner.invoicesTable.getColumnModel().getColumn(4).setPreferredWidth(110);
+        owner.invoicesTable.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.status());
         owner.invoicesTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.money());
+        owner.invoicesTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.money());
+        owner.invoicesTable.getColumnModel().getColumn(8).setPreferredWidth(118);
         
         // Hide ID column
         owner.invoicesTable.getColumnModel().getColumn(0).setMinWidth(0);
@@ -145,12 +162,20 @@ final class CommercialInvoicesView {
         JScrollPane invoicesScroll = new JScrollPane(owner.invoicesTable);
         UIHelper.styleScrollPane(invoicesScroll);
         JTextField invSearch = TableFilter.searchField("Nº fatura ou cliente…");
+        owner.invBusinessUnitCombo = TableFilter.combo("Todos os negócios", "Misto");
+        if (owner.businessUnitsList != null) {
+            for (mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO bu : owner.businessUnitsList) {
+                owner.invBusinessUnitCombo.addItem(bu.name());
+            }
+        }
         JComboBox<String> invEstado = TableFilter.combo("Todos os estados",
-                "DRAFT", "PENDING_APPROVAL", "PENDING_DISCOUNT_APPROVAL", "APPROVED",
-                "PARTIALLY_PAID", "REJECTED", "PAID", "CANCELLED");
+                "Rascunho", "Pendente de aprovação", "Aprovação de desconto", "Aprovado",
+                "Parcialmente paga", "Rejeitado", "Paga", "Cancelado");
         JComboBox<String> invPeriodo = TableFilter.periodCombo();
         TableFilter.install(owner.invoicesTable, invSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(invEstado, 4)),
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(owner.invBusinessUnitCombo, 4),
+                        new TableFilter.ColumnFilter(invEstado, 5)),
                 java.util.List.of(new TableFilter.PeriodFilter(invPeriodo, 3)));
         listCard.add(invoicesScroll, BorderLayout.CENTER);
 
@@ -172,7 +197,9 @@ final class CommercialInvoicesView {
         cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn), BorderLayout.EAST);
 
         JPanel invFilters = UIHelper.filterBar(
-                new JComponent[]{invSearch, TableFilter.label("Estado:"), invEstado,
+                new JComponent[]{invSearch,
+                        TableFilter.label("Negócio:"), owner.invBusinessUnitCombo,
+                        TableFilter.label("Estado:"), invEstado,
                         TableFilter.label("Período:", "fas-calendar-alt"), invPeriodo},
                 null);
         JPanel cardTop = new JPanel(new BorderLayout(0, 10));
@@ -189,11 +216,11 @@ final class CommercialInvoicesView {
         panel.add(listCard, BorderLayout.CENTER);
 
         // LISTENERS
-        UIHelper.installDoubleClick(owner.invoicesTable, owner::printSelectedInvoice);
         TableQuickPeekController invPeek = UIHelper.installQuickPeek(owner.invoicesTable, listCard);
         invPeek.setOnOpenFullCallback(modelRow -> owner.printSelectedInvoice());
         UIHelper.installDocumentGridShortcuts(owner.linesTable,
-                owner::addDraftLine, owner::removeSelectedInvoiceDraftLine, owner::saveInvoiceFromEditor);
+                owner::addDraftLine, owner::removeSelectedInvoiceDraftLine, owner::saveInvoiceFromEditor,
+                owner::openInvoiceProductLookup);
         addLineBtn.addActionListener(e -> owner.addDraftLine());
         // Documento em painel completo (substitui o modal): a aba alterna lista <-> editor.
         DocumentEditorHost invoiceEditor = new DocumentEditorHost(

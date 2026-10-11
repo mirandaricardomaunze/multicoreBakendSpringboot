@@ -215,6 +215,8 @@ public class PromotionService {
     }
 
     private PromotionDTO toDTO(Promotion p) {
+        Long buId = p.getProduct() != null && p.getProduct().getBusinessUnit() != null ? p.getProduct().getBusinessUnit().getId() : null;
+        String buName = p.getProduct() != null && p.getProduct().getBusinessUnit() != null ? p.getProduct().getBusinessUnit().getName() : null;
         return new PromotionDTO(
                 p.getId(),
                 p.getName(),
@@ -228,7 +230,9 @@ public class PromotionService {
                 p.getPayQuantity(),
                 p.getStartDate(),
                 p.getEndDate(),
-                p.isActive()
+                p.isActive(),
+                buId,
+                buName
         );
     }
 

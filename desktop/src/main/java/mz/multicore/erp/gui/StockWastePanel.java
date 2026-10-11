@@ -48,6 +48,7 @@ public class StockWastePanel extends JPanel {
     JComboBox<String> statusFilterCombo;
     JComboBox<String> reasonFilterCombo;
     JComboBox<String> periodFilterCombo;
+    JComboBox<String> wasteBusinessUnitCombo;
     JTextField wasteSearchField;
     ModernButton approveBtn;
     ModernButton rejectBtn;
@@ -79,27 +80,18 @@ public class StockWastePanel extends JPanel {
         this.inventoryApiClient = inventoryApiClient;
         this.comercialApiClient = comercialApiClient;
 
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(0, 6));
         setOpaque(false);
+        setBorder(new EmptyBorder(6, 4, 4, 4));
 
-        JPanel mainContent = new JPanel(new BorderLayout(0, 4));
-        mainContent.setOpaque(false);
-        mainContent.setBorder(new EmptyBorder(2, 2, 2, 2));
-
-        JPanel centerPanel = new JPanel(new BorderLayout(0, 4));
-        centerPanel.setOpaque(false);
-        centerPanel.add(buildKpiBar(), BorderLayout.NORTH);
+        add(buildKpiBar(), BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
         tabs.addTab("Registo & Validação de Quebras", UIHelper.icon("fas-clipboard-check", 16, UIHelper.REJECTED_RED), buildHistoryTab());
         tabs.addTab("Radar de Validades & Prevenção", UIHelper.icon("fas-shield-alt", 16, UIHelper.PENDING_YELLOW), buildRadarTab());
         tabs.addTab("Métricas & Relatório Executivo", UIHelper.icon("fas-chart-pie", 16, UIHelper.ACCENT_BLUE), buildMetricsTab());
-        centerPanel.add(tabs, BorderLayout.CENTER);
-
-        mainContent.add(centerPanel, BorderLayout.CENTER);
-
-        add(mainContent, BorderLayout.CENTER);
+        add(tabs, BorderLayout.CENTER);
     }
 
     private JPanel buildKpiBar() {
@@ -114,9 +106,9 @@ public class StockWastePanel extends JPanel {
     }
 
     private JPanel buildHistoryTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        JPanel panel = new JPanel(new BorderLayout(0, 0));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(2, 0, 0, 0));
 
         statusFilterCombo = new JComboBox<>(new String[]{"Todos os Estados", "Aprovado", "Pendente Aprovação", "Rejeitado"});
         UIHelper.styleComboBox(statusFilterCombo);
@@ -135,6 +127,9 @@ public class StockWastePanel extends JPanel {
         UIHelper.styleComboBox(reasonFilterCombo);
         reasonFilterCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         reasonFilterCombo.addActionListener(e -> applyWasteFilters());
+
+        wasteBusinessUnitCombo = TableFilter.combo("Todos os negócios");
+        wasteBusinessUnitCombo.addActionListener(e -> applyWasteFilters());
 
         periodFilterCombo = TableFilter.periodCombo();
         UIHelper.styleComboBox(periodFilterCombo);
@@ -163,21 +158,24 @@ public class StockWastePanel extends JPanel {
         rejectBtn.setEnabled(false);
         rejectBtn.addActionListener(e -> handleApproveSelected(false));
 
-        JPanel filters = new JPanel(new GridBagLayout());
-        filters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 8);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar registo de quebra (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar quebra");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridx = 0; g.weightx = 0; filters.add(statusFilterCombo, g);
-        g.gridx = 1; g.weightx = 0; filters.add(reasonFilterCombo, g);
-        g.gridx = 2; g.weightx = 0; filters.add(periodFilterCombo, g);
-        g.gridx = 3; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        filters.add(wasteSearchField, g);
+        JPanel filters = TableFilter.bar(
+                wasteSearchField,
+                TableFilter.label("Negócio:"),
+                wasteBusinessUnitCombo,
+                statusFilterCombo,
+                reasonFilterCombo,
+                periodFilterCombo,
+                peekToggleBtn
+        );
         filters.setBorder(new EmptyBorder(0, 0, 4, 0));
 
-        String[] cols = {"ID", "Data", "Produto", "Armazém", "Lote", "Motivo", "Quantidade", "Custo Unit.", "Total Perda", "Estado", "Registado Por", "Aprovado Por"};
+        String[] cols = {"ID", "Data", "Produto", "Armazém", "Lote", "Motivo", "Quantidade", "Custo Unit.", "Total Perda", "Estado", "Registado Por", "Aprovado Por", "Negócio"};
         wasteTableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -201,6 +199,7 @@ public class StockWastePanel extends JPanel {
         wasteTable.getColumnModel().getColumn(9).setPreferredWidth(140);
         wasteTable.getColumnModel().getColumn(10).setPreferredWidth(110);
         wasteTable.getColumnModel().getColumn(11).setPreferredWidth(110);
+        wasteTable.getColumnModel().getColumn(12).setPreferredWidth(110);
 
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -226,11 +225,10 @@ public class StockWastePanel extends JPanel {
             }
         });
 
-        wasteTable.setPreferredScrollableViewportSize(new Dimension(800, 480));
-
         JScrollPane scroll = new JScrollPane(wasteTable);
         UIHelper.styleScrollPane(scroll);
-        scroll.setMinimumSize(new Dimension(200, 180));
+
+        UIHelper.ensureHeadersFit(wasteTable);
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
@@ -238,15 +236,44 @@ public class StockWastePanel extends JPanel {
         card.add(UIHelper.tableCardTop("Registo de Quebras & Perdas", filters, reloadBtn, registerBtn, approveBtn, rejectBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(wasteTable), BorderLayout.SOUTH);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(wasteTable, card, (peek, mr) -> {
+            if (mr < 0 || mr >= wasteTableModel.getRowCount()) return;
+            String id = String.valueOf(wasteTableModel.getValueAt(mr, 0));
+            String date = String.valueOf(wasteTableModel.getValueAt(mr, 1));
+            String prod = String.valueOf(wasteTableModel.getValueAt(mr, 2));
+            String wh = String.valueOf(wasteTableModel.getValueAt(mr, 3));
+            String batch = String.valueOf(wasteTableModel.getValueAt(mr, 4));
+            String reason = String.valueOf(wasteTableModel.getValueAt(mr, 5));
+            String qty = String.valueOf(wasteTableModel.getValueAt(mr, 6));
+            String cost = String.valueOf(wasteTableModel.getValueAt(mr, 7));
+            String total = String.valueOf(wasteTableModel.getValueAt(mr, 8));
+            String status = String.valueOf(wasteTableModel.getValueAt(mr, 9));
+
+            peek.setTitle("Quebra #" + id);
+            peek.setSubtitle(prod);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Data", date, false),
+                    new QuickPeekPanel.PeekItem("Armazém", wh, false),
+                    new QuickPeekPanel.PeekItem("Lote", batch, false),
+                    new QuickPeekPanel.PeekItem("Motivo", reason, false),
+                    new QuickPeekPanel.PeekItem("Quantidade", qty, false),
+                    new QuickPeekPanel.PeekItem("Custo Unit.", cost, false),
+                    new QuickPeekPanel.PeekItem("Perda Total", total, true),
+                    new QuickPeekPanel.PeekItem("Estado", status, false)
+            ));
+            peek.getOpenFullButton().setText("Ficha de Quebra");
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
         panel.add(card, BorderLayout.CENTER);
 
         return panel;
     }
 
     private JPanel buildRadarTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        JPanel panel = new JPanel(new BorderLayout(0, 0));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        panel.setBorder(new EmptyBorder(2, 0, 0, 0));
 
         urgencyFilterCombo = new JComboBox<>(new String[]{
                 "Todas as Urgências",
@@ -270,16 +297,17 @@ public class StockWastePanel extends JPanel {
 
         ModernButton wasteRadarBtn = UIHelper.createDangerButton("Registar Quebra deste Lote");
         wasteRadarBtn.setIcon(UIHelper.icon("fas-trash-alt", 14));
+        wasteRadarBtn.setEnabled(false);
+        wasteRadarBtn.setToolTipText("Selecione um lote na tabela para registar quebra");
         wasteRadarBtn.addActionListener(e -> handleWasteFromSelectedBatch());
 
-        JPanel radarFilters = new JPanel(new GridBagLayout());
-        radarFilters.setOpaque(false);
-        GridBagConstraints rg = new GridBagConstraints();
-        rg.gridy = 0;
-        rg.fill = GridBagConstraints.HORIZONTAL;
-        rg.insets = new Insets(0, 0, 0, 8);
-        rg.gridx = 0; rg.weightx = 0; radarFilters.add(urgencyFilterCombo, rg);
-        rg.gridx = 1; rg.weightx = 1.0; rg.insets = new Insets(0, 0, 0, 0); radarFilters.add(radarSearchField, rg);
+        ModernButton peekRadarBtn = UIHelper.createSecondaryButton("");
+        peekRadarBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekRadarBtn.setToolTipText("Espreitar lote em risco (Espaço)");
+        peekRadarBtn.getAccessibleContext().setAccessibleName("Espreitar lote");
+        peekRadarBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel radarFilters = TableFilter.bar(radarSearchField, urgencyFilterCombo, peekRadarBtn);
         radarFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
 
         String[] cols = {"Lote", "Produto", "Categoria", "Armazém", "Qtd Disponível", "Custo Unit.", "Perda Estimada", "Data Validade", "Dias Restantes", "Urgência"};
@@ -291,6 +319,7 @@ public class StockWastePanel extends JPanel {
         UIHelper.styleTable(radarTable);
         radarTable.setRowHeight(42);
         radarTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        radarTable.getSelectionModel().addListSelectionListener(e -> wasteRadarBtn.setEnabled(radarTable.getSelectedRow() >= 0));
 
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -320,11 +349,10 @@ public class StockWastePanel extends JPanel {
             }
         });
 
-        radarTable.setPreferredScrollableViewportSize(new Dimension(800, 480));
+        UIHelper.ensureHeadersFit(radarTable);
 
         JScrollPane scroll = new JScrollPane(radarTable);
         UIHelper.styleScrollPane(scroll);
-        scroll.setMinimumSize(new Dimension(200, 180));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
@@ -332,13 +360,43 @@ public class StockWastePanel extends JPanel {
         card.add(UIHelper.tableCardTop("Radar de Validades & Prevenção", radarFilters, reloadRadarBtn, wasteRadarBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(radarTable), BorderLayout.SOUTH);
+
+        TableQuickPeekController radarPeek = TableQuickPeekController.install(radarTable, card, (peek, mr) -> {
+            if (mr < 0 || mr >= radarTableModel.getRowCount()) return;
+            String batch = String.valueOf(radarTableModel.getValueAt(mr, 0));
+            String prod = String.valueOf(radarTableModel.getValueAt(mr, 1));
+            String cat = String.valueOf(radarTableModel.getValueAt(mr, 2));
+            String wh = String.valueOf(radarTableModel.getValueAt(mr, 3));
+            String qty = String.valueOf(radarTableModel.getValueAt(mr, 4));
+            String cost = String.valueOf(radarTableModel.getValueAt(mr, 5));
+            String loss = String.valueOf(radarTableModel.getValueAt(mr, 6));
+            String exp = String.valueOf(radarTableModel.getValueAt(mr, 7));
+            String days = String.valueOf(radarTableModel.getValueAt(mr, 8));
+            String urg = String.valueOf(radarTableModel.getValueAt(mr, 9));
+
+            peek.setTitle("Lote " + batch);
+            peek.setSubtitle(prod + " • " + wh);
+            peek.setStatus(urg, urg.contains("VENCIDO") || urg.contains("CRÍTICO") ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Categoria", cat, false),
+                    new QuickPeekPanel.PeekItem("Qtd em Risco", qty, false),
+                    new QuickPeekPanel.PeekItem("Custo Unit.", cost, false),
+                    new QuickPeekPanel.PeekItem("Perda Estimada", loss, true),
+                    new QuickPeekPanel.PeekItem("Validade", exp, false),
+                    new QuickPeekPanel.PeekItem("Dias Restantes", days, false)
+            ));
+            peek.getOpenFullButton().setText("Registar Quebra");
+            peek.setOnOpenFullAction(v -> handleWasteFromSelectedBatch());
+        });
+        peekRadarBtn.addActionListener(e -> radarPeek.toggle());
+
         panel.add(card, BorderLayout.CENTER);
 
         return panel;
     }
 
     private JPanel buildMetricsTab() {
-        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(10, 0, 0, 0));
 
@@ -359,7 +417,7 @@ public class StockWastePanel extends JPanel {
         printPdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
         printPdfBtn.addActionListener(e -> exportPdfReport());
 
-        ModernPanel filterCard = new ModernPanel(14);
+        ModernPanel filterCard = new ModernPanel(16);
         filterCard.setLayout(new BorderLayout());
         filterCard.setBorder(new EmptyBorder(10, 14, 10, 14));
 
@@ -378,7 +436,7 @@ public class StockWastePanel extends JPanel {
         filterCard.add(filterToolbar, BorderLayout.CENTER);
         panel.add(filterCard, BorderLayout.NORTH);
 
-        JPanel tablesGrid = new JPanel(new GridLayout(1, 2, 14, 0));
+        JPanel tablesGrid = new JPanel(new GridLayout(1, 2, 12, 0));
         tablesGrid.setOpaque(false);
 
         // Motivos
@@ -391,11 +449,8 @@ public class StockWastePanel extends JPanel {
         };
         JTable reasonTable = new JTable(reasonMetricsModel);
         UIHelper.styleTable(reasonTable);
-        reasonTable.setRowHeight(36);
-        reasonTable.setPreferredScrollableViewportSize(new Dimension(350, 320));
         JScrollPane reasonScroll = new JScrollPane(reasonTable);
         UIHelper.styleScrollPane(reasonScroll);
-        reasonScroll.setMinimumSize(new Dimension(200, 220));
         reasonCard.add(reasonScroll, BorderLayout.CENTER);
         tablesGrid.add(reasonCard);
 
@@ -409,11 +464,8 @@ public class StockWastePanel extends JPanel {
         };
         JTable catTable = new JTable(categoryMetricsModel);
         UIHelper.styleTable(catTable);
-        catTable.setRowHeight(36);
-        catTable.setPreferredScrollableViewportSize(new Dimension(350, 320));
         JScrollPane catScroll = new JScrollPane(catTable);
         UIHelper.styleScrollPane(catScroll);
-        catScroll.setMinimumSize(new Dimension(200, 220));
         catCard.add(catScroll, BorderLayout.CENTER);
         tablesGrid.add(catCard);
 
@@ -452,6 +504,17 @@ public class StockWastePanel extends JPanel {
             protected void done() {
                 try {
                     currentWasteList = get();
+                    if (wasteBusinessUnitCombo != null) {
+                        Object prev = wasteBusinessUnitCombo.getSelectedItem();
+                        java.util.Set<String> bus = new java.util.TreeSet<>();
+                        for (StockWasteDTO w : currentWasteList) {
+                            if (w.businessUnitName() != null && !w.businessUnitName().isBlank()) bus.add(w.businessUnitName());
+                        }
+                        wasteBusinessUnitCombo.removeAllItems();
+                        wasteBusinessUnitCombo.addItem("Todos os negócios");
+                        for (String b : bus) wasteBusinessUnitCombo.addItem(b);
+                        if (prev != null) wasteBusinessUnitCombo.setSelectedItem(prev);
+                    }
                     applyWasteFilters();
                 } catch (Exception ex) {
                     ToastManager.show(StockWastePanel.this, FeedbackType.ERROR, "Erro ao carregar quebras: " + ex.getMessage());
@@ -532,6 +595,7 @@ public class StockWastePanel extends JPanel {
     }
 
     void applyWasteFilters() {
+        String buSel = (String) (wasteBusinessUnitCombo != null ? wasteBusinessUnitCombo.getSelectedItem() : "Todos os negócios");
         String statusSel = (String) statusFilterCombo.getSelectedItem();
         String reasonSel = (String) reasonFilterCombo.getSelectedItem();
         String periodSel = (String) (periodFilterCombo != null ? periodFilterCombo.getSelectedItem() : "Todo o período");
@@ -540,6 +604,10 @@ public class StockWastePanel extends JPanel {
         wasteTableModel.setRowCount(0);
         LocalDate today = LocalDate.now();
         for (StockWasteDTO w : currentWasteList) {
+            if (buSel != null && !"Todos os negócios".equals(buSel)) {
+                String wBu = w.businessUnitName() != null ? w.businessUnitName() : "";
+                if (!buSel.equalsIgnoreCase(wBu)) continue;
+            }
             if (!"Todos os Estados".equals(statusSel) && !w.status().getDescription().equals(statusSel)) {
                 continue;
             }
@@ -570,7 +638,8 @@ public class StockWastePanel extends JPanel {
                     UIHelper.formatMzn(w.totalCost()),
                     w.status().getDescription(),
                     w.registeredBy(),
-                    w.approvedBy() != null ? w.approvedBy() : "-"
+                    w.approvedBy() != null ? w.approvedBy() : "-",
+                    w.businessUnitName() != null && !w.businessUnitName().isBlank() ? w.businessUnitName() : "—"
             });
         }
         updateApprovalButtonsState();

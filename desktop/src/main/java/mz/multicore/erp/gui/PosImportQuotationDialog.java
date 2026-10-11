@@ -83,7 +83,7 @@ public class PosImportQuotationDialog extends JDialog {
         add(header, BorderLayout.NORTH);
 
         // Center card
-        ModernPanel card = new ModernPanel(14);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(14, 16, 14, 16));
 
@@ -96,6 +96,7 @@ public class PosImportQuotationDialog extends JDialog {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.getColumnModel().getColumn(COL_TOTAL).setCellRenderer(TableCellRenderers.money());
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(32);

@@ -198,6 +198,25 @@ class ComercialControllerIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void authenticatedDesktopCanLoadPaginatedCatalog() throws Exception {
+        JsonNode login = login();
+        String token = login.get("token").asText();
+        String companyId = login.get("companies").get(0).get("id").asText();
+
+        mockMvc.perform(get("/api/comercial/products/page")
+                        .param("page", "0").param("size", "25")
+                        .param("query", "")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(25))
+                .andExpect(jsonPath("$.totalElements").isNumber())
+                .andExpect(jsonPath("$.totalPages").isNumber());
+    }
+
     private JsonNode login() throws Exception {
         String body = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

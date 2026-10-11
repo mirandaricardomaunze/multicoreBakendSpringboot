@@ -22,12 +22,20 @@ public record CreateInvoiceRequest(
     List<CreateInvoiceLineRequest> lines,
 
     /** Vencimento escolhido pelo operador. Vazio = prazo de pagamento do cliente. */
-    LocalDate dueDate
+    LocalDate dueDate,
+
+    /** Linha de negócio exclusiva (opcional). Se nula, aceita produtos mistos. */
+    Long businessUnitId
 ) {
+
+    public CreateInvoiceRequest(Long clientId, Long companyId, Long warehouseId,
+                                List<CreateInvoiceLineRequest> lines, LocalDate dueDate) {
+        this(clientId, companyId, warehouseId, lines, dueDate, null);
+    }
 
     /** Retrocompatível: sem vencimento explícito, manda o prazo acordado com o cliente. */
     public CreateInvoiceRequest(Long clientId, Long companyId, Long warehouseId,
                                 List<CreateInvoiceLineRequest> lines) {
-        this(clientId, companyId, warehouseId, lines, null);
+        this(clientId, companyId, warehouseId, lines, null, null);
     }
 }

@@ -60,7 +60,7 @@ public class DatabaseBackupDialog extends JDialog {
         center.setOpaque(false);
 
         // Card 1: Estado e Ação Rápida
-        ModernPanel quickCard = new ModernPanel(14);
+        ModernPanel quickCard = new ModernPanel(16);
         quickCard.setLayout(new BorderLayout(14, 0));
         quickCard.setBorder(new EmptyBorder(14, 16, 14, 16));
 
@@ -68,7 +68,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.setLayout(new BoxLayout(statusBox, BoxLayout.Y_AXIS));
         statusBox.setOpaque(false);
 
-        statusLabel = new JLabel("Estado: A verificar...");
+        statusLabel = new JLabel("Estado: A verificar");
         statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         statusLabel.setForeground(UIHelper.TEXT_LIGHT);
 
@@ -89,7 +89,7 @@ public class DatabaseBackupDialog extends JDialog {
         center.add(quickCard, BorderLayout.NORTH);
 
         // Card 2: Ficheiros de Backup e Verificação
-        ModernPanel tableCard = new ModernPanel(14);
+        ModernPanel tableCard = new ModernPanel(16);
         tableCard.setLayout(new BorderLayout(0, 10));
         tableCard.setBorder(new EmptyBorder(14, 16, 14, 16));
 
@@ -104,6 +104,7 @@ public class DatabaseBackupDialog extends JDialog {
         };
         filesTable = new JTable(filesTableModel);
         UIHelper.styleTable(filesTable);
+        UIHelper.ensureHeadersFit(filesTable);
         filesTable.setFillsViewportHeight(true);
         filesTable.putClientProperty("emptyText", "Nenhuma cópia de segurança encontrada.");
 

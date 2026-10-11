@@ -41,7 +41,7 @@ class HRSubsidiesUiHarnessTest {
         String hr = source("desktop/src/main/java/mz/multicore/erp/gui/HRPanel.java");
         String vacations = source("desktop/src/main/java/mz/multicore/erp/gui/HRVacationsPanel.java");
         assertThat(hr).contains("\"13.º Mês\"", "bonusActions::openThirteenthMonth");
-        assertThat(vacations).contains("\"Subsídio\"", "openVacationAllowance()");
+        assertThat(vacations).contains("\"Subsídio de Férias\"", "openVacationAllowance()");
         assertThat(hr).doesNotContain("addTab(\"Subsídios\"");
     }
 

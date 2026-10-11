@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -78,10 +79,25 @@ final class HRLiabilitiesPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         table.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.status());
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-university", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(model.getValueAt(row, 2)));
+            peek.setSubtitle("Período: " + model.getValueAt(row, 1));
+            peek.setStatus(String.valueOf(model.getValueAt(row, 5)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor da Retenção", String.valueOf(model.getValueAt(row, 3)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Prazo Limite", String.valueOf(model.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Entregue Por", String.valueOf(model.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Referência de Pagamento", String.valueOf(model.getValueAt(row, 7)), false));
+            peek.setItems(items);
+        });
 
         JTextField search = TableFilter.searchField("Retenção ou período…");
         JComboBox<String> estado = TableFilter.combo("Todos os estados", "Por entregar", "Entregue");

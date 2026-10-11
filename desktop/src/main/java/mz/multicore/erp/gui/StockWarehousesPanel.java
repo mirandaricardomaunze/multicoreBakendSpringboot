@@ -17,9 +17,9 @@ final class StockWarehousesPanel {
     StockWarehousesPanel(StockPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
-        tab.setBorder(new EmptyBorder(12, 5, 5, 5));
+        tab.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Armazém");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -32,7 +32,7 @@ final class StockWarehousesPanel {
                 .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedWarehouse);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
-        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setBorder(new EmptyBorder(8, 12, 8, 12));
         String[] cols = {"Nome", "Nº", "Tipo", "Capacidade", "Localização", "Responsável", "Telefone", "Vendas", "Estado"};
         owner.warehousesModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -55,7 +55,7 @@ final class StockWarehousesPanel {
         UIHelper.styleComboBox(whTipo);
         whTipo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JComboBox<String> whEstado = TableFilter.combo("Todos os estados", "ACTIVO", "INATIVO");
+        JComboBox<String> whEstado = TableFilter.combo("Todos os estados", "Activo", "Inactivo");
         UIHelper.styleComboBox(whEstado);
         whEstado.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
 
@@ -63,28 +63,53 @@ final class StockWarehousesPanel {
                 new TableFilter.ColumnFilter(whTipo, 2),
                 new TableFilter.ColumnFilter(whEstado, 8));
 
-        JPanel whFilters = new JPanel(new GridBagLayout());
-        whFilters.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.gridy = 0;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.insets = new Insets(0, 0, 0, 12);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes do armazém (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar armazém");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        g.gridx = 0; g.weightx = 0; whFilters.add(filterLabel("Tipo de Armazém"), g);
-        g.gridx = 1; g.weightx = 0; whFilters.add(filterLabel("Estado"), g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(0, 0, 0, 0);
-        whFilters.add(filterLabel("Pesquisa"), g);
-
-        g.gridy = 1;
-        g.insets = new Insets(4, 0, 0, 12);
-        g.gridx = 0; g.weightx = 0; whFilters.add(whTipo, g);
-        g.gridx = 1; g.weightx = 0; whFilters.add(whEstado, g);
-        g.gridx = 2; g.weightx = 1.0; g.insets = new Insets(4, 0, 0, 0);
-        whFilters.add(whSearch, g);
-
-        whFilters.setBorder(new EmptyBorder(0, 0, 12, 0));
+        JPanel whFilters = TableFilter.bar(
+                whSearch,
+                TableFilter.label("Tipo:"), whTipo,
+                TableFilter.label("Estado:"), whEstado,
+                peekToggleBtn
+        );
+        whFilters.setBorder(new EmptyBorder(0, 0, 4, 0));
         card.add(UIHelper.tableCardTop("Gestão de Armazéns", whFilters,
                 refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
+        UIHelper.ensureHeadersFit(owner.warehousesTable);
+        TableQuickPeekController peekController = TableQuickPeekController.install(owner.warehousesTable, card, (peek, mr) -> {
+            if (mr < 0 || mr >= owner.warehousesModel.getRowCount()) return;
+            String name = String.valueOf(owner.warehousesModel.getValueAt(mr, 0));
+            String num = String.valueOf(owner.warehousesModel.getValueAt(mr, 1));
+            String type = String.valueOf(owner.warehousesModel.getValueAt(mr, 2));
+            String cap = String.valueOf(owner.warehousesModel.getValueAt(mr, 3));
+            String loc = String.valueOf(owner.warehousesModel.getValueAt(mr, 4));
+            String resp = String.valueOf(owner.warehousesModel.getValueAt(mr, 5));
+            String tel = String.valueOf(owner.warehousesModel.getValueAt(mr, 6));
+            String email = String.valueOf(owner.warehousesModel.getValueAt(mr, 7));
+            String status = String.valueOf(owner.warehousesModel.getValueAt(mr, 8));
+
+            peek.setTitle(name);
+            peek.setSubtitle("Nº " + num + " • " + type);
+            peek.setItems(java.util.List.of(
+                    new QuickPeekPanel.PeekItem("Tipo", type, false),
+                    new QuickPeekPanel.PeekItem("Capacidade", cap, false),
+                    new QuickPeekPanel.PeekItem("Localização", loc, false),
+                    new QuickPeekPanel.PeekItem("Responsável", resp, false),
+                    new QuickPeekPanel.PeekItem("Telefone", tel, false),
+                    new QuickPeekPanel.PeekItem("Email", email, false),
+                    new QuickPeekPanel.PeekItem("Estado", status, true)
+            ));
+            peek.getOpenFullButton().setText("Editar Armazém");
+            peek.setOnOpenFullAction(v -> {
+                WarehouseDTO w = selectedManagedWarehouse();
+                if (w != null) warehouseDialog(w);
+            });
+        });
+        peekToggleBtn.addActionListener(e -> peekController.toggle());
+
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(owner.warehousesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);

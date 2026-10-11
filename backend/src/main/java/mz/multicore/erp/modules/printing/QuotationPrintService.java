@@ -61,13 +61,14 @@ public class QuotationPrintService {
             ));
             doc.add(ClientBlockRenderer.build(quotation.getClient(), quotation.getWalkInName(),
                     quotation.getQuotationDate(), null));
-            doc.add(buildValidityBlock(quotation));
-            doc.add(LineItemsTableRenderer.build(toRows(quotation.getLines()),
+            List<LineItemsTableRenderer.Row> rows = toRows(quotation.getLines());
+            doc.add(LineItemsTableRenderer.build(rows,
                     documentConfigService.getColumns(quotation.getCompany().getId(), DocumentType.COMMERCIAL)));
             doc.add(TotalsBlockRenderer.build(
                     quotation.getTotalBeforeTax(),
                     quotation.getTaxAmount(),
-                    quotation.getTotalAmount()
+                    quotation.getTotalAmount(),
+                    TotalsBlockRenderer.calculateBreakdowns(rows)
             ));
             doc.add(PdfDocumentBuilder.spacer(10f));
             // Bloco partilhado com a encomenda A4 — são o mesmo acordo, não podem divergir.
@@ -81,6 +82,72 @@ public class QuotationPrintService {
                     "Pela empresa", "Aceite pelo cliente (nome, assinatura e data)"));
             doc.add(PdfDocumentBuilder.spacer(8f));
             doc.add(disclaimer());
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] renderThermal(Long quotationId) {
+        Quotation quotation = quotationRepository
+                .findByIdWithLinesAndCompanyId(quotationId, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Cotação não encontrada."));
+
+        return PdfDocumentBuilder.buildReceipt(doc -> {
+            ThermalReceiptRenderer.companyHeader(doc, quotation.getCompany());
+
+            ThermalReceiptRenderer.centered(doc, "COTAÇÃO COMERCIAL (80mm)", PdfTheme.boldFont());
+            ThermalReceiptRenderer.centered(doc, quotation.getQuotationNumber(), PdfTheme.bodyFont());
+            if (quotation.getQuotationDate() != null) {
+                ThermalReceiptRenderer.centered(doc, "Data: " + quotation.getQuotationDate().format(DATE_FMT), PdfTheme.smallFont());
+            }
+            if (quotation.getValidUntil() != null) {
+                boolean expired = quotation.getValidUntil().isBefore(LocalDate.now());
+                String validityText = "Válida até: " + quotation.getValidUntil().format(DATE_FMT)
+                        + (expired ? " (EXPIRADA)" : "");
+                ThermalReceiptRenderer.centered(doc, validityText, expired ? PdfTheme.boldFont() : PdfTheme.smallFont());
+            }
+
+            String clientName = quotation.getClient() != null ? quotation.getClient().getName() : quotation.getWalkInName();
+            if (clientName != null && !clientName.isBlank()) {
+                ThermalReceiptRenderer.centered(doc, "Cliente: " + clientName, PdfTheme.smallFont());
+            }
+
+            ThermalReceiptRenderer.dottedLine(doc);
+
+            PdfPTable table = new PdfPTable(new float[]{65f, 35f});
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(2f);
+
+            ThermalReceiptRenderer.cell(table, "Artigo", PdfTheme.tableHeaderFont(), Element.ALIGN_LEFT, true);
+            ThermalReceiptRenderer.cell(table, "Total", PdfTheme.tableHeaderFont(), Element.ALIGN_RIGHT, true);
+
+            for (QuotationLine line : quotation.getLines()) {
+                com.lowagie.text.Phrase phrase = new com.lowagie.text.Phrase();
+                phrase.add(new com.lowagie.text.Chunk(line.getProduct().getName(), PdfTheme.bodyFont()));
+                String qtyPrice = line.getQuantity() + " un. × " + MoneyFormat.formatPlain(line.getUnitPrice());
+                if (line.getDiscountPercentage() != null && line.getDiscountPercentage().signum() > 0) {
+                    qtyPrice += " (-" + line.getDiscountPercentage().stripTrailingZeros().toPlainString() + "%)";
+                }
+                phrase.add(new com.lowagie.text.Chunk("\n" + qtyPrice, PdfTheme.smallFont()));
+                PdfPCell descCell = new PdfPCell(phrase);
+                descCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+                descCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+                descCell.setCellEvent(ThermalReceiptRenderer.DOTTED_BOTTOM);
+                descCell.setPadding(3f);
+                table.addCell(descCell);
+
+                ThermalReceiptRenderer.cell(table, MoneyFormat.formatPlain(line.getLineTotal()), PdfTheme.boldFont(), Element.ALIGN_RIGHT, false);
+            }
+            doc.add(table);
+
+            ThermalReceiptRenderer.dottedLine(doc);
+            ThermalReceiptRenderer.right(doc, "Subtotal: " + MoneyFormat.format(quotation.getTotalBeforeTax()), PdfTheme.bodyFont());
+            ThermalReceiptRenderer.right(doc, "IVA:      " + MoneyFormat.format(quotation.getTaxAmount()), PdfTheme.bodyFont());
+            ThermalReceiptRenderer.right(doc, "TOTAL:    " + MoneyFormat.format(quotation.getTotalAmount()), PdfTheme.boldFont());
+
+            ThermalReceiptRenderer.dottedLine(doc);
+            ThermalReceiptRenderer.centered(doc, "PROPOSTA COMERCIAL INFORMATIVA", PdfTheme.smallFont());
+            ThermalReceiptRenderer.centered(doc, "NÃO CONSTITUI DOCUMENTO FISCAL", PdfTheme.smallFont());
+            ThermalReceiptRenderer.centered(doc, "Processado por Computador / Multicore ERP", PdfTheme.smallFont());
         });
     }
 

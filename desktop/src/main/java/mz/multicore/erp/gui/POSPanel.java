@@ -21,6 +21,7 @@ import mz.multicore.erp.desktop.client.FinanceApiClient;
 import mz.multicore.erp.desktop.client.InventoryApiClient;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PromotionApiClient;
+import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.CreateCreditNoteLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreditNoteDTO;
@@ -65,6 +66,7 @@ public class POSPanel extends JPanel {
     final InventoryApiClient inventoryApiClient;
     final FinanceApiClient financeApiClient;
     final PromotionApiClient promotionApiClient;
+    final PrintApiClient printApiClient;
     final mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser;
     final PosContingencyManager contingencyManager;
     final PosContingencySyncService contingencySyncService;
@@ -160,18 +162,36 @@ public class POSPanel extends JPanel {
             InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
             PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser) {
         this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
-                scaleBarcodeParser, new PosContingencyManager(), null);
+                scaleBarcodeParser, new PosContingencyManager(), null, null);
+    }
+
+    public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
+            PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
+            PrintApiClient printApiClient) {
+        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
+                scaleBarcodeParser, new PosContingencyManager(), null, printApiClient);
     }
 
     public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
             InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
             PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             PosContingencyManager contingencyManager, PosContingencySyncService contingencySyncService) {
+        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
+                scaleBarcodeParser, contingencyManager, contingencySyncService, null);
+    }
+
+    public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
+            InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
+            PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
+            PosContingencyManager contingencyManager, PosContingencySyncService contingencySyncService,
+            PrintApiClient printApiClient) {
         this.posApiClient = posApiClient;
         this.comercialApiClient = comercialApiClient;
         this.inventoryApiClient = inventoryApiClient;
         this.financeApiClient = financeApiClient;
         this.promotionApiClient = promotionApiClient;
+        this.printApiClient = printApiClient;
         this.scaleBarcodeParser = scaleBarcodeParser;
         this.contingencyManager = contingencyManager != null ? contingencyManager : new PosContingencyManager();
         this.contingencySyncService = contingencySyncService;
@@ -226,7 +246,8 @@ public class POSPanel extends JPanel {
         operationsMenu = UIHelper.createActionMenuButton("Operações")
                 .addAction("Importar Cotação (F7)", UIHelper.icon("fas-file-import", 14, UIHelper.ACCENT_CYAN), () -> quotationActions.openImportDialog())
                 .addAction("Programa de Fidelidade", UIHelper.icon("fas-star", 14, UIHelper.ACCENT), this::openLoyaltyDialog)
-                .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> cashSessionActions.showSessionHistory());
+                .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> cashSessionActions.showSessionHistory())
+                .addAction("Atalhos de Teclado (F1)", UIHelper.icon("fas-keyboard", 14, UIHelper.ACCENT_CYAN), () -> PosKeyboardShortcutsHandler.showHelp(this));
         operationsMenu.setToolTipText("Ações e ferramentas adicionais do ponto de venda");
 
         JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -453,6 +474,7 @@ public class POSPanel extends JPanel {
         cartTable.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
         cartTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         PosLayout.configureOperationalCartColumns(cartTable);
+        UIHelper.ensureHeadersFit(cartTable);
         // Altura confortável: viewport para ~12 linhas; o scroll trata do excesso de produtos.
         cartTable.setPreferredScrollableViewportSize(new Dimension(620, cartTable.getRowHeight() * 12));
         JScrollPane cartScroll = new JScrollPane(cartTable);
@@ -560,7 +582,6 @@ public class POSPanel extends JPanel {
         viewCards.add(salesTab, "venda");
         viewCards.add(buildSalesHistoryTab(), "hist");
         add(viewCards, BorderLayout.CENTER);
-        add(new PosShortcutBar(this), BorderLayout.SOUTH);
         selectView(false);
 
         // LISTENERS

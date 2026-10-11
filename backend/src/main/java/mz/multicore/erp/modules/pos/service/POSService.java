@@ -219,13 +219,15 @@ public class POSService {
     @Transactional
     public TillSession openSession(String operator, BigDecimal openingBalance, Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        Optional<TillSession> active = getActiveSession(operator, companyId);
+        // Serializa a verificação + criação entre todas as instâncias do backend. Sem este mutex,
+        // dois pedidos podiam observar "nenhuma sessão" e ambos criar uma sessão OPEN.
+        Company company = companyRepository.lockById(companyId)
+                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Optional<TillSession> active = tillSessionRepository
+                .findActiveSessionForOperator(operator, "OPEN", companyId);
         if (active.isPresent()) {
             throw new BusinessRuleException("Já possui uma sessão de caixa aberta para este operador.");
         }
-
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
 
         TillSession session = new TillSession();
         session.setOperator(operator);
@@ -255,14 +257,14 @@ public class POSService {
      */
     @Transactional
     public TillSession closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId, String notes, String cashBreakdownJson) {
-        TillSession session = tillSessionRepository.findById(sessionId)
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        TillSession session = tillSessionRepository.lockByIdAndCompanyId(sessionId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
 
         if (!"OPEN".equals(session.getStatus())) {
             throw new BusinessRuleException("Sessão de caixa já se encontra fechada.");
         }
 
-        CurrentUserContext.requireCompany(session.getCompany().getId());
         BigDecimal expected = computeExpectedCash(sessionId, session.getOpeningBalance());
 
         session.setClosingBalanceReal(closingBalanceReal);

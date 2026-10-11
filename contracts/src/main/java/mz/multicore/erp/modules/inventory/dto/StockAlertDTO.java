@@ -7,5 +7,11 @@ public record StockAlertDTO(
         Long productId,
         String sku,
         String name,
-        BigDecimal currentStock
-) {}
+        BigDecimal currentStock,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public StockAlertDTO(Long productId, String sku, String name, BigDecimal currentStock) {
+        this(productId, sku, name, currentStock, null, null);
+    }
+}

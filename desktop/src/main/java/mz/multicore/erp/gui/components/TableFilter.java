@@ -30,6 +30,16 @@ public final class TableFilter {
     private TableFilter() {}
 
     /** Dropdown que filtra uma coluna pelo texto exacto; índice 0 do combo = "sem filtro". */
+    /** Dropdown que filtra uma coluna verificando se a celula contem a opcao escolhida; indice 0 = "sem filtro". */
+    public static final class ContainsColumnFilter {
+        final JComboBox<String> combo;
+        final int column;
+        public ContainsColumnFilter(JComboBox<String> combo, int column) {
+            this.combo = combo;
+            this.column = column;
+        }
+    }
+
     public static final class ColumnFilter {
         final JComboBox<String> combo;
         final int column;
@@ -47,6 +57,20 @@ public final class TableFilter {
     /** Instala pesquisa + filtros por coluna (tipo/estado) + filtros por período (data). */
     public static void install(JTable table, JTextField search,
                                List<ColumnFilter> columnFilters, List<PeriodFilter> periodFilters) {
+        install(table, search, columnFilters, periodFilters, List.of());
+    }
+
+    /** Instala pesquisa, filtros exactos, períodos predefinidos e intervalos de datas livres. */
+    public static void install(JTable table, JTextField search,
+                               List<ColumnFilter> columnFilters, List<PeriodFilter> periodFilters,
+                               List<DateRangeFilter> dateRangeFilters) {
+        install(table, search, columnFilters, periodFilters, dateRangeFilters, List.of());
+    }
+
+    public static void install(JTable table, JTextField search,
+                               List<ColumnFilter> columnFilters, List<PeriodFilter> periodFilters,
+                               List<DateRangeFilter> dateRangeFilters,
+                               List<ContainsColumnFilter> containsColumnFilters) {
         TableRowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
         table.setRowSorter(sorter);
 
@@ -75,6 +99,20 @@ public final class TableFilter {
                             return false;
                         }
                     }
+                    for (DateRangeFilter rf : dateRangeFilters) {
+                        String cell = rf.column >= 0 && rf.column < cells.size() ? cells.get(rf.column) : "";
+                        if (!matchesDateRange(parseCellDate(cell), rf.from.getDate(), rf.to.getDate())) {
+                            return false;
+                        }
+                    }
+                    for (ContainsColumnFilter ccf : containsColumnFilters) {
+                        if (ccf.combo.getSelectedIndex() <= 0) continue;
+                        String want = String.valueOf(ccf.combo.getSelectedItem()).trim().toLowerCase(Locale.ROOT);
+                        String cell = ccf.column >= 0 && ccf.column < cells.size() ? cells.get(ccf.column) : "";
+                        if (!cell.toLowerCase(Locale.ROOT).contains(want)) {
+                            return false;
+                        }
+                    }
                     return true;
                 }
             });
@@ -89,19 +127,39 @@ public final class TableFilter {
         }
         for (ColumnFilter cf : columnFilters) cf.combo.addActionListener(e -> apply.run());
         for (PeriodFilter pf : periodFilters) pf.combo.addActionListener(e -> apply.run());
+        for (DateRangeFilter rf : dateRangeFilters) {
+            rf.from.getDocument().addDocumentListener(listener(apply));
+            rf.to.getDocument().addDocumentListener(listener(apply));
+        }
+        for (ContainsColumnFilter ccf : containsColumnFilters) ccf.combo.addActionListener(e -> apply.run());
         apply.run();
+    }
+
+    private static DocumentListener listener(Runnable action) {
+        return new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { action.run(); }
+            @Override public void removeUpdate(DocumentEvent e) { action.run(); }
+            @Override public void changedUpdate(DocumentEvent e) { action.run(); }
+        };
     }
 
     /**
      * Lógica pura: a linha passa se o texto de pesquisa aparecer em alguma célula (case-insensitive)
-     * e cada coluna com filtro corresponder exactamente ao valor escolhido.
+     * e cada coluna com filtro corresponder ao valor escolhido (com suporte bi-direcional a enums e rótulos PT-MZ).
      */
     public static boolean rowMatches(List<String> cells, String search, Map<Integer, String> exactByColumn) {
         if (search != null && !search.isBlank()) {
-            String q = search.trim().toLowerCase(Locale.ROOT);
+            String q = normalizeText(search);
             boolean any = false;
             for (String c : cells) {
-                if (c != null && c.toLowerCase(Locale.ROOT).contains(q)) { any = true; break; }
+                if (c != null) {
+                    String cNorm = normalizeText(c);
+                    String hNorm = normalizeText(UIHelper.humanStatus(c));
+                    if (cNorm.contains(q) || hNorm.contains(q)) {
+                        any = true;
+                        break;
+                    }
+                }
             }
             if (!any) return false;
         }
@@ -111,10 +169,49 @@ public final class TableFilter {
                 if (want == null || want.isBlank()) continue;
                 int col = en.getKey();
                 String cell = (col >= 0 && col < cells.size()) ? cells.get(col) : "";
-                if (!want.equalsIgnoreCase(cell == null ? "" : cell.trim())) return false;
+                if (!cellMatches(cell, want)) return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Verifica correspondência entre a célula e o critério de filtro.
+     * Suporta tanto o enum em inglês (`PENDING`, `BILLED`) quanto o rótulo PT-MZ (`Pendente`, `Facturado`).
+     */
+    public static boolean cellMatches(String cell, String want) {
+        if (want == null || want.isBlank() || want.startsWith("Todos") || want.startsWith("Todas") || want.equalsIgnoreCase("Todos")) {
+            return true;
+        }
+        if (cell == null) cell = "";
+        cell = cell.trim();
+        want = want.trim();
+        if (want.equalsIgnoreCase(cell)) return true;
+
+        String cellNorm = normalizeText(cell);
+        String wantNorm = normalizeText(want);
+        if (cellNorm.equalsIgnoreCase(wantNorm)) return true;
+
+        String cellHuman = UIHelper.humanStatus(cell);
+        if (want.equalsIgnoreCase(cellHuman) || wantNorm.equalsIgnoreCase(normalizeText(cellHuman))) return true;
+
+        String wantHuman = UIHelper.humanStatus(want);
+        if (cell.equalsIgnoreCase(wantHuman) || cellNorm.equalsIgnoreCase(normalizeText(wantHuman))) return true;
+
+        if (cellHuman.equalsIgnoreCase(wantHuman) || normalizeText(cellHuman).equalsIgnoreCase(normalizeText(wantHuman))) return true;
+
+        // Equivalência canónica de encomenda: "PENDING" corresponde a "Pendente" ou "Por facturar"
+        if (("PENDING".equalsIgnoreCase(cell) || "POR FACTURAR".equalsIgnoreCase(cellNorm) || "PENDENTE".equalsIgnoreCase(cellNorm))
+                && ("PENDENTE".equalsIgnoreCase(wantNorm) || "POR FACTURAR".equalsIgnoreCase(wantNorm) || "PENDING".equalsIgnoreCase(want))) {
+            return true;
+        }
+        return false;
+    }
+
+    private static String normalizeText(String s) {
+        if (s == null) return "";
+        return java.text.Normalizer.normalize(s.trim().toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
     }
 
     /** Linha do modelo correspondente à selecção (converte da vista); -1 se nada seleccionado. */
@@ -133,6 +230,26 @@ public final class TableFilter {
             this.combo = combo;
             this.column = column;
         }
+    }
+
+    /** Intervalo inclusivo aplicado a uma coluna cuja data começa por dd/MM/yyyy. */
+    public static final class DateRangeFilter {
+        final DateField from;
+        final DateField to;
+        final int column;
+
+        public DateRangeFilter(DateField from, DateField to, int column) {
+            this.from = from;
+            this.to = to;
+            this.column = column;
+        }
+    }
+
+    public static boolean matchesDateRange(java.time.LocalDate date, java.time.LocalDate from,
+                                           java.time.LocalDate to) {
+        if (from == null && to == null) return true;
+        if (date == null) return false;
+        return (from == null || !date.isBefore(from)) && (to == null || !date.isAfter(to));
     }
 
     /** Combo de período pronto (com ícone de calendário via label na barra). */

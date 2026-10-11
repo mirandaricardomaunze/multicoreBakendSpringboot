@@ -322,4 +322,48 @@ class AutomaticPostingServiceTest {
         verify(journalService, never()).save(any(), any());
         verify(auditLogService).logEvent(any(), eq(COMPANY_ID), eq("PAYROLL_POSTING_SKIPPED"), any());
     }
+
+    @Test
+    void ordemProducaoConcluida_debitaProdutosAcabados_creditaVariacaoProducao() {
+        var event = new mz.multicore.erp.architecture.events.ProductionCompletedEvent(
+                COMPANY_ID, 101L, "OP-2026/001", HOJE, new BigDecimal("125000.00"));
+
+        service.onProductionCompleted(event);
+
+        JournalEntry entry = captureEntry();
+        assertTrue(entry.isBalanced());
+        assertEquals(new BigDecimal("125000.00"), debitOf(entry, PgcNirfChart.PRODUTOS_ACABADOS));
+        assertEquals(new BigDecimal("125000.00"), creditOf(entry, PgcNirfChart.VARIACAO_PRODUCAO));
+        assertEquals(JournalSource.PRODUCTION, entry.getSource());
+        assertEquals("OP-2026/001", entry.getSourceDocumentNumber());
+    }
+
+    @Test
+    void depreciacaoActivo_debitaGastosExercicio_creditaAmortizacoesAcumuladas() {
+        var event = new mz.multicore.erp.architecture.events.AssetDepreciatedEvent(
+                COMPANY_ID, 201L, "ATV-001", HOJE, new BigDecimal("15000.00"));
+
+        service.onAssetDepreciated(event);
+
+        JournalEntry entry = captureEntry();
+        assertTrue(entry.isBalanced());
+        assertEquals(new BigDecimal("15000.00"), debitOf(entry, PgcNirfChart.DEPRECIACAO_EXERCICIO));
+        assertEquals(new BigDecimal("15000.00"), creditOf(entry, PgcNirfChart.AMORTIZACOES_ACUMULADAS));
+        assertEquals(JournalSource.ASSET_DEPRECIATION, entry.getSource());
+        assertEquals("ATV-001", entry.getSourceDocumentNumber());
+    }
+
+    @Test
+    void abastecimentoFrota_debitaCombustiveis_creditaCaixa() {
+        var event = new mz.multicore.erp.architecture.events.FleetFuelLoggedEvent(
+                COMPANY_ID, 301L, "AF-89-MC", HOJE, new BigDecimal("4350.00"), true);
+
+        service.onFleetFuelLogged(event);
+
+        JournalEntry entry = captureEntry();
+        assertTrue(entry.isBalanced());
+        assertEquals(new BigDecimal("4350.00"), debitOf(entry, PgcNirfChart.FROTA_COMBUSTIVEIS));
+        assertEquals(new BigDecimal("4350.00"), creditOf(entry, PgcNirfChart.CAIXA));
+        assertEquals(JournalSource.FLEET_FUEL, entry.getSource());
+    }
 }

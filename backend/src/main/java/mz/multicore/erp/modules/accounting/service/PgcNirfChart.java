@@ -40,6 +40,11 @@ public final class PgcNirfChart {
     public static final String ENCARGOS_PESSOAL = "6302";   // INSS patronal: custo da empresa
     public static final String VENDAS = "7101";
     public static final String OUTROS_PROVEITOS_OPERACIONAIS = "7501";
+    public static final String PRODUTOS_ACABADOS = "3401";
+    public static final String AMORTIZACOES_ACUMULADAS = "2801";
+    public static final String FROTA_COMBUSTIVEIS = "6221";
+    public static final String DEPRECIACAO_EXERCICIO = "6501";
+    public static final String VARIACAO_PRODUCAO = "7301";
 
     public static List<Seed> accounts() {
         return List.of(
@@ -67,11 +72,15 @@ public final class PgcNirfChart {
                 new Seed("26", "Pessoal", AccountNature.CREDORA, false),
                 new Seed(PESSOAL_REMUNERACOES, "Remunerações a pagar", AccountNature.CREDORA, true),
                 new Seed(PESSOAL_OUTROS_DESCONTOS, "Outros descontos ao pessoal", AccountNature.CREDORA, true),
+                new Seed("28", "Amortizações acumuladas", AccountNature.CREDORA, false),
+                new Seed(AMORTIZACOES_ACUMULADAS, "Amortizações acumuladas de activos tangíveis", AccountNature.CREDORA, true),
 
                 // Classe 3 — Existências
                 new Seed("3", "Existências", AccountNature.DEVEDORA, false),
                 new Seed("32", "Mercadorias", AccountNature.DEVEDORA, false),
                 new Seed(MERCADORIAS, "Mercadorias em armazém", AccountNature.DEVEDORA, true),
+                new Seed("34", "Produtos acabados e intermédios", AccountNature.DEVEDORA, false),
+                new Seed(PRODUTOS_ACABADOS, "Produtos acabados em armazém", AccountNature.DEVEDORA, true),
 
                 // Classe 5 — Capital
                 new Seed("5", "Capital, reservas e resultados transitados", AccountNature.CREDORA, false),
@@ -84,10 +93,13 @@ public final class PgcNirfChart {
                 new Seed(CMVMC, "Custo das mercadorias vendidas", AccountNature.DEVEDORA, true),
                 new Seed("62", "Fornecimentos e serviços de terceiros", AccountNature.DEVEDORA, false),
                 new Seed("6201", "Fornecimentos e serviços de terceiros", AccountNature.DEVEDORA, true),
+                new Seed(FROTA_COMBUSTIVEIS, "Combustíveis e lubrificantes da frota", AccountNature.DEVEDORA, true),
                 new Seed("63", "Custos com o pessoal", AccountNature.DEVEDORA, false),
                 new Seed(CUSTOS_PESSOAL, "Remunerações do pessoal", AccountNature.DEVEDORA, true),
                 new Seed(ENCARGOS_PESSOAL, "Encargos sobre remunerações (INSS patronal)",
                         AccountNature.DEVEDORA, true),
+                new Seed("65", "Amortizações do exercício", AccountNature.DEVEDORA, false),
+                new Seed(DEPRECIACAO_EXERCICIO, "Amortizações e depreciações do exercício", AccountNature.DEVEDORA, true),
 
                 // Classe 7 — Proveitos e ganhos
                 new Seed("7", "Proveitos e ganhos", AccountNature.CREDORA, false),
@@ -95,6 +107,8 @@ public final class PgcNirfChart {
                 new Seed(VENDAS, "Vendas de mercadorias", AccountNature.CREDORA, true),
                 new Seed("72", "Prestações de serviços", AccountNature.CREDORA, false),
                 new Seed("7201", "Prestações de serviços", AccountNature.CREDORA, true),
+                new Seed("73", "Variação de produção", AccountNature.CREDORA, false),
+                new Seed(VARIACAO_PRODUCAO, "Variação da produção industrial", AccountNature.CREDORA, true),
                 new Seed("75", "Outros proveitos operacionais", AccountNature.CREDORA, false),
                 new Seed(OUTROS_PROVEITOS_OPERACIONAIS, "Outros proveitos operacionais",
                         AccountNature.CREDORA, true),

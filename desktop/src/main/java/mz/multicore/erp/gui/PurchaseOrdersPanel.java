@@ -26,6 +26,12 @@ final class PurchaseOrdersPanel {
     private JTable poLinesTable;
     private DefaultTableModel poListModel;
     private JTable poListTable;
+    private final CardLayout pages = new CardLayout();
+    private DocumentEditorHost editorHost;
+    private PurchaseOrderDTO editingOrder;
+    private boolean lineGridEditable;
+    private boolean syncingPoLines;
+    private boolean editorDirty;
     PurchaseOrdersPanel(ComprasPanel owner) { this.owner = owner; }
 
     public void refreshCombos() {
@@ -41,7 +47,7 @@ final class PurchaseOrdersPanel {
     // ===== Encomendas a Fornecedor =====
 
     public JPanel buildPanel() {
-        JPanel tab = new JPanel(new BorderLayout(0, 12));
+        JPanel tab = new JPanel(pages);
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(12, 5, 5, 5));
 
@@ -84,12 +90,25 @@ final class PurchaseOrdersPanel {
         formCard.add(addRow, g);
 
         // ---- linhas (rascunho) ----
-        String[] lineCols = {"Produto", "Qtd", "Preço Unit.", "Lote", "Validade", "Total"};
+        String[] lineCols = {"Produto", "Qtd", "Emb.", "Cx.", "A receber agora", "Preço Unit.", "Lote", "Validade", "Série", "Total"};
         owner.poLinesModel = new DefaultTableModel(lineCols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override public boolean isCellEditable(int r, int c) {
+                if (!lineGridEditable) return false;
+                if (editingOrder != null && ("ORDERED".equals(editingOrder.status())
+                        || "PARTIALLY_RECEIVED".equals(editingOrder.status()))) return c == 4;
+                return lineGridEditable && (c <= 3 || (c >= 5 && c <= 8));
+            }
         };
         poLinesTable = new JTable(owner.poLinesModel);
         UIHelper.styleTable(poLinesTable);
+        poLinesTable.setSurrendersFocusOnKeystroke(true);
+        poLinesTable.getModel().addTableModelListener(event -> {
+            if (syncingPoLines || event.getFirstRow() < 0
+                    || event.getType() != javax.swing.event.TableModelEvent.UPDATE) return;
+            syncPoLineFromGrid(event.getFirstRow(), event.getColumn());
+        });
+        UIHelper.installDocumentGridShortcuts(poLinesTable, this::addBlankPoLine,
+                this::removeSelectedPoLine, this::savePurchaseOrder, this::openPoProductLookup);
         JScrollPane linesScroll = new JScrollPane(poLinesTable);
         UIHelper.styleScrollPane(linesScroll);
 
@@ -103,7 +122,17 @@ final class PurchaseOrdersPanel {
         ModernPanel draftCard = new ModernPanel(16);
         draftCard.setLayout(new BorderLayout(0, 10));
         draftCard.setBorder(new EmptyBorder(12, 16, 12, 16));
-        draftCard.add(UIHelper.createSubheading("Linhas da Encomenda"), BorderLayout.NORTH);
+        ModernButton addGridLineBtn = UIHelper.createAddLineButton();
+        addGridLineBtn.setText("Adicionar linha");
+        addGridLineBtn.addActionListener(event -> addBlankPoLine());
+        ModernButton removeGridLineBtn = UIHelper.createDangerButton("Remover item");
+        removeGridLineBtn.setIcon(UIHelper.icon("fas-trash", 14));
+        removeGridLineBtn.addActionListener(event -> removeSelectedPoLine());
+        ModernButton lookupBtn = UIHelper.createProductLookupButton(this::openPoProductLookup);
+        JLabel gridHint = new JLabel("Edição directa na grelha: Produto, Qtd, Emb., Cx., preço, lote, validade e série.");
+        gridHint.setForeground(UIHelper.TEXT_MUTED);
+        draftCard.add(UIHelper.tableCardTop("Linhas da Encomenda", gridHint,
+                lookupBtn, addGridLineBtn, removeGridLineBtn), BorderLayout.NORTH);
         draftCard.add(linesScroll, BorderLayout.CENTER);
         draftCard.add(poFooter, BorderLayout.SOUTH);
 
@@ -115,26 +144,22 @@ final class PurchaseOrdersPanel {
         owner.poFormContent = poFormContentPanel;
 
         // ---- lista de encomendas (base) ----
-        JPanel listHeader = new JPanel(new BorderLayout(8, 0)); listHeader.setOpaque(false);
-        listHeader.add(UIHelper.createHeading("Encomendas Registadas"), BorderLayout.WEST);
-
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> { owner.poSearchField.setText(""); refresh(); });
 
         ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações da Encomenda");
+        actionsMenu.addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), this::openSelectedEditor);
         actionsMenu.addAction("Receber Encomenda", UIHelper.icon("fas-dolly", 14, UIHelper.APPROVED_GREEN), this::receiveSelectedPO);
-        actionsMenu.addAction("Receber Parcial…", UIHelper.icon("fas-dolly-flatbed", 14, UIHelper.ACCENT_BLUE), this::receivePartialSelectedPO);
+        actionsMenu.addAction("Receber Parcial", UIHelper.icon("fas-dolly-flatbed", 14, UIHelper.ACCENT_BLUE), this::receivePartialSelectedPO);
         actionsMenu.addAction("Imprimir Etiquetas", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT), this::printSelectedPOReceiptLabels);
         actionsMenu.addAction("Cancelar Encomenda", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), this::cancelSelectedPO);
 
-        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda…");
+        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda");
         newOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         newOrderBtn.addActionListener(e -> openPurchaseOrderFormDialog());
 
-        listHeader.add(UIHelper.actionsBar(refreshBtn, actionsMenu, newOrderBtn), BorderLayout.EAST);
-
-        String[] cols = {"Nº", "Fornecedor", "Estado", "Total", "Data", "Entrega prev."};
+        String[] cols = {"Nº", "Fornecedor", "Estado", "Total", "Data", "Entrega prev.", "Negócio"};
         poListModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -142,55 +167,95 @@ final class PurchaseOrdersPanel {
         UIHelper.styleTable(poListTable);
         poListTable.getColumnModel().getColumn(2).setCellRenderer(TableCellRenderers.status());
         poListTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
+        poListTable.getColumnModel().getColumn(6).setPreferredWidth(110);
+        UIHelper.ensureHeadersFit(poListTable);
         JScrollPane listScroll = new JScrollPane(poListTable);
         UIHelper.styleScrollPane(listScroll);
 
         owner.poSearchField = TableFilter.searchField("Nº ou fornecedor…");
+        owner.poBusinessUnitCombo = TableFilter.combo("Todos os negócios");
         JComboBox<String> poEstado = TableFilter.combo("Todos os estados",
-                "ORDERED", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED");
-        UIHelper.styleComboBox(poEstado);
-        poEstado.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
-
+                "Encomendado", "Parcialmente recebido", "Recebido", "Cancelado");
         JComboBox<String> poPeriodo = TableFilter.periodCombo();
-        UIHelper.styleComboBox(poPeriodo);
-        poPeriodo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(poListTable, owner.poSearchField,
-                java.util.List.of(new TableFilter.ColumnFilter(poEstado, 2)),
+                java.util.List.of(
+                        new TableFilter.ColumnFilter(owner.poBusinessUnitCombo, 6),
+                        new TableFilter.ColumnFilter(poEstado, 2)),
                 java.util.List.of(new TableFilter.PeriodFilter(poPeriodo, 4)));
 
-        JPanel poFilters = new JPanel(new GridBagLayout());
-        poFilters.setOpaque(false);
-        GridBagConstraints pg = new GridBagConstraints();
-        pg.gridy = 0;
-        pg.fill = GridBagConstraints.HORIZONTAL;
-        pg.insets = new Insets(0, 0, 0, 12);
+        JPanel poFilters = TableFilter.bar(
+                owner.poSearchField,
+                TableFilter.label("Negócio:"), owner.poBusinessUnitCombo,
+                TableFilter.label("Estado:"), poEstado,
+                TableFilter.label("Período:"), poPeriodo);
 
-        pg.gridx = 0; pg.weightx = 0; poFilters.add(filterLabel("Estado"), pg);
-        pg.gridx = 1; pg.weightx = 0; poFilters.add(filterLabel("Período"), pg);
-        pg.gridx = 2; pg.weightx = 1.0; pg.insets = new Insets(0, 0, 0, 0);
-        poFilters.add(filterLabel("Pesquisa"), pg);
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da encomenda (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        pg.gridy = 1;
-        pg.insets = new Insets(4, 0, 0, 12);
-        pg.gridx = 0; pg.weightx = 0; poFilters.add(poEstado, pg);
-        pg.gridx = 1; pg.weightx = 0; poFilters.add(poPeriodo, pg);
-        pg.gridx = 2; pg.weightx = 1.0; pg.insets = new Insets(4, 0, 0, 0);
-        poFilters.add(owner.poSearchField, pg);
-
-        poFilters.setBorder(new EmptyBorder(10, 0, 0, 0));
-        listHeader.add(poFilters, BorderLayout.SOUTH);
+        JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
+        filtersRow.setOpaque(false);
+        filtersRow.setBorder(new EmptyBorder(0, 0, 6, 0));
+        filtersRow.add(poFilters, BorderLayout.WEST);
+        filtersRow.add(peekToggleBtn, BorderLayout.EAST);
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 10));
         listCard.setBorder(new EmptyBorder(12, 16, 12, 16));
-        listCard.add(listHeader, BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Encomendas Registadas", filtersRow,
+                refreshBtn, actionsMenu, newOrderBtn), BorderLayout.NORTH);
         listCard.add(listScroll, BorderLayout.CENTER);
         listCard.add(ClientTablePagination.install(poListTable), BorderLayout.SOUTH);
 
-        // Lista de encomendas ocupa a tab inteira; o formulário vive no modal.
-        tab.add(listCard, BorderLayout.CENTER);
+        TableQuickPeekController peek = TableQuickPeekController.install(poListTable, listCard, this::populatePeek);
+        peekToggleBtn.addActionListener(e -> peek.toggle());
+
+        JPanel listPage = new JPanel(new BorderLayout());
+        listPage.setOpaque(false);
+        listPage.add(listCard, BorderLayout.CENTER);
+        editorHost = new DocumentEditorHost("Nova Encomenda", owner.poFormContent,
+                this::savePurchaseOrder, () -> pages.show(tab, "LIST"), () -> editorDirty);
+        tab.add(listPage, "LIST");
+        tab.add(editorHost, "EDITOR");
+        pages.show(tab, "LIST");
         return tab;
+    }
+
+    private void populatePeek(QuickPeekPanel peek, int modelRow) {
+        if (owner.poList == null || modelRow < 0 || modelRow >= owner.poList.size()) return;
+        PurchaseOrderDTO order = owner.poList.get(modelRow);
+        String status = order.status() != null ? order.status() : "PENDING";
+        Color statusColor = "RECEIVED".equalsIgnoreCase(status) ? UIHelper.APPROVED_GREEN
+                : ("CANCELLED".equalsIgnoreCase(status) ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
+
+        peek.setHeaderIcon("fas-clipboard-check", UIHelper.ACCENT_BLUE);
+        peek.setTitle("Encomenda " + (order.orderNumber() != null ? order.orderNumber() : ""));
+        peek.setSubtitle(order.supplierName() != null ? order.supplierName() : "—");
+        peek.setStatus(UIHelper.humanStatus(status), statusColor);
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
+        items.add(new QuickPeekPanel.PeekItem("Fornecedor", order.supplierName() != null ? order.supplierName() : "-", false));
+        if (order.businessUnitName() != null && !order.businessUnitName().isBlank()) {
+            items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", order.businessUnitName(), false));
+        }
+        items.add(new QuickPeekPanel.PeekItem("Data Emissão", order.orderDate() != null ? order.orderDate().format(dtf) : "-", false));
+        items.add(new QuickPeekPanel.PeekItem("Entrega Prevista", order.expectedDate() != null ? order.expectedDate().toString() : "-", false));
+        int itemCount = order.lines() != null ? order.lines().size() : 0;
+        items.add(new QuickPeekPanel.PeekItem("Itens Encomendados", String.valueOf(itemCount), false));
+        BigDecimal total = order.totalAmount() != null ? order.totalAmount() : BigDecimal.ZERO;
+        items.add(new QuickPeekPanel.PeekItem("Valor Total", String.format("%,.2f MT", total), true));
+        peek.setItems(items);
+
+        if ("ORDERED".equalsIgnoreCase(status) || "PARTIALLY_RECEIVED".equalsIgnoreCase(status)) {
+            peek.getOpenFullButton().setText("Receber Encomenda");
+            peek.setOnOpenFullAction(ignored -> receiveSelectedPO());
+        } else {
+            peek.setOnOpenFullAction(null);
+        }
     }
 
     void openPurchaseOrderFormDialog() {
@@ -203,6 +268,9 @@ final class PurchaseOrdersPanel {
                     "Registe um fornecedor activo antes de criar a encomenda.");
             return;
         }
+        editingOrder = null;
+        lineGridEditable = true;
+        editorDirty = false;
         // Reset do rascunho ao abrir.
         owner.poDraftLines.clear();
         if (owner.poLinesModel != null) owner.poLinesModel.setRowCount(0);
@@ -232,23 +300,11 @@ final class PurchaseOrdersPanel {
             addPoDraftLine();
         }
 
-        Window parent = SwingUtilities.getWindowAncestor(owner);
-        ModernFormDialog dlg = new ModernFormDialog(parent, "Nova Encomenda a Fornecedor", owner.poFormContent);
-        dlg.setSize(880, 640);
-        PurchaseOrderDTO[] created = new PurchaseOrderDTO[1];
-        dlg.setOnSaveAsync(() -> {
-            CreatePurchaseOrderRequest request = buildPurchaseOrderRequest();
-            return () -> created[0] = owner.purchaseApiClient.createOrder(request);
-        });
-        if (dlg.showDialog()) {
-            owner.poDraftLines.clear();
-            if (owner.poLinesModel != null) owner.poLinesModel.setRowCount(0);
-            recomputePoTotal();
-            poExpectedField.setText("");
-            owner.showPurchaseSuccess("Encomenda " + created[0].orderNumber() + " criada.");
-            refresh();
-            owner.reorderPanel.refresh();
-        }
+        configureProductCellEditor();
+        editorHost.setEditorTitle("Nova Encomenda a Fornecedor");
+        editorHost.setSaveText("Emitir Encomenda");
+        editorHost.setSaveEnabled(true);
+        showEditorPage();
     }
 
     private JLabel label(String text) {
@@ -269,14 +325,165 @@ final class PurchaseOrdersPanel {
             if (qty.signum() <= 0 || price.signum() < 0) throw new NumberFormatException();
             owner.poDraftLines.add(new CreatePurchaseOrderLineRequest(
                     product.id(), qty, price, null, null, null));
-            owner.poLinesModel.addRow(new Object[]{
-                    product.name(), qty.toPlainString(),
-                    String.format("%,.2f", price), "-", "-",
-                    String.format("%,.2f MT", qty.multiply(price))});
-            recomputePoTotal();
+            refreshPoRows();
+            editorDirty = true;
             poPackageEditor.reset(); owner.poPriceField.setText("0");
         } catch (IllegalArgumentException ignored) {
             // Os campos canónicos já apresentam o estado inválido no formulário activo.
+        }
+    }
+
+    private void addBlankPoLine() {
+        if (!lineGridEditable) return;
+        stopPoCellEditing();
+        ProductDTO product = owner.productsList.isEmpty() ? null : owner.productsList.get(0);
+        owner.poDraftLines.add(new CreatePurchaseOrderLineRequest(
+                product == null ? 0L : product.id(), BigDecimal.ONE, BigDecimal.ZERO,
+                null, null, null));
+        refreshPoRows();
+        editorDirty = true;
+        int row = poLinesTable.getRowCount() - 1;
+        if (row >= 0) {
+            poLinesTable.setRowSelectionInterval(row, row);
+            poLinesTable.editCellAt(row, 0);
+        }
+    }
+
+    private void removeSelectedPoLine() {
+        if (!lineGridEditable) return;
+        stopPoCellEditing();
+        int viewRow = poLinesTable.getSelectedRow();
+        if (viewRow < 0) return;
+        int row = poLinesTable.convertRowIndexToModel(viewRow);
+        if (row >= 0 && row < owner.poDraftLines.size()) {
+            owner.poDraftLines.remove(row);
+            refreshPoRows();
+            editorDirty = true;
+        }
+    }
+
+    private void configureProductCellEditor() {
+        if (poLinesTable == null || poLinesTable.getColumnCount() == 0) return;
+        ProductSearchComboBox poCellSearchCombo = new ProductSearchComboBox(owner.productsList);
+        poCellSearchCombo.setOnLookupRequested(() -> {
+            stopPoCellEditing();
+            openPoProductLookup();
+        });
+        poLinesTable.getColumnModel().getColumn(0).setCellEditor(ProductSearchComboBox.createTableCellEditor(poCellSearchCombo));
+    }
+
+    private void openPoProductLookup() {
+        if (!lineGridEditable) return;
+        stopPoCellEditing();
+        Window win = SwingUtilities.getWindowAncestor(poLinesTable != null ? poLinesTable : owner);
+        Frame frame = win instanceof Frame f ? f : null;
+        ProductLookupDialog.show(frame, owner.productsList, this::applySelectedPoProducts);
+    }
+
+    private void applySelectedPoProducts(List<ProductDTO> selected) {
+        if (selected == null || selected.isEmpty() || !lineGridEditable) return;
+        stopPoCellEditing();
+        int viewRow = poLinesTable != null ? poLinesTable.getSelectedRow() : -1;
+        int modelRow = (viewRow >= 0 && poLinesTable != null) ? poLinesTable.convertRowIndexToModel(viewRow) : -1;
+        boolean fillCurrent = (modelRow >= 0 && modelRow < owner.poDraftLines.size()
+                && (owner.poDraftLines.get(modelRow).productId() == null || owner.poDraftLines.get(modelRow).productId() <= 0L));
+
+        int targetModelRow = modelRow;
+        for (int i = 0; i < selected.size(); i++) {
+            ProductDTO p = selected.get(i);
+            if (p == null) continue;
+            BigDecimal price = p.purchasePrice() != null ? p.purchasePrice() : (p.unitPrice() != null ? p.unitPrice() : BigDecimal.ZERO);
+            if (i == 0 && fillCurrent) {
+                owner.poDraftLines.set(modelRow, new CreatePurchaseOrderLineRequest(
+                        p.id(), BigDecimal.ONE, price, null, null, null));
+                targetModelRow = modelRow;
+            } else {
+                owner.poDraftLines.add(new CreatePurchaseOrderLineRequest(
+                        p.id(), BigDecimal.ONE, price, null, null, null));
+                targetModelRow = owner.poDraftLines.size() - 1;
+            }
+        }
+        refreshPoRows();
+        editorDirty = true;
+        if (targetModelRow >= 0 && poLinesTable != null && targetModelRow < poLinesTable.getRowCount()) {
+            final int finalRow = targetModelRow;
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    int vr = poLinesTable.convertRowIndexToView(finalRow);
+                    poLinesTable.setRowSelectionInterval(vr, vr);
+                    poLinesTable.scrollRectToVisible(poLinesTable.getCellRect(vr, 1, true));
+                    poLinesTable.editCellAt(vr, 1);
+                    Component comp = poLinesTable.getEditorComponent();
+                    if (comp != null) comp.requestFocusInWindow();
+                } catch (Exception ignored) {
+                }
+            });
+        }
+    }
+
+    private void syncPoLineFromGrid(int row, int column) {
+        if (row < 0 || row >= owner.poDraftLines.size()) return;
+        ProductDTO product = owner.poLinesModel.getValueAt(row, 0) instanceof ProductDTO p ? p : null;
+        int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
+        BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
+                : (long) Math.max(1, product.packagesPerBox()) * unitsPerPackage);
+        BigDecimal units = decimalAt(row, 1);
+        BigDecimal packages = decimalAt(row, 2).multiply(BigDecimal.valueOf(unitsPerPackage));
+        BigDecimal boxes = decimalAt(row, 3).multiply(unitsPerBox);
+        BigDecimal quantity = units.add(packages).add(boxes);
+        BigDecimal price = decimalAt(row, 5);
+        CreatePurchaseOrderLineRequest previous = owner.poDraftLines.get(row);
+        owner.poDraftLines.set(row, new CreatePurchaseOrderLineRequest(
+                product == null ? previous.productId() : product.id(), quantity, price,
+                textAt(row, 6), dateAt(row, 7), textAt(row, 8)));
+        editorDirty = true;
+        refreshPoRows();
+    }
+
+    private void refreshPoRows() {
+        stopPoCellEditing();
+        syncingPoLines = true;
+        owner.poLinesModel.setRowCount(0);
+        for (CreatePurchaseOrderLineRequest line : owner.poDraftLines) {
+            ProductDTO product = productById(line.productId());
+            owner.poLinesModel.addRow(new Object[]{
+                    product, line.quantity(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    line.unitPrice(), blank(line.batchNumber()),
+                    line.expirationDate() == null ? "" : line.expirationDate().toString(),
+                    blank(line.serialNumber()), line.quantity().multiply(line.unitPrice())});
+        }
+        syncingPoLines = false;
+        recomputePoTotal();
+    }
+
+    private ProductDTO productById(Long id) {
+        return owner.productsList.stream().filter(product -> product.id().equals(id)).findFirst().orElse(null);
+    }
+
+    private BigDecimal decimalAt(int row, int column) {
+        Object value = owner.poLinesModel.getValueAt(row, column);
+        if (value == null || String.valueOf(value).isBlank()) return BigDecimal.ZERO;
+        try { return new BigDecimal(String.valueOf(value).trim().replace(',', '.')); }
+        catch (NumberFormatException ignored) { return BigDecimal.ZERO; }
+    }
+
+    private String textAt(int row, int column) {
+        String value = String.valueOf(owner.poLinesModel.getValueAt(row, column)).trim();
+        return value.isBlank() || "null".equals(value) ? null : value;
+    }
+
+    private LocalDate dateAt(int row, int column) {
+        String value = textAt(row, column);
+        if (value == null) return null;
+        try { return LocalDate.parse(value); }
+        catch (DateTimeParseException error) { throw new RuntimeException("Validade inválida na linha " + (row + 1) + ". Use aaaa-MM-dd."); }
+    }
+
+    private String blank(String value) { return value == null ? "" : value; }
+
+    private void stopPoCellEditing() {
+        if (poLinesTable.isEditing() && !poLinesTable.getCellEditor().stopCellEditing()) {
+            poLinesTable.getCellEditor().cancelCellEditing();
         }
     }
 
@@ -298,6 +505,7 @@ final class PurchaseOrdersPanel {
 
     /** Validação + criação da encomenda. Lança RuntimeException em erro (mantém o modal aberto). */
     private CreatePurchaseOrderRequest buildPurchaseOrderRequest() {
+        stopPoCellEditing();
         int supIdx = owner.poSupplierCombo.getSelectedIndex();
         int whIdx = owner.poWarehouseCombo.getSelectedIndex();
         if (supIdx < 0 || supIdx >= owner.supplierComboList.size() || whIdx < 0 || whIdx >= owner.warehousesList.size()) {
@@ -305,6 +513,12 @@ final class PurchaseOrdersPanel {
         }
         if (owner.poDraftLines.isEmpty()) {
             throw new RuntimeException("Adicione pelo menos uma linha.");
+        }
+        for (int row = 0; row < owner.poDraftLines.size(); row++) {
+            CreatePurchaseOrderLineRequest line = owner.poDraftLines.get(row);
+            if (productById(line.productId()) == null) throw new RuntimeException("Seleccione o produto da linha " + (row + 1) + ".");
+            if (line.quantity().signum() <= 0) throw new RuntimeException("A quantidade da linha " + (row + 1) + " deve ser positiva.");
+            if (line.unitPrice().signum() < 0) throw new RuntimeException("O preço da linha " + (row + 1) + " não pode ser negativo.");
         }
         LocalDate expected = null;
         String t = poExpectedField.getText().trim();
@@ -334,12 +548,105 @@ final class PurchaseOrdersPanel {
         owner.poList = loaded;
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         poListModel.setRowCount(0);
+        java.util.Set<String> bus = new java.util.TreeSet<>();
         for (PurchaseOrderDTO o : owner.poList) {
+            String buName = o.businessUnitName() != null && !o.businessUnitName().isBlank() ? o.businessUnitName() : "—";
+            if (!"—".equals(buName)) bus.add(buName);
             poListModel.addRow(new Object[]{
                     o.orderNumber(), o.supplierName(), o.status(),
                     o.totalAmount() == null ? BigDecimal.ZERO : o.totalAmount(),
                     o.orderDate() == null ? "-" : o.orderDate().format(dtf),
-                    o.expectedDate() == null ? "-" : o.expectedDate().toString()});
+                    o.expectedDate() == null ? "-" : o.expectedDate().toString(),
+                    buName});
+        }
+        if (owner.poBusinessUnitCombo != null) {
+            Object prev = owner.poBusinessUnitCombo.getSelectedItem();
+            owner.poBusinessUnitCombo.removeAllItems();
+            owner.poBusinessUnitCombo.addItem("Todos os negócios");
+            owner.poBusinessUnitCombo.addItem("—");
+            for (String b : bus) owner.poBusinessUnitCombo.addItem(b);
+            if (prev != null) owner.poBusinessUnitCombo.setSelectedItem(prev);
+        }
+    }
+
+    private void openSelectedEditor() {
+        PurchaseOrderDTO selected = selectedPO();
+        if (selected == null) return;
+        editingOrder = selected;
+        lineGridEditable = "ORDERED".equals(selected.status())
+                && selected.lines().stream().noneMatch(line -> line.receivedQuantity() != null
+                && line.receivedQuantity().signum() > 0);
+        editorDirty = false;
+        selectSupplier(selected.supplierId());
+        selectWarehouse(selected.warehouseId());
+        poExpectedField.setText(selected.expectedDate() == null ? "" : selected.expectedDate().toString());
+        owner.poDraftLines.clear();
+        if (selected.lines() != null) {
+            for (PurchaseOrderLineDTO line : selected.lines()) {
+                owner.poDraftLines.add(new CreatePurchaseOrderLineRequest(
+                        line.productId(), line.quantity(), line.unitPrice(), line.batchNumber(),
+                        line.expirationDate(), line.serialNumber()));
+            }
+        }
+        configureProductCellEditor();
+        refreshPoRows();
+        editorDirty = false;
+        editorHost.setEditorTitle((lineGridEditable ? "Editar Encomenda " : "Consultar Encomenda ")
+                + selected.orderNumber());
+        editorHost.setSaveText("Guardar alterações");
+        editorHost.setSaveEnabled(lineGridEditable);
+        showEditorPage();
+    }
+
+    private void savePurchaseOrder() {
+        try {
+            CreatePurchaseOrderRequest create = buildPurchaseOrderRequest();
+            if (editingOrder == null) {
+                UIHelper.runWithProgress(owner, "A emitir encomenda…",
+                        () -> owner.purchaseApiClient.createOrder(create),
+                        saved -> finishPurchaseOrderSave(saved, "criada"), owner::showPurchaseError);
+            } else {
+                UpdatePurchaseOrderRequest request = new UpdatePurchaseOrderRequest(
+                        editingOrder.version(), create.supplierId(), create.warehouseId(),
+                        create.expectedDate(), create.notes(), create.lines());
+                UIHelper.runWithProgress(owner, "A guardar alterações…",
+                        () -> owner.purchaseApiClient.updateOrder(editingOrder.id(), request),
+                        saved -> finishPurchaseOrderSave(saved, "actualizada"), owner::showPurchaseError);
+            }
+        } catch (RuntimeException error) {
+            owner.showPurchaseNotice(FeedbackType.ERROR, "Dados incompletos", error.getMessage());
+        }
+    }
+
+    private void finishPurchaseOrderSave(PurchaseOrderDTO saved, String action) {
+        editorDirty = false;
+        owner.showPurchaseSuccess("Encomenda " + saved.orderNumber() + " " + action + ".");
+        Container parent = editorHost.getParent();
+        if (parent != null && parent.getLayout() instanceof CardLayout layout) layout.show(parent, "LIST");
+        refresh();
+        owner.reorderPanel.refresh();
+    }
+
+    private void showEditorPage() {
+        Container parent = editorHost.getParent();
+        if (parent != null && parent.getLayout() instanceof CardLayout layout) layout.show(parent, "EDITOR");
+    }
+
+    private void selectSupplier(Long id) {
+        for (int i = 0; i < owner.supplierComboList.size(); i++) {
+            if (id != null && id.equals(owner.supplierComboList.get(i).id())) {
+                owner.poSupplierCombo.setSelectedIndex(i);
+                return;
+            }
+        }
+    }
+
+    private void selectWarehouse(Long id) {
+        for (int i = 0; i < owner.warehousesList.size(); i++) {
+            if (id != null && id.equals(owner.warehousesList.get(i).id())) {
+                owner.poWarehouseCombo.setSelectedIndex(i);
+                return;
+            }
         }
     }
 

@@ -14,5 +14,21 @@ public record PayableDTO(
         BigDecimal totalAmount,
         BigDecimal amountPaid,
         BigDecimal outstanding,
-        LocalDateTime purchaseDate
-) {}
+        LocalDateTime purchaseDate,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public PayableDTO(
+            Long purchaseId,
+            String purchaseNumber,
+            Long supplierId,
+            String supplierName,
+            BigDecimal totalAmount,
+            BigDecimal amountPaid,
+            BigDecimal outstanding,
+            LocalDateTime purchaseDate
+    ) {
+        this(purchaseId, purchaseNumber, supplierId, supplierName, totalAmount, amountPaid, outstanding, purchaseDate, null, null);
+    }
+}
+

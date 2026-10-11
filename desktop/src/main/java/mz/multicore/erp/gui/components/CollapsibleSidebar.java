@@ -145,6 +145,14 @@ public class CollapsibleSidebar extends JPanel {
         footerVersionLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         footerVersionLabel.setForeground(subText());
         footerVersionLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
+        footerVersionLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        footerVersionLabel.setToolTipText("MULTICORE ERP • Clique para ver detalhes e licença do sistema");
+        footerVersionLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                AboutDialog.show(CollapsibleSidebar.this);
+            }
+        });
 
         add(footerPanel, BorderLayout.SOUTH);
 

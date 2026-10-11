@@ -15,8 +15,8 @@ Esta separação é protegida pelo SPEC e pelo harness em [docs/MULTI_MODULE_ARC
 | Linguagem         | Java 21                                                 |
 | Framework         | Spring Boot 3.2.5 (Web + Data JPA + Validation)         |
 | Persistência      | JPA/Hibernate                                            |
-| BD local          | H2 (in-memory, zero-setup)                              |
-| BD alvo produção  | PostgreSQL (via HTTPS contra backend online)            |
+| BD do backend em desenvolvimento | H2 persistente em `data/multicoredb.mv.db`     |
+| BD do backend em produção        | PostgreSQL privado                              |
 | UI desktop        | Java Swing + componentes próprios (`gui/components`)    |
 | Ícones            | Ikonli + FontAwesome 5 Solid (`UIHelper.icon(...)`)      |
 | PDF               | OpenPDF (LGPL/MPL fork do iText)                        |
@@ -34,7 +34,8 @@ backend/src/main/resources/# configuração e migrações Flyway
 desktop/src/main/java/     # Swing, clientes HTTP e impressão local
 ```
 
-Cada módulo segue a mesma sub-estrutura **obrigatória**:
+Cada domínio de negócio do **backend** segue a sub-estrutura obrigatória abaixo. Os módulos
+`contracts` e `desktop` não contêm Controllers, Services, Repositories nem entidades JPA:
 
 ```
 modules/<nome>/
@@ -135,7 +136,7 @@ e o login são públicos — ver [docs/SEGURANCA_HARDENING_SPEC.md](docs/SEGURAN
 | Ficheiro | Para quê |
 |----------|----------|
 | [ARCHITECTURE.md](ARCHITECTURE.md)     | Como **não misturar camadas** (Controller→Service→Repository), separação backend/desktop, princípios SOLID |
-| [CONVENTIONS.md](CONVENTIONS.md)       | Convenções de código: naming, Lombok, DTOs, exceções, transações, mensagens em PT-PT/PT-BR |
+| [CONVENTIONS.md](CONVENTIONS.md)       | Convenções de código: naming, Lombok, DTOs, excepções, transacções e mensagens em português de Moçambique |
 | [.claude/skills/](.claude/skills/)     | Receitas accionáveis (novo módulo, novo endpoint, novo PDF, ícones, revisão SOLID, status da loja) |
 | [tasks/current.md](tasks/current.md)   | Contexto operacional actual — o que está em curso, decisões recentes, próximos passos |
 

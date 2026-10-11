@@ -16,5 +16,15 @@ public record PromotionDTO(
         Integer payQuantity,
         LocalDate startDate,
         LocalDate endDate,
-        boolean active
-) {}
+        boolean active,
+        Long businessUnitId,
+        String businessUnitName
+) {
+    public PromotionDTO(Long id, String name, String type, Long productId, String productName,
+                        Long categoryId, String categoryName, BigDecimal percentValue,
+                        Integer buyQuantity, Integer payQuantity, LocalDate startDate,
+                        LocalDate endDate, boolean active) {
+        this(id, name, type, productId, productName, categoryId, categoryName, percentValue,
+                buyQuantity, payQuantity, startDate, endDate, active, null, null);
+    }
+}

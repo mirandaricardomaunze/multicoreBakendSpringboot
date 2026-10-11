@@ -3,11 +3,14 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.ClientTablePagination;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
@@ -17,13 +20,18 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class ApprovalsPanel extends JPanel {
 
     private final ApprovalApiClient approvalApiClient;
+    private final mz.multicore.erp.desktop.client.StockTransferApiClient stockTransferApiClient;
+    private final mz.multicore.erp.desktop.client.ComercialApiClient comercialApiClient;
+    private final mz.multicore.erp.desktop.client.PrintApiClient printApiClient;
 
     // GUI Tables
     private DefaultTableModel pendingModel;
@@ -31,6 +39,12 @@ public class ApprovalsPanel extends JPanel {
 
     private DefaultTableModel historyModel;
     private JTable historyTable;
+
+    // KPIs Superiores
+    private JLabel kpiPendingCount;
+    private JLabel kpiPendingAmount;
+    private JLabel kpiApprovedCount;
+    private JLabel kpiRejectedCount;
 
     // Toolbar
     private ModernButton openBtn;
@@ -41,22 +55,40 @@ public class ApprovalsPanel extends JPanel {
     private List<ApprovalRequestDTO> historyList = new ArrayList<>();
 
     public ApprovalsPanel(ApprovalApiClient approvalApiClient) {
+        this(approvalApiClient, null, null, null);
+    }
+
+    public ApprovalsPanel(
+            ApprovalApiClient approvalApiClient,
+            mz.multicore.erp.desktop.client.StockTransferApiClient stockTransferApiClient,
+            mz.multicore.erp.desktop.client.ComercialApiClient comercialApiClient
+    ) {
+        this(approvalApiClient, stockTransferApiClient, comercialApiClient, null);
+    }
+
+    public ApprovalsPanel(
+            ApprovalApiClient approvalApiClient,
+            mz.multicore.erp.desktop.client.StockTransferApiClient stockTransferApiClient,
+            mz.multicore.erp.desktop.client.ComercialApiClient comercialApiClient,
+            mz.multicore.erp.desktop.client.PrintApiClient printApiClient
+    ) {
         this.approvalApiClient = approvalApiClient;
+        this.stockTransferApiClient = stockTransferApiClient;
+        this.comercialApiClient = comercialApiClient;
+        this.printApiClient = printApiClient;
 
-        setLayout(new BorderLayout(0, 20));
+        setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(25, 25, 25, 25));
+        setBorder(new EmptyBorder(10, 12, 10, 12));
 
-        // HEADER
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        headerPanel.add(UIHelper.createHeading("Fila de Aprovações de Documentos"), BorderLayout.NORTH);
-        
-        JLabel sub = new JLabel("Validação e controlo administrativo de limites de compras e vendas.");
-        sub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-        sub.setForeground(UIHelper.TEXT_MUTED);
-        headerPanel.add(sub, BorderLayout.SOUTH);
-        add(headerPanel, BorderLayout.NORTH);
+        // KPIS Superiores Canónicos
+        JPanel kpiGrid = KpiCard.createGrid(4);
+        kpiGrid.add(KpiCard.createCard("Pedidos Pendentes", kpiPendingCount = new JLabel("0"), "Aguardam decisão", "fas-hourglass-half", UIHelper.PENDING_YELLOW));
+        kpiGrid.add(KpiCard.createCard("Valor em Análise", kpiPendingAmount = new JLabel("0,00 MT"), "Montante sob validação", "fas-money-bill-wave", UIHelper.ACCENT_BLUE));
+        kpiGrid.add(KpiCard.createCard("Pedidos Aprovados", kpiApprovedCount = new JLabel("0"), "Decisões favoráveis", "fas-check-circle", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createCard("Pedidos Rejeitados", kpiRejectedCount = new JLabel("0"), "Devolvidos com motivo", "fas-times-circle", UIHelper.REJECTED_RED));
+
+        add(kpiGrid, BorderLayout.NORTH);
 
         // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -65,7 +97,7 @@ public class ApprovalsPanel extends JPanel {
                 createPendingTab());
         tabbedPane.addTab("Histórico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.APPROVED_GREEN),
                 createHistoryTab());
-        JPanel body = new JPanel(new BorderLayout(0, 10));
+        JPanel body = new JPanel(new BorderLayout(0, 8));
         body.setOpaque(false);
         body.add(feedback, BorderLayout.NORTH);
         body.add(tabbedPane, BorderLayout.CENTER);
@@ -74,7 +106,9 @@ public class ApprovalsPanel extends JPanel {
         // LISTENERS
         pendingTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                openBtn.setEnabled(pendingTable.getSelectedRow() >= 0);
+                boolean hasSel = pendingTable.getSelectedRow() >= 0;
+                openBtn.setEnabled(hasSel);
+                openBtn.setToolTipText(hasSel ? "Decidir pedido selecionado" : "Selecione um pedido pendente para decidir");
             }
         });
         pendingTable.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -98,17 +132,18 @@ public class ApprovalsPanel extends JPanel {
 
     /** Aba dos pedidos pendentes (cabeçalho com acção + tabela a ocupar toda a aba). */
     private JPanel createPendingTab() {
-        JPanel pendingPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel pendingPanel = new JPanel(new BorderLayout(0, 8));
         pendingPanel.setOpaque(false);
-        pendingPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        pendingPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
 
         openBtn = UIHelper.createPrimaryButton("Abrir / Decidir");
         openBtn.setIcon(UIHelper.icon("fas-gavel", 14));
         openBtn.setEnabled(false);
+        openBtn.setToolTipText("Selecione um pedido pendente para decidir");
         openBtn.addActionListener(e -> openDecisionForSelected());
         ModernPanel pendingCard = new ModernPanel(16);
-        pendingCard.setLayout(new BorderLayout());
-        pendingCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        pendingCard.setLayout(new BorderLayout(0, 10));
+        pendingCard.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         String[] pendingCols = {"ID", "Documento", "Submissor", "Valor", "Perfil Requerido"};
         pendingModel = new DefaultTableModel(pendingCols, 0) {
@@ -117,33 +152,52 @@ public class ApprovalsPanel extends JPanel {
         };
         pendingTable = new JTable(pendingModel);
         UIHelper.styleTable(pendingTable);
+        UIHelper.ensureHeadersFit(pendingTable);
         pendingTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         pendingTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.role());
         // Duplo-clique abre o modal de decisão (não o inspector genérico do styleTable).
         pendingTable.putClientProperty("noRowInspector", Boolean.TRUE);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
         UIHelper.styleScrollPane(pendingScroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(pendingTable, pendingCard, (peek, mr) -> {
+            int row = pendingTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-gavel", UIHelper.PENDING_YELLOW);
+            peek.setTitle(String.valueOf(pendingModel.getValueAt(row, 1)));
+            peek.setSubtitle("ID #" + pendingModel.getValueAt(row, 0) + " • Submetido por " + pendingModel.getValueAt(row, 2));
+            peek.setStatus("PENDENTE", UIHelper.PENDING_YELLOW);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Submissor", String.valueOf(pendingModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Envolvido", String.valueOf(pendingModel.getValueAt(row, 3)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Perfil Requerido", String.valueOf(pendingModel.getValueAt(row, 4)), false));
+            peek.setItems(items);
+            peek.getOpenFullButton().setText("Decidir Pedido");
+            peek.setOnOpenFullAction(v -> openDecisionForSelected());
+        });
         JTextField pSearch = TableFilter.searchField("Documento ou submissor…");
         JComboBox<String> pPerfil = TableFilter.combo("Todos os perfis", "ADMIN", "MANAGER");
         UIHelper.humanizeRoleCombo(pPerfil);
         TableFilter.install(pendingTable, pSearch, new TableFilter.ColumnFilter(pPerfil, 4));
         JPanel pBar = TableFilter.bar(pSearch, TableFilter.label("Perfil:"), pPerfil);
+        pBar.setBorder(new EmptyBorder(0, 0, 4, 0));
         ModernButton pRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
+        pendingCard.setLayout(new BorderLayout(0, 8));
         pendingCard.add(UIHelper.tableCardTop("Pedidos a Aguardar Decisão", pBar,
                 pRefreshBtn, openBtn), BorderLayout.NORTH);
         pendingCard.add(pendingScroll, BorderLayout.CENTER);
+        pendingCard.add(ClientTablePagination.install(pendingTable), BorderLayout.SOUTH);
         pendingPanel.add(pendingCard, BorderLayout.CENTER);
         return pendingPanel;
     }
 
     /** Aba do histórico e auditoria (tabela ocupa toda a aba). */
     private JPanel createHistoryTab() {
-        JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel bottomPanel = new JPanel(new BorderLayout(0, 8));
         bottomPanel.setOpaque(false);
-        bottomPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        bottomPanel.setBorder(new EmptyBorder(8, 0, 0, 0));
         ModernPanel historyCard = new ModernPanel(16);
-        historyCard.setLayout(new BorderLayout());
-        historyCard.setBorder(new EmptyBorder(15, 15, 15, 15));
+        historyCard.setLayout(new BorderLayout(0, 8));
+        historyCard.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         String[] historyCols = {"Data", "Tipo Doc", "Submissor", "Valor", "Estado Final", "Motivo / Comentário"};
         historyModel = new DefaultTableModel(historyCols, 0) {
@@ -152,10 +206,25 @@ public class ApprovalsPanel extends JPanel {
         };
         historyTable = new JTable(historyModel);
         UIHelper.styleTable(historyTable);
+        UIHelper.ensureHeadersFit(historyTable);
         historyTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
         historyTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.status());
         JScrollPane historyScroll = new JScrollPane(historyTable);
         UIHelper.styleScrollPane(historyScroll);
+
+        TableQuickPeekController hPeekController = TableQuickPeekController.install(historyTable, historyCard, (peek, mr) -> {
+            int row = historyTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-history", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(historyModel.getValueAt(row, 1)));
+            peek.setSubtitle("Data: " + historyModel.getValueAt(row, 0));
+            peek.setStatus(String.valueOf(historyModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Submissor", String.valueOf(historyModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor", String.valueOf(historyModel.getValueAt(row, 3)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Decisão Final", String.valueOf(historyModel.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Motivo / Parecer", String.valueOf(historyModel.getValueAt(row, 5)), false));
+            peek.setItems(items);
+        });
         JTextField hSearch = TableFilter.searchField("Documento ou submissor…");
         JComboBox<String> hEstado = TableFilter.combo("Todos os estados", "APPROVED", "REJECTED");
         JComboBox<String> hPeriodo = TableFilter.periodCombo();
@@ -164,10 +233,11 @@ public class ApprovalsPanel extends JPanel {
                 java.util.List.of(new TableFilter.PeriodFilter(hPeriodo, 0)));
         JPanel hBar = TableFilter.bar(hSearch, TableFilter.label("Estado final:"), hEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), hPeriodo);
-        hBar.setBorder(new EmptyBorder(0, 0, 10, 0));
+        hBar.setBorder(new EmptyBorder(0, 0, 4, 0));
         ModernButton hRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
         historyCard.add(UIHelper.tableCardTop("Histórico e Auditoria de Aprovações", hBar, hRefreshBtn), BorderLayout.NORTH);
         historyCard.add(historyScroll, BorderLayout.CENTER);
+        historyCard.add(ClientTablePagination.install(historyTable), BorderLayout.SOUTH);
         bottomPanel.add(historyCard, BorderLayout.CENTER);
         return bottomPanel;
     }
@@ -179,6 +249,9 @@ public class ApprovalsPanel extends JPanel {
             case "ORDER" -> "Encomenda";
             case "INVOICE" -> "Fatura";
             case "EXPENSE", "EXPENSE_CLAIM" -> "Despesa";
+            case "STOCK_TRANSFER", "TRANSFER" -> "Transferência de Stock";
+            case "STOCK_WASTE", "WASTE" -> "Quebra de Stock";
+            case "PURCHASE_ORDER", "PURCHASE" -> "Ordem de Compra";
             default -> documentType;
         };
     }
@@ -210,8 +283,34 @@ public class ApprovalsPanel extends JPanel {
                 });
             }
         }
+
+        // Actualizar KPIs
+        if (kpiPendingCount != null) {
+            kpiPendingCount.setText(String.valueOf(pendingList.size()));
+        }
+        if (kpiPendingAmount != null) {
+            BigDecimal totalPendingAmount = pendingList.stream()
+                    .map(ApprovalRequestDTO::amount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            kpiPendingAmount.setText(String.format("%,.2f MT", totalPendingAmount));
+        }
+        if (kpiApprovedCount != null) {
+            long approvedCount = historyList.stream()
+                    .filter(r -> r.status() == ApprovalStatus.APPROVED)
+                    .count();
+            kpiApprovedCount.setText(String.valueOf(approvedCount));
+        }
+        if (kpiRejectedCount != null) {
+            long rejectedCount = historyList.stream()
+                    .filter(r -> r.status() == ApprovalStatus.REJECTED)
+                    .count();
+            kpiRejectedCount.setText(String.valueOf(rejectedCount));
+        }
+
         if (openBtn != null) {
             openBtn.setEnabled(false);
+            openBtn.setToolTipText("Selecione um pedido pendente para decidir");
             pendingTable.clearSelection();
         }
     }
@@ -221,89 +320,18 @@ public class ApprovalsPanel extends JPanel {
     private void openDecisionForSelected() {
         int row = TableFilter.selectedModelRow(pendingTable);
         if (row < 0 || row >= pendingList.size()) return;
-        openDecisionDialog(pendingList.get(row));
-    }
-
-    /**
-     * Modal de decisão profissional ({@link ModernFormDialog}): mostra os detalhes do pedido
-     * (só-leitura) e oferece Aprovar / Rejeitar / Fechar no rodapé. Substitui o inspector inline.
-     */
-    private void openDecisionDialog(ApprovalRequestDTO req) {
-        JTextArea descA = new JTextArea(req.description() == null ? "" : req.description());
-        descA.setEditable(false);
-        descA.setLineWrap(true);
-        descA.setWrapStyleWord(true);
-        UIHelper.styleTextArea(descA);
-        JScrollPane descScroll = new JScrollPane(descA);
-        descScroll.setPreferredSize(new Dimension(380, 96));
-        descScroll.setBorder(BorderFactory.createLineBorder(UIHelper.BORDER, 1));
-
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-        GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.weightx = 1.0;
-        g.gridx = 0;
-        g.insets = new Insets(5, 8, 5, 8);
-        int y = 0;
-        y = addFormRow(form, g, y, "Tipo de Documento:", readOnly(humanType(req.documentType())));
-        y = addFormRow(form, g, y, "ID Documento:", readOnly("#" + req.documentId()));
-        y = addFormRow(form, g, y, "Solicitante:", readOnly(req.submitter()));
-        y = addFormRow(form, g, y, "Valor do Documento:", readOnly(String.format("%,.2f MT", req.amount())));
-        y = addFormRow(form, g, y, "Perfil Requerido:", readOnly(req.requiredRole()));
-        addFormRow(form, g, y, "Descrição / Justificação:", descScroll);
-
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Decisão de Aprovação",
-                "fas-clipboard-check", humanType(req.documentType()) + " #" + req.documentId(), form);
-
-        ModernButton rejectBtn = UIHelper.createDangerButton("Rejeitar");
-        rejectBtn.setIcon(UIHelper.icon("fas-times", 14));
-        rejectBtn.addActionListener(e -> {
-            String reason = UIHelper.promptRequiredText("Rejeitar Documento", "fas-times",
-                    humanType(req.documentType()) + " #" + req.documentId(), "Motivo da rejeição");
-            if (reason == null) return;
-            UIHelper.submitAsync(rejectBtn, () -> {
-                approvalApiClient.rejectRequest(req.id(), reason);
-                return null;
-            }, ignored -> {
-                dlg.close();
-                ToastManager.success(this, "Documento rejeitado com sucesso.");
-            }, error -> feedback.show(FeedbackType.ERROR, "Não foi possível rejeitar o documento",
-                    error.getMessage(), null, null));
-        });
-        dlg.addActionButton(rejectBtn);
-        dlg.setConfirmButton("Aprovar", "fas-check");
-        dlg.setOnSaveAsync(() -> () -> {
-            approvalApiClient.approveRequest(req.id(), "Aprovado via interface Swing.");
-            return null;
-        });
-
-        boolean approved = dlg.showDialog();
-        if (approved) {
-            ToastManager.success(this, "Documento aprovado com sucesso.");
-        }
-        refreshData();
-    }
-
-    private static JTextField readOnly(String value) {
-        JTextField f = new JTextField(value == null ? "" : value);
-        UIHelper.styleTextField(f);
-        UIHelper.setReadOnly(f, true);
-        return f;
-    }
-
-    /** Adiciona um par etiqueta (acento) → componente, empilhados, e devolve o próximo {@code gridy}. */
-    private static int addFormRow(JPanel form, GridBagConstraints g, int y, String label, JComponent comp) {
-        JLabel l = new JLabel(label);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        l.setForeground(UIHelper.ACCENT);
-        g.gridy = y;
-        g.insets = new Insets(8, 8, 2, 8);
-        form.add(l, g);
-        g.gridy = y + 1;
-        g.insets = new Insets(0, 8, 6, 8);
-        form.add(comp, g);
-        return y + 2;
+        ApprovalDetailsDialog.show(
+                SwingUtilities.getWindowAncestor(this),
+                pendingList.get(row),
+                approvalApiClient,
+                stockTransferApiClient,
+                comercialApiClient,
+                printApiClient,
+                () -> {
+                    ToastManager.success(this, "Decisão de aprovação processada.");
+                    refreshData();
+                }
+        );
     }
 
     public void onPanelSelected() {

@@ -2,10 +2,12 @@ package mz.multicore.erp.gui.commercial;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.ClientTablePagination;
+import mz.multicore.erp.gui.components.BarcodeScanField;
 import mz.multicore.erp.gui.components.DecimalField;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.ProductLookupDialog;
 import mz.multicore.erp.gui.components.ProductSearchComboBox;
 import mz.multicore.erp.gui.components.QuantityField;
 import mz.multicore.erp.gui.components.TableCellRenderers;
@@ -57,6 +59,7 @@ final class QuotationEditorForm {
     private ProductSearchComboBox productCombo;
     private QuantityField quantityField;
     private DecimalField discountField;
+    private BarcodeScanField barcodeScanField;
     private DefaultTableModel linesModel;
     private JTable linesTable;
     private JLabel totalLabel;
@@ -74,6 +77,12 @@ final class QuotationEditorForm {
         content.setOpaque(false);
         content.add(buildHeaderForm(), BorderLayout.NORTH);
         content.add(buildLinesSection(), BorderLayout.CENTER);
+        content.registerKeyboardAction(e -> {
+            if (barcodeScanField != null && barcodeScanField.isEnabled()) {
+                barcodeScanField.requestFocusInWindow();
+                barcodeScanField.selectAll();
+            }
+        }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F2, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         installDirtyTracking();
     }
 
@@ -222,6 +231,7 @@ final class QuotationEditorForm {
         productCombo = new ProductSearchComboBox();
         quantityField = new QuantityField("1", true);
         discountField = new DecimalField("0", 2, false);
+        barcodeScanField = new BarcodeScanField("Bipar código / SKU (F2)...", this::handleBarcodeScanned);
         addButton = UIHelper.createPrimaryButton("Adicionar linha");
         addButton.setIcon(UIHelper.icon("fas-plus", 14));
         addButton.addActionListener(e -> addBlankLine());
@@ -237,10 +247,12 @@ final class QuotationEditorForm {
             }
         };
         linesTable = new JTable(linesModel); UIHelper.styleTable(linesTable);
+        UIHelper.ensureHeadersFit(linesTable);
         linesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         linesTable.putClientProperty("noTableFooter", Boolean.TRUE);
-        UIHelper.installDocumentGridShortcuts(linesTable, this::addBlankLine, this::removeSelectedLine, owner::saveEditor);
-        linesTable.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(productCombo));
+        UIHelper.installDocumentGridShortcuts(linesTable, this::addBlankLine, this::removeSelectedLine, owner::saveEditor, this::openProductCatalogLookup);
+        linesTable.getColumnModel().getColumn(0)
+                .setCellEditor(ProductSearchComboBox.createTableCellEditor(productCombo));
         linesTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
             @Override protected void setValue(Object value) {
                 setText(value instanceof ProductDTO product ? product.name() : "Pesquisar produto...");
@@ -256,7 +268,7 @@ final class QuotationEditorForm {
         linesTable.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.money());
         linesTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
         linesTable.setSurrendersFocusOnKeystroke(true);
-        linesTable.setToolTipText("Edite Produto, Qtd, Emb., Cx. e Desc. directamente nas células.");
+        linesTable.setToolTipText("Edite Produto, Qtd, Emb., Cx. e Desc. directamente nas células. Pressione F2 para bipar.");
         linesModel.addTableModelListener(event -> {
             if (loading || syncingLines || event.getFirstRow() < 0
                     || event.getType() != javax.swing.event.TableModelEvent.UPDATE) return;
@@ -267,9 +279,10 @@ final class QuotationEditorForm {
 
         JPanel tableArea = new JPanel(new BorderLayout(0, 8));
         tableArea.setOpaque(false);
-        JLabel instruction = new JLabel("Edite directamente na grelha; embalagens e caixas mantêm-se sincronizadas.");
+        JLabel instruction = new JLabel("Edite na grelha ou use o leitor de código de barras (F2).");
         instruction.setForeground(UIHelper.TEXT_MUTED);
-        tableArea.add(UIHelper.tableCardTop("Itens da Cotação", instruction, addButton, removeButton), BorderLayout.NORTH);
+        ModernButton lookupButton = UIHelper.createProductLookupButton(this::openProductCatalogLookup);
+        tableArea.add(UIHelper.tableCardTop("Itens da Cotação", instruction, barcodeScanField, lookupButton, addButton, removeButton), BorderLayout.NORTH);
         tableArea.add(scroll, BorderLayout.CENTER);
         totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
         JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
@@ -278,6 +291,61 @@ final class QuotationEditorForm {
 
         section.add(tableArea, BorderLayout.CENTER);
         return section;
+    }
+
+    private void openProductCatalogLookup() {
+        if (!tableEditable) return;
+        stopCellEditing();
+        List<ProductDTO> catalog = products;
+        if (catalog == null || catalog.isEmpty()) {
+            owner.showNotice(FeedbackType.WARNING, "Catálogo Vazio",
+                    "Não existem produtos registados no sistema.");
+            return;
+        }
+        List<ProductDTO> selected = ProductLookupDialog.showMulti(content, catalog);
+        if (selected != null && !selected.isEmpty()) {
+            applySelectedProducts(selected);
+        }
+    }
+
+    private void applySelectedProducts(List<ProductDTO> selected) {
+        if (selected == null || selected.isEmpty()) return;
+        stopCellEditing();
+        int viewRow = linesTable.getSelectedRow();
+        int modelRow = viewRow >= 0 ? linesTable.convertRowIndexToModel(viewRow) : -1;
+        boolean fillCurrent = (modelRow >= 0 && modelRow < draftLines.size()
+                && (draftLines.get(modelRow).productId() == null || draftLines.get(modelRow).productId() <= 0));
+
+        int targetModelRow = modelRow;
+        for (int i = 0; i < selected.size(); i++) {
+            ProductDTO p = selected.get(i);
+            BigDecimal price = p != null && p.unitPrice() != null ? p.unitPrice() : BigDecimal.ZERO;
+            if (i == 0 && fillCurrent) {
+                draftLines.set(modelRow, new CreateQuotationLineRequest(p.id(), BigDecimal.ONE, BigDecimal.ZERO));
+                previewPrices.set(modelRow, price);
+                targetModelRow = modelRow;
+            } else {
+                draftLines.add(new CreateQuotationLineRequest(p.id(), BigDecimal.ONE, BigDecimal.ZERO));
+                previewPrices.add(price);
+                targetModelRow = draftLines.size() - 1;
+            }
+        }
+        refreshRows();
+        if (targetModelRow >= 0 && targetModelRow < linesTable.getRowCount()) {
+            final int finalRow = targetModelRow;
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    int vr = linesTable.convertRowIndexToView(finalRow);
+                    linesTable.setRowSelectionInterval(vr, vr);
+                    linesTable.scrollRectToVisible(linesTable.getCellRect(vr, 1, true));
+                    linesTable.editCellAt(vr, 1);
+                    Component comp = linesTable.getEditorComponent();
+                    if (comp != null) comp.requestFocusInWindow();
+                } catch (Exception ignored) {
+                }
+            });
+        }
+        dirty = true;
     }
 
     private void addBlankLine() {
@@ -332,33 +400,59 @@ final class QuotationEditorForm {
     private void refreshRows() {
         stopCellEditing();
         syncingLines = true;
-        linesModel.setRowCount(0);
-        for (int i = 0; i < draftLines.size(); i++) {
-            CreateQuotationLineRequest line = draftLines.get(i);
-            ProductDTO product = findProduct(line.productId());
-            BigDecimal price = previewPrices.get(i) == null ? BigDecimal.ZERO : previewPrices.get(i);
-            BigDecimal discount = line.discountPercentage() == null ? BigDecimal.ZERO : line.discountPercentage();
-            BigDecimal net = price.multiply(line.quantity())
-                    .multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2)));
-            BigDecimal tax = product == null ? BigDecimal.ZERO : product.effectiveTaxRate();
-            BigDecimal total = net.multiply(BigDecimal.ONE.add(tax)).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal packages = line.quantity().divide(BigDecimal.valueOf(product == null ? 1
-                    : Math.max(1, product.unitsPerPackage())), 2, RoundingMode.HALF_UP);
-            BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
-                    : (long) Math.max(1, product.packagesPerBox()) * Math.max(1, product.unitsPerPackage()));
-            BigDecimal boxes = line.quantity().divide(unitsPerBox, 2, RoundingMode.HALF_UP);
-            BigDecimal percentage = line.quantity().multiply(BigDecimal.valueOf(100))
-                    .divide(unitsPerBox, 1, RoundingMode.HALF_UP);
-            linesModel.addRow(new Object[]{product, line.quantity(), packages, boxes,
-                    percentage.stripTrailingZeros().toPlainString() + "%", price, discount, total});
+        try {
+            linesModel.setRowCount(0);
+            for (int i = 0; i < draftLines.size(); i++) {
+                CreateQuotationLineRequest line = draftLines.get(i);
+                ProductDTO product = findProduct(line.productId());
+                BigDecimal price = previewPrices.get(i) == null ? BigDecimal.ZERO : previewPrices.get(i);
+                BigDecimal discount = line.discountPercentage() == null ? BigDecimal.ZERO : line.discountPercentage();
+                BigDecimal net = price.multiply(line.quantity())
+                        .multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2)));
+                BigDecimal tax = product == null ? BigDecimal.ZERO : product.effectiveTaxRate();
+                BigDecimal total = net.multiply(BigDecimal.ONE.add(tax)).setScale(2, RoundingMode.HALF_UP);
+                int unitsPerPkg = product == null ? 1 : Math.max(1, product.unitsPerPackage());
+                BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
+                        : (long) Math.max(1, product.packagesPerBox()) * unitsPerPkg);
+                BigDecimal packages = line.quantity().divide(BigDecimal.valueOf(unitsPerPkg), 2, RoundingMode.HALF_UP);
+                BigDecimal boxes = line.quantity().divide(unitsPerBox, 2, RoundingMode.HALF_UP);
+                BigDecimal percentage = line.quantity().multiply(BigDecimal.valueOf(100))
+                        .divide(unitsPerBox, 1, RoundingMode.HALF_UP);
+                linesModel.addRow(new Object[]{product, line.quantity(), packages, boxes,
+                        percentage.stripTrailingZeros().toPlainString() + "%", price, discount, total});
+            }
+        } finally {
+            syncingLines = false;
         }
-        syncingLines = false;
         refreshTotals();
     }
 
     private void syncLineFromGrid(int row, int column) {
-        if (row >= draftLines.size()) return;
-        ProductDTO product = linesModel.getValueAt(row, 0) instanceof ProductDTO selected ? selected : null;
+        if (syncingLines || row < 0 || row >= draftLines.size()) return;
+        CreateQuotationLineRequest previous = draftLines.get(row);
+        Object cellProduct = linesModel.getValueAt(row, 0);
+        ProductDTO product = null;
+        if (cellProduct instanceof ProductDTO selected) {
+            product = selected;
+        } else if (productCombo != null) {
+            product = productCombo.resolve(cellProduct);
+        }
+        if (product == null && cellProduct != null) {
+            String label = String.valueOf(cellProduct).trim();
+            if (!label.isBlank() && !"Pesquisar produto...".equalsIgnoreCase(label)) {
+                product = products.stream().filter(p ->
+                        label.equalsIgnoreCase(p.name())
+                        || (p.reference() != null && label.equalsIgnoreCase(p.reference()))
+                        || (p.sku() != null && label.equalsIgnoreCase(p.sku()))
+                        || (p.barcode() != null && label.equalsIgnoreCase(p.barcode()))
+                ).findFirst().orElse(null);
+            }
+        }
+        if (product == null && previous.productId() != null && previous.productId() > 0) {
+            final Long prevId = previous.productId();
+            product = products.stream().filter(p -> prevId.equals(p.id())).findFirst().orElse(null);
+        }
+
         int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
         BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
                 : (long) Math.max(1, product.packagesPerBox()) * unitsPerPackage);
@@ -366,11 +460,91 @@ final class QuotationEditorForm {
         if (column == 2) quantity = decimal(linesModel.getValueAt(row, 2)).multiply(BigDecimal.valueOf(unitsPerPackage));
         else if (column == 3) quantity = decimal(linesModel.getValueAt(row, 3)).multiply(unitsPerBox);
         else quantity = decimal(linesModel.getValueAt(row, 1));
+        if (quantity.signum() <= 0) quantity = BigDecimal.ONE;
         BigDecimal discount = decimal(linesModel.getValueAt(row, 6));
+
         draftLines.set(row, new CreateQuotationLineRequest(product == null ? 0L : product.id(), quantity, discount));
-        previewPrices.set(row, product == null || product.unitPrice() == null ? BigDecimal.ZERO : product.unitPrice());
+        BigDecimal unitPrice = product == null || product.unitPrice() == null ? BigDecimal.ZERO : product.unitPrice();
+        previewPrices.set(row, unitPrice);
         dirty = true;
-        refreshRows();
+        updateLineRow(row, product, quantity, discount);
+    }
+
+    private void handleBarcodeScanned(String code) {
+        if (!tableEditable) return;
+        ProductDTO product = products.stream().filter(p ->
+                code.equalsIgnoreCase(p.barcode())
+                || code.equalsIgnoreCase(p.sku())
+                || (p.reference() != null && code.equalsIgnoreCase(p.reference()))
+        ).findFirst().orElse(null);
+
+        if (product == null) {
+            Toolkit.getDefaultToolkit().beep();
+            owner.showNotice(FeedbackType.WARNING, "Artigo não encontrado",
+                    "Nenhum produto cadastrado com o código ou SKU: " + code);
+            return;
+        }
+
+        int existingIndex = -1;
+        for (int i = 0; i < draftLines.size(); i++) {
+            if (product.id().equals(draftLines.get(i).productId())) {
+                existingIndex = i;
+                break;
+            }
+        }
+
+        if (existingIndex >= 0) {
+            CreateQuotationLineRequest current = draftLines.get(existingIndex);
+            BigDecimal newQty = current.quantity().add(BigDecimal.ONE);
+            draftLines.set(existingIndex, new CreateQuotationLineRequest(product.id(), newQty, current.discountPercentage()));
+            dirty = true;
+            updateLineRow(existingIndex, product, newQty, current.discountPercentage());
+            linesTable.setRowSelectionInterval(existingIndex, existingIndex);
+            linesTable.scrollRectToVisible(linesTable.getCellRect(existingIndex, 0, true));
+        } else {
+            stopCellEditing();
+            draftLines.add(new CreateQuotationLineRequest(product.id(), BigDecimal.ONE, BigDecimal.ZERO));
+            previewPrices.add(product.unitPrice() == null ? BigDecimal.ZERO : product.unitPrice());
+            dirty = true;
+            refreshRows();
+            int newRow = linesModel.getRowCount() - 1;
+            if (newRow >= 0) {
+                linesTable.setRowSelectionInterval(newRow, newRow);
+                linesTable.scrollRectToVisible(linesTable.getCellRect(newRow, 0, true));
+            }
+        }
+    }
+
+    private void updateLineRow(int row, ProductDTO product, BigDecimal quantity, BigDecimal discount) {
+        int unitsPerPackage = product == null ? 1 : Math.max(1, product.unitsPerPackage());
+        BigDecimal unitsPerBox = BigDecimal.valueOf(product == null ? 1L
+                : (long) Math.max(1, product.packagesPerBox()) * unitsPerPackage);
+        BigDecimal unitPrice = product == null || product.unitPrice() == null ? BigDecimal.ZERO : product.unitPrice();
+        if (discount == null) discount = BigDecimal.ZERO;
+
+        syncingLines = true;
+        try {
+            BigDecimal net = unitPrice.multiply(quantity)
+                    .multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2)));
+            BigDecimal tax = product == null ? BigDecimal.ZERO : product.effectiveTaxRate();
+            BigDecimal total = net.multiply(BigDecimal.ONE.add(tax)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal packages = quantity.divide(BigDecimal.valueOf(unitsPerPackage), 2, RoundingMode.HALF_UP);
+            BigDecimal boxes = quantity.divide(unitsPerBox, 2, RoundingMode.HALF_UP);
+            BigDecimal percentage = quantity.multiply(BigDecimal.valueOf(100))
+                    .divide(unitsPerBox, 1, RoundingMode.HALF_UP);
+
+            linesModel.setValueAt(product, row, 0);
+            linesModel.setValueAt(quantity, row, 1);
+            linesModel.setValueAt(packages, row, 2);
+            linesModel.setValueAt(boxes, row, 3);
+            linesModel.setValueAt(percentage.stripTrailingZeros().toPlainString() + "%", row, 4);
+            linesModel.setValueAt(unitPrice, row, 5);
+            linesModel.setValueAt(discount, row, 6);
+            linesModel.setValueAt(total, row, 7);
+        } finally {
+            syncingLines = false;
+        }
+        refreshTotals();
     }
 
     private void refreshTotals() {
@@ -441,7 +615,9 @@ final class QuotationEditorForm {
         validityField.setEnabled(editable); paymentTermsField.setEnabled(editable);
         deliveryTermsField.setEnabled(editable); deliveryDaysField.setEnabled(editable); notesField.setEnabled(editable);
         productCombo.setEnabled(editable); quantityField.setEnabled(editable); discountField.setEnabled(editable);
-        addButton.setEnabled(editable); removeButton.setEnabled(editable); linesTable.repaint();
+        addButton.setEnabled(editable); removeButton.setEnabled(editable);
+        if (barcodeScanField != null) barcodeScanField.setEnabled(editable);
+        linesTable.repaint();
     }
 
     private void installDirtyTracking() {
@@ -468,9 +644,19 @@ final class QuotationEditorForm {
         catch (NumberFormatException ignored) { return BigDecimal.ZERO; }
     }
 
+    private boolean inStopCellEditing = false;
+
     private void stopCellEditing() {
-        if (linesTable.isEditing() && !linesTable.getCellEditor().stopCellEditing()) {
-            linesTable.getCellEditor().cancelCellEditing();
+        if (inStopCellEditing) return;
+        inStopCellEditing = true;
+        try {
+            if (linesTable != null && linesTable.isEditing() && linesTable.getCellEditor() != null) {
+                if (!linesTable.getCellEditor().stopCellEditing()) {
+                    linesTable.getCellEditor().cancelCellEditing();
+                }
+            }
+        } finally {
+            inStopCellEditing = false;
         }
     }
 

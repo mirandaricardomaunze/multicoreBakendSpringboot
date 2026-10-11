@@ -292,7 +292,7 @@ public final class ClientTablePagination {
      * Botão de navegação ghost circular (30×30).
      * Fundo transparente em repouso; acento suave ao passar o rato; desativado com opacidade reduzida.
      */
-    private static GhostNavButton ghostBtn(String icon, String tooltip) {
+    static GhostNavButton ghostBtn(String icon, String tooltip) {
         boolean light = UIHelper.isLight();
         Color base = light ? new Color(51, 65, 85) : new Color(226, 232, 240);
         Color hover = UIHelper.ACCENT_BLUE;
@@ -303,7 +303,7 @@ public final class ClientTablePagination {
         return b;
     }
 
-    private static final class GhostNavButton extends javax.swing.JButton {
+    static final class GhostNavButton extends javax.swing.JButton {
         private boolean hovered;
         private static final int SIZE = 30;
         private static final int ARC  = SIZE; // círculo perfeito

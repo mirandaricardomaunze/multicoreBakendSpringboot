@@ -95,6 +95,20 @@ public class BonusTab extends JPanel {
 
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
+
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-award", UIHelper.APPROVED_GREEN);
+            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 2)));
+            peek.setSubtitle("Meta: " + tableModel.getValueAt(row, 1));
+            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 6)), UIHelper.APPROVED_GREEN);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Calculado", String.valueOf(tableModel.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Aprovado", String.valueOf(tableModel.getValueAt(row, 4)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Justificação", String.valueOf(tableModel.getValueAt(row, 5)), false));
+            peek.setItems(items);
+        });
 
         JScrollPane scrollPane = new JScrollPane(table);
         UIHelper.styleScrollPane(scrollPane);

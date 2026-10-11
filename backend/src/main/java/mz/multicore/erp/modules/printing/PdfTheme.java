@@ -22,10 +22,10 @@ public final class PdfTheme {
     /** Vermelho de anulação — carimbos de documento sem valor (folha de obra anulada). */
     public static final Color DANGER = new Color(185, 28, 28);
 
-    public static final float MARGIN_LEFT = 36f;
-    public static final float MARGIN_RIGHT = 36f;
-    public static final float MARGIN_TOP = 36f;
-    public static final float MARGIN_BOTTOM = 36f;
+    public static final float MARGIN_LEFT = 24f;
+    public static final float MARGIN_RIGHT = 24f;
+    public static final float MARGIN_TOP = 28f;
+    public static final float MARGIN_BOTTOM = 28f;
 
     public static final String CURRENCY_CODE = "MT";
 
@@ -52,7 +52,11 @@ public final class PdfTheme {
     }
 
     public static Font tableHeaderFont() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, BRAND);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8.5f, BRAND);
+    }
+
+    public static Font tableBodyFont() {
+        return FontFactory.getFont(FontFactory.HELVETICA, 8.5f, TEXT);
     }
 
     public static Font monoFont() {

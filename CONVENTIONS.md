@@ -101,7 +101,9 @@ public class PurchaseService {
 }
 ```
 
-Para Swing (`gui/`): mesma regra — o painel recebe Services no construtor.
+Para Swing (`gui/`), aplica-se a mesma regra de injecção por construtor, mas o painel recebe apenas
+clientes HTTP, estado de sessão e colaboradores próprios do desktop. O módulo `desktop` nunca
+recebe Services ou Repositories do backend.
 
 ---
 

@@ -36,6 +36,7 @@ import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.RecentItemsDialog;
 import mz.multicore.erp.gui.components.RecentItemsHistoryManager;
 import mz.multicore.erp.desktop.client.HRApiClient;
+import mz.multicore.erp.desktop.client.AiAssistantApiClient;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -77,6 +78,10 @@ public class MainFrame extends JFrame {
     private final ClientesPanel clientesPanel;
     private final FiscalPanel fiscalPanel;
     private final mz.multicore.erp.gui.accounting.AccountingPanel accountingPanel;
+    private final AssetsPanel assetsPanel;
+    private final ManufacturingPanel manufacturingPanel;
+    private final FleetPanel fleetPanel;
+    private final RecurringContractsPanel recurringContractsPanel;
     private final ApprovalsPanel approvalsPanel;
     private final POSPanel posPanel;
     private final StockPanel stockPanel;
@@ -88,6 +93,7 @@ public class MainFrame extends JFrame {
     private final NotificationsPanel notificationsPanel;
     private final NotificationReadStore notificationReadStore;
     private final ForensicAuditPanel forensicAuditPanel;
+    private final AiManagementAssistantPanel aiAssistantPanel;
 
     private final DesktopSessionStore desktopSessionStore;
     private final mz.multicore.erp.desktop.client.VersionApiClient versionApiClient;
@@ -141,7 +147,13 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.CashFlowForecastApiClient cashFlowForecastApiClient,
             mz.multicore.erp.desktop.client.ForensicAuditApiClient forensicAuditApiClient,
             mz.multicore.erp.desktop.client.InventoryPhysicalCountingApiClient inventoryPhysicalCountingApiClient,
-            mz.multicore.erp.desktop.client.SystemMonitoringApiClient systemMonitoringApiClient
+            mz.multicore.erp.desktop.client.SystemMonitoringApiClient systemMonitoringApiClient,
+            mz.multicore.erp.desktop.client.AssetApiClient assetApiClient,
+            mz.multicore.erp.desktop.client.ProductionApiClient productionApiClient,
+            mz.multicore.erp.desktop.client.FleetApiClient fleetApiClient,
+            mz.multicore.erp.desktop.client.RecurringContractApiClient recurringContractApiClient,
+            mz.multicore.erp.desktop.client.DashboardApiClient dashboardApiClient,
+            AiAssistantApiClient aiAssistantApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -163,7 +175,7 @@ public class MainFrame extends JFrame {
         if (superAdmin) {
             dashboardPanel = null; comercialPanel = null; financeiroPanel = null; hrPanel = null;
             crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null;
-            accountingPanel = null; performancePanel = null; forensicAuditPanel = null;
+            accountingPanel = null; assetsPanel = null; manufacturingPanel = null; fleetPanel = null; recurringContractsPanel = null; performancePanel = null; forensicAuditPanel = null; aiAssistantPanel = null;
             posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
             notificationFeed = null; notificationsPanel = null; notificationReadStore = null;
             plataformaPanel = new PlataformaPanel(platformApiClient, systemMonitoringApiClient);
@@ -171,9 +183,11 @@ public class MainFrame extends JFrame {
         } else {
             dashboardPanel  = new DashboardPanel(
                     comercialApiClient, financeApiClient, approvalApiClient, crmApiClient, purchaseApiClient, inventoryApiClient,
-                    forensicAuditApiClient, cashFlowForecastApiClient, creditRiskApiClient, performanceApiClient, this::navigate);
+                    forensicAuditApiClient, cashFlowForecastApiClient, creditRiskApiClient, performanceApiClient,
+                    dashboardApiClient, this::navigate);
             stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient);
             comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient, printApiClient,
+                    productionApiClient, fleetApiClient,
                     () -> {
                         navigate("stock");
                         if (topBar != null) topBar.setActive("Stock & Armazéns");
@@ -186,12 +200,19 @@ public class MainFrame extends JFrame {
             clientesPanel   = new ClientesPanel(comercialApiClient, printApiClient, creditRiskApiClient, accountStatementApiClient);
             fiscalPanel     = new FiscalPanel(fiscalApiClient);
             accountingPanel = new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
-            approvalsPanel  = new ApprovalsPanel(approvalApiClient);
-            posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser);
+            assetsPanel     = new AssetsPanel(assetApiClient, printApiClient);
+            manufacturingPanel = new ManufacturingPanel(productionApiClient, comercialApiClient, inventoryApiClient);
+            fleetPanel      = new FleetPanel(fleetApiClient);
+            recurringContractsPanel = new RecurringContractsPanel(recurringContractApiClient);
+            approvalsPanel  = new ApprovalsPanel(approvalApiClient, stockTransferApiClient,
+                    comercialApiClient, printApiClient);
+            posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
+                    promotionApiClient, scaleBarcodeParser, printApiClient);
             comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
             configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
             performancePanel = new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = new ForensicAuditPanel(forensicAuditApiClient);
+            aiAssistantPanel = new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
                     mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient);
             notificationReadStore = new NotificationReadStore();
@@ -204,8 +225,13 @@ public class MainFrame extends JFrame {
             contentPanel.add(hrPanel, "hr"); contentPanel.add(performancePanel, "desempenho");
             contentPanel.add(crmPanel, "crm"); contentPanel.add(clientesPanel, "clientes");
             contentPanel.add(fiscalPanel, "fiscal"); contentPanel.add(accountingPanel, "contabilidade");
+            contentPanel.add(assetsPanel, "assets");
+            contentPanel.add(manufacturingPanel, "manufacturing");
+            contentPanel.add(fleetPanel, "fleet");
+            contentPanel.add(recurringContractsPanel, "recurring");
             contentPanel.add(approvalsPanel, "approvals"); contentPanel.add(configPanel, "config");
             contentPanel.add(forensicAuditPanel, "auditoria_forense");
+            contentPanel.add(aiAssistantPanel, "assistente_ia");
             contentPanel.add(notificationsPanel, "notifications");
         }
 
@@ -223,12 +249,13 @@ public class MainFrame extends JFrame {
         add(sidebar, BorderLayout.WEST);
         add(centerContainer, BorderLayout.CENTER);
 
-        // Atalhos de Teclado Rápidos (Ctrl+B, Ctrl+K, F1, F11)
+        // Atalhos de Teclado Rápidos (Ctrl+B, Ctrl+K, F1, F11, F12)
         int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
         getRootPane().registerKeyboardAction(e -> { if (sidebar != null) sidebar.toggle(); }, KeyStroke.getKeyStroke(KeyEvent.VK_B, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> openGlobalSearch(), KeyStroke.getKeyStroke(KeyEvent.VK_K, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> openRecentItemsHistory(), KeyStroke.getKeyStroke(KeyEvent.VK_H, mask), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> openShortcutHelp(), KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> openAboutDialog(), KeyStroke.getKeyStroke(KeyEvent.VK_F12, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> toggleFullScreen(), KeyStroke.getKeyStroke(KeyEvent.VK_F11, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         if (superAdmin) {
@@ -356,19 +383,31 @@ public class MainFrame extends JFrame {
         });
         sb.addItem(UIHelper.icon("fas-shopping-cart", 16, UIHelper.MODULE_COMPRAS), "Compras", UIHelper.MODULE_COMPRAS, () -> navigate("compras"));
         sb.addItem(UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), "Stock & Armazéns", UIHelper.MODULE_STOCK, () -> navigate("stock"));
+        sb.addItem(UIHelper.icon("fas-exchange-alt", 16, UIHelper.ACCENT_BLUE), "Movimentos", UIHelper.ACCENT_BLUE, () -> {
+            navigate("comercial");
+            comercialPanel.showMovements();
+        });
+        sb.addItem(UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_BLUE), "Produção & Fabrico", UIHelper.ACCENT_BLUE, () -> navigate("manufacturing"));
+        sb.addItem(UIHelper.icon("fas-car", 16, UIHelper.ACCENT_CYAN), "Gestão de Frotas", UIHelper.ACCENT_CYAN, () -> navigate("fleet"));
 
         // 2. GESTÃO & CRM
         sb.addSection("Gestão & CRM");
+        String activeRole = initialSession.activeRole();
+        if ("MANAGER".equalsIgnoreCase(activeRole) || "ADMIN".equalsIgnoreCase(activeRole)) {
+            sb.addItem(UIHelper.icon("fas-lightbulb", 16, UIHelper.ACCENT_ORANGE), "Assistente de Gestão", UIHelper.ACCENT_ORANGE, () -> navigate("assistente_ia"));
+        }
         sb.addItem(UIHelper.icon("fas-coins", 16, UIHelper.MODULE_FINANCEIRO), "Tesouraria", UIHelper.MODULE_FINANCEIRO, () -> navigate("financeiro"));
         sb.addItem(UIHelper.icon("fas-users", 16, UIHelper.MODULE_HR), "Recursos Humanos", UIHelper.MODULE_HR, () -> navigate("hr"));
         sb.addItem(UIHelper.icon("fas-trophy", 16, UIHelper.MODULE_COMERCIAL), "Desempenho", UIHelper.MODULE_COMERCIAL, () -> navigate("desempenho"));
         sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM & Assistência", UIHelper.MODULE_CRM, () -> navigate("crm"));
         sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate("clientes"));
+        sb.addItem(UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), "Avenças & Contratos", UIHelper.ACCENT_BLUE, () -> navigate("recurring"));
 
         // 3. FISCAL & AUDITORIA
         sb.addSection("Fiscal & Auditoria");
         sb.addItem(UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), "Área Fiscal", UIHelper.MODULE_FISCAL, () -> navigate("fiscal"));
         sb.addItem(UIHelper.icon("fas-calculator", 16, UIHelper.MODULE_ACCOUNTING), "Contabilidade", UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"));
+        sb.addItem(UIHelper.icon("fas-building", 16, UIHelper.ACCENT_BLUE), "Activos & Património", UIHelper.ACCENT_BLUE, () -> navigate("assets"));
         sb.addItem(UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_APPROVALS), "Aprovações", UIHelper.MODULE_APPROVALS, () -> navigate("approvals"));
         sb.addItem(UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), "Auditoria Forense", UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"));
 
@@ -378,6 +417,18 @@ public class MainFrame extends JFrame {
         sb.addItem(UIHelper.icon("fas-cog", 16, UIHelper.ACCENT_BLUE), "Configurações", UIHelper.ACCENT_BLUE, () -> navigate("config"));
 
         return sb;
+    }
+
+    /** Botão Sobre o Multicore ERP na barra superior (F12). */
+    private javax.swing.JComponent buildAboutButton() {
+        JLabel btn = new JLabel(UIHelper.icon("fas-info-circle", 18, topBarIconTint()));
+        btn.setToolTipText("Sobre o Multicore ERP (F12)");
+        btn.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        btn.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mousePressed(java.awt.event.MouseEvent e) { openAboutDialog(); }
+        });
+        return btn;
     }
 
     /** Botão de histórico recente na barra de menu (Ctrl+H). */
@@ -568,13 +619,26 @@ public class MainFrame extends JFrame {
         JComboBox<DesktopSession.CompanyAccess> combo =
                 new JComboBox<>(companies.toArray(new DesktopSession.CompanyAccess[0]));
 
-        if (!companies.isEmpty()) {
-            selectDesktopCompany(companies.get(0));
+        java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(MainFrame.class);
+        String prefKey = "last_selected_company_id_" + (session.username() != null ? session.username() : "default");
+        long lastCompanyId = prefs.getLong(prefKey, -1L);
+
+        DesktopSession.CompanyAccess initial = companies.stream()
+                .filter(c -> c.id().equals(lastCompanyId))
+                .findFirst()
+                .orElse(companies.isEmpty() ? null : companies.get(0));
+
+        if (initial != null) {
+            combo.setSelectedItem(initial);
+            selectDesktopCompany(initial);
         }
 
         combo.addActionListener(e -> {
             DesktopSession.CompanyAccess selected = (DesktopSession.CompanyAccess) combo.getSelectedItem();
             if (selected != null) {
+                try {
+                    prefs.putLong(prefKey, selected.id());
+                } catch (Exception ignored) {}
                 selectDesktopCompany(selected);
                 if (topBar != null) topBar.setSubBrand(selected.name());
                 if (sidebar != null) sidebar.setSubBrand(selected.name());
@@ -767,8 +831,13 @@ public class MainFrame extends JFrame {
             case "clientes"   -> "Clientes";
             case "fiscal"     -> "Área Fiscal";
             case "contabilidade" -> "Contabilidade";
+            case "assets"     -> "Activos & Património";
+            case "manufacturing" -> "Produção & Fabrico";
+            case "fleet"      -> "Gestão de Frotas";
+            case "recurring"  -> "Avenças & Contratos";
             case "approvals"  -> "Aprovações";
             case "auditoria_forense" -> "Auditoria Forense";
+            case "assistente_ia" -> "Assistente de Gestão";
             case "config"     -> "Configurações";
             case "notifications" -> "Notificações";
             case "plataforma" -> "Plataforma";
@@ -792,6 +861,10 @@ public class MainFrame extends JFrame {
             case "clientes"   -> clientesPanel.onPanelSelected();
             case "fiscal"     -> fiscalPanel.onPanelSelected();
             case "contabilidade" -> accountingPanel.onPanelSelected();
+            case "assets"     -> assetsPanel.onPanelSelected();
+            case "manufacturing" -> manufacturingPanel.onPanelSelected();
+            case "fleet"      -> fleetPanel.onPanelSelected();
+            case "recurring"  -> recurringContractsPanel.onPanelSelected();
             case "approvals"  -> approvalsPanel.onPanelSelected();
             case "auditoria_forense" -> forensicAuditPanel.loadData();
             case "pos"        -> posPanel.onPanelSelected();
@@ -827,6 +900,10 @@ public class MainFrame extends JFrame {
             else if (comp instanceof ClientesPanel p)   p.onPanelSelected();
             else if (comp instanceof FiscalPanel p)     p.onPanelSelected();
             else if (comp instanceof mz.multicore.erp.gui.accounting.AccountingPanel p) p.onPanelSelected();
+            else if (comp instanceof AssetsPanel p)     p.onPanelSelected();
+            else if (comp instanceof ManufacturingPanel p) p.onPanelSelected();
+            else if (comp instanceof FleetPanel p)         p.onPanelSelected();
+            else if (comp instanceof RecurringContractsPanel p) p.onPanelSelected();
             else if (comp instanceof ApprovalsPanel p)  p.onPanelSelected();
             else if (comp instanceof POSPanel p)        p.onPanelSelected();
             else if (comp instanceof StockPanel p)      p.onPanelSelected();
@@ -853,6 +930,10 @@ public class MainFrame extends JFrame {
 
     public void openShortcutHelp() {
         ShortcutHelpDialog.show(this);
+    }
+
+    public void openAboutDialog() {
+        mz.multicore.erp.gui.components.AboutDialog.show(this);
     }
 
     public void toggleFullScreen() {
@@ -962,11 +1043,16 @@ public class MainFrame extends JFrame {
                 () -> navigate("fiscal"), List.of("imposto", "declaracao", "mapa", "retencoes")
         ));
         items.add(new GlobalSearchDialog.SearchItem("mod_contabilidade", "Contabilidade & Razão", "Módulos", null, UIHelper.icon("fas-calculator", 16, UIHelper.MODULE_ACCOUNTING), UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"), List.of("lancamentos", "diario", "balancete", "contas")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_assets", "Activos Fixos & Património", "Módulos", null, UIHelper.icon("fas-building", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("assets"), List.of("activos", "patrimonio", "imobilizado", "amortizacoes", "depreciacao", "vlc")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_manufacturing", "Produção & Transformação Industrial", "Módulos", null, UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("manufacturing"), List.of("producao", "fabrico", "bom", "ficha tecnica", "ordem de producao", "cip", "industria")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_fleet", "Gestão de Frotas & Viaturas", "Módulos", null, UIHelper.icon("fas-car", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("fleet"), List.of("frota", "viaturas", "carros", "combustivel", "abastecimento", "odometro", "km/l", "motoristas")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_recurring", "Avenças & Contratos Recorrentes", "Módulos", null, UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("recurring"), List.of("avencas", "contratos", "recorrente", "mensalidades", "subscricoes", "servicos", "batch", "faturacao")));
         items.add(new GlobalSearchDialog.SearchItem("mod_approvals", "Aprovações Pendentes", "Módulos", null, UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_APPROVALS), UIHelper.MODULE_APPROVALS, () -> navigate("approvals"), List.of("autorizar", "pendencias", "requisicoes")));
         items.add(new GlobalSearchDialog.SearchItem("mod_notifications", "Notificações & Avisos", "Módulos", null, UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("notifications"), List.of("alertas", "sino", "avisos", "validade")));
         items.add(new GlobalSearchDialog.SearchItem("mod_config", "Configurações do Sistema", "Módulos", null, UIHelper.icon("fas-cog", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("config"), List.of("utilizadores", "empresa", "auditoria", "backup", "licenca")));
 
         // 2. Ações Rápidas & Ferramentas
+        items.add(new GlobalSearchDialog.SearchItem("act_about", "Sobre o Multicore ERP", "Sistema", "F12", UIHelper.icon("fas-info-circle", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openAboutDialog, List.of("sobre", "versao", "sistema", "licenca", "autor", "miranda", "maunze", "desenvolvedor", "arquiteto", "creditos")));
         items.add(new GlobalSearchDialog.SearchItem("act_logout", "Terminar Sessão (Logout)", "Sistema", null, UIHelper.icon("fas-sign-out-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> UIHelper.requestLogout(this), List.of("logout", "sair", "encerrar", "trocar utilizador", "login", "desconectar")));
         items.add(new GlobalSearchDialog.SearchItem("act_help", "Guia de Atalhos de Teclado", "Ferramentas", "F1", UIHelper.icon("fas-keyboard", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openShortcutHelp, List.of("atalhos", "ajuda", "comandos", "teclado", "help")));
         items.add(new GlobalSearchDialog.SearchItem("act_fullscreen", "Alternar Modo Ecrã Completo", "Ferramentas", "F11", UIHelper.icon("fas-expand", 16, UIHelper.BUTTON_NEUTRAL), UIHelper.BUTTON_NEUTRAL, this::toggleFullScreen, List.of("fullscreen", "ecra inteiro", "maximizar", "quiosque")));

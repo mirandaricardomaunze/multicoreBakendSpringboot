@@ -343,7 +343,7 @@ class POSServiceTest {
     @Test
     void closeSession_saldoCerto_fechaSemExigirPermissao() {
         // Operador EMPLOYEE; sem diferença não há guarda de permissão.
-        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
         when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
         when(tillSessionRepository.save(any(TillSession.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -355,7 +355,7 @@ class POSServiceTest {
 
     @Test
     void closeSession_comDiferenca_semPermissao_bloqueia() {
-        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
         when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
 
         // Esperado 100, contado 90 → diferença -10 exige MANAGER/ADMIN. Operador é EMPLOYEE.
@@ -366,7 +366,7 @@ class POSServiceTest {
     @Test
     void closeSession_jaFechada_bloqueia() {
         TillSession closed = session(1L, "CLOSED", new BigDecimal("100"));
-        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(closed));
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(closed));
 
         assertThrows(BusinessRuleException.class, () -> service.closeSession(1L, new BigDecimal("100")));
     }
@@ -374,7 +374,7 @@ class POSServiceTest {
     @Test
     void closeSession_comDeposito_movimentaLiquidoParaTesouraria() {
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
-        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
         TillMovement sale = new TillMovement();
         sale.setMovementType(TillMovementType.SALE);
         sale.setAmount(new BigDecimal("50"));
@@ -390,7 +390,7 @@ class POSServiceTest {
 
     @Test
     void closeSession_comNotasEDenominacoes_persisteComSucesso() {
-        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
         when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
         when(tillSessionRepository.save(any(TillSession.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -408,7 +408,7 @@ class POSServiceTest {
     @Test
     void closeSession_comDiferencaEJustificacao_comPermissaoGerente_persisteNotasEDiferenca() {
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
-        when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(openSession));
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
         when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
         when(tillSessionRepository.save(any(TillSession.class))).thenAnswer(inv -> inv.getArgument(0));
 

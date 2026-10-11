@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.inventory.controller;
 
+import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.inventory.service.ProductBatchService;
@@ -58,6 +59,14 @@ public class InventoryController {
     @GetMapping("/movements")
     public ResponseEntity<List<StockMovementDTO>> getMovements(@RequestParam Long companyId) {
         return ResponseEntity.ok(inventoryService.findMovementsByCompany(companyId));
+    }
+
+    @GetMapping("/movements/page")
+    public ResponseEntity<PageResponse<StockMovementDTO>> getMovementsPage(
+            @RequestParam Long companyId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size) {
+        return ResponseEntity.ok(inventoryService.findMovementsPageByCompany(companyId, page, size));
     }
 
     @PostMapping("/adjustments")

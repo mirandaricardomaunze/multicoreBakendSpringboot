@@ -21,6 +21,9 @@ public interface ProductBatchRepository extends JpaRepository<ProductBatch, Long
     Optional<ProductBatch> findFirstByProductIdAndBatchNumberOrderByExpirationDateAsc(
             Long productId, String batchNumber);
 
+    /** Obtém o lote ativo mais antigo (FEFO) para um produto. */
+    Optional<ProductBatch> findFirstByProductIdOrderByExpirationDateAsc(Long productId);
+
     @Query("SELECT b FROM ProductBatch b " +
             "WHERE b.product.id = :productId AND b.warehouse.id = :warehouseId AND b.quantity > 0 " +
             "ORDER BY b.expirationDate ASC, b.entryDate ASC, b.id ASC")

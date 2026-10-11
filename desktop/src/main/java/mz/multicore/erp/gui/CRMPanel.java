@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.UIHelper;
@@ -112,6 +113,7 @@ public class CRMPanel extends JPanel {
         };
         ticketsTable = new JTable(ticketsModel);
         UIHelper.styleTable(ticketsTable);
+        UIHelper.ensureHeadersFit(ticketsTable);
         ticketsTable.putClientProperty("noRowInspector", Boolean.TRUE);
         ticketsTable.getColumnModel().getColumn(6).setCellRenderer(TableCellRenderers.status());
         ticketsTable.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -119,6 +121,23 @@ public class CRMPanel extends JPanel {
                 if (ev.getClickCount() == 2) ticketActions.openSelectedTicket();
             }
         });
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(ticketsTable, ticketsCard, (peek, mr) -> {
+            int row = ticketsTable.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-headset", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(ticketsModel.getValueAt(row, 3)));
+            peek.setSubtitle("Ticket #" + ticketsModel.getValueAt(row, 0) + " • " + ticketsModel.getValueAt(row, 2));
+            peek.setStatus(String.valueOf(ticketsModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data de Abertura", String.valueOf(ticketsModel.getValueAt(row, 1)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Cliente", String.valueOf(ticketsModel.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Prioridade", String.valueOf(ticketsModel.getValueAt(row, 4)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Técnico Responsável", String.valueOf(ticketsModel.getValueAt(row, 5)), false));
+            peek.setItems(items);
+            peek.getOpenFullButton().setText("Abrir Pedido");
+            peek.setOnOpenFullAction(v -> ticketActions.openSelectedTicket());
+        });
+
         JScrollPane tScroll = new JScrollPane(ticketsTable);
         UIHelper.styleScrollPane(tScroll);
 
@@ -156,6 +175,8 @@ public class CRMPanel extends JPanel {
         ModernButton billBtn = UIHelper.createPrimaryButton("Faturar Folha de Obra");
         billBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
         billBtn.addActionListener(e -> workSheetActions.billWorkSheet());
+
+        ModernButton refreshWsBtn = UIHelper.createRefreshButton(this::refreshData);
 
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Ações da Folha")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), workSheetActions::printWorkSheet)
@@ -196,9 +217,8 @@ public class CRMPanel extends JPanel {
         JPanel wsBar = TableFilter.bar(wsSearch, TableFilter.label("Estado:"), wsEstado,
                 TableFilter.label("Data:", "fas-calendar-alt"), wsPeriodo);
         wsBar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        ModernButton wsRefreshBtn = UIHelper.createRefreshButton(this::refreshData);
         wsCard.add(UIHelper.tableCardTop("Folhas de Obra Registadas", wsBar,
-                wsRefreshBtn, moreBtn, billBtn, newWsBtn), BorderLayout.NORTH);
+                refreshWsBtn, moreBtn, billBtn, newWsBtn), BorderLayout.NORTH);
         wsCard.add(wsScroll, BorderLayout.CENTER);
         wsPanel.add(wsCard, BorderLayout.CENTER);
         return wsPanel;

@@ -45,8 +45,30 @@ public record QuotationDTO(
         List<QuotationLineDTO> lines,
         Long invoiceId,
         String invoiceNumber,
-        long version
+        long version,
+        Long businessUnitId,
+        String businessUnitName
 ) {
+    /** Construtor retrocompatível com 33 argumentos (sem unidade de negócio). */
+    public QuotationDTO(
+            Long id, String quotationNumber, LocalDateTime quotationDate, LocalDate validUntil,
+            boolean expired, long daysUntilExpiry, Long companyId, Long clientId,
+            String clientName, String clientTaxId, String walkInName, Long warehouseId,
+            String warehouseName, BigDecimal totalBeforeTax, BigDecimal taxAmount,
+            BigDecimal totalAmount, String status, String statusLabel, String paymentTerms,
+            String deliveryTerms, Integer deliveryDays, String notes, LocalDateTime sentAt,
+            LocalDateTime decidedAt, String decidedBy, String rejectionReason, Long orderId,
+            String orderNumber, String createdBy, List<QuotationLineDTO> lines,
+            Long invoiceId, String invoiceNumber, long version
+    ) {
+        this(id, quotationNumber, quotationDate, validUntil, expired, daysUntilExpiry,
+                companyId, clientId, clientName, clientTaxId, walkInName, warehouseId,
+                warehouseName, totalBeforeTax, taxAmount, totalAmount, status, statusLabel,
+                paymentTerms, deliveryTerms, deliveryDays, notes, sentAt, decidedAt, decidedBy,
+                rejectionReason, orderId, orderNumber, createdBy, lines, invoiceId, invoiceNumber, version,
+                null, null);
+    }
+
     /** Construtor retrocompatível sem versão optimista. */
     public QuotationDTO(
             Long id, String quotationNumber, LocalDateTime quotationDate, LocalDate validUntil,
@@ -63,7 +85,8 @@ public record QuotationDTO(
                 companyId, clientId, clientName, clientTaxId, walkInName, warehouseId,
                 warehouseName, totalBeforeTax, taxAmount, totalAmount, status, statusLabel,
                 paymentTerms, deliveryTerms, deliveryDays, notes, sentAt, decidedAt, decidedBy,
-                rejectionReason, orderId, orderNumber, createdBy, lines, invoiceId, invoiceNumber, 0L);
+                rejectionReason, orderId, orderNumber, createdBy, lines, invoiceId, invoiceNumber, 0L,
+                null, null);
     }
 
     /** Construtor retrocompatível sem campos de fatura gerada. */

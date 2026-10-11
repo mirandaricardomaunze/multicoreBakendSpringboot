@@ -25,8 +25,23 @@ public record StockTransferDTO(
         String orderNumber,
         String driverName,
         String vehiclePlate,
-        Long version
+        Long version,
+        Long businessUnitId,
+        String businessUnitName
 ) {
+    /** Construtor retrocompatível para 21 argumentos (anterior a businessUnitId/businessUnitName). */
+    public StockTransferDTO(Long id, String transferNumber, LocalDateTime transferDate, Long companyId,
+                            Long originWarehouseId, String originWarehouseName, Long destinationWarehouseId,
+                            String destinationWarehouseName, String status, String responsible, String vehicle,
+                            String notes, String approvedBy, LocalDateTime approvedAt, String rejectionReason,
+                            List<StockTransferLineDTO> lines, Long orderId, String orderNumber,
+                            String driverName, String vehiclePlate, Long version) {
+        this(id, transferNumber, transferDate, companyId, originWarehouseId, originWarehouseName,
+                destinationWarehouseId, destinationWarehouseName, status, responsible, vehicle, notes,
+                approvedBy, approvedAt, rejectionReason, lines, orderId, orderNumber, driverName,
+                vehiclePlate, version, null, null);
+    }
+
     /** Construtor retrocompatível de quem construía o DTO antes da reposição interna existir. */
     public StockTransferDTO(Long id, String transferNumber, LocalDateTime transferDate, Long companyId,
                             Long originWarehouseId, String originWarehouseName, Long destinationWarehouseId,

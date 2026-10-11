@@ -2,17 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.client.AccountStatementApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
-import mz.multicore.erp.gui.components.DateField;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.KpiCard;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.PrintPreviewDialog;
-import mz.multicore.erp.gui.components.SendStatementEmailDialog;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.ToastManager;
-import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.comercial.dto.CustomerStatementDTO;
 import mz.multicore.erp.modules.comercial.dto.CustomerStatementLineDTO;
@@ -39,6 +29,7 @@ public class CustomerStatementPanel extends JPanel {
     private final ComercialApiClient comercialApiClient;
 
     private JComboBox<ClientComboItem> clientCombo;
+    private JComboBox<String> businessUnitCombo;
     private DateField startDateField;
     private DateField endDateField;
     private JProgressBar busyBar;
@@ -62,84 +53,14 @@ public class CustomerStatementPanel extends JPanel {
         this.statementApiClient = statementApiClient;
         this.comercialApiClient = comercialApiClient;
 
-        setLayout(new BorderLayout(0, 12));
+        setLayout(new BorderLayout(0, 10));
         setBackground(UIHelper.BG_DARK);
-        setBorder(new EmptyBorder(16, 20, 20, 20));
+        setBorder(new EmptyBorder(10, 12, 10, 12));
 
-        add(buildHeader(), BorderLayout.NORTH);
-
-        JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
-        centerPanel.setOpaque(false);
-        centerPanel.add(buildSummaryCards(), BorderLayout.NORTH);
-        centerPanel.add(buildTableCard(), BorderLayout.CENTER);
-
-        add(centerPanel, BorderLayout.CENTER);
+        add(buildSummaryCards(), BorderLayout.NORTH);
+        add(buildTableCard(), BorderLayout.CENTER);
 
         loadClients();
-    }
-
-    private JPanel buildHeader() {
-        JPanel header = new JPanel(new BorderLayout(0, 10));
-        header.setOpaque(false);
-
-        // Linha 1: Título e barra de progresso
-        JPanel topRow = new JPanel(new BorderLayout());
-        topRow.setOpaque(false);
-        topRow.add(UIHelper.createHeading("Conta Corrente & Reconciliação de Clientes"), BorderLayout.WEST);
-
-        busyBar = new JProgressBar();
-        busyBar.setIndeterminate(true);
-        busyBar.setVisible(false);
-        busyBar.setPreferredSize(new Dimension(140, 14));
-        topRow.add(busyBar, BorderLayout.EAST);
-        header.add(topRow, BorderLayout.NORTH);
-
-        JLabel lblCliente = new JLabel("Cliente:");
-        lblCliente.setForeground(UIHelper.TEXT_LIGHT);
-        lblCliente.setFont(lblCliente.getFont().deriveFont(12f));
-
-        clientCombo = new JComboBox<>();
-        clientCombo.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleComboBox(clientCombo);
-        clientCombo.addActionListener(e -> refreshData());
-
-        JLabel lblInicio = new JLabel("Início:");
-        lblInicio.setForeground(UIHelper.TEXT_LIGHT);
-        lblInicio.setFont(lblInicio.getFont().deriveFont(12f));
-
-        LocalDate defaultStart = LocalDate.now().withDayOfYear(1);
-        startDateField = new DateField(defaultStart);
-        startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
-        startDateField.addActionListener(e -> refreshData());
-
-        JLabel lblFim = new JLabel("Fim:");
-        lblFim.setForeground(UIHelper.TEXT_LIGHT);
-        lblFim.setFont(lblFim.getFont().deriveFont(12f));
-
-        LocalDate defaultEnd = LocalDate.now();
-        endDateField = new DateField(defaultEnd);
-        endDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
-        endDateField.addActionListener(e -> refreshData());
-
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
-
-        ModernButton pdfBtn = UIHelper.createPrimaryButton("Imprimir Extrato (PDF)");
-        pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        pdfBtn.setPreferredSize(new Dimension(185, UIHelper.FORM_CONTROL_HEIGHT));
-        pdfBtn.addActionListener(e -> emitStatementPdf());
-
-        ModernButton emailBtn = UIHelper.createSecondaryButton("Enviar por Email");
-        emailBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
-        emailBtn.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
-        emailBtn.addActionListener(e -> emitStatementEmail());
-
-        JPanel filterBar = TableFilter.toolbar(
-                new JComponent[]{lblCliente, clientCombo, lblInicio, startDateField, lblFim, endDateField},
-                new JComponent[]{refreshBtn, pdfBtn, emailBtn}
-        );
-        header.add(filterBar, BorderLayout.SOUTH);
-
-        return header;
     }
 
     private JPanel buildSummaryCards() {
@@ -161,11 +82,68 @@ public class CustomerStatementPanel extends JPanel {
     }
 
     private ModernPanel buildTableCard() {
-        ModernPanel card = new ModernPanel(12);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 8));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
 
-        String[] cols = {"Data", "Tipo", "Nº Documento", "Descrição", "Referência", "Débito (+)", "Crédito (-)", "Saldo Acumulado"};
+        busyBar = new JProgressBar();
+        busyBar.setIndeterminate(true);
+        busyBar.setVisible(false);
+        busyBar.setPreferredSize(new Dimension(100, 14));
+
+        clientCombo = new JComboBox<>();
+        clientCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(clientCombo);
+        clientCombo.addActionListener(e -> refreshData());
+
+        businessUnitCombo = TableFilter.combo("Todos os negócios");
+        businessUnitCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(businessUnitCombo);
+        businessUnitCombo.addActionListener(e -> renderLines());
+
+        LocalDate defaultStart = LocalDate.now().withDayOfYear(1);
+        startDateField = new DateField(defaultStart);
+        startDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
+        startDateField.addActionListener(e -> refreshData());
+
+        LocalDate defaultEnd = LocalDate.now();
+        endDateField = new DateField(defaultEnd);
+        endDateField.setPreferredSize(new Dimension(110, UIHelper.FORM_CONTROL_HEIGHT));
+        endDateField.addActionListener(e -> refreshData());
+
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::refreshData);
+
+        ModernButton pdfBtn = UIHelper.createPrimaryButton("Imprimir Extrato (PDF)");
+        pdfBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
+        pdfBtn.setPreferredSize(new Dimension(185, UIHelper.FORM_CONTROL_HEIGHT));
+        pdfBtn.addActionListener(e -> emitStatementPdf());
+
+        ModernButton emailBtn = UIHelper.createSecondaryButton("Enviar por Email");
+        emailBtn.setIcon(UIHelper.icon("fas-paper-plane", 14));
+        emailBtn.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        emailBtn.addActionListener(e -> emitStatementEmail());
+
+        JPanel filters = TableFilter.bar(
+                TableFilter.label("Cliente:"), clientCombo,
+                TableFilter.label("Negócio:"), businessUnitCombo,
+                TableFilter.label("Início:"), startDateField,
+                TableFilter.label("Fim:"), endDateField,
+                busyBar
+        );
+
+        ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
+        peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
+        peekToggleBtn.setToolTipText("Espreitar detalhes da linha (Espaço)");
+        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar detalhes");
+        peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
+
+        JPanel filtersRow = new JPanel(new BorderLayout(8, 0));
+        filtersRow.setOpaque(false);
+        filtersRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        filtersRow.add(filters, BorderLayout.WEST);
+        filtersRow.add(peekToggleBtn, BorderLayout.EAST);
+
+        String[] cols = {"Data", "Tipo", "Negócio", "Nº Documento", "Descrição", "Referência", "Débito (+)", "Crédito (-)", "Saldo Acumulado"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -176,24 +154,62 @@ public class CustomerStatementPanel extends JPanel {
         table = new JTable(tableModel);
         UIHelper.styleTable(table);
 
-        table.getColumnModel().getColumn(0).setPreferredWidth(90);
-        table.getColumnModel().getColumn(1).setPreferredWidth(55);
-        table.getColumnModel().getColumn(2).setPreferredWidth(120);
-        table.getColumnModel().getColumn(3).setPreferredWidth(210);
-        table.getColumnModel().getColumn(4).setPreferredWidth(110);
-        table.getColumnModel().getColumn(5).setPreferredWidth(110);
-        table.getColumnModel().getColumn(6).setPreferredWidth(110);
-        table.getColumnModel().getColumn(7).setPreferredWidth(120);
-
-        for (int c : new int[]{5, 6, 7}) {
+        int[] widths = {85, 50, 110, 115, 180, 100, 105, 105, 115};
+        for (int i = 0; i < widths.length; i++) {
+            table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+        }
+        for (int c : new int[]{6, 7, 8}) {
             table.getColumnModel().getColumn(c).setCellRenderer(TableCellRenderers.money());
         }
+        UIHelper.ensureHeadersFit(table);
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        card.add(UIHelper.tableCardTop("Conta Corrente & Reconciliação de Clientes", filtersRow,
+                refreshBtn, pdfBtn, emailBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
+        card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
+
+        TableQuickPeekController peek = TableQuickPeekController.install(table, card, this::populatePeek);
+        peekToggleBtn.addActionListener(e -> peek.toggle());
 
         return card;
+    }
+
+    private void populatePeek(QuickPeekPanel peek, int modelRow) {
+        if (tableModel == null || modelRow < 0 || modelRow >= tableModel.getRowCount()) return;
+        String date = String.valueOf(tableModel.getValueAt(modelRow, 0));
+        String type = String.valueOf(tableModel.getValueAt(modelRow, 1));
+        String bu = String.valueOf(tableModel.getValueAt(modelRow, 2));
+        String docNo = String.valueOf(tableModel.getValueAt(modelRow, 3));
+        String desc = String.valueOf(tableModel.getValueAt(modelRow, 4));
+        String ref = String.valueOf(tableModel.getValueAt(modelRow, 5));
+        Object debitVal = tableModel.getValueAt(modelRow, 6);
+        Object creditVal = tableModel.getValueAt(modelRow, 7);
+        Object balanceVal = tableModel.getValueAt(modelRow, 8);
+
+        peek.setHeaderIcon("fas-file-invoice", UIHelper.ACCENT_BLUE);
+        peek.setTitle(docNo != null && !"-".equals(docNo) ? docNo : desc);
+        peek.setSubtitle(desc);
+        peek.setStatus(type, "FT".equals(type) || "ND".equals(type) ? UIHelper.REJECTED_RED : UIHelper.APPROVED_GREEN);
+
+        java.util.List<QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+        items.add(new QuickPeekPanel.PeekItem("Data", date, false));
+        items.add(new QuickPeekPanel.PeekItem("Tipo de Documento", type, false));
+        items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", bu != null && !"-".equals(bu) ? bu : "Geral", false));
+        items.add(new QuickPeekPanel.PeekItem("Referência", ref != null ? ref : "-", false));
+        if (debitVal instanceof BigDecimal d && d.signum() > 0) {
+            items.add(new QuickPeekPanel.PeekItem("Débito (+)", formatMoney(d), false));
+        }
+        if (creditVal instanceof BigDecimal c && c.signum() > 0) {
+            items.add(new QuickPeekPanel.PeekItem("Crédito (-)", formatMoney(c), false));
+        }
+        if (balanceVal instanceof BigDecimal b) {
+            items.add(new QuickPeekPanel.PeekItem("Saldo Acumulado", formatMoney(b), true));
+        }
+        peek.setItems(items);
+        peek.setOnOpenFullAction(null);
     }
 
     public void loadClients() {
@@ -271,31 +287,64 @@ public class CustomerStatementPanel extends JPanel {
             closingBalanceLabel.setForeground(UIHelper.APPROVED_GREEN);
         }
 
+        // Atualizar seletor de negócios
+        java.util.Set<String> bus = new java.util.TreeSet<>();
+        if (stmt.lines() != null) {
+            for (CustomerStatementLineDTO line : stmt.lines()) {
+                if (line.businessUnitName() != null && !line.businessUnitName().isBlank()) {
+                    bus.add(line.businessUnitName());
+                }
+            }
+        }
+        if (businessUnitCombo != null) {
+            String selectedBu = (String) businessUnitCombo.getSelectedItem();
+            businessUnitCombo.removeAllItems();
+            businessUnitCombo.addItem("Todos os negócios");
+            for (String b : bus) businessUnitCombo.addItem(b);
+            if (selectedBu != null) businessUnitCombo.setSelectedItem(selectedBu);
+        }
+
+        renderLines();
+    }
+
+    private void renderLines() {
+        if (currentStatement == null) return;
         tableModel.setRowCount(0);
+
+        String selectedBu = businessUnitCombo != null ? (String) businessUnitCombo.getSelectedItem() : null;
+        boolean filterBu = selectedBu != null && !selectedBu.startsWith("Todos");
 
         // Linha de Saldo Anterior Transmitido
         tableModel.addRow(new Object[]{
-                stmt.startDate().format(DATE_FMT),
+                currentStatement.startDate().format(DATE_FMT),
                 "TRANS",
+                "-",
                 "SALDO-ANT",
                 "Saldo Anterior Transmitido",
                 "-",
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                stmt.openingBalance()
+                currentStatement.openingBalance()
         });
 
-        for (CustomerStatementLineDTO line : stmt.lines()) {
-            tableModel.addRow(new Object[]{
-                    line.date().format(DATE_FMT),
-                    line.documentType(),
-                    line.documentNumber(),
-                    line.description(),
-                    line.reference(),
-                    line.debit(),
-                    line.credit(),
-                    line.runningBalance()
-            });
+        if (currentStatement.lines() != null) {
+            for (CustomerStatementLineDTO line : currentStatement.lines()) {
+                String bu = line.businessUnitName() != null && !line.businessUnitName().isBlank() ? line.businessUnitName() : "-";
+                if (filterBu && !bu.equalsIgnoreCase(selectedBu)) {
+                    continue;
+                }
+                tableModel.addRow(new Object[]{
+                        line.date().format(DATE_FMT),
+                        line.documentType(),
+                        bu,
+                        line.documentNumber(),
+                        line.description(),
+                        line.reference(),
+                        line.debit(),
+                        line.credit(),
+                        line.runningBalance()
+                });
+            }
         }
     }
 

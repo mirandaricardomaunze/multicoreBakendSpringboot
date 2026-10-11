@@ -139,6 +139,7 @@ class TableActionPlacementHarnessTest {
         Path gui = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui");
         List<String> migrated = List.of(
                 "ClientesPanel.java",
+                "CreditRiskPanel.java",
                 "ApprovalsPanel.java",
                 "CommercialOrdersView.java",
                 "ComprasPanel.java",

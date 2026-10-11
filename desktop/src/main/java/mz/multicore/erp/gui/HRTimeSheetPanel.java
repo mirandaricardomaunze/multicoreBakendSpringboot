@@ -2,6 +2,7 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -73,6 +74,8 @@ final class HRTimeSheetPanel {
         closeBtn.setIcon(UIHelper.icon("fas-lock", 14));
         closeBtn.addActionListener(e -> toggleClose());
 
+        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
+
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Opções")
                 .addAction("Configurar Acréscimos", UIHelper.icon("fas-percentage", 14), this::openOvertimeRatesDialog)
                 .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
@@ -89,8 +92,27 @@ final class HRTimeSheetPanel {
         };
         table = new JTable(model);
         UIHelper.styleTable(table);
+        UIHelper.ensureHeadersFit(table);
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
+
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+            int row = table.convertRowIndexToModel(mr);
+            peek.setHeaderIcon("fas-clock", UIHelper.ACCENT_BLUE);
+            peek.setTitle(String.valueOf(model.getValueAt(row, 0)));
+            peek.setSubtitle("Assiduidade do Mês");
+            peek.setStatus(String.valueOf(model.getValueAt(row, 2)) + " dias", UIHelper.APPROVED_GREEN);
+            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dias Previstos", String.valueOf(model.getValueAt(row, 1)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dias Trabalhados", String.valueOf(model.getValueAt(row, 2)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Sem Marcação", String.valueOf(model.getValueAt(row, 3)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Horas Normais", String.valueOf(model.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Horas Extras Dia", String.valueOf(model.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Horas Extras Noite", String.valueOf(model.getValueAt(row, 6)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Descanso / Feriado", String.valueOf(model.getValueAt(row, 7)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Atrasos", String.valueOf(model.getValueAt(row, 8)), true));
+            peek.setItems(items);
+        });
 
         JTextField search = TableFilter.searchField("Colaborador…");
         TableFilter.install(table, search);
@@ -100,7 +122,6 @@ final class HRTimeSheetPanel {
         filters.setOpaque(false);
         filters.add(periodFilters, BorderLayout.NORTH);
         filters.add(bar, BorderLayout.CENTER);
-        ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
         card.add(UIHelper.tableCardTop("Folha de Ponto", filters,
                 refreshBtn, moreBtn, closeBtn, entryBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);

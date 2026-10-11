@@ -123,6 +123,8 @@ class ComercialServiceTest {
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
+        when(orderRepository.findForUpdate(anyLong(), anyLong()))
+                .thenAnswer(inv -> orderRepository.findById(inv.getArgument(0)));
     }
 
     @AfterEach
@@ -653,7 +655,7 @@ class ComercialServiceTest {
         verify(receiptRepository, times(2)).save(saved.capture());
         Receipt primeiro = saved.getAllValues().get(0);
         primeiro.setId(50L);
-        when(receiptRepository.findById(50L)).thenReturn(Optional.of(primeiro));
+        when(receiptRepository.lockByIdAndCompanyId(50L, COMPANY_ID)).thenReturn(Optional.of(primeiro));
 
         service.cancelReceipt(50L, "Cheque devolvido");
 
@@ -664,7 +666,7 @@ class ComercialServiceTest {
     }
 
     private void stubReceiptLookups(Invoice invoice) {
-        when(invoiceRepository.findById(1L)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
         when(treasuryAccountRepository.findByIdAndCompanyId(TREASURY_ID, COMPANY_ID))
                 .thenReturn(Optional.of(treasuryAccount()));

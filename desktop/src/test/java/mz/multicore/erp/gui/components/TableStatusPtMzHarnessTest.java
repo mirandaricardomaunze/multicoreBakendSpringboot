@@ -1,0 +1,189 @@
+package mz.multicore.erp.gui.components;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import java.awt.Component;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@DisplayName("Harness de Tradução e Filtragem de Estados em PT-MZ")
+class TableStatusPtMzHarnessTest {
+
+    private static final Path GUI_ROOT = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui");
+
+    @Test
+    @DisplayName("UIHelper.humanStatus traduz todos os estados de negócio canónicos para Português de Moçambique")
+    void humanStatus_translatesAllCanonicalBusinessStatuses() {
+        // Encomendas e Vendas
+        assertEquals("Pendente", UIHelper.humanStatus("PENDING"));
+        assertEquals("Pendente de aprovação", UIHelper.humanStatus("PENDING_APPROVAL"));
+        assertEquals("Aguarda separação", UIHelper.humanStatus("AWAITING_SEPARATION"));
+        assertEquals("Em separação", UIHelper.humanStatus("IN_SEPARATION"));
+        assertEquals("Separado", UIHelper.humanStatus("SEPARATED"));
+        assertEquals("Guia por aprovar", UIHelper.humanStatus("GUIDE_PENDING"));
+        assertEquals("Expedido por guia", UIHelper.humanStatus("GUIDED"));
+        assertEquals("Transferência por aprovar", UIHelper.humanStatus("TRANSFER_PENDING"));
+        assertEquals("Transferido para a loja", UIHelper.humanStatus("TRANSFERRED"));
+        assertEquals("Facturado", UIHelper.humanStatus("BILLED"));
+        assertEquals("Cancelado", UIHelper.humanStatus("CANCELLED"));
+
+        // Facturas e Notas
+        assertEquals("Rascunho", UIHelper.humanStatus("DRAFT"));
+        assertEquals("Aprovação de desconto", UIHelper.humanStatus("PENDING_DISCOUNT_APPROVAL"));
+        assertEquals("Aprovado", UIHelper.humanStatus("APPROVED"));
+        assertEquals("Parcialmente paga", UIHelper.humanStatus("PARTIALLY_PAID"));
+        assertEquals("Paga", UIHelper.humanStatus("PAID"));
+        assertEquals("Rejeitado", UIHelper.humanStatus("REJECTED"));
+        assertEquals("Em atraso", UIHelper.humanStatus("OVERDUE"));
+
+        // Compras e Recepção
+        assertEquals("Encomendado", UIHelper.humanStatus("ORDERED"));
+        assertEquals("Parcialmente recebido", UIHelper.humanStatus("PARTIALLY_RECEIVED"));
+        assertEquals("Recebido", UIHelper.humanStatus("RECEIVED"));
+
+        // Recibos e Caixa
+        assertEquals("Concluído", UIHelper.humanStatus("COMPLETED"));
+
+        // Contratos e Utilizadores
+        assertEquals("Activo", UIHelper.humanStatus("ACTIVE"));
+        assertEquals("Suspenso", UIHelper.humanStatus("SUSPENDED"));
+        assertEquals("Expirado", UIHelper.humanStatus("EXPIRED"));
+        assertEquals("Rescindido", UIHelper.humanStatus("TERMINATED"));
+        assertEquals("SuperAdmin", UIHelper.humanStatus("SUPERADMIN"));
+
+        // Frotas
+        assertEquals("Operacional", UIHelper.humanStatus("OPERATIONAL"));
+        assertEquals("Manutenção", UIHelper.humanStatus("MAINTENANCE"));
+        assertEquals("Inspecção", UIHelper.humanStatus("INSPECTION"));
+        assertEquals("Fora de serviço", UIHelper.humanStatus("OUT_OF_SERVICE"));
+        assertEquals("Vendido", UIHelper.humanStatus("SOLD"));
+
+        // Produção
+        assertEquals("Planeada", UIHelper.humanStatus("PLANEADA"));
+        assertEquals("Em produção", UIHelper.humanStatus("EM_PRODUCAO"));
+        assertEquals("Concluído", UIHelper.humanStatus("CONCLUIDA"));
+
+        // Financeiro
+        assertEquals("Débito", UIHelper.humanStatus("DEBIT"));
+        assertEquals("Crédito", UIHelper.humanStatus("CREDIT"));
+    }
+
+    @Test
+    @DisplayName("TableFilter.cellMatches suporta correspondência bidirecional entre opções em PT-MZ e enums no modelo")
+    void cellMatches_bidirectionalMatchingBetweenPtMzAndEnums() {
+        // Opção do combo em PT-MZ vs enum em inglês no modelo
+        assertTrue(TableFilter.cellMatches("PENDING", "Pendente"));
+        assertTrue(TableFilter.cellMatches("PENDING", "Por facturar"));
+        assertTrue(TableFilter.cellMatches("PENDING_APPROVAL", "Pendente de aprovação"));
+        assertTrue(TableFilter.cellMatches("AWAITING_SEPARATION", "Aguarda separação"));
+        assertTrue(TableFilter.cellMatches("IN_SEPARATION", "Em separação"));
+        assertTrue(TableFilter.cellMatches("SEPARATED", "Separado"));
+        assertTrue(TableFilter.cellMatches("BILLED", "Facturado"));
+        assertTrue(TableFilter.cellMatches("BILLED", "Faturado"));
+        assertTrue(TableFilter.cellMatches("CANCELLED", "Cancelado"));
+        assertTrue(TableFilter.cellMatches("ORDERED", "Encomendado"));
+        assertTrue(TableFilter.cellMatches("DRAFT", "Rascunho"));
+        assertTrue(TableFilter.cellMatches("PAID", "Paga"));
+        assertTrue(TableFilter.cellMatches("APPROVED", "Aprovado"));
+        assertTrue(TableFilter.cellMatches("REJECTED", "Rejeitado"));
+        assertTrue(TableFilter.cellMatches("ACTIVE", "Activo"));
+        assertTrue(TableFilter.cellMatches("SUSPENDED", "Suspenso"));
+        assertTrue(TableFilter.cellMatches("TERMINATED", "Rescindido"));
+
+        // Caso o modelo já guarde o texto humanizado
+        assertTrue(TableFilter.cellMatches("Pendente", "Pendente"));
+        assertTrue(TableFilter.cellMatches("Facturado", "Facturado"));
+        assertTrue(TableFilter.cellMatches("Aguarda separação", "Aguarda separação"));
+
+        // Opção universal "Todos" deve aceitar qualquer valor
+        assertTrue(TableFilter.cellMatches("PENDING", "Todos os estados"));
+        assertTrue(TableFilter.cellMatches("BILLED", "Todos"));
+        assertTrue(TableFilter.cellMatches(null, "Todos os estados"));
+    }
+
+    @Test
+    @DisplayName("TableCellRenderers.status renderiza badges com rótulo PT-MZ e cores semânticas correctas")
+    void statusRenderer_rendersPortugueseBadgesWithSemanticColors() {
+        TableCellRenderer renderer = TableCellRenderers.status();
+        DefaultTableModel model = new DefaultTableModel(new Object[]{"ID", "Estado"}, 0);
+        model.addRow(new Object[]{1L, "PENDING"});
+        model.addRow(new Object[]{2L, "BILLED"});
+        model.addRow(new Object[]{3L, "CANCELLED"});
+        model.addRow(new Object[]{4L, "AWAITING_SEPARATION"});
+        model.addRow(new Object[]{5L, "ORDERED"});
+
+        JTable table = new JTable(model);
+
+        // Linha 0: PENDING -> "Pendente", Amarelo
+        Component comp0 = renderer.getTableCellRendererComponent(table, model.getValueAt(0, 1), false, false, 0, 1);
+        assertThat(comp0).isInstanceOf(javax.swing.JLabel.class);
+        javax.swing.JLabel label0 = (javax.swing.JLabel) comp0;
+        assertEquals("Pendente", label0.getText());
+        assertEquals(UIHelper.PENDING_YELLOW, label0.getForeground());
+
+        // Linha 1: BILLED -> "Facturado", Verde
+        Component comp1 = renderer.getTableCellRendererComponent(table, model.getValueAt(1, 1), false, false, 1, 1);
+        javax.swing.JLabel label1 = (javax.swing.JLabel) comp1;
+        assertEquals("Facturado", label1.getText());
+        assertEquals(UIHelper.APPROVED_GREEN, label1.getForeground());
+
+        // Linha 2: CANCELLED -> "Cancelado", Vermelho
+        Component comp2 = renderer.getTableCellRendererComponent(table, model.getValueAt(2, 1), false, false, 2, 1);
+        javax.swing.JLabel label2 = (javax.swing.JLabel) comp2;
+        assertEquals("Cancelado", label2.getText());
+        assertEquals(UIHelper.REJECTED_RED, label2.getForeground());
+
+        // Linha 3: AWAITING_SEPARATION -> "Aguarda separação", Amarelo
+        Component comp3 = renderer.getTableCellRendererComponent(table, model.getValueAt(3, 1), false, false, 3, 1);
+        javax.swing.JLabel label3 = (javax.swing.JLabel) comp3;
+        assertEquals("Aguarda separação", label3.getText());
+        assertEquals(UIHelper.PENDING_YELLOW, label3.getForeground());
+
+        // Linha 4: ORDERED -> "Encomendado", Amarelo
+        Component comp4 = renderer.getTableCellRendererComponent(table, model.getValueAt(4, 1), false, false, 4, 1);
+        javax.swing.JLabel label4 = (javax.swing.JLabel) comp4;
+        assertEquals("Encomendado", label4.getText());
+        assertEquals(UIHelper.PENDING_YELLOW, label4.getForeground());
+    }
+
+    @Test
+    @DisplayName("Varredura estática garante ausência de enums em inglês nos combos de filtro TableFilter.combo")
+    void staticScan_noEnglishStatusEnumsInFilterCombos() throws IOException {
+        Pattern pattern = Pattern.compile("TableFilter\\.combo\\s*\\([^;]+\\)", Pattern.DOTALL);
+        List<String> forbiddenEnums = List.of(
+                "\"PENDING\"", "\"BILLED\"", "\"ORDERED\"", "\"AWAITING_SEPARATION\"",
+                "\"IN_SEPARATION\"", "\"SEPARATED\"", "\"GUIDE_PENDING\"", "\"GUIDED\"",
+                "\"ACTIVE\"", "\"SUSPENDED\"", "\"CANCELLED\"", "\"DRAFT\""
+        );
+
+        try (Stream<Path> paths = Files.walk(GUI_ROOT)) {
+            List<Path> javaFiles = paths.filter(p -> p.toString().endsWith(".java")).toList();
+            for (Path path : javaFiles) {
+                String content = Files.readString(path);
+                Matcher matcher = pattern.matcher(content);
+                while (matcher.find()) {
+                    String comboSnippet = matcher.group();
+                    for (String forbidden : forbiddenEnums) {
+                        assertThat(comboSnippet)
+                                .withFailMessage("Ficheiro %s contém enum em inglês %s em TableFilter.combo: %s",
+                                        path.getFileName(), forbidden, comboSnippet)
+                                .doesNotContain(forbidden);
+                    }
+                }
+            }
+        }
+    }
+}

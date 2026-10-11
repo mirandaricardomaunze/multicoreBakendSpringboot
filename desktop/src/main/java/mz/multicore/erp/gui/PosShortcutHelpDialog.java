@@ -58,7 +58,7 @@ public final class PosShortcutHelpDialog {
     }
 
     private static JPanel buildCategoryCard(String title, String iconCode, Color accentColor, String[][] shortcuts) {
-        ModernPanel card = new ModernPanel(14);
+        ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBackground(UIHelper.BG_CARD);
         card.setBorder(new EmptyBorder(12, 14, 14, 14));

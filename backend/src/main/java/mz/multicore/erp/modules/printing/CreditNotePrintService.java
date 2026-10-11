@@ -21,6 +21,13 @@ public class CreditNotePrintService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    public static final List<String> CREDIT_NOTE_COPIES = List.of(
+            "1.ª VIA — ORIGINAL (Cliente)",
+            "2.ª VIA — DUPLICADO (Contabilidade / Fisco)",
+            "3.ª VIA — TRIPLICADO (Arquivo / Cobrança)",
+            "4.ª VIA — QUADRUPLICADO (Arquivo Geral)"
+    );
+
     private final CreditNoteService service;
     private final LineRowMapper lineRowMapper;
     private final DocumentConfigService documentConfigService;
@@ -37,26 +44,57 @@ public class CreditNotePrintService {
         CreditNote note = service.loadForPrint(noteId);
 
         return PdfDocumentBuilder.buildA4(doc -> {
-            doc.add(CompanyHeaderRenderer.build(
-                    note.getCompany(),
-                    "Nota de Crédito",
-                    note.getNoteNumber()
-            ));
-            doc.add(buildContextBlock(note));
-            doc.add(buildLinesTable(note.getLines(), note.getCompany().getId()));
-            doc.add(PdfDocumentBuilder.spacer(6f));
-            doc.add(TotalsBlockRenderer.build(
-                    note.getTotalBeforeTax(),
-                    note.getTaxAmount(),
-                    note.getTotalAmount()
-            ));
-            if (note.getDescription() != null && !note.getDescription().isBlank()) {
-                doc.add(PdfDocumentBuilder.spacer(10f));
-                doc.add(new Paragraph("Observações: " + note.getDescription(), PdfTheme.bodyFont()));
+            for (int i = 0; i < CREDIT_NOTE_COPIES.size(); i++) {
+                if (i > 0) {
+                    doc.newPage();
+                }
+                renderCreditNoteCopy(doc, note, CREDIT_NOTE_COPIES.get(i));
             }
-            doc.add(PdfDocumentBuilder.spacer(24f));
-            doc.add(buildSignatureBlock());
         });
+    }
+
+    private void renderCreditNoteCopy(com.lowagie.text.Document doc, CreditNote note, String copyLabel) {
+        doc.add(CompanyHeaderRenderer.build(
+                note.getCompany(),
+                "Nota de Crédito",
+                note.getNoteNumber()
+        ));
+        doc.add(buildCopyBadge(copyLabel));
+        doc.add(buildContextBlock(note));
+        doc.add(buildLinesTable(note.getLines(), note.getCompany().getId()));
+        doc.add(PdfDocumentBuilder.spacer(6f));
+        doc.add(TotalsBlockRenderer.build(
+                note.getTotalBeforeTax(),
+                note.getTaxAmount(),
+                note.getTotalAmount()
+        ));
+        if (note.getDescription() != null && !note.getDescription().isBlank()) {
+            doc.add(PdfDocumentBuilder.spacer(10f));
+            doc.add(new Paragraph("Observações: " + note.getDescription(), PdfTheme.bodyFont()));
+        }
+        doc.add(PdfDocumentBuilder.spacer(24f));
+        doc.add(buildSignatureBlock());
+    }
+
+    private static PdfPTable buildCopyBadge(String copyText) {
+        PdfPTable table = new PdfPTable(1);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(2f);
+        table.setSpacingAfter(8f);
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(new java.awt.Color(241, 245, 249)); // Slate-100
+        cell.setBorderColor(new java.awt.Color(203, 213, 225));     // Slate-300
+        cell.setBorderWidth(1f);
+        cell.setPadding(5f);
+
+        com.lowagie.text.Font badgeFont = new com.lowagie.text.Font(
+                com.lowagie.text.Font.HELVETICA, 8.5f, com.lowagie.text.Font.BOLD, new java.awt.Color(30, 41, 59));
+        Paragraph p = new Paragraph(copyText, badgeFont);
+        p.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(p);
+        table.addCell(cell);
+        return table;
     }
 
     private PdfPTable buildContextBlock(CreditNote note) {

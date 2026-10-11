@@ -18,13 +18,11 @@ Para garantir velocidade operacional equivalente a sistemas de balcão e ERPs in
 
 ## 2. Requisitos Não Negociáveis
 
-### DTI-01: Duplo Clique em Tabelas de Listagem de Documentos
-Toda a tabela de listagem de documentos deve possuir um `MouseListener` que, ao receber duplo clique (`getClickCount() == 2`), abre a acção padrão daquele documento:
-- **Encomendas de Cliente (`ordersTable`):** Abre `openSelectedOrderEditor()`.
-- **Faturação Recente (`invoicesTable`):** Abre visualização/impressão do PDF `printSelectedInvoice()`.
-- **Cotações (`table` em `QuotationsPanel`):** Abre `openSelectedEditor()`.
-- **Encomendas a Fornecedor (`poListTable`):** Abre `openSelectedEditor()`.
-- **Transferências de Stock (`transferTable`):** Abre `openSelectedTransfer()`.
+### DTI-01: Duplo Clique e Inspeção Unificada em Tabelas de Listagem de Documentos
+Toda a tabela de listagem de documentos deve utilizar a porta unificada do `RowDetailsInspector` (instalada via `UIHelper.styleTable(table)`) para duplo clique e tecla Enter:
+- **Inspeção sem Redirecionamento:** O duplo clique em tabelas de listagem (`ordersTable`, `invoicesTable`, `table` em `QuotationsPanel`, `poListTable`, `transferTable`) abre a visualização/inspeção de detalhes ou acção configurada em `customDetailAction`, sem alternar concorrentemente para a página de formulário/editor.
+- **Edição Preservada:** A edição de documentos é acionada através dos botões e menus "Editar / Consultar" (`openSelectedOrderEditor`, `openSelectedEditor`, etc.), prevenindo a perda de contexto ou navegação involuntária para o formulário ao fechar janelas de detalhes.
+- **Proteção Anti-Concorrência:** Proibido registar ouvintes concorrentes de duplo clique com ações de formulário sobre tabelas que já possuem `styleTable`.
 
 ### DTI-02: Atalhos Universais em Grelhas de Linhas de Documentos
 Todas as grelhas de itens em preparação de documentos (`CommercialOrdersView`, `QuotationEditorForm`, `PurchaseOrdersPanel`, `StockTransferEditorForm`, `CommercialInvoicesView`) devem registar os seguintes atalhos no seu `InputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)`:

@@ -20,7 +20,6 @@ public class PhysicalInventoryPanelHarnessTest {
 
     @BeforeEach
     void setUp() {
-        System.setProperty("java.awt.headless", "true");
         mockApiClient = new MockApiClient();
         panel = new PhysicalInventoryPanel(mockApiClient);
     }
@@ -84,6 +83,14 @@ public class PhysicalInventoryPanelHarnessTest {
         assertTrue(hasActionMenu, "As ações do ciclo da sessão devem estar agrupadas em ActionMenuButton");
     }
 
+    private static void collectButtons(java.awt.Container root,
+                                       java.util.List<javax.swing.AbstractButton> buttons) {
+        for (java.awt.Component component : root.getComponents()) {
+            if (component instanceof javax.swing.AbstractButton button) buttons.add(button);
+            if (component instanceof java.awt.Container child) collectButtons(child, buttons);
+        }
+    }
+
     private static mz.multicore.erp.gui.components.ModernPanel findTableCard(java.awt.Container root) {
         for (java.awt.Component component : root.getComponents()) {
             if (component instanceof mz.multicore.erp.gui.components.ModernPanel panel
@@ -95,13 +102,6 @@ public class PhysicalInventoryPanelHarnessTest {
             }
         }
         return null;
-    }
-
-    private static void collectButtons(java.awt.Container root, java.util.List<javax.swing.AbstractButton> buttons) {
-        for (java.awt.Component component : root.getComponents()) {
-            if (component instanceof javax.swing.AbstractButton button) buttons.add(button);
-            if (component instanceof java.awt.Container child) collectButtons(child, buttons);
-        }
     }
 
     private static class MockApiClient extends InventoryPhysicalCountingApiClient {

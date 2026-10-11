@@ -1,5 +1,6 @@
 package mz.multicore.erp.desktop.client;
 
+import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateWarehouseRequest;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
@@ -76,6 +77,14 @@ public class InventoryApiClient {
                 .getList("/api/inventory/movements?companyId=" + companyId, StockMovementDTO.class);
     }
 
+    public PageResponse<StockMovementDTO> getMovementsPageByCompany(
+            Long companyId, int page, int size) {
+        return clientFactory.authenticatedClient().getGeneric(
+                "/api/inventory/movements/page?companyId=" + companyId
+                        + "&page=" + page + "&size=" + size,
+                PageResponse.class, StockMovementDTO.class);
+    }
+
     public StockMovementDTO registerMovement(RegisterMovementRequest request) {
         return clientFactory.authenticatedClient()
                 .post("/api/inventory/movements", request, StockMovementDTO.class);
@@ -131,8 +140,23 @@ public class InventoryApiClient {
     }
 
     public byte[] renderProductLabels(Long companyId, List<Long> productIds, int copies) {
+        return renderProductLabels(companyId, productIds, copies, null, null, "A4");
+    }
+
+    public byte[] renderProductLabels(Long companyId, List<Long> productIds, int copies, String lotNumber, String expiryDate, String layout) {
         String ids = productIds.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("");
-        return clientFactory.authenticatedClient()
-                .getBytes("/api/print/product-label?companyId=" + companyId + "&productIds=" + ids + "&copies=" + copies);
+        StringBuilder path = new StringBuilder("/api/print/product-label?companyId=").append(companyId)
+                .append("&productIds=").append(ids)
+                .append("&copies=").append(copies);
+        if (lotNumber != null && !lotNumber.isBlank()) {
+            path.append("&lotNumber=").append(java.net.URLEncoder.encode(lotNumber.trim(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        if (expiryDate != null && !expiryDate.isBlank()) {
+            path.append("&expiryDate=").append(java.net.URLEncoder.encode(expiryDate.trim(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        if (layout != null && !layout.isBlank()) {
+            path.append("&layout=").append(layout);
+        }
+        return clientFactory.authenticatedClient().getBytes(path.toString());
     }
 }

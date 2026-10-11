@@ -108,6 +108,7 @@ public class PurchaseOrderReceivingDialog {
         table.getColumnModel().getColumn(COL_DAMAGED).setPreferredWidth(100);
         table.getColumnModel().getColumn(COL_MISSING).setPreferredWidth(110);
         table.getColumnModel().getColumn(COL_NOTES).setPreferredWidth(160);
+        UIHelper.ensureHeadersFit(table);
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
