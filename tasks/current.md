@@ -177,6 +177,14 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
       - `RecordDetailsDialog`: aviso informativo via `ToastManager` orientando a selecção de linha na tabela.
     - **Testabilidade:** Adicionado `setTestListener` em `ToastManager` e expostos getters contextuais em `InlineFeedbackPanel`.
     - **Especificação & Harness:** Criada especificação canónica em `docs/GUI_ACTION_ALERT_GUIDANCE_SPEC.md` e novo harness dedicado `GuiActionAlertGuidanceHarnessTest` (7/7 testes aprovados). Aprovados também `DesktopThinContextTest` (2/2) e `PosHeaderLayoutHarnessTest` (5/5).
+22. Implementação da **Experiência Operacional Dedicada ao Vendedor**:
+    - Painel inicial próprio com vendas e atendimentos da sessão de caixa autenticada, encomendas
+      pendentes, cotações abertas e seis acções rápidas.
+    - Pesquisa global reduzida aos destinos comerciais autorizados para `SELLER`.
+    - Área Comercial simplificada para Cotações, consulta de Facturação e Pedidos, ocultando fluxos
+      de gestão e acções que o backend recusaria.
+    - Tentativas programáticas de navegação proibida apresentam orientação clara ao utilizador.
+    - Especificação e harness em `docs/SELLER_EXPERIENCE_SPEC.md` e `SellerExperienceHarnessTest`.
 22. Implementação das **Melhorias de Experiência do Utilizador (UX & Ergonomia de Alta Frequência)**:
     - **Auto-Foco Inteligente em Formulários (`ModernFormDialog`):** Foco automático recursivo no primeiro componente interactivo (`JTextField`, `JComboBox`, etc.) ao abrir qualquer modal de formulário, permitindo que o operador inicie a digitação de imediato sem tocar no rato.
     - **Restauração Rápida de Pesquisas (`TableFilter`):** Tecla `Esc` registada no campo de pesquisa para limpar a busca e restaurar a tabela instantaneamente; novo método canónico `TableFilter.clear(table)` para reinicializar pesquisa e dropdowns.
@@ -202,6 +210,19 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
       - **Rede de Distribuição:** Contagem de tipos distintos de armazéns operacionais cadastrados (`X Tipos`), com subtítulo discriminado com as siglas dos tipos em operação (ex.: `Central · Loja · Depósito`). Ícone `fas-network-wired` em `ACCENT_BLUE`.
     - **Sincronização em Tempo Real:** Método `updateKpis()` acionado ao carregar/atualizar a lista de armazéns e sincronizado com o carregamento de saldos de stock (`StockPanel.applyStocks`), mantendo os valores de stock e capacidades sempre consistentes.
     - **Especificação & Harness:** Criada especificação canónica em `docs/WAREHOUSE_MANAGEMENT_KPIS_SPEC.md` e harness dedicado `StockWarehouseKpiHarnessTest` (2/2 testes aprovados). Aprovados a 100%: `StockWarehouseKpiHarnessTest`, `RadarAlertasProactivoHarnessTest`, `DesktopThinContextTest` (2/2) e `MultiModuleArchitectureHarnessTest` (6/6).
+26. **Recepção de Transferências em Trânsito com Divergências e Devolução à Origem:**
+    - **Invariante Permanente:** $\text{Despachado da Origem} = \text{Recebido no Destino} + \text{Devolvido à Origem}$. O que chegou entra no destino (alocação FEFO); a diferença volta imediatamente à origem com os mesmos lotes e datas de validade originais, sem perdas no éter nem duplicações.
+    - **Persistência & Migração BD:** `V93__stock_transfer_receipt_discrepancy.sql` adiciona `received_quantity`, `returned_quantity` e `discrepancy_reason` em `stock_transfer_lines`, `received_quantity` em `stock_transfer_line_batches` e atualiza `stock_transfers.status` para VARCHAR(30).
+    - **Ciclo de Vida & Estados:** Novo estado terminal `RECEIVED_WITH_DISCREPANCY` ("Recebido c/ divergência", badge âmbar `UIHelper.PENDING_YELLOW`), com auditoria `STOCK_TRANSFER_RECEIVE_DISCREPANCY` e autorização de impressão da Guia Oficial de Transporte.
+    - **Desktop & UI:** Novo diálogo `StockTransferReceivingDialog` (`ModernFormDialog`) com cabeçalho contextual da guia/transportador, tabela de conferência física com cálculo automático de devolução em tempo real, proteção contra paginação comprimida (`ClientTablePagination.DISABLED`), campo de notas gerais e filtro no `StockPanel`.
+    - **Especificação & Harness:** Especificação canónica em `docs/STOCK_TRANSFER_RECEIPT_DISCREPANCY_SPEC.md`. Harnesses dedicados aprovados a 100%: backend `StockTransferReceiptDiscrepancyHarnessTest` (10/10), `StockTransferInTransitHarnessTest` (9/9), `StockTransferServiceTest` (25/25), `MultiModuleArchitectureHarnessTest` (6/6); desktop `StockTransferReceiptDiscrepancyUiHarnessTest` (6/6), `StockInTransitUiHarnessTest` (5/5), `TableStatusPtMzHarnessTest` (5/5) e `DesktopThinContextTest` (2/2).
+20. Reorganização e desanuviamento ergonómico do Painel Principal / Indicadores (`DashboardPanel.java`):
+    - **Diagnóstico:** O painel principal encontrava-se visualmente sobrecarregado ("muito cheio"), acumulando 8 cartões hiper-saturados no topo e múltiplos widgets empilhados verticalmente num scroll longo, o que empurrava os 4 gráficos analíticos e operacionais para fora da área visível do ecrã.
+    - **Arquitetura em Abas Corporativas (`JTabbedPane` com `UIHelper.styleTabbedPaneMulticore`):**
+      - **Aba 1: "Visão Geral & Gráficos" (`fas-chart-pie`):** Linha única horizontal com os 4 KPIs financeiros essenciais (`KpiCard.createGrid(4)`: Tesouraria, Faturação Total, Vendas POS e IVA Liquidado), grelha 2x2 com os 4 gráficos em destaque direto sem scroll (`financialChart`, `salesChannelPieChart`, `operationsChart` e `financialStructurePieChart`), seguidos dos widgets de Top Produtos e Atividade Recente.
+      - **Aba 2: "Cockpit Operacional 360°" (`fas-cogs`):** Linha única horizontal com os 4 KPIs operacionais (`KpiCard.createGrid(4)`: Aprovações Pendentes, Atendimento ao Cliente, Alertas de Stock Baixo e Alertas de Validade), seguidos dos cockpits analíticos `StrategicPulseWidget` e `OperationalPulseWidget`.
+      - **Aba 3: "Rentabilidade & DRE" (`fas-coins`):** Painel de rentabilidade e margens comerciais (`ProfitAnalyticsWidget`: CMVMC, Margem Bruta e Lucro Operacional).
+    - **Validação e Integridade:** Preservados todos os getters e listeners de ciclo de vida (`getStrategicPulseWidget()`, `getOperationalPulseWidget()`, `refreshData()`, `selectPeriod()`, `updateWelcomeMessage()`). Validado com 100% de sucesso em `DesktopThinContextTest` (2/2), `DashboardCommercialKpiHarnessTest` (8/8) e `SimplePieChartTest` (2/2). Backend UP e Desktop relançado via `schtasks`.
 
 ## Decisões permanentes relevantes
 

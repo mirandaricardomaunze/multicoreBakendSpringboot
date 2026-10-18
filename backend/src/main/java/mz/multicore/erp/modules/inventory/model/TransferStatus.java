@@ -17,7 +17,9 @@ public enum TransferStatus {
     /** Saiu da origem e ainda não foi confirmada no destino (só com {@code requiresReceipt}). */
     IN_TRANSIT("Em Trânsito"),
     /** Recepção confirmada pelo armazém de destino; stock creditado. */
-    RECEIVED("Recebida");
+    RECEIVED("Recebida"),
+    /** Recebida com faltas: o recebido entrou no destino e a diferença voltou à origem. */
+    RECEIVED_WITH_DISCREPANCY("Recebida c/ Divergência");
 
     private final String label;
 
@@ -36,5 +38,10 @@ public enum TransferStatus {
 
     public boolean isSeparatedOrPending() {
         return this == SEPARATED || this == PENDING_APPROVAL;
+    }
+
+    /** Recepção confirmada no destino, integral ou com divergência. */
+    public boolean isReceived() {
+        return this == RECEIVED || this == RECEIVED_WITH_DISCREPANCY;
     }
 }

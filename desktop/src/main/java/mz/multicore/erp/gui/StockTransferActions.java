@@ -166,7 +166,7 @@ final class StockTransferActions {
                     "A guia " + selected.transferNumber() + " está em trânsito com mercadoria já despachada da origem e não pode ser cancelada.");
             return;
         }
-        if ("RECEIVED".equals(selected.status()) || "APPROVED".equals(selected.status()) || "REJECTED".equals(selected.status()) || "CANCELLED".equals(selected.status())) {
+        if ("RECEIVED".equals(selected.status()) || "RECEIVED_WITH_DISCREPANCY".equals(selected.status()) || "APPROVED".equals(selected.status()) || "REJECTED".equals(selected.status()) || "CANCELLED".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.INFO, "Estado incompatível",
                     "Transferências concluídas, recebidas, rejeitadas ou já canceladas não podem ser canceladas.");
             return;
@@ -548,7 +548,7 @@ final class StockTransferActions {
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
-        if ("IN_TRANSIT".equals(selected.status()) || "RECEIVED".equals(selected.status())) {
+        if ("IN_TRANSIT".equals(selected.status()) || "RECEIVED".equals(selected.status()) || "RECEIVED_WITH_DISCREPANCY".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.WARNING, "Operação bloqueada",
                     "A guia " + selected.transferNumber() + " já tem mercadoria despachada e não pode ser rejeitada.");
             return;
@@ -570,7 +570,7 @@ final class StockTransferActions {
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
-        if (!"APPROVED".equals(selected.status()) && !"IN_TRANSIT".equals(selected.status()) && !"RECEIVED".equals(selected.status())) {
+        if (!"APPROVED".equals(selected.status()) && !"IN_TRANSIT".equals(selected.status()) && !"RECEIVED".equals(selected.status()) && !"RECEIVED_WITH_DISCREPANCY".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.INFO, "Guia oficial bloqueada",
                     "A Guia de Transferência oficial (3 vias) só pode ser emitida após a separação e aprovação.\n"
                             + "Para conferência física no armazém, utilize a opção 'Guia de Separação'.");
@@ -593,25 +593,21 @@ final class StockTransferActions {
                             + "Estado atual: " + UIHelper.humanStatus(selected.status()));
             return;
         }
-        boolean confirm = ModernMessageDialog.confirm(
-                SwingUtilities.getWindowAncestor(owner),
-                FeedbackType.INFO,
-                "Confirmar Recepção de Mercadoria",
-                "Confirmar a recepção da guia " + selected.transferNumber() + " no armazém '" + selected.destinationWarehouseName() + "'?\n\n"
-                        + "Origem: " + selected.originWarehouseName() + "\n"
-                        + "Linhas a receber: " + (selected.lines() == null ? 0 : selected.lines().size()) + "\n\n"
-                        + "O stock será creditado definitivamente no armazém de destino com os respectivos lotes e validades de origem.",
-                "Confirmar Recepção"
-        );
-        if (!confirm) return;
-        UIHelper.runWithProgress(owner, "A confirmar recepção no destino…",
-                () -> owner.stockTransferApiClient.receive(selected.id(), null),
-                received -> {
-                    owner.onPanelSelected();
-                    owner.showStockSuccess("Recepção da guia " + selected.transferNumber() + " confirmada com sucesso · stock creditado em '"
-                            + selected.destinationWarehouseName() + "'.");
-                },
-                owner::showStockError);
+        StockTransferReceivingDialog.show(SwingUtilities.getWindowAncestor(owner), selected, (notes, lines) -> {
+            UIHelper.runWithProgress(owner, "A confirmar recepção no destino…",
+                    () -> owner.stockTransferApiClient.receive(selected.id(), notes, lines),
+                    (StockTransferDTO received) -> {
+                        owner.onPanelSelected();
+                        boolean withDiscrepancy = "RECEIVED_WITH_DISCREPANCY".equals(received.status());
+                        String msg = withDiscrepancy
+                                ? "Recepção da guia " + selected.transferNumber() + " confirmada com divergência · quantidades recebidas creditadas em '"
+                                + selected.destinationWarehouseName() + "' e faltas devolvidas à origem '" + selected.originWarehouseName() + "'."
+                                : "Recepção da guia " + selected.transferNumber() + " confirmada com sucesso · stock creditado em '"
+                                + selected.destinationWarehouseName() + "'.";
+                        owner.showStockSuccess(msg);
+                    },
+                    owner::showStockError);
+        });
     }
 
     /**

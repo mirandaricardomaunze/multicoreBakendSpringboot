@@ -222,6 +222,7 @@ public final class TableCellRenderers {
                      "IN_SEPARATION", "EM SEPARAÇÃO", "EM SEPARACAO",
                      "GUIDE_PENDING", "GUIA POR APROVAR", "TRANSFER_PENDING", "TRANSFERÊNCIA POR APROVAR",
                      "ORDERED", "ENCOMENDADO", "PARTIALLY_RECEIVED", "PARCIALMENTE RECEBIDO",
+                     "RECEIVED_WITH_DISCREPANCY", "RECEBIDO C/ DIVERGÊNCIA", "RECEBIDO C/ DIVERGENCIA",
                      "MAINTENANCE", "MANUTENÇÃO", "MANUTENCAO", "INSPECTION", "INSPECÇÃO", "INSPECCAO",
                      "UNMATCHED", "POR CONCILIAR", "CRÍTICO", "CRITICO" -> true;
                 default -> false;

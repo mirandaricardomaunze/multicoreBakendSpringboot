@@ -46,7 +46,10 @@ public final class StockTransferDtoMapper {
                             pkgs,
                             units,
                             price,
-                            tax
+                            tax,
+                            l.getReceivedQuantity(),
+                            l.getReturnedQuantity(),
+                            l.getDiscrepancyReason()
                     );
                 }).toList();
         Long buId = null;

@@ -54,11 +54,16 @@ class SellerExperienceHarnessTest {
     @DisplayName("UXV-04/05: MainFrame selecciona painel e pesquisa próprios do SELLER")
     void mainFrame_routesSellerToDedicatedExperience() throws Exception {
         String source = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/MainFrame.java"));
-        assertTrue(source.contains("new SellerDashboardPanel"));
+        assertTrue(source.contains("new SellerDashboardPanel("));
         assertTrue(source.contains("buildSellerSearchIndex()"));
-        assertTrue(source.contains("Esta área requer perfil de gestor ou administrador"));
+        assertTrue(source.contains("perfil de gestor ou administrador"));
+        assertTrue(source.contains("Painel do Vendedor"));
+        assertTrue(source.contains("Pedidos e Cotações"));
         assertFalse(source.substring(source.indexOf("private List<GlobalSearchDialog.SearchItem> buildSellerSearchIndex()"))
                 .contains("seller_financeiro"));
+        String commercial = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/ComercialPanel.java"));
+        assertTrue(commercial.contains("boolean sellerView"));
+        assertTrue(commercial.contains("if (\"SELLER\".equalsIgnoreCase(CurrentUserContext.getRole())) return;"));
     }
 
     private static List<String> texts(Component component) {

@@ -43,6 +43,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -202,16 +203,21 @@ public class DashboardPanel extends JPanel {
 
         add(headerPanel, BorderLayout.NORTH);
 
-        JPanel dashboardContent = new JPanel(new BorderLayout(0, 16));
-        dashboardContent.setOpaque(false);
-        dashboardContent.setBorder(new EmptyBorder(14, 0, 0, 0));
+        JTabbedPane dashboardTabs = new JTabbedPane();
+        UIHelper.styleTabbedPaneMulticore(dashboardTabs);
 
-        // Grelha de 4 colunas de KPIs compactos e elegantes
-        JPanel gridPanel = new JPanel(new GridLayout(0, 4, 10, 10));
-        gridPanel.setOpaque(false);
+        // ════════════════════════════════════════════════════════════════
+        // ABA 1: VISÃO GERAL & GRÁFICOS (Comercial, Tesouraria & Análise)
+        // ════════════════════════════════════════════════════════════════
+        JPanel tab1 = new JPanel(new BorderLayout(0, 12));
+        tab1.setOpaque(false);
+        tab1.setBorder(new EmptyBorder(12, 4, 4, 4));
+
+        // 4 KPIs Comerciais / Tesouraria em linha única horizontal
+        JPanel commercialKpiGrid = KpiCard.createGrid(4, 10, 10);
 
         balanceValLabel = newValueLabel("0.00 MT", 19);
-        gridPanel.add(buildKpiCard(
+        commercialKpiGrid.add(buildKpiCard(
                 "SALDO DE TESOURARIA", "fas-piggy-bank", UIHelper.KPI_INFO_SOFT,
                 balanceValLabel, null,
                 UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
@@ -222,7 +228,7 @@ public class DashboardPanel extends JPanel {
         salesSubLabel = new JLabel("Ticket Médio: 0.00 MT/venda");
         salesSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         salesSubLabel.setForeground(UIHelper.KPI_PURPLE_SOFT);
-        gridPanel.add(buildKpiCard(
+        commercialKpiGrid.add(buildKpiCard(
                 "FATURAÇÃO TOTAL", "fas-file-invoice-dollar", UIHelper.KPI_PURPLE_SOFT,
                 salesValLabel, salesTrendBadge, salesSubLabel,
                 UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END,
@@ -233,7 +239,7 @@ public class DashboardPanel extends JPanel {
         posSalesCountSub = new JLabel("0 vendas");
         posSalesCountSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         posSalesCountSub.setForeground(UIHelper.KPI_SUCCESS_SOFT);
-        gridPanel.add(buildKpiCard(
+        commercialKpiGrid.add(buildKpiCard(
                 "VENDAS POS", "fas-cash-register", UIHelper.KPI_SUCCESS_SOFT,
                 posSalesValLabel, posTrendBadge, posSalesCountSub,
                 UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN,
@@ -243,60 +249,20 @@ public class DashboardPanel extends JPanel {
         taxDetailLabel = new JLabel("IVA Liquidado / Deduzido");
         taxDetailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         taxDetailLabel.setForeground(UIHelper.KPI_SUCCESS_SOFT);
-        gridPanel.add(buildKpiCard(
+        commercialKpiGrid.add(buildKpiCard(
                 "RESUMO FISCAL DO IVA", "fas-percentage", UIHelper.KPI_SUCCESS_SOFT,
                 taxSummaryLabel, taxDetailLabel,
                 UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
                 "Clique para abrir Área Fiscal", "fiscal"));
 
-        approvalsValLabel = newValueLabel("0 Pedidos", 19);
-        gridPanel.add(buildKpiCard(
-                "APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,
-                approvalsValLabel, null,
-                UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END,
-                "Clique para abrir Aprovações", "approvals"));
+        tab1.add(commercialKpiGrid, BorderLayout.NORTH);
 
-        ticketsValLabel = newValueLabel("0 Tickets", 19);
-        gridPanel.add(buildKpiCard(
-                "SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", UIHelper.KPI_NEUTRAL_SOFT,
-                ticketsValLabel, null,
-                UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END,
-                "Clique para abrir CRM & Assistência", "crm"));
+        // Centro da Aba 1: Gráficos 2x2 + Top Produtos & Atividades Recentes
+        JPanel tab1Center = new JPanel();
+        tab1Center.setOpaque(false);
+        tab1Center.setLayout(new BoxLayout(tab1Center, BoxLayout.Y_AXIS));
 
-        stockAlertsLabel = newValueLabel("0 Artigos", 19);
-        JLabel stockAlertsSub = new JLabel("Qtd < 5 un no armazém");
-        stockAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        stockAlertsSub.setForeground(UIHelper.KPI_DANGER_SOFT);
-        gridPanel.add(buildKpiCard(
-                "ALERTAS DE STOCK", "fas-exclamation-triangle", UIHelper.KPI_DANGER_SOFT,
-                stockAlertsLabel, stockAlertsSub,
-                UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END,
-                "Clique para abrir Gestão de Stock", "stock"));
-
-        expiryAlertsLabel = newValueLabel("0 Lotes", 19);
-        expiryAlertsSub = new JLabel("Vencimento ≤ " + EXPIRY_ALERT_DAYS + " dias");
-        expiryAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        expiryAlertsSub.setForeground(UIHelper.KPI_ORANGE_SOFT);
-        gridPanel.add(buildKpiCard(
-                "ALERTAS DE VALIDADE", "fas-calendar-times", UIHelper.KPI_ORANGE_SOFT,
-                expiryAlertsLabel, expiryAlertsSub,
-                UIHelper.KPI_ORANGE_DARK, UIHelper.KPI_ORANGE_END,
-                "Clique para abrir Gestão de Lotes / Stock", "stock"));
-
-        dashboardContent.add(gridPanel, BorderLayout.NORTH);
-
-        // Painel central: Pulso Estratégico 360° + Gráficos 2x2 + Widgets de Ranking e Atividade Recente
-        JPanel centerContainer = new JPanel();
-        centerContainer.setOpaque(false);
-        centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
-
-        centerContainer.add(strategicPulseWidget);
-        centerContainer.add(Box.createVerticalStrut(14));
-        centerContainer.add(operationalPulseWidget);
-        centerContainer.add(Box.createVerticalStrut(14));
-
-        // Gráficos 2x2
-        JPanel chartsPanel = new JPanel(new GridLayout(2, 2, 14, 14));
+        JPanel chartsPanel = new JPanel(new GridLayout(2, 2, 12, 12));
         chartsPanel.setOpaque(false);
 
         financialChart = new SimpleBarChart("Vendas, Compras e IVA");
@@ -308,17 +274,11 @@ public class DashboardPanel extends JPanel {
         chartsPanel.add(createChartCard(salesChannelPieChart));
         chartsPanel.add(createChartCard(operationsChart));
         chartsPanel.add(createChartCard(financialStructurePieChart));
-        centerContainer.add(chartsPanel);
+        tab1Center.add(chartsPanel);
 
-        centerContainer.add(Box.createVerticalStrut(14));
+        tab1Center.add(Box.createVerticalStrut(12));
 
-        profitAnalyticsWidget = new ProfitAnalyticsWidget();
-        centerContainer.add(profitAnalyticsWidget);
-
-        centerContainer.add(Box.createVerticalStrut(14));
-
-        // Widgets Inferiores: Top 5 Produtos + Atividade Recente
-        JPanel bottomWidgets = new JPanel(new GridLayout(1, 2, 14, 14));
+        JPanel bottomWidgets = new JPanel(new GridLayout(1, 2, 12, 12));
         bottomWidgets.setOpaque(false);
 
         topProductsWidget = new TopProductsWidget();
@@ -326,13 +286,88 @@ public class DashboardPanel extends JPanel {
 
         bottomWidgets.add(topProductsWidget);
         bottomWidgets.add(recentActivityWidget);
-        centerContainer.add(bottomWidgets);
+        tab1Center.add(bottomWidgets);
 
-        dashboardContent.add(centerContainer, BorderLayout.CENTER);
+        tab1.add(new ArrowScrollPanel(tab1Center), BorderLayout.CENTER);
 
-        // Scroll wrapper fluido com botões de seta superior/inferior e largura adaptativa (sem overflow)
-        ArrowScrollPanel scroll = new ArrowScrollPanel(dashboardContent);
-        add(scroll, BorderLayout.CENTER);
+        dashboardTabs.addTab("Visão Geral & Gráficos", UIHelper.icon("fas-chart-pie", 13, UIHelper.ACCENT_BLUE), tab1);
+
+        // ════════════════════════════════════════════════════════════════
+        // ABA 2: COCKPIT OPERACIONAL 360° (Operações, Suporte & Indústria)
+        // ════════════════════════════════════════════════════════════════
+        JPanel tab2 = new JPanel(new BorderLayout(0, 12));
+        tab2.setOpaque(false);
+        tab2.setBorder(new EmptyBorder(12, 4, 4, 4));
+
+        JPanel operationalKpiGrid = KpiCard.createGrid(4, 10, 10);
+
+        approvalsValLabel = newValueLabel("0 Pedidos", 19);
+        operationalKpiGrid.add(buildKpiCard(
+                "APROVAÇÕES PENDENTES", "fas-clipboard-check", UIHelper.KPI_WARNING_SOFT,
+                approvalsValLabel, null,
+                UIHelper.KPI_WARNING_DARK, UIHelper.KPI_WARNING_END,
+                "Clique para abrir Aprovações", "approvals"));
+
+        ticketsValLabel = newValueLabel("0 Tickets", 19);
+        operationalKpiGrid.add(buildKpiCard(
+                "SUPORTE CRM / ASSISTÊNCIAS", "fas-headset", UIHelper.KPI_NEUTRAL_SOFT,
+                ticketsValLabel, null,
+                UIHelper.KPI_NEUTRAL_DARK, UIHelper.KPI_NEUTRAL_END,
+                "Clique para abrir CRM & Assistência", "crm"));
+
+        stockAlertsLabel = newValueLabel("0 Artigos", 19);
+        JLabel stockAlertsSub = new JLabel("Qtd < 5 un no armazém");
+        stockAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        stockAlertsSub.setForeground(UIHelper.KPI_DANGER_SOFT);
+        operationalKpiGrid.add(buildKpiCard(
+                "ALERTAS DE STOCK", "fas-exclamation-triangle", UIHelper.KPI_DANGER_SOFT,
+                stockAlertsLabel, stockAlertsSub,
+                UIHelper.KPI_DANGER_DARK, UIHelper.KPI_DANGER_END,
+                "Clique para abrir Gestão de Stock", "stock"));
+
+        expiryAlertsLabel = newValueLabel("0 Lotes", 19);
+        expiryAlertsSub = new JLabel("Vencimento ≤ " + EXPIRY_ALERT_DAYS + " dias");
+        expiryAlertsSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+        expiryAlertsSub.setForeground(UIHelper.KPI_ORANGE_SOFT);
+        operationalKpiGrid.add(buildKpiCard(
+                "ALERTAS DE VALIDADE", "fas-calendar-times", UIHelper.KPI_ORANGE_SOFT,
+                expiryAlertsLabel, expiryAlertsSub,
+                UIHelper.KPI_ORANGE_DARK, UIHelper.KPI_ORANGE_END,
+                "Clique para abrir Gestão de Lotes / Stock", "stock"));
+
+        tab2.add(operationalKpiGrid, BorderLayout.NORTH);
+
+        JPanel tab2Center = new JPanel();
+        tab2Center.setOpaque(false);
+        tab2Center.setLayout(new BoxLayout(tab2Center, BoxLayout.Y_AXIS));
+
+        tab2Center.add(strategicPulseWidget);
+        tab2Center.add(Box.createVerticalStrut(14));
+        tab2Center.add(operationalPulseWidget);
+
+        tab2.add(new ArrowScrollPanel(tab2Center), BorderLayout.CENTER);
+
+        dashboardTabs.addTab("Cockpit Operacional 360°", UIHelper.icon("fas-cogs", 13, UIHelper.APPROVED_GREEN), tab2);
+
+        // ════════════════════════════════════════════════════════════════
+        // ABA 3: RENTABILIDADE & DRE (Margens, CMVMC e Controladoria)
+        // ════════════════════════════════════════════════════════════════
+        JPanel tab3 = new JPanel(new BorderLayout(0, 12));
+        tab3.setOpaque(false);
+        tab3.setBorder(new EmptyBorder(12, 4, 4, 4));
+
+        profitAnalyticsWidget = new ProfitAnalyticsWidget();
+
+        JPanel tab3Center = new JPanel();
+        tab3Center.setOpaque(false);
+        tab3Center.setLayout(new BoxLayout(tab3Center, BoxLayout.Y_AXIS));
+        tab3Center.add(profitAnalyticsWidget);
+
+        tab3.add(new ArrowScrollPanel(tab3Center), BorderLayout.CENTER);
+
+        dashboardTabs.addTab("Rentabilidade & DRE", UIHelper.icon("fas-coins", 13, UIHelper.PENDING_YELLOW), tab3);
+
+        add(dashboardTabs, BorderLayout.CENTER);
 
         refreshData();
     }

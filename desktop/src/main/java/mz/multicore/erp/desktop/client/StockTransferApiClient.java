@@ -61,8 +61,14 @@ public class StockTransferApiClient {
 
     /** O armazém de destino confirma a recepção de uma guia em trânsito. */
     public StockTransferDTO receive(Long id, String notes) {
+        return receive(id, notes, List.of());
+    }
+
+    /** Recepção conferida: linhas com quantidade recebida e motivo; a diferença volta à origem. */
+    public StockTransferDTO receive(Long id, String notes,
+                                    List<mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest.ReceiveLine> lines) {
         return clientFactory.authenticatedClient().post("/api/inventory/transfers/" + id + "/receive",
-                new mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest(notes), StockTransferDTO.class);
+                new mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest(notes, lines), StockTransferDTO.class);
     }
 
     /** Guias despachadas e ainda por confirmar; {@code destinationWarehouseId} nulo = todas. */

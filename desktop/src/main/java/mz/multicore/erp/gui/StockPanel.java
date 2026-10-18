@@ -552,7 +552,7 @@ public class StockPanel extends JPanel {
         UIHelper.styleScrollPane(transferScroll);
         JTextField trSearch = TableFilter.searchField("Nº guia, armazém, motorista ou matrícula…");
         JComboBox<String> trEstado = TableFilter.combo("Todos os estados",
-                "Rascunho", "Aguarda separação", "Em separação", "Separado", "Pendente de aprovação", "Aprovado", "Em trânsito", "Recebido", "Rejeitado", "Cancelado");
+                "Rascunho", "Aguarda separação", "Em separação", "Separado", "Pendente de aprovação", "Aprovado", "Em trânsito", "Recebido", "Recebido c/ divergência", "Rejeitado", "Cancelado");
         UIHelper.styleComboBox(trEstado);
         trEstado.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
 
@@ -718,7 +718,8 @@ public class StockPanel extends JPanel {
                 pendingCount++;
             } else if ("IN_TRANSIT".equals(status)) {
                 inTransitCount++;
-            } else if ("APPROVED".equals(status) || "RECEIVED".equals(status)) {
+            } else if ("APPROVED".equals(status) || "RECEIVED".equals(status)
+                    || "RECEIVED_WITH_DISCREPANCY".equals(status)) {
                 if (t.transferDate() == null || t.transferDate().isAfter(thirtyDaysAgo)) {
                     completedCount++;
                 }

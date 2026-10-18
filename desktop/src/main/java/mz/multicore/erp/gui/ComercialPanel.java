@@ -269,10 +269,12 @@ public class ComercialPanel extends JPanel {
         JPanel tabFaturacao = createFaturacaoTab();
         tabbedPane.addTab("Faturação", UIHelper.icon("fas-file-invoice", 16, UIHelper.MODULE_COMERCIAL), tabFaturacao);
 
-        tabbedPane.addTab("Recibos", UIHelper.icon("fas-receipt", 16, UIHelper.APPROVED_GREEN), receiptsPanel);
-
         JPanel tabEncomendas = createEncomendasTab();
         tabbedPane.addTab("Pedidos & Separação", UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_CYAN), tabEncomendas);
+
+        boolean sellerView = "SELLER".equalsIgnoreCase(CurrentUserContext.getRole());
+        if (!sellerView) {
+        tabbedPane.addTab("Recibos", UIHelper.icon("fas-receipt", 16, UIHelper.APPROVED_GREEN), receiptsPanel);
 
         // TAB 5: GUIAS DE REMESSA (GR)
         tabbedPane.addTab("Guias", UIHelper.icon("fas-truck", 16, UIHelper.ACCENT_SKY),
@@ -292,6 +294,7 @@ public class ComercialPanel extends JPanel {
 
         // TAB 10: MOVIMENTOS (vista unificada de todos os documentos comerciais)
         tabbedPane.addTab("Movimentos", UIHelper.icon("fas-list-alt", 16, UIHelper.ACCENT), movementsPanel);
+        }
 
         add(feedback, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
@@ -405,11 +408,12 @@ public class ComercialPanel extends JPanel {
     public void onPanelSelected() {
         loadClientsAndProducts();
         loadWarehouses();
-        loadBusinessUnits();
         loadInvoicesTable();
-        receiptsPanel.refresh();
         loadOrdersTable();
         quotationsPanel.refresh();
+        if ("SELLER".equalsIgnoreCase(CurrentUserContext.getRole())) return;
+        loadBusinessUnits();
+        receiptsPanel.refresh();
         deliveryGuidesPanel.refresh();
         notesPanel.refresh();
         outstandingAccountsPanel.refresh();

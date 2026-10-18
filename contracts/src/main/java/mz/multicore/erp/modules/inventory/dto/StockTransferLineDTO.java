@@ -14,8 +14,37 @@ public record StockTransferLineDTO(
         Integer packagesPerBox,
         Integer unitsPerPackage,
         BigDecimal unitPrice,
-        BigDecimal taxRate
+        BigDecimal taxRate,
+        /** Quantidade confirmada no destino; nulo enquanto a guia não foi recebida. */
+        BigDecimal receivedQuantity,
+        /** Quantidade devolvida à origem por divergência na recepção. */
+        BigDecimal returnedQuantity,
+        String discrepancyReason
 ) {
+    /** Construtor retrocompatível de 12 argumentos (anterior à recepção com divergências). */
+    public StockTransferLineDTO(
+            Long id,
+            Long productId,
+            String productSku,
+            String reference,
+            String barcode,
+            String productName,
+            BigDecimal quantity,
+            String batchNumber,
+            Integer packagesPerBox,
+            Integer unitsPerPackage,
+            BigDecimal unitPrice,
+            BigDecimal taxRate
+    ) {
+        this(id, productId, productSku, reference, barcode, productName, quantity, batchNumber,
+                packagesPerBox, unitsPerPackage, unitPrice, taxRate, null, null, null);
+    }
+
+    /** Verdadeiro quando parte da linha voltou à origem na recepção. */
+    public boolean hasDiscrepancy() {
+        return returnedQuantity != null && returnedQuantity.signum() > 0;
+    }
+
     public StockTransferLineDTO(
             Long id,
             Long productId,

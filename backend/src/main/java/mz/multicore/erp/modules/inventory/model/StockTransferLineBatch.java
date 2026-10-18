@@ -33,4 +33,8 @@ public class StockTransferLineBatch {
 
     @Column(name = "quantity", nullable = false, precision = 14, scale = 3)
     private BigDecimal quantity;
+
+    /** Parte desta parcela que entrou no destino; o restante voltou à origem. */
+    @Column(name = "received_quantity", precision = 14, scale = 3)
+    private BigDecimal receivedQuantity;
 }

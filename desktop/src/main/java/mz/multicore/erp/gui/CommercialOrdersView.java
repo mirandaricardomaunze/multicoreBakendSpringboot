@@ -378,8 +378,10 @@ final class CommercialOrdersView {
                 .addAction("Ver Ficha Completa", UIHelper.icon("fas-file-alt", 14, UIHelper.APPROVED_GREEN), owner::openSelectedOrderDetails)
                 .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), owner::openSelectedOrderEditor)
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), owner::printSelectedOrder)
-                .addAction("Gerar Ordem de Fabrico", UIHelper.icon("fas-industry", 14, UIHelper.ACCENT_CYAN), owner::generateProductionOrderFromSelectedOrder)
                 .addAction("Ver histórico operacional", UIHelper.icon("fas-history", 14), owner::showSelectedOrderEvents);
+        if (mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()) {
+            moreBtn.addAction("Gerar Ordem de Fabrico", UIHelper.icon("fas-industry", 14, UIHelper.ACCENT_CYAN), owner::generateProductionOrderFromSelectedOrder);
+        }
         ActionMenuButton convertMenu = UIHelper.createActionMenuButton("Processo")
                 .addAction("Marcar como separado", UIHelper.icon("fas-box-open", 14), owner::completeSelectedOrderSeparation)
                 .addAction("Converter em Guia", UIHelper.icon("fas-truck", 14), owner::convertSelectedOrderToGuide)
@@ -399,8 +401,11 @@ final class CommercialOrdersView {
         owner.ordersTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         owner.ordersPager = new TablePager(owner::loadOrdersPage);
         listCard.add(owner.ordersPager, BorderLayout.SOUTH);
-        listCard.add(UIHelper.tableCardTop("Central de Pedidos e Separação", ecFilters,
-                refreshBtn, moreBtn, convertMenu, newOrderBtn), BorderLayout.NORTH);
+        listCard.add(mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()
+                ? UIHelper.tableCardTop("Central de Pedidos e Separação", ecFilters,
+                        refreshBtn, moreBtn, convertMenu, newOrderBtn)
+                : UIHelper.tableCardTop("Central de Pedidos", ecFilters,
+                        refreshBtn, moreBtn, newOrderBtn), BorderLayout.NORTH);
 
         panel.add(listCard, BorderLayout.CENTER);
 

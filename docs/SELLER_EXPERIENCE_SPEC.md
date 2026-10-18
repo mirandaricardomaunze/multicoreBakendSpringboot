@@ -30,6 +30,10 @@ de verdade.
 3. Tentativas programáticas de abrir uma área proibida mostram uma orientação clara para solicitar
    apoio ao gestor, em vez de falhar silenciosamente.
 4. Os botões têm altura e alinhamento uniformes e usam apenas ícones FontAwesome.
+5. Dentro da área Comercial, o Vendedor vê somente Cotações, consulta de Facturação e Pedidos;
+   recibos, guias, notas, contas correntes, promoções administrativas e movimentos ficam ocultos.
+6. Nas facturas, o Vendedor pode consultar, imprimir e exportar, mas não vê Emitir, Anular ou
+   Liquidar. Nas encomendas, não vê o menu de separação, conversão, cancelamento ou facturação.
 
 ## Privacidade operacional
 

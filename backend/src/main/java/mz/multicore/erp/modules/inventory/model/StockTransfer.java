@@ -48,7 +48,7 @@ public class StockTransfer extends BaseEntity {
      * quando um MANAGER/ADMIN aprova (status APPROVED). REJECTED/CANCELLED nunca movem stock.
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 30)
     private TransferStatus status = TransferStatus.DRAFT;
 
     @Column(name = "responsible")

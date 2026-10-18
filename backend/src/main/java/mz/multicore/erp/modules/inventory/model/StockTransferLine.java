@@ -34,4 +34,15 @@ public class StockTransferLine {
     /** Parcelas de lote em viagem (preenchido no despacho de guias com recepção). */
     @OneToMany(mappedBy = "line", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<StockTransferLineBatch> transitBatches = new java.util.ArrayList<>();
+
+    /** Quantidade confirmada no destino (só guias com recepção). */
+    @Column(name = "received_quantity", precision = 12, scale = 3)
+    private BigDecimal receivedQuantity;
+
+    /** Quantidade devolvida à origem por divergência na recepção. */
+    @Column(name = "returned_quantity", precision = 12, scale = 3)
+    private BigDecimal returnedQuantity;
+
+    @Column(name = "discrepancy_reason", length = 200)
+    private String discrepancyReason;
 }

@@ -387,7 +387,7 @@ public class StockTransferService {
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada ID: " + id));
         if (transfer.getStatus() == TransferStatus.APPROVED
                 || transfer.getStatus() == TransferStatus.IN_TRANSIT
-                || transfer.getStatus() == TransferStatus.RECEIVED) {
+                || transfer.getStatus().isReceived()) {
             return toDTO(transfer);
         }
         validateAvailability(transfer);
@@ -667,7 +667,7 @@ public class StockTransferService {
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
         if (transfer.getStatus() != TransferStatus.APPROVED
                 && transfer.getStatus() != TransferStatus.IN_TRANSIT
-                && transfer.getStatus() != TransferStatus.RECEIVED) {
+                && !transfer.getStatus().isReceived()) {
             throw new BusinessRuleException(
                     "A Guia de Transferência oficial (documento de transporte em 3 vias) só pode ser emitida "
                             + "após a separação e aprovação da transferência. "

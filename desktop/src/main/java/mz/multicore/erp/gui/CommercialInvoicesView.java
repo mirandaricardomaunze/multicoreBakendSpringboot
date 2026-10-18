@@ -186,10 +186,12 @@ final class CommercialInvoicesView {
 
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), owner::printSelectedInvoice)
-                .addAction("Imprimir Guia", UIHelper.icon("fas-truck", 14, UIHelper.ACCENT), owner::printSelectedGuide)
-                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14, UIHelper.REJECTED_RED), owner::exportInvoicesTable)
-                .addAction("Anular Fatura", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), owner::cancelSelectedInvoice)
-                .addAction("Liquidar (RC)", UIHelper.icon("fas-money-bill-wave", 14, UIHelper.APPROVED_GREEN), owner::paySelectedInvoice);
+                .addAction("Exportar Tabela", UIHelper.icon("fas-file-pdf", 14, UIHelper.REJECTED_RED), owner::exportInvoicesTable);
+        if (mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()) {
+            moreBtn.addAction("Imprimir Guia", UIHelper.icon("fas-truck", 14, UIHelper.ACCENT), owner::printSelectedGuide)
+                    .addAction("Anular Fatura", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), owner::cancelSelectedInvoice)
+                    .addAction("Liquidar (RC)", UIHelper.icon("fas-money-bill-wave", 14, UIHelper.APPROVED_GREEN), owner::paySelectedInvoice);
+        }
         ActionMenuButton issueBtn = UIHelper.createActionMenuButton("Emitir")
                 .addAction("Nova Fatura", UIHelper.icon("fas-file-invoice", 14, UIHelper.ACCENT_BLUE), owner::openInvoiceEditor)
                 .addAction("Faturar Encomenda", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT), owner::openBillFromOrderDialog);
@@ -199,7 +201,9 @@ final class CommercialInvoicesView {
         JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
         cardHeader.setOpaque(false);
         cardHeader.add(UIHelper.createSubheading("Faturas Recentes"), BorderLayout.WEST);
-        cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn), BorderLayout.EAST);
+        cardHeader.add(mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()
+                ? UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn)
+                : UIHelper.actionsBar(refreshBtn, moreBtn), BorderLayout.EAST);
 
         JPanel invFilters = UIHelper.filterBar(
                 new JComponent[]{invSearch,

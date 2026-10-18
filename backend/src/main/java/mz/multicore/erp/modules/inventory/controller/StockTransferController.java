@@ -41,7 +41,9 @@ public class StockTransferController {
     public ResponseEntity<StockTransferDTO> receive(
             @PathVariable Long id,
             @RequestBody(required = false) @Valid mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest body) {
-        return ResponseEntity.ok(transitService.receive(id, body == null ? null : body.notes()));
+        return ResponseEntity.ok(body == null
+                ? transitService.receive(id, null)
+                : transitService.receive(id, body.notes(), body.lines()));
     }
 
     @GetMapping

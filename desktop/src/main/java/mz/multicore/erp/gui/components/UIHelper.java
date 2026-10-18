@@ -923,7 +923,8 @@ public class UIHelper {
         if (upper.contains("PENDING") || upper.contains("PENDENTE") || upper.startsWith("VENCE")
                 || upper.equals("BAIXO") || upper.equals("STOCK BAIXO")
                 || upper.contains("DÍVIDA") || upper.contains("DIVIDA")
-                || upper.contains("PARCIAL") || upper.contains("PARTIALLY")) {
+                || upper.contains("PARCIAL") || upper.contains("PARTIALLY")
+                || upper.contains("DIVERG") || upper.contains("DISCREPANCY")) {
             return PENDING_YELLOW;
         }
         return null;
@@ -2663,6 +2664,7 @@ public class UIHelper {
             case "ORDERED", "ENCOMENDADO" -> "Encomendado";
             case "PARTIALLY_RECEIVED", "PARCIALMENTE_RECEBIDO", "PARCIALMENTE RECEBIDO" -> "Parcialmente recebido";
             case "RECEIVED", "RECEBIDO" -> "Recebido";
+            case "RECEIVED_WITH_DISCREPANCY", "RECEBIDO C/ DIVERGÊNCIA", "RECEBIDO C/ DIVERGENCIA" -> "Recebido c/ divergência";
             case "COMPLETED", "CONCLUIDO", "CONCLUÍDO", "CONCLUIDA", "CONCLUÍDA" -> "Concluído";
             case "SUSPENDED", "SUSPENSO", "SUSPENSA" -> "Suspenso";
             case "EXPIRED", "EXPIRADO", "EXPIRADA" -> "Expirado";
