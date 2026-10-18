@@ -122,6 +122,65 @@ class OrderPrintServiceTest {
         assertFalse(text.contains("LEGACY-1"), "Não deve conter lote LEGACY-1 na descrição: " + text);
     }
 
+    @Test
+    void render_notaNoPeDaPaginaERodapeCorporativo() throws Exception {
+        Company company = new Company();
+        company.setId(1L);
+        company.setName("Multicore Portugal Lda");
+        company.setTaxId("501982736");
+
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(2L);
+        warehouse.setName("Armazém Central");
+
+        Client client = new Client();
+        client.setId(3L);
+        client.setName("Cliente VIP");
+
+        Product product = new Product();
+        product.setId(10L);
+        product.setName("Produto Teste");
+        product.setBarcode("5601000000017");
+
+        Order order = new Order();
+        order.setId(101L);
+        order.setOrderNumber("EC-2026/2");
+        order.setCompany(company);
+        order.setClient(client);
+        order.setWarehouse(warehouse);
+        order.setStatus("PENDING");
+        order.setCreatedAt(LocalDateTime.of(2026, 10, 8, 20, 50));
+        order.setTotalBeforeTax(new BigDecimal("100.00"));
+        order.setTaxAmount(BigDecimal.ZERO);
+        order.setTotalAmount(new BigDecimal("100.00"));
+        order.setNotes("Entregar com urgência até às 14h no armazém B.");
+
+        OrderLine line = new OrderLine();
+        line.setOrder(order);
+        line.setProduct(product);
+        line.setQuantity(BigDecimal.ONE);
+        line.setUnitPrice(new BigDecimal("100.00"));
+        line.setTaxRate(BigDecimal.ZERO);
+        line.setDiscountPercentage(BigDecimal.ZERO);
+        line.setLineTotal(new BigDecimal("100.00"));
+        order.setLines(List.of(line));
+
+        DocumentColumnsDTO columnsWithFooter = new DocumentColumnsDTO(
+                true, true, true, true, true, true, true, true, true, true, true,
+                "Mercadoria sob reserva de propriedade. Processado por Computador."
+        );
+
+        when(orderRepository.findById(101L)).thenReturn(Optional.of(order));
+        when(documentConfigService.getColumns(eq(1L), any(DocumentType.class))).thenReturn(columnsWithFooter);
+
+        byte[] pdf = printService.render(101L);
+        String text = extractText(pdf);
+
+        assertTrue(text.contains("Observações / Instruções:"), text);
+        assertTrue(text.contains("Entregar com urgência até às 14h no armazém B."), text);
+        assertTrue(text.contains("Mercadoria sob reserva de propriedade"), text);
+    }
+
     private static String extractText(byte[] pdf) throws Exception {
         PdfReader reader = new PdfReader(pdf);
         try {

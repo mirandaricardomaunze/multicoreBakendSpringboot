@@ -21,6 +21,10 @@ import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
+import mz.multicore.erp.desktop.client.StockTransferApiClient;
+import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
+import java.time.LocalDateTime;
+import java.time.Duration;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -38,6 +42,7 @@ public class NotificationFeed {
     private static final int EXPIRY_ALERT_DAYS = 30;
     private static final long SUBSCRIPTION_ALERT_DAYS = 7;
     private static final BigDecimal DEFAULT_LOW_STOCK = BigDecimal.valueOf(5);
+    private static final long IN_TRANSIT_OVERDUE_HOURS = 48; // 2 dias de tolerância em viagem
 
     private final ApprovalApiClient approvalApiClient;
     private final InventoryApiClient inventoryApiClient;
@@ -63,6 +68,7 @@ public class NotificationFeed {
     }
 
     private final mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient;
+    private final StockTransferApiClient stockTransferApiClient;
 
     public NotificationFeed(ApprovalApiClient approvalApiClient,
                             InventoryApiClient inventoryApiClient,
@@ -82,6 +88,19 @@ public class NotificationFeed {
                             CreditRiskApiClient creditRiskApiClient,
                             StockWasteApiClient stockWasteApiClient,
                             mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient) {
+        this(approvalApiClient, inventoryApiClient, subscriptionApiClient, hrApiClient, performanceApiClient,
+                creditRiskApiClient, stockWasteApiClient, monitoringApiClient, null);
+    }
+
+    public NotificationFeed(ApprovalApiClient approvalApiClient,
+                            InventoryApiClient inventoryApiClient,
+                            MySubscriptionApiClient subscriptionApiClient,
+                            HRApiClient hrApiClient,
+                            mz.multicore.erp.desktop.client.PerformanceApiClient performanceApiClient,
+                            CreditRiskApiClient creditRiskApiClient,
+                            StockWasteApiClient stockWasteApiClient,
+                            mz.multicore.erp.desktop.client.SystemMonitoringApiClient monitoringApiClient,
+                            StockTransferApiClient stockTransferApiClient) {
         this.approvalApiClient = approvalApiClient;
         this.inventoryApiClient = inventoryApiClient;
         this.subscriptionApiClient = subscriptionApiClient;
@@ -90,6 +109,7 @@ public class NotificationFeed {
         this.creditRiskApiClient = creditRiskApiClient;
         this.stockWasteApiClient = stockWasteApiClient;
         this.monitoringApiClient = monitoringApiClient;
+        this.stockTransferApiClient = stockTransferApiClient;
     }
 
     public List<NotificationItem> load(Long companyId) {
@@ -106,6 +126,7 @@ public class NotificationFeed {
         addEmployeeDocuments(items);
         addOccupationalHealth(items);
         addGoals(items, companyId);
+        addInTransitOverdue(items, companyId);
         items.sort(Comparator.comparingInt(NotificationItem::priority).reversed()
                 .thenComparing(NotificationItem::type)
                 .thenComparing(NotificationItem::title));
@@ -403,6 +424,40 @@ public class NotificationFeed {
             }
         } catch (Exception ignored) {
             // Degrada suavemente se serviço de monitoramento estiver offline
+        }
+    }
+
+    private void addInTransitOverdue(List<NotificationItem> items, Long companyId) {
+        if (stockTransferApiClient == null || companyId == null) return;
+        try {
+            List<StockTransferDTO> inTransitList = stockTransferApiClient.findInTransit(companyId, null);
+            if (inTransitList == null || inTransitList.isEmpty()) return;
+            LocalDateTime now = LocalDateTime.now();
+            for (StockTransferDTO t : inTransitList) {
+                LocalDateTime dispatched = t.dispatchedAt() != null ? t.dispatchedAt() : t.transferDate();
+                if (dispatched == null) continue;
+                long hours = Duration.between(dispatched, now).toHours();
+                if (hours >= IN_TRANSIT_OVERDUE_HOURS) {
+                    long days = hours / 24;
+                    String timeDesc = days > 1 ? days + " dias" : hours + " horas";
+                    String driver = t.driverName() != null && !t.driverName().isBlank()
+                            ? t.driverName()
+                            : (t.responsible() != null && !t.responsible().isBlank() ? t.responsible() : "Transportador");
+                    String detail = String.format("%s → %s · Despachada há %s por %s · Recepção pendente no destino",
+                            t.originWarehouseName(), t.destinationWarehouseName(), timeDesc, driver);
+                    int priority = days >= 5 ? 3 : 2; // Crítico se >= 5 dias, Atenção se >= 48h
+                    items.add(new NotificationItem(
+                            "Stock em Trânsito",
+                            "Guia " + t.transferNumber() + " em trânsito há " + timeDesc,
+                            detail,
+                            dispatched.format(UIHelper.DATE_FMT),
+                            "stock_transfers",
+                            priority
+                    ));
+                }
+            }
+        } catch (Exception ignored) {
+            // Degrada suavemente em caso de timeout ou indisponibilidade da API
         }
     }
 

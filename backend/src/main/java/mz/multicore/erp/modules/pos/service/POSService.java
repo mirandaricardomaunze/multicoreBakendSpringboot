@@ -218,7 +218,9 @@ public class POSService {
 
     @Transactional
     public TillSession openSession(String operator, BigDecimal openingBalance, Long companyId) {
+        PermissionGuard.requireSeller("abrir sessão de caixa");
         CurrentUserContext.requireCompany(companyId);
+        requireOwnOperatorForSeller(operator);
         // Serializa a verificação + criação entre todas as instâncias do backend. Sem este mutex,
         // dois pedidos podiam observar "nenhuma sessão" e ambos criar uma sessão OPEN.
         Company company = companyRepository.lockById(companyId)
@@ -257,9 +259,12 @@ public class POSService {
      */
     @Transactional
     public TillSession closeSession(Long sessionId, BigDecimal closingBalanceReal, Long depositAccountId, String notes, String cashBreakdownJson) {
+        PermissionGuard.requireSeller("fechar sessão de caixa");
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         TillSession session = tillSessionRepository.lockByIdAndCompanyId(sessionId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Sessão de caixa não encontrada."));
+        requireOwnOperatorForSeller(session.getCurrentOperator() != null
+                ? session.getCurrentOperator() : session.getOperator());
 
         if (!"OPEN".equals(session.getStatus())) {
             throw new BusinessRuleException("Sessão de caixa já se encontra fechada.");
@@ -479,7 +484,9 @@ public class POSService {
 
     @Transactional
     public Invoice checkout(POSCheckoutRequest request) {
+        PermissionGuard.requireSeller("efectuar venda no POS");
         CurrentUserContext.requireCompany(request.companyId());
+        requireOwnOperatorForSeller(request.operator());
 
         // Idempotência para Modo de Contingência (Offline-First):
         // Se a venda com esta referência de contingência já foi sincronizada anteriormente,
@@ -1137,6 +1144,13 @@ public class POSService {
                 m.getDescription(),
                 m.getMovementDate()
         );
+    }
+
+    private void requireOwnOperatorForSeller(String operator) {
+        if ("SELLER".equalsIgnoreCase(CurrentUserContext.getRole())
+                && (operator == null || !operator.equalsIgnoreCase(CurrentUserContext.getUsername()))) {
+            throw new BusinessRuleException("O vendedor só pode operar a sua própria sessão de caixa.");
+        }
     }
 
 }

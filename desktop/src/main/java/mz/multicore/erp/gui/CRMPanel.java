@@ -142,11 +142,13 @@ public class CRMPanel extends JPanel {
         UIHelper.styleScrollPane(tScroll);
 
         JTextField tSearch = TableFilter.searchField("Cliente, assunto ou técnico…");
+        tSearch.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         JComboBox<String> tEstado = TableFilter.combo("Todos os estados",
                 "Aberto", "Em curso", "Resolvido", "Anulado");
         JComboBox<String> tPrioridade = TableFilter.combo("Todas as prioridades",
                 "Urgente", "Alta", "Normal", "Baixa");
         JComboBox<String> tPeriodo = TableFilter.periodCombo();
+        tPeriodo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(ticketsTable, tSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(tEstado, 6),
                         new TableFilter.ColumnFilter(tPrioridade, 4)),
@@ -208,9 +210,11 @@ public class CRMPanel extends JPanel {
         UIHelper.styleScrollPane(wsScroll);
 
         JTextField wsSearch = TableFilter.searchField("Cliente ou técnico…");
+        wsSearch.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         JComboBox<String> wsEstado = TableFilter.combo("Todos os estados",
                 "Por faturar", "Faturada", "Anulada");
         JComboBox<String> wsPeriodo = TableFilter.periodCombo();
+        wsPeriodo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(worksheetsTable, wsSearch,
                 java.util.List.of(new TableFilter.ColumnFilter(wsEstado, 7)),
                 java.util.List.of(new TableFilter.PeriodFilter(wsPeriodo, 1)));

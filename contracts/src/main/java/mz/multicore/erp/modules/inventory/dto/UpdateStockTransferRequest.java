@@ -22,7 +22,9 @@ public record UpdateStockTransferRequest(
         @Size(max = 120, message = "O nome do motorista deve ter no máximo 120 caracteres.")
         String driverName,
         @Size(max = 30, message = "A matrícula do veículo deve ter no máximo 30 caracteres.")
-        String vehiclePlate
+        String vehiclePlate,
+        /** Exige confirmação de recepção no destino. Nulo = mantém falso (fluxo de 1 passo). */
+        Boolean requiresReceipt
 ) {
     public UpdateStockTransferRequest {
         responsible = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeText(responsible);
@@ -30,5 +32,14 @@ public record UpdateStockTransferRequest(
         notes = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeNotes(notes, 500);
         driverName = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeText(driverName);
         vehiclePlate = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeText(vehiclePlate);
+    }
+
+    /** Construtor retrocompatível de 9 argumentos (anterior ao stock em trânsito). */
+    public UpdateStockTransferRequest(Long version, Long originWarehouseId, Long destinationWarehouseId,
+                                      String responsible, String vehicle, String notes,
+                                      List<CreateStockTransferLineRequest> lines,
+                                      String driverName, String vehiclePlate) {
+        this(version, originWarehouseId, destinationWarehouseId, responsible, vehicle, notes, lines,
+                driverName, vehiclePlate, null);
     }
 }

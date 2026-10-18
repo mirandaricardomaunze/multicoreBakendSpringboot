@@ -585,9 +585,12 @@ public class BankReconciliationPanel extends JPanel {
                 error -> feedback.show(FeedbackType.ERROR, "Não foi possível fechar extracto", error.getMessage(), null, null));
     }
 
-    private void unmatchSelectedItem() {
+    void unmatchSelectedItem() {
         int row = itemsTable.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione um movimento bancário reconciliado para anular a conciliação.");
+            return;
+        }
         int modelRow = itemsTable.convertRowIndexToModel(row);
         BankStatementItemDTO item = currentItems.get(modelRow);
 
@@ -600,9 +603,12 @@ public class BankReconciliationPanel extends JPanel {
                 error -> feedback.show(FeedbackType.ERROR, "Erro ao desfazer conciliação", error.getMessage(), null, null));
     }
 
-    private void openManualMatchDialog() {
+    void openManualMatchDialog() {
         int row = itemsTable.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione um item do extracto pendente para associar a uma transacção de tesouraria.");
+            return;
+        }
         int modelRow = itemsTable.convertRowIndexToModel(row);
         BankStatementItemDTO item = currentItems.get(modelRow);
 
@@ -659,9 +665,12 @@ public class BankReconciliationPanel extends JPanel {
         }
     }
 
-    private void openExpenseDialog() {
+    void openExpenseDialog() {
         int row = itemsTable.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            ToastManager.show(this, FeedbackType.WARNING, "Seleccione a linha do extracto para lançar a despesa ou receita directa de tesouraria.");
+            return;
+        }
         int modelRow = itemsTable.convertRowIndexToModel(row);
         BankStatementItemDTO item = currentItems.get(modelRow);
 

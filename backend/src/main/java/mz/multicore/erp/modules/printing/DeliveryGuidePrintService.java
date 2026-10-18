@@ -72,9 +72,10 @@ public class DeliveryGuidePrintService {
         doc.add(CompanyHeaderRenderer.build(
                 guide.getCompany(),
                 "Guia de Remessa",
-                guide.getGuideNumber()
+                guide.getGuideNumber(),
+                copyLabel,
+                null
         ));
-        doc.add(buildCopyBadge(copyLabel));
         doc.add(buildDeliveryBlock(guide));
         doc.add(LineItemsTableRenderer.build(rows, columns));
 
@@ -107,27 +108,6 @@ public class DeliveryGuidePrintService {
         doc.add(PdfDocumentBuilder.spacer(24f));
         doc.add(SignatureBlockRenderer.build(
                 "O Expedidor", "Recebi em conformidade (Destinatário)"));
-    }
-
-    private static PdfPTable buildCopyBadge(String copyText) {
-        PdfPTable table = new PdfPTable(1);
-        table.setWidthPercentage(100);
-        table.setSpacingBefore(2f);
-        table.setSpacingAfter(8f);
-
-        PdfPCell cell = new PdfPCell();
-        cell.setBackgroundColor(new java.awt.Color(241, 245, 249)); // Slate-100
-        cell.setBorderColor(new java.awt.Color(203, 213, 225));     // Slate-300
-        cell.setBorderWidth(1f);
-        cell.setPadding(5f);
-
-        com.lowagie.text.Font badgeFont = new com.lowagie.text.Font(
-                com.lowagie.text.Font.HELVETICA, 8.5f, com.lowagie.text.Font.BOLD, new java.awt.Color(30, 41, 59));
-        Paragraph p = new Paragraph(copyText, badgeFont);
-        p.setAlignment(Element.ALIGN_CENTER);
-        cell.addElement(p);
-        table.addCell(cell);
-        return table;
     }
 
     private PdfPTable buildDeliveryBlock(DeliveryGuide guide) {

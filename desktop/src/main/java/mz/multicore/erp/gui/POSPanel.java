@@ -80,47 +80,29 @@ public class POSPanel extends JPanel {
     private final PosReturnDialog returnDialog;
     private final PosCashSessionActions cashSessionActions;
     private final PosBarcodeActions barcodeActions;
-    private final PosCatalogController catalogController;
+    final PosCatalogController catalogController;
     private ModernButton loyaltyBtn;
 
     // Active session status
     TillSessionDTO activeSession = null;
 
     // GUI elements
-    JLabel statusLabel;
+    JLabel statusLabel, totalLabel, subtotalValueLabel, ivaValueLabel;
     ModernPanel sessionBanner;
-    JComboBox<String> clientCombo;
-    JComboBox<String> warehouseCombo;
+    JComboBox<String> clientCombo, warehouseCombo;
     private JComboBox<String> accountCombo;
-    JTextField clientSearchField;
-    JTextField productSearchField;
-    JTextField barcodeField;
-
+    JTextField clientSearchField, productSearchField, barcodeField;
     DefaultTableModel cartModel;
     JTable cartTable;
     private JLabel cartItemCountLabel;
-    JPanel cartCenter;
-    private JScrollPane formScroll;
-    JPanel productGrid;
-    private JScrollPane productGridScroll;
-    JPanel topSelectsBar;
-    JLabel totalLabel;
-    JLabel subtotalValueLabel;
-    JLabel ivaValueLabel;
-    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+    JPanel cartCenter, productGrid, topSelectsBar;
+    private JScrollPane formScroll, productGridScroll;
+    final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
-    private ModernButton openSessionBtn;
-    private ModernButton closeSessionBtn;
-    private ModernButton cashMoveBtn;
-    private ModernButton shiftHandoverBtn;
-    private ModernButton checkoutBtn;
-    private ModernButton addToCartBtn;
+    private ModernButton openSessionBtn, closeSessionBtn, cashMoveBtn, shiftHandoverBtn, checkoutBtn, addToCartBtn;
     JCheckBox creditCheck;
     JPanel viewCards;
-    private ModernButton tabVendaBtn;
-    private ModernButton tabHistBtn;
-    private ModernButton contingencyBtn;
-    private ModernButton quotationBtn;
+    private ModernButton tabVendaBtn, tabHistBtn, contingencyBtn, quotationBtn;
     ActionMenuButton operationsMenu;
     final PosQuotationActions quotationActions;
     Long currentQuotationId;
@@ -161,24 +143,21 @@ public class POSPanel extends JPanel {
     public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
             InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
             PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser) {
-        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
-                scaleBarcodeParser, new PosContingencyManager(), null, null);
+        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser, new PosContingencyManager(), null, null);
     }
 
     public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
             InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
             PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             PrintApiClient printApiClient) {
-        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
-                scaleBarcodeParser, new PosContingencyManager(), null, printApiClient);
+        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser, new PosContingencyManager(), null, printApiClient);
     }
 
     public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
             InventoryApiClient inventoryApiClient, FinanceApiClient financeApiClient,
             PromotionApiClient promotionApiClient, mz.multicore.erp.modules.pos.scale.ScaleBarcodeParser scaleBarcodeParser,
             PosContingencyManager contingencyManager, PosContingencySyncService contingencySyncService) {
-        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient,
-                scaleBarcodeParser, contingencyManager, contingencySyncService, null);
+        this(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient, promotionApiClient, scaleBarcodeParser, contingencyManager, contingencySyncService, null);
     }
 
     public POSPanel(POSApiClient posApiClient, ComercialApiClient comercialApiClient,
@@ -203,6 +182,7 @@ public class POSPanel extends JPanel {
         this.catalogController = new PosCatalogController(this);
         this.scaleReader = new mz.multicore.erp.modules.pos.scale.SerialScaleReader(true);
         this.scaleWidget = new mz.multicore.erp.gui.pos.scale.PosScaleLiveWidget(this.scaleReader);
+        this.scaleWidget.setOnWeightCapturedCallback(this.catalogController::handleScaleWeightCaptured);
         this.loyaltyController = new mz.multicore.erp.gui.pos.loyalty.PosLoyaltyController(comercialApiClient);
         this.todaySummaryView = new PosTodaySummaryView(comercialApiClient,
                 error -> showPosLoadError("resumo diário do POS", error));
@@ -221,8 +201,7 @@ public class POSPanel extends JPanel {
         tabHistBtn.addActionListener(e -> selectView(true));
 
         quotationBtn = UIHelper.createButton("Cotação", UIHelper.icon("fas-file-import", 14, Color.WHITE), UIHelper.ACCENT_CYAN, e -> quotationActions.openImportDialog());
-        quotationBtn.setForeground(Color.WHITE);
-        quotationBtn.setShortcut("F7");
+        quotationBtn.setForeground(Color.WHITE); quotationBtn.setShortcut("F7");
         quotationBtn.setToolTipText("Importar Cotação / Pró-forma aberta para o carrinho");
 
         loyaltyBtn = UIHelper.createButton("Fidelidade", UIHelper.icon("fas-star", 14, Color.WHITE), UIHelper.ACCENT, e -> openLoyaltyDialog());
@@ -247,39 +226,34 @@ public class POSPanel extends JPanel {
                 .addAction("Importar Cotação (F7)", UIHelper.icon("fas-file-import", 14, UIHelper.ACCENT_CYAN), () -> quotationActions.openImportDialog())
                 .addAction("Programa de Fidelidade", UIHelper.icon("fas-star", 14, UIHelper.ACCENT), this::openLoyaltyDialog)
                 .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> cashSessionActions.showSessionHistory())
-                .addAction("Atalhos de Teclado (F1)", UIHelper.icon("fas-keyboard", 14, UIHelper.ACCENT_CYAN), () -> PosKeyboardShortcutsHandler.showHelp(this));
+                .addAction("Sangria / Suprimento", UIHelper.icon("fas-exchange-alt", 14, UIHelper.PENDING_YELLOW), () -> cashSessionActions.manageCashMovements())
+                .addAction("Passar Turno", UIHelper.icon("fas-people-arrows", 14, UIHelper.APPROVED_GREEN), () -> cashSessionActions.shiftHandover());
         operationsMenu.setToolTipText("Ações e ferramentas adicionais do ponto de venda");
 
         JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         segmented.setOpaque(false);
-        segmented.add(tabVendaBtn);
-        segmented.add(tabHistBtn);
-        segmented.add(operationsMenu);
-        segmented.add(contingencyBtn);
+        segmented.add(tabVendaBtn); segmented.add(tabHistBtn); segmented.add(operationsMenu); segmented.add(contingencyBtn);
 
         openSessionBtn = UIHelper.createSuccessButton("Abrir Caixa");
         openSessionBtn.setIcon(UIHelper.icon("fas-lock-open", 14));
         openSessionBtn.addActionListener(e -> cashSessionActions.openSession());
         closeSessionBtn = UIHelper.createDangerButton("Fechar Caixa");
-        closeSessionBtn.setShortcut("Z");
-        closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14));
+        closeSessionBtn.setShortcut("Z"); closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14));
         closeSessionBtn.addActionListener(e -> cashSessionActions.closeSession()); closeSessionBtn.setVisible(false);
         cashMoveBtn = UIHelper.createWarningButton("Sangria / Suprimento");
         cashMoveBtn.setIcon(UIHelper.icon("fas-exchange-alt", 14));
         cashMoveBtn.addActionListener(e -> cashSessionActions.manageCashMovements()); cashMoveBtn.setVisible(false);
         shiftHandoverBtn = new ModernButton("Passar Turno", UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN_HOVER);
         shiftHandoverBtn.setIcon(UIHelper.icon("fas-people-arrows", 14, Color.WHITE));
-        shiftHandoverBtn.setForeground(Color.WHITE);
-        shiftHandoverBtn.setToolTipText("Passagem de turno entre operadores");
+        shiftHandoverBtn.setForeground(Color.WHITE); shiftHandoverBtn.setToolTipText("Passagem de turno entre operadores");
         shiftHandoverBtn.addActionListener(e -> cashSessionActions.shiftHandover()); shiftHandoverBtn.setVisible(false);
 
-        JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         sessionActions.setOpaque(false);
+        sessionActions.add(scaleWidget);
         ModernButton refreshPosBtn = UIHelper.createRefreshButton(this::refreshOperationalData);
         sessionActions.add(refreshPosBtn);
         sessionActions.add(openSessionBtn);
-        sessionActions.add(shiftHandoverBtn);
-        sessionActions.add(cashMoveBtn);
         sessionActions.add(closeSessionBtn);
 
         JPanel topBar = new JPanel(new GridBagLayout());
@@ -293,12 +267,13 @@ public class POSPanel extends JPanel {
         topBar.add(sessionActions, topGbc);
 
         statusLabel = new JLabel("Caixa Fechada. Abra uma sessão para vender.");
-        statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
+        statusLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         statusLabel.setForeground(UIHelper.PENDING_YELLOW);
-        sessionBanner = PosLayout.createSessionBanner(statusLabel, scaleWidget);
+        sessionBanner = PosLayout.createSessionBanner(statusLabel, null);
         sessionBanner.setBackground(UIHelper.ROW_ALT);
+        sessionBanner.setBorder(new EmptyBorder(2, 10, 2, 10));
 
-        JPanel sessionBar = new JPanel(new BorderLayout(0, 4));
+        JPanel sessionBar = new JPanel(new BorderLayout(0, 2));
         sessionBar.setOpaque(false);
         sessionBar.add(topBar, BorderLayout.NORTH);
         sessionBar.add(sessionBanner, BorderLayout.SOUTH);
@@ -422,10 +397,17 @@ public class POSPanel extends JPanel {
         rightPanel.setOpaque(false);
         JPanel cartHeader = new JPanel(new BorderLayout(8, 0));
         cartHeader.setOpaque(false);
+        JPanel cartTitleBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        cartTitleBox.setOpaque(false);
         JLabel cartTitle = new JLabel("Carrinho de Vendas (POS)", UIHelper.icon("fas-shopping-cart", 15, UIHelper.ACCENT_BLUE), SwingConstants.LEFT);
         cartTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         cartTitle.setForeground(UIHelper.TEXT_LIGHT);
-        cartHeader.add(cartTitle, BorderLayout.WEST);
+        cartTitleBox.add(cartTitle);
+        cartItemCountLabel = new JLabel("• 0 artigos");
+        cartItemCountLabel.setForeground(UIHelper.TEXT_MUTED);
+        cartItemCountLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        cartTitleBox.add(cartItemCountLabel);
+        cartHeader.add(cartTitleBox, BorderLayout.WEST);
 
         quotationBannerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         quotationBannerPanel.setOpaque(false);
@@ -498,31 +480,6 @@ public class POSPanel extends JPanel {
         cartCenter.setMinimumSize(new Dimension(0, 126));
         cartCenter.add(emptyState, "empty");
         cartCenter.add(cartScroll, "table");
-        JPanel cartToolbar = new JPanel(new BorderLayout(8, 0));
-        cartToolbar.setOpaque(false);
-        cartItemCountLabel = new JLabel("0 artigos");
-        cartItemCountLabel.setForeground(UIHelper.TEXT_MUTED);
-        cartItemCountLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        cartToolbar.add(cartItemCountLabel, BorderLayout.WEST);
-
-        ModernButton decreaseBtn = UIHelper.createPrimaryButton("−");
-        decreaseBtn.setIcon(null); decreaseBtn.setForeground(Color.WHITE);
-        decreaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
-        decreaseBtn.setPreferredSize(new Dimension(36, 32)); decreaseBtn.setToolTipText("Diminuir quantidade");
-        ModernButton editQtyBtn = UIHelper.createPrimaryButton("Quantidade");
-        editQtyBtn.setShortcut("F6");
-        editQtyBtn.setIcon(UIHelper.icon("fas-sort-numeric-up", 12, Color.WHITE)); editQtyBtn.setForeground(Color.WHITE);
-        ModernButton increaseBtn = UIHelper.createPrimaryButton("+");
-        increaseBtn.setIcon(null); increaseBtn.setForeground(Color.WHITE);
-        increaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
-        increaseBtn.setPreferredSize(new Dimension(36, 32)); increaseBtn.setToolTipText("Aumentar quantidade");
-        JPanel quantityActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        quantityActions.setOpaque(false);
-        quantityActions.add(decreaseBtn);
-        quantityActions.add(editQtyBtn);
-        quantityActions.add(increaseBtn);
-        cartToolbar.add(quantityActions, BorderLayout.EAST);
-        cartCard.add(cartToolbar, BorderLayout.NORTH);
         cartCard.add(cartCenter, BorderLayout.CENTER);
 
         // Resumo e acções ficam compactos para preservar a altura operacional da tabela.
@@ -549,7 +506,30 @@ public class POSPanel extends JPanel {
         ModernButton removeBtn = UIHelper.createDangerButton("Remover");
         removeBtn.setShortcut("Del");
         removeBtn.setIcon(UIHelper.icon("fas-trash", 14, Color.WHITE));
-        buttonRow.add(removeBtn, BorderLayout.WEST);
+
+        ModernButton decreaseBtn = UIHelper.createPrimaryButton("−");
+        decreaseBtn.setIcon(null); decreaseBtn.setForeground(Color.WHITE);
+        decreaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        decreaseBtn.setPreferredSize(new Dimension(38, 36));
+        decreaseBtn.setToolTipText("Diminuir quantidade");
+
+        ModernButton editQtyBtn = UIHelper.createPrimaryButton("Quantidade");
+        editQtyBtn.setShortcut("F6");
+        editQtyBtn.setIcon(UIHelper.icon("fas-sort-numeric-up", 12, Color.WHITE));
+        editQtyBtn.setForeground(Color.WHITE);
+        editQtyBtn.setToolTipText("Alterar quantidade seleccionada (F6)");
+
+        ModernButton increaseBtn = UIHelper.createPrimaryButton("+");
+        increaseBtn.setIcon(null); increaseBtn.setForeground(Color.WHITE);
+        increaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
+        increaseBtn.setPreferredSize(new Dimension(38, 36));
+        increaseBtn.setToolTipText("Aumentar quantidade");
+
+        JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        leftActions.setOpaque(false);
+        leftActions.add(removeBtn); leftActions.add(decreaseBtn);
+        leftActions.add(editQtyBtn); leftActions.add(increaseBtn);
+        buttonRow.add(leftActions, BorderLayout.WEST);
 
         checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda");
         checkoutBtn.setShortcut("F10");
@@ -813,7 +793,7 @@ public class POSPanel extends JPanel {
         if (cartItemCountLabel != null) {
             BigDecimal units = cartItems.stream().map(item -> item.qty).reduce(BigDecimal.ZERO, BigDecimal::add);
             String formatted = units.stripTrailingZeros().toPlainString();
-            cartItemCountLabel.setText(formatted + (BigDecimal.ONE.compareTo(units) == 0 ? " artigo" : " artigos"));
+            cartItemCountLabel.setText("• " + formatted + (BigDecimal.ONE.compareTo(units) == 0 ? " artigo" : " artigos"));
         }
         catalogController.selectAndRevealCartRow(preferredModelRow);
     }

@@ -74,6 +74,7 @@ public class StockPanel extends JPanel {
     // KPI labels para a aba de transferências
     private final JLabel kpiTransfersSeparation = new JLabel("0");
     private final JLabel kpiTransfersPending = new JLabel("0");
+    private final JLabel kpiTransfersInTransit = new JLabel("0");
     private final JLabel kpiTransfersCompleted = new JLabel("0");
     private final JLabel kpiTransfersTotalValue = new JLabel("0.00 MT");
 
@@ -459,24 +460,23 @@ public class StockPanel extends JPanel {
         JScrollPane movScroll = new JScrollPane(movementsTable);
         UIHelper.styleScrollPane(movScroll);
         JTextField mvSearch = TableFilter.searchField("Lote, série ou descrição…");
-        mvSearch.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
+        mvSearch.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
 
-        // Valores crus: o TableFilter compara com o VALOR DO MODELO, não com a renderização.
         JComboBox<String> mvTipo = TableFilter.combo("Todos os tipos",
-                "PURCHASE", "ENTRY", "SALE", "TRANSFER", "ADJUSTMENT", "RETURN", "REVERSAL");
+                "Compra", "Entrada", "Venda", "Transferência", "Ajuste", "Devolução", "Estorno");
         UIHelper.styleComboBox(mvTipo);
-        mvTipo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
+        mvTipo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
 
         movementProductFilter = TableFilter.combo("Todos os artigos");
-        movementProductFilter.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        movementProductFilter.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
 
         movementBusinessUnitFilter = TableFilter.combo("Todos os negócios");
-        movementBusinessUnitFilter.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        movementBusinessUnitFilter.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
 
         DateField movementFrom = new DateField(null);
         DateField movementTo = new DateField(null);
-        movementFrom.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
-        movementTo.setPreferredSize(new Dimension(105, UIHelper.FORM_CONTROL_HEIGHT));
+        movementFrom.setPreferredSize(new Dimension(95, UIHelper.FORM_CONTROL_HEIGHT));
+        movementTo.setPreferredSize(new Dimension(95, UIHelper.FORM_CONTROL_HEIGHT));
         movementFrom.putClientProperty("JTextField.placeholderText", "aaaa-mm-dd");
         movementTo.putClientProperty("JTextField.placeholderText", "aaaa-mm-dd");
 
@@ -531,6 +531,7 @@ public class StockPanel extends JPanel {
                 .addAction("Guia de Separação", UIHelper.icon("fas-clipboard-list", 14, UIHelper.ACCENT_BLUE), () -> transferActions.printPickingSheetForSelected())
                 .addAction("Concluir Separação", UIHelper.icon("fas-tasks", 14, UIHelper.APPROVED_GREEN), () -> transferActions.completeSeparationForSelected())
                 .addAction("Imprimir Guia (3 Vias)", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printSelectedTransfer)
+                .addAction("Confirmar Recepção", UIHelper.icon("fas-box-open", 14, UIHelper.APPROVED_GREEN), () -> transferActions.receiveSelectedTransfer())
                 .addAction("Registar Encomenda", UIHelper.icon("fas-clipboard-check", 14, UIHelper.ACCENT_BLUE), () -> transferActions.recordOrderForSelectedTransfer());
 
         ModernButton refreshTransfersBtn = UIHelper.createRefreshButton(this::loadTransfers);
@@ -551,7 +552,7 @@ public class StockPanel extends JPanel {
         UIHelper.styleScrollPane(transferScroll);
         JTextField trSearch = TableFilter.searchField("Nº guia, armazém, motorista ou matrícula…");
         JComboBox<String> trEstado = TableFilter.combo("Todos os estados",
-                "Rascunho", "Aguarda separação", "Em separação", "Separado", "Pendente de aprovação", "Aprovado", "Rejeitado", "Cancelado");
+                "Rascunho", "Aguarda separação", "Em separação", "Separado", "Pendente de aprovação", "Aprovado", "Em trânsito", "Recebido", "Rejeitado", "Cancelado");
         UIHelper.styleComboBox(trEstado);
         trEstado.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
 
@@ -579,11 +580,13 @@ public class StockPanel extends JPanel {
         card.add(transferScroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(transferTable), BorderLayout.SOUTH);
 
-        JPanel kpiGrid = KpiCard.createGrid(4);
+        JPanel kpiGrid = KpiCard.createGrid(5);
         kpiGrid.add(KpiCard.createCard("Aguarda Separação", kpiTransfersSeparation,
                 "Picking pendente no armazém", "fas-dolly", UIHelper.PENDING_YELLOW));
         kpiGrid.add(KpiCard.createCard("Aguarda Decisão", kpiTransfersPending,
                 "Guias prontas para aprovação", "fas-clock", UIHelper.ACCENT_BLUE));
+        kpiGrid.add(KpiCard.createCard("Em Trânsito", kpiTransfersInTransit,
+                "Mercadoria em viagem entre armazéns", "fas-truck", UIHelper.ACCENT_BLUE));
         kpiGrid.add(KpiCard.createCard("Concluídas (Mês)", kpiTransfersCompleted,
                 "Transferências finalizadas no período", "fas-check-circle", UIHelper.APPROVED_GREEN));
         kpiGrid.add(KpiCard.createCard("Valor Movimentado", kpiTransfersTotalValue,
@@ -701,6 +704,7 @@ public class StockPanel extends JPanel {
 
         int separationCount = 0;
         int pendingCount = 0;
+        int inTransitCount = 0;
         int completedCount = 0;
         BigDecimal totalValue = BigDecimal.ZERO;
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
@@ -712,7 +716,9 @@ public class StockPanel extends JPanel {
                 separationCount++;
             } else if ("SEPARATED".equals(status) || "PENDING_APPROVAL".equals(status) || "DRAFT".equals(status)) {
                 pendingCount++;
-            } else if ("APPROVED".equals(status)) {
+            } else if ("IN_TRANSIT".equals(status)) {
+                inTransitCount++;
+            } else if ("APPROVED".equals(status) || "RECEIVED".equals(status)) {
                 if (t.transferDate() == null || t.transferDate().isAfter(thirtyDaysAgo)) {
                     completedCount++;
                 }
@@ -746,6 +752,7 @@ public class StockPanel extends JPanel {
 
         kpiTransfersSeparation.setText(String.valueOf(separationCount));
         kpiTransfersPending.setText(String.valueOf(pendingCount));
+        kpiTransfersInTransit.setText(String.valueOf(inTransitCount));
         kpiTransfersCompleted.setText(String.valueOf(completedCount));
         kpiTransfersTotalValue.setText(MultiCurrencyEngine.formatCurrency(totalValue, MultiCurrencyEngine.Currency.MZN));
         if (transferBusinessUnitCombo != null) {
@@ -795,6 +802,9 @@ public class StockPanel extends JPanel {
         syncCategoryCombo();
         syncBusinessUnitCombo();
         filterStocks();
+        if (warehousesPanel != null) {
+            warehousesPanel.updateKpis();
+        }
     }
 
     /** Popula o combo de categorias com as categorias distintas presentes no stock (preserva a escolha). */
@@ -994,7 +1004,7 @@ public class StockPanel extends JPanel {
                     m.productName(),
                     m.warehouseName(),
                     formattedQty,
-                    m.movementType(),
+                    UIHelper.humanStatus(m.movementType()),
                     m.batchNumber() != null ? m.batchNumber() : "-",
                     m.serialNumber() != null ? m.serialNumber() : "-",
                     m.description(),

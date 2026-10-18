@@ -37,7 +37,7 @@ public final class AssetsPanel extends JPanel {
     private final PrintApiClient printApiClient;
 
     // Componentes de Feedback e KPIs
-    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+    final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiTotalCost = new JLabel("0.00 MT");
     private final JLabel kpiAccumulated = new JLabel("0.00 MT");
     private final JLabel kpiNetBookValue = new JLabel("0.00 MT");
@@ -45,7 +45,7 @@ public final class AssetsPanel extends JPanel {
 
     // Tabela e Modelo
     private final DefaultTableModel tableModel;
-    private final JTable table;
+    final JTable table;
     private List<AssetDTO> currentAssets = new ArrayList<>();
 
     // Filtros
@@ -398,9 +398,13 @@ public final class AssetsPanel extends JPanel {
         }
     }
 
-    private void showAssetDetails() {
+    void showAssetDetails() {
         int row = table.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            feedback.show(FeedbackType.WARNING, "Seleccione um activo",
+                    "Seleccione um activo na tabela para consultar o plano e quotas de amortização.", null, null);
+            return;
+        }
         int modelRow = table.convertRowIndexToModel(row);
         if (modelRow >= currentAssets.size()) return;
         AssetDTO asset = currentAssets.get(modelRow);

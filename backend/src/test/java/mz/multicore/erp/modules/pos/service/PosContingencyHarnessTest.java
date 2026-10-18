@@ -153,7 +153,7 @@ class PosContingencyHarnessTest {
         walkInClient.setId(999L);
         walkInClient.setName("Consumidor Final");
 
-        CurrentUserContext.setCurrentUser("operador", "CASHIER");
+        CurrentUserContext.setCurrentUser(OPERATOR, "SELLER");
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
 
         when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));

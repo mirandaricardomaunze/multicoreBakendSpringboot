@@ -19,19 +19,23 @@ public final class CompanyHeaderRenderer {
     private CompanyHeaderRenderer() {}
 
     public static PdfPTable build(Company company, String documentTitle, String documentNumber) {
-        return build(company, documentTitle, documentNumber, null);
+        return build(company, documentTitle, documentNumber, null, null);
     }
 
     public static PdfPTable build(Company company, String documentTitle, String documentNumber, String statusLabel) {
+        return build(company, documentTitle, documentNumber, null, statusLabel);
+    }
+
+    public static PdfPTable build(Company company, String documentTitle, String documentNumber, String copyLabel, String statusLabel) {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         try {
-            table.setWidths(new float[]{60f, 40f});
+            table.setWidths(new float[]{55f, 45f});
         } catch (Exception ignored) {}
         table.setSpacingAfter(14f);
 
         table.addCell(companyCell(company));
-        table.addCell(documentCell(documentTitle, documentNumber, statusLabel));
+        table.addCell(documentCell(documentTitle, documentNumber, copyLabel, statusLabel));
         return table;
     }
 
@@ -79,7 +83,7 @@ public final class CompanyHeaderRenderer {
         return value != null && !value.isBlank();
     }
 
-    private static PdfPCell documentCell(String title, String number, String statusLabel) {
+    private static PdfPCell documentCell(String title, String number, String copyLabel, String statusLabel) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(PdfPCell.NO_BORDER);
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -89,15 +93,21 @@ public final class CompanyHeaderRenderer {
         titleP.setSpacingAfter(2f);
         cell.addElement(titleP);
 
-        if (number != null) {
+        if (number != null && !number.isBlank()) {
             Paragraph num = new Paragraph(new Phrase(new Chunk(number, PdfTheme.subtitleFont())));
             num.setAlignment(Element.ALIGN_RIGHT);
             cell.addElement(num);
         }
+        if (copyLabel != null && !copyLabel.isBlank()) {
+            Paragraph copy = new Paragraph(new Phrase(new Chunk(copyLabel.trim(), PdfTheme.copyBadgeFont())));
+            copy.setAlignment(Element.ALIGN_RIGHT);
+            copy.setSpacingBefore(3f);
+            cell.addElement(copy);
+        }
         if (statusLabel != null && !statusLabel.isBlank()) {
             Paragraph st = new Paragraph(new Phrase(new Chunk("Estado: " + statusLabel.trim(), PdfTheme.bodyFont())));
             st.setAlignment(Element.ALIGN_RIGHT);
-            st.setSpacingBefore(4f);
+            st.setSpacingBefore(3f);
             cell.addElement(st);
         }
         return cell;

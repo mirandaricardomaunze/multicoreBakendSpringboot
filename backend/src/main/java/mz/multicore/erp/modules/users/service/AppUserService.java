@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.users.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.PasswordPolicy;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.users.model.AppUser;
@@ -112,6 +113,7 @@ public class AppUserService {
     @Transactional
     public AppUser createUser(String username, String name, String password, String role) {
         requireAdmin();
+        PasswordPolicy.validate(password, username);
         Optional<AppUser> existing = appUserRepository.findByUsername(username);
         if (existing.isPresent()) {
             throw new BusinessRuleException("Utilizador já existe.");
@@ -187,6 +189,9 @@ public class AppUserService {
         String oldRole = access.getRole();
         access.setRole(normalizedRole);
         AppUser saved = appUserRepository.save(user);
+        if (!normalizedRole.equalsIgnoreCase(oldRole) && authSessionService != null) {
+            authSessionService.revokeUser(user.getUsername());
+        }
         if (auditLogService != null) {
             auditLogService.logCurrent("USER_ROLE_CHANGE",
                     "Perfil do utilizador " + username + " na empresa " + companyId + " alterado de " + oldRole + " para " + normalizedRole);
@@ -263,9 +268,7 @@ public class AppUserService {
     public void resetPassword(String username, String newPassword) {
         requireAdmin();
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 4) {
-            throw new BusinessRuleException("A nova senha deve ter pelo menos 4 caracteres.");
-        }
+        PasswordPolicy.validate(newPassword, username);
         AppUser user = appUserRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
         requireManagedUser(user, companyId);
@@ -294,6 +297,9 @@ public class AppUserService {
         }
         user.setActive(active);
         AppUser saved = appUserRepository.save(user);
+        if (!active && authSessionService != null) {
+            authSessionService.revokeUser(user.getUsername());
+        }
         if (auditLogService != null) {
             auditLogService.logCurrent("USER_STATUS_CHANGE",
                     "Estado do utilizador " + username + " alterado para " + (active ? "ATIVO" : "INATIVO"));

@@ -30,9 +30,17 @@ public final class ToastManager {
     private static final Deque<Toast> QUEUE = new ArrayDeque<>();
     private static boolean showing;
 
-    private ToastManager() {}
+    private static java.util.function.BiConsumer<FeedbackType, String> testListener;
+
+    public static void setTestListener(java.util.function.BiConsumer<FeedbackType, String> listener) {
+        testListener = listener;
+    }
 
     public static void show(Component owner, FeedbackType type, String message) {
+        if (testListener != null) {
+            testListener.accept(type == null ? FeedbackType.INFO : type, message);
+            return;
+        }
         runOnEdt(() -> {
             QUEUE.addLast(new Toast(owner, type == null ? FeedbackType.INFO : type, message));
             showNext();

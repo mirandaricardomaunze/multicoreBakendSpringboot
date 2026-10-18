@@ -107,9 +107,10 @@ public class MulticoreServicesTest {
     @Test
     public void testTaxIdValidation() {
         // Valid NUIT / NIF: exactly 9 digits
+        String uniqueTaxId = String.format("%09d", Math.floorMod(System.nanoTime(), 1_000_000_000L));
         assertDoesNotThrow(() -> {
             ClientDTO c = comercialService.createClient(
-                    new SaveClientRequest("Test Client Valid", "999888777", "valid@email.com", "Test Addr"));
+                    new SaveClientRequest("Test Client Valid", uniqueTaxId, "valid@email.com", "Test Addr"));
             assertNotNull(c);
         });
 
@@ -208,8 +209,8 @@ public class MulticoreServicesTest {
         );
         CreateInvoiceRequest reqNormal = new CreateInvoiceRequest(
                 client.getId(),
-                warehouse.getId(),
                 company.getId(),
+                warehouse.getId(),
                 List.of(lineNormal)
         );
 
@@ -227,8 +228,8 @@ public class MulticoreServicesTest {
         );
         CreateInvoiceRequest reqHigh = new CreateInvoiceRequest(
                 client.getId(),
-                warehouse.getId(),
                 company.getId(),
+                warehouse.getId(),
                 List.of(lineHigh)
         );
 
@@ -317,8 +318,8 @@ public class MulticoreServicesTest {
 
         var order = comercialService.createOrder(request);
         assertNotNull(order);
-        // Encomenda entra na Engine de Aprovações (total > 500 → requer ADMIN).
-        assertEquals("PENDING_APPROVAL", order.status());
+        // Encomenda de baixo risco entra na Green Lane (até 50 000 MT) e fica faturável.
+        assertEquals("PENDING", order.status());
         assertTrue(order.orderNumber().startsWith("EC-2026/"));
 
         // 3. Stock should NOT be deducted upon order creation
@@ -326,15 +327,7 @@ public class MulticoreServicesTest {
                 .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
         assertEquals(stockBefore, stockAfterOrder);
 
-        // 4. Aprovar a encomenda (contexto de teste corre como ADMIN) → fica faturável (PENDING).
-        Long orderId = order.id();
-        var pendingReq = approvalService.getPendingRequests().stream()
-                .filter(r -> "ORDER".equals(r.documentType()) && orderId.equals(r.documentId()))
-                .findFirst()
-                .orElseThrow();
-        approvalService.approveRequest(pendingReq.id(), "Aprovado para teste");
-
-        // 5. Bill the order (FT)
+        // 4. Bill the auto-approved order (FT)
         var invoice = comercialService.billOrder(order.id());
         assertNotNull(invoice);
         assertEquals(InvoiceStatus.APPROVED, invoice.status());

@@ -112,7 +112,7 @@ public class StockWastePanel extends JPanel {
 
         statusFilterCombo = new JComboBox<>(new String[]{"Todos os Estados", "Aprovado", "Pendente Aprovação", "Rejeitado"});
         UIHelper.styleComboBox(statusFilterCombo);
-        statusFilterCombo.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        statusFilterCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         statusFilterCombo.addActionListener(e -> applyWasteFilters());
 
         reasonFilterCombo = new JComboBox<>(new String[]{
@@ -125,19 +125,20 @@ public class StockWastePanel extends JPanel {
                 "Outro Motivo"
         });
         UIHelper.styleComboBox(reasonFilterCombo);
-        reasonFilterCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        reasonFilterCombo.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         reasonFilterCombo.addActionListener(e -> applyWasteFilters());
 
         wasteBusinessUnitCombo = TableFilter.combo("Todos os negócios");
+        wasteBusinessUnitCombo.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         wasteBusinessUnitCombo.addActionListener(e -> applyWasteFilters());
 
         periodFilterCombo = TableFilter.periodCombo();
         UIHelper.styleComboBox(periodFilterCombo);
-        periodFilterCombo.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
+        periodFilterCombo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
         periodFilterCombo.addActionListener(e -> applyWasteFilters());
 
         wasteSearchField = new SearchField("Pesquisar por produto, armazém, lote ou registador...");
-        wasteSearchField.setPreferredSize(new Dimension(260, UIHelper.FORM_CONTROL_HEIGHT));
+        wasteSearchField.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.onTextChange(wasteSearchField, this::applyWasteFilters);
 
         ModernButton reloadBtn = UIHelper.createSecondaryButton("Actualizar");

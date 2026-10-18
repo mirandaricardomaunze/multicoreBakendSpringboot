@@ -118,12 +118,71 @@ class POSServiceTest {
         openSession = session(1L, "OPEN", new BigDecimal("100"));
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
-        CurrentUserContext.setCurrentUser(OPERATOR, "EMPLOYEE");
+        CurrentUserContext.setCurrentUser(OPERATOR, "SELLER");
     }
 
     @AfterEach
     void tearDown() {
         CurrentUserContext.clear();
+    }
+
+    @Test
+    void openSession_sellerOwnOperator_allowsOpening() {
+        when(companyRepository.lockById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(tillSessionRepository.findActiveSessionForOperator(OPERATOR, "OPEN", COMPANY_ID))
+                .thenReturn(Optional.empty());
+        when(tillSessionRepository.save(any(TillSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        TillSession opened = service.openSession(OPERATOR, new BigDecimal("100"), COMPANY_ID);
+
+        assertEquals(OPERATOR, opened.getOperator());
+        assertEquals("OPEN", opened.getStatus());
+    }
+
+    @Test
+    void openSession_employee_deniesBeforePersistence() {
+        CurrentUserContext.setCurrentUser(OPERATOR, "EMPLOYEE");
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.openSession(OPERATOR, new BigDecimal("100"), COMPANY_ID));
+        verifyNoInteractions(companyRepository, tillSessionRepository);
+    }
+
+    @Test
+    void openSession_sellerUsingAnotherOperator_deniesBeforePersistence() {
+        assertThrows(BusinessRuleException.class,
+                () -> service.openSession("outro", new BigDecimal("100"), COMPANY_ID));
+        verifyNoInteractions(companyRepository, tillSessionRepository);
+    }
+
+    @Test
+    void checkout_employee_deniesBeforeBusinessProcessing() {
+        CurrentUserContext.setCurrentUser(OPERATOR, "EMPLOYEE");
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.checkout(checkout(null, ACCOUNT_ID)));
+        verifyNoInteractions(tillSessionRepository, invoiceRepository);
+    }
+
+    @Test
+    void checkout_sellerUsingAnotherOperator_deniesBeforeBusinessProcessing() {
+        POSCheckoutRequest original = checkout(null, ACCOUNT_ID);
+        POSCheckoutRequest otherOperator = new POSCheckoutRequest("outro", original.companyId(),
+                original.clientId(), original.walkInName(), original.warehouseId(),
+                original.treasuryAccountId(), original.lines(), original.payments());
+
+        assertThrows(BusinessRuleException.class, () -> service.checkout(otherOperator));
+        verifyNoInteractions(tillSessionRepository, invoiceRepository);
+    }
+
+    @Test
+    void closeSession_sellerUsingAnotherOperatorsSession_deniesBeforeMutation() {
+        openSession.setCurrentOperator("outro");
+        when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.closeSession(1L, new BigDecimal("100")));
+        verify(tillSessionRepository, never()).save(any());
     }
 
     // ────────────────────────── checkout ──────────────────────────
@@ -358,7 +417,7 @@ class POSServiceTest {
         when(tillSessionRepository.lockByIdAndCompanyId(1L, COMPANY_ID)).thenReturn(Optional.of(openSession));
         when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
 
-        // Esperado 100, contado 90 → diferença -10 exige MANAGER/ADMIN. Operador é EMPLOYEE.
+        // Esperado 100, contado 90 → diferença -10 exige MANAGER/ADMIN. Operador é SELLER.
         assertThrows(BusinessRuleException.class, () -> service.closeSession(1L, new BigDecimal("90")));
         verify(tillSessionRepository, never()).save(any());
     }

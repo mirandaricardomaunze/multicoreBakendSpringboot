@@ -8,6 +8,7 @@ import mz.multicore.erp.modules.comercial.dto.ClientAgingDTO;
 import mz.multicore.erp.modules.comercial.model.AgingBucket;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
+import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 
 import org.springframework.stereotype.Service;
@@ -53,11 +54,8 @@ public class ReceivablesService {
     @Transactional(readOnly = true)
     public BigDecimal outstandingTotalFor(Long clientId) {
         if (clientId == null) return BigDecimal.ZERO;
-        return invoiceRepository.findByCompanyId(CurrentUserContext.getCurrentCompanyId()).stream()
-                .filter(invoice -> invoice.getClient() != null && clientId.equals(invoice.getClient().getId()))
-                .filter(invoice -> invoice.getStatus().isCollectable())
-                .map(Invoice::outstandingAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return invoiceRepository.sumOutstandingByClient(CurrentUserContext.requireCurrentCompanyId(),
+                clientId, InvoiceStatus.collectableStatuses());
     }
 
     /**
@@ -99,9 +97,10 @@ public class ReceivablesService {
     @Transactional(readOnly = true)
     public AgingSummaryDTO getAging(LocalDate referenceDate) {
         LocalDate reference = referenceDate == null ? LocalDate.now() : referenceDate;
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
 
-        List<Invoice> collectable = invoiceRepository.findByCompanyId(companyId).stream()
+        List<Invoice> collectable = invoiceRepository.findOutstandingWithClient(
+                companyId, InvoiceStatus.collectableStatuses()).stream()
                 .filter(invoice -> invoice.getStatus().isCollectable())
                 .filter(invoice -> invoice.outstandingAmount().signum() > 0)
                 .toList();

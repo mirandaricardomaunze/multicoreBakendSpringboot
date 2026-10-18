@@ -161,9 +161,14 @@ final class StockTransferActions {
         StockTransferDTO selected = selected("Seleccione uma guia",
                 "Escolha uma transferência para cancelar.");
         if (selected == null) return;
-        if ("APPROVED".equals(selected.status()) || "REJECTED".equals(selected.status()) || "CANCELLED".equals(selected.status())) {
+        if ("IN_TRANSIT".equals(selected.status())) {
+            owner.showStockNotice(FeedbackType.WARNING, "Transferência em trânsito",
+                    "A guia " + selected.transferNumber() + " está em trânsito com mercadoria já despachada da origem e não pode ser cancelada.");
+            return;
+        }
+        if ("RECEIVED".equals(selected.status()) || "APPROVED".equals(selected.status()) || "REJECTED".equals(selected.status()) || "CANCELLED".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.INFO, "Estado incompatível",
-                    "Transferências concluídas, rejeitadas ou já canceladas não podem ser canceladas.");
+                    "Transferências concluídas, recebidas, rejeitadas ou já canceladas não podem ser canceladas.");
             return;
         }
         int confirm = JOptionPane.showConfirmDialog(owner,
@@ -501,19 +506,28 @@ final class StockTransferActions {
                             + "Emita a Guia de Separação e marque 'Concluir Separação' antes da aprovação.");
             return;
         }
+        String confirmMsg = selected.requiresReceipt()
+                ? "Aprovar a guia " + selected.transferNumber() + "?\n\n"
+                  + "O stock vai sair de '" + selected.originWarehouseName()
+                  + "' e ficar EM TRÂNSITO até que o armazém '" + selected.destinationWarehouseName()
+                  + "' confirme a recepção física dos artigos."
+                : "Aprovar a guia " + selected.transferNumber() + "?\n\n"
+                  + "O stock vai sair de '" + selected.originWarehouseName()
+                  + "' e entrar em '" + selected.destinationWarehouseName() + "'.";
         boolean confirm = ModernMessageDialog.confirm(
                 SwingUtilities.getWindowAncestor(owner),
                 FeedbackType.INFO,
                 "Confirmar Aprovação",
-                "Aprovar a guia " + selected.transferNumber() + "?\n\n"
-                        + "O stock vai sair de '" + selected.originWarehouseName()
-                        + "' e entrar em '" + selected.destinationWarehouseName() + "'.",
+                confirmMsg,
                 "Aprovar Guia"
         );
         if (!confirm) return;
         UIHelper.runWithProgress(owner, "A aprovar transferência…", () -> owner.stockTransferApiClient.approve(selected.id()), approved -> {
             owner.onPanelSelected();
-            owner.showStockSuccess("Guia " + selected.transferNumber() + " aprovada · stock movimentado.");
+            String successMsg = selected.requiresReceipt()
+                    ? "Guia " + selected.transferNumber() + " aprovada · mercadoria despachada em trânsito para '" + selected.destinationWarehouseName() + "'."
+                    : "Guia " + selected.transferNumber() + " aprovada · stock movimentado.";
+            owner.showStockSuccess(successMsg);
             boolean print = ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner),
                     FeedbackType.INFO,
                     "Impressão de Guia",
@@ -534,6 +548,11 @@ final class StockTransferActions {
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
+        if ("IN_TRANSIT".equals(selected.status()) || "RECEIVED".equals(selected.status())) {
+            owner.showStockNotice(FeedbackType.WARNING, "Operação bloqueada",
+                    "A guia " + selected.transferNumber() + " já tem mercadoria despachada e não pode ser rejeitada.");
+            return;
+        }
         String reason = UIHelper.promptRequiredText("Rejeitar Guia", "fas-times-circle",
                 "Guia " + selected.transferNumber(), "Motivo da rejeição:");
         if (reason == null) return;
@@ -551,13 +570,48 @@ final class StockTransferActions {
             return;
         }
         StockTransferDTO selected = owner.transfersList.get(row);
-        if (!"APPROVED".equals(selected.status())) {
+        if (!"APPROVED".equals(selected.status()) && !"IN_TRANSIT".equals(selected.status()) && !"RECEIVED".equals(selected.status())) {
             owner.showStockNotice(FeedbackType.INFO, "Guia oficial bloqueada",
                     "A Guia de Transferência oficial (3 vias) só pode ser emitida após a separação e aprovação.\n"
                             + "Para conferência física no armazém, utilize a opção 'Guia de Separação'.");
             return;
         }
         printTransfer(selected.id(), selected.transferNumber());
+    }
+
+    public void receiveSelectedTransfer() {
+        int row = TableFilter.selectedModelRow(owner.transferTable);
+        if (row < 0) {
+            owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma guia",
+                    "Escolha uma guia em trânsito na tabela para confirmar a recepção.");
+            return;
+        }
+        StockTransferDTO selected = owner.transfersList.get(row);
+        if (!"IN_TRANSIT".equals(selected.status())) {
+            owner.showStockNotice(FeedbackType.WARNING, "Estado incompatível",
+                    "Apenas transferências com mercadoria em trânsito podem ter a recepção confirmada no destino.\n"
+                            + "Estado atual: " + UIHelper.humanStatus(selected.status()));
+            return;
+        }
+        boolean confirm = ModernMessageDialog.confirm(
+                SwingUtilities.getWindowAncestor(owner),
+                FeedbackType.INFO,
+                "Confirmar Recepção de Mercadoria",
+                "Confirmar a recepção da guia " + selected.transferNumber() + " no armazém '" + selected.destinationWarehouseName() + "'?\n\n"
+                        + "Origem: " + selected.originWarehouseName() + "\n"
+                        + "Linhas a receber: " + (selected.lines() == null ? 0 : selected.lines().size()) + "\n\n"
+                        + "O stock será creditado definitivamente no armazém de destino com os respectivos lotes e validades de origem.",
+                "Confirmar Recepção"
+        );
+        if (!confirm) return;
+        UIHelper.runWithProgress(owner, "A confirmar recepção no destino…",
+                () -> owner.stockTransferApiClient.receive(selected.id(), null),
+                received -> {
+                    owner.onPanelSelected();
+                    owner.showStockSuccess("Recepção da guia " + selected.transferNumber() + " confirmada com sucesso · stock creditado em '"
+                            + selected.destinationWarehouseName() + "'.");
+                },
+                owner::showStockError);
     }
 
     /**
@@ -635,7 +689,7 @@ final class StockTransferActions {
         infoCard.add(createMetaItem("Data da Transferência", dateStr));
         infoCard.add(createMetaItem("Motorista", driver));
         infoCard.add(createMetaItem("Matrícula do Veículo", plate));
-        infoCard.add(createMetaItem("Estado", transfer.status() != null ? transfer.status() : "—"));
+        infoCard.add(createMetaItem("Estado", UIHelper.humanStatus(transfer.status())));
 
         // Tabela com as 9 colunas canónicas: Referência, Cód. Barras, Produto, Quantidade, Embalagem, Caixa, % da Caixa, Valor Unitário, IVA
         String[] cols = {"Referência", "Cód. Barras", "Produto", "Quantidade", "Embalagem", "Caixa", "% da Caixa", "Valor Unitário", "IVA"};

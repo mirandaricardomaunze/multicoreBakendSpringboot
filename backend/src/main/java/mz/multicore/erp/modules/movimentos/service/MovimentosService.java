@@ -29,6 +29,7 @@ import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoTipo;
 import java.math.BigDecimal;
+import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -363,10 +364,18 @@ public class MovimentosService {
     }
 
     private static String nameOf(Client client, String fallback) {
-        if (client != null && client.getName() != null && !client.getName().isBlank()) {
-            return client.getName();
+        boolean hasFallback = fallback != null && !fallback.isBlank();
+        boolean isWalkIn = client == null
+                || WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())
+                || WalkInClientProvider.WALK_IN_NAME.equalsIgnoreCase(client.getName());
+
+        if (isWalkIn) {
+            return hasFallback ? fallback.trim() : WalkInClientProvider.WALK_IN_NAME;
         }
-        return fallback != null && !fallback.isBlank() ? fallback : SEM_CLIENTE;
+        if (client != null && client.getName() != null && !client.getName().isBlank()) {
+            return hasFallback ? client.getName() + " — " + fallback.trim() : client.getName();
+        }
+        return hasFallback ? fallback.trim() : SEM_CLIENTE;
     }
 
     private static String statusName(Enum<?> status) {

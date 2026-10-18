@@ -36,14 +36,14 @@ public final class ManufacturingPanel extends JPanel {
     private final ComercialApiClient comercialApiClient;
     private final InventoryApiClient inventoryApiClient;
 
-    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+    final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiInProgress = new JLabel("0 OPs");
     private final JLabel kpiCompleted = new JLabel("0 OPs");
     private final JLabel kpiBoms = new JLabel("0 Fichas");
     private final JLabel kpiTotalCost = new JLabel("0.00 MT");
 
     private final DefaultTableModel ordersModel;
-    private final JTable ordersTable;
+    final JTable ordersTable;
     private List<ProductionOrderDTO> currentOrders = new ArrayList<>();
     private List<BillOfMaterialsDTO> currentBoms = new ArrayList<>();
     private List<ProductDTO> cachedProducts = new ArrayList<>();
@@ -426,9 +426,13 @@ public final class ManufacturingPanel extends JPanel {
         }
     }
 
-    private void showOrderActions() {
+    void showOrderActions() {
         int row = ordersTable.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            feedback.show(FeedbackType.WARNING, "Seleccione uma ordem",
+                    "Seleccione uma Ordem de Produção na tabela para gerir o seu estado ou imprimir etiquetas.", null, null);
+            return;
+        }
         int modelRow = ordersTable.convertRowIndexToModel(row);
         if (modelRow >= currentOrders.size()) return;
         ProductionOrderDTO order = currentOrders.get(modelRow);

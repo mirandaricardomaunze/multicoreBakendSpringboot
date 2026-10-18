@@ -14,12 +14,29 @@ import java.util.List;
 /** Vista e operações de gestão de armazéns. */
 final class StockWarehousesPanel {
     private final StockPanel owner;
+
+    private final JLabel kpiActiveWarehouses = new JLabel("0");
+    private final JLabel kpiActiveSubtitle = new JLabel("0 loja(s) POS · 0 depósito(s)");
+    private final JLabel kpiTotalCapacity = new JLabel("—");
+    private final JLabel kpiTotalStockValue = new JLabel("0,00 MT");
+    private final JLabel kpiDistributionNetwork = new JLabel("0 Tipos");
+
     StockWarehousesPanel(StockPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(4, 0, 0, 0));
+
+        JPanel kpiGrid = KpiCard.createGrid(4);
+        kpiGrid.add(KpiCard.createMetricCard("Armazéns Activos", kpiActiveWarehouses,
+                kpiActiveSubtitle, "fas-warehouse", UIHelper.ACCENT_CYAN, null));
+        kpiGrid.add(KpiCard.createCard("Capacidade Instalada", kpiTotalCapacity,
+                "Capacidade máxima de armazenagem", "fas-boxes", UIHelper.MODULE_STOCK));
+        kpiGrid.add(KpiCard.createCard("Valor em Armazém", kpiTotalStockValue,
+                "Existências valorizadas em stock", "fas-coins", UIHelper.APPROVED_GREEN));
+        kpiGrid.add(KpiCard.createCard("Rede de Distribuição", kpiDistributionNetwork,
+                "Lojas, depósitos e centros de distribuição", "fas-network-wired", UIHelper.ACCENT_BLUE));
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Armazém");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -112,6 +129,7 @@ final class StockWarehousesPanel {
 
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(owner.warehousesTable), BorderLayout.SOUTH);
+        tab.add(kpiGrid, BorderLayout.NORTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -138,6 +156,47 @@ final class StockWarehousesPanel {
                     w.allowsSales() ? "Sim" : "Não",
                     w.active() ? "ACTIVO" : "INATIVO"});
         }
+        updateKpis();
+    }
+
+    public void updateKpis() {
+        if (owner.warehousesFullList == null) return;
+        List<WarehouseDTO> list = owner.warehousesFullList;
+        long totalCount = list.size();
+        long activeCount = list.stream().filter(WarehouseDTO::active).count();
+        long salesCount = list.stream().filter(w -> w.active() && w.allowsSales()).count();
+        long storageCount = Math.max(0, activeCount - salesCount);
+
+        kpiActiveWarehouses.setText(activeCount + " / " + totalCount);
+        kpiActiveSubtitle.setText(salesCount + " loja(s) POS · " + storageCount + " depósito(s)");
+
+        BigDecimal totalCapacity = list.stream()
+                .filter(WarehouseDTO::active)
+                .map(w -> w.capacity() != null ? w.capacity() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (totalCapacity.compareTo(BigDecimal.ZERO) > 0) {
+            kpiTotalCapacity.setText(String.format("%,.0f un", totalCapacity));
+        } else {
+            kpiTotalCapacity.setText("—");
+        }
+
+        BigDecimal totalStockVal = BigDecimal.ZERO;
+        if (owner.stocksList != null) {
+            for (StockDTO s : owner.stocksList) {
+                BigDecimal qty = s.quantity() != null ? s.quantity() : BigDecimal.ZERO;
+                BigDecimal price = s.unitPrice() != null ? s.unitPrice() : BigDecimal.ZERO;
+                totalStockVal = totalStockVal.add(qty.multiply(price));
+            }
+        }
+        kpiTotalStockValue.setText(UIHelper.formatMzn(totalStockVal));
+
+        long distinctTypes = list.stream()
+                .filter(WarehouseDTO::active)
+                .map(WarehouseDTO::type)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .count();
+        kpiDistributionNetwork.setText(distinctTypes + " " + (distinctTypes == 1 ? "Tipo" : "Tipos"));
     }
 
     private WarehouseDTO selectedManagedWarehouse() {

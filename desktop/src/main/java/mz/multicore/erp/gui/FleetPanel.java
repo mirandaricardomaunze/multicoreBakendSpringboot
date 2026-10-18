@@ -35,14 +35,14 @@ public final class FleetPanel extends JPanel {
 
     private final FleetApiClient fleetApiClient;
 
-    private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
+    final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiActiveCount = new JLabel("0 Viaturas");
     private final JLabel kpiTotalKm = new JLabel("0 Km");
     private final JLabel kpiAvgConsumption = new JLabel("0.0 Km/L");
     private final JLabel kpiMaintenanceCount = new JLabel("0 Viaturas");
 
     private final DefaultTableModel tableModel;
-    private final JTable table;
+    final JTable table;
     private List<VehicleDTO> currentVehicles = new ArrayList<>();
 
     private final JTextField searchField = TableFilter.searchField("Pesquisar por matrícula, marca, modelo ou condutor...");
@@ -446,9 +446,13 @@ public final class FleetPanel extends JPanel {
         }
     }
 
-    private void showFuelHistory() {
+    void showFuelHistory() {
         int row = table.getSelectedRow();
-        if (row < 0) return;
+        if (row < 0) {
+            feedback.show(FeedbackType.WARNING, "Seleccione uma viatura",
+                    "Seleccione uma viatura na tabela para consultar o histórico de abastecimentos e rendimento.", null, null);
+            return;
+        }
         int modelRow = table.convertRowIndexToModel(row);
         if (modelRow >= currentVehicles.size()) return;
         VehicleDTO vehicle = currentVehicles.get(modelRow);

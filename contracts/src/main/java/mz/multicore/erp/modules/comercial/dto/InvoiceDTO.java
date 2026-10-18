@@ -32,8 +32,20 @@ public record InvoiceDTO(
     int daysOverdue,
     AgingBucket agingBucket,
     Long businessUnitId,
-    String businessUnitName
+    String businessUnitName,
+    String customerName
 ) {
+
+    public InvoiceDTO(
+            Long id, String invoiceNumber, Long clientId, String clientName, String clientTaxId,
+            BigDecimal totalBeforeTax, BigDecimal taxAmount, BigDecimal totalAmount, BigDecimal amountPaid,
+            InvoiceStatus status, String rejectionReason, List<InvoiceLineDTO> lines,
+            LocalDateTime createdAt, String createdBy, LocalDate dueDate, int daysOverdue,
+            AgingBucket agingBucket, Long businessUnitId, String businessUnitName) {
+        this(id, invoiceNumber, clientId, clientName, clientTaxId, totalBeforeTax, taxAmount,
+                totalAmount, amountPaid, status, rejectionReason, lines, createdAt, createdBy,
+                dueDate, daysOverdue, agingBucket, businessUnitId, businessUnitName, null);
+    }
 
     public InvoiceDTO(
             Long id, String invoiceNumber, Long clientId, String clientName, String clientTaxId,
@@ -43,7 +55,7 @@ public record InvoiceDTO(
             AgingBucket agingBucket) {
         this(id, invoiceNumber, clientId, clientName, clientTaxId, totalBeforeTax, taxAmount,
                 totalAmount, amountPaid, status, rejectionReason, lines, createdAt, createdBy,
-                dueDate, daysOverdue, agingBucket, null, null);
+                dueDate, daysOverdue, agingBucket, null, null, null);
     }
 
     /** Saldo por liquidar — espelha {@code Invoice.outstandingAmount()} para a UI não o recalcular. */

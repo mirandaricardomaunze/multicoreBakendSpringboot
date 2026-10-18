@@ -367,4 +367,24 @@ final class PosCatalogController {
         return code + " - " + p.name();
     }
 
+    public void handleScaleWeightCaptured(BigDecimal weight) {
+        if (weight == null || weight.signum() <= 0) {
+            owner.showPosNotice(FeedbackType.WARNING, "Balança a zero",
+                    "Coloque um artigo sobre o prato da balança antes de capturar o peso.");
+            return;
+        }
+        if (owner.cartItems.isEmpty()) {
+            owner.showPosNotice(FeedbackType.WARNING, "Carrinho vazio",
+                    "Adicione um artigo de peso à carrinha antes de capturar a pesagem.");
+            return;
+        }
+        int selected = owner.cartTable == null || owner.cartTable.getSelectedRow() < 0
+                ? owner.cartItems.size() - 1
+                : owner.cartTable.convertRowIndexToModel(owner.cartTable.getSelectedRow());
+        if (selected < 0 || selected >= owner.cartItems.size()) selected = owner.cartItems.size() - 1;
+        POSPanel.CartItem item = owner.cartItems.get(selected);
+        item.qty = weight;
+        owner.updateCartTotal(selected);
+        ToastManager.success(owner, String.format("Peso de %.3f kg aplicado a '%s'.", weight, item.product.name()));
+    }
 }

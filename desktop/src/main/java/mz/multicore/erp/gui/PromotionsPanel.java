@@ -75,14 +75,16 @@ public class PromotionsPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
 
         JTextField promoSearch = TableFilter.searchField("Nome, alcance ou benefício…");
+        promoSearch.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         promoBusinessUnitCombo = TableFilter.combo("Todos os negócios");
+        promoBusinessUnitCombo.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         JComboBox<String> promoTipo = TableFilter.combo("Todos os tipos", "Percentagem", "Leve X, pague Y");
         UIHelper.styleComboBox(promoTipo);
-        promoTipo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+        promoTipo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> promoEstado = TableFilter.combo("Todos os estados", "Activa", "Inactiva");
         UIHelper.styleComboBox(promoEstado);
-        promoEstado.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        promoEstado.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(table, promoSearch,
                 new TableFilter.ColumnFilter(promoTipo, 1),

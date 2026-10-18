@@ -55,8 +55,10 @@ public class ShortcutHelpDialog extends JDialog {
                 new ShortcutItem("Ctrl + K", "Pesquisa Global / Paleta de Comandos"),
                 new ShortcutItem("Ctrl + B", "Alternar Menu Lateral (Recolher/Expandir)"),
                 new ShortcutItem("F1", "Abrir este Guia de Atalhos"),
+                new ShortcutItem("Espaço", "Espreitar Linha Selecionada (Quick-Peek)"),
+                new ShortcutItem("F3", "Pesquisar Artigos no Catálogo de Produtos"),
                 new ShortcutItem("F11", "Alternar Modo Ecrã Completo (Fullscreen)"),
-                new ShortcutItem("Esc", "Fechar Janelas, Diálogos ou Menus")
+                new ShortcutItem("Esc", "Limpar Pesquisas / Fechar Janelas e Menus")
         );
 
         List<ShortcutItem> posShortcuts = List.of(
@@ -64,7 +66,7 @@ public class ShortcutHelpDialog extends JDialog {
                 new ShortcutItem("F3", "Focar Leitor de Código de Barras"),
                 new ShortcutItem("F4", "Selecionar ou Trocar Cliente"),
                 new ShortcutItem("F6", "Alterar Quantidade da Linha Selecionada"),
-                new ShortcutItem("F9", "Finalizar Venda e Abrir Pagamento"),
+                new ShortcutItem("F10", "Finalizar Venda e Abrir Pagamento"),
                 new ShortcutItem("Delete", "Remover Artigo Selecionado do Carrinho")
         );
 

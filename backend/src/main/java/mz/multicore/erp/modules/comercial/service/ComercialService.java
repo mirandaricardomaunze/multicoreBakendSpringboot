@@ -248,8 +248,13 @@ public class ComercialService {
         // Emitir fatura é operação directa de quem tem perfil autorizado (atribuído pelo admin) —
         // não passa pela Engine de Aprovações. Só o desconto sensível (>10%) é que exige aprovação.
         PermissionGuard.requireManagerOrAdmin("emitir fatura");
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        Client client;
+        if (request.clientId() != null) {
+            client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
+                    .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+        } else {
+            client = walkInClientProvider.getOrCreate();
+        }
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
@@ -266,6 +271,9 @@ public class ComercialService {
 
         Invoice invoice = new Invoice();
         invoice.setClient(client);
+        if (request.customerName() != null && !request.customerName().isBlank()) {
+            invoice.setCustomerName(request.customerName().trim());
+        }
         invoice.setCompany(company);
         invoice.setWarehouse(warehouse);
         if (restrictedBu != null) {
@@ -352,7 +360,11 @@ public class ComercialService {
             String approvalDesc = String.format(
                     "Fatura %s para %s - Total: %s MT (Aprovação de Desconto Especial >10%%)",
                     invoice.getInvoiceNumber(), client.getName(), invoice.getTotalAmount());
-            approvalService.submitRequest("INVOICE", invoice.getId(), invoice.getTotalAmount(), approvalDesc);
+            // O desconto acima de 10% é sensível por natureza, independentemente do valor total.
+            // Não usar a sobrecarga baseada apenas no montante, pois uma factura pequena entraria
+            // na Green Lane e seria aprovada automaticamente, anulando esta regra.
+            approvalService.submitRequest("INVOICE", invoice.getId(), invoice.getTotalAmount(),
+                    approvalDesc, "MANAGER", false);
         } else {
             // Faturação directa: emite já APROVADA e baixa o stock no acto (como POS/encomenda).
             invoice.setStatus(InvoiceStatus.APPROVED);
@@ -1189,14 +1201,15 @@ public class ComercialService {
                 invoice.daysOverdue(LocalDate.now()),
                 invoice.agingBucket(LocalDate.now()),
                 invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getId() : null,
-                invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getName() : null
+                invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getName() : null,
+                invoice.getCustomerName()
         );
     }
 
     @Transactional
     public OrderDTO createOrder(CreateInvoiceRequest request) {
         return createOrder(new CreateOrderRequest(
-                request.clientId(), null,
+                request.clientId(), request.customerName(),
                 request.companyId(), request.warehouseId(), request.lines()));
     }
 
@@ -1214,6 +1227,7 @@ public class ComercialService {
      */
     @Transactional
     public OrderDTO createOrder(CreateOrderRequest request, OrderKind kind) {
+        PermissionGuard.requireSeller("registar encomenda de cliente");
         CurrentUserContext.requireCompany(request.companyId());
         Client client;
         if (request.clientId() != null) {
@@ -1307,6 +1321,7 @@ public class ComercialService {
         order.setWalkInName(cleanWalkInName(request.walkInName()));
         order.setWarehouse(warehouse);
         order.setDestinationWarehouse(destination);
+        order.setNotes(request.notes());
         order.getLines().clear();
         replacement.forEach(order::addLine);
         recalculateOrderTotals(order);
@@ -1458,6 +1473,7 @@ public class ComercialService {
         order.setQuotationNumber(agreed.quotationNumber());
         order.setPaymentTerms(agreed.paymentTerms());
         order.setDeliveryTerms(agreed.deliveryTerms());
+        order.setNotes(agreed.notes());
         // A data prometida conta da CONFIRMAÇÃO, não da aprovação interna: se a aprovação demorar,
         // a data prometida ao cliente não se mexe — foi essa que ele leu.
         order.assignExpectedDelivery(LocalDate.now(), agreed.deliveryDays());
@@ -1529,6 +1545,9 @@ public class ComercialService {
 
         Invoice invoice = new Invoice();
         invoice.setClient(order.getClient());
+        if (order.getWalkInName() != null && !order.getWalkInName().isBlank()) {
+            invoice.setCustomerName(order.getWalkInName().trim());
+        }
         invoice.setCompany(order.getCompany());
         invoice.setWarehouse(order.getWarehouse());
         // A encomenda facturada segue o prazo do cliente, tal como uma fatura emitida à mão.
@@ -1970,7 +1989,8 @@ public class ComercialService {
                 order.getTransferNumber(),
                 order.getVersion(),
                 order.getBusinessUnit() == null ? null : order.getBusinessUnit().getId(),
-                order.getBusinessUnit() == null ? null : order.getBusinessUnit().getName()
+                order.getBusinessUnit() == null ? null : order.getBusinessUnit().getName(),
+                order.getNotes()
         );
     }
 

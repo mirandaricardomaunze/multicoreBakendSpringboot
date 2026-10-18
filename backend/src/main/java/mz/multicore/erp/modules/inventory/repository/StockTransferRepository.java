@@ -33,5 +33,13 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
             "WHERE t.id = :id AND t.company.id = :companyId")
     Optional<StockTransfer> findByIdWithLinesAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
 
+    @Query("SELECT t FROM StockTransfer t " +
+            "JOIN FETCH t.originWarehouse o " +
+            "JOIN FETCH t.destinationWarehouse d " +
+            "WHERE t.company.id = :companyId AND t.status = :status " +
+            "ORDER BY t.dispatchedAt DESC")
+    List<StockTransfer> findByCompanyIdAndStatus(@Param("companyId") Long companyId,
+                                                 @Param("status") mz.multicore.erp.modules.inventory.model.TransferStatus status);
+
     long countByCompanyId(Long companyId);
 }

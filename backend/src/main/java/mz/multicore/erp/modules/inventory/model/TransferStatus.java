@@ -13,7 +13,11 @@ public enum TransferStatus {
     PENDING_APPROVAL("Pendente de Aprovação"),
     APPROVED("Aprovada"),
     REJECTED("Rejeitada"),
-    CANCELLED("Cancelada");
+    CANCELLED("Cancelada"),
+    /** Saiu da origem e ainda não foi confirmada no destino (só com {@code requiresReceipt}). */
+    IN_TRANSIT("Em Trânsito"),
+    /** Recepção confirmada pelo armazém de destino; stock creditado. */
+    RECEIVED("Recebida");
 
     private final String label;
 

@@ -51,9 +51,10 @@ public class DebitNotePrintService {
         doc.add(CompanyHeaderRenderer.build(
                 note.getCompany(),
                 "Nota de Débito",
-                note.getNoteNumber()
+                note.getNoteNumber(),
+                copyLabel,
+                null
         ));
-        doc.add(buildCopyBadge(copyLabel));
         doc.add(buildContextBlock(note));
         doc.add(buildLinesTable(note.getLines()));
         doc.add(PdfDocumentBuilder.spacer(6f));
@@ -68,27 +69,6 @@ public class DebitNotePrintService {
         }
         doc.add(PdfDocumentBuilder.spacer(24f));
         doc.add(buildSignatureBlock());
-    }
-
-    private static PdfPTable buildCopyBadge(String copyText) {
-        PdfPTable table = new PdfPTable(1);
-        table.setWidthPercentage(100);
-        table.setSpacingBefore(2f);
-        table.setSpacingAfter(8f);
-
-        PdfPCell cell = new PdfPCell();
-        cell.setBackgroundColor(new java.awt.Color(241, 245, 249)); // Slate-100
-        cell.setBorderColor(new java.awt.Color(203, 213, 225));     // Slate-300
-        cell.setBorderWidth(1f);
-        cell.setPadding(5f);
-
-        com.lowagie.text.Font badgeFont = new com.lowagie.text.Font(
-                com.lowagie.text.Font.HELVETICA, 8.5f, com.lowagie.text.Font.BOLD, new java.awt.Color(30, 41, 59));
-        Paragraph p = new Paragraph(copyText, badgeFont);
-        p.setAlignment(Element.ALIGN_CENTER);
-        cell.addElement(p);
-        table.addCell(cell);
-        return table;
     }
 
     private PdfPTable buildContextBlock(DebitNote note) {
@@ -172,6 +152,7 @@ public class DebitNotePrintService {
         cell.setBorderColor(PdfTheme.BORDER);
         cell.setHorizontalAlignment(align);
         cell.setPadding(5f);
+        cell.setNoWrap(true);
         table.addCell(cell);
     }
 

@@ -173,10 +173,14 @@ final class PurchaseOrdersPanel {
         UIHelper.styleScrollPane(listScroll);
 
         owner.poSearchField = TableFilter.searchField("Nº ou fornecedor…");
+        owner.poSearchField.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         owner.poBusinessUnitCombo = TableFilter.combo("Todos os negócios");
+        owner.poBusinessUnitCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         JComboBox<String> poEstado = TableFilter.combo("Todos os estados",
                 "Encomendado", "Parcialmente recebido", "Recebido", "Cancelado");
+        poEstado.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         JComboBox<String> poPeriodo = TableFilter.periodCombo();
+        poPeriodo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(poListTable, owner.poSearchField,
                 java.util.List.of(

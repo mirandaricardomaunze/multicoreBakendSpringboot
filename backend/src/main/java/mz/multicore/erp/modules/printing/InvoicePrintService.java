@@ -130,9 +130,10 @@ public class InvoicePrintService {
         doc.add(CompanyHeaderRenderer.build(
                 invoice.getCompany(),
                 "Fatura",
-                invoice.getInvoiceNumber()
+                invoice.getInvoiceNumber(),
+                copyLabel,
+                null
         ));
-        doc.add(buildCopyBadge(copyLabel));
         doc.add(ClientBlockRenderer.build(invoice.getClient(), invoice.getCustomerName(),
                 invoice.getCreatedAt(), invoice.getWarehouse()));
         doc.add(LineItemsTableRenderer.build(rows, columns));
@@ -145,19 +146,6 @@ public class InvoicePrintService {
         doc.add(PdfDocumentBuilder.spacer(8f));
         Paragraph status = new Paragraph("Estado: " + invoice.getStatus(), PdfTheme.boldFont());
         doc.add(status);
-    }
-
-    private static com.lowagie.text.pdf.PdfPTable buildCopyBadge(String copyText) {
-        com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(1);
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(8f);
-        com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(copyText, PdfTheme.boldFont()));
-        cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
-        cell.setBorderColor(PdfTheme.BORDER);
-        cell.setHorizontalAlignment(com.lowagie.text.Element.ALIGN_CENTER);
-        cell.setPadding(4f);
-        table.addCell(cell);
-        return table;
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<InvoiceLine> lines) {

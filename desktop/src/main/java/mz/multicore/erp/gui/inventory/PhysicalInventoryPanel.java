@@ -416,9 +416,17 @@ public class PhysicalInventoryPanel extends JPanel {
         recordCountBtn.setEnabled(enable);
     }
 
-    private void handleBarcodeScan() {
+    public void handleBarcodeScan() {
+        if (currentSession == null) {
+            ToastManager.show(this, FeedbackType.WARNING, "Abra ou seleccione uma sessão de inventário antes de registar contagens.");
+            return;
+        }
         String code = barcodeScanField.getText() != null ? barcodeScanField.getText().trim() : "";
-        if (code.isEmpty() || currentSession == null) return;
+        if (code.isEmpty()) {
+            ToastManager.show(this, FeedbackType.WARNING, "Indique ou bipe o código do produto antes de registar a contagem.");
+            barcodeScanField.requestFocusInWindow();
+            return;
+        }
 
         BigDecimal qty = BigDecimal.ONE;
         try {

@@ -69,10 +69,8 @@ public class UserEditorDialog {
         gbc.gridx = 0; gbc.gridy = isEdit ? 2 : 3; gbc.weightx = 0.3;
         form.add(createLabel("Perfil de Acesso (Role):"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.7;
-        JComboBox<String> roleCombo = new JComboBox<>(new String[]{
-                "SELLER", "MANAGER", "ADMIN", "ACCOUNTANT", "HR_MANAGER"
-        });
-        UIHelper.styleComboBox(roleCombo);
+        JComboBox<String> roleCombo = UIHelper.createComboBox(
+                new String[]{"SELLER", "EMPLOYEE", "MANAGER", "ADMIN"}, UIHelper::humanRole);
         if (isEdit && existingUser.role() != null) {
             roleCombo.setSelectedItem(existingUser.role().toUpperCase());
         }

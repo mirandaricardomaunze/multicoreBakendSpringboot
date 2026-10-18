@@ -57,8 +57,9 @@ public class OrderPrintService {
                 doc.add(origin);
             }
             List<LineItemsTableRenderer.Row> rows = toRows(order.getLines());
-            doc.add(LineItemsTableRenderer.build(rows,
-                    documentConfigService.getColumns(order.getCompany().getId(), mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL)));
+            var columns = documentConfigService.getColumns(order.getCompany().getId(),
+                    mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL);
+            doc.add(LineItemsTableRenderer.build(rows, columns));
             java.math.BigDecimal grossWeight = order.getLines().stream()
                     .map(line -> line.getProduct().getGrossUnitWeightKg() == null ? java.math.BigDecimal.ZERO
                             : line.getQuantity().multiply(line.getProduct().getGrossUnitWeightKg()))
@@ -76,16 +77,59 @@ public class OrderPrintService {
                     order.getTotalAmount(),
                     TotalsBlockRenderer.calculateBreakdowns(rows)
             ));
-            doc.add(PdfDocumentBuilder.spacer(10f));
+            doc.add(PdfDocumentBuilder.spacer(8f));
             // Condições acordadas + data prometida. Mesmo bloco da cotação — é o mesmo acordo.
             PdfPTable terms = CommercialTermsRenderer.build(order.getPaymentTerms(),
                     order.getDeliveryTerms(), order.getExpectedDeliveryDate(), null);
             if (terms != null) {
                 doc.add(terms);
             }
-            doc.add(PdfDocumentBuilder.spacer(18f));
+            // Bloco de Notas / Observações e Rodapé Corporativo no pé da página
+            PdfPTable footerBlock = buildFooterBlock(order.getNotes(), columns != null ? columns.footer() : null);
+            if (footerBlock != null) {
+                doc.add(footerBlock);
+            }
+            doc.add(PdfDocumentBuilder.spacer(14f));
             doc.add(SignatureBlockRenderer.build("Pela empresa", "Confirmação do cliente"));
         });
+    }
+
+    private static PdfPTable buildFooterBlock(String orderNotes, String companyFooter) {
+        boolean hasNotes = orderNotes != null && !orderNotes.isBlank();
+        boolean hasFooter = companyFooter != null && !companyFooter.isBlank();
+        if (!hasNotes && !hasFooter) {
+            return null;
+        }
+
+        PdfPTable table = new PdfPTable(1);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(6f);
+        table.setSpacingAfter(4f);
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(PdfPCell.BOX);
+        cell.setBorderColor(PdfTheme.BORDER);
+        cell.setBorderWidth(0.5f);
+        cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
+        cell.setPadding(6f);
+
+        if (hasNotes) {
+            Paragraph title = new Paragraph("Observações / Instruções:", PdfTheme.boldFont());
+            title.setSpacingAfter(2f);
+            cell.addElement(title);
+            Paragraph note = new Paragraph(orderNotes.trim(), PdfTheme.bodyFont());
+            note.setSpacingAfter(hasFooter ? 4f : 0f);
+            cell.addElement(note);
+        }
+
+        if (hasFooter) {
+            Paragraph foot = new Paragraph(companyFooter.trim(), PdfTheme.smallFont());
+            foot.setAlignment(Element.ALIGN_CENTER);
+            cell.addElement(foot);
+        }
+
+        table.addCell(cell);
+        return table;
     }
 
     private List<LineItemsTableRenderer.Row> toRows(List<OrderLine> lines) {

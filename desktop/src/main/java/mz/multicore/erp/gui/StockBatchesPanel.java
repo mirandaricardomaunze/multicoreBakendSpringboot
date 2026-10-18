@@ -32,7 +32,7 @@ final class StockBatchesPanel {
         exportBtn.addActionListener(e -> exportBatchesPdf());
         owner.batchWarehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.batchWarehouseCombo);
-        owner.batchWarehouseCombo.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        owner.batchWarehouseCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         owner.batchWarehouseCombo.addActionListener(e -> filterBatches());
 
         owner.batchExpirationCombo = new JComboBox<>(new String[]{
@@ -43,16 +43,17 @@ final class StockBatchesPanel {
                 "Válidos (> 90 dias)"
         });
         UIHelper.styleComboBox(owner.batchExpirationCombo);
-        owner.batchExpirationCombo.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+        owner.batchExpirationCombo.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
         owner.batchExpirationCombo.addActionListener(e -> filterBatches());
 
         owner.batchBusinessUnitCombo = new JComboBox<>();
         owner.batchBusinessUnitCombo.addItem("Todos os negócios");
         UIHelper.styleComboBox(owner.batchBusinessUnitCombo);
-        owner.batchBusinessUnitCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        owner.batchBusinessUnitCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         owner.batchBusinessUnitCombo.addActionListener(e -> filterBatches());
 
         owner.batchSearchField = new SearchField("Pesquisar por SKU, nome ou lote…");
+        owner.batchSearchField.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.onTextChange(owner.batchSearchField, this::filterBatches);
 
         ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");

@@ -303,10 +303,11 @@ public class ModernButton extends JButton {
         int iconW = (getIcon() != null) ? (getIcon().getIconWidth() + Math.max(getIconTextGap(), 8)) : 0;
         Insets insets = getInsets();
         int insetsW = insets != null ? (insets.left + insets.right) : 28;
-        int neededW = textW + iconW + insetsW + 12;
+        int strictMin = textW + iconW + insetsW;
+        int neededW = strictMin + 12;
 
         if (isPreferredSizeSet() && d != null) {
-            return new Dimension(Math.max(d.width, neededW), Math.max(d.height, UIHelper.FORM_CONTROL_HEIGHT));
+            return new Dimension(Math.max(d.width, strictMin), Math.max(d.height, UIHelper.FORM_CONTROL_HEIGHT));
         }
         int minW = Math.max(d != null ? d.width + 12 : neededW, Math.max(neededW, 76));
         return new Dimension(minW, Math.max(d != null ? d.height : 0, UIHelper.FORM_CONTROL_HEIGHT));

@@ -22,6 +22,26 @@ import jakarta.persistence.LockModeType;
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByCompanyId(Long companyId);
 
+    /** Saldo equivalente a Invoice.outstandingAmount(), sem materializar o histórico. */
+    @Query("""
+            select coalesce(sum(coalesce(i.totalAmount, 0) - coalesce(i.amountPaid, 0)), 0)
+            from Invoice i
+            where i.company.id = :companyId and i.client.id = :clientId
+              and i.status in :statuses
+              and coalesce(i.totalAmount, 0) > coalesce(i.amountPaid, 0)
+            """)
+    BigDecimal sumOutstandingByClient(@Param("companyId") Long companyId,
+                                      @Param("clientId") Long clientId,
+                                      @Param("statuses") Collection<InvoiceStatus> statuses);
+
+    @Query("""
+            select i from Invoice i left join fetch i.client
+            where i.company.id = :companyId and i.status in :statuses
+              and coalesce(i.totalAmount, 0) > coalesce(i.amountPaid, 0)
+            """)
+    List<Invoice> findOutstandingWithClient(@Param("companyId") Long companyId,
+                                          @Param("statuses") Collection<InvoiceStatus> statuses);
+
     /** Página de faturas da empresa, da mais recente para a mais antiga. */
     Page<Invoice> findByCompanyIdOrderByCreatedAtDesc(Long companyId, Pageable pageable);
 

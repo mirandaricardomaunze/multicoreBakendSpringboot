@@ -16,5 +16,12 @@ public record UpdateOrderRequest(
         @NotNull(message = "O ID do armazém é obrigatório.") Long warehouseId,
         Long destinationWarehouseId,
         @NotEmpty(message = "A encomenda deve conter pelo menos uma linha.") @Valid
-        List<CreateInvoiceLineRequest> lines
-) {}
+        List<CreateInvoiceLineRequest> lines,
+        @Size(max = 1000, message = "Observações devem ter no máximo 1000 caracteres.")
+        String notes
+) {
+    public UpdateOrderRequest(Long version, Long clientId, String walkInName, Long warehouseId,
+                             Long destinationWarehouseId, List<CreateInvoiceLineRequest> lines) {
+        this(version, clientId, walkInName, warehouseId, destinationWarehouseId, lines, null);
+    }
+}

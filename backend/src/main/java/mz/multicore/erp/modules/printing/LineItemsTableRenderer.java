@@ -71,9 +71,11 @@ public final class LineItemsTableRenderer {
         for (Column column : columns) {
             header(table, column.header(), column.align());
         }
-        for (Row row : rows) {
+        for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+            Row row = rows.get(rowIndex);
+            boolean alternate = (rowIndex % 2 == 1);
             for (Column column : columns) {
-                body(table, column.cell().apply(row), column.align());
+                body(table, column.cell().apply(row), column.align(), alternate);
             }
         }
         return table;
@@ -82,43 +84,59 @@ public final class LineItemsTableRenderer {
     private static List<Column> activeColumns(DocumentColumnsDTO cols) {
         List<Column> columns = new ArrayList<>();
         if (cols.barcode()) {
-            columns.add(new Column(13f, "Cód.", Element.ALIGN_LEFT, r -> safe(r.barcode())));
+            columns.add(new Column(8.5f, "Cód.", Element.ALIGN_LEFT, r -> safe(r.barcode())));
         }
         if (cols.reference()) {
-            columns.add(new Column(7f, "Ref.", Element.ALIGN_LEFT, r -> safe(r.reference())));
+            columns.add(new Column(7.0f, "Ref.", Element.ALIGN_LEFT, r -> safe(r.reference())));
         }
         if (cols.description()) {
-            columns.add(new Column(26f, "Desc.", Element.ALIGN_LEFT, r -> safe(r.description())));
+            boolean allCanonical = cols.barcode() && cols.reference() && cols.expiry() && cols.quantity()
+                    && cols.packages() && cols.boxes() && cols.boxPercentage() && cols.unitPrice() && cols.tax() && cols.subtotal();
+            float descWidth = 19.5f;
+            if (!allCanonical) {
+                float otherWidths = (cols.barcode() ? 8.5f : 0f)
+                        + (cols.reference() ? 7.0f : 0f)
+                        + (cols.expiry() ? 9.0f : 0f)
+                        + (cols.quantity() ? 8.0f : 0f)
+                        + (cols.packages() ? 6.5f : 0f)
+                        + (cols.boxes() ? 6.5f : 0f)
+                        + (cols.boxPercentage() ? 8.0f : 0f)
+                        + (cols.unitPrice() ? 13.5f : 0f)
+                        + (cols.tax() ? 4.0f : 0f)
+                        + (cols.subtotal() ? 9.5f : 0f);
+                descWidth = Math.max(19.5f, 100f - otherWidths);
+            }
+            columns.add(new Column(descWidth, "Desc.", Element.ALIGN_LEFT, r -> safe(r.description())));
         }
         if (cols.expiry()) {
-            columns.add(new Column(9.5f, "Val.", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
+            columns.add(new Column(9.0f, "Val.", Element.ALIGN_CENTER, r -> formatExpiry(r.expiryDate())));
         }
         if (cols.quantity()) {
-            columns.add(new Column(5.5f, "Qtd.", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
+            columns.add(new Column(8.0f, "Qtd.", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity())));
         }
         if (cols.packages()) {
-            columns.add(new Column(5f, "Emb.", Element.ALIGN_RIGHT,
+            columns.add(new Column(6.5f, "Emb.", Element.ALIGN_RIGHT,
                     LineItemsTableRenderer::formatPackages));
         }
         if (cols.boxes()) {
-            columns.add(new Column(4.5f, "Cx.", Element.ALIGN_RIGHT,
+            columns.add(new Column(6.5f, "Cx.", Element.ALIGN_RIGHT,
                     LineItemsTableRenderer::formatBoxes));
         }
         if (cols.boxPercentage()) {
-            columns.add(new Column(6f, "% Cx.", Element.ALIGN_RIGHT,
+            columns.add(new Column(8.0f, "% Cx.", Element.ALIGN_RIGHT,
                     LineItemsTableRenderer::formatBoxPercentage));
         }
         if (cols.unitPrice()) {
-            columns.add(new Column(9.5f, "P. Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
+            columns.add(new Column(13.5f, "P. Unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice())));
         }
         if (cols.tax()) {
-            columns.add(new Column(5f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
+            columns.add(new Column(4.0f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
         }
         if (cols.subtotal()) {
-            columns.add(new Column(11f, "Subt.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
+            columns.add(new Column(9.5f, "Subt.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r))));
         }
         if (columns.isEmpty()) {
-            columns.add(new Column(26f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
+            columns.add(new Column(30f, "Descrição", Element.ALIGN_LEFT, r -> safe(r.description())));
         }
         return columns;
     }
@@ -133,22 +151,28 @@ public final class LineItemsTableRenderer {
         PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.tableHeaderFont()));
         cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
         cell.setBorderColor(PdfTheme.BORDER);
+        cell.setBorderWidth(0.5f);
         cell.setHorizontalAlignment(align);
-        cell.setPaddingTop(3.5f);
-        cell.setPaddingBottom(3.5f);
-        cell.setPaddingLeft(2.5f);
-        cell.setPaddingRight(2.5f);
+        cell.setPaddingTop(4.0f);
+        cell.setPaddingBottom(4.0f);
+        cell.setPaddingLeft(3.5f);
+        cell.setPaddingRight(3.5f);
+        cell.setNoWrap(true);
         table.addCell(cell);
     }
 
-    private static void body(PdfPTable table, String text, int align) {
+    private static void body(PdfPTable table, String text, int align, boolean alternate) {
         PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.tableBodyFont()));
+        if (alternate) {
+            cell.setBackgroundColor(PdfTheme.ROW_ALT);
+        }
         cell.setBorderColor(PdfTheme.BORDER);
+        cell.setBorderWidth(0.5f);
         cell.setHorizontalAlignment(align);
-        cell.setPaddingTop(3f);
-        cell.setPaddingBottom(3f);
-        cell.setPaddingLeft(2.5f);
-        cell.setPaddingRight(2.5f);
+        cell.setPaddingTop(3.5f);
+        cell.setPaddingBottom(3.5f);
+        cell.setPaddingLeft(3.5f);
+        cell.setPaddingRight(3.5f);
         table.addCell(cell);
     }
 

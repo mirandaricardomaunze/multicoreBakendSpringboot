@@ -30,14 +30,11 @@ public class PosScaleLiveWidget extends ModernPanel {
     private Consumer<BigDecimal> onWeightCapturedCallback;
 
     public PosScaleLiveWidget(SerialScaleReader scaleReader) {
-        super(12);
-        setLayout(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        super(0);
+        setOpaque(false);
+        setLayout(new FlowLayout(FlowLayout.LEFT, 4, 0));
         this.scaleReader = scaleReader != null ? scaleReader : new SerialScaleReader(true);
-        setBackground(UIHelper.ROW_ALT);
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.BORDER, 1),
-                new EmptyBorder(2, 6, 2, 6)
-        ));
+        setBorder(new EmptyBorder(0, 0, 0, 0));
 
         statusDotLabel = new JLabel(UIHelper.icon("fas-circle", 9, UIHelper.APPROVED_GREEN));
         statusDotLabel.setToolTipText("Balança Serial COM Ligada");
@@ -45,33 +42,33 @@ public class PosScaleLiveWidget extends ModernPanel {
         weightDisplayLabel = new JLabel("0.000 kg");
         weightDisplayLabel.setIcon(UIHelper.icon("fas-balance-scale", 13, UIHelper.ACCENT_BLUE));
         weightDisplayLabel.setIconTextGap(5);
-        weightDisplayLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        weightDisplayLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         weightDisplayLabel.setForeground(UIHelper.TEXT_LIGHT);
 
         captureButton = UIHelper.createButton("Capturar", UIHelper.icon("fas-balance-scale", 11, Color.WHITE), UIHelper.ACCENT_BLUE, e -> captureWeight());
         captureButton.setForeground(Color.WHITE);
         captureButton.setToolTipText("Capturar peso activo da balança para o artigo seleccionado");
-        captureButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        captureButton.setMargin(new Insets(2, 6, 2, 6));
-        captureButton.setPreferredSize(new Dimension(88, 30));
+        captureButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        captureButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        captureButton.setPreferredSize(new Dimension(80, UIHelper.FORM_CONTROL_HEIGHT));
 
-        tareButton = new ModernButton("Tarar", UIHelper.ACCENT_SKY, UIHelper.ACCENT_SKY.darker());
+        tareButton = new ModernButton("Tara", UIHelper.ACCENT_SKY, UIHelper.ACCENT_SKY.darker());
         tareButton.setIcon(UIHelper.icon("fas-sync", 11, Color.WHITE));
         tareButton.setForeground(Color.WHITE);
-        tareButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        tareButton.setMargin(new Insets(2, 6, 2, 6));
+        tareButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        tareButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         tareButton.addActionListener(e -> handleTare());
         tareButton.setToolTipText("Zerar / Aplicar Tara no prato da balança");
-        tareButton.setPreferredSize(new Dimension(72, 30));
+        tareButton.setPreferredSize(new Dimension(60, UIHelper.FORM_CONTROL_HEIGHT));
 
         simulateButton = new ModernButton("Simular", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
         simulateButton.setIcon(UIHelper.icon("fas-edit", 11, Color.WHITE));
         simulateButton.setForeground(Color.WHITE);
-        simulateButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        simulateButton.setMargin(new Insets(2, 6, 2, 6));
+        simulateButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        simulateButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         simulateButton.addActionListener(e -> openSimulationDialog());
         simulateButton.setToolTipText("Inserir peso simulado para testes sem balança física");
-        simulateButton.setPreferredSize(new Dimension(82, 30));
+        simulateButton.setPreferredSize(new Dimension(70, UIHelper.FORM_CONTROL_HEIGHT));
 
         add(statusDotLabel);
         add(weightDisplayLabel);

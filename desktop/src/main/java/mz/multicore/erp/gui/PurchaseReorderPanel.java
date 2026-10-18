@@ -108,9 +108,13 @@ final class PurchaseReorderPanel {
 
         // Barra de filtros numa única linha horizontal
         JTextField reorderSearch = TableFilter.searchField("Pesquisar produto, SKU ou fornecedor…");
+        reorderSearch.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         businessUnitFilterCombo = TableFilter.combo("Todos os negócios");
+        businessUnitFilterCombo.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         urgencyFilterCombo = TableFilter.combo(ALL_URGENCIES, "ESGOTADO", "CRÍTICO", "BAIXO");
+        urgencyFilterCombo.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
         supplierFilterCombo = TableFilter.combo("Todos os fornecedores");
+        supplierFilterCombo.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(reorderTable, reorderSearch,
                 new TableFilter.ColumnFilter(businessUnitFilterCombo, 13),

@@ -92,12 +92,12 @@ public class CustomerStatementPanel extends JPanel {
         busyBar.setPreferredSize(new Dimension(100, 14));
 
         clientCombo = new JComboBox<>();
-        clientCombo.setPreferredSize(new Dimension(240, UIHelper.FORM_CONTROL_HEIGHT));
+        clientCombo.setPreferredSize(new Dimension(190, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(clientCombo);
         clientCombo.addActionListener(e -> refreshData());
 
         businessUnitCombo = TableFilter.combo("Todos os negócios");
-        businessUnitCombo.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        businessUnitCombo.setPreferredSize(new Dimension(140, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(businessUnitCombo);
         businessUnitCombo.addActionListener(e -> renderLines());
 

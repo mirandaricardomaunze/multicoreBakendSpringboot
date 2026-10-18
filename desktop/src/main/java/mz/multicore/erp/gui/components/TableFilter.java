@@ -118,7 +118,24 @@ public final class TableFilter {
             });
         };
 
+        Runnable clearAll = () -> {
+            if (search != null) search.setText("");
+            for (ColumnFilter cf : columnFilters) if (cf.combo.getItemCount() > 0) cf.combo.setSelectedIndex(0);
+            for (PeriodFilter pf : periodFilters) if (pf.combo.getItemCount() > 0) pf.combo.setSelectedIndex(0);
+            for (DateRangeFilter rf : dateRangeFilters) {
+                rf.from.setText("");
+                rf.to.setText("");
+            }
+            for (ContainsColumnFilter ccf : containsColumnFilters) if (ccf.combo.getItemCount() > 0) ccf.combo.setSelectedIndex(0);
+        };
+        table.putClientProperty(CLEAR_ACTION_KEY, clearAll);
+
         if (search != null) {
+            search.registerKeyboardAction(
+                    e -> clearAll.run(),
+                    javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                    JComponent.WHEN_FOCUSED
+            );
             search.getDocument().addDocumentListener(new DocumentListener() {
                 @Override public void insertUpdate(DocumentEvent e) { apply.run(); }
                 @Override public void removeUpdate(DocumentEvent e) { apply.run(); }
@@ -133,6 +150,17 @@ public final class TableFilter {
         }
         for (ContainsColumnFilter ccf : containsColumnFilters) ccf.combo.addActionListener(e -> apply.run());
         apply.run();
+    }
+
+    public static final String CLEAR_ACTION_KEY = "tableFilter.clearAction";
+
+    /** Limpa a pesquisa e redefine todos os filtros da tabela para o estado inicial. */
+    public static void clear(JTable table) {
+        if (table == null) return;
+        Object action = table.getClientProperty(CLEAR_ACTION_KEY);
+        if (action instanceof Runnable r) {
+            r.run();
+        }
     }
 
     private static DocumentListener listener(Runnable action) {
@@ -320,9 +348,30 @@ public final class TableFilter {
      * A pesquisa já tem a lupa <b>dentro</b> do input ({@link SearchField}).
      */
     public static JPanel bar(JComponent... comps) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0) {
+            @Override
+            public void layoutContainer(java.awt.Container target) {
+                synchronized (target.getTreeLock()) {
+                    java.awt.Insets insets = target.getInsets();
+                    int x = insets.left;
+                    int hgap = getHgap();
+                    int targetHeight = target.getHeight() - (insets.top + insets.bottom);
+                    for (int i = 0; i < target.getComponentCount(); i++) {
+                        java.awt.Component m = target.getComponent(i);
+                        if (m.isVisible()) {
+                            java.awt.Dimension d = m.getPreferredSize();
+                            int y = insets.top + Math.max(0, (targetHeight - d.height) / 2);
+                            m.setBounds(x, y, d.width, d.height);
+                            x += d.width + hgap;
+                        }
+                    }
+                }
+            }
+        });
         p.setOpaque(false);
-        for (JComponent c : comps) p.add(c);
+        for (JComponent c : comps) {
+            if (c != null) p.add(c);
+        }
         return p;
     }
 
@@ -341,15 +390,31 @@ public final class TableFilter {
         JPanel p = new JPanel(new BorderLayout(8, 0));
         p.setOpaque(false);
         if (filters != null && filters.length > 0) {
-            JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-            left.setOpaque(false);
-            for (JComponent c : filters) {
-                if (c != null) left.add(c);
-            }
+            JPanel left = bar(filters);
             p.add(left, BorderLayout.WEST);
         }
         if (actions != null && actions.length > 0) {
-            JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0) {
+                @Override
+                public void layoutContainer(java.awt.Container target) {
+                    synchronized (target.getTreeLock()) {
+                        java.awt.Insets insets = target.getInsets();
+                        int x = target.getWidth() - insets.right;
+                        int hgap = getHgap();
+                        int targetHeight = target.getHeight() - (insets.top + insets.bottom);
+                        for (int i = target.getComponentCount() - 1; i >= 0; i--) {
+                            java.awt.Component m = target.getComponent(i);
+                            if (m.isVisible()) {
+                                java.awt.Dimension d = m.getPreferredSize();
+                                x -= d.width;
+                                int y = insets.top + Math.max(0, (targetHeight - d.height) / 2);
+                                m.setBounds(x, y, d.width, d.height);
+                                x -= hgap;
+                            }
+                        }
+                    }
+                }
+            });
             right.setOpaque(false);
             for (JComponent c : actions) {
                 if (c != null) right.add(c);

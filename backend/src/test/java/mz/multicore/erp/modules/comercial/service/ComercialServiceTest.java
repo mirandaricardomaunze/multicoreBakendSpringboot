@@ -133,6 +133,17 @@ class ComercialServiceTest {
     }
 
     @Test
+    void createOrder_employeeWithoutSellerRole_isDeniedBeforeBusinessProcessing() {
+        CurrentUserContext.setCurrentUser("colaborador", "EMPLOYEE");
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.createOrder(invoiceRequest(new BigDecimal("1"), null)));
+
+        assertTrue(error.getMessage().contains("perfil"));
+        verifyNoInteractions(clientRepository, companyRepository, warehouseRepository);
+    }
+
+    @Test
     void posCatalogPageAppliesSearchAvailabilityAndServerPageSize() {
         when(inventoryService.getInStockProductIdsForSale(COMPANY_ID)).thenReturn(java.util.Set.of(PRODUCT_ID));
         when(productRepository.findPOSCatalogPage(eq(COMPANY_ID), eq("arroz"), eq(true),
@@ -175,7 +186,8 @@ class ComercialServiceTest {
         assertEquals(InvoiceStatus.PENDING_DISCOUNT_APPROVAL, dto.status());
         // Stock só baixa na aprovação (callback) — aqui não há movimento.
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
-        verify(approvalService).submitRequest(eq("INVOICE"), any(), any(), any());
+        verify(approvalService).submitRequest(
+                eq("INVOICE"), any(), any(), any(), eq("MANAGER"), eq(false));
     }
 
     @Test

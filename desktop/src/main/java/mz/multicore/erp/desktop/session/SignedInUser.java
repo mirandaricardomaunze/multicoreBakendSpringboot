@@ -43,6 +43,25 @@ public final class SignedInUser {
         return "ADMIN".equals(role) || "MANAGER".equals(role);
     }
 
+    public static boolean isSellerOrAbove() {
+        String role = role();
+        return "SELLER".equals(role) || "MANAGER".equals(role) || "ADMIN".equals(role);
+    }
+
+    public static boolean canNavigate(String role, String cardName) {
+        if ("SUPERADMIN".equalsIgnoreCase(role)) {
+            return "plataforma".equals(cardName);
+        }
+        if ("ADMIN".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role)) {
+            return true;
+        }
+        if ("SELLER".equalsIgnoreCase(role)) {
+            return java.util.Set.of("dashboard", "pos", "comercial", "clientes", "crm", "notifications")
+                    .contains(cardName);
+        }
+        return java.util.Set.of("dashboard", "notifications").contains(cardName);
+    }
+
     public static boolean isSuperAdmin() {
         return SUPERADMIN.equals(role());
     }

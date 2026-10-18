@@ -15,10 +15,16 @@ public record OrderTerms(
         String quotationNumber,
         String paymentTerms,
         String deliveryTerms,
-        Integer deliveryDays
+        Integer deliveryDays,
+        String notes
 ) {
 
-    private static final OrderTerms NONE = new OrderTerms(null, null, null, null, null);
+    public OrderTerms(Long quotationId, String quotationNumber, String paymentTerms,
+                      String deliveryTerms, Integer deliveryDays) {
+        this(quotationId, quotationNumber, paymentTerms, deliveryTerms, deliveryDays, null);
+    }
+
+    private static final OrderTerms NONE = new OrderTerms(null, null, null, null, null, null);
 
     /** Encomenda sem acordo prévio — o caso de quem a cria à mão a partir do catálogo. */
     public static OrderTerms none() {

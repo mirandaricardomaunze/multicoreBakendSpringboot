@@ -25,15 +25,20 @@ final class CommercialInvoicesView {
         owner.clientCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.clientCombo);
 
-owner.warehouseCombo = new JComboBox<>();
+        owner.invoiceCustomerNameField = new JTextField();
+        UIHelper.styleTextField(owner.invoiceCustomerNameField);
+        owner.invoiceCustomerNameField.putClientProperty("JTextField.placeholderText", "Nome do comprador...");
+
+        owner.warehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.warehouseCombo);
 
         owner.invoiceBusinessUnitCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.invoiceBusinessUnitCombo);
 
-        formCard.add(fieldGroup("Cliente:", owner.clientCombo, 320));
-        formCard.add(fieldGroup("Armazém de Expedição:", owner.warehouseCombo, 220));
-        formCard.add(fieldGroup("Linha de Negócio:", owner.invoiceBusinessUnitCombo, 250));
+        formCard.add(fieldGroup("Cliente:", owner.clientCombo, 260));
+        formCard.add(fieldGroup("Comprador (se Consumidor Final):", owner.invoiceCustomerNameField, 230));
+        formCard.add(fieldGroup("Armazém de Expedição:", owner.warehouseCombo, 200));
+        formCard.add(fieldGroup("Linha de Negócio:", owner.invoiceBusinessUnitCombo, 220));
 
         owner.productCombo = new ProductSearchComboBox();
 

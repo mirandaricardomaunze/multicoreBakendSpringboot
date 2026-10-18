@@ -109,4 +109,37 @@ class TableFilterHarnessTest {
                     .contains("periodCombo");
         }
     }
+
+    @Test
+    @DisplayName("TableFilter.bar e toolbar mantêm estritamente uma única linha sem wrap para trás da tabela")
+    void tableFilterBars_enforceStrictSingleRowLayout() {
+        javax.swing.JPanel bar = TableFilter.bar(
+                new javax.swing.JTextField(20),
+                new javax.swing.JComboBox<>(new String[]{"A", "B"}),
+                new javax.swing.JButton("Btn 1"),
+                new javax.swing.JButton("Btn 2")
+        );
+        bar.setSize(200, 36);
+        bar.doLayout();
+        for (int i = 0; i < bar.getComponentCount(); i++) {
+            assertTrue(bar.getComponent(i).getY() < 36, "Componente na bar não deve quebrar para linha 2 (y deve estar na 1ª linha)");
+        }
+
+        javax.swing.JPanel toolbar = TableFilter.toolbar(
+                null,
+                new javax.swing.JComponent[]{
+                        new javax.swing.JButton("Action 1"),
+                        new javax.swing.JButton("Action 2"),
+                        new javax.swing.JButton("Action 3")
+                }
+        );
+        toolbar.setSize(200, 36);
+        toolbar.doLayout();
+        javax.swing.JPanel right = (javax.swing.JPanel) toolbar.getComponent(0);
+        right.setSize(100, 36);
+        right.doLayout();
+        for (int i = 0; i < right.getComponentCount(); i++) {
+            assertTrue(right.getComponent(i).getY() < 36, "Acções na toolbar não devem quebrar para linha 2 (y deve estar na 1ª linha)");
+        }
+    }
 }

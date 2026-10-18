@@ -423,7 +423,14 @@ public final class CommercialNotesPanel {
         add.addActionListener(e -> lines.addRow(new Object[]{"", "0", "0"}));
         ModernButton remove = UIHelper.createDangerButton("Remover");
         remove.setIcon(UIHelper.icon("fas-minus", 14));
-        remove.addActionListener(e -> { if (lineTable.getSelectedRow() >= 0) lines.removeRow(lineTable.getSelectedRow()); });
+        remove.addActionListener(e -> {
+            int sel = lineTable.getSelectedRow();
+            if (sel >= 0) {
+                lines.removeRow(sel);
+            } else {
+                ToastManager.show(UIHelper.mainWindow, FeedbackType.WARNING, "Seleccione na grelha a linha que pretende remover da nota.");
+            }
+        });
         JPanel buttons = UIHelper.actionsBar(remove, add);
         JScrollPane scroll = new JScrollPane(lineTable);
         UIHelper.styleScrollPane(scroll);

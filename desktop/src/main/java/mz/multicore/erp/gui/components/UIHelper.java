@@ -2418,6 +2418,7 @@ public class UIHelper {
         return switch (role.trim().toUpperCase()) {
             case "ADMIN" -> "Administrador";
             case "MANAGER" -> "Gestor";
+            case "SELLER" -> "Vendedor";
             case "EMPLOYEE" -> "Funcionário";
             case "SUPERADMIN" -> "Administrador da Plataforma";
             default -> role;
@@ -2673,7 +2674,7 @@ public class UIHelper {
             case "PLANEADA" -> "Planeada";
             case "EM_PRODUCAO", "EM PRODUÇÃO", "EM PRODUCAO" -> "Em produção";
             case "ISSUED", "EMITIDA", "EMITIDO" -> "Emitida";
-            case "SHIPPED", "ENVIADO", "EM TRANSITO", "EM TRÂNSITO" -> "Em trânsito";
+            case "SHIPPED", "ENVIADO", "EM TRANSITO", "EM TRÂNSITO", "IN_TRANSIT" -> "Em trânsito";
             case "DELIVERED", "ENTREGUE" -> "Entregue";
             case "MATCHED", "CONCILIADO" -> "Conciliado";
             case "UNMATCHED", "POR_CONCILIAR", "POR CONCILIAR" -> "Por conciliar";
@@ -2699,6 +2700,12 @@ public class UIHelper {
             case "SUPERADMIN" -> "SuperAdmin";
             case "DEBIT", "DEBITO", "DÉBITO" -> "Débito";
             case "CREDIT", "CREDITO", "CRÉDITO" -> "Crédito";
+            // Métodos de pagamento
+            case "CASH", "DINHEIRO" -> "Dinheiro";
+            case "BANK_TRANSFER" -> "Transferência";
+            case "CARD", "CARTAO", "CARTÃO" -> "Cartão";
+            case "MPESA", "M-PESA" -> "M-Pesa";
+            case "EMOLA", "E-MOLA" -> "E-Mola";
             default -> status.trim().replace('_', ' ');
         };
     }

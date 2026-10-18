@@ -14,8 +14,8 @@ public final class PdfTheme {
     public static final Color BRAND = new Color(31, 41, 55);
     public static final Color ACCENT = new Color(139, 92, 246);
     public static final Color MUTED = new Color(107, 114, 128);
-    public static final Color TABLE_HEADER_BG = new Color(243, 244, 246);
-    public static final Color BORDER = new Color(209, 213, 219);
+    public static final Color TABLE_HEADER_BG = new Color(248, 250, 252);
+    public static final Color BORDER = new Color(226, 232, 240);
     public static final Color TEXT = new Color(17, 24, 39);
     public static final Color TOTAL_ROW_BG = new Color(245, 247, 250);
     public static final Color ROW_ALT = new Color(249, 250, 251);
@@ -39,6 +39,10 @@ public final class PdfTheme {
         return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BRAND);
     }
 
+    public static Font copyBadgeFont() {
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, BRAND);
+    }
+
     public static Font bodyFont() {
         return FontFactory.getFont(FontFactory.HELVETICA, 10, TEXT);
     }
@@ -52,11 +56,11 @@ public final class PdfTheme {
     }
 
     public static Font tableHeaderFont() {
-        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8.5f, BRAND);
+        return FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.8f, BRAND);
     }
 
     public static Font tableBodyFont() {
-        return FontFactory.getFont(FontFactory.HELVETICA, 8.5f, TEXT);
+        return FontFactory.getFont(FontFactory.HELVETICA, 7.8f, TEXT);
     }
 
     public static Font monoFont() {

@@ -95,18 +95,24 @@ final class CommercialOrderSubmission {
         }
         Long clientId = null;
         String walkInName = null;
+        String typedUpdate = owner.orderClientWalkInField == null ? "" : owner.orderClientWalkInField.getText().trim();
+        if (!typedUpdate.isEmpty()) walkInName = typedUpdate;
         int clientIndex = owner.orderClientCombo.getSelectedIndex();
         if (clientIndex > 0 && clientIndex - 1 < owner.clientsList.size()) {
-            clientId = owner.clientsList.get(clientIndex - 1).id();
-        } else {
-            String typed = owner.orderClientWalkInField.getText().trim();
-            if (!typed.isEmpty()) walkInName = typed;
+            var selected = owner.clientsList.get(clientIndex - 1);
+            if ("000000000".equals(selected.taxId()) || "Consumidor Final".equalsIgnoreCase(selected.name())) {
+                clientId = null;
+            } else {
+                clientId = selected.id();
+            }
         }
         WarehouseDTO warehouse = owner.warehousesList.get(warehouseIndex);
         Long destinationId = owner.editingOrder.kind().requiresDestinationWarehouse()
                 ? destinationWarehouseId(owner, warehouse) : null;
+        String updateNotes = owner.orderNotesField == null ? null : owner.orderNotesField.getText().trim();
+        if (updateNotes != null && updateNotes.isEmpty()) updateNotes = null;
         return new UpdateOrderRequest(owner.editingOrder.version(), clientId, walkInName,
-                warehouse.id(), destinationId, new ArrayList<>(owner.draftOrderLines));
+                warehouse.id(), destinationId, new ArrayList<>(owner.draftOrderLines), updateNotes);
     }
 
     /** Validação do rascunho. Lança {@link RuntimeException} em erro para manter o editor aberto. */
@@ -127,22 +133,29 @@ final class CommercialOrderSubmission {
         // O índice 0 do combo é "Consumidor Final"; índices >0 mapeiam para clientsList[idx-1].
         Long clientId = null;
         String walkInName = null;
+        String typedCreate = owner.orderClientWalkInField == null ? "" : owner.orderClientWalkInField.getText().trim();
+        if (!typedCreate.isEmpty()) walkInName = typedCreate;
         if (clientIdx > 0 && (clientIdx - 1) < owner.clientsList.size()) {
-            clientId = owner.clientsList.get(clientIdx - 1).id();
-        } else {
-            String typed = owner.orderClientWalkInField == null ? "" : owner.orderClientWalkInField.getText().trim();
-            if (!typed.isEmpty()) walkInName = typed;
+            var selected = owner.clientsList.get(clientIdx - 1);
+            if ("000000000".equals(selected.taxId()) || "Consumidor Final".equalsIgnoreCase(selected.name())) {
+                clientId = null;
+            } else {
+                clientId = selected.id();
+            }
         }
 
         WarehouseDTO warehouse = owner.warehousesList.get(whIdx);
         OrderKind kind = selectedKind(owner);
+        String createNotes = owner.orderNotesField == null ? null : owner.orderNotesField.getText().trim();
+        if (createNotes != null && createNotes.isEmpty()) createNotes = null;
         if (kind.requiresDestinationWarehouse()) {
             return CreateOrderRequest.replenishment(CurrentUserContext.getCurrentCompanyId(),
                     warehouse.id(), destinationWarehouseId(owner, warehouse),
                     new ArrayList<>(owner.draftOrderLines));
         }
         return new CreateOrderRequest(clientId, walkInName, CurrentUserContext.getCurrentCompanyId(),
-                warehouse.id(), new ArrayList<>(owner.draftOrderLines), kind);
+                warehouse.id(), new ArrayList<>(owner.draftOrderLines), kind,
+                null, null, null, null, createNotes);
     }
 
     /** A loja que recebe. Validado aqui só para o operador não ir ao servidor descobrir o óbvio. */

@@ -89,3 +89,9 @@ Mas erros de utilizador devem ser tratados antes no Service com `BusinessRuleExc
 - `order_id` nulo identifica uma guia avulsa; as linhas continuam obrigatórias em
   `delivery_guide_lines` e mantêm FK para produto.
 - A migration é aditiva e não transforma nem elimina guias existentes.
+
+## Stock em trânsito (transferência em 2 passos)
+
+- A migration `V92__stock_transfer_in_transit.sql` adiciona `requires_receipt`, `dispatched_at`, `dispatched_by`, `received_at`, `received_by` e `receipt_notes` a `stock_transfers`.
+- Cria a tabela `stock_transfer_line_batches` (com FK para `stock_transfer_lines`), registando os lotes e validades exactos que saíram da origem e estão a viajar, permitindo creditar com precisão o armazém de destino na confirmação de recepção.
+

@@ -58,6 +58,17 @@ tecnicas que envolvem essas regras.
 
 ## Gates de capacidade
 
+### Consultas de contas a receber
+
+- A verificação de crédito agrega o saldo na BD por empresa, cliente e estados derivados de
+  `InvoiceStatus.collectableStatuses()`, sem carregar entidades. Saldo negativo conta como zero,
+  exactamente como `Invoice.outstandingAmount()`; não há cache de dívida.
+- O mapa de antiguidade lê apenas documentos cobráveis com saldo positivo e obtém o cliente na
+  mesma consulta, sem carregar linhas de factura nem consultar cada cliente separadamente.
+- `ReceivablesQueryHarnessTest` executa as consultas numa BD H2 isolada, compara o agregado com
+  a regra do domínio para todos os estados e verifica o número de statements/entidades carregadas.
+  Isto não substitui o ensaio de carga PostgreSQL nem prova concorrência na concessão de crédito.
+
 Nenhum numero de utilizadores pode ser anunciado sem ensaio PostgreSQL. O ensaio deve misturar
 login, pesquisa paginada, POS, factura, reserva de stock, pagamento e relatorio, registando:
 
@@ -107,8 +118,12 @@ reescrita massiva que misture regras de POS, stock, fiscalidade e caixa.
 - Índices Compostos de Elevada Escala: migração `V90__scalability_performance_composite_indexes.sql`
   adiciona índices B-Tree compostos tenant-scoped (`company_id` + data/estado/série) sobre `invoices`,
   `customer_orders`, `stock_movements`, `stocks`, `treasury_transactions`, `purchases`, `journal_entries` e
-  `products`, prevenindo full-table scans à medida que o volume de dados cresce.
+  `product_companies`. A V90 foi corrigida ainda local, após confirmação do utilizador: datas de
+  facturas/encomendas são `created_at`; produtos ligam-se ao tenant via `product_companies`.
+  Inclui `(company_id, client_id, status)` para crédito. O harness aplica o SQL ao schema JPA H2 e
+  verifica reaplicação; planos PostgreSQL e a cadeia completa Flyway ainda exigem validação própria.
 - JDBC Batching no Hibernate: ativado em `application.properties` com `spring.jpa.properties.hibernate.jdbc.batch_size=25`,
-  `order_inserts=true`, `order_updates=true` e `batch_versioned_data=true`, reduzindo drasticamente round-trips
-  de rede durante a persistência em lote de linhas de faturas, movimentos e stocks.
+  `order_inserts=true`, `order_updates=true` e `batch_versioned_data=true`. Configuração não é prova
+  de ganho: entidades com IDs `IDENTITY` não beneficiam de batching de inserts como entidades com
+  sequência. Medir statements e latência antes de anunciar redução de round-trips.
 

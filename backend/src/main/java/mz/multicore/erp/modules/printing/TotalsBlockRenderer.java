@@ -85,14 +85,17 @@ public final class TotalsBlockRenderer {
         PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.tableHeaderFont()));
         cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
         cell.setBorderColor(PdfTheme.BORDER);
+        cell.setBorderWidth(0.5f);
         cell.setHorizontalAlignment(align);
         cell.setPadding(3.5f);
+        cell.setNoWrap(true);
         t.addCell(cell);
     }
 
     private static void dataCell(PdfPTable t, String text, int align, boolean emphasised) {
         PdfPCell cell = new PdfPCell(new Phrase(text, emphasised ? PdfTheme.boldFont() : PdfTheme.smallFont()));
         cell.setBorderColor(PdfTheme.BORDER);
+        cell.setBorderWidth(0.5f);
         cell.setHorizontalAlignment(align);
         cell.setPadding(3f);
         t.addCell(cell);

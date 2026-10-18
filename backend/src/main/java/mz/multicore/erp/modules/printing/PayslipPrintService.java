@@ -103,6 +103,8 @@ public class PayslipPrintService {
         return table;
     }
 
+
+
     private PdfPTable buildEmployeeBlock(Payslip p) {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);

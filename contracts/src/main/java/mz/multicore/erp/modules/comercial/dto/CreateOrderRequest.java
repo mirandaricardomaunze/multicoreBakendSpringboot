@@ -44,7 +44,11 @@ public record CreateOrderRequest(
          * Armazém que recebe, na reposição interna — a loja que pediu. Obrigatório nessa via e
          * ignorado nas outras. Ver {@code docs/REPOSICAO_INTERNA_SPEC.md}.
          */
-        Long destinationWarehouseId
+        Long destinationWarehouseId,
+
+        /** Nota no pé da página / Observações comerciais impressas no documento. */
+        @Size(max = 1000, message = "Observações devem ter no máximo 1000 caracteres.")
+        String notes
 ) {
     /** Construtor retrocompatível: quem não declara a via fica na encomenda A4 formal. */
     public CreateOrderRequest(Long clientId, String walkInName, Long companyId, Long warehouseId,
@@ -55,7 +59,16 @@ public record CreateOrderRequest(
     /** Construtor retrocompatível de quem declara a via mas não as condições. */
     public CreateOrderRequest(Long clientId, String walkInName, Long companyId, Long warehouseId,
                               List<CreateInvoiceLineRequest> lines, OrderKind kind) {
-        this(clientId, walkInName, companyId, warehouseId, lines, kind, null, null, null, null);
+        this(clientId, walkInName, companyId, warehouseId, lines, kind, null, null, null, null, null);
+    }
+
+    /** Construtor retrocompatível de 10 parâmetros sem nota de rodapé. */
+    public CreateOrderRequest(Long clientId, String walkInName, Long companyId, Long warehouseId,
+                              List<CreateInvoiceLineRequest> lines, OrderKind kind,
+                              String paymentTerms, String deliveryTerms, Integer deliveryDays,
+                              Long destinationWarehouseId) {
+        this(clientId, walkInName, companyId, warehouseId, lines, kind, paymentTerms, deliveryTerms,
+                deliveryDays, destinationWarehouseId, null);
     }
 
     /** Reposição interna: origem, destino e artigos; sem condições comerciais nem cliente. */
@@ -63,7 +76,7 @@ public record CreateOrderRequest(
                                                    Long destinationWarehouseId,
                                                    List<CreateInvoiceLineRequest> lines) {
         return new CreateOrderRequest(null, null, companyId, originWarehouseId, lines,
-                OrderKind.INTERNAL_REPLENISHMENT, null, null, null, destinationWarehouseId);
+                OrderKind.INTERNAL_REPLENISHMENT, null, null, null, destinationWarehouseId, null);
     }
 
     public OrderKind effectiveKind() {
@@ -75,6 +88,6 @@ public record CreateOrderRequest(
      * nenhuma; quem tem origem é a conversão, que usa {@code Quotation.agreedTerms()}.
      */
     public OrderTerms agreedTerms() {
-        return new OrderTerms(null, null, paymentTerms, deliveryTerms, deliveryDays);
+        return new OrderTerms(null, null, paymentTerms, deliveryTerms, deliveryDays, notes);
     }
 }

@@ -3,13 +3,18 @@ package mz.multicore.erp.architecture.security;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.users.model.AppUser;
+import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -30,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:security-api;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Transactional
 class SecurityApiIntegrationTest {
 
     private static final String PT_TAX_ID = "501982736";
@@ -38,6 +44,23 @@ class SecurityApiIntegrationTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private CompanyRepository companyRepository;
+    @Autowired private AppUserRepository appUserRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
+
+    @BeforeEach
+    void ensureSeller() {
+        var company = companyRepository.findAll().stream()
+                .filter(c -> PT_TAX_ID.equals(c.getTaxId()))
+                .findFirst().orElseThrow();
+        AppUser seller = appUserRepository.findByUsername("vendedor-api").orElseGet(AppUser::new);
+        seller.setUsername("vendedor-api");
+        seller.setName("Vendedor API");
+        seller.setPassword(passwordEncoder.encode("password"));
+        seller.setRole("SELLER");
+        seller.setActive(true);
+        seller.grantCompany(company, "SELLER");
+        appUserRepository.save(seller);
+    }
 
     @Test
     void endpointProtegido_semToken_retorna401() throws Exception {
@@ -62,8 +85,44 @@ class SecurityApiIntegrationTest {
                         .header("X-Company-Id", companyId(PT_TAX_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invoiceBody(companyId(PT_TAX_ID))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("perfil")));
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void employee_naoAcedeAreaFinanceira() throws Exception {
+        String token = login("maria");
+        mockMvc.perform(get("/api/finance/accounts")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId(PT_TAX_ID)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void seller_acedeClientesMasNaoFinancas() throws Exception {
+        String token = login("vendedor-api");
+        String companyId = companyId(PT_TAX_ID);
+        mockMvc.perform(get("/api/comercial/clients")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/finance/accounts")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void manager_acedeAreaFinanceiraMasNaoGereUtilizadores() throws Exception {
+        String token = login("joao");
+        String companyId = companyId(PT_TAX_ID);
+        mockMvc.perform(get("/api/finance/accounts")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/users")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId))
+                .andExpect(status().isForbidden());
     }
 
     @Test

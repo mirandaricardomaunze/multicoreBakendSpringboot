@@ -88,6 +88,25 @@ public class StockTransfer extends BaseEntity {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
+    /** Opt-in: o stock só entra no destino quando a recepção for confirmada. */
+    @Column(name = "requires_receipt", nullable = false)
+    private boolean requiresReceipt = false;
+
+    @Column(name = "dispatched_at")
+    private LocalDateTime dispatchedAt;
+
+    @Column(name = "dispatched_by", length = 100)
+    private String dispatchedBy;
+
+    @Column(name = "received_at")
+    private LocalDateTime receivedAt;
+
+    @Column(name = "received_by", length = 100)
+    private String receivedBy;
+
+    @Column(name = "receipt_notes", length = 500)
+    private String receiptNotes;
+
     @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<StockTransferLine> lines = new ArrayList<>();
 }

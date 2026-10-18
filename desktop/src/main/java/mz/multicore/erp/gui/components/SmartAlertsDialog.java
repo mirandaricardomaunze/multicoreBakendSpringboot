@@ -58,6 +58,8 @@ public class SmartAlertsDialog extends JDialog {
                 action = "Cobrar / Ver Risco";
             } else if ("stock_waste".equals(item.moduleCard())) {
                 action = "Aprovar Quebras";
+            } else if ("stock_transfers".equals(item.moduleCard())) {
+                action = "Verificar Recepção";
             }
             return new SmartAlert(u, item.type(), item.title(), item.detail(), action, item.moduleCard());
         }

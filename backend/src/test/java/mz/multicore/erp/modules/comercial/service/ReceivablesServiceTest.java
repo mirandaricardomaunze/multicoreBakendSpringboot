@@ -71,7 +71,7 @@ class ReceivablesServiceTest {
     @Test // VA-20
     void reparteOSaldoPelosEscaloesCertos() {
         Client cliente = client(5L, "Loja Central");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        when(invoiceRepository.findOutstandingWithClient(COMPANY_ID, InvoiceStatus.collectableStatuses())).thenReturn(List.of(
                 invoice(cliente, "100.00", "0", InvoiceStatus.APPROVED, HOJE.plusDays(10)),   // corrente
                 invoice(cliente, "200.00", "0", InvoiceStatus.APPROVED, HOJE.minusDays(10)),  // 1-30
                 invoice(cliente, "300.00", "0", InvoiceStatus.APPROVED, HOJE.minusDays(45)),  // 31-60
@@ -92,7 +92,7 @@ class ReceivablesServiceTest {
 
     @Test // VA-21
     void osCincoEscaloesAparecemSempreAindaQueVazios() {
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of());
+        when(invoiceRepository.findOutstandingWithClient(COMPANY_ID, InvoiceStatus.collectableStatuses())).thenReturn(List.of());
 
         AgingSummaryDTO summary = service.getAging(HOJE);
 
@@ -105,7 +105,7 @@ class ReceivablesServiceTest {
     @Test // VA-22
     void contaApenasOSaldoPorLiquidar_naoOTotalDaFatura() {
         Client cliente = client(5L, "Loja Central");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        when(invoiceRepository.findOutstandingWithClient(COMPANY_ID, InvoiceStatus.collectableStatuses())).thenReturn(List.of(
                 invoice(cliente, "1000.00", "400.00", InvoiceStatus.PARTIALLY_PAID, HOJE.minusDays(5))));
 
         AgingSummaryDTO summary = service.getAging(HOJE);
@@ -117,7 +117,7 @@ class ReceivablesServiceTest {
     @Test // VA-23
     void faturasNaoCobraveisFicamDeFora() {
         Client cliente = client(5L, "Loja Central");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        when(invoiceRepository.findOutstandingWithClient(COMPANY_ID, InvoiceStatus.collectableStatuses())).thenReturn(List.of(
                 invoice(cliente, "100.00", "100.00", InvoiceStatus.PAID, HOJE.minusDays(300)),
                 invoice(cliente, "200.00", "0", InvoiceStatus.CANCELLED, HOJE.minusDays(300)),
                 invoice(cliente, "300.00", "0", InvoiceStatus.DRAFT, HOJE.minusDays(300)),
@@ -133,7 +133,7 @@ class ReceivablesServiceTest {
     void reparteEOrdenaPorCliente_doMaiorDevedorParaOMenor() {
         Client pequeno = client(1L, "Quiosque A");
         Client grande = client(2L, "Distribuidora B");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        when(invoiceRepository.findOutstandingWithClient(COMPANY_ID, InvoiceStatus.collectableStatuses())).thenReturn(List.of(
                 invoice(pequeno, "150.00", "0", InvoiceStatus.APPROVED, HOJE.minusDays(3)),
                 invoice(grande, "800.00", "0", InvoiceStatus.APPROVED, HOJE.minusDays(120)),
                 invoice(grande, "200.00", "0", InvoiceStatus.APPROVED, HOJE.plusDays(30))));
@@ -154,7 +154,7 @@ class ReceivablesServiceTest {
     @Test // VA-25
     void aDataDeReferenciaMandaNoCalculo() {
         Client cliente = client(5L, "Loja Central");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
+        when(invoiceRepository.findOutstandingWithClient(COMPANY_ID, InvoiceStatus.collectableStatuses())).thenReturn(List.of(
                 invoice(cliente, "100.00", "0", InvoiceStatus.APPROVED, HOJE)));
 
         assertEquals(BigDecimal.ZERO, service.getAging(HOJE).overdueTotal(), "hoje ainda vence hoje");
@@ -168,37 +168,43 @@ class ReceivablesServiceTest {
 
     // ────────────────────────── limite de crédito ──────────────────────────
 
-    @Test // LC-10
-    void dividaEmAbertoDoClienteSomaSoOQueECobravel() {
-        Client cliente = client(5L, "Loja Central");
-        Client outro = client(9L, "Outra Loja");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "1000.00", "400.00", InvoiceStatus.PARTIALLY_PAID, HOJE),
-                invoice(cliente, "300.00", "0", InvoiceStatus.APPROVED, HOJE),
-                invoice(cliente, "500.00", "500.00", InvoiceStatus.PAID, HOJE),
-                invoice(cliente, "900.00", "0", InvoiceStatus.CANCELLED, HOJE),
-                invoice(outro, "700.00", "0", InvoiceStatus.APPROVED, HOJE)));
+    @Test
+    void outstandingTotalFor_usesTenantScopedAggregateWithoutLoadingInvoices() {
+        when(invoiceRepository.sumOutstandingByClient(COMPANY_ID, 5L,
+                InvoiceStatus.collectableStatuses())).thenReturn(new BigDecimal("900.00"));
+        assertEquals(new BigDecimal("900.00"), service.outstandingTotalFor(5L));
+        verify(invoiceRepository).sumOutstandingByClient(COMPANY_ID, 5L,
+                InvoiceStatus.collectableStatuses());
+        verifyNoMoreInteractions(invoiceRepository);
+    }
 
-        assertEquals(new BigDecimal("900.00"), service.outstandingTotalFor(5L),
-                "600 do saldo parcial + 300 do fiado; a paga, a anulada e a de outro cliente ficam de fora");
+    @Test
+    void outstandingTotalFor_nullClientDoesNotQuery() {
+        assertEquals(BigDecimal.ZERO, service.outstandingTotalFor(null));
+        verifyNoInteractions(invoiceRepository);
+    }
+
+    @Test
+    void receivables_withoutCompanyRejectBeforeQuery() {
+        CurrentUserContext.clear();
+        assertThrows(BusinessRuleException.class, () -> service.outstandingTotalFor(5L));
+        assertThrows(BusinessRuleException.class, () -> service.getAging(HOJE));
+        verifyNoInteractions(invoiceRepository);
     }
 
     @Test // LC-11
     void semLimiteDefinido_aVendaPassaSempre() {
-        Client cliente = client(5L, "Loja Central");
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "50000.00", "0", InvoiceStatus.APPROVED, HOJE)));
-
-        assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, new BigDecimal("90000.00")));
+        assertDoesNotThrow(() -> service.assertCreditAvailable(client(5L, "Loja Central"),
+                new BigDecimal("90000.00")));
+        verifyNoInteractions(invoiceRepository);
     }
 
     @Test // LC-12
     void dentroDoLimite_aVendaPassa() {
         Client cliente = client(5L, "Loja Central");
         cliente.setCreditLimit(new BigDecimal("10000.00"));
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "3000.00", "0", InvoiceStatus.APPROVED, HOJE)));
-
+        when(invoiceRepository.sumOutstandingByClient(COMPANY_ID, 5L,
+                InvoiceStatus.collectableStatuses())).thenReturn(new BigDecimal("3000.00"));
         assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, new BigDecimal("7000.00")));
     }
 
@@ -206,43 +212,36 @@ class ReceivablesServiceTest {
     void acimaDoLimite_recusaEDizOsNumeros() {
         Client cliente = client(5L, "Loja Central");
         cliente.setCreditLimit(new BigDecimal("10000.00"));
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "8000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+        when(invoiceRepository.sumOutstandingByClient(COMPANY_ID, 5L,
+                InvoiceStatus.collectableStatuses())).thenReturn(new BigDecimal("8000.00"));
 
         BusinessRuleException error = assertThrows(BusinessRuleException.class,
                 () -> service.assertCreditAvailable(cliente, new BigDecimal("3000.00")));
-
         assertTrue(error.getMessage().contains("Limite de crédito excedido"));
-        assertTrue(error.getMessage().contains("10000.00"), "diz o limite");
-        assertTrue(error.getMessage().contains("8000.00"), "diz a dívida actual");
-        assertTrue(error.getMessage().contains("2000.00"), "diz o disponível");
-        assertTrue(error.getMessage().contains("Loja Central"), "diz de quem se trata");
+        assertTrue(error.getMessage().contains("10000.00"));
+        assertTrue(error.getMessage().contains("8000.00"));
+        assertTrue(error.getMessage().contains("2000.00"));
+        assertTrue(error.getMessage().contains("Loja Central"));
     }
 
     @Test // LC-14
     void vendaPagaNaHoraNaoConsomeCredito_mesmoComOLimiteEstourado() {
         Client cliente = client(5L, "Loja Central");
         cliente.setCreditLimit(new BigDecimal("1000.00"));
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "5000.00", "0", InvoiceStatus.APPROVED, HOJE)));
-
         assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, BigDecimal.ZERO));
         assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, null));
+        verifyNoInteractions(invoiceRepository);
     }
 
     @Test // LC-15
     void receberDinheiroLibertaCredito() {
         Client cliente = client(5L, "Loja Central");
         cliente.setCreditLimit(new BigDecimal("10000.00"));
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "9000.00", "0", InvoiceStatus.APPROVED, HOJE)));
+        when(invoiceRepository.sumOutstandingByClient(COMPANY_ID, 5L,
+                InvoiceStatus.collectableStatuses()))
+                .thenReturn(new BigDecimal("9000.00"), new BigDecimal("4000.00"));
         assertThrows(BusinessRuleException.class,
                 () -> service.assertCreditAvailable(cliente, new BigDecimal("2000.00")));
-
-        // O cliente paga 5000 daquela fatura.
-        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                invoice(cliente, "9000.00", "5000.00", InvoiceStatus.PARTIALLY_PAID, HOJE)));
-
         assertDoesNotThrow(() -> service.assertCreditAvailable(cliente, new BigDecimal("2000.00")));
     }
 

@@ -366,12 +366,43 @@ public class ConfigPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 15));
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
 
+        JPanel topCard = new JPanel(new BorderLayout(0, 10));
+        topCard.setOpaque(false);
         JLabel desc = new JLabel("<html><body>Escolha que colunas aparecem na tabela de linhas da <b>Fatura</b>, "
                 + "<b>Encomenda</b>, <b>Nota de Crédito</b> e <b>Guia de Remessa</b>. A configuração é por empresa "
                 + "e não altera totais nem IVA — apenas a presença visual das colunas.</body></html>");
         desc.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         desc.setForeground(UIHelper.TEXT_MUTED);
-        card.add(desc, BorderLayout.NORTH);
+        topCard.add(desc, BorderLayout.NORTH);
+
+        JPanel presetsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        presetsRow.setOpaque(false);
+        JLabel presetsLbl = new JLabel("Predefinições:");
+        presetsLbl.setForeground(UIHelper.TEXT_MUTED);
+        presetsLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        presetsRow.add(presetsLbl);
+
+        ModernButton btnCommercial = UIHelper.createSecondaryButton("Comercial Executivo");
+        btnCommercial.setIcon(UIHelper.semanticIcon("fas-file-invoice", UIHelper.ICON_XS));
+        btnCommercial.setToolTipText("Modelo executivo: Ref, Descrição, Qtd, Preço Unit., IVA e Subtotal.");
+        btnCommercial.addActionListener(e -> applyPresetCommercial());
+
+        ModernButton btnLogistics = UIHelper.createSecondaryButton("Logístico / Armazém");
+        btnLogistics.setIcon(UIHelper.semanticIcon("fas-truck", UIHelper.ICON_XS));
+        btnLogistics.setToolTipText("Modelo logístico: Cód. Barras, Ref, Descrição, Validade, Qtd, Embalagens, Caixas e % Caixa.");
+        btnLogistics.addActionListener(e -> applyPresetLogistics());
+
+        ModernButton btnAll = UIHelper.createSecondaryButton("Todas as Colunas");
+        btnAll.setIcon(UIHelper.semanticIcon("fas-check-double", UIHelper.ICON_XS));
+        btnAll.setToolTipText("Activa todas as 11 colunas canónicas.");
+        btnAll.addActionListener(e -> applyPresetAll());
+
+        presetsRow.add(btnCommercial);
+        presetsRow.add(btnLogistics);
+        presetsRow.add(btnAll);
+        topCard.add(presetsRow, BorderLayout.SOUTH);
+
+        card.add(topCard, BorderLayout.NORTH);
 
         JPanel checks = new JPanel(new GridLayout(0, 2, 12, 8));
         checks.setOpaque(false);
@@ -427,6 +458,51 @@ public class ConfigPanel extends JPanel {
 
         saveBtn.addActionListener(e -> saveDocumentColumns());
         return panel;
+    }
+
+    private void applyPresetCommercial() {
+        if (colBarcode == null) return;
+        colBarcode.setSelected(false);
+        colReference.setSelected(true);
+        colDescription.setSelected(true);
+        colExpiry.setSelected(false);
+        colQuantity.setSelected(true);
+        colPackages.setSelected(false);
+        colBoxes.setSelected(false);
+        colBoxPercentage.setSelected(false);
+        colUnitPrice.setSelected(true);
+        colTax.setSelected(true);
+        colSubtotal.setSelected(true);
+    }
+
+    private void applyPresetLogistics() {
+        if (colBarcode == null) return;
+        colBarcode.setSelected(true);
+        colReference.setSelected(true);
+        colDescription.setSelected(true);
+        colExpiry.setSelected(true);
+        colQuantity.setSelected(true);
+        colPackages.setSelected(true);
+        colBoxes.setSelected(true);
+        colBoxPercentage.setSelected(true);
+        colUnitPrice.setSelected(false);
+        colTax.setSelected(false);
+        colSubtotal.setSelected(true);
+    }
+
+    private void applyPresetAll() {
+        if (colBarcode == null) return;
+        colBarcode.setSelected(true);
+        colReference.setSelected(true);
+        colDescription.setSelected(true);
+        colExpiry.setSelected(true);
+        colQuantity.setSelected(true);
+        colPackages.setSelected(true);
+        colBoxes.setSelected(true);
+        colBoxPercentage.setSelected(true);
+        colUnitPrice.setSelected(true);
+        colTax.setSelected(true);
+        colSubtotal.setSelected(true);
     }
 
     private JCheckBox columnCheckBox(String label) {

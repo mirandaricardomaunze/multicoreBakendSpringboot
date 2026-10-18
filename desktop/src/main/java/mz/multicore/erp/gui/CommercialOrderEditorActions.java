@@ -178,6 +178,9 @@ final class CommercialOrderEditorActions {
         owner.editingOrder = order;
         owner.orderClientCombo.setSelectedIndex(clientIndex(owner, order.clientId()));
         owner.orderClientWalkInField.setText(order.walkInName() == null ? "" : order.walkInName());
+        if (owner.orderNotesField != null) {
+            owner.orderNotesField.setText(order.notes() == null ? "" : order.notes());
+        }
         selectWarehouse(owner, owner.orderWarehouseCombo, order.warehouseId());
         selectWarehouse(owner, owner.orderDestinationCombo, order.destinationWarehouseId());
         owner.orderKindCombo.setSelectedItem(order.kind());

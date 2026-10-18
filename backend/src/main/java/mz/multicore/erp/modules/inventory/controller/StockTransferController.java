@@ -18,10 +18,30 @@ public class StockTransferController {
     private final StockTransferService stockTransferService;
     private final mz.multicore.erp.modules.comercial.service.InternalReplenishmentService replenishmentService;
 
+    private final mz.multicore.erp.modules.inventory.service.StockTransferTransitService transitService;
+
     public StockTransferController(StockTransferService stockTransferService,
-            mz.multicore.erp.modules.comercial.service.InternalReplenishmentService replenishmentService) {
+            mz.multicore.erp.modules.comercial.service.InternalReplenishmentService replenishmentService,
+            mz.multicore.erp.modules.inventory.service.StockTransferTransitService transitService) {
         this.stockTransferService = stockTransferService;
         this.replenishmentService = replenishmentService;
+        this.transitService = transitService;
+    }
+
+    /** Guias despachadas e ainda por confirmar no destino. */
+    @GetMapping("/in-transit")
+    public ResponseEntity<List<StockTransferDTO>> inTransit(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) Long destinationWarehouseId) {
+        return ResponseEntity.ok(transitService.findInTransit(companyId, destinationWarehouseId));
+    }
+
+    /** O armazém de destino confirma a recepção; só agora o stock entra no destino. */
+    @PostMapping("/{id}/receive")
+    public ResponseEntity<StockTransferDTO> receive(
+            @PathVariable Long id,
+            @RequestBody(required = false) @Valid mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest body) {
+        return ResponseEntity.ok(transitService.receive(id, body == null ? null : body.notes()));
     }
 
     @GetMapping

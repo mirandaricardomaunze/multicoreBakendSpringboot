@@ -61,9 +61,10 @@ public class StockTransferPrintService {
         doc.add(CompanyHeaderRenderer.build(
                 transfer.getCompany(),
                 "Guia de Transferência",
-                transfer.getTransferNumber()
+                transfer.getTransferNumber(),
+                copyLabel,
+                null
         ));
-        doc.add(buildCopyBadge(copyLabel));
         doc.add(buildRouteBlock(transfer));
         doc.add(buildLinesTable(transfer));
         doc.add(PdfDocumentBuilder.spacer(6f));
@@ -93,9 +94,10 @@ public class StockTransferPrintService {
             doc.add(CompanyHeaderRenderer.build(
                     transfer.getCompany(),
                     "Guia de Separação",
-                    transfer.getTransferNumber()
+                    transfer.getTransferNumber(),
+                    "DOCUMENTO INTERNO DE ARMAZÉM — SEPARAÇÃO E CONFERÊNCIA FÍSICA",
+                    null
             ));
-            doc.add(buildCopyBadge("DOCUMENTO INTERNO DE ARMAZÉM — SEPARAÇÃO E CONFERÊNCIA FÍSICA"));
             doc.add(buildPickingRouteBlock(transfer));
             doc.add(buildPickingLinesTable(transfer.getLines()));
             doc.add(PdfDocumentBuilder.spacer(8f));
@@ -113,18 +115,7 @@ public class StockTransferPrintService {
         });
     }
 
-    private static PdfPTable buildCopyBadge(String copyText) {
-        PdfPTable table = new PdfPTable(1);
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(8f);
-        PdfPCell cell = new PdfPCell(new Phrase(copyText, PdfTheme.boldFont()));
-        cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
-        cell.setBorderColor(PdfTheme.BORDER);
-        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-        cell.setPadding(4.5f);
-        table.addCell(cell);
-        return table;
-    }
+
 
     private PdfPTable buildRouteBlock(StockTransfer transfer) {
         PdfPTable table = new PdfPTable(2);

@@ -45,12 +45,19 @@ public final class ReceiptsPanel extends JPanel {
         table.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
         hideColumn(0);
         JTextField search = TableFilter.searchField("Nº recibo, fatura ou cliente…");
+        search.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         businessUnit = TableFilter.combo("Todos os negócios");
-        businessUnit.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        businessUnit.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.styleComboBox(businessUnit);
-        JComboBox<String> method = TableFilter.combo("Todos os métodos", "CASH", "BANK_TRANSFER", "CARD");
+        JComboBox<String> method = TableFilter.combo("Todos os métodos", "Dinheiro", "Transferência", "Cartão", "M-Pesa");
+        method.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(method);
         JComboBox<String> status = TableFilter.combo("Todos os estados", "Concluído", "Cancelado");
+        status.setPreferredSize(new Dimension(115, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(status);
         JComboBox<String> period = TableFilter.periodCombo();
+        period.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
+        UIHelper.styleComboBox(period);
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(businessUnit, 2),
                         new TableFilter.ColumnFilter(method, 6),
@@ -180,7 +187,7 @@ public final class ReceiptsPanel extends JPanel {
                     receipt.invoiceNumber(),
                     receipt.clientName(),
                     receipt.amountPaid(),
-                    receipt.paymentMethod(),
+                    UIHelper.humanStatus(receipt.paymentMethod()),
                     receipt.status(),
                     receipt.receiptDate().format(DATE_TIME)
             });

@@ -73,6 +73,7 @@ public class ComercialPanel extends JPanel {
 
     // TAB 1: FATURAÇÃO ELEMENTS
     JComboBox<String> clientCombo;
+    JTextField invoiceCustomerNameField;
     JComboBox<String> warehouseCombo;
     JComboBox<BusinessUnitOption> invoiceBusinessUnitCombo;
     List<BusinessUnitDTO> businessUnitsList = new ArrayList<>();
@@ -102,6 +103,7 @@ public class ComercialPanel extends JPanel {
     JComboBox<String> orderWarehouseCombo;
     /** Armazém que recebe, só visível na reposição interna. Ver docs/REPOSICAO_INTERNA_SPEC.md. */
     JComboBox<String> orderDestinationCombo;
+    JTextField orderNotesField;
     ProductSearchComboBox orderProductCombo;
     DecimalField orderDiscountField;
     JTextField orderSerialField;
@@ -304,6 +306,25 @@ public class ComercialPanel extends JPanel {
         }
     }
 
+    public void showQuotations() {
+        for (int index = 0; index < commercialTabs.getTabCount(); index++) {
+            if (!commercialTabs.getTitleAt(index).startsWith("Cotações")) continue;
+            commercialTabs.setSelectedIndex(index);
+            quotationsPanel.refresh();
+            return;
+        }
+    }
+
+    public void startNewOrder() {
+        showCustomerOrders();
+        openOrderEditor();
+    }
+
+    public void startNewQuotation() {
+        showQuotations();
+        quotationsPanel.openCreate();
+    }
+
     public void showMovements() {
         for (int index = 0; index < commercialTabs.getTabCount(); index++) {
             if (commercialTabs.getTitleAt(index).startsWith("Movimentos")) {
@@ -352,8 +373,8 @@ public class ComercialPanel extends JPanel {
         stopInvoiceCellEditing();
         try {
             int clientIdx = clientCombo.getSelectedIndex();
-            if (clientIdx >= 0 && clientIdx < clientsList.size()) {
-                ClientDTO client = clientsList.get(clientIdx);
+            if (clientIdx > 0 && (clientIdx - 1) < clientsList.size()) {
+                ClientDTO client = clientsList.get(clientIdx - 1);
                 CustomerCreditValidator.CreditAssessment assessment =
                         CustomerCreditValidator.validateCreditPreFlight(client, draftTotal);
                 if (!assessment.isApproved()) {
@@ -409,7 +430,8 @@ public class ComercialPanel extends JPanel {
         productsList.clear();
         productsList.addAll(metadata.products());
 
-        // Encomendas aceitam venda sem cliente registado — primeiro item do combo.
+        // Faturas e Encomendas aceitam venda sem cliente registado — primeiro item do combo.
+        clientCombo.addItem("Consumidor Final (sem registo)");
         orderClientCombo.addItem("Consumidor Final (sem registo)");
 
         for (ClientDTO c : clientsList) {
@@ -721,17 +743,30 @@ public class ComercialPanel extends JPanel {
         }
         int clientIdx = clientCombo.getSelectedIndex();
         int whIdx = warehouseCombo.getSelectedIndex();
-        if (clientIdx < 0 || whIdx < 0) {
-            throw new RuntimeException("Selecione cliente e armazém.");
+        if (whIdx < 0) {
+            throw new RuntimeException("Selecione o armazém.");
         }
-        ClientDTO client = clientsList.get(clientIdx);
+        Long clientId = null;
+        String customerName = null;
+        if (invoiceCustomerNameField != null) {
+            String typed = invoiceCustomerNameField.getText().trim();
+            if (!typed.isEmpty()) customerName = typed;
+        }
+        if (clientIdx > 0 && (clientIdx - 1) < clientsList.size()) {
+            ClientDTO selected = clientsList.get(clientIdx - 1);
+            if ("000000000".equals(selected.taxId()) || "Consumidor Final".equalsIgnoreCase(selected.name())) {
+                clientId = null;
+            } else {
+                clientId = selected.id();
+            }
+        }
         WarehouseDTO warehouse = warehousesList.get(whIdx);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Long businessUnitId = null;
         if (invoiceBusinessUnitCombo != null && invoiceBusinessUnitCombo.getSelectedItem() instanceof BusinessUnitOption opt) {
             businessUnitId = opt.id();
         }
-        return new CreateInvoiceRequest(client.id(), companyId, warehouse.id(), new ArrayList<>(draftLines), null, businessUnitId);
+        return new CreateInvoiceRequest(clientId, companyId, warehouse.id(), new ArrayList<>(draftLines), null, businessUnitId, customerName);
     }
 
     private void resetInvoiceDraft() {
@@ -739,6 +774,7 @@ public class ComercialPanel extends JPanel {
         draftSubtotal = BigDecimal.ZERO;
         draftTax = BigDecimal.ZERO;
         draftTotal = BigDecimal.ZERO;
+        if (invoiceCustomerNameField != null) invoiceCustomerNameField.setText("");
         if (linesTableModel != null) linesTableModel.setRowCount(0);
         if (totalLabel != null) totalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
     }
@@ -841,10 +877,14 @@ public class ComercialPanel extends JPanel {
             String dateStr = invoice.createdAt() != null ? invoice.createdAt().format(INVOICE_DATE_FMT) : "—";
             String buLabel = invoice.businessUnitName() != null && !invoice.businessUnitName().isBlank()
                     ? invoice.businessUnitName() : "Misto";
+            String clientLabel = invoice.clientName();
+            if (invoice.customerName() != null && !invoice.customerName().isBlank()) {
+                clientLabel += " — " + invoice.customerName();
+            }
             invoicesTableModel.addRow(new Object[]{
                     invoice.id(),
                     invoice.invoiceNumber(),
-                    invoice.clientName(),
+                    clientLabel,
                     dateStr,
                     buLabel,
                     invoice.status().name(),
@@ -1048,6 +1088,7 @@ public class ComercialPanel extends JPanel {
         if (orderTotalLabel != null) orderTotalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
         if (orderLoadLabel != null) orderLoadLabel.setText("Carga: 0.000 kg");
         if (orderClientWalkInField != null) orderClientWalkInField.setText("");
+        if (orderNotesField != null) orderNotesField.setText("");
         if (orderClientCombo != null && orderClientCombo.getItemCount() > 0) orderClientCombo.setSelectedIndex(0);
     }
 

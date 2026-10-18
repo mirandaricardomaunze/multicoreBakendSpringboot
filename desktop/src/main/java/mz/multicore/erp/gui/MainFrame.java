@@ -214,7 +214,7 @@ public class MainFrame extends JFrame {
             forensicAuditPanel = new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
-                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient);
+                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);
@@ -816,6 +816,9 @@ public class MainFrame extends JFrame {
         } else if ("previsao_tesouraria".equals(cardName)) {
             cardName = "financeiro";
             if (financeiroPanel != null) financeiroPanel.showForecastTab();
+        } else if ("stock_transfers".equals(cardName)) {
+            cardName = "stock";
+            if (stockPanel != null) stockPanel.showWarehouseTransfers();
         }
         cardLayout.show(contentPanel, cardName);
         String modName = switch (cardName) {

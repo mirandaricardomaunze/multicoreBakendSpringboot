@@ -33,10 +33,12 @@ POST /api/inventory/transfers/{id}/submit
 POST /api/inventory/transfers/{id}/approve
 POST /api/inventory/transfers/{id}/reject
 POST /api/inventory/transfers/{id}/cancel
+POST /api/inventory/transfers/{id}/receive
+GET  /api/inventory/transfers/in-transit
 ```
 
 `PUT` recebe `UpdateStockTransferRequest` com `version`; apenas `DRAFT` é editável. Submeter
-bloqueia o conteúdo e apenas aprovar uma guia `PENDING_APPROVAL` movimenta stock.
+bloqueia o conteúdo; a aprovação movimenta stock (se `requiresReceipt=false`, move de imediato de origem para destino; se `requiresReceipt=true`, retira da origem e coloca em `IN_TRANSIT`, sendo necessária a chamada a `POST /{id}/receive` pelo armazém de destino para creditar o stock final).
 
 Se houver quebra futura de contrato publico, introduzir versionamento explicito:
 

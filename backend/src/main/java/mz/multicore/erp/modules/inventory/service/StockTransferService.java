@@ -56,6 +56,7 @@ public class StockTransferService {
     private final AuditLogService auditLogService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final mz.multicore.erp.modules.approvals.service.ApprovalService approvalService;
+    private final StockTransferTransitService transitService;
 
     public StockTransferService(
             StockTransferRepository transferRepository,
@@ -74,6 +75,25 @@ public class StockTransferService {
                 auditLogService, eventPublisher, null);
     }
 
+    /** Construtor de 11 argumentos (sem stock em trânsito) mantido para compatibilidade. */
+    public StockTransferService(
+            StockTransferRepository transferRepository,
+            WarehouseRepository warehouseRepository,
+            CompanyRepository companyRepository,
+            ProductRepository productRepository,
+            StockRepository stockRepository,
+            StockMovementRepository stockMovementRepository,
+            ProductBatchService productBatchService,
+            DocumentNumberService documentNumberService,
+            AuditLogService auditLogService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            mz.multicore.erp.modules.approvals.service.ApprovalService approvalService
+    ) {
+        this(transferRepository, warehouseRepository, companyRepository, productRepository,
+                stockRepository, stockMovementRepository, productBatchService, documentNumberService,
+                auditLogService, eventPublisher, approvalService, null);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     public StockTransferService(
             StockTransferRepository transferRepository,
@@ -86,7 +106,8 @@ public class StockTransferService {
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             org.springframework.context.ApplicationEventPublisher eventPublisher,
-            @org.springframework.context.annotation.Lazy mz.multicore.erp.modules.approvals.service.ApprovalService approvalService
+            @org.springframework.context.annotation.Lazy mz.multicore.erp.modules.approvals.service.ApprovalService approvalService,
+            StockTransferTransitService transitService
     ) {
         this.eventPublisher = eventPublisher;
         this.transferRepository = transferRepository;
@@ -99,6 +120,7 @@ public class StockTransferService {
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
         this.approvalService = approvalService;
+        this.transitService = transitService;
     }
 
     @Transactional
@@ -147,6 +169,7 @@ public class StockTransferService {
         transfer.setDriverName(driver);
         transfer.setVehiclePlate(plate);
         transfer.setNotes(blankToNull(request.notes()));
+        transfer.setRequiresReceipt(Boolean.TRUE.equals(request.requiresReceipt()));
         transfer.setCreatedBy(CurrentUserContext.getUsername());
 
         for (CreateStockTransferLineRequest lineReq : request.lines()) {
@@ -203,6 +226,9 @@ public class StockTransferService {
         transfer.setDriverName(driver);
         transfer.setVehiclePlate(plate);
         transfer.setNotes(blankToNull(request.notes()));
+        if (request.requiresReceipt() != null) {
+            transfer.setRequiresReceipt(request.requiresReceipt());
+        }
         transfer.getLines().clear();
         for (CreateStockTransferLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
@@ -335,14 +361,11 @@ public class StockTransferService {
                             + transfer.getStatus().getLabel());
         }
 
-        Warehouse origin = transfer.getOriginWarehouse();
-        Warehouse destination = transfer.getDestinationWarehouse();
-        for (StockTransferLine line : transfer.getLines()) {
-            String batchSummary = moveProduct(transfer, line.getProduct(), origin, destination, line.getQuantity());
-            line.setBatchNumber(batchSummary);
-        }
+        dispatchOrMove(transfer, CurrentUserContext.getUsername());
 
-        transfer.setStatus(TransferStatus.APPROVED);
+        if (!transfer.isRequiresReceipt()) {
+            transfer.setStatus(TransferStatus.APPROVED);
+        }
         transfer.setApprovedBy(CurrentUserContext.getUsername());
         transfer.setApprovedAt(LocalDateTime.now());
         StockTransfer saved = transferRepository.save(transfer);
@@ -362,20 +385,18 @@ public class StockTransferService {
     public StockTransferDTO approveFromWorkflow(Long id) {
         StockTransfer transfer = transferRepository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada ID: " + id));
-        if (transfer.getStatus() == TransferStatus.APPROVED) {
+        if (transfer.getStatus() == TransferStatus.APPROVED
+                || transfer.getStatus() == TransferStatus.IN_TRANSIT
+                || transfer.getStatus() == TransferStatus.RECEIVED) {
             return toDTO(transfer);
         }
         validateAvailability(transfer);
 
-        Warehouse origin = transfer.getOriginWarehouse();
-        Warehouse destination = transfer.getDestinationWarehouse();
-        for (StockTransferLine line : transfer.getLines()) {
-            String batchSummary = moveProduct(transfer, line.getProduct(), origin, destination, line.getQuantity());
-            line.setBatchNumber(batchSummary);
-        }
-
-        transfer.setStatus(TransferStatus.APPROVED);
         String approver = CurrentUserContext.getUsername();
+        dispatchOrMove(transfer, approver != null && !approver.isBlank() ? approver : "GESTOR_WORKFLOW");
+        if (!transfer.isRequiresReceipt()) {
+            transfer.setStatus(TransferStatus.APPROVED);
+        }
         transfer.setApprovedBy(approver != null && !approver.isBlank() ? approver : "GESTOR_WORKFLOW");
         transfer.setApprovedAt(LocalDateTime.now());
         StockTransfer saved = transferRepository.save(transfer);
@@ -536,6 +557,26 @@ public class StockTransferService {
     }
 
     /**
+     * Guia de 1 passo: move origem → destino de imediato. Guia com recepção: só despacha
+     * (stock em trânsito) — o destino é creditado em {@link StockTransferTransitService#receive}.
+     */
+    private void dispatchOrMove(StockTransfer transfer, String actor) {
+        if (transfer.isRequiresReceipt()) {
+            if (transitService == null) {
+                throw new BusinessRuleException("O stock em trânsito não está disponível neste momento.");
+            }
+            transitService.dispatch(transfer, actor);
+            return;
+        }
+        Warehouse origin = transfer.getOriginWarehouse();
+        Warehouse destination = transfer.getDestinationWarehouse();
+        for (StockTransferLine line : transfer.getLines()) {
+            String batchSummary = moveProduct(transfer, line.getProduct(), origin, destination, line.getQuantity());
+            line.setBatchNumber(batchSummary);
+        }
+    }
+
+    /**
      * Consume FEFO from origin and replicate the same batches in destination.
      * Returns a comma-separated batch summary for display on the transfer line.
      */
@@ -624,7 +665,9 @@ public class StockTransferService {
     public StockTransfer loadForPrint(Long id) {
         StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
-        if (transfer.getStatus() != TransferStatus.APPROVED) {
+        if (transfer.getStatus() != TransferStatus.APPROVED
+                && transfer.getStatus() != TransferStatus.IN_TRANSIT
+                && transfer.getStatus() != TransferStatus.RECEIVED) {
             throw new BusinessRuleException(
                     "A Guia de Transferência oficial (documento de transporte em 3 vias) só pode ser emitida "
                             + "após a separação e aprovação da transferência. "
@@ -663,76 +706,6 @@ public class StockTransferService {
     }
 
     private StockTransferDTO toDTO(StockTransfer t) {
-        List<StockTransferLineDTO> lineDTOs = t.getLines().stream()
-                .map(l -> {
-                    var p = l.getProduct();
-                    BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
-                    String ref = p != null && p.getReference() != null && !p.getReference().isBlank()
-                            ? p.getReference() : (p != null ? p.getSku() : null);
-                    String barcode = p != null ? p.getBarcode() : null;
-                    int pkgs = p != null && p.getPackagesPerBox() > 0 ? p.getPackagesPerBox() : 1;
-                    int units = p != null && p.getUnitsPerPackage() > 0 ? p.getUnitsPerPackage() : 1;
-                    BigDecimal price = (p != null && p.effectiveUnitPrice(qty) != null)
-                            ? p.effectiveUnitPrice(qty) : BigDecimal.ZERO;
-                    BigDecimal tax = p != null ? p.effectiveTaxRate() : BigDecimal.ZERO;
-                    return new StockTransferLineDTO(
-                            l.getId(),
-                            p != null ? p.getId() : null,
-                            p != null ? p.getSku() : null,
-                            ref,
-                            barcode,
-                            p != null ? p.getName() : null,
-                            qty,
-                            l.getBatchNumber(),
-                            pkgs,
-                            units,
-                            price,
-                            tax
-                    );
-                }).toList();
-        Long buId = null;
-        String buName = null;
-        if (t.getLines() != null && !t.getLines().isEmpty()) {
-            java.util.Set<String> bus = new java.util.HashSet<>();
-            for (StockTransferLine l : t.getLines()) {
-                if (l.getProduct() != null && l.getProduct().getBusinessUnit() != null) {
-                    bus.add(l.getProduct().getBusinessUnit().getName());
-                    if (buId == null) {
-                        buId = l.getProduct().getBusinessUnit().getId();
-                        buName = l.getProduct().getBusinessUnit().getName();
-                    }
-                }
-            }
-            if (bus.size() > 1) {
-                buId = null;
-                buName = "Misto";
-            }
-        }
-
-        return new StockTransferDTO(
-                t.getId(),
-                t.getTransferNumber(),
-                t.getTransferDate(),
-                t.getCompany() != null ? t.getCompany().getId() : null,
-                t.getOriginWarehouse().getId(),
-                t.getOriginWarehouse().getName(),
-                t.getDestinationWarehouse().getId(),
-                t.getDestinationWarehouse().getName(),
-                t.getStatus() != null ? t.getStatus().name() : null,
-                t.getResponsible(),
-                t.getVehicle(),
-                t.getNotes(),
-                t.getApprovedBy(),
-                t.getApprovedAt(),
-                t.getRejectionReason(),
-                lineDTOs,
-                t.getOrderId(),
-                t.getOrderNumber(),
-                t.getDriverName(),
-                t.getVehiclePlate(),
-                t.getVersion(),
-                buId,
-                buName
-        );
+        return StockTransferDtoMapper.toDTO(t);
     }
 }

@@ -233,6 +233,7 @@ public class ModernFormDialog {
             dimGlass.setVisible(true);
         }
 
+        SwingUtilities.invokeLater(() -> focusFirstComponent(contentPanel));
         try {
             dialog.setVisible(true);
         } finally {
@@ -242,6 +243,31 @@ public class ModernFormDialog {
             }
         }
         return saved;
+    }
+
+    /**
+     * Foca recursivamente o primeiro componente de entrada interactivo (campo de texto ou combo).
+     */
+    public static boolean focusFirstComponent(Component c) {
+        if (c == null) return false;
+        if (c instanceof javax.swing.text.JTextComponent tc) {
+            if (tc.isEditable() && tc.isEnabled() && tc.isFocusable()) {
+                tc.requestFocusInWindow();
+                tc.selectAll();
+                return true;
+            }
+        } else if (c instanceof JComboBox<?> combo) {
+            if (combo.isEnabled() && combo.isFocusable()) {
+                combo.requestFocusInWindow();
+                return true;
+            }
+        }
+        if (c instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                if (focusFirstComponent(child)) return true;
+            }
+        }
+        return false;
     }
 
     /** Executa a confirmação do modal programaticamente (ex.: duplo clique ou Enter na tabela). */

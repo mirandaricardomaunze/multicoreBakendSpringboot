@@ -129,6 +129,20 @@ final class CommercialOrdersView {
         owner.orderKindCombo.addActionListener(e -> syncKind.run());
         syncKind.run();
 
+        // Linha 3: Nota no pé da página / Observações
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 5; gbc.gridheight = 1; gbc.weightx = 1.0;
+        gbc.insets = new Insets(3, 6, 4, 6);
+        JPanel notesPanel = new JPanel(new BorderLayout(0, 2));
+        notesPanel.setOpaque(false);
+        JLabel notesLbl = new JLabel("Nota no pé da página / Observações:");
+        notesLbl.setForeground(UIHelper.TEXT_MUTED);
+        owner.orderNotesField = new JTextField();
+        UIHelper.styleTextField(owner.orderNotesField);
+        owner.orderNotesField.setToolTipText("Instruções de entrega, condições bancárias ou nota institucional impressa no rodapé do documento.");
+        notesPanel.add(notesLbl, BorderLayout.NORTH);
+        notesPanel.add(owner.orderNotesField, BorderLayout.CENTER);
+        formCard.add(notesPanel, gbc);
+
         // Editores reutilizados apenas pelas células da grelha
         owner.orderProductCombo = new ProductSearchComboBox();
         owner.orderDiscountField = new DecimalField("0", 2, false);
@@ -405,6 +419,7 @@ final class CommercialOrdersView {
         owner.orderDestinationCombo.addActionListener(e -> owner.markOrderEditorDirty());
         owner.orderKindCombo.addActionListener(e -> owner.markOrderEditorDirty());
         UIHelper.onTextChange(owner.orderClientWalkInField, owner::markOrderEditorDirty);
+        UIHelper.onTextChange(owner.orderNotesField, owner::markOrderEditorDirty);
         /*
          * As acções que não se aplicam à linha seleccionada ficam DESACTIVADAS, não escondidas.
          *

@@ -60,6 +60,7 @@ final class StockTransferEditorForm {
     private final JTextField responsibleField = new JTextField();
     private final JTextField vehicleField = new JTextField();
     private final JTextField notesField = new JTextField();
+    private final JCheckBox requiresReceiptCheck = new JCheckBox("Exigir confirmação de recepção no destino (stock em trânsito)");
 
     // Compatibilidade canónica com testes de contrato estrutural da spec PHC
     private final DefaultTableModel headerModel;
@@ -95,6 +96,9 @@ final class StockTransferEditorForm {
         UIHelper.styleTextField(responsibleField);
         UIHelper.styleTextField(vehicleField);
         UIHelper.styleTextField(notesField);
+        requiresReceiptCheck.setOpaque(false);
+        requiresReceiptCheck.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        requiresReceiptCheck.setSelected(true);
 
         // Modelo de cabeçalho mantido para compatibilidade com o harness
         headerModel = new DefaultTableModel(
@@ -159,6 +163,7 @@ final class StockTransferEditorForm {
         responsibleField.setText("");
         vehicleField.setText("");
         notesField.setText("");
+        requiresReceiptCheck.setSelected(true);
         syncHeaderModel();
         linesModel.setRowCount(0);
         loading = false;
@@ -179,6 +184,7 @@ final class StockTransferEditorForm {
         responsibleField.setText(nz(transfer.responsible()));
         vehicleField.setText(nz(transfer.vehicle()));
         notesField.setText(nz(transfer.notes()));
+        requiresReceiptCheck.setSelected(transfer.requiresReceipt());
         syncHeaderModel();
         linesModel.setRowCount(0);
         if (transfer.lines() != null) {
@@ -194,7 +200,7 @@ final class StockTransferEditorForm {
         Values values = validateValues();
         return new CreateStockTransferRequest(CurrentUserContext.getCurrentCompanyId(), values.originId(),
                 values.destinationId(), values.responsible(), values.vehicle(), values.notes(),
-                readLines(), values.driver(), values.plate());
+                readLines(), values.driver(), values.plate(), requiresReceiptCheck.isSelected());
     }
 
     UpdateStockTransferRequest updateRequest() {
@@ -202,7 +208,7 @@ final class StockTransferEditorForm {
         Values values = validateValues();
         return new UpdateStockTransferRequest(loaded.version(), values.originId(), values.destinationId(),
                 values.responsible(), values.vehicle(), values.notes(), readLines(),
-                values.driver(), values.plate());
+                values.driver(), values.plate(), requiresReceiptCheck.isSelected());
     }
 
     private void configureGridEditors() {
@@ -321,6 +327,11 @@ final class StockTransferEditorForm {
         gbc.insets = new Insets(2, 6, 4, 6);
         notesField.putClientProperty("JTextField.placeholderText", "Notas adicionais de transporte...");
         formCard.add(notesField, gbc);
+
+        // Linha 4: Checkbox de Stock em Trânsito
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 4; gbc.weightx = 1.0;
+        gbc.insets = new Insets(4, 6, 4, 6);
+        formCard.add(requiresReceiptCheck, gbc);
 
         JPanel section = new JPanel(new BorderLayout(0, 8));
         section.setOpaque(false);
@@ -640,6 +651,7 @@ final class StockTransferEditorForm {
         UIHelper.onTextChange(responsibleField, () -> { if (!loading) dirty = true; });
         UIHelper.onTextChange(vehicleField, () -> { if (!loading) dirty = true; });
         UIHelper.onTextChange(notesField, () -> { if (!loading) dirty = true; });
+        requiresReceiptCheck.addActionListener(e -> { if (!loading) dirty = true; });
 
         linesModel.addTableModelListener(event -> {
             if (loading || recalculating || event.getFirstRow() < 0) return;
@@ -663,6 +675,7 @@ final class StockTransferEditorForm {
         responsibleField.setEditable(editable);
         vehicleField.setEditable(editable);
         notesField.setEditable(editable);
+        requiresReceiptCheck.setEnabled(editable);
         if (barcodeScanField != null) barcodeScanField.setEnabled(editable);
         if (searchCatalogButton != null) searchCatalogButton.setEnabled(editable);
         if (suggestReplenishmentButton != null) suggestReplenishmentButton.setEnabled(editable);

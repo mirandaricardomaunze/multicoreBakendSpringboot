@@ -27,8 +27,29 @@ public record StockTransferDTO(
         String vehiclePlate,
         Long version,
         Long businessUnitId,
-        String businessUnitName
+        String businessUnitName,
+        /** Exige confirmação de recepção no destino (stock em trânsito). */
+        boolean requiresReceipt,
+        /** Momento em que a mercadoria saiu da origem (início do trânsito). */
+        LocalDateTime dispatchedAt,
+        String receivedBy,
+        LocalDateTime receivedAt,
+        String receiptNotes
 ) {
+    /** Construtor retrocompatível de 23 argumentos (anterior ao stock em trânsito). */
+    public StockTransferDTO(Long id, String transferNumber, LocalDateTime transferDate, Long companyId,
+                            Long originWarehouseId, String originWarehouseName, Long destinationWarehouseId,
+                            String destinationWarehouseName, String status, String responsible, String vehicle,
+                            String notes, String approvedBy, LocalDateTime approvedAt, String rejectionReason,
+                            List<StockTransferLineDTO> lines, Long orderId, String orderNumber,
+                            String driverName, String vehiclePlate, Long version,
+                            Long businessUnitId, String businessUnitName) {
+        this(id, transferNumber, transferDate, companyId, originWarehouseId, originWarehouseName,
+                destinationWarehouseId, destinationWarehouseName, status, responsible, vehicle, notes,
+                approvedBy, approvedAt, rejectionReason, lines, orderId, orderNumber, driverName,
+                vehiclePlate, version, businessUnitId, businessUnitName, false, null, null, null, null);
+    }
+
     /** Construtor retrocompatível para 21 argumentos (anterior a businessUnitId/businessUnitName). */
     public StockTransferDTO(Long id, String transferNumber, LocalDateTime transferDate, Long companyId,
                             Long originWarehouseId, String originWarehouseName, Long destinationWarehouseId,

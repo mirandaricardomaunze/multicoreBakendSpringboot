@@ -77,22 +77,23 @@ public final class OutstandingAccountsPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         JTextField search = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
+        search.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
 
         businessUnit = TableFilter.combo("Todos os negócios");
         UIHelper.styleComboBox(businessUnit);
-        businessUnit.setPreferredSize(new Dimension(170, UIHelper.FORM_CONTROL_HEIGHT));
+        businessUnit.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> status = TableFilter.combo("Todos os estados", "Aprovado", "Parcialmente paga");
         UIHelper.styleComboBox(status);
-        status.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+        status.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> aging = TableFilter.combo(agingLabels());
         UIHelper.styleComboBox(aging);
-        aging.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
+        aging.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> period = TableFilter.periodCombo();
         UIHelper.styleComboBox(period);
-        period.setPreferredSize(new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT));
+        period.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(table, search,
                 List.of(

@@ -234,6 +234,10 @@ public final class QuotationsPanel extends JPanel {
         return until + " (faltam " + q.daysUntilExpiry() + " dias)";
     }
 
+    public void openCreate() {
+        openEditor();
+    }
+
     private void openEditor() {
         if (warehouses.get().isEmpty() || products.get().isEmpty()) {
             showNotice(FeedbackType.WARNING, "Dados necessários",

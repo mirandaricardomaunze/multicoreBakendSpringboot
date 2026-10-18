@@ -97,6 +97,9 @@ public class Order extends BaseEntity {
     @Column(name = "delivery_terms", length = 200)
     private String deliveryTerms;
 
+    @Column(name = "notes", length = 1000)
+    private String notes;
+
     /** Data prometida ao cliente, calculada na confirmação e <b>gravada</b> (molde do
      *  {@code Invoice.dueDate}): mudar o prazo acordado amanhã não altera o que já foi prometido. */
     @Column(name = "expected_delivery_date")

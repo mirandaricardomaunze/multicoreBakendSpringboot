@@ -30,4 +30,8 @@ public class StockTransferLine {
 
     @Column(name = "batch_number")
     private String batchNumber;
+
+    /** Parcelas de lote em viagem (preenchido no despacho de guias com recepção). */
+    @OneToMany(mappedBy = "line", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<StockTransferLineBatch> transitBatches = new java.util.ArrayList<>();
 }

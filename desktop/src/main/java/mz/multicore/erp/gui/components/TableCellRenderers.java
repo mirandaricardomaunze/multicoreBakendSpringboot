@@ -230,7 +230,7 @@ public final class TableCellRenderers {
 
         private static boolean isBlue(String s) {
             return switch (s) {
-                case "PROCESSING", "EM PROCESSAMENTO", "SHIPPED", "ENVIADO", "EM TRÂNSITO", "EM TRANSITO",
+                case "PROCESSING", "EM PROCESSAMENTO", "SHIPPED", "ENVIADO", "EM TRÂNSITO", "EM TRANSITO", "IN_TRANSIT",
                      "SCHEDULED", "AGENDADO", "BAIXO", "DRAFT", "RASCUNHO",
                      "SEPARATED", "SEPARADO", "GUIDED", "EXPEDIDO POR GUIA",
                      "TRANSFERRED", "TRANSFERIDO", "TRANSFERIDO PARA A LOJA",

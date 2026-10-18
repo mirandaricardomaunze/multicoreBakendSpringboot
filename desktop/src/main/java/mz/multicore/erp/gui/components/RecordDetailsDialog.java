@@ -64,7 +64,11 @@ public final class RecordDetailsDialog {
     private static final java.util.concurrent.atomic.AtomicBoolean OPENING = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public static void show(JTable table) {
-        if (table == null || table.getSelectedRow() < 0) return;
+        if (table == null) return;
+        if (table.getSelectedRow() < 0) {
+            ToastManager.show(table, FeedbackType.INFO, "Seleccione uma linha na tabela para inspecionar os detalhes.");
+            return;
+        }
         if (!OPENING.compareAndSet(false, true)) return;
         try {
             showInternal(table);

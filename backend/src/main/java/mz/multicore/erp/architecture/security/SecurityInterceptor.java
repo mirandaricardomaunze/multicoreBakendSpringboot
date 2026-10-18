@@ -41,8 +41,15 @@ public class SecurityInterceptor implements HandlerInterceptor {
             String username = authSessionService.requireValid(token).username();
             Long requestedCompanyId = Long.parseLong(companyId);
             var user = tenantAccessService.requireAccess(username, requestedCompanyId);
-            CurrentUserContext.setCurrentUser(user.getUsername(), user.getRoleForCompany(requestedCompanyId));
+            String role = user.getRoleForCompany(requestedCompanyId);
+            if (!ApiRolePolicy.allows(role, request.getMethod(), uri)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Sem permissão para aceder a esta área com o perfil actual.");
+                return false;
+            }
+            CurrentUserContext.setCurrentUser(user.getUsername(), role);
             CurrentUserContext.setCurrentCompanyId(requestedCompanyId);
+            updateSecurityContextAuthority(user.getUsername(), role);
             return true;
         } catch (NumberFormatException ex) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Empresa inválida.");
@@ -63,6 +70,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
             String username = authSessionService.requireValid(token).username();
             var user = tenantAccessService.requireSuperAdmin(username);
             CurrentUserContext.setCurrentUser(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
+            updateSecurityContextAuthority(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
             return true;
         } catch (RuntimeException ex) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
@@ -99,6 +107,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
                 }
                 CurrentUserContext.setCurrentUser(user.getUsername(), role);
                 CurrentUserContext.setCurrentCompanyId(companyId);
+                updateSecurityContextAuthority(user.getUsername(), role);
             }
             return true;
         } catch (NumberFormatException ex) {
@@ -113,5 +122,18 @@ public class SecurityInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         CurrentUserContext.clear();
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    private void updateSecurityContextAuthority(String username, String role) {
+        if (role == null || role.isBlank()) {
+            return;
+        }
+        String authority = role.startsWith("ROLE_")
+                ? role.toUpperCase(java.util.Locale.ROOT)
+                : "ROLE_" + role.toUpperCase(java.util.Locale.ROOT);
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                username, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(authority)));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
     }
 }

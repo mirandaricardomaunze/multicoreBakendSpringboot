@@ -167,6 +167,7 @@ public final class InlineFeedbackPanel extends JPanel {
     }
 
     public FeedbackType feedbackType() { return type; }
+    public String titleText() { return title.getText(); }
     public String messageText() { return message.getText(); }
     public boolean hasAction() { return actionButton.isVisible(); }
     public boolean isAutoCloseEnabled() { return autoCloseEnabled; }

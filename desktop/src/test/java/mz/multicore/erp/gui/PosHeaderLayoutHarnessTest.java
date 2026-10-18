@@ -56,7 +56,7 @@ public class PosHeaderLayoutHarnessTest {
     }
 
     @Test
-    @DisplayName("OVERLAP-02: ActionMenuButton agrega Cotação, Fidelidade e Fechos Z com <= 5 ações")
+    @DisplayName("OVERLAP-02: ActionMenuButton agrega Cotação, Fidelidade, Fechos Z, Sangria e Turno com <= 5 ações")
     void testOperationsMenuGroupsSecondaryActions() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             CurrentUserContext.setCurrentUser("operador.pos", "CAIXA");
@@ -64,12 +64,14 @@ public class PosHeaderLayoutHarnessTest {
             try {
                 POSPanel pos = createTestPosPanel();
                 assertNotNull(pos.operationsMenu, "operationsMenu deve estar instanciado");
-                assertEquals(3, pos.operationsMenu.actionCount(), "Deve possuir exactamente 3 acções agrupadas");
+                assertEquals(5, pos.operationsMenu.actionCount(), "Deve possuir exactamente 5 acções agrupadas");
                 assertTrue(pos.operationsMenu.actionCount() <= 5, "Não pode exceder o limite estrito de 5 acções");
 
                 assertEquals("Importar Cotação (F7)", pos.operationsMenu.actionAt(0).getText());
                 assertEquals("Programa de Fidelidade", pos.operationsMenu.actionAt(1).getText());
                 assertEquals("Histórico de Fechos (Z)", pos.operationsMenu.actionAt(2).getText());
+                assertEquals("Sangria / Suprimento", pos.operationsMenu.actionAt(3).getText());
+                assertEquals("Passar Turno", pos.operationsMenu.actionAt(4).getText());
             } finally {
                 CurrentUserContext.clear();
             }

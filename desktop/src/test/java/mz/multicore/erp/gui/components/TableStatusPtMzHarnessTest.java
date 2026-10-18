@@ -3,10 +3,12 @@ package mz.multicore.erp.gui.components;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -76,9 +78,14 @@ class TableStatusPtMzHarnessTest {
         assertEquals("Em produção", UIHelper.humanStatus("EM_PRODUCAO"));
         assertEquals("Concluído", UIHelper.humanStatus("CONCLUIDA"));
 
-        // Financeiro
+        // Financeiro e Pagamentos
         assertEquals("Débito", UIHelper.humanStatus("DEBIT"));
         assertEquals("Crédito", UIHelper.humanStatus("CREDIT"));
+        assertEquals("Dinheiro", UIHelper.humanStatus("CASH"));
+        assertEquals("Transferência", UIHelper.humanStatus("BANK_TRANSFER"));
+        assertEquals("Cartão", UIHelper.humanStatus("CARD"));
+        assertEquals("M-Pesa", UIHelper.humanStatus("MPESA"));
+        assertEquals("E-Mola", UIHelper.humanStatus("EMOLA"));
     }
 
     @Test
@@ -166,7 +173,8 @@ class TableStatusPtMzHarnessTest {
         List<String> forbiddenEnums = List.of(
                 "\"PENDING\"", "\"BILLED\"", "\"ORDERED\"", "\"AWAITING_SEPARATION\"",
                 "\"IN_SEPARATION\"", "\"SEPARATED\"", "\"GUIDE_PENDING\"", "\"GUIDED\"",
-                "\"ACTIVE\"", "\"SUSPENDED\"", "\"CANCELLED\"", "\"DRAFT\""
+                "\"ACTIVE\"", "\"SUSPENDED\"", "\"CANCELLED\"", "\"DRAFT\"",
+                "\"CASH\"", "\"BANK_TRANSFER\"", "\"CARD\""
         );
 
         try (Stream<Path> paths = Files.walk(GUI_ROOT)) {
@@ -184,6 +192,33 @@ class TableStatusPtMzHarnessTest {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    @DisplayName("TableFilter.bar mantém todos os componentes estritamente em linha horizontal única sem quebra vertical")
+    void tableFilterBar_singleRowHorizontalLayout() {
+        javax.swing.JTextField c1 = new javax.swing.JTextField(20);
+        c1.setPreferredSize(new Dimension(200, 36));
+        javax.swing.JComboBox<String> c2 = new javax.swing.JComboBox<>(new String[]{"Opção 1"});
+        c2.setPreferredSize(new Dimension(150, 36));
+        javax.swing.JComboBox<String> c3 = new javax.swing.JComboBox<>(new String[]{"Opção 2"});
+        c3.setPreferredSize(new Dimension(150, 36));
+        javax.swing.JComboBox<String> c4 = new javax.swing.JComboBox<>(new String[]{"Opção 3"});
+        c4.setPreferredSize(new Dimension(150, 36));
+        javax.swing.JButton c5 = new javax.swing.JButton("Ação");
+        c5.setPreferredSize(new Dimension(100, 36));
+
+        JPanel bar = TableFilter.bar(c1, c2, c3, c4, c5);
+        // Mesmo com largura reduzida (ex: 400px, onde FlowLayout normal empilharia em 2 ou 3 linhas):
+        bar.setSize(400, 36);
+        bar.doLayout();
+
+        // Todos os componentes devem estar na mesma linha vertical (y <= 4px):
+        for (int i = 0; i < bar.getComponentCount(); i++) {
+            Component child = bar.getComponent(i);
+            assertTrue(child.getY() <= 4,
+                    "Componente " + i + " não deve ser empilhado para a 2ª linha (y=" + child.getY() + ")");
         }
     }
 }

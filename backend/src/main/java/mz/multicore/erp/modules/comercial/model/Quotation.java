@@ -183,7 +183,7 @@ public class Quotation extends BaseEntity {
      * sabe o que acordou — daí ser ela a dizê-lo, em vez de o serviço remontar os campos à mão.
      */
     public OrderTerms agreedTerms() {
-        return new OrderTerms(id, quotationNumber, paymentTerms, deliveryTerms, deliveryDays);
+        return new OrderTerms(id, quotationNumber, paymentTerms, deliveryTerms, deliveryDays, notes);
     }
 
     /** Rótulo do comprador: o nome livre quando não há cliente registado. */
