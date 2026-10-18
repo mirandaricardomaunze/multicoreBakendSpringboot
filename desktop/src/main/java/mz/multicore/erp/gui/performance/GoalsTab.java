@@ -23,6 +23,11 @@ import java.util.Locale;
 
 public class GoalsTab extends JPanel {
 
+    public record BusinessUnitOption(Long id, String name) {
+        @Override
+        public String toString() { return name; }
+    }
+
     private final PerformanceApiClient apiClient;
     private final DesktopSession session;
     private final Runnable onGoalChanged;
@@ -217,6 +222,48 @@ public class GoalsTab extends JPanel {
         JComboBox<GoalScope> cbScope = PerformanceControls.createSelect(GoalScope.values(), 0, PerformanceControls::humanScope);
         form.add(new FormField("Escopo da Meta", cbScope, true, null), gc);
 
+        // Seletor de Unidade de Negócio
+        gc.gridy++;
+        JComboBox<BusinessUnitOption> cbBusinessUnit = new JComboBox<>();
+        cbBusinessUnit.addItem(new BusinessUnitOption(null, "Todas as Unidades (Geral)"));
+        try {
+            List<mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO> buList = apiClient.getActiveBusinessUnits(session.activeCompanyId());
+            if (buList != null) {
+                for (var bu : buList) {
+                    cbBusinessUnit.addItem(new BusinessUnitOption(bu.id(), bu.name()));
+                }
+            }
+        } catch (Exception ignored) {}
+        UIHelper.styleComboBox(cbBusinessUnit);
+
+        JPanel buRow = new JPanel(new GridLayout(1, 1));
+        buRow.setOpaque(false);
+        buRow.add(new FormField("Unidade de Negócio / Módulo", cbBusinessUnit, false, "Selecione o negócio associado"));
+        form.add(buRow, gc);
+
+        // Campos específicos para Colaborador / Vendedor e Responsável Comercial
+        gc.gridy++;
+        JPanel sellerRow = new JPanel(new GridLayout(1, 2, 8, 0));
+        sellerRow.setOpaque(false);
+        JTextField txtSeller = PerformanceControls.createTextInput("", "Nome ou username do vendedor", 0);
+        JTextField txtSupervisor = PerformanceControls.createTextInput("", "Responsável / Supervisor de Vendas", 0);
+        sellerRow.add(new FormField("Vendedor / Colaborador", txtSeller, false, "Ex: Carlos Silva ou username"));
+        sellerRow.add(new FormField("Responsável de Vendas (Supervisor)", txtSupervisor, false, "Ex: Chefe de Vendas"));
+        form.add(sellerRow, gc);
+
+        Runnable updateScopeVisibility = () -> {
+            GoalScope selectedScope = (GoalScope) cbScope.getSelectedItem();
+            boolean isEmp = selectedScope == GoalScope.EMPLOYEE;
+            boolean isBu = selectedScope == GoalScope.BUSINESS_UNIT;
+
+            sellerRow.setVisible(isEmp);
+            buRow.setVisible(isBu || isEmp);
+            form.revalidate();
+            form.repaint();
+        };
+        cbScope.addActionListener(e -> updateScopeVisibility.run());
+        updateScopeVisibility.run();
+
         gc.gridy++;
         JPanel targetsRow = new JPanel(new GridLayout(1, 2, 8, 0));
         targetsRow.setOpaque(false);
@@ -226,23 +273,46 @@ public class GoalsTab extends JPanel {
         targetsRow.add(new FormField("Alvo Margem Bruta (MZN)", txtMargin, false, null));
         form.add(targetsRow, gc);
 
+        // Bonificação Opcional
+        gc.gridy++;
+        JCheckBox chkBonusOptional = new JCheckBox("Atribuir Bonificação / Compensação de Vendas (Opcional)", false);
+        chkBonusOptional.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        chkBonusOptional.setForeground(UIHelper.PENDING_YELLOW);
+        chkBonusOptional.setOpaque(false);
+        form.add(chkBonusOptional, gc);
+
         gc.gridy++;
         JComboBox<BonusType> cbBonusType = PerformanceControls.createSelect(BonusType.values(), 0, PerformanceControls::humanBonusType);
-        form.add(new FormField("Tipo de Bónus", cbBonusType, true, null), gc);
+        form.add(new FormField("Tipo de Bónus / Comissão", cbBonusType, false, null), gc);
 
         gc.gridy++;
         JPanel bonusRow = new JPanel(new GridLayout(1, 2, 8, 0));
         bonusRow.setOpaque(false);
         MoneyField txtBonusValue = PerformanceControls.createMoneyField("", 0);
         MoneyField txtBonusCap = PerformanceControls.createMoneyField("", 0);
-        bonusRow.add(new FormField("Valor do Bónus (MZN ou %)", txtBonusValue, true, null));
+        bonusRow.add(new FormField("Valor do Bónus (MZN ou %)", txtBonusValue, false, null));
         bonusRow.add(new FormField("Teto Máximo Bónus (MZN)", txtBonusCap, false, null));
         form.add(bonusRow, gc);
 
         gc.gridy++;
-        JCheckBox chkAuto = new JCheckBox("Gerar bónus automaticamente ao atingir", true);
+        JCheckBox chkAuto = new JCheckBox("Gerar bónus automaticamente ao atingir a meta", true);
         chkAuto.setOpaque(false);
         form.add(chkAuto, gc);
+
+        Runnable updateBonusFields = () -> {
+            boolean enabled = chkBonusOptional.isSelected();
+            cbBonusType.setEnabled(enabled);
+            txtBonusValue.setEnabled(enabled);
+            txtBonusCap.setEnabled(enabled);
+            chkAuto.setEnabled(enabled);
+        };
+        chkBonusOptional.addActionListener(e -> updateBonusFields.run());
+        updateBonusFields.run();
+
+        JScrollPane scrollForm = new JScrollPane(form);
+        scrollForm.setBorder(BorderFactory.createEmptyBorder());
+        scrollForm.getViewport().setBackground(UIHelper.BG_CARD);
+        scrollForm.getVerticalScrollBar().setUnitIncrement(14);
 
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         footer.setBackground(UIHelper.BG_DARK);
@@ -262,8 +332,37 @@ public class GoalsTab extends JPanel {
 
                 BigDecimal rev = txtRevenue.optionalValue();
                 BigDecimal marg = txtMargin.optionalValue();
-                BigDecimal bonusVal = txtBonusValue.optionalValue() != null ? txtBonusValue.optionalValue() : BigDecimal.ZERO;
-                BigDecimal bonusCap = txtBonusCap.optionalValue();
+
+                boolean bonusActive = chkBonusOptional.isSelected();
+                BigDecimal bonusVal = bonusActive && txtBonusValue.optionalValue() != null ? txtBonusValue.optionalValue() : BigDecimal.ZERO;
+                BigDecimal bonusCap = bonusActive ? txtBonusCap.optionalValue() : null;
+                BonusType bonusType = bonusActive ? (BonusType) cbBonusType.getSelectedItem() : BonusType.FIXED;
+
+                GoalScope scope = (GoalScope) cbScope.getSelectedItem();
+                Long scopeRefId = null;
+                String scopeLabel = null;
+
+                BusinessUnitOption selectedBu = (BusinessUnitOption) cbBusinessUnit.getSelectedItem();
+
+                if (scope == GoalScope.BUSINESS_UNIT) {
+                    if (selectedBu != null && selectedBu.id() != null) {
+                        scopeRefId = selectedBu.id();
+                        scopeLabel = "Negócio: " + selectedBu.name();
+                    } else {
+                        throw new IllegalArgumentException("Por favor selecione uma Unidade de Negócio para este escopo.");
+                    }
+                } else if (scope == GoalScope.EMPLOYEE) {
+                    String seller = txtSeller.getText().trim();
+                    String supervisor = txtSupervisor.getText().trim();
+                    scopeLabel = seller.isEmpty() ? "Vendedor" : seller;
+                    if (selectedBu != null && selectedBu.id() != null) {
+                        scopeRefId = selectedBu.id();
+                        scopeLabel += " • " + selectedBu.name();
+                    }
+                    if (!supervisor.isEmpty()) {
+                        scopeLabel += " (Resp: " + supervisor + ")";
+                    }
+                }
 
                 CreateSalesGoalRequest req = new CreateSalesGoalRequest(
                         session.activeCompanyId(),
@@ -271,16 +370,16 @@ public class GoalsTab extends JPanel {
                         (GoalPeriod) cbPeriod.getSelectedItem(),
                         start,
                         end,
-                        (GoalScope) cbScope.getSelectedItem(),
-                        null,
-                        null,
+                        scope,
+                        scopeRefId,
+                        scopeLabel,
                         rev,
                         marg,
                         null,
-                        (BonusType) cbBonusType.getSelectedItem(),
+                        bonusType,
                         bonusVal,
                         bonusCap,
-                        chkAuto.isSelected()
+                        bonusActive && chkAuto.isSelected()
                 );
 
                 UIHelper.loadAsync(
@@ -300,8 +399,9 @@ public class GoalsTab extends JPanel {
         });
         footer.add(btnSave);
 
-        dialog.add(form, BorderLayout.CENTER);
+        dialog.add(scrollForm, BorderLayout.CENTER);
         dialog.add(footer, BorderLayout.SOUTH);
+        UIHelper.applyStandardModalBounds(dialog, 540, 600);
         dialog.setVisible(true);
     }
 

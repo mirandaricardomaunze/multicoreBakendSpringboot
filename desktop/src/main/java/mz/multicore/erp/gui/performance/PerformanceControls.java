@@ -119,6 +119,7 @@ public final class PerformanceControls {
         if (scope == null) return "Todos";
         return switch (scope) {
             case COMPANY -> "Empresa Inteira";
+            case BUSINESS_UNIT -> "Por Unidade de Negócio";
             case WAREHOUSE -> "Por Armazém";
             case CATEGORY -> "Por Categoria";
             case PRODUCT -> "Por Produto";

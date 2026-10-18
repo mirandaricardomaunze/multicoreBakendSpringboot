@@ -124,7 +124,7 @@ final class CustomerOrderFulfillmentActions {
     private static String whyCannotSeparate(OrderKind kind, String status) {
         if (!kind.usesSeparationFlow()) {
             return "Esta é uma \"" + OrderKind.FORMAL_ORDER.label() + "\" e não passa pelo armazém.\n\n"
-                    + "As encomendas deste tipo aprovam-se e facturam-se directamente. A separação "
+                    + "As encomendas deste tipo aprovam-se e faturam-se directamente. A separação "
                     + "aplica-se aos pedidos criados para expedição.";
         }
         return switch (status) {
@@ -134,10 +134,10 @@ final class CustomerOrderFulfillmentActions {
                     + "dá início ao trabalho no armazém. Depois de separada, volte aqui.";
             case "SEPARATED" -> "Esta encomenda já está separada.\n\nO passo seguinte é "
                     + "\"Faturar Encomenda\".";
-            case "INVOICED" -> "Esta encomenda já foi facturada.";
+            case "INVOICED", "BILLED" -> "Esta encomenda já foi faturada.";
             case "CANCELLED" -> "Esta encomenda foi cancelada.";
             default -> "Esta encomenda não faz parte do circuito de separação — está em \""
-                    + status + "\" e fatura-se directamente.\n\n"
+                    + UIHelper.humanStatus(status) + "\" e fatura-se directamente.\n\n"
                     + "A separação aplica-se apenas às encomendas criadas para expedição.";
         };
     }
@@ -151,8 +151,8 @@ final class CustomerOrderFulfillmentActions {
                     "Novo estado", "Utilizador", "Perfil", "Terminal", "Detalhes"}, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
-            events.forEach(e -> model.addRow(new Object[]{e.occurredAt(), e.eventType(), e.previousStatus(),
-                    e.newStatus(), e.actor(), e.actorRole(), e.terminalName(), e.details()}));
+            events.forEach(e -> model.addRow(new Object[]{e.occurredAt(), e.eventType(), UIHelper.humanStatus(e.previousStatus()),
+                    UIHelper.humanStatus(e.newStatus()), e.actor(), e.actorRole(), e.terminalName(), e.details()}));
             JTable table = new JTable(model); UIHelper.styleTable(table);
             JScrollPane scroll = new JScrollPane(table); UIHelper.styleScrollPane(scroll);
             scroll.setPreferredSize(new Dimension(1000, 420));

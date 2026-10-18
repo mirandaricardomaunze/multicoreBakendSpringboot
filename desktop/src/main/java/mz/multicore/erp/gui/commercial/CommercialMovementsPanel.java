@@ -140,7 +140,7 @@ public final class CommercialMovementsPanel extends JPanel {
             peek.setHeaderIcon("fas-exchange-alt", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(model.getValueAt(row, 0)) + " " + model.getValueAt(row, 1));
             peek.setSubtitle("Entidade: " + model.getValueAt(row, 2) + " • " + model.getValueAt(row, 6));
-            peek.setStatus(String.valueOf(model.getValueAt(row, 7)), UIHelper.ACCENT_BLUE);
+            peek.setStatus(UIHelper.humanStatus(String.valueOf(model.getValueAt(row, 7))), UIHelper.ACCENT_BLUE);
             List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new ArrayList<>();
             items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Tipo Documento", String.valueOf(model.getValueAt(row, 0)), false));
             items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Número", String.valueOf(model.getValueAt(row, 1)), false));
@@ -286,7 +286,7 @@ public final class CommercialMovementsPanel extends JPanel {
                     qty,
                     armazem,
                     movement.data() == null ? "-" : movement.data().format(DATE_TIME),
-                    movement.estado(),
+                    UIHelper.humanStatus(movement.estado()),
                     movement.total() == null ? BigDecimal.ZERO : movement.total()
             });
         }

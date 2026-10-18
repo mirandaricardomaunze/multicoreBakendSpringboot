@@ -89,7 +89,7 @@ public class StockTransfer extends BaseEntity {
     private String rejectionReason;
 
     /** Opt-in: o stock só entra no destino quando a recepção for confirmada. */
-    @Column(name = "requires_receipt", nullable = false)
+    @Column(name = "requires_receipt", nullable = false, columnDefinition = "boolean default false")
     private boolean requiresReceipt = false;
 
     @Column(name = "dispatched_at")

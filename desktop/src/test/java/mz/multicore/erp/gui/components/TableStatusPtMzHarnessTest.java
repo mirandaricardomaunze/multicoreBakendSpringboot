@@ -39,7 +39,8 @@ class TableStatusPtMzHarnessTest {
         assertEquals("Expedido por guia", UIHelper.humanStatus("GUIDED"));
         assertEquals("Transferência por aprovar", UIHelper.humanStatus("TRANSFER_PENDING"));
         assertEquals("Transferido para a loja", UIHelper.humanStatus("TRANSFERRED"));
-        assertEquals("Facturado", UIHelper.humanStatus("BILLED"));
+        assertEquals("Faturado", UIHelper.humanStatus("BILLED"));
+        assertEquals("Faturado", UIHelper.humanStatus("INVOICED"));
         assertEquals("Cancelado", UIHelper.humanStatus("CANCELLED"));
 
         // Facturas e Notas
@@ -112,7 +113,8 @@ class TableStatusPtMzHarnessTest {
 
         // Caso o modelo já guarde o texto humanizado
         assertTrue(TableFilter.cellMatches("Pendente", "Pendente"));
-        assertTrue(TableFilter.cellMatches("Facturado", "Facturado"));
+        assertTrue(TableFilter.cellMatches("Faturado", "Faturado"));
+        assertTrue(TableFilter.cellMatches("Facturado", "Faturado"));
         assertTrue(TableFilter.cellMatches("Aguarda separação", "Aguarda separação"));
 
         // Opção universal "Todos" deve aceitar qualquer valor
@@ -141,10 +143,10 @@ class TableStatusPtMzHarnessTest {
         assertEquals("Pendente", label0.getText());
         assertEquals(UIHelper.PENDING_YELLOW, label0.getForeground());
 
-        // Linha 1: BILLED -> "Facturado", Verde
+        // Linha 1: BILLED -> "Faturado", Verde
         Component comp1 = renderer.getTableCellRendererComponent(table, model.getValueAt(1, 1), false, false, 1, 1);
         javax.swing.JLabel label1 = (javax.swing.JLabel) comp1;
-        assertEquals("Facturado", label1.getText());
+        assertEquals("Faturado", label1.getText());
         assertEquals(UIHelper.APPROVED_GREEN, label1.getForeground());
 
         // Linha 2: CANCELLED -> "Cancelado", Vermelho

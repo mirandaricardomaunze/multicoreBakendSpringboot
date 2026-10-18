@@ -15,6 +15,7 @@ import mz.multicore.erp.gui.components.StrategicPulseWidget;
 import mz.multicore.erp.gui.components.TopProductsWidget;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.OperationalPulseWidget;
+import mz.multicore.erp.gui.tv.ExecutiveTvDashboardDialog;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.desktop.client.CashFlowForecastApiClient;
@@ -44,6 +45,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -51,6 +54,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Window;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -369,12 +373,27 @@ public class DashboardPanel extends JPanel {
 
         add(dashboardTabs, BorderLayout.CENTER);
 
+        // Atalho F11 para abrir Painel da Sala de Reuniões em Tela Cheia
+        registerKeyboardAction(
+                e -> openExecutiveTvDashboard(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F11, 0),
+                JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT
+        );
+
         refreshData();
     }
 
     private JPanel buildPeriodFilterBar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         bar.setOpaque(false);
+
+        ModernButton tvBtn = UIHelper.createSecondaryButton("Painel TV");
+        tvBtn.setIcon(UIHelper.icon("fas-tv", 12, UIHelper.ACCENT_CYAN));
+        tvBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
+        tvBtn.setToolTipText("Abrir Painel Executivo em Tela Cheia para Sala de Reuniões (F11)");
+        tvBtn.setPreferredSize(new Dimension(tvBtn.getPreferredSize().width + 12, 28));
+        tvBtn.addActionListener(e -> openExecutiveTvDashboard());
+        bar.add(tvBtn);
 
         for (PeriodFilter p : PeriodFilter.values()) {
             ModernButton btn = UIHelper.createSecondaryButton(p.getLabel());
@@ -386,6 +405,12 @@ public class DashboardPanel extends JPanel {
         }
         updatePeriodButtonStyles();
         return bar;
+    }
+
+    public void openExecutiveTvDashboard() {
+        java.awt.Window ancestor = SwingUtilities.getWindowAncestor(this);
+        ExecutiveTvDashboardDialog dialog = new ExecutiveTvDashboardDialog(ancestor, comercialApiClient, 1L);
+        dialog.setVisible(true);
     }
 
     public void selectPeriod(PeriodFilter period) {

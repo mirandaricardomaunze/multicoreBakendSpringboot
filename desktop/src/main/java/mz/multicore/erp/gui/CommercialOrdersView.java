@@ -305,7 +305,7 @@ final class CommercialOrdersView {
         }
         JComboBox<String> ecEstado = TableFilter.combo("Todos os estados",
                 "Pendente", "Pendente de aprovação", "Aguarda separação", "Em separação",
-                "Separado", "Guia por aprovar", "Expedido por guia", "Facturado", "Cancelado");
+                "Separado", "Guia por aprovar", "Expedido por guia", "Faturado", "Cancelado");
         JComboBox<String> ecPeriodo = TableFilter.periodCombo();
         TableFilter.install(owner.ordersTable, ecSearch,
                 java.util.List.of(

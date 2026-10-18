@@ -52,7 +52,7 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 4. Atualizada a especificação `DOCUMENT_TABLE_INTERACTION_SPEC.md` e validado o harness `DocumentTableInteractionHarnessTest`.
 5. Manter a suite completa estável após alterações de UI, contratos ou fronteiras Maven.
 6. Padronização DRY universal de pesquisa paginada de catálogo de produtos (`ProductLookupDialog`, `ProductSearchComboBox`, `UIHelper.createProductLookupButton`, atalho canónico `F3`) em todas as grelhas e tabelas de linhas de documento (Transferências de Stock, Encomendas de Cliente, Faturação/Vendas, Cotações e Encomendas a Fornecedor).
-7. Concluída a erradicação de enums em inglês nas tabelas e filtros do ERP (substituição por termos canónicos em Português de Moçambique: `Pendente`, `Facturado`, `Aguarda separação`, `Encomendado`, `Rascunho`, `Activo`, etc.). Especificação documentada em `docs/TABELAS_ESTADOS_PTMZ_SPEC.md` e harness validado em `TableStatusPtMzHarnessTest` (4/4 testes aprovados).
+7. Concluída a erradicação de enums em inglês nas tabelas e filtros do ERP (substituição por termos canónicos em Português de Moçambique: `Pendente`, `Faturado`, `Por faturar`, `Aguarda separação`, `Encomendado`, `Rascunho`, `Activo`, etc.). Erradicado o uso de `INVOICED`, `BILLED` ou grafias divergentes na interface. Especificação documentada em `docs/TABELAS_ESTADOS_PTMZ_SPEC.md` e harness validado em `TableStatusPtMzHarnessTest` (5/5 testes aprovados).
 8. Concluída a especificação e blindagem de segurança para faturação única de encomendas, notas de crédito/débito, visibilidade do histórico de impressões e segregação estrita na reimpressão presencial (documentada em `docs/SEGURANCA_FATURACAO_E_REIMPRESSAO_SPEC.md`). Validado o harness dedicado `OrderBillingAndReprintSecurityHarnessTest` (8/8 testes aprovados), `MultiModuleArchitectureHarnessTest` e `DesktopThinContextTest`.
 9. Concluído o módulo **Gestão de Negócios** (Linhas de Distribuição / Unidades de Negócio multi-fornecedor, ex.: Unilever, BAT, Food). Integrada aba "Gestão de Negócios" em Compras (`PurchaseBusinessUnitsPanel`), rastreamento de artigos vinculados e seletor no cabeçalho da faturação (`ComercialPanel` / `CommercialInvoicesView`). Regra R4 implementada: fatura aceita produtos mistos por defeito; quando restrita a uma unidade de negócio, valida estritamente todos os produtos e bloqueia artigos divergentes. Especificação documentada em `docs/GESTAO_DE_NEGOCIOS_SPEC.md`, harness validado em `BusinessUnitHarnessTest` (5/5 testes aprovados), `MultiModuleArchitectureHarnessTest` e `DesktopThinContextTest`.
 10. Implementados filtros e colunas de **Negócio** de forma universal em todas as tabelas do sistema onde circulam artigos, compras, fornecedores, propostas e movimentações:
@@ -79,6 +79,22 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
     - Contas a Pagar a Fornecedores (`PurchasePayablesPanel`)
     - Recibos Emitidos / Liquidações Comerciais (`ReceiptsPanel`)
     Todos os filtros seguem o padrão canónico `TableFilter.bar` com `TableFilter.combo("Todos os negócios")`, exibição em Quick-Peek (`Espaço`), retrocompatibilidade total de DTOs e validação por harness (`BusinessUnitHarnessTest`, `AccountStatementHarnessTest`, `DesktopThinContextTest`, `MultiModuleArchitectureHarnessTest`).
+10.1 Concluído e aprimorado o **Painel Executivo para Sala de Reuniões e TV** (*War Room / Full Screen TV Dashboard*):
+    - Janela dedicada em tela cheia (`ExecutiveTvDashboardDialog`), atalho canónico `F11`, saída em `ESC`.
+    - Suporte dinâmico a dois temas executivos: **Tema Escuro (Dark Slate)** e **Tema Claro (Executive Light)** via botão `[ Tema Claro / Tema Escuro ]`.
+    - Cabeçalho estruturado em 2 linhas horizontais (Linha 1: Marca, Relógio e Ações de Sistema; Linha 2: Filtros de Período e Seletor de Negócio com Rodízio), eliminando qualquer colisão ou sobreposição de componentes visuais.
+    - Erradicação de emojis Unicode dos badges semânticos (`META SUPERADA`, `NO RITMO`, `ATENÇÃO`, `ALERTA`), prevenindo retângulos `▯` no Java 2D do Windows.
+    - Gestor de metas modular (`BusinessUnitGoalManager`): seleção interativa com caixas de seleção (`JCheckBox`) por unidade/módulo de negócio, botões `[ Marcar Todos ]`, `[ Desmarcar Todos ]` e cálculo automático `[ Somar na Meta Global ]`.
+    - A visualização na TV respeita os negócios selecionados, rotulando unidades desmarcadas como `FORA DA META`.
+    - Modo rodízio automático de ecrãs (slideshow contínuo a cada 15s) com indicador de contagem decrescente e pausa via `[ Espaço ]`.
+    - Botão de acesso direto "Painel TV" no cabeçalho do `DashboardPanel` (com atalho F11).
+    - Documentação canónica em `docs/SALA_DE_REUNIOES_TV_SPEC.md` e suite completa validada em `GoalProgressBarTest` e `DesktopThinContextTest`.
+10.2 Concluída a integração de **Unidades de Negócio no Centro de Desempenho Comercial (`GoalsTab` / `PerformancePanel`)**:
+    - Adicionado o escopo `BUSINESS_UNIT` ("Por Unidade de Negócio") ao enum canónico `GoalScope` em `contracts`.
+    - `PerformanceControls.humanScope` e `GoalProgressEngine` atualizados para calcular o faturamento e progresso filtrando faturas associadas à unidade de negócio (`invoice.getBusinessUnit().getId()`).
+    - No formulário de Nova Meta (`GoalsTab.openCreateGoalDialog`), integrado o seletor corporativo de Unidade de Negócio carregado dinamicamente via `PerformanceApiClient.getActiveBusinessUnits`.
+    - Suporte a metas focadas em Negócio específico (`BUSINESS_UNIT`) e metas de Vendedor com filtro de Negócio (`EMPLOYEE` + `BusinessUnit`).
+    - Validação completa: `MultiModuleArchitectureHarnessTest`, `CommercialPerformanceHarnessTest`, `GoalProgressEngineTest`, `GoalProgressBarTest` e `DesktopThinContextTest` 100% aprovados.
 11. Iniciada e fechada a baseline transversal de robustez multiutilizador: capacidade Hikari/Tomcat
     configurável por ambiente, shutdown gracioso, probes readiness/liveness, métricas Prometheus
     apenas internas e invariantes permanentes de concorrência em `docs/ROBUSTEZ_MULTIUTILIZADOR_SPEC.md`.
@@ -223,6 +239,13 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
       - **Aba 2: "Cockpit Operacional 360°" (`fas-cogs`):** Linha única horizontal com os 4 KPIs operacionais (`KpiCard.createGrid(4)`: Aprovações Pendentes, Atendimento ao Cliente, Alertas de Stock Baixo e Alertas de Validade), seguidos dos cockpits analíticos `StrategicPulseWidget` e `OperationalPulseWidget`.
       - **Aba 3: "Rentabilidade & DRE" (`fas-coins`):** Painel de rentabilidade e margens comerciais (`ProfitAnalyticsWidget`: CMVMC, Margem Bruta e Lucro Operacional).
     - **Validação e Integridade:** Preservados todos os getters e listeners de ciclo de vida (`getStrategicPulseWidget()`, `getOperationalPulseWidget()`, `refreshData()`, `selectPeriod()`, `updateWelcomeMessage()`). Validado com 100% de sucesso em `DesktopThinContextTest` (2/2), `DashboardCommercialKpiHarnessTest` (8/8) e `SimplePieChartTest` (2/2). Backend UP e Desktop relançado via `schtasks`.
+21. Resolução de Erro no Mapa de Movimentos (`/api/movimentos` / Sidebar):
+    - **Diagnóstico:** Ao clicar em "Movimentos" na barra lateral, a UI exibia erro de carregamento (HTTP 500 no backend). A investigação detalhada dos logs do backend revelou que a coluna `requires_receipt` na entidade `StockTransfer` (`nullable = false`) não possuía default DDL explícito para o Hibernate dev (`ddl-auto=update`), o que impedia o H2 de alterar a tabela pré-existente com registos. Adicionalmente, o backend em background estava a executar com uma versão prévia desfasada das novas classes do módulo `contracts`.
+    - **Correção:**
+      1. Adicionado `columnDefinition = "boolean default false"` em `StockTransfer.java` (`requiresReceipt`) para garantir compatibilidade com DDL do Hibernate.
+      2. Regularizado o schema no banco de dados H2 persistente (`./data/multicoredb`) com as colunas do fluxo em trânsito e recepção.
+      3. Reconstrução completa e sincronizada de todo o reactor Maven (`contracts`, `backend` e `desktop`).
+    - **Validação:** Endpoint `/api/movimentos?companyId=1` responde com sucesso (200 OK, 14 movimentos carregados), backend com status `UP` e Desktop relançado na sessão interativa via `schtasks`.
 
 ## Decisões permanentes relevantes
 

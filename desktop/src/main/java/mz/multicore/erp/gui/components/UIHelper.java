@@ -2646,7 +2646,7 @@ public class UIHelper {
             case "PENDING", "PENDENTE" -> "Pendente";
             case "PENDING_APPROVAL", "PENDENTE_APROVACAO", "PENDENTE DE APROVAÇÃO", "PENDENTE DE APROVACAO" -> "Pendente de aprovação";
             case "PENDING_DISCOUNT_APPROVAL" -> "Aprovação de desconto";
-            case "POR_FACTURAR", "POR_FATURAR", "POR FACTURAR", "POR FATURAR" -> "Por facturar";
+            case "POR_FACTURAR", "POR_FATURAR", "POR FACTURAR", "POR FATURAR" -> "Por faturar";
             case "AWAITING_SEPARATION", "AGUARDA_SEPARACAO", "AGUARDA SEPARAÇÃO", "AGUARDA SEPARACAO" -> "Aguarda separação";
             case "IN_SEPARATION", "EM_SEPARACAO", "EM SEPARAÇÃO", "EM SEPARACAO" -> "Em separação";
             case "SEPARATED", "SEPARADO" -> "Separado";
@@ -2654,7 +2654,7 @@ public class UIHelper {
             case "GUIDED", "EXPEDIDO_POR_GUIA", "EXPEDIDO POR GUIA" -> "Expedido por guia";
             case "TRANSFER_PENDING", "TRANSFERENCIA_POR_APROVAR", "TRANSFERÊNCIA POR APROVAR" -> "Transferência por aprovar";
             case "TRANSFERRED", "TRANSFERIDO", "TRANSFERIDO PARA A LOJA" -> "Transferido para a loja";
-            case "BILLED", "INVOICED", "FACTURADO", "FACTURADA", "FATURADO", "FATURADA" -> "Facturado";
+            case "BILLED", "INVOICED", "FACTURADO", "FACTURADA", "FATURADO", "FATURADA" -> "Faturado";
             case "APPROVED", "APROVADO", "APROVADA" -> "Aprovado";
             case "REJECTED", "REJEITADO", "REJEITADA" -> "Rejeitado";
             case "CANCELLED", "CANCELADO", "CANCELADA", "ANULADO", "ANULADA" -> "Cancelado";

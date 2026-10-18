@@ -80,13 +80,16 @@ public final class OrderDetailsDialog {
 
         // Status com severidade semântica
         ExecutiveDetailDialog.StatusSeverity severity = switch (order.status() != null ? order.status() : "") {
-            case "BILLED" -> ExecutiveDetailDialog.StatusSeverity.SUCCESS;
+            case "BILLED", "INVOICED", "FATURADO", "FACTURADO" -> ExecutiveDetailDialog.StatusSeverity.SUCCESS;
             case "CONFIRMED", "APPROVED" -> ExecutiveDetailDialog.StatusSeverity.INFO;
             case "PENDING" -> ExecutiveDetailDialog.StatusSeverity.WARNING;
             case "CANCELLED" -> ExecutiveDetailDialog.StatusSeverity.DANGER;
             default -> ExecutiveDetailDialog.StatusSeverity.NEUTRAL;
         };
-        dialog.setStatusBadge(order.statusLabel() != null ? order.statusLabel() : order.status(), severity);
+        String rawStatus = order.statusLabel() != null && !order.statusLabel().isBlank()
+                ? order.statusLabel()
+                : order.status();
+        dialog.setStatusBadge(UIHelper.humanStatus(rawStatus), severity);
 
         // 2. KPIs
         BigDecimal totalQty = BigDecimal.ZERO;

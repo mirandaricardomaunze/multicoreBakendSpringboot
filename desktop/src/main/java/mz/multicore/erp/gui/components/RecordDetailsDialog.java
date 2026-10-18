@@ -138,9 +138,9 @@ public final class RecordDetailsDialog {
             String colLower = colName.toLowerCase();
 
             if (colLower.contains("estado") || colLower.contains("status") || colLower.contains("activo") || colLower.contains("ativo")) {
-                statusText = valStr;
+                statusText = UIHelper.humanStatus(valStr);
                 String upper = valStr.toUpperCase();
-                if (upper.contains("OK") || upper.contains("ACTIV") || upper.contains("APROV") || upper.contains("CONCLU") || upper.contains("PAGO") || upper.contains("EMITID")) {
+                if (upper.contains("OK") || upper.contains("ACTIV") || upper.contains("APROV") || upper.contains("CONCLU") || upper.contains("PAGO") || upper.contains("EMITID") || upper.contains("FATUR") || upper.contains("FACTUR") || upper.contains("BILLED") || upper.contains("INVOICED")) {
                     severity = ExecutiveDetailDialog.StatusSeverity.SUCCESS;
                 } else if (upper.contains("PEND") || upper.contains("ALERTA") || upper.contains("SUSP") || upper.contains("ANALIS") || upper.contains("RASCUNHO")) {
                     severity = ExecutiveDetailDialog.StatusSeverity.WARNING;

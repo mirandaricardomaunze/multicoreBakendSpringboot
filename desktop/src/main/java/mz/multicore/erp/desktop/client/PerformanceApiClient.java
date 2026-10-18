@@ -94,4 +94,13 @@ public class PerformanceApiClient {
         if (to != null) sb.append("&to=").append(to);
         return clientFactory.authenticatedClient().getBytes(sb.toString());
     }
+
+    public List<mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO> getActiveBusinessUnits(Long companyId) {
+        String path = "/api/business-units/active" + (companyId != null ? "?companyId=" + companyId : "");
+        try {
+            return clientFactory.authenticatedClient().getList(path, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
+        } catch (Exception ex) {
+            return List.of();
+        }
+    }
 }

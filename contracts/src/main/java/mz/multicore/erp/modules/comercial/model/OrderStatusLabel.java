@@ -24,7 +24,7 @@ public final class OrderStatusLabel {
         }
         return switch (status.trim().toUpperCase(java.util.Locale.ROOT)) {
             case "PENDING_APPROVAL" -> "Pendente de aprovação";
-            case "PENDING" -> "Por facturar";
+            case "PENDING" -> "Por faturar";
             case "AWAITING_SEPARATION" -> "Aguarda separação";
             case "IN_SEPARATION" -> "Em separação";
             case "SEPARATED" -> "Separado";
@@ -32,7 +32,7 @@ public final class OrderStatusLabel {
             case "GUIDED" -> "Expedido por guia";
             case "TRANSFER_PENDING" -> "Transferência por aprovar";
             case "TRANSFERRED" -> "Transferido para a loja";
-            case "BILLED", "INVOICED" -> "Facturado";
+            case "BILLED", "INVOICED" -> "Faturado";
             case "CANCELLED" -> "Cancelado";
             default -> status;
         };

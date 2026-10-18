@@ -163,6 +163,10 @@ public class GoalProgressEngine {
     }
 
     private boolean matchesInvoiceScope(SalesGoal goal, Invoice invoice, Employee employee) {
+        if (goal.getScope() == GoalScope.BUSINESS_UNIT) {
+            if (goal.getScopeRefId() == null) return true;
+            return invoice.getBusinessUnit() != null && goal.getScopeRefId().equals(invoice.getBusinessUnit().getId());
+        }
         if (goal.getScope() == GoalScope.WAREHOUSE) {
             if (goal.getScopeRefId() == null) return true;
             return invoice.getWarehouse() != null && goal.getScopeRefId().equals(invoice.getWarehouse().getId());

@@ -75,13 +75,14 @@ class OrderTest {
     @Test
     void statusLabel_traduzTodosOsEstadosDocumentados() { // EP-15, EP-16
         assertEquals("Pendente de aprovação", OrderStatusLabel.of("PENDING_APPROVAL"));
-        assertEquals("Por facturar", OrderStatusLabel.of("PENDING"));
+        assertEquals("Por faturar", OrderStatusLabel.of("PENDING"));
         assertEquals("Aguarda separação", OrderStatusLabel.of("AWAITING_SEPARATION"));
         assertEquals("Em separação", OrderStatusLabel.of("IN_SEPARATION"));
         assertEquals("Separado", OrderStatusLabel.of("SEPARATED"));
         assertEquals("Guia por aprovar", OrderStatusLabel.of("GUIDE_PENDING"));
         assertEquals("Expedido por guia", OrderStatusLabel.of("GUIDED"));
-        assertEquals("Facturado", OrderStatusLabel.of("BILLED"));
+        assertEquals("Faturado", OrderStatusLabel.of("BILLED"));
+        assertEquals("Faturado", OrderStatusLabel.of("INVOICED"));
         assertEquals("Cancelado", OrderStatusLabel.of("CANCELLED"));
     }
 

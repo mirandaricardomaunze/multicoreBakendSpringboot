@@ -228,9 +228,9 @@ public final class TableFilter {
 
         if (cellHuman.equalsIgnoreCase(wantHuman) || normalizeText(cellHuman).equalsIgnoreCase(normalizeText(wantHuman))) return true;
 
-        // Equivalência canónica de encomenda: "PENDING" corresponde a "Pendente" ou "Por facturar"
-        if (("PENDING".equalsIgnoreCase(cell) || "POR FACTURAR".equalsIgnoreCase(cellNorm) || "PENDENTE".equalsIgnoreCase(cellNorm))
-                && ("PENDENTE".equalsIgnoreCase(wantNorm) || "POR FACTURAR".equalsIgnoreCase(wantNorm) || "PENDING".equalsIgnoreCase(want))) {
+        // Equivalência canónica de encomenda: "PENDING" corresponde a "Pendente", "Por facturar" ou "Por faturar"
+        if (("PENDING".equalsIgnoreCase(cell) || "POR FACTURAR".equalsIgnoreCase(cellNorm) || "POR FATURAR".equalsIgnoreCase(cellNorm) || "PENDENTE".equalsIgnoreCase(cellNorm))
+                && ("PENDENTE".equalsIgnoreCase(wantNorm) || "POR FACTURAR".equalsIgnoreCase(wantNorm) || "POR FATURAR".equalsIgnoreCase(wantNorm) || "PENDING".equalsIgnoreCase(want))) {
             return true;
         }
         return false;
