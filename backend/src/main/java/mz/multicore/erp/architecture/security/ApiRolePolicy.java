@@ -17,7 +17,22 @@ public final class ApiRolePolicy {
             "/api/debit-notes", "/api/recurring-contracts",
             "/api/recurring/contracts", "/api/inventory/counts",
             "/api/inventory/physical-counting", "/api/inventory/waste",
-            "/api/inventory/transfers", "/api/intelligence", "/api/hr");
+            "/api/inventory/transfers", "/api/inventory/movements",
+            "/api/inventory/warehouses/all", "/api/intelligence", "/api/hr", "/api/quality");
+
+    /** Raízes que têm uma decisão deliberada nesta política, mesmo quando a decisão fina é por método. */
+    private static final Set<String> EXPLICIT_AREAS = Set.of(
+            "/api/auth", "/api/version", "/api/platform", "/api/monitoring",
+            "/api/backup", "/api/users", "/api/documents",
+            "/api/license", "/api/subscription", "/api/dashboard", "/api/crm",
+            "/api/support/tickets", "/api/promotions", "/api/comercial", "/api/pos",
+            "/api/product-categories", "/api/inventory", "/api/print",
+            "/api/finance", "/api/accounting", "/api/fiscal", "/api/audit",
+            "/api/reports", "/api/purchases", "/api/business-units", "/api/approvals",
+            "/api/assets", "/api/manufacturing", "/api/fleet", "/api/performance",
+            "/api/movimentos", "/api/credit-notes", "/api/debit-notes",
+            "/api/recurring-contracts", "/api/recurring/contracts", "/api/intelligence",
+            "/api/hr", "/api/quality");
 
     private ApiRolePolicy() {
     }
@@ -85,7 +100,19 @@ public final class ApiRolePolicy {
         if (matches(uri, "/api/print")) {
             return allowsPrint(seller, manager, uri);
         }
-        return manager;
+        return manager && isExplicitlyClassified(method, uri);
+    }
+
+    /**
+     * Indica se um mapping HTTP foi conscientemente incluído na matriz. É separado de
+     * {@link #allows(String, String, String)} para o harness poder detectar endpoints novos sem
+     * confundir "negado" com "esquecido".
+     */
+    public static boolean isExplicitlyClassified(String method, String uri) {
+        if (method == null || method.isBlank() || uri == null || uri.isBlank()) {
+            return false;
+        }
+        return EXPLICIT_AREAS.stream().anyMatch(area -> matches(uri, area));
     }
 
     private static boolean allowsPrint(boolean seller, boolean manager, String uri) {

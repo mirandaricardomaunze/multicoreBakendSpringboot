@@ -558,6 +558,69 @@ class POSServiceTest {
     // ────────────────────────── fecho de caixa (Z) ──────────────────────────
 
     @Test
+    void pagamentoPosterior_replayIdentico_naoDuplicaTesourariaNemSaldoPago() {
+        Invoice invoice = unpaidInvoice();
+        PosPaymentRequest request = new PosPaymentRequest(
+                "CARD", new BigDecimal("40"), new BigDecimal("40"), "AUTH-77", ACCOUNT_ID, "PAY-123");
+        when(invoiceRepository.lockByIdAndCompanyId(77L, COMPANY_ID)).thenReturn(Optional.of(invoice));
+        when(paymentEntryRepository.findByInvoiceIdAndIdempotencyKey(77L, "PAY-123"))
+                .thenReturn(Optional.empty());
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentEntryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.registerLatePayment(77L, request);
+        org.mockito.ArgumentCaptor<mz.multicore.erp.modules.pos.model.PaymentEntry> entryCaptor =
+                org.mockito.ArgumentCaptor.forClass(mz.multicore.erp.modules.pos.model.PaymentEntry.class);
+        verify(paymentEntryRepository).save(entryCaptor.capture());
+        mz.multicore.erp.modules.pos.model.PaymentEntry firstEntry = entryCaptor.getValue();
+        assertNotNull(firstEntry.getRequestFingerprint());
+        assertEquals(0, new BigDecimal("40.00").compareTo(invoice.getAmountPaid()));
+
+        clearInvocations(paymentEntryRepository, financeService, invoiceRepository);
+        when(invoiceRepository.lockByIdAndCompanyId(77L, COMPANY_ID)).thenReturn(Optional.of(invoice));
+        when(paymentEntryRepository.findByInvoiceIdAndIdempotencyKey(77L, "PAY-123"))
+                .thenReturn(Optional.of(firstEntry));
+
+        assertSame(invoice, service.registerLatePayment(77L, request));
+        assertEquals(0, new BigDecimal("40.00").compareTo(invoice.getAmountPaid()));
+        verify(paymentEntryRepository, never()).save(any());
+        verify(financeService, never()).registerTransaction(anyLong(), anyString(), any(), anyString());
+        verify(invoiceRepository, never()).save(any());
+    }
+
+    @Test
+    void pagamentoPosterior_mesmaChaveComValorDiferente_eRejeitadoAntesDaTesouraria() {
+        Invoice invoice = unpaidInvoice();
+        mz.multicore.erp.modules.pos.model.PaymentEntry previous = new mz.multicore.erp.modules.pos.model.PaymentEntry();
+        previous.setRequestFingerprint("fingerprint-diferente");
+        when(invoiceRepository.lockByIdAndCompanyId(77L, COMPANY_ID)).thenReturn(Optional.of(invoice));
+        when(paymentEntryRepository.findByInvoiceIdAndIdempotencyKey(77L, "PAY-456"))
+                .thenReturn(Optional.of(previous));
+        PosPaymentRequest request = new PosPaymentRequest(
+                "CARD", new BigDecimal("50"), new BigDecimal("50"), "AUTH-88", ACCOUNT_ID, "PAY-456");
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.registerLatePayment(77L, request));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verify(paymentEntryRepository, never()).save(any());
+        verifyNoInteractions(financeService);
+        verify(invoiceRepository, never()).save(any());
+    }
+
+    private Invoice unpaidInvoice() {
+        Invoice invoice = new Invoice();
+        invoice.setId(77L);
+        invoice.setInvoiceNumber("FT 2026/77");
+        invoice.setCompany(company);
+        invoice.setClient(client(88L, "Cliente a crédito"));
+        invoice.setTotalAmount(new BigDecimal("100.00"));
+        invoice.setAmountPaid(BigDecimal.ZERO);
+        invoice.setStatus(InvoiceStatus.APPROVED);
+        return invoice;
+    }
+
+    @Test
     void buildZReport_reconciliaGaveta() {
         when(tillSessionRepository.findById(1L)).thenReturn(Optional.of(session(1L, "OPEN", new BigDecimal("100"))));
         when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of(

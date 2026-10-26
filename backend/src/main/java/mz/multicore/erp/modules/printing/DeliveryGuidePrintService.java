@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.printing;
 
 import com.lowagie.text.Element;
+import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -54,9 +55,23 @@ public class DeliveryGuidePrintService {
         CurrentUserContext.requireCompany(guide.getCompany().getId());
 
         List<LineItemsTableRenderer.Row> rows = toRows(guide.getLines());
-        var columns = documentConfigService.getColumns(guide.getCompany().getId(), DocumentType.COMMERCIAL);
+        var rawColumns = documentConfigService.getColumns(guide.getCompany().getId(), DocumentType.COMMERCIAL);
+        var columns = new mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO(
+                rawColumns.barcode(),
+                rawColumns.reference(),
+                rawColumns.description(),
+                rawColumns.expiry(),
+                rawColumns.quantity(),
+                rawColumns.packages(),
+                rawColumns.boxes(),
+                rawColumns.boxPercentage(),
+                true,
+                rawColumns.tax(),
+                true,
+                rawColumns.footer()
+        );
 
-        return PdfDocumentBuilder.buildA4(doc -> {
+        return PdfDocumentBuilder.build(PageSize.A4.rotate(), doc -> {
             for (int i = 0; i < DELIVERY_GUIDE_COPIES.size(); i++) {
                 if (i > 0) {
                     doc.newPage();

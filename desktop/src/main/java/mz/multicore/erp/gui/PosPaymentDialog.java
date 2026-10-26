@@ -125,33 +125,23 @@ final class PosPaymentDialog {
             }
             if (apiClient == null) return;
             Long companyId = CurrentUserContext.getCurrentCompanyId();
-            Optional<StoreVoucherDTO> opt = apiClient.getVoucher(code, companyId);
-            if (opt.isEmpty()) {
-                changeTitleLabel.setText("VALE DE COMPRAS NÃO ENCONTRADO");
-                changeTitleLabel.setForeground(UIHelper.REJECTED_RED);
-                changeValueLabel.setText("Inválido");
-                changeValueLabel.setForeground(UIHelper.REJECTED_RED);
-                return;
-            }
-            StoreVoucherDTO v = opt.get();
-            if (!v.isActive() || v.isExpired()) {
-                changeTitleLabel.setText("VALE EXPIRADO OU JÁ UTILIZADO");
-                changeTitleLabel.setForeground(UIHelper.REJECTED_RED);
-                changeValueLabel.setText("0,00 MT");
-                changeValueLabel.setForeground(UIHelper.REJECTED_RED);
-                return;
-            }
-            if (v.remainingAmount().compareTo(safeTotal) < 0) {
-                changeTitleLabel.setText("SALDO INSUFICIENTE NO VALE (" + v.clientName() + ")");
-                changeTitleLabel.setForeground(UIHelper.PENDING_YELLOW);
-                changeValueLabel.setText(String.format("%,.2f MT", v.remainingAmount()));
-                changeValueLabel.setForeground(UIHelper.PENDING_YELLOW);
-            } else {
+            changeTitleLabel.setText("A VALIDAR VALE...");
+            changeTitleLabel.setForeground(UIHelper.ACCENT_CYAN);
+            changeValueLabel.setText("Aguarde");
+            changeValueLabel.setForeground(UIHelper.TEXT_MUTED);
+            UIHelper.submitAsync(checkVoucherBtn,
+                    () -> validateVoucher(apiClient.getVoucher(code, companyId), safeTotal, code),
+                    v -> {
                 changeTitleLabel.setText("VALE VÁLIDO · " + v.clientName());
                 changeTitleLabel.setForeground(UIHelper.APPROVED_GREEN);
                 changeValueLabel.setText(String.format("Saldo: %,.2f MT", v.remainingAmount()));
                 changeValueLabel.setForeground(UIHelper.APPROVED_GREEN);
-            }
+                    }, error -> {
+                        changeTitleLabel.setText("VALE NÃO VALIDADO");
+                        changeTitleLabel.setForeground(UIHelper.REJECTED_RED);
+                        changeValueLabel.setText(userMessage(error));
+                        changeValueLabel.setForeground(UIHelper.REJECTED_RED);
+                    });
         });
 
         // Painel de Cédulas Nacionais Rápidas (Meticais)
@@ -289,7 +279,7 @@ final class PosPaymentDialog {
         boolean ok = new ModernFormDialog(UIHelper.mainWindow, "Pagamento POS", "fas-cash-register",
                 "Receba o pagamento do cliente e confira o troco", panel)
                 .setConfirmButton("Confirmar Pagamento", "fas-check")
-                .setOnSave(() -> {
+                .setOnSaveAsync(() -> {
                     int methodIdx = methodCombo.getSelectedIndex();
                     if (methodIdx == 0) {
                         BigDecimal tendered;
@@ -301,8 +291,12 @@ final class PosPaymentDialog {
                         if (tendered.compareTo(safeTotal) < 0) {
                             throw new IllegalArgumentException("O valor entregue é inferior ao total a pagar.");
                         }
-                        result[0] = new PosPaymentRequest(
-                                "CASH", safeTotal, tendered, null, null);
+                        BigDecimal capturedTendered = tendered;
+                        return () -> {
+                            result[0] = new PosPaymentRequest(
+                                    "CASH", safeTotal, capturedTendered, null, null);
+                            return null;
+                        };
                     } else {
                         String method = methodCodes[methodIdx];
                         String ref = refField.getText().trim();
@@ -310,27 +304,21 @@ final class PosPaymentDialog {
                             if (ref.isEmpty()) {
                                 throw new IllegalArgumentException("Indique o código do vale de compras.");
                             }
-                            if (apiClient != null) {
-                                Long companyId = CurrentUserContext.getCurrentCompanyId();
-                                Optional<StoreVoucherDTO> opt = apiClient.getVoucher(ref, companyId);
-                                if (opt.isEmpty()) {
-                                    throw new IllegalArgumentException("Vale de compras não encontrado: " + ref);
+                            Long companyId = CurrentUserContext.getCurrentCompanyId();
+                            return () -> {
+                                if (apiClient != null) {
+                                    validateVoucher(apiClient.getVoucher(ref, companyId), safeTotal, ref);
                                 }
-                                StoreVoucherDTO v = opt.get();
-                                if (!v.isActive() || v.isExpired()) {
-                                    throw new IllegalArgumentException("O vale " + ref + " está expirado ou já foi utilizado.");
-                                }
-                                if (v.remainingAmount().compareTo(safeTotal) < 0) {
-                                    throw new IllegalArgumentException(String.format(
-                                            "Saldo do vale (%,.2f MT) é insuficiente para cobrir o total (%,.2f MT).",
-                                            v.remainingAmount(), safeTotal));
-                                }
-                            }
-                            result[0] = new PosPaymentRequest(
-                                    "STORE_CREDIT", safeTotal, safeTotal, ref.toUpperCase(), null);
+                                result[0] = new PosPaymentRequest(
+                                        "STORE_CREDIT", safeTotal, safeTotal, ref.toUpperCase(), null);
+                                return null;
+                            };
                         } else {
-                            result[0] = new PosPaymentRequest(
-                                    method, safeTotal, safeTotal, ref.isEmpty() ? null : ref, accountId);
+                            return () -> {
+                                result[0] = new PosPaymentRequest(
+                                        method, safeTotal, safeTotal, ref.isEmpty() ? null : ref, accountId);
+                                return null;
+                            };
                         }
                     }
                 })
@@ -349,5 +337,27 @@ final class PosPaymentDialog {
         button.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         button.addActionListener(e -> target.setText(value.stripTrailingZeros().toPlainString()));
         parent.add(button);
+    }
+
+    static StoreVoucherDTO validateVoucher(Optional<StoreVoucherDTO> voucher, BigDecimal total, String code) {
+        StoreVoucherDTO value = voucher.orElseThrow(() ->
+                new IllegalArgumentException("Vale de compras não encontrado: " + code));
+        if (!value.isActive() || value.isExpired()) {
+            throw new IllegalArgumentException("O vale " + code + " está expirado ou já foi utilizado.");
+        }
+        if (value.remainingAmount().compareTo(total) < 0) {
+            throw new IllegalArgumentException(String.format(
+                    "Saldo do vale (%,.2f MT) é insuficiente para cobrir o total (%,.2f MT).",
+                    value.remainingAmount(), total));
+        }
+        return value;
+    }
+
+    private static String userMessage(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) current = current.getCause();
+        return current.getMessage() == null || current.getMessage().isBlank()
+                ? "Não foi possível validar o vale. Tente novamente."
+                : current.getMessage();
     }
 }

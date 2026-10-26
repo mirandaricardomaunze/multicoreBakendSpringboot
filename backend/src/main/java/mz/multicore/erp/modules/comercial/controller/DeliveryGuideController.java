@@ -3,6 +3,7 @@ package mz.multicore.erp.modules.comercial.controller;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
+import mz.multicore.erp.modules.comercial.dto.RejectionReasonRequest;
 import mz.multicore.erp.modules.comercial.service.DeliveryGuideService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,10 @@ public class DeliveryGuideController {
     }
 
     @GetMapping
-    public ResponseEntity<List<DeliveryGuideDTO>> list(@RequestParam Long companyId) {
+    public ResponseEntity<List<DeliveryGuideDTO>> list(@RequestParam(required = false) Long companyId) {
+        if (companyId == null) {
+            companyId = mz.multicore.erp.architecture.security.CurrentUserContext.getCurrentCompanyId();
+        }
         return ResponseEntity.ok(deliveryGuideService.findByCompany(companyId));
     }
 
@@ -54,8 +58,8 @@ public class DeliveryGuideController {
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<DeliveryGuideDTO> reject(@PathVariable Long id,
-                                                   @RequestBody(required = false) Map<String, String> body) {
-        String reason = body == null ? null : body.get("rejectionReason");
+                                                   @RequestBody(required = false) @Valid RejectionReasonRequest body) {
+        String reason = body == null ? null : body.rejectionReason();
         return ResponseEntity.ok(deliveryGuideService.reject(id, reason));
     }
 

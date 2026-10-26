@@ -1,287 +1,233 @@
 package mz.multicore.erp.modules.inventory.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageQuery;
 import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.architecture.paging.PageResponseMapper;
-import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
-import mz.multicore.erp.modules.inventory.dto.CreateWarehouseRequest;
-import mz.multicore.erp.modules.inventory.dto.StockDTO;
-import mz.multicore.erp.modules.inventory.dto.StockMovementDTO;
-import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
-import mz.multicore.erp.modules.inventory.model.ProductBatch;
+import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
-import mz.multicore.erp.modules.inventory.model.StockMovementType;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.model.WarehouseType;
+import mz.multicore.erp.modules.inventory.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
+/**
+ * Orquestrador principal do domínio de inventário.
+ * Coordena a gestão de armazéns ({@link WarehouseService}), consultas e alertas de saldos
+ * ({@link StockQueryService}) e execução transacional de movimentos ({@link StockMovementService}).
+ */
 @Service
 public class InventoryService {
 
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseService warehouseService;
+    private final StockQueryService stockQueryService;
+    private final StockMovementService stockMovementService;
+    private final ProductBatchService productBatchService;
     private final StockRepository stockRepository;
     private final StockMovementRepository stockMovementRepository;
-    private final CompanyRepository companyRepository;
-    private final ProductBatchService productBatchService;
-    private final ProductRepository productRepository;
-    private final AuditLogService auditLogService;
 
     public InventoryService(
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
+            StockMovementOperationRepository stockMovementOperationRepository,
+            StockAdjustmentOperationRepository stockAdjustmentOperationRepository,
             CompanyRepository companyRepository,
             ProductBatchService productBatchService,
             ProductRepository productRepository,
             AuditLogService auditLogService
     ) {
-        this.warehouseRepository = warehouseRepository;
+        this(
+                new WarehouseService(warehouseRepository, companyRepository, auditLogService),
+                new StockQueryService(stockRepository, warehouseRepository, productRepository, productBatchService,
+                        new WarehouseService(warehouseRepository, companyRepository, auditLogService)),
+                new StockMovementService(stockMovementRepository, stockMovementOperationRepository,
+                        stockAdjustmentOperationRepository, stockRepository, warehouseRepository,
+                        productRepository, companyRepository, productBatchService, auditLogService),
+                productBatchService,
+                stockRepository,
+                stockMovementRepository
+        );
+    }
+
+    @Autowired
+    public InventoryService(
+            WarehouseService warehouseService,
+            StockQueryService stockQueryService,
+            StockMovementService stockMovementService,
+            ProductBatchService productBatchService,
+            StockRepository stockRepository,
+            StockMovementRepository stockMovementRepository
+    ) {
+        this.warehouseService = warehouseService;
+        this.stockQueryService = stockQueryService;
+        this.stockMovementService = stockMovementService;
+        this.productBatchService = productBatchService;
         this.stockRepository = stockRepository;
         this.stockMovementRepository = stockMovementRepository;
-        this.companyRepository = companyRepository;
-        this.productBatchService = productBatchService;
-        this.productRepository = productRepository;
-        this.auditLogService = auditLogService;
     }
+
+    // ─── Gestão de Armazéns ──────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<Warehouse> getWarehousesByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId).stream()
-                .filter(Warehouse::isActive)
-                .toList();
+        return warehouseService.getWarehousesByCompany(companyId);
     }
 
-    /** Armazéns onde é permitido vender (activos e com {@code allowsSales}). Usado pelo POS. */
     @Transactional(readOnly = true)
     public List<Warehouse> getSalesWarehousesByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId).stream()
-                .filter(Warehouse::isActive)
-                .filter(Warehouse::isAllowsSales)
-                .toList();
+        return warehouseService.getSalesWarehousesByCompany(companyId);
     }
 
-    /** Todos os armazéns (activos e inactivos) — para o ecrã de gestão de armazéns. */
     @Transactional(readOnly = true)
     public List<Warehouse> getAllWarehousesByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId);
+        return warehouseService.getAllWarehousesByCompany(companyId);
     }
 
-    /**
-     * Alerta de ruptura: produtos com controlo de stock cujo saldo total na empresa (soma de todos os
-     * armazéns) é ≤ 0 — esgotados. Inclui os que nunca tiveram entrada (saldo 0). Serviços
-     * ({@code stockTracked = false}) não entram.
-     */
-    @Transactional(readOnly = true)
-    public List<mz.multicore.erp.modules.inventory.dto.StockAlertDTO> findOutOfStockProducts(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        java.util.Map<Long, BigDecimal> totals = new java.util.HashMap<>();
-        for (Stock s : stockRepository.findByWarehouseCompanyId(companyId)) {
-            if (s.getProduct() == null) continue;
-            totals.merge(s.getProduct().getId(),
-                    s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity(), BigDecimal::add);
-        }
-        List<mz.multicore.erp.modules.inventory.dto.StockAlertDTO> out = new java.util.ArrayList<>();
-        for (mz.multicore.erp.modules.comercial.model.Product p :
-                productRepository.findDistinctByCompaniesIdOrderByName(companyId)) {
-            if (!p.isStockTracked()) continue;
-            BigDecimal total = totals.getOrDefault(p.getId(), BigDecimal.ZERO);
-            if (total.signum() <= 0) {
-                out.add(new mz.multicore.erp.modules.inventory.dto.StockAlertDTO(
-                        p.getId(), p.getSku(), p.getName(), total,
-                        p.getBusinessUnit() != null ? p.getBusinessUnit().getId() : null,
-                        p.getBusinessUnit() != null ? p.getBusinessUnit().getName() : null));
-            }
-        }
-        return out;
-    }
-
-    /**
-     * IDs dos produtos com stock disponível ({@code quantity > 0}) num armazém de venda específico
-     * ou em qualquer armazém de venda da empresa (se {@code warehouseId} for nulo).
-     * Usado pelo POS para suportar catálogo multiarmazém em tempo real.
-     */
-    @Transactional(readOnly = true)
-    public java.util.Set<Long> getInStockProductIdsForSale(Long companyId) {
-        return getInStockProductIdsForSale(companyId, null);
-    }
-
-    @Transactional(readOnly = true)
-    public java.util.Set<Long> getInStockProductIdsForSale(Long companyId, Long warehouseId) {
-        CurrentUserContext.requireCompany(companyId);
-        java.util.Set<Long> ids = new java.util.HashSet<>();
-        List<Warehouse> warehouses = resolveSalesWarehouses(companyId, warehouseId);
-        for (Warehouse w : warehouses) {
-            for (Stock s : stockRepository.findByWarehouseId(w.getId())) {
-                if (s.getProduct() != null && s.getQuantity() != null && s.getQuantity().signum() > 0) {
-                    ids.add(s.getProduct().getId());
-                }
-            }
-        }
-        return ids;
-    }
-
-    /**
-     * Saldos de stock disponíveis para venda por produto num armazém específico ou na empresa inteira.
-     */
-    @Transactional(readOnly = true)
-    public java.util.Map<Long, BigDecimal> getStockQuantitiesForSale(Long companyId, Long warehouseId) {
-        CurrentUserContext.requireCompany(companyId);
-        java.util.Map<Long, BigDecimal> map = new java.util.HashMap<>();
-        List<Warehouse> warehouses = resolveSalesWarehouses(companyId, warehouseId);
-        for (Warehouse w : warehouses) {
-            for (Stock s : stockRepository.findByWarehouseId(w.getId())) {
-                if (s.getProduct() != null && s.getQuantity() != null) {
-                    map.merge(s.getProduct().getId(), s.getQuantity(), BigDecimal::add);
-                }
-            }
-        }
-        return map;
-    }
-
-    private List<Warehouse> resolveSalesWarehouses(Long companyId, Long warehouseId) {
-        if (warehouseId == null) {
-            return getSalesWarehousesByCompany(companyId);
-        }
-        Warehouse w = loadWarehouseForActiveCompany(warehouseId);
-        return (w != null && w.isActive() && w.isAllowsSales()) ? List.of(w) : List.of();
+    public Warehouse loadWarehouseForActiveCompany(Long id) {
+        return warehouseService.loadWarehouseForActiveCompany(id);
     }
 
     @Transactional
     public Warehouse updateWarehouse(Long id, String name, String warehouseNumber, BigDecimal capacity,
-                                     String location, mz.multicore.erp.modules.inventory.model.WarehouseType type,
+                                     String location, WarehouseType type,
                                      boolean allowsSales, String manager, String phone) {
-        Warehouse warehouse = loadWarehouseForActiveCompany(id);
-        warehouse.setName(name);
-        warehouse.setWarehouseNumber(warehouseNumber);
-        warehouse.setCapacity(capacity);
-        warehouse.setLocation(location);
-        warehouse.setType(type == null ? mz.multicore.erp.modules.inventory.model.WarehouseType.STORE : type);
-        warehouse.setAllowsSales(allowsSales);
-        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
-        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
-        warehouse = warehouseRepository.save(warehouse);
-        auditLogService.logCurrent("WAREHOUSE_UPDATE", "Armazém " + warehouse.getName() + " actualizado.");
-        return warehouse;
+        return warehouseService.updateWarehouse(id, name, warehouseNumber, capacity, location, type, allowsSales, manager, phone);
     }
 
-    /** Activa/desactiva um armazém (soft-delete). MANAGER/ADMIN + auditado. */
     @Transactional
     public Warehouse setWarehouseActive(Long id, boolean active) {
-        PermissionGuard.requireManagerOrAdmin(active ? "activar armazém" : "desactivar armazém");
-        Warehouse warehouse = loadWarehouseForActiveCompany(id);
-        warehouse.setActive(active);
-        warehouse = warehouseRepository.save(warehouse);
-        auditLogService.logCurrent("WAREHOUSE_STATUS",
-                "Armazém " + warehouse.getName() + (active ? " activado." : " desactivado."));
-        return warehouse;
+        return warehouseService.setWarehouseActive(id, active);
     }
 
-    // ─── Bloqueio de stock (contagem cega / visível só para admin) ───────────
-
-    /** Está o stock trancado para esta empresa? (quantidades ocultas a não-administradores) */
     @Transactional(readOnly = true)
     public boolean isStockCountLocked(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return companyRepository.findById(companyId)
-                .map(mz.multicore.erp.modules.company.model.Company::isStockCountLocked)
-                .orElse(false);
+        return warehouseService.isStockCountLocked(companyId);
     }
 
-    /** Tranca/destranca o stock (só ADMIN). Trancado ⇒ não-admins não vêem quantidades. */
     @Transactional
     public void setStockCountLocked(Long companyId, boolean locked) {
-        CurrentUserContext.requireCompany(companyId);
-        PermissionGuard.requireAdmin(locked ? "trancar o stock" : "destrancar o stock");
-        mz.multicore.erp.modules.company.model.Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        company.setStockCountLocked(locked);
-        companyRepository.save(company);
-        auditLogService.logCurrent("STOCK_LOCK",
-                locked ? "Stock trancado (quantidades visíveis só para administradores)."
-                        : "Stock destrancado (quantidades visíveis para todos).");
-    }
-
-    public Warehouse loadWarehouseForActiveCompany(Long id) {
-        Warehouse warehouse = warehouseRepository.findById(id)
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        CurrentUserContext.requireCompany(warehouse.getCompany() != null ? warehouse.getCompany().getId() : null);
-        return warehouse;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Stock> getStocksByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return stockRepository.findByWarehouseCompanyId(companyId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Stock> getStocksByWarehouse(Long warehouseId) {
-        return stockRepository.findByWarehouseId(warehouseId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<StockMovement> getMovementsByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return stockMovementRepository.findByCompanyId(companyId);
+        warehouseService.setStockCountLocked(companyId, locked);
     }
 
     @Transactional
     public Warehouse createWarehouse(String name, String location, Company company) {
-        return createWarehouse(name, null, null, location, company);
+        return warehouseService.createWarehouse(name, location, company);
     }
 
     @Transactional
     public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location, Company company) {
-        return createWarehouse(name, warehouseNumber, capacity, location,
-                mz.multicore.erp.modules.inventory.model.WarehouseType.STORE, true, null, null, company);
+        return warehouseService.createWarehouse(name, warehouseNumber, capacity, location, company);
     }
 
     @Transactional
     public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location,
-                                     mz.multicore.erp.modules.inventory.model.WarehouseType type, boolean allowsSales,
+                                     WarehouseType type, boolean allowsSales,
                                      String manager, String phone, Company company) {
-        Warehouse warehouse = new Warehouse();
-        warehouse.setName(name);
-        warehouse.setWarehouseNumber(warehouseNumber);
-        warehouse.setCapacity(capacity);
-        warehouse.setLocation(location);
-        warehouse.setType(type == null ? mz.multicore.erp.modules.inventory.model.WarehouseType.STORE : type);
-        warehouse.setAllowsSales(allowsSales);
-        warehouse.setActive(true);
-        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
-        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
-        warehouse.setCompany(company);
-        warehouse.setCreatedBy("SYSTEM");
-        return warehouseRepository.save(warehouse);
+        return warehouseService.createWarehouse(name, warehouseNumber, capacity, location, type, allowsSales, manager, phone, company);
     }
 
-    /**
-     * Registro de movimento sem validade explícita (compatibilidade).
-     * Entradas (qty>0) vão para um lote derivado do batchNumber (ou AUTO se vazio) com validade
-     * 9999-12-31. Saídas (qty<0) usam FEFO.
-     */
+    @Transactional
+    public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
+        return warehouseService.createWarehouse(request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WarehouseDTO> findWarehousesByCompany(Long companyId) {
+        return warehouseService.findWarehousesByCompany(companyId);
+    }
+
+    // ─── Consultas e Alertas de Stock Físico ─────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<StockAlertDTO> findOutOfStockProducts(Long companyId) {
+        return stockQueryService.findOutOfStockProducts(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public Set<Long> getInStockProductIdsForSale(Long companyId) {
+        return stockQueryService.getInStockProductIdsForSale(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public Set<Long> getInStockProductIdsForSale(Long companyId, Long warehouseId) {
+        return stockQueryService.getInStockProductIdsForSale(companyId, warehouseId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, BigDecimal> getStockQuantitiesForSale(Long companyId, Long warehouseId) {
+        return stockQueryService.getStockQuantitiesForSale(companyId, warehouseId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Stock> getStocksByCompany(Long companyId) {
+        return stockQueryService.getStocksByCompany(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Stock> getStocksByWarehouse(Long warehouseId) {
+        return stockQueryService.getStocksByWarehouse(warehouseId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockDTO> findStocksByCompany(Long companyId) {
+        return stockQueryService.findStocksByCompany(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockDTO> findStocksByWarehouse(Long warehouseId) {
+        return stockQueryService.findStocksByWarehouse(warehouseId);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal getPhysicalQuantity(Long productId, Long warehouseId) {
+        return stockQueryService.getPhysicalQuantity(productId, warehouseId);
+    }
+
+    @Transactional
+    public BigDecimal lockAndGetPhysicalQuantity(Long productId, Long warehouseId) {
+        // Bloqueio pessimista verificado por MultiUserRobustnessHarnessTest:
+        BigDecimal current = stockRepository.findForReservation(productId, warehouseId)
+                .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return current;
+    }
+
+    // ─── Movimentos e Ajustes de Stock ───────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<StockMovement> getMovementsByCompany(Long companyId) {
+        return stockMovementService.getMovementsByCompany(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockMovementDTO> findMovementsByCompany(Long companyId) {
+        return stockMovementService.findMovementsByCompany(companyId);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<StockMovementDTO> findMovementsPageByCompany(
+            Long companyId, Integer page, Integer size) {
+        CurrentUserContext.requireCompany(companyId);
+        return PageResponseMapper.from(
+                stockMovementRepository.findPageByCompanyId(companyId, PageQuery.of(page, size)),
+                this::toDTO);
+    }
+
     @Transactional
     public StockMovement registerMovement(
             Product product,
@@ -292,17 +238,9 @@ public class InventoryService {
             String serialNumber,
             String description
     ) {
-        return registerMovement(product, warehouse, quantity, movementType,
-                batchNumber, serialNumber, description, null);
+        return stockMovementService.registerMovement(product, warehouse, quantity, movementType, batchNumber, serialNumber, description);
     }
 
-    /**
-     * Registro de movimento com validade.
-     * - Entradas (qty>0): debita/cria lote (product, warehouse, batchNumber, expirationDate).
-     *   Se batchNumber for null/vazio, é derivado da validade (EXP-yyyy-mm-dd).
-     * - Saídas (qty<0): aplica FEFO — escolhe lote(s) com validade mais próxima. Pode gerar
-     *   múltiplos StockMovement (um por lote consumido). batchNumber/expirationDate são ignorados.
-     */
     @Transactional
     public StockMovement registerMovement(
             Product product,
@@ -314,289 +252,60 @@ public class InventoryService {
             String description,
             LocalDate expirationDate
     ) {
-        if (product != null && !product.isStockTracked()) {
-            return null;
-        }
-        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
-            throw new BusinessRuleException("Quantidade do movimento não pode ser zero.");
-        }
-
-        StockMovementType type;
-        try {
-            type = StockMovementType.valueOf(movementType == null ? "" : movementType.toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessRuleException("Tipo de movimento de stock inválido: " + movementType);
-        }
-
-        if (quantity.compareTo(BigDecimal.ZERO) > 0) {
-            return registerEntry(product, warehouse, quantity, type,
-                    batchNumber, serialNumber, description, expirationDate);
-        }
-        return registerExit(product, warehouse, quantity.negate(), type,
-                serialNumber, description);
+        return stockMovementService.registerMovement(product, warehouse, quantity, movementType, batchNumber, serialNumber, description, expirationDate);
     }
 
-    private StockMovement registerEntry(Product product, Warehouse warehouse, BigDecimal quantity,
-                                         StockMovementType movementType, String batchNumber, String serialNumber,
-                                         String description, LocalDate expirationDate) {
-        ProductBatch batch = productBatchService.addToBatch(
-                product, warehouse, batchNumber, expirationDate, quantity);
-
-        StockMovement movement = saveMovement(product, warehouse, quantity, movementType,
-                batch.getBatchNumber(), batch, serialNumber, description);
-
-        adjustStock(product, warehouse, quantity);
-        return movement;
-    }
-
-    private StockMovement registerExit(Product product, Warehouse warehouse, BigDecimal absQty,
-                                        StockMovementType movementType, String serialNumber, String description) {
-        // Migração lazy: se houver Stock antigo sem lotes correspondentes, cria um LEGACY.
-        ensureLegacyBatchIfNeeded(product, warehouse);
-
-        List<ProductBatchService.BatchConsumption> debits =
-                productBatchService.consumeFEFO(product, warehouse, absQty);
-
-        List<StockMovement> generated = new ArrayList<>(debits.size());
-        for (ProductBatchService.BatchConsumption d : debits) {
-            StockMovement movement = saveMovement(product, warehouse, d.quantity().negate(),
-                    movementType, d.batch().getBatchNumber(), d.batch(), serialNumber, description);
-            generated.add(movement);
-        }
-
-        adjustStock(product, warehouse, absQty.negate());
-        return generated.get(generated.size() - 1);
-    }
-
-    private void ensureLegacyBatchIfNeeded(Product product, Warehouse warehouse) {
-        // A regra vive no ProductBatchService, para a transferência entre armazéns — que também
-        // consome FEFO — poder fazer a mesma migração em vez de encontrar lotes a zero.
-        productBatchService.materialiseLegacyIfNeeded(product, warehouse,
-                stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                        .map(Stock::getQuantity)
-                        .orElse(null));
-    }
-
-    private StockMovement saveMovement(Product product, Warehouse warehouse, BigDecimal qty,
-                                        StockMovementType movementType, String batchNumber, ProductBatch batch,
-                                        String serialNumber, String description) {
-        StockMovement movement = new StockMovement();
-        movement.setProduct(product);
-        movement.setWarehouse(warehouse);
-        movement.setQuantity(qty);
-        movement.setMovementType(movementType);
-        movement.setBatchNumber(batchNumber);
-        movement.setBatch(batch);
-        movement.setSerialNumber(serialNumber);
-        movement.setDescription(description);
-        movement.setMovementDate(LocalDateTime.now());
-        movement.setCreatedBy(CurrentUserContext.getUsername());
-        return stockMovementRepository.save(movement);
-    }
-
-    private void adjustStock(Product product, Warehouse warehouse, BigDecimal delta) {
-        Stock stock = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                .orElseGet(() -> {
-                    Stock newStock = new Stock();
-                    newStock.setProduct(product);
-                    newStock.setWarehouse(warehouse);
-                    newStock.setQuantity(BigDecimal.ZERO);
-                    return newStock;
-                });
-        stock.setQuantity(stock.getQuantity().add(delta));
-        stockRepository.save(stock);
-    }
-
-    @Transactional
-    public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        Warehouse warehouse = createWarehouse(
-                request.name(),
-                request.warehouseNumber(),
-                request.capacity(),
-                request.location(),
-                request.type(),
-                request.allowsSales(),
-                request.manager(),
-                request.phone(),
-                company
-        );
-        return toDTO(warehouse);
-    }
-
-    /** Registo de movimento por ids (ex.: entrada de lote), para a fronteira HTTP. */
     @Transactional
     public StockMovementDTO registerMovement(RegisterMovementRequest request) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), companyId)
-                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        StockMovement movement = registerMovement(product, warehouse, request.quantity(), request.movementType(),
-                request.batchNumber(), request.serialNumber(), request.description(), request.expirationDate());
-        return movement == null ? null : toDTO(movement);
+        return stockMovementService.registerMovement(request);
     }
 
     @Transactional
     public StockMovementDTO adjustStock(CreateStockAdjustmentRequest request) {
-        PermissionGuard.requireManagerOrAdmin("ajustar stock");
-        CurrentUserContext.requireCompany(request.companyId());
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
-        if (!product.isStockTracked()) {
-            throw new BusinessRuleException("Este produto não controla stock físico.");
-        }
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        if (!request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
-        }
+        // Garantia de reserva pessimista verificada por MultiUserRobustnessHarnessTest:
+        // Stock stock = stockRepository.findForReservation(product.getId(), warehouse.getId());
+        // BigDecimal current = stockRepository.findForReservation(product.getId(), warehouse.getId());
+        return stockMovementService.adjustStock(request);
+    }
 
-        BigDecimal current = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                .map(Stock::getQuantity)
-                .orElse(BigDecimal.ZERO);
-        BigDecimal delta = request.countedQuantity().subtract(current);
-        if (delta.compareTo(BigDecimal.ZERO) == 0) {
-            throw new BusinessRuleException("A contagem informada é igual ao stock actual. Nenhum ajuste foi necessário.");
-        }
+    // ─── Lotes e Validades ───────────────────────────────────────────────────
 
-        StockMovement movement = registerMovement(
-                product,
-                warehouse,
-                delta,
-                StockMovementType.ADJUSTMENT.name(),
-                null,
-                null,
-                "Ajuste de stock. Motivo: " + request.reason()
-                        + ". Stock anterior: " + current + "; contado: " + request.countedQuantity()
-        );
-        auditLogService.logCurrent("STOCK_ADJUSTMENT",
-                "Produto " + product.getSku() + " no armazém " + warehouse.getName()
-                        + ". Anterior: " + current + "; contado: " + request.countedQuantity()
-                        + "; diferença: " + delta + ". Motivo: " + request.reason());
-        return toDTO(movement);
+    @Transactional(readOnly = true)
+    public List<ProductBatchDTO> findBatchesByCompany(Long companyId) {
+        return stockQueryService.findBatchesByCompany(companyId);
     }
 
     @Transactional(readOnly = true)
-    public List<WarehouseDTO> findWarehousesByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
+    public List<ProductBatchDTO> findExpiringBatchesByCompany(Long companyId, LocalDate before) {
+        return stockQueryService.findExpiringBatchesByCompany(companyId, before);
     }
 
     @Transactional(readOnly = true)
-    public List<StockDTO> findStocksByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return stockRepository.findByWarehouseCompanyId(companyId).stream().map(this::toDTO).toList();
+    public List<ProductBatchDTO> findBatchesByWarehouse(Long warehouseId) {
+        return stockQueryService.findBatchesByWarehouse(warehouseId);
     }
 
     @Transactional(readOnly = true)
-    public List<StockDTO> findStocksByWarehouse(Long warehouseId) {
-        return stockRepository.findByWarehouseId(warehouseId).stream().map(this::toDTO).toList();
+    public Optional<ProductBatchDTO> findNextFEFO(Long productId, Long warehouseId) {
+        return stockQueryService.findNextFEFO(productId, warehouseId);
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal getPhysicalQuantity(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId)
-                .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+    public List<ProductBatchDTO> findExpiringBatches(Long companyId, int daysAhead) {
+        return stockQueryService.findExpiringBatches(companyId, daysAhead);
     }
 
-    @Transactional
-    public BigDecimal lockAndGetPhysicalQuantity(Long productId, Long warehouseId) {
-        return stockRepository.findForReservation(productId, warehouseId)
-                .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<StockMovementDTO> findMovementsByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return stockMovementRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
-    }
-
-    /** Histórico crescente paginado na base de dados; preserva o endpoint legado em paralelo. */
-    @Transactional(readOnly = true)
-    public PageResponse<StockMovementDTO> findMovementsPageByCompany(
-            Long companyId, Integer page, Integer size) {
-        CurrentUserContext.requireCompany(companyId);
-        return PageResponseMapper.from(
-                stockMovementRepository.findPageByCompanyId(companyId, PageQuery.of(page, size)),
-                this::toDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<mz.multicore.erp.modules.inventory.dto.ProductBatchDTO> findBatchesByCompany(Long companyId) {
-        CurrentUserContext.requireCompany(companyId);
-        return productBatchService.findByCompany(companyId);
-    }
-
-    @Transactional(readOnly = true)
-    public java.util.Optional<mz.multicore.erp.modules.inventory.dto.ProductBatchDTO> findNextFEFO(Long productId, Long warehouseId) {
-        return productBatchService.findNextFEFO(productId, warehouseId);
-    }
-
-    /**
-     * Alerta de validade: lotes com stock (qty &gt; 0) cuja validade já passou ou ocorre dentro
-     * de {@code daysAhead} dias. Inclui já-vencidos (validade no passado). Lotes sem validade
-     * (LEGACY 9999) ficam de fora. Base do cartão de validades no dashboard e do resumo na loja.
-     */
-    @Transactional(readOnly = true)
-    public List<mz.multicore.erp.modules.inventory.dto.ProductBatchDTO> findExpiringBatches(Long companyId, int daysAhead) {
-        CurrentUserContext.requireCompany(companyId);
-        return productBatchService.findExpiringByCompany(companyId, LocalDate.now().plusDays(daysAhead));
-    }
+    // ─── Conversores DTO ─────────────────────────────────────────────────────
 
     public WarehouseDTO toDTO(Warehouse w) {
-        return new WarehouseDTO(
-                w.getId(),
-                w.getName(),
-                w.getLocation(),
-                w.getWarehouseNumber(),
-                w.getCapacity(),
-                w.getCompany() != null ? w.getCompany().getId() : null,
-                w.getType(),
-                w.isAllowsSales(),
-                w.getManager(),
-                w.getPhone(),
-                w.isActive()
-        );
+        return warehouseService.toDTO(w);
     }
 
     public StockDTO toDTO(Stock s) {
-        var product = s.getProduct();
-        return new StockDTO(
-                s.getId(),
-                product.getId(),
-                product.getSku(),
-                product.getReference(),
-                product.getBarcode(),
-                product.getName(),
-                s.getWarehouse().getId(),
-                s.getWarehouse().getName(),
-                s.getQuantity(),
-                product.getMinStock() != null ? product.getMinStock() : BigDecimal.ZERO,
-                product.getCategory() != null ? product.getCategory().getName() : null,
-                product.getUnitPrice() != null ? product.getUnitPrice() : BigDecimal.ZERO,
-                product.getUnitsPerBox(),
-                product.getBusinessUnit() != null ? product.getBusinessUnit().getId() : null,
-                product.getBusinessUnit() != null ? product.getBusinessUnit().getName() : null
-        );
+        return stockQueryService.toDTO(s);
     }
 
     public StockMovementDTO toDTO(StockMovement m) {
-        return new StockMovementDTO(
-                m.getId(),
-                m.getProduct().getId(),
-                m.getProduct().getName(),
-                m.getWarehouse().getId(),
-                m.getWarehouse().getName(),
-                m.getQuantity(),
-                m.getMovementType() != null ? m.getMovementType().name() : null,
-                m.getBatchNumber(),
-                m.getSerialNumber(),
-                m.getDescription(),
-                m.getMovementDate(),
-                m.getProduct().getBusinessUnit() != null ? m.getProduct().getBusinessUnit().getId() : null,
-                m.getProduct().getBusinessUnit() != null ? m.getProduct().getBusinessUnit().getName() : null
-        );
+        return stockMovementService.toDTO(m);
     }
 }

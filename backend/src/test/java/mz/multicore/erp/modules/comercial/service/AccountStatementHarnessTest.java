@@ -316,4 +316,42 @@ class AccountStatementHarnessTest {
         String header = new String(pdfBytes, 0, Math.min(10, pdfBytes.length), StandardCharsets.US_ASCII);
         assertTrue(header.startsWith("%PDF"), "Ficheiro gerado deve ser um documento PDF válido");
     }
+
+    @Test
+    @DisplayName("ECC-08: Robustez contra nulls, exclusão de rascunhos e quitação no balcão sem recibo autónomo")
+    void testCustomerStatementRobustnessAndDirectPayments() {
+        when(clientRepository.findById(TEST_CLIENT_ID)).thenReturn(Optional.of(testClient));
+
+        // 1. Factura paga a pronto (POS / Balcão) no valor de 3.000 MT, amountPaid = 3.000 MT, sem recibo na tabela
+        Invoice paidInv = new Invoice();
+        paidInv.setId(50L);
+        paidInv.setInvoiceNumber("FT-2026/050");
+        paidInv.setClient(testClient);
+        paidInv.setTotalAmount(new BigDecimal("3000.00"));
+        paidInv.setAmountPaid(new BigDecimal("3000.00"));
+        paidInv.setCreatedAt(LocalDateTime.of(2026, 1, 10, 10, 0));
+        paidInv.setStatus(InvoiceStatus.PAID);
+
+        // 2. Factura em RASCUNHO (DRAFT) no valor de 9.000 MT - NÃO pode entrar no extrato!
+        Invoice draftInv = new Invoice();
+        draftInv.setId(51L);
+        draftInv.setInvoiceNumber("FT-DRAFT");
+        draftInv.setClient(testClient);
+        draftInv.setTotalAmount(new BigDecimal("9000.00"));
+        draftInv.setCreatedAt(LocalDateTime.of(2026, 1, 12, 10, 0));
+        draftInv.setStatus(InvoiceStatus.DRAFT);
+
+        when(invoiceRepository.findByCompanyId(TEST_COMPANY_ID)).thenReturn(List.of(paidInv, draftInv));
+        when(receiptRepository.findByCompanyId(TEST_COMPANY_ID)).thenReturn(Collections.emptyList());
+        when(creditNoteRepository.findByCompanyId(TEST_COMPANY_ID)).thenReturn(Collections.emptyList());
+        when(debitNoteRepository.findByCompanyId(TEST_COMPANY_ID)).thenReturn(Collections.emptyList());
+
+        CustomerStatementDTO stmt = customerStatementService.getStatement(TEST_CLIENT_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+
+        assertNotNull(stmt);
+        assertEquals(2, stmt.lines().size(), "Deve conter a fatura paga e o crédito automático de liquidação no balcão");
+        assertEquals(new BigDecimal("3000.00"), stmt.totalDebits());
+        assertEquals(new BigDecimal("3000.00"), stmt.totalCredits());
+        assertEquals(0, stmt.closingBalance().compareTo(BigDecimal.ZERO), "Saldo final da venda a pronto deve ser zero");
+    }
 }

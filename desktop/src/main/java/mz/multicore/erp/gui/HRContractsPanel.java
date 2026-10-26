@@ -1,43 +1,21 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
-import mz.multicore.erp.gui.components.DateField;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.MoneyField;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.modules.hr.dto.CreateContractRequest;
-import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
-import mz.multicore.erp.modules.hr.dto.RenewContractRequest;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import mz.multicore.erp.gui.components.PrintPreviewDialog;
-import mz.multicore.erp.gui.components.SensitivePrintCoordinator;
 
 /**
  * Separador de contratos de trabalho. Ver docs/RH_COMPLETO_SPEC.md §B1.
- *
- * <p>Classe própria como o {@link HRExpensesPanel} — e não mais um {@code buildXTab()} dentro do
- * {@code HRPanel}, que está a dois passos do limite de 1000 linhas do
- * {@code UiPanelDecompositionTest}.
  */
 final class HRContractsPanel {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final String[] TYPES = {
-            "SEM_TERMO", "TERMO_CERTO", "TERMO_INCERTO", "TEMPORARIO", "ESTAGIO"};
 
     private final HRPanel owner;
     private DefaultTableModel model;
@@ -66,7 +44,7 @@ final class HRContractsPanel {
 
         ModernButton newBtn = UIHelper.createPrimaryButton("Novo Contrato");
         newBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
-        newBtn.addActionListener(e -> createContract());
+        newBtn.addActionListener(e -> HrContractFormDialog.showCreateDialog(owner, this::load));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -85,18 +63,9 @@ final class HRContractsPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-file-signature", UIHelper.ACCENT_BLUE);
-            peek.setTitle(String.valueOf(model.getValueAt(row, 1)));
-            peek.setSubtitle("Contrato " + model.getValueAt(row, 0) + " • " + model.getValueAt(row, 3));
-            peek.setStatus(String.valueOf(model.getValueAt(row, 7)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Tipo", String.valueOf(model.getValueAt(row, 2)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Início", String.valueOf(model.getValueAt(row, 4)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Fim", String.valueOf(model.getValueAt(row, 5)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Salário Acordado", String.valueOf(model.getValueAt(row, 6)), true));
-            peek.setItems(items);
+            HRContractsOperationsCoordinator.populatePeek(peek, model, row);
         });
 
         JTextField search = TableFilter.searchField("Nº, colaborador ou função…");
@@ -133,14 +102,12 @@ final class HRContractsPanel {
                     c.startDate() == null ? "" : c.startDate().format(DATE_FMT),
                     c.endDate() == null ? "Sem termo" : c.endDate().format(DATE_FMT),
                     c.agreedSalary(),
-                    // A caducidade é derivada, não gravada: o ecrã diz o mesmo que o DTO calcula.
                     c.expired() ? "Prazo terminado" : c.statusLabel()
             });
         }
         UIHelper.ensureHeadersFit(table);
     }
 
-    /** Corre a acção sobre o contrato seleccionado, ou avisa que falta seleccionar. */
     private void withSelection(java.util.function.Consumer<EmploymentContractDTO> action) {
         int row = table.getSelectedRow();
         if (row < 0) {
@@ -151,150 +118,18 @@ final class HRContractsPanel {
     }
 
     private void printContract(EmploymentContractDTO contract) {
-        if (owner.printApiClient == null) {
-            UIHelper.runWithProgress(owner, "A gerar contrato…",
-                    () -> owner.hrApiClient.renderContract(contract.id()),
-                    pdf -> PrintPreviewDialog.show(owner, pdf, "contrato-" + contract.contractNumber()),
-                    owner::showActionError);
-            return;
-        }
-        SensitivePrintCoordinator.print(owner, owner.printApiClient,
-                mz.multicore.erp.modules.printing.dto.SensitiveDocumentType.EMPLOYMENT_CONTRACT,
-                contract.id(), "Contrato " + contract.contractNumber(),
-                "contrato-" + contract.contractNumber(),
-                () -> owner.hrApiClient.renderContract(contract.id()), this::load);
+        HRContractsOperationsCoordinator.printContract(owner, contract, this::load);
     }
 
     private void activateContract(EmploymentContractDTO contract) {
-        int option = JOptionPane.showConfirmDialog(owner,
-                "Pôr o contrato " + contract.contractNumber() + " a vigorar?\n"
-                        + "O salário acordado passa a ser o da ficha do colaborador.",
-                "Activar Contrato", JOptionPane.YES_NO_OPTION);
-        if (option != JOptionPane.YES_OPTION) return;
-        UIHelper.runWithProgress(owner, "A activar contrato…",
-                () -> owner.hrApiClient.activateContract(contract.id()),
-                ignored -> load(), owner::showActionError);
-    }
-
-    private void createContract() {
-        List<EmployeeDTO> employees = owner.hrApiClient.getAllEmployees();
-        if (employees.isEmpty()) {
-            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe primeiro um colaborador.");
-            return;
-        }
-        JComboBox<EmployeeDTO> employeeCombo = new JComboBox<>(employees.toArray(new EmployeeDTO[0]));
-        employeeCombo.setRenderer(employeeRenderer());
-        UIHelper.styleComboBox(employeeCombo);
-        JComboBox<String> typeCombo = new JComboBox<>(TYPES);
-        UIHelper.styleComboBox(typeCombo);
-
-        JTextField jobField = new JTextField();
-        DateField startField = new DateField(LocalDate.now());
-        DateField endField = new DateField();
-        DateField probationField = new DateField();
-        MoneyField salaryField = new MoneyField("0");
-        JSpinner hoursSpinner = new JSpinner(new SpinnerNumberModel(40, 1, 80, 1));
-        JTextField locationField = new JTextField();
-        JTextField reasonField = new JTextField();
-        for (JTextField f : new JTextField[]{jobField, locationField, reasonField}) {
-            UIHelper.styleTextField(f);
-        }
-
-        JPanel form = UIHelper.createDialogForm(
-                "Colaborador:", employeeCombo,
-                "Tipo de contrato:", typeCombo,
-                "Função:", jobField,
-                "Início (yyyy-MM-dd):", startField,
-                "Fim (opcional, yyyy-MM-dd):", endField,
-                "Fim da experiência (opcional):", probationField,
-                "Salário acordado (MT):", salaryField,
-                "Horas semanais:", hoursSpinner,
-                "Local de trabalho:", locationField,
-                "Motivo do termo (obrigatório a termo):", reasonField);
-
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Novo Contrato",
-                "fas-file-signature", "Condições acordadas", form).showDialog();
-        if (!confirmed) return;
-
-        try {
-            CreateContractRequest request = new CreateContractRequest(
-                    ((EmployeeDTO) employeeCombo.getSelectedItem()).id(),
-                    String.valueOf(typeCombo.getSelectedItem()),
-                    startField.value(),
-                    parseDate(endField),
-                    parseDate(probationField),
-                    salaryField.value(),
-                    (Integer) hoursSpinner.getValue(),
-                    jobField.getText().trim(),
-                    locationField.getText().trim(),
-                    reasonField.getText().trim());
-            UIHelper.runWithProgress(owner, "A criar contrato…",
-                    () -> owner.hrApiClient.createContract(request),
-                    ignored -> {
-                        load();
-                        owner.showSuccess("Contrato criado em rascunho; use Activar para o pôr a vigorar.");
-                    }, owner::showActionError);
-        } catch (RuntimeException ex) {
-            owner.showActionError(ex);
-        }
+        HRContractsOperationsCoordinator.activateContract(owner, contract, this::load);
     }
 
     private void renewContract(EmploymentContractDTO contract) {
-        DateField startField = new DateField(contract.endDate() == null
-                ? LocalDate.now() : contract.endDate().plusDays(1));
-        DateField endField = new DateField();
-        MoneyField salaryField = new MoneyField(contract.agreedSalary().toPlainString());
-
-        JPanel form = UIHelper.createDialogForm(
-                "Novo início (yyyy-MM-dd):", startField,
-                "Novo fim (opcional):", endField,
-                "Salário acordado (MT):", salaryField);
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
-                "Renovar " + contract.contractNumber(), "fas-redo",
-                "O contrato anterior fecha na véspera do novo", form).showDialog();
-        if (!confirmed) return;
-
-        RenewContractRequest request = new RenewContractRequest(
-                startField.value(), parseDate(endField), salaryField.value(), null);
-        UIHelper.runWithProgress(owner, "A renovar contrato…",
-                () -> owner.hrApiClient.renewContract(contract.id(), request),
-                ignored -> load(), owner::showActionError);
+        HrContractFormDialog.showRenewDialog(owner, contract, this::load);
     }
 
     private void terminateContract(EmploymentContractDTO contract) {
-        DateField dateField = new DateField(LocalDate.now());
-        JTextField reasonField = new JTextField();
-        UIHelper.styleTextField(reasonField);
-        JPanel form = UIHelper.createDialogForm(
-                "Data da cessação:", dateField,
-                "Motivo (obrigatório):", reasonField);
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
-                "Cessar " + contract.contractNumber(), "fas-ban",
-                "A cessação fica auditada", form).showDialog();
-        if (!confirmed) return;
-
-        UIHelper.runWithProgress(owner, "A cessar contrato…",
-                () -> owner.hrApiClient.terminateContract(
-                        contract.id(), dateField.value(), reasonField.getText().trim()),
-                ignored -> load(), owner::showActionError);
-    }
-
-    private LocalDate parseDate(JTextField field) {
-        String text = field.getText().trim();
-        return text.isBlank() ? null : LocalDate.parse(text);
-    }
-
-    private ListCellRenderer<Object> employeeRenderer() {
-        return new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-                                                          boolean selected, boolean focused) {
-                super.getListCellRendererComponent(list, value, index, selected, focused);
-                if (value instanceof EmployeeDTO employee) {
-                    setText(employee.name() + " (" + employee.employeeNumber() + ")");
-                }
-                return this;
-            }
-        };
+        HrContractFormDialog.showTerminateDialog(owner, contract, this::load);
     }
 }

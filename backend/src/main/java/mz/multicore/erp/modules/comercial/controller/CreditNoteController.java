@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.comercial.controller;
 
 import mz.multicore.erp.modules.comercial.dto.CreateCreditNoteRequest;
 import mz.multicore.erp.modules.comercial.dto.CreditNoteDTO;
+import mz.multicore.erp.modules.comercial.dto.RejectionReasonRequest;
 import mz.multicore.erp.modules.comercial.dto.ReturnedQtyDTO;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import jakarta.validation.Valid;
@@ -53,8 +54,8 @@ public class CreditNoteController {
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<CreditNoteDTO> reject(@PathVariable Long id,
-                                                 @RequestBody(required = false) Map<String, String> body) {
-        String reason = body == null ? null : body.get("rejectionReason");
+                                                 @RequestBody(required = false) @Valid RejectionReasonRequest body) {
+        String reason = body == null ? null : body.rejectionReason();
         return ResponseEntity.ok(service.reject(id, reason));
     }
 

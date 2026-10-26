@@ -704,6 +704,128 @@ public class ComercialService {
     }
 
     @Transactional(readOnly = true)
+    public ClientCreditEligibilityDTO getClientCreditEligibility(Long clientId) {
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        if (clientId == null) {
+            return new ClientCreditEligibilityDTO(
+                    null, "Consumidor Final", false, false,
+                    "Consumidor Final (sem registo) está limitado estritamente a Pronto Pagamento.",
+                    0, null, BigDecimal.ZERO, null, 0);
+        }
+        Client client = clientRepository.findByIdAndCompaniesId(clientId, companyId)
+                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado: " + clientId));
+
+        return evaluateClientCreditEligibility(client, companyId);
+    }
+
+    public ClientCreditEligibilityDTO evaluateClientCreditEligibility(Client client, Long companyId) {
+        if (client == null) {
+            return new ClientCreditEligibilityDTO(
+                    null, "Consumidor Final", false, false,
+                    "Consumidor Final (sem registo) está limitado estritamente a Pronto Pagamento.",
+                    0, null, BigDecimal.ZERO, null, 0);
+        }
+
+        // 1. Limite zero = Não vende fiado / Bloqueado para crédito
+        if (client.hasCreditLimit() && client.getCreditLimit().signum() == 0) {
+            return new ClientCreditEligibilityDTO(
+                    client.getId(), client.getName(), false, true,
+                    "Cliente sem autorização para crédito (limite zero definido na ficha).",
+                    0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0);
+        }
+
+        // 2. Dívida actual e faturas vencidas em mora
+        LocalDate today = LocalDate.now();
+        List<Invoice> openInvoices = invoiceRepository.findByCompanyId(companyId).stream()
+                .filter(inv -> inv.getClient() != null && client.getId().equals(inv.getClient().getId()))
+                .filter(inv -> inv.getStatus() != null && inv.getStatus().isCollectable())
+                .filter(inv -> inv.outstandingAmount().signum() > 0)
+                .toList();
+
+        BigDecimal currentDebt = BigDecimal.ZERO;
+        int maxDaysOverdue = 0;
+        for (Invoice inv : openInvoices) {
+            currentDebt = currentDebt.add(inv.outstandingAmount());
+            int days = inv.daysOverdue(today);
+            if (days > maxDaysOverdue) {
+                maxDaysOverdue = days;
+            }
+        }
+
+        BigDecimal available = client.creditAvailable(currentDebt);
+
+        // 3. Checagem de Mora (> 30 dias de atraso)
+        if (maxDaysOverdue > 30) {
+            return new ClientCreditEligibilityDTO(
+                    client.getId(), client.getName(), false, true,
+                    String.format("Cliente com faturas vencidas em mora há %d dias (máx. permitido: 30 dias).", maxDaysOverdue),
+                    0, client.getCreditLimit(), currentDebt, available, maxDaysOverdue);
+        }
+
+        // 4. Checagem de Limite de Crédito Esgotado
+        if (client.hasCreditLimit() && available != null && available.signum() <= 0) {
+            return new ClientCreditEligibilityDTO(
+                    client.getId(), client.getName(), false, true,
+                    String.format("Limite de crédito esgotado (Dívida: %s MT · Limite: %s MT).",
+                            formatMoney(currentDebt), formatMoney(client.getCreditLimit())),
+                    0, client.getCreditLimit(), currentDebt, available, maxDaysOverdue);
+        }
+
+        // 5. Cliente regular e elegível para crédito
+        return new ClientCreditEligibilityDTO(
+                client.getId(), client.getName(), true, false, null,
+                client.effectivePaymentTermsDays(), client.getCreditLimit(), currentDebt, available, maxDaysOverdue);
+    }
+
+    public void validatePaymentTermsForClient(Client client, String paymentTerms, Long companyId) {
+        if (isPromptPayment(paymentTerms)) {
+            return; // Pronto pagamento é sempre permitido!
+        }
+        if (client == null) {
+            throw new BusinessRuleException("Consumidor Final (sem registo) está limitado estritamente a Pronto Pagamento.");
+        }
+        ClientCreditEligibilityDTO eligibility = evaluateClientCreditEligibility(client, companyId);
+        if (!eligibility.creditAllowed() || eligibility.problematic()) {
+            throw new BusinessRuleException(String.format(
+                    "Venda a prazo não autorizada para o cliente %s. Restrição de crédito: %s. As encomendas para este cliente estão limitadas estritamente a Pronto Pagamento.",
+                    client.getName(), eligibility.restrictionReason() != null ? eligibility.restrictionReason() : "Risco de crédito"));
+        }
+    }
+
+    public static boolean isPromptPayment(String terms) {
+        if (terms == null || terms.isBlank()) return true;
+        String norm = terms.trim().toLowerCase(java.util.Locale.ROOT);
+        return norm.contains("pronto") || norm.startsWith("0 dia") || norm.equals("0");
+    }
+
+    private static String formatMoney(BigDecimal val) {
+        return (val == null ? BigDecimal.ZERO : val).setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    public LocalDate resolveDueDateFromTerms(String paymentTerms, LocalDate issueDate, Client client) {
+        if (paymentTerms == null || paymentTerms.isBlank()) {
+            int days = client != null ? client.effectivePaymentTermsDays() : 0;
+            return issueDate.plusDays(days);
+        }
+        if (isPromptPayment(paymentTerms)) {
+            return issueDate;
+        }
+        int days = parseDaysFromTerms(paymentTerms, client != null ? client.effectivePaymentTermsDays() : 0);
+        return issueDate.plusDays(days);
+    }
+
+    private static int parseDaysFromTerms(String terms, int defaultDays) {
+        if (terms == null || terms.isBlank()) return defaultDays;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)").matcher(terms);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        return defaultDays;
+    }
+
+    @Transactional(readOnly = true)
     public List<ProductDTO> getAllProducts() {
         return productRepository.findDistinctByCompaniesIdOrderByName(CurrentUserContext.getCurrentCompanyId())
                 .stream()
@@ -1140,6 +1262,7 @@ public class ComercialService {
     /** Guarda/actualiza a imagem (thumbnail) de um produto da empresa actual. */
     @Transactional
     public void updateProductImage(Long productId, byte[] imageData) {
+        mz.multicore.erp.architecture.validation.ImagePayloadValidator.validate(imageData, 2 * 1024 * 1024);
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         Product product = productRepository.findById(productId)
                 .filter(p -> p.belongsToCompany(companyId))
@@ -1278,6 +1401,8 @@ public class ComercialService {
             lines.add(line);
         }
 
+        validatePaymentTermsForClient(client, request.paymentTerms(), request.companyId());
+
         return placeOrder(company, client, warehouse, destination, request.walkInName(), lines, kind,
                 request.agreedTerms());
     }
@@ -1321,6 +1446,9 @@ public class ComercialService {
         order.setWalkInName(cleanWalkInName(request.walkInName()));
         order.setWarehouse(warehouse);
         order.setDestinationWarehouse(destination);
+        String paymentTerms = request.paymentTerms() != null ? request.paymentTerms() : order.getPaymentTerms();
+        validatePaymentTermsForClient(client, paymentTerms, companyId);
+        order.setPaymentTerms(paymentTerms);
         order.setNotes(request.notes());
         order.getLines().clear();
         replacement.forEach(order::addLine);
@@ -1550,8 +1678,9 @@ public class ComercialService {
         }
         invoice.setCompany(order.getCompany());
         invoice.setWarehouse(order.getWarehouse());
-        // A encomenda facturada segue o prazo do cliente, tal como uma fatura emitida à mão.
-        invoice.assignDueDate(LocalDate.now(), null);
+        // A encomenda facturada segue a modalidade de pagamento acordada na encomenda se definida, ou a da ficha do cliente.
+        LocalDate explicitDueDate = resolveDueDateFromTerms(order.getPaymentTerms(), LocalDate.now(), order.getClient());
+        invoice.assignDueDate(LocalDate.now(), explicitDueDate);
         invoice.setStatus(InvoiceStatus.APPROVED);
         invoice.setSalesChannel(SalesChannel.ORDER);
         invoice.setTotalBeforeTax(order.getTotalBeforeTax());

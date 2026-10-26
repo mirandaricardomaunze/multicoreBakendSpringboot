@@ -1,17 +1,15 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
+import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
+import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.MoneyField;
+import mz.multicore.erp.gui.components.QuickPeekPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.modules.hr.dto.CreatePayrollDeductionRequest;
-import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollDeductionDTO;
 
 import javax.swing.*;
@@ -19,19 +17,12 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Separador dos <b>descontos, adiantamentos e empréstimos</b>. Ver docs/RH_COMPLETO_SPEC.md §B6.
- *
- * <p>O que este ecrã torna visível é o <b>saldo em dívida</b>: até agora um adiantamento saía da
- * caixa e nunca voltava, porque nada o ligava ao recibo do período — e o recibo mostrava um único
- * "Outros Descontos" anónimo, que é a origem clássica da reclamação do trabalhador.
- *
- * <p>O saldo da coluna não está gravado em lado nenhum: apura-se das linhas que os recibos
- * levaram. Anular um recibo põe as prestações de volta em dívida sem ninguém ter de se lembrar.
+ * Separador dos descontos, adiantamentos e empréstimos da folha de pagamentos de RH.
  */
 final class HRDeductionsPanel {
 
@@ -57,9 +48,9 @@ final class HRDeductionsPanel {
         stopBtn.addActionListener(e -> deactivate());
 
         ActionMenuButton newDeductionBtn = UIHelper.createActionMenuButton("Novo Desconto")
-                .addAction("Adiantamento Salarial", UIHelper.icon("fas-hand-holding-usd", 14), () -> openDialog("ADIANTAMENTO"))
-                .addAction("Empréstimo", UIHelper.icon("fas-file-invoice-dollar", 14), () -> openDialog("EMPRESTIMO"))
-                .addAction("Desconto Recorrente", UIHelper.icon("fas-redo", 14), () -> openDialog("RECORRENTE"));
+                .addAction("Adiantamento Salarial", UIHelper.icon("fas-hand-holding-usd", 14), () -> HrDeductionFormDialog.open(owner, "ADIANTAMENTO", this::load))
+                .addAction("Empréstimo", UIHelper.icon("fas-file-invoice-dollar", 14), () -> HrDeductionFormDialog.open(owner, "EMPRESTIMO", this::load))
+                .addAction("Desconto Recorrente", UIHelper.icon("fas-redo", 14), () -> HrDeductionFormDialog.open(owner, "RECORRENTE", this::load));
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
@@ -80,30 +71,26 @@ final class HRDeductionsPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
             peek.setHeaderIcon("fas-hand-holding-usd", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(model.getValueAt(row, 1)));
             peek.setSubtitle(String.valueOf(model.getValueAt(row, 2)) + " • " + model.getValueAt(row, 3));
             peek.setStatus(String.valueOf(model.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Capital Inicial", String.valueOf(model.getValueAt(row, 4)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Prestação Mensal", String.valueOf(model.getValueAt(row, 5)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total Descontado", String.valueOf(model.getValueAt(row, 6)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dívida Restante", String.valueOf(model.getValueAt(row, 7)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data Início", String.valueOf(model.getValueAt(row, 8)), false));
+            List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
+            items.add(new QuickPeekPanel.PeekItem("Capital Inicial", String.valueOf(model.getValueAt(row, 4)), false));
+            items.add(new QuickPeekPanel.PeekItem("Prestação Mensal", String.valueOf(model.getValueAt(row, 5)), false));
+            items.add(new QuickPeekPanel.PeekItem("Total Descontado", String.valueOf(model.getValueAt(row, 6)), false));
+            items.add(new QuickPeekPanel.PeekItem("Dívida Restante", String.valueOf(model.getValueAt(row, 7)), true));
+            items.add(new QuickPeekPanel.PeekItem("Data Início", String.valueOf(model.getValueAt(row, 8)), false));
             peek.setItems(items);
         });
 
         JTextField search = TableFilter.searchField("Colaborador ou descrição…");
-        JComboBox<String> tipo = TableFilter.combo("Todos os tipos",
-                "Adiantamento", "Empréstimo", "Desconto recorrente");
+        JComboBox<String> tipo = TableFilter.combo("Todos os tipos", "Adiantamento", "Empréstimo", "Desconto recorrente");
         JComboBox<String> estado = TableFilter.combo("Todos os estados", "Activo", "Liquidado", "Desactivado");
-        TableFilter.install(table, search,
-                List.of(new TableFilter.ColumnFilter(tipo, 2), new TableFilter.ColumnFilter(estado, 9)),
-                List.of());
-        JPanel bar = TableFilter.bar(search, TableFilter.label("Tipo:"), tipo,
-                TableFilter.label("Estado:"), estado);
+        TableFilter.install(table, search, List.of(new TableFilter.ColumnFilter(tipo, 2), new TableFilter.ColumnFilter(estado, 9)), List.of());
+        JPanel bar = TableFilter.bar(search, TableFilter.label("Tipo:"), tipo, TableFilter.label("Estado:"), estado);
         bar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
@@ -133,7 +120,6 @@ final class HRDeductionsPanel {
         }
     }
 
-    /** Três estados que interessam a quem olha: ainda desconta, já pagou tudo, ou foi parado. */
     private String statusLabel(PayrollDeductionDTO d) {
         if (!d.active()) {
             return "Desactivado";
@@ -141,137 +127,26 @@ final class HRDeductionsPanel {
         return d.settled() ? "Liquidado" : "Activo";
     }
 
-    private void openDialog(String kind) {
-        if (owner.employeesList.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Cadastre colaboradores primeiro.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        boolean recurring = "RECORRENTE".equals(kind);
-        boolean loan = "EMPRESTIMO".equals(kind);
-
-        JComboBox<String> empCombo = new JComboBox<>();
-        UIHelper.styleComboBox(empCombo);
-        for (EmployeeDTO e : owner.employeesList) {
-            empCombo.addItem(e.name() + " — " + e.department());
-        }
-        JTextField descField = new JTextField(defaultDescription(kind));
-        UIHelper.styleTextField(descField);
-        MoneyField principalField = new MoneyField("0.00");
-        MoneyField installmentField = new MoneyField("0.00");
-        JSpinner installmentsSpinner = new JSpinner(new SpinnerNumberModel(loan ? 6 : 1, 1, 120, 1));
-        DateField startField = new DateField(LocalDate.now().withDayOfMonth(1));
-        DateField endField = new DateField(null);
-        JTextField notesField = new JTextField();
-        UIHelper.styleTextField(notesField);
-
-        JPanel form = recurring
-                ? UIHelper.createDialogForm(
-                        "Colaborador:", empCombo,
-                        "Descrição:", descField,
-                        "Valor por recibo:", installmentField,
-                        "Início:", startField,
-                        "Fim (vazio = sem fim):", endField,
-                        "Observações:", notesField)
-                : UIHelper.createDialogForm(
-                        "Colaborador:", empCombo,
-                        "Descrição:", descField,
-                        "Valor entregue:", principalField,
-                        loan ? "Nº de prestações:" : "Prestações (1):", installmentsSpinner,
-                        "Início do desconto:", startField,
-                        "Observações:", notesField);
-
-        String subtitle = recurring
-                ? "Desconta enquanto estiver activo e dentro da vigência. Não sai dinheiro da caixa."
-                : "O valor sai da tesouraria agora e volta pelos recibos seguintes.";
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, dialogTitle(kind),
-                iconFor(kind), subtitle, form).showDialog();
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            EmployeeDTO employee = owner.employeesList.get(empCombo.getSelectedIndex());
-            CreatePayrollDeductionRequest request = new CreatePayrollDeductionRequest(
-                    employee.id(), kind, descField.getText().trim(),
-                    recurring ? null : principalField.value(),
-                    recurring ? installmentField.value() : null,
-                    recurring ? null : (Integer) installmentsSpinner.getValue(),
-                    startField.value(),
-                    recurring ? endField.value() : null,
-                    notesField.getText().trim().isEmpty() ? null : notesField.getText().trim());
-            UIHelper.runWithProgress(owner, "A registar…",
-                    () -> owner.hrApiClient.createDeduction(request),
-                    ignored -> {
-                        JOptionPane.showMessageDialog(owner, confirmationOf(kind),
-                                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-                        load();
-                    }, owner::showActionError);
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(owner, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
     private void deactivate() {
         int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
-            JOptionPane.showMessageDialog(owner, "Selecione um desconto na tabela.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um desconto", "Selecione um desconto na tabela.");
             return;
         }
         PayrollDeductionDTO sel = deductions.get(row);
         BigDecimal outstanding = sel.outstandingAmount() == null ? BigDecimal.ZERO : sel.outstandingAmount();
-        // O saldo por liquidar aparece na pergunta: desactivar um empréstimo a meio deixa dinheiro
-        // por cobrar, e quem carrega no botão tem de ver isso antes de o fazer.
-        int answer = JOptionPane.showConfirmDialog(owner, String.format(
+        String msg = String.format(
                 "Desactivar \"%s\" de %s?%s",
                 sel.description(), sel.employeeName(),
                 outstanding.signum() > 0
-                        ? String.format("%n%nFicam %,.2f MT por liquidar, que deixam de ser descontados.",
-                                outstanding)
-                        : ""),
-                "Desactivar Desconto", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (answer != JOptionPane.YES_OPTION) {
+                        ? String.format("%n%nFicam %,.2f MT por liquidar, que deixam de ser descontados.", outstanding)
+                        : "");
+        if (!ModernMessageDialog.confirm(UIHelper.mainWindow, FeedbackType.WARNING, "Desactivar Desconto", msg, "Desactivar")) {
             return;
         }
         UIHelper.runWithProgress(owner, "A desactivar…", () -> {
             owner.hrApiClient.deactivateDeduction(sel.id());
             return null;
         }, ignored -> load(), owner::showActionError);
-    }
-
-    private String dialogTitle(String kind) {
-        return switch (kind) {
-            case "ADIANTAMENTO" -> "Novo Adiantamento";
-            case "EMPRESTIMO" -> "Novo Empréstimo";
-            default -> "Novo Desconto Recorrente";
-        };
-    }
-
-    private String iconFor(String kind) {
-        return switch (kind) {
-            case "ADIANTAMENTO" -> "fas-hand-holding-usd";
-            case "EMPRESTIMO" -> "fas-file-invoice-dollar";
-            default -> "fas-redo";
-        };
-    }
-
-    private String defaultDescription(String kind) {
-        return switch (kind) {
-            case "ADIANTAMENTO" -> "Adiantamento de " + LocalDate.now().getMonthValue()
-                    + "/" + LocalDate.now().getYear();
-            case "EMPRESTIMO" -> "Empréstimo";
-            default -> "";
-        };
-    }
-
-    private String confirmationOf(String kind) {
-        return switch (kind) {
-            case "ADIANTAMENTO" -> "Adiantamento registado. O valor saiu da tesouraria e será "
-                    + "descontado no recibo do período.";
-            case "EMPRESTIMO" -> "Empréstimo registado. O capital saiu da tesouraria e as prestações "
-                    + "são descontadas nos recibos seguintes.";
-            default -> "Desconto recorrente registado.";
-        };
     }
 }

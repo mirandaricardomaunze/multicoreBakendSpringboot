@@ -94,6 +94,7 @@ public class PlatformCompanyService {
     @Transactional
     public void updateCompanyLogo(Long companyId, byte[] logo) {
         PermissionGuard.requireSuperAdmin("actualizar o logótipo da empresa");
+        mz.multicore.erp.architecture.validation.ImagePayloadValidator.validate(logo, 5 * 1024 * 1024);
         Company company = requireCompany(companyId);
         company.setLogo(logo != null && logo.length > 0 ? logo : null);
         companyRepository.save(company);

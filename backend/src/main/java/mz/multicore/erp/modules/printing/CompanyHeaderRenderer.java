@@ -27,10 +27,16 @@ public final class CompanyHeaderRenderer {
     }
 
     public static PdfPTable build(Company company, String documentTitle, String documentNumber, String copyLabel, String statusLabel) {
+        return build(company, documentTitle, documentNumber, copyLabel, statusLabel, 55f, 45f);
+    }
+
+    public static PdfPTable build(Company company, String documentTitle, String documentNumber,
+                                  String copyLabel, String statusLabel,
+                                  float companyWidth, float documentWidth) {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         try {
-            table.setWidths(new float[]{55f, 45f});
+            table.setWidths(new float[]{companyWidth, documentWidth});
         } catch (Exception ignored) {}
         table.setSpacingAfter(14f);
 

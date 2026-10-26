@@ -107,6 +107,12 @@ public class StockTransfer extends BaseEntity {
     @Column(name = "receipt_notes", length = 500)
     private String receiptNotes;
 
+    @Column(name = "receipt_idempotency_key", length = 60)
+    private String receiptIdempotencyKey;
+
+    @Column(name = "receipt_request_fingerprint", length = 64)
+    private String receiptRequestFingerprint;
+
     @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<StockTransferLine> lines = new ArrayList<>();
 }

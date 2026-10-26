@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
+
+import java.util.Map;
 
 @Component
 public class SecurityInterceptor implements HandlerInterceptor {
@@ -50,6 +53,10 @@ public class SecurityInterceptor implements HandlerInterceptor {
             CurrentUserContext.setCurrentUser(user.getUsername(), role);
             CurrentUserContext.setCurrentCompanyId(requestedCompanyId);
             updateSecurityContextAuthority(user.getUsername(), role);
+            @SuppressWarnings("unchecked")
+            Map<String, String> pathVariables = (Map<String, String>) request.getAttribute(
+                    HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+            TenantRequestBoundaryGuard.validateUrlCompany(request.getParameter("companyId"), pathVariables);
             return true;
         } catch (NumberFormatException ex) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Empresa inválida.");

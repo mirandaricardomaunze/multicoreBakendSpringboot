@@ -68,9 +68,12 @@ public class InventoryReportPrintService {
             stocks = stockRepository.findByWarehouseCompanyId(companyId);
         }
 
-        stocks.sort(Comparator
-                .comparing((Stock s) -> s.getWarehouse().getName())
-                .thenComparing(s -> s.getProduct().getName()));
+        List<Stock> mutableStocks = new java.util.ArrayList<>(stocks != null ? stocks : List.of());
+        mutableStocks.sort(Comparator
+                .comparing((Stock s) -> s.getWarehouse() != null && s.getWarehouse().getName() != null
+                        ? s.getWarehouse().getName() : "", String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(s -> s.getProduct() != null && s.getProduct().getName() != null
+                        ? s.getProduct().getName() : "", String.CASE_INSENSITIVE_ORDER));
 
         final Warehouse filterForLambda = warehouseFilter;
         return PdfDocumentBuilder.buildA4(doc -> {
@@ -80,9 +83,9 @@ public class InventoryReportPrintService {
                     "INV-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
             ));
             doc.add(buildMetaBlock(filterForLambda));
-            doc.add(buildStockTable(stocks));
+            doc.add(buildStockTable(mutableStocks));
             doc.add(PdfDocumentBuilder.spacer(6f));
-            doc.add(buildSummary(stocks));
+            doc.add(buildSummary(mutableStocks));
             doc.add(PdfDocumentBuilder.spacer(32f));
             doc.add(buildSignatureBlock());
         });
@@ -118,43 +121,56 @@ public class InventoryReportPrintService {
     }
 
     private PdfPTable buildStockTable(List<Stock> stocks) {
-        // Referência | Cód. Barras | Nome | Quantidade | Caixas | Valor
-        PdfPTable table = new PdfPTable(new float[]{14f, 16f, 34f, 12f, 10f, 14f});
+        // Referência | Código de Barras | Designação | Quantidade | Caixas | Preço
+        PdfPTable table = new PdfPTable(new float[]{15f, 16f, 33f, 12f, 11f, 13f});
         table.setWidthPercentage(100);
         table.setSpacingBefore(6f);
         table.setSpacingAfter(6f);
 
         header(table, "Referência", Element.ALIGN_LEFT);
-        header(table, "Cód. Barras", Element.ALIGN_LEFT);
-        header(table, "Nome do Artigo", Element.ALIGN_LEFT);
+        header(table, "Código de Barras", Element.ALIGN_LEFT);
+        header(table, "Designação", Element.ALIGN_LEFT);
         header(table, "Quantidade", Element.ALIGN_RIGHT);
         header(table, "Caixas", Element.ALIGN_RIGHT);
-        header(table, "Valor", Element.ALIGN_RIGHT);
+        header(table, "Preço", Element.ALIGN_RIGHT);
 
         for (Stock s : stocks) {
             BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-            // Valor a preço de VENDA (unitPrice).
-            BigDecimal price = s.getProduct().getUnitPrice() == null ? BigDecimal.ZERO : s.getProduct().getUnitPrice();
-            BigDecimal value = qty.multiply(price);
             int unitsPerBox = s.getProduct().getUnitsPerBox() <= 0 ? 1 : s.getProduct().getUnitsPerBox();
             BigDecimal boxes = qty.divide(BigDecimal.valueOf(unitsPerBox), 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal price = s.getProduct().getUnitPrice() == null ? BigDecimal.ZERO : s.getProduct().getUnitPrice();
 
             // Referência com recurso ao SKU quando não há referência (evita coluna vazia).
             String reference = s.getProduct().getReference();
             if (reference == null || reference.isBlank()) reference = s.getProduct().getSku();
+            if (reference == null || reference.isBlank()) reference = "—";
+
+            String barcode = s.getProduct().getBarcode();
+            if (barcode == null || barcode.isBlank()) barcode = "—";
 
             body(table, reference, Element.ALIGN_LEFT);
-            body(table, s.getProduct().getBarcode(), Element.ALIGN_LEFT);
+            body(table, barcode, Element.ALIGN_LEFT);
             body(table, s.getProduct().getName(), Element.ALIGN_LEFT);
-            body(table, String.format("%,.3f", qty), Element.ALIGN_RIGHT);
-            body(table, String.format("%,.2f", boxes), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(value), Element.ALIGN_RIGHT);
+            body(table, formatNumber(qty), Element.ALIGN_RIGHT);
+            body(table, formatNumber(boxes), Element.ALIGN_RIGHT);
+            body(table, MoneyFormat.formatPlain(price), Element.ALIGN_RIGHT);
         }
         return table;
     }
 
+    private String formatNumber(BigDecimal value) {
+        if (value == null) return "0";
+        if (value.stripTrailingZeros().scale() <= 0) {
+            return String.format("%,.0f", value);
+        }
+        return String.format("%,.2f", value);
+    }
+
     private PdfPTable buildSummary(List<Stock> stocks) {
         long total = stocks.size();
+        BigDecimal totalQty = stocks.stream()
+                .map(s -> s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalValue = stocks.stream()
                 .map(s -> {
                     BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
@@ -172,6 +188,7 @@ public class InventoryReportPrintService {
 
         PdfPTable inner = new PdfPTable(new float[]{60f, 40f});
         addSummaryLine(inner, "Artigos no inventário", String.valueOf(total), false);
+        addSummaryLine(inner, "Total de Unidades", formatNumber(totalQty), false);
         addSummaryLine(inner, "VALOR TOTAL DO STOCK", MoneyFormat.format(totalValue), true);
 
         PdfPCell innerWrap = new PdfPCell(inner);

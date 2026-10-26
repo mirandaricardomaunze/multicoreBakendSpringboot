@@ -1,502 +1,120 @@
 package mz.multicore.erp.modules.accounting.service;
 
-import mz.multicore.erp.architecture.events.PayrollLiabilityDeliveredEvent;
-import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
-import mz.multicore.erp.architecture.events.PayslipPaidEvent;
-import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
-import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
+import mz.multicore.erp.architecture.events.AssetDepreciatedEvent;
 import mz.multicore.erp.architecture.events.CreditNoteApprovedEvent;
 import mz.multicore.erp.architecture.events.DebitNoteApprovedEvent;
+import mz.multicore.erp.architecture.events.FleetFuelLoggedEvent;
+import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
+import mz.multicore.erp.architecture.events.PayrollLiabilityDeliveredEvent;
+import mz.multicore.erp.architecture.events.PayslipPaidEvent;
+import mz.multicore.erp.architecture.events.ProductionCompletedEvent;
+import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
 import mz.multicore.erp.architecture.events.SaleRegisteredEvent;
-import mz.multicore.erp.modules.accounting.model.Account;
-import mz.multicore.erp.modules.accounting.model.JournalEntry;
-import mz.multicore.erp.modules.accounting.model.JournalLine;
-import mz.multicore.erp.modules.accounting.model.JournalSource;
+import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-
 /**
  * Traduz factos de negócio em partidas dobradas.
- *
- * <p>Ouve eventos ({@code @EventListener} síncrono, <b>na mesma transacção</b> da operação de
- * origem): se o lançamento falhar, a venda não fica gravada pela metade. O módulo comercial não
- * conhece a contabilidade — só publica o que aconteceu.
- *
- * <p><b>Sem plano de contas, não lança e não estoira.</b> Uma empresa que ainda não semeou o
- * plano tem de poder continuar a vender; a contabilidade é opcional até alguém a ligar.
+ * Orquestrador desacoplado ouvindo eventos e delegando para handlers especializados.
  */
 @Service
 public class AutomaticPostingService {
 
-    private final ChartOfAccountsService chartOfAccountsService;
-    private final JournalService journalService;
-    private final AuditLogService auditLogService;
+    private final CommercialPostingHandler commercialPostingHandler;
+    private final ProcurementPostingHandler procurementPostingHandler;
+    private final OperationsPostingHandler operationsPostingHandler;
 
+    public AutomaticPostingService(CommercialPostingHandler commercialPostingHandler,
+                                   ProcurementPostingHandler procurementPostingHandler,
+                                   OperationsPostingHandler operationsPostingHandler) {
+        this.commercialPostingHandler = commercialPostingHandler;
+        this.procurementPostingHandler = procurementPostingHandler;
+        this.operationsPostingHandler = operationsPostingHandler;
+    }
+
+    /** Construtor para retrocompatibilidade com testes legados. */
     public AutomaticPostingService(ChartOfAccountsService chartOfAccountsService,
                                    JournalService journalService,
                                    AuditLogService auditLogService) {
-        this.chartOfAccountsService = chartOfAccountsService;
-        this.journalService = journalService;
-        this.auditLogService = auditLogService;
+        PostingHelper helper = new PostingHelper(chartOfAccountsService, journalService);
+        this.commercialPostingHandler = new CommercialPostingHandler(helper, journalService);
+        this.procurementPostingHandler = new ProcurementPostingHandler(helper, journalService);
+        this.operationsPostingHandler = new OperationsPostingHandler(helper, journalService, auditLogService);
     }
 
-    /**
-     * Venda:
-     * <pre>
-     *   D  Clientes / Caixa      total
-     *   C  Vendas                líquido
-     *   C  IVA liquidado         imposto
-     *   D  CMVMC                 custo        (só se o custo for conhecido)
-     *   C  Mercadorias           custo
-     * </pre>
-     * Uma venda paga na hora entra directamente em Caixa/Banco; a fiado fica em Clientes, e é o
-     * {@link #onPaymentReceived} que a transfere mais tarde.
-     */
+    // ─── Comercial e Vendas ───────────────────────────────────────────────────
+
     @EventListener
     @Transactional
     public void onSaleRegistered(SaleRegisteredEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (alreadyPosted(event.companyId(), JournalSource.INVOICE, event.invoiceId())) return;
-
-        BigDecimal total = safe(event.totalAmount());
-        BigDecimal net = safe(event.netAmount());
-        BigDecimal tax = safe(event.taxAmount());
-        BigDecimal paidNow = safe(event.amountPaidNow());
-        if (total.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Venda " + event.invoiceNumber());
-        entry.setSource(JournalSource.INVOICE);
-        entry.setSourceDocumentId(event.invoiceId());
-        entry.setSourceDocumentNumber(event.invoiceNumber());
-
-        // Débito: o que entrou agora vai a Caixa/Banco; o resto fica por receber em Clientes.
-        BigDecimal onCredit = total.subtract(paidNow);
-        if (paidNow.signum() > 0) {
-            entry.addLine(JournalLine.debit(cashAccount(event.companyId(), event.cashPayment()),
-                    paidNow, "Recebido no acto"));
-        }
-        if (onCredit.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.CLIENTES),
-                    onCredit, "A receber do cliente"));
-        }
-
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.VENDAS),
-                net, "Vendas de mercadorias"));
-        if (tax.signum() > 0) {
-            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.IVA_LIQUIDADO),
-                    tax, "IVA liquidado"));
-        }
-
-        // Custo das mercadorias vendidas: só quando se sabe o custo. Inventar um custo para o
-        // lançamento fechar seria pior do que não lançar a margem.
-        BigDecimal cost = safe(event.costOfGoods());
-        if (cost.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.CMVMC),
-                    cost, "Custo das mercadorias vendidas"));
-            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.MERCADORIAS),
-                    cost, "Saída de existências"));
-        }
-
-        journalService.save(entry, event.companyId());
+        commercialPostingHandler.postSale(event);
     }
 
-    /**
-     * Recebimento:
-     * <pre>
-     *   D  Caixa / Banco     valor
-     *   C  Clientes          valor
-     * </pre>
-     * Só movimenta o saldo — o proveito já foi lançado na emissão da fatura. Lançar Vendas outra
-     * vez aqui contaria a mesma venda duas vezes, que é o erro clássico deste tipo de integração.
-     */
     @EventListener
     @Transactional
     public void onPaymentReceived(PaymentReceivedEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (alreadyPosted(event.companyId(), JournalSource.RECEIPT, event.receiptId())) return;
-
-        BigDecimal amount = safe(event.amount());
-        if (amount.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Recebimento " + event.receiptNumber());
-        entry.setSource(JournalSource.RECEIPT);
-        entry.setSourceDocumentId(event.receiptId());
-        entry.setSourceDocumentNumber(event.receiptNumber());
-        entry.addLine(JournalLine.debit(cashAccount(event.companyId(), event.cashPayment()),
-                amount, "Recebimento de cliente"));
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CLIENTES),
-                amount, "Liquidação de conta corrente"));
-
-        journalService.save(entry, event.companyId());
+        commercialPostingHandler.postPayment(event);
     }
 
-    /** Compra: D Mercadorias, D IVA dedutível, C Fornecedores. */
-    @EventListener
-    @Transactional
-    public void onPurchaseRegistered(PurchaseRegisteredEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (alreadyPosted(event.companyId(), JournalSource.PURCHASE, event.purchaseId())) return;
-
-        BigDecimal total = safe(event.totalAmount());
-        if (total.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Compra " + event.purchaseNumber());
-        entry.setSource(JournalSource.PURCHASE);
-        entry.setSourceDocumentId(event.purchaseId());
-        entry.setSourceDocumentNumber(event.purchaseNumber());
-
-        BigDecimal net = safe(event.netAmount());
-        BigDecimal tax = safe(event.taxAmount());
-        if (net.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.MERCADORIAS),
-                    net, "Entrada de mercadorias"));
-        }
-        if (tax.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.IVA_DEDUTIVEL),
-                    tax, "IVA dedutível"));
-        }
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.FORNECEDORES),
-                total, "Dívida ao fornecedor"));
-        BigDecimal paidNow = safe(event.amountPaidNow());
-        if (paidNow.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.FORNECEDORES),
-                    paidNow, "Liquidação no acto"));
-            entry.addLine(JournalLine.credit(cashAccount(event.companyId(), event.cashPayment()),
-                    paidNow, "Pagamento no acto"));
-        }
-        journalService.save(entry, event.companyId());
-    }
-
-    /** Pagamento posterior: D Fornecedores, C Caixa/Banco. */
-    @EventListener
-    @Transactional
-    public void onSupplierPaymentRegistered(SupplierPaymentRegisteredEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (alreadyPosted(event.companyId(), JournalSource.SUPPLIER_PAYMENT, event.transactionId())) return;
-        BigDecimal amount = safe(event.amount());
-        if (amount.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Pagamento da compra " + event.purchaseNumber());
-        entry.setSource(JournalSource.SUPPLIER_PAYMENT);
-        entry.setSourceDocumentId(event.transactionId());
-        entry.setSourceDocumentNumber(event.purchaseNumber());
-        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.FORNECEDORES),
-                amount, "Liquidação ao fornecedor"));
-        entry.addLine(JournalLine.credit(cashAccount(event.companyId(), event.cashPayment()),
-                amount, "Saída de tesouraria"));
-        journalService.save(entry, event.companyId());
-    }
-
-    /** Nota de crédito: estorna Clientes, Vendas e IVA; devoluções repõem existências ao custo. */
     @EventListener
     @Transactional
     public void onCreditNoteApproved(CreditNoteApprovedEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (alreadyPosted(event.companyId(), JournalSource.CREDIT_NOTE, event.noteId())) return;
-        BigDecimal total = safe(event.totalAmount());
-        if (total.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Nota de crédito " + event.noteNumber());
-        entry.setSource(JournalSource.CREDIT_NOTE);
-        entry.setSourceDocumentId(event.noteId());
-        entry.setSourceDocumentNumber(event.noteNumber());
-        BigDecimal net = safe(event.netAmount());
-        BigDecimal tax = safe(event.taxAmount());
-        if (net.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.VENDAS),
-                    net, "Estorno da venda"));
-        }
-        if (tax.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.IVA_LIQUIDADO),
-                    tax, "Estorno do IVA liquidado"));
-        }
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CLIENTES),
-                total, "Redução da dívida do cliente"));
-        BigDecimal cost = safe(event.returnedGoodsCost());
-        if (cost.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.MERCADORIAS),
-                    cost, "Reposição das mercadorias devolvidas"));
-            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CMVMC),
-                    cost, "Estorno do custo da venda"));
-        }
-        journalService.save(entry, event.companyId());
+        commercialPostingHandler.postCreditNote(event);
     }
 
-    /** Nota de débito: aumenta Clientes e reconhece outros proveitos e IVA. */
     @EventListener
     @Transactional
     public void onDebitNoteApproved(DebitNoteApprovedEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (alreadyPosted(event.companyId(), JournalSource.DEBIT_NOTE, event.noteId())) return;
-        BigDecimal total = safe(event.totalAmount());
-        if (total.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Nota de débito " + event.noteNumber());
-        entry.setSource(JournalSource.DEBIT_NOTE);
-        entry.setSourceDocumentId(event.noteId());
-        entry.setSourceDocumentNumber(event.noteNumber());
-        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.CLIENTES),
-                total, "Acréscimo à dívida do cliente"));
-        BigDecimal net = safe(event.netAmount());
-        BigDecimal tax = safe(event.taxAmount());
-        if (net.signum() > 0) {
-            entry.addLine(JournalLine.credit(
-                    account(event.companyId(), PgcNirfChart.OUTROS_PROVEITOS_OPERACIONAIS),
-                    net, "Frete, sobretaxa ou correcção"));
-        }
-        if (tax.signum() > 0) {
-            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.IVA_LIQUIDADO),
-                    tax, "IVA liquidado"));
-        }
-        journalService.save(entry, event.companyId());
+        commercialPostingHandler.postDebitNote(event);
     }
 
-    /**
-     * Salários pagos:
-     * <pre>
-     *   D  Custos com o pessoal          ilíquido − faltas descontadas
-     *   D  Encargos sobre remunerações   INSS patronal
-     *   C  IRPS retido a entregar        IRPS
-     *   C  INSS a entregar               quota do trabalhador + quota patronal
-     *   C  Outros descontos ao pessoal   outros descontos      (só se existirem)
-     *   C  Caixa                         líquido pago
-     * </pre>
-     * <b>O maior custo fixo de uma empresa de retalho não chegava ao razão</b> — declarado em falta
-     * na CONTABILIDADE_SPEC §7. O desconto por faltas entra a reduzir o custo (e não como proveito)
-     * porque é trabalho que não foi prestado, não é receita da empresa.
-     *
-     * <p>O INSS patronal é <b>custo</b>, não retenção ao trabalhador; por isso é débito de conta
-     * própria e não sai do ilíquido. Tê-lo diluído no mesmo sítio das retenções foi sempre a forma
-     * de ele desaparecer.
-     */
+    // ─── Compras e Fornecedores ───────────────────────────────────────────────
+
+    @EventListener
+    @Transactional
+    public void onPurchaseRegistered(PurchaseRegisteredEvent event) {
+        procurementPostingHandler.postPurchase(event);
+    }
+
+    @EventListener
+    @Transactional
+    public void onSupplierPaymentRegistered(SupplierPaymentRegisteredEvent event) {
+        procurementPostingHandler.postSupplierPayment(event);
+    }
+
+    // ─── Recursos Humanos, Produção e Activos ─────────────────────────────────
+
     @EventListener
     @Transactional
     public void onPayslipPaid(PayslipPaidEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (!hasPayrollAccounts(event.companyId())) {
-            auditLogService.logEvent("SYSTEM", event.companyId(), "PAYROLL_POSTING_SKIPPED",
-                    String.format("Recibo %s não foi lançado na contabilidade: o plano de contas "
-                            + "desta empresa não tem as contas de pessoal. Semeie o plano de contas "
-                            + "em Contabilidade para as acrescentar.", event.payslipNumber()));
-            return;
-        }
-        if (alreadyPosted(event.companyId(), JournalSource.PAYROLL, event.payslipId())) return;
-
-        BigDecimal cost = safe(event.grossPay()).subtract(safe(event.absenceDeduction()));
-        if (cost.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription("Salário " + event.payslipNumber() + " — " + event.employeeName());
-        entry.setSource(JournalSource.PAYROLL);
-        entry.setSourceDocumentId(event.payslipId());
-        entry.setSourceDocumentNumber(event.payslipNumber());
-
-        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.CUSTOS_PESSOAL),
-                cost, "Remunerações do mês"));
-        BigDecimal employerInss = safe(event.employerInss());
-        if (employerInss.signum() > 0) {
-            entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.ENCARGOS_PESSOAL),
-                    employerInss, "INSS a cargo da empresa"));
-        }
-
-        BigDecimal irps = safe(event.irps());
-        if (irps.signum() > 0) {
-            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.IRPS_RETIDO),
-                    irps, "IRPS retido a entregar"));
-        }
-        BigDecimal inss = safe(event.employeeInss()).add(employerInss);
-        if (inss.signum() > 0) {
-            entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.INSS_A_ENTREGAR),
-                    inss, "INSS a entregar"));
-        }
-        BigDecimal other = safe(event.otherDeductions());
-        if (other.signum() > 0) {
-            entry.addLine(JournalLine.credit(
-                    account(event.companyId(), PgcNirfChart.PESSOAL_OUTROS_DESCONTOS),
-                    other, "Outros descontos ao pessoal"));
-        }
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CAIXA),
-                safe(event.netPay()), "Líquido pago ao colaborador"));
-
-        journalService.save(entry, event.companyId());
+        operationsPostingHandler.postPayslip(event);
     }
 
-    /**
-     * Entrega das retenções ao Estado:
-     * <pre>
-     *   D  IRPS retido / INSS a entregar   valor
-     *   C  Caixa                           valor
-     * </pre>
-     * Fecha o par do {@link #onPayslipPaid}: sem isto a conta de retenções crescia para sempre, o
-     * dinheiro saía da caixa e a dívida ficava lá — o balancete deixava de bater com a realidade.
-     */
     @EventListener
     @Transactional
     public void onPayrollLiabilityDelivered(PayrollLiabilityDeliveredEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (!hasPayrollAccounts(event.companyId())) {
-            auditLogService.logEvent("SYSTEM", event.companyId(), "PAYROLL_POSTING_SKIPPED",
-                    String.format("A entrega de %s de %d/%d não foi lançada na contabilidade: o "
-                                    + "plano de contas não tem as contas de pessoal.",
-                            event.liabilityType(), event.month(), event.year()));
-            return;
-        }
-        if (alreadyPosted(event.companyId(), JournalSource.PAYROLL_DELIVERY, event.liabilityId())) return;
-
-        BigDecimal amount = safe(event.amount());
-        if (amount.signum() <= 0) return;
-
-        String liabilityAccount = "IRPS".equals(event.liabilityType())
-                ? PgcNirfChart.IRPS_RETIDO : PgcNirfChart.INSS_A_ENTREGAR;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date());
-        entry.setDescription(String.format("Entrega %s %d/%d",
-                event.liabilityType(), event.month(), event.year()));
-        entry.setSource(JournalSource.PAYROLL_DELIVERY);
-        entry.setSourceDocumentId(event.liabilityId());
-        entry.setSourceDocumentNumber(event.paymentReference());
-        entry.addLine(JournalLine.debit(account(event.companyId(), liabilityAccount),
-                amount, "Retenção entregue ao Estado"));
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.CAIXA),
-                amount, "Pagamento ao Estado"));
-
-        journalService.save(entry, event.companyId());
+        operationsPostingHandler.postPayrollLiability(event);
     }
 
-    /** Conclusão de Ordem de Produção: D Produtos Acabados (3401), C Variação de Produção (7301). */
     @EventListener
     @Transactional
-    public void onProductionCompleted(mz.multicore.erp.architecture.events.ProductionCompletedEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (!chartOfAccountsService.hasAccounts(event.companyId(), PgcNirfChart.PRODUTOS_ACABADOS, PgcNirfChart.VARIACAO_PRODUCAO)) {
-            return;
-        }
-        if (alreadyPosted(event.companyId(), JournalSource.PRODUCTION, event.productionOrderId())) return;
-
-        BigDecimal cip = safe(event.totalCipCost());
-        if (cip.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date() != null ? event.date() : java.time.LocalDate.now());
-        entry.setDescription("Conclusão de Produção " + event.orderNumber());
-        entry.setSource(JournalSource.PRODUCTION);
-        entry.setSourceDocumentId(event.productionOrderId());
-        entry.setSourceDocumentNumber(event.orderNumber());
-        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.PRODUTOS_ACABADOS),
-                cip, "Entrada de produto acabado no armazém"));
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.VARIACAO_PRODUCAO),
-                cip, "Apuramento da variação de produção"));
-
-        journalService.save(entry, event.companyId());
+    public void onProductionCompleted(ProductionCompletedEvent event) {
+        operationsPostingHandler.postProduction(event);
     }
 
-    /** Quota de Depreciação: D Amortizações do Exercício (6501), C Amortizações Acumuladas (2801). */
     @EventListener
     @Transactional
-    public void onAssetDepreciated(mz.multicore.erp.architecture.events.AssetDepreciatedEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (!chartOfAccountsService.hasAccounts(event.companyId(), PgcNirfChart.DEPRECIACAO_EXERCICIO, PgcNirfChart.AMORTIZACOES_ACUMULADAS)) {
-            return;
-        }
-        if (alreadyPosted(event.companyId(), JournalSource.ASSET_DEPRECIATION, event.assetId())) return;
-
-        BigDecimal amount = safe(event.depreciationAmount());
-        if (amount.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date() != null ? event.date() : java.time.LocalDate.now());
-        entry.setDescription("Amortização do Activo " + event.assetCode());
-        entry.setSource(JournalSource.ASSET_DEPRECIATION);
-        entry.setSourceDocumentId(event.assetId());
-        entry.setSourceDocumentNumber(event.assetCode());
-        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.DEPRECIACAO_EXERCICIO),
-                amount, "Gasto com amortizações do exercício"));
-        entry.addLine(JournalLine.credit(account(event.companyId(), PgcNirfChart.AMORTIZACOES_ACUMULADAS),
-                amount, "Quota de amortização acumulada"));
-
-        journalService.save(entry, event.companyId());
+    public void onAssetDepreciated(AssetDepreciatedEvent event) {
+        operationsPostingHandler.postAssetDepreciation(event);
     }
 
-    /** Abastecimento de Frota: D Combustíveis da Frota (6221), C Caixa/Banco. */
     @EventListener
     @Transactional
-    public void onFleetFuelLogged(mz.multicore.erp.architecture.events.FleetFuelLoggedEvent event) {
-        if (!canPost(event.companyId())) return;
-        if (!chartOfAccountsService.hasAccounts(event.companyId(), PgcNirfChart.FROTA_COMBUSTIVEIS, PgcNirfChart.CAIXA)) {
-            return;
-        }
-        if (alreadyPosted(event.companyId(), JournalSource.FLEET_FUEL, event.fuelLogId())) return;
-
-        BigDecimal cost = safe(event.totalCost());
-        if (cost.signum() <= 0) return;
-
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(event.date() != null ? event.date() : java.time.LocalDate.now());
-        entry.setDescription("Abastecimento Viatura " + event.licensePlate());
-        entry.setSource(JournalSource.FLEET_FUEL);
-        entry.setSourceDocumentId(event.fuelLogId());
-        entry.setSourceDocumentNumber(event.licensePlate());
-        entry.addLine(JournalLine.debit(account(event.companyId(), PgcNirfChart.FROTA_COMBUSTIVEIS),
-                cost, "Consumo de combustível da frota"));
-        entry.addLine(JournalLine.credit(cashAccount(event.companyId(), event.cashPayment()),
-                cost, "Saída de tesouraria"));
-
-        journalService.save(entry, event.companyId());
-    }
-
-    private boolean canPost(Long companyId) {
-        return companyId != null && chartOfAccountsService.hasChart(companyId);
-    }
-
-    /**
-     * O plano desta empresa já tem as contas de pessoal.
-     *
-     * <p>Uma empresa que semeou o plano antes destas contas existirem tem um plano <b>incompleto</b>,
-     * não inexistente. Recusar o pagamento do salário por causa disso seria pior do que o problema:
-     * o salário está certo, o que falta é escriturá-lo. Por isso não se lança, <b>fica rasto na
-     * auditoria</b> a dizer o que fazer, e o utilizador resolve semeando o plano outra vez — que
-     * agora preenche só as lacunas.
-     */
-    private boolean hasPayrollAccounts(Long companyId) {
-        return chartOfAccountsService.hasAccounts(companyId,
-                PgcNirfChart.CUSTOS_PESSOAL, PgcNirfChart.ENCARGOS_PESSOAL,
-                PgcNirfChart.IRPS_RETIDO, PgcNirfChart.INSS_A_ENTREGAR,
-                PgcNirfChart.PESSOAL_OUTROS_DESCONTOS, PgcNirfChart.CAIXA);
-    }
-
-    private boolean alreadyPosted(Long companyId, JournalSource source, Long documentId) {
-        return documentId != null
-                && journalService.findByDocument(companyId, source, documentId).isPresent();
-    }
-
-    private Account cashAccount(Long companyId, boolean cash) {
-        return account(companyId, cash ? PgcNirfChart.CAIXA : PgcNirfChart.BANCO);
-    }
-
-    private Account account(Long companyId, String code) {
-        return chartOfAccountsService.requirePostableAccount(companyId, code);
-    }
-
-    private static BigDecimal safe(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
+    public void onFleetFuelLogged(FleetFuelLoggedEvent event) {
+        operationsPostingHandler.postFleetFuel(event);
     }
 }

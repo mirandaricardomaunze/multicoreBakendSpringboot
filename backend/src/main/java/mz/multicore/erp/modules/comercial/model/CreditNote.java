@@ -75,6 +75,12 @@ public class CreditNote extends BaseEntity {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
+    @Column(name = "pos_return_idempotency_key", length = 60)
+    private String posReturnIdempotencyKey;
+
+    @Column(name = "pos_return_request_fingerprint", length = 64)
+    private String posReturnRequestFingerprint;
+
     @OneToMany(mappedBy = "creditNote", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CreditNoteLine> lines = new ArrayList<>();
 

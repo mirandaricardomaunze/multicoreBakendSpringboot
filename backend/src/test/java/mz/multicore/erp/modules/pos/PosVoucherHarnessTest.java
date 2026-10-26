@@ -140,6 +140,8 @@ public class PosVoucherHarnessTest {
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser(OPERATOR, "ADMIN");
+        when(invoiceRepository.lockByIdAndCompanyId(anyLong(), anyLong()))
+                .thenAnswer(inv -> invoiceRepository.findById(inv.getArgument(0)));
     }
 
     @AfterEach
@@ -225,7 +227,71 @@ public class PosVoucherHarnessTest {
     }
 
     @Test
-    @DisplayName("VOUCH-03: Consulta de vale existente por código retorna DTO válido")
+    @DisplayName("VOUCH-03: Replay da mesma devolução não repõe stock nem reembolsa novamente")
+    void returnReplayWithSamePayloadDoesNotDuplicateSideEffects() {
+        Invoice invoice = createTestInvoice();
+        when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
+        when(tillSessionRepository.findActiveSessionForOperator(OPERATOR, "OPEN", COMPANY_ID))
+                .thenReturn(Optional.of(openSession));
+        when(tillMovementRepository.findByTillSessionId(1L)).thenReturn(List.of());
+        CreditNoteDTO dto = new CreditNoteDTO(
+                5L, "NC-2026-0005", LocalDateTime.now(), COMPANY_ID, CLIENT_ID, "Maria Manjate",
+                INVOICE_ID, "FT-2026-0001", WAREHOUSE_ID, "Armazém Principal", "Defeito",
+                "APPROVED", new BigDecimal("500.00"), BigDecimal.ZERO, new BigDecimal("500.00"),
+                "Devolução", "ADMIN", LocalDateTime.now(), null, List.of());
+        CreditNote entity = new CreditNote();
+        entity.setId(5L);
+        when(creditNoteService.create(any())).thenReturn(dto);
+        when(creditNoteService.approve(5L)).thenReturn(dto);
+        when(creditNoteRepository.findById(5L)).thenReturn(Optional.of(entity));
+        when(creditNoteRepository.save(any(CreditNote.class))).thenAnswer(inv -> inv.getArgument(0));
+        POSReturnRequest request = new POSReturnRequest(
+                OPERATOR, COMPANY_ID, INVOICE_ID, WAREHOUSE_ID, "Defeito", "CASH", null,
+                List.of(new CreateCreditNoteLineRequest(1L, BigDecimal.ONE)), "RETURN-123");
+
+        service.returnSale(request);
+        assertNotNull(entity.getPosReturnRequestFingerprint());
+        clearInvocations(creditNoteService, creditNoteRepository, tillMovementRepository,
+                storeVoucherRepository, financeService);
+        when(creditNoteRepository.findByInvoiceIdAndPosReturnIdempotencyKey(INVOICE_ID, "RETURN-123"))
+                .thenReturn(Optional.of(entity));
+        when(creditNoteService.findById(5L)).thenReturn(dto);
+
+        POSReturnResultDTO replay = service.returnSale(request);
+
+        assertEquals("NC-2026-0005", replay.creditNote().noteNumber());
+        verify(creditNoteService, never()).create(any());
+        verify(creditNoteService, never()).approve(anyLong());
+        verify(tillMovementRepository, never()).save(any());
+        verifyNoInteractions(financeService);
+        verify(storeVoucherRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("VOUCH-04: Mesma chave com devolução diferente é rejeitada antes dos efeitos")
+    void returnReplayWithDifferentPayloadIsRejected() {
+        Invoice invoice = createTestInvoice();
+        when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
+        CreditNote previous = new CreditNote();
+        previous.setId(6L);
+        previous.setPosReturnIdempotencyKey("RETURN-456");
+        previous.setPosReturnRequestFingerprint("fingerprint-diferente");
+        when(creditNoteRepository.findByInvoiceIdAndPosReturnIdempotencyKey(INVOICE_ID, "RETURN-456"))
+                .thenReturn(Optional.of(previous));
+        POSReturnRequest request = new POSReturnRequest(
+                OPERATOR, COMPANY_ID, INVOICE_ID, WAREHOUSE_ID, "Outro motivo", "CASH", null,
+                List.of(new CreateCreditNoteLineRequest(1L, BigDecimal.ONE)), "RETURN-456");
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.returnSale(request));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verifyNoInteractions(creditNoteService, financeService, tillMovementRepository);
+        verify(storeVoucherRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("VOUCH-05: Consulta de vale existente por código retorna DTO válido")
     void testGetVoucherSuccess() {
         StoreVoucher voucher = new StoreVoucher();
         voucher.setId(10L);

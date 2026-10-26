@@ -3,8 +3,6 @@ package mz.multicore.erp.gui.commercial;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.modules.comercial.dto.ReceiptDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 
 import javax.swing.*;
@@ -12,12 +10,10 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /** Lista e anulação de recibos comerciais. */
 public final class ReceiptsPanel extends JPanel {
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final ComercialApiClient apiClient;
     private final Runnable invoicesRefresh;
     private final DefaultTableModel model;
@@ -32,9 +28,11 @@ public final class ReceiptsPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(4, 0, 0, 0));
         add(feedback, BorderLayout.NORTH);
+
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 6));
         card.setBorder(new EmptyBorder(8, 12, 8, 12));
+
         model = new DefaultTableModel(
                 new String[]{"ID", "Nº Recibo", "Negócio", "Fatura", "Cliente", "Montante Pago", "Método Pag.", "Estado", "Data"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -44,74 +42,42 @@ public final class ReceiptsPanel extends JPanel {
         table.getColumnModel().getColumn(5).setCellRenderer(TableCellRenderers.money());
         table.getColumnModel().getColumn(7).setCellRenderer(TableCellRenderers.status());
         hideColumn(0);
+
         JTextField search = TableFilter.searchField("Nº recibo, fatura ou cliente…");
         search.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         businessUnit = TableFilter.combo("Todos os negócios");
-        businessUnit.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleComboBox(businessUnit);
         JComboBox<String> method = TableFilter.combo("Todos os métodos", "Dinheiro", "Transferência", "Cartão", "M-Pesa");
-        method.setPreferredSize(new Dimension(125, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleComboBox(method);
         JComboBox<String> status = TableFilter.combo("Todos os estados", "Concluído", "Cancelado");
-        status.setPreferredSize(new Dimension(115, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleComboBox(status);
         JComboBox<String> period = TableFilter.periodCombo();
-        period.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.styleComboBox(period);
+
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(businessUnit, 2),
                         new TableFilter.ColumnFilter(method, 6),
                         new TableFilter.ColumnFilter(status, 7)),
                 List.of(new TableFilter.PeriodFilter(period, 8)));
+
         ModernButton cancel = UIHelper.createDangerButton("Anular Recibo");
         cancel.setIcon(UIHelper.icon("fas-ban", 14));
-        cancel.addActionListener(e -> cancelSelected());
+        cancel.addActionListener(e -> ReceiptsViewCoordinator.cancelSelected(this, table, model, apiClient, feedback, invoicesRefresh, this::refresh));
+
         ModernButton refresh = UIHelper.createRefreshButton(this::refresh);
         ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
         peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
         peekToggleBtn.setToolTipText("Espreitar detalhes do recibo (Espaço)");
-        peekToggleBtn.getAccessibleContext().setAccessibleName("Espreitar recibo");
         peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
-        JPanel filters = TableFilter.bar(
-                search,
+        JPanel filters = TableFilter.bar(search,
                 TableFilter.label("Negócio:"), businessUnit,
                 TableFilter.label("Método:"), method,
                 TableFilter.label("Estado:"), status,
                 TableFilter.label("Data:"), period,
-                peekToggleBtn
-        );
+                peekToggleBtn);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(UIHelper.tableCardTop("Recibos Emitidos (Liquidações)", filters,
-                refresh, cancel), BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Recibos Emitidos (Liquidações)", filters, refresh, cancel), BorderLayout.NORTH);
 
         UIHelper.ensureHeadersFit(table);
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
-            if (mr < 0 || mr >= model.getRowCount()) return;
-            String id = String.valueOf(model.getValueAt(mr, 0));
-            String num = String.valueOf(model.getValueAt(mr, 1));
-            String bu = String.valueOf(model.getValueAt(mr, 2));
-            String inv = String.valueOf(model.getValueAt(mr, 3));
-            String client = String.valueOf(model.getValueAt(mr, 4));
-            String total = String.valueOf(model.getValueAt(mr, 5));
-            String payMethod = String.valueOf(model.getValueAt(mr, 6));
-            String state = String.valueOf(model.getValueAt(mr, 7));
-            String date = String.valueOf(model.getValueAt(mr, 8));
-
-            peek.setTitle("Recibo " + num);
-            peek.setSubtitle(client);
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu, false),
-                    new QuickPeekPanel.PeekItem("Fatura Liquidada", inv, false),
-                    new QuickPeekPanel.PeekItem("Cliente", client, false),
-                    new QuickPeekPanel.PeekItem("Data", date, false),
-                    new QuickPeekPanel.PeekItem("Método", payMethod, false),
-                    new QuickPeekPanel.PeekItem("Montante Pago", total, true),
-                    new QuickPeekPanel.PeekItem("Estado", state, false)
-            ));
-            peek.getOpenFullButton().setText("Anular Recibo");
-            peek.setOnOpenFullAction(v -> cancel.doClick());
-        });
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card,
+                (peek, mr) -> ReceiptsViewCoordinator.renderQuickPeek(peek, mr, model, cancel::doClick));
         peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         JScrollPane scroll = new JScrollPane(table);
@@ -122,115 +88,20 @@ public final class ReceiptsPanel extends JPanel {
 
     public void openPayment(Long invoiceId, String invoiceNumber, BigDecimal invoiceTotal,
                             List<TreasuryAccountDTO> accounts) {
-        if (accounts.isEmpty()) {
-            showNotice(FeedbackType.WARNING, "Sem contas de tesouraria", "Registe uma conta de tesouraria antes de emitir o recibo.");
-            return;
-        }
-        JComboBox<String> accountCombo = new JComboBox<>();
-        UIHelper.styleComboBox(accountCombo);
-        accounts.forEach(account -> accountCombo.addItem(account.name() + " (" + account.balance() + " MT)"));
-        JComboBox<String> methodCombo = new JComboBox<>(
-                new String[]{"DINHEIRO", "TRANSFERÊNCIA", "M-PESA", "CARTÃO"});
-        UIHelper.styleComboBox(methodCombo);
-        MoneyField amountField = new MoneyField(invoiceTotal.toString());
-        JLabel invoiceLabel = new JLabel(invoiceNumber);
-        invoiceLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
-        invoiceLabel.setForeground(UIHelper.TEXT_LIGHT);
-        JPanel form = UIHelper.createDialogForm("Fatura:", invoiceLabel,
-                "Conta de Tesouraria:", accountCombo, "Método de Pagamento:", methodCombo,
-                "Montante a Receber (MT):", amountField);
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
-                "Registar Recebimento (Emitir Recibo)", "fas-receipt",
-                "Recebimento de cliente e emissão de recibo", form)
-                .setConfirmButton("Receber", "fas-money-bill-wave").showDialog();
-        if (!confirmed || accountCombo.getSelectedIndex() < 0) return;
-        try {
-            BigDecimal amount = amountField.value();
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                showNotice(FeedbackType.ERROR, "Valor inválido", "O valor pago deve ser maior que zero.");
-                return;
-            }
-            Long accountId = accounts.get(accountCombo.getSelectedIndex()).id();
-            String method = String.valueOf(methodCombo.getSelectedItem());
-            UIHelper.runWithProgress(this, "A emitir recibo…",
-                    () -> apiClient.createReceipt(invoiceId, accountId, method, amount), ignored -> {
-                        BigDecimal remaining = invoiceTotal.subtract(amount);
-                        String message = remaining.compareTo(BigDecimal.ZERO) > 0
-                                ? "Recibo emitido. Continuam por receber " + remaining + " MT desta fatura."
-                                : "Fatura liquidada com sucesso! Recibo emitido.";
-                        ToastManager.success(this, message);
-                        invoicesRefresh.run();
-                        refresh();
-                    }, error -> showNotice(FeedbackType.ERROR, "Não foi possível emitir o recibo", error.getMessage()));
-        } catch (IllegalArgumentException ex) {
-            showNotice(FeedbackType.ERROR, "Dados de pagamento inválidos", ex.getMessage());
-        }
+        ReceiptPaymentDialog.show(this, apiClient, feedback, invoiceId, invoiceNumber, invoiceTotal,
+                accounts, this::refresh, invoicesRefresh);
     }
 
     public void refresh() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.loadAsync(this, () -> apiClient.getReceiptsByCompany(companyId), this::apply,
-                error -> showError("carregar recibos", error));
-    }
-
-    private void apply(List<ReceiptDTO> receipts) {
-        model.setRowCount(0);
-        java.util.Set<String> bus = new java.util.TreeSet<>();
-        for (ReceiptDTO receipt : receipts) {
-            String bu = (receipt.businessUnitName() != null && !receipt.businessUnitName().isBlank())
-                    ? receipt.businessUnitName() : "Geral";
-            bus.add(bu);
-            model.addRow(new Object[]{
-                    receipt.id(),
-                    receipt.receiptNumber(),
-                    bu,
-                    receipt.invoiceNumber(),
-                    receipt.clientName(),
-                    receipt.amountPaid(),
-                    UIHelper.humanStatus(receipt.paymentMethod()),
-                    receipt.status(),
-                    receipt.receiptDate().format(DATE_TIME)
-            });
-        }
-        Object sel = businessUnit.getSelectedItem();
-        businessUnit.removeAllItems();
-        businessUnit.addItem("Todos os negócios");
-        for (String b : bus) businessUnit.addItem(b);
-        if (sel != null) businessUnit.setSelectedItem(sel);
-    }
-
-    private void cancelSelected() {
-        int row = TableFilter.selectedModelRow(table);
-        if (row < 0) {
-            showNotice(FeedbackType.WARNING, "Seleccione um recibo", "Escolha um recibo na tabela para anular.");
-            return;
-        }
-        Long id = (Long) model.getValueAt(row, 0);
-        String number = String.valueOf(model.getValueAt(row, 1));
-        String reason = UIHelper.promptRequiredText("Anular Recibo", "fas-ban", "Recibo " + number,
-                "Motivo da anulação:");
-        if (reason == null) return;
-        UIHelper.runWithProgress(this, "A anular recibo…", () -> {
-            apiClient.cancelReceipt(id, reason);
-            return null;
-        }, ignored -> {
-            ToastManager.success(this, "Recibo " + number + " anulado; o estado da fatura foi actualizado.");
-            invoicesRefresh.run();
-            refresh();
-        }, error -> showError("anular recibo", error));
+        UIHelper.loadAsync(this, () -> apiClient.getReceiptsByCompany(companyId),
+                receipts -> ReceiptsViewCoordinator.populateReceipts(model, businessUnit, receipts),
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar recibos", error.getMessage(), null, null));
     }
 
     private void hideColumn(int index) {
         table.getColumnModel().getColumn(index).setMinWidth(0);
         table.getColumnModel().getColumn(index).setMaxWidth(0);
         table.getColumnModel().getColumn(index).setWidth(0);
-    }
-
-    private void showError(String action, Throwable error) {
-        showNotice(FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
-    }
-
-    private void showNotice(FeedbackType type, String title, String message) {
-        feedback.show(type, title, message, null, null);
     }
 }

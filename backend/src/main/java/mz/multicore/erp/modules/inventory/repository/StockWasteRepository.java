@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface StockWasteRepository extends JpaRepository<StockWaste, Long> {
@@ -38,4 +39,6 @@ public interface StockWasteRepository extends JpaRepository<StockWaste, Long> {
             @Param("companyId") Long companyId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    Optional<StockWaste> findByCompanyIdAndIdempotencyKey(Long companyId, String idempotencyKey);
 }

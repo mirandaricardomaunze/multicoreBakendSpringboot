@@ -4,11 +4,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
-import mz.multicore.erp.modules.printing.dto.SensitiveDocumentType;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -16,6 +14,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 
 /** Lista e fluxo de aprovação das guias de remessa. */
@@ -35,11 +35,6 @@ public final class DeliveryGuidesPanel extends JPanel {
         this(apiClient, ordersRefresh, null, List::of, List::of, null);
     }
 
-    /**
-     * @param openWarehouseTransfers leva ao separador das transferências entre armazéns, no Stock.
-     *        Estas guias saem para o <b>cliente</b>; a transferência move mercadoria entre armazéns
-     *        da mesma empresa e por isso vive no Stock — mas é aqui que as pessoas a vêm procurar.
-     */
     public DeliveryGuidesPanel(ComercialApiClient apiClient, Runnable ordersRefresh,
                                Runnable openWarehouseTransfers) {
         this(apiClient, ordersRefresh, openWarehouseTransfers, List::of, List::of, null);
@@ -93,10 +88,10 @@ public final class DeliveryGuidesPanel extends JPanel {
                 "Pendente de aprovação", "Aprovado", "Rejeitado", "Cancelado");
         JComboBox<String> periodo = TableFilter.periodCombo();
         TableFilter.install(table, search,
-                java.util.List.of(
+                List.of(
                         new TableFilter.ColumnFilter(status, 9),
                         new TableFilter.ColumnFilter(guideBusinessUnitCombo, 10)),
-                java.util.List.of(new TableFilter.PeriodFilter(periodo, 2)));
+                List.of(new TableFilter.PeriodFilter(periodo, 2)));
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::refresh);
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Nova guia avulsa", UIHelper.icon("fas-plus", 14, UIHelper.APPROVED_GREEN), this::createStandalone)
@@ -126,33 +121,8 @@ public final class DeliveryGuidesPanel extends JPanel {
         }
 
         UIHelper.ensureHeadersFit(table);
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
-            if (mr < 0 || mr >= model.getRowCount()) return;
-            String id = String.valueOf(model.getValueAt(mr, 0));
-            String guideNum = String.valueOf(model.getValueAt(mr, 1));
-            String date = String.valueOf(model.getValueAt(mr, 2));
-            String orderNum = String.valueOf(model.getValueAt(mr, 3));
-            String client = String.valueOf(model.getValueAt(mr, 4));
-            String wh = String.valueOf(model.getValueAt(mr, 5));
-            String resp = String.valueOf(model.getValueAt(mr, 6));
-            String vehicle = String.valueOf(model.getValueAt(mr, 7));
-            String total = String.valueOf(model.getValueAt(mr, 8));
-            String state = String.valueOf(model.getValueAt(mr, 9));
-
-            peek.setTitle("Guia " + guideNum);
-            peek.setSubtitle(client);
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("Origem", orderNum, false),
-                    new QuickPeekPanel.PeekItem("Data Emissão", date, false),
-                    new QuickPeekPanel.PeekItem("Armazém Expedição", wh, false),
-                    new QuickPeekPanel.PeekItem("Motorista", resp, false),
-                    new QuickPeekPanel.PeekItem("Viatura", vehicle, false),
-                    new QuickPeekPanel.PeekItem("Valor Total", total, true),
-                    new QuickPeekPanel.PeekItem("Estado", state, false)
-            ));
-            peek.getOpenFullButton().setText("Ver Caixas e Unidades");
-            peek.setOnOpenFullAction(v -> showPackages());
-        });
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) ->
+                DeliveryGuidesOperationsCoordinator.populatePeek(peek, model, mr, this::showPackages));
         peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         JScrollPane scroll = new JScrollPane(table);
@@ -191,7 +161,7 @@ public final class DeliveryGuidesPanel extends JPanel {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         UIHelper.loadAsync(this, () -> apiClient.getDeliveryGuidesByCompany(companyId), guides -> {
             model.setRowCount(0);
-            java.util.Set<String> bus = new java.util.TreeSet<>();
+            Set<String> bus = new TreeSet<>();
             for (DeliveryGuideDTO guide : guides) {
                 String buName = guide.businessUnitName() != null && !guide.businessUnitName().isBlank() ? guide.businessUnitName() : "—";
                 if (!"—".equals(buName)) bus.add(buName);
@@ -214,90 +184,40 @@ public final class DeliveryGuidesPanel extends JPanel {
     private void approve() {
         int row = selected("aprovar");
         if (row < 0 || !pending(row)) return;
-        String number = String.valueOf(model.getValueAt(row, 1));
-        if (JOptionPane.showConfirmDialog(this,
-                "A aprovação da guia " + number + " dará saída definitiva ao stock.\n\nPretende continuar?",
-                "Confirmar Aprovação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
-        Long id = (Long) model.getValueAt(row, 0);
-        UIHelper.runWithProgress(this, "A aprovar guia…", () -> apiClient.approveDeliveryGuide(id), ignored -> {
-            ToastManager.success(this, "Guia " + number + " aprovada; o stock foi actualizado.");
-            refreshBoth();
-        }, error -> showError("aprovar guia", error));
+        DeliveryGuidesOperationsCoordinator.approve(
+                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
+                apiClient, feedback, this::refreshBoth);
     }
 
     private void reject() {
         int row = selected("rejeitar");
         if (row < 0 || !pending(row)) return;
-        String number = String.valueOf(model.getValueAt(row, 1));
-        String reason = UIHelper.promptRequiredText("Rejeitar Guia de Remessa", "fas-times",
-                "Guia " + number, "Motivo da rejeição:");
-        if (reason == null) return;
-        Long id = (Long) model.getValueAt(row, 0);
-        UIHelper.runWithProgress(this, "A rejeitar guia…", () -> apiClient.rejectDeliveryGuide(id, reason), ignored -> {
-            ToastManager.success(this, "Guia " + number + " rejeitada; a encomenda voltou a ficar disponível.");
-            refreshBoth();
-        }, error -> showError("rejeitar guia", error));
+        DeliveryGuidesOperationsCoordinator.reject(
+                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
+                apiClient, feedback, this::refreshBoth);
     }
 
     private void cancel() {
         int row = selected("cancelar");
         if (row < 0 || !pending(row)) return;
-        String number = String.valueOf(model.getValueAt(row, 1));
-        if (JOptionPane.showConfirmDialog(this,
-                "Cancelar a guia " + number + "?\nA encomenda voltará a ficar disponível para faturação ou nova guia.",
-                "Confirmar Cancelamento", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
-        Long id = (Long) model.getValueAt(row, 0);
-        UIHelper.runWithProgress(this, "A cancelar guia…", () -> apiClient.cancelDeliveryGuide(id), ignored -> {
-            ToastManager.success(this, "Guia " + number + " cancelada.");
-            refreshBoth();
-        }, error -> showError("cancelar guia", error));
+        DeliveryGuidesOperationsCoordinator.cancel(
+                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
+                apiClient, feedback, this::refreshBoth);
     }
 
     private void print() {
         int row = selected("imprimir");
         if (row < 0) return;
-        Long id = (Long) model.getValueAt(row, 0);
-        String number = String.valueOf(model.getValueAt(row, 1));
-        if (printApiClient == null) {
-            UIHelper.runWithProgress(this, "A gerar guia em PDF…", () -> apiClient.renderDeliveryGuide(id),
-                    pdf -> PrintPreviewDialog.show(this, pdf, "guia-remessa-" + number),
-                    error -> showError("gerar guia", error));
-            return;
-        }
-        SensitivePrintCoordinator.print(this, printApiClient, SensitiveDocumentType.DELIVERY_GUIDE,
-                id, "Guia de remessa " + number, "guia-remessa-" + number,
-                () -> apiClient.renderDeliveryGuide(id), this::refresh);
+        DeliveryGuidesOperationsCoordinator.print(
+                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
+                apiClient, printApiClient, this::refresh, feedback);
     }
 
     private void showPackages() {
         int row = selected("consultar");
         if (row < 0) return;
-        Long id = (Long) model.getValueAt(row, 0);
-        UIHelper.loadAsync(this, () -> apiClient.getDeliveryGuideById(id), guide -> {
-            DefaultTableModel lines = new DefaultTableModel(
-                    new String[]{"Produto", "Quantidade", "Composição", "Valor Unit.", "Total", "Peso kg", "% Qtd", "% Peso"}, 0) {
-                @Override public boolean isCellEditable(int r, int c) { return false; }
-            };
-            guide.lines().forEach(line -> {
-                String packages = mz.multicore.erp.architecture.quantity.PackageQuantity
-                        .label(line.quantity(), line.unitsPerBox());
-                lines.addRow(new Object[]{line.productName(), line.quantity(), packages, line.unitPrice() != null ? line.unitPrice() : java.math.BigDecimal.ZERO, line.lineTotal() != null ? line.lineTotal() : java.math.BigDecimal.ZERO,
-                        line.lineGrossWeightKg(), line.quantityPercentage() + "%", line.weightPercentage() + "%"});
-            });
-            JTable details = new JTable(lines);
-            UIHelper.styleTable(details);
-            details.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
-            details.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
-            JScrollPane scroll = new JScrollPane(details);
-            UIHelper.styleScrollPane(scroll);
-            scroll.setPreferredSize(new Dimension(900, 300));
-            ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Caixas e Unidades — " + guide.guideNumber(), "fas-boxes", scroll);
-            dlg.asReadOnly("Fechar");
-            dlg.setSize(920, 480);
-            dlg.showDialog();
-            // modern dialog displayed
-            // closed
-        }, error -> showError("carregar caixas da guia", error));
+        DeliveryGuidesOperationsCoordinator.showPackagesModal(
+                this, (Long) model.getValueAt(row, 0), apiClient, feedback);
     }
 
     private int selected(String action) {
@@ -314,7 +234,7 @@ public final class DeliveryGuidesPanel extends JPanel {
         return false;
     }
 
-    private void refreshBoth() { refresh(); ordersRefresh.run(); }
+    private void refreshBoth() { refresh(); if (ordersRefresh != null) ordersRefresh.run(); }
     private void hideColumn(int index) {
         table.getColumnModel().getColumn(index).setMinWidth(0);
         table.getColumnModel().getColumn(index).setMaxWidth(0);

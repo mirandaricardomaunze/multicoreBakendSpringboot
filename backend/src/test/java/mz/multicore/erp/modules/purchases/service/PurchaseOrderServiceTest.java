@@ -48,6 +48,7 @@ class PurchaseOrderServiceTest {
     private InventoryService inventoryService;
     private DocumentNumberService documentNumberService;
     private mz.multicore.erp.modules.purchases.repository.GoodsReceiptDiscrepancyRepository discrepancyRepository;
+    private mz.multicore.erp.modules.purchases.repository.PurchaseOrderReceiptRepository receiptRepository;
     private PurchaseOrderService service;
 
     @BeforeEach
@@ -60,16 +61,20 @@ class PurchaseOrderServiceTest {
         inventoryService = mock(InventoryService.class);
         documentNumberService = mock(DocumentNumberService.class);
         discrepancyRepository = mock(mz.multicore.erp.modules.purchases.repository.GoodsReceiptDiscrepancyRepository.class);
+        receiptRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderReceiptRepository.class);
         when(discrepancyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         service = new PurchaseOrderService(orderRepository, supplierRepository, productRepository,
                 warehouseRepository, companyRepository, inventoryService, documentNumberService,
-                mock(AuditLogService.class), discrepancyRepository);
+                mock(AuditLogService.class), discrepancyRepository, receiptRepository);
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
 
         when(orderRepository.save(any(PurchaseOrder.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.saveAndFlush(any(PurchaseOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.lockByIdAndCompanyId(anyLong(), anyLong()))
+                .thenAnswer(inv -> orderRepository.findById(inv.getArgument(0)));
+        when(receiptRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(documentNumberService.next(anyString())).thenReturn("EC-F-2026/1");
     }
 
@@ -494,5 +499,54 @@ class PurchaseOrderServiceTest {
     void receivePartial_lineIdInexistente_lanca() {
         orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
         assertThrows(BusinessRuleException.class, () -> service.receivePartial(99L, receive(999L, "1")));
+    }
+
+    @Test // RP-13
+    void receivePartial_replayIdentico_naoDuplicaStockNemDivergencia() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        ReceivePurchaseOrderRequest request = new ReceivePurchaseOrderRequest(List.of(
+                new ReceiveLine(5L, new BigDecimal("6"), BigDecimal.ZERO, BigDecimal.ZERO, "Conferido")),
+                "PURCHASE-RECV-123");
+        when(receiptRepository.findByPurchaseOrderIdAndIdempotencyKey(99L, "PURCHASE-RECV-123"))
+                .thenReturn(Optional.empty());
+
+        service.receivePartial(99L, request);
+        org.mockito.ArgumentCaptor<mz.multicore.erp.modules.purchases.model.PurchaseOrderReceipt> captor =
+                org.mockito.ArgumentCaptor.forClass(
+                        mz.multicore.erp.modules.purchases.model.PurchaseOrderReceipt.class);
+        verify(receiptRepository).save(captor.capture());
+        var receipt = captor.getValue();
+        assertNotNull(receipt.getRequestFingerprint());
+
+        clearInvocations(inventoryService, discrepancyRepository, receiptRepository, orderRepository);
+        when(receiptRepository.findByPurchaseOrderIdAndIdempotencyKey(99L, "PURCHASE-RECV-123"))
+                .thenReturn(Optional.of(receipt));
+
+        PurchaseOrderDTO replay = service.receivePartial(99L, request);
+
+        assertEquals(PurchaseOrder.PARTIALLY_RECEIVED, replay.status());
+        assertEquals(0, new BigDecimal("6").compareTo(replay.lines().get(0).receivedQuantity()));
+        verifyNoInteractions(inventoryService, discrepancyRepository);
+        verify(receiptRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test // RP-14
+    void receivePartial_mesmaChaveComPayloadDiferente_eRejeitadoAntesDoStock() {
+        orderInState(PurchaseOrder.ORDERED, new BigDecimal("10"), BigDecimal.ZERO, 5L);
+        var previous = new mz.multicore.erp.modules.purchases.model.PurchaseOrderReceipt();
+        previous.setRequestFingerprint("fingerprint-diferente");
+        when(receiptRepository.findByPurchaseOrderIdAndIdempotencyKey(99L, "PURCHASE-RECV-456"))
+                .thenReturn(Optional.of(previous));
+        ReceivePurchaseOrderRequest request = new ReceivePurchaseOrderRequest(
+                List.of(new ReceiveLine(5L, new BigDecimal("4"))), "PURCHASE-RECV-456");
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.receivePartial(99L, request));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verifyNoInteractions(inventoryService, discrepancyRepository);
+        verify(receiptRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
     }
 }

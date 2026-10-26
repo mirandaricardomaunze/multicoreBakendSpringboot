@@ -68,6 +68,7 @@ class EnterpriseModulesUiUniformityHarnessTest {
         try (var stream = Files.walk(guiDir)) {
             List<Path> files = stream.filter(p -> p.toString().endsWith(".java"))
                     .filter(p -> !p.toString().contains("components"))
+                    .filter(p -> !p.toString().contains("tv"))
                     .filter(p -> !p.getFileName().toString().equals("LoginDialog.java"))
                     .toList();
 

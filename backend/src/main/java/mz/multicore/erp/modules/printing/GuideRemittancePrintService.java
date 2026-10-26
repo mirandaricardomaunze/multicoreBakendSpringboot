@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.printing;
 
 import com.lowagie.text.Element;
+import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -79,7 +80,7 @@ public class GuideRemittancePrintService {
                 rawColumns.footer()
         );
 
-        return PdfDocumentBuilder.buildA4(doc -> {
+        return PdfDocumentBuilder.build(PageSize.A4.rotate(), doc -> {
             for (int i = 0; i < GUIDE_REMITTANCE_COPIES.size(); i++) {
                 if (i > 0) {
                     doc.newPage();

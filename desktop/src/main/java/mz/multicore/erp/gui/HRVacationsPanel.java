@@ -1,35 +1,17 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.gui.components.DateField;
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.modules.hr.dto.CreateVacationRequest;
-import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
-import mz.multicore.erp.modules.hr.dto.VacationDTO;
+import mz.multicore.erp.gui.components.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.awt.BorderLayout;
 import java.util.List;
 
 /**
- * Separador de pedidos de férias. Extraído do {@link HRPanel} a 2026-08-23: o painel estava a
- * 998/1000 linhas do {@code UiPanelDecompositionTest} e o ponto (B2) precisava de espaço para o
- * seu próprio separador. Molde do {@link HRExpensesPanel}.
+ * Separador de pedidos de férias.
  */
 final class HRVacationsPanel {
-
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final HRPanel owner;
 
@@ -71,18 +53,9 @@ final class HRVacationsPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-plane-departure", UIHelper.ACCENT_BLUE);
-            peek.setTitle(String.valueOf(owner.vacationsModel.getValueAt(row, 1)));
-            peek.setSubtitle("Férias Ref. " + owner.vacationsModel.getValueAt(row, 5) + " • " + owner.vacationsModel.getValueAt(row, 4) + " dias");
-            peek.setStatus(String.valueOf(owner.vacationsModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Início", String.valueOf(owner.vacationsModel.getValueAt(row, 2)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Fim", String.valueOf(owner.vacationsModel.getValueAt(row, 3)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Dias Marcados", String.valueOf(owner.vacationsModel.getValueAt(row, 4)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Decidido Por", String.valueOf(owner.vacationsModel.getValueAt(row, 7)), false));
-            peek.setItems(items);
+            HrVacationsViewCoordinator.populateQuickPeek(peek, row, owner);
         });
 
         JTextField vacSearch = TableFilter.searchField("Colaborador ou decisor…");
@@ -90,111 +63,34 @@ final class HRVacationsPanel {
                 "Pendente", "Aprovado", "Rejeitado", "Cancelado");
         JComboBox<String> vacPeriodo = TableFilter.periodCombo();
         TableFilter.install(owner.vacationsTable, vacSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(vacEstado, 6)),
-                java.util.List.of(new TableFilter.PeriodFilter(vacPeriodo, 2)));
+                List.of(new TableFilter.ColumnFilter(vacEstado, 6)),
+                List.of(new TableFilter.PeriodFilter(vacPeriodo, 2)));
         JPanel vacBar = TableFilter.bar(vacSearch,
                 TableFilter.label("Estado:"), vacEstado,
-                TableFilter.label("Início:", "fas-calendar-alt"), vacPeriodo);
+                TableFilter.label("Início:", "fas-calendar-alt"), vacPeriodo, refreshBtn);
         vacBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         card.add(UIHelper.tableCardTop("Pedidos de Férias", vacBar,
-                refreshBtn, exportBtn, decisionBtn, newBtn), BorderLayout.NORTH);
+                exportBtn, decisionBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
 
     void load() {
-        UIHelper.loadAsync(owner, owner.hrApiClient::getAllVacations, this::applyVacations,
+        UIHelper.loadAsync(owner, owner.hrApiClient::getAllVacations,
+                loaded -> HrVacationsViewCoordinator.applyVacations(loaded, owner),
                 error -> owner.showLoadError("férias", error));
     }
 
-    private void applyVacations(List<VacationDTO> loaded) {
-        owner.vacationsList = loaded;
-        owner.vacationsModel.setRowCount(0);
-        for (VacationDTO v : owner.vacationsList) {
-            owner.vacationsModel.addRow(new Object[]{
-                    v.id(), v.employeeName(),
-                    v.startDate().format(DATE_FMT), v.endDate().format(DATE_FMT),
-                    v.totalDays(), v.yearReference(), v.status(),
-                    v.decisionBy() == null ? "-" : v.decisionBy()
-            });
-        }
-        UIHelper.ensureHeadersFit(owner.vacationsTable);
-        owner.refreshOverview();
-    }
-
     private void openCreateVacationDialog() {
-        if (owner.employeesList.isEmpty()) {
-            owner.showNotice(FeedbackType.WARNING, "Sem colaboradores", "Registe colaboradores primeiro.");
-            return;
-        }
-        JComboBox<String> empCombo = new JComboBox<>();
-        UIHelper.styleComboBox(empCombo);
-        for (EmployeeDTO e : owner.employeesList) empCombo.addItem(e.name() + " — " + e.department());
-
-        DateField startField = new DateField(LocalDate.now());
-        DateField endField = new DateField(LocalDate.now().plusDays(15));
-        JSpinner yearSpinner = new JSpinner(new SpinnerNumberModel(LocalDate.now().getYear(), 2000, 2100, 1));
-        JTextField notesField = new JTextField();
-        UIHelper.styleTextField(notesField);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Colaborador:", empCombo,
-                "Data Início (yyyy-MM-dd):", startField,
-                "Data Fim (yyyy-MM-dd):", endField,
-                "Ano de Referência:", yearSpinner,
-                "Observações:", notesField
-        );
-
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Novo Pedido de Férias", "fas-umbrella-beach", "Marcação de férias do colaborador", form).showDialog();
-        if (!confirmed) return;
-
-        try {
-            EmployeeDTO emp = owner.employeesList.get(empCombo.getSelectedIndex());
-            CreateVacationRequest req = new CreateVacationRequest(
-                    emp.id(),
-                    startField.value(),
-                    endField.value(),
-                    (Integer) yearSpinner.getValue(),
-                    notesField.getText().trim().isEmpty() ? null : notesField.getText().trim()
-            );
-            UIHelper.runWithProgress(owner, "A submeter pedido de férias…", () -> owner.hrApiClient.submitVacation(req), ignored -> {
-                owner.showSuccess("Pedido de férias submetido.");
-                load();
-            }, owner::showActionError);
-        } catch (Exception ex) {
-            owner.showNotice(FeedbackType.ERROR, "Não foi possível submeter o pedido de férias", ex.getMessage());
-        }
+        HrVacationFormDialog.show(owner, this::load);
     }
 
     private void decideVacation(boolean approve) {
-        int row = TableFilter.selectedModelRow(owner.vacationsTable);
-        if (row < 0) {
-            owner.showNotice(FeedbackType.WARNING, "Seleccione um pedido", "Escolha um pedido na tabela para continuar.");
-            return;
-        }
-        VacationDTO sel = owner.vacationsList.get(row);
-        String reason = null;
-        if (!approve) {
-            reason = UIHelper.promptRequiredText("Rejeitar Pedido de Férias", "fas-times-circle",
-                    "Colaborador: " + sel.employeeName(), "Motivo da rejeição:");
-            if (reason == null) return;
-        }
-        String decisionReason = reason;
-        UIHelper.runWithProgress(owner, approve ? "A aprovar férias…" : "A rejeitar férias…", () -> {
-            owner.hrApiClient.decideVacation(sel.id(), approve, decisionReason);
-            return null;
-        }, ignored -> load(), owner::showActionError);
+        HrVacationsViewCoordinator.decideVacation(approve, owner, this::load);
     }
 
-    private void openVacationAllowance() {
-        int row = TableFilter.selectedModelRow(owner.vacationsTable);
-        if (row < 0) {
-            owner.showNotice(FeedbackType.WARNING, "Seleccione um pedido",
-                    "Escolha as férias aprovadas cujo subsídio pretende consultar.");
-            return;
-        }
-        new HRBonusActions(owner).openVacationAllowance(owner.vacationsList.get(row));
+    void openVacationAllowance() {
+        HrVacationsViewCoordinator.openVacationAllowance(owner);
     }
-
 }

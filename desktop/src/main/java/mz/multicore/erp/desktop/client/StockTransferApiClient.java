@@ -68,7 +68,8 @@ public class StockTransferApiClient {
     public StockTransferDTO receive(Long id, String notes,
                                     List<mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest.ReceiveLine> lines) {
         return clientFactory.authenticatedClient().post("/api/inventory/transfers/" + id + "/receive",
-                new mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest(notes, lines), StockTransferDTO.class);
+                new mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest(
+                        notes, lines, "RECV-" + java.util.UUID.randomUUID()), StockTransferDTO.class);
     }
 
     /** Guias despachadas e ainda por confirmar; {@code destinationWarehouseId} nulo = todas. */

@@ -5,6 +5,8 @@ import mz.multicore.erp.modules.hr.dto.CreateAbsenceRequest;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.dto.CreatePayslipRequest;
 import mz.multicore.erp.modules.hr.dto.CreateVacationRequest;
+import mz.multicore.erp.modules.hr.dto.ChangeEmployeeStatusRequest;
+import mz.multicore.erp.modules.hr.dto.VacationDecisionRequest;
 import mz.multicore.erp.modules.hr.dto.EmployeeDTO;
 import mz.multicore.erp.modules.hr.dto.ExpenseClaimDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollFiscalSummaryDTO;
@@ -81,9 +83,9 @@ public class HRController {
     @PostMapping("/employees/{id}/status")
     public ResponseEntity<EmployeeDTO> changeEmployeeStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body
+            @RequestBody @Valid ChangeEmployeeStatusRequest body
     ) {
-        return ResponseEntity.ok(hrService.changeEmployeeStatus(id, body.get("status")));
+        return ResponseEntity.ok(hrService.changeEmployeeStatus(id, body.status()));
     }
 
     @GetMapping("/expenses")
@@ -204,10 +206,10 @@ public class HRController {
     @PostMapping("/vacations/{id}/decide")
     public ResponseEntity<VacationDTO> decideVacation(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> body
+            @RequestBody @Valid VacationDecisionRequest body
     ) {
-        boolean approve = Boolean.TRUE.equals(body.get("approve"));
-        String rejectionReason = (String) body.get("rejectionReason");
+        boolean approve = body.approve();
+        String rejectionReason = body.rejectionReason();
         // O decisor é resolvido no Service a partir do utilizador autenticado, não do corpo do pedido.
         return ResponseEntity.ok(hrService.decideVacation(id, approve, rejectionReason));
     }

@@ -1,16 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.client.ForensicAuditApiClient;
-import mz.multicore.erp.gui.components.DateField;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.KpiCard;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
-import mz.multicore.erp.gui.components.PrintPreviewDialog;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.ToastManager;
-import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.audit.dto.ForensicAnomalyDTO;
 import mz.multicore.erp.modules.audit.dto.ForensicAuditSummaryDTO;
 import mz.multicore.erp.modules.audit.dto.ForensicCategory;
@@ -18,24 +9,18 @@ import mz.multicore.erp.modules.audit.dto.ForensicSeverity;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Painel Executivo da Central de Auditoria Forense & Controlo de Fraude Interna.
- * Monitorização de anomalias fiscais, cancelamentos, quebras de armazém e descontos manuais.
+ * Monitorização analítica de anomalias fiscais, cancelamentos, quebras de armazém e descontos manuais.
  */
 public class ForensicAuditPanel extends JPanel {
-
 
     private final ForensicAuditApiClient apiClient;
 
@@ -88,7 +73,6 @@ public class ForensicAuditPanel extends JPanel {
         titles.add(title);
         titles.add(Box.createVerticalStrut(2));
         titles.add(subtitle);
-
         header.add(titles, BorderLayout.WEST);
 
         busyBar = UIHelper.createBusyBar();
@@ -105,12 +89,10 @@ public class ForensicAuditPanel extends JPanel {
 
     private JPanel buildKpiBar() {
         JPanel kpiRow = KpiCard.createGrid(4);
-
         kpiRow.add(KpiCard.createMetricCard("RISCO FINANCEIRO TOTAL", kpiTotalRisk, "Exposição apurada em auditoria", "fas-shield-alt", UIHelper.REJECTED_RED));
         kpiRow.add(KpiCard.createMetricCard("OCORRÊNCIAS CRÍTICAS", kpiCritical, "Cancelamentos e desvios graves", "fas-exclamation-circle", UIHelper.REJECTED_RED));
         kpiRow.add(KpiCard.createMetricCard("OCORRÊNCIAS SUSPEITAS", kpiSuspicious, "Operações com padrão atípico", "fas-exclamation-triangle", UIHelper.PENDING_YELLOW));
         kpiRow.add(KpiCard.createMetricCard("ÍNDICE DE CONFORMIDADE", kpiComplianceScore, "Score global de controlo interno", "fas-clipboard-check", UIHelper.APPROVED_GREEN));
-
         return kpiRow;
     }
 
@@ -139,18 +121,17 @@ public class ForensicAuditPanel extends JPanel {
         table.putClientProperty("noRowInspector", Boolean.TRUE);
 
         if (table.getColumnModel().getColumnCount() > 0) {
-            table.getColumnModel().getColumn(0).setPreferredWidth(125); // Data/Hora
-            table.getColumnModel().getColumn(1).setPreferredWidth(95);  // Severidade
-            table.getColumnModel().getColumn(2).setPreferredWidth(160); // Categoria
-            table.getColumnModel().getColumn(3).setPreferredWidth(110); // Referência
-            table.getColumnModel().getColumn(4).setPreferredWidth(110); // Operador
-            table.getColumnModel().getColumn(5).setPreferredWidth(110); // Impacto
-            table.getColumnModel().getColumn(6).setPreferredWidth(230); // Detalhes
-            table.getColumnModel().getColumn(7).setPreferredWidth(240); // Recomendação
+            table.getColumnModel().getColumn(0).setPreferredWidth(125);
+            table.getColumnModel().getColumn(1).setPreferredWidth(95);
+            table.getColumnModel().getColumn(2).setPreferredWidth(160);
+            table.getColumnModel().getColumn(3).setPreferredWidth(110);
+            table.getColumnModel().getColumn(4).setPreferredWidth(110);
+            table.getColumnModel().getColumn(5).setPreferredWidth(110);
+            table.getColumnModel().getColumn(6).setPreferredWidth(230);
+            table.getColumnModel().getColumn(7).setPreferredWidth(240);
         }
 
         table.setDefaultRenderer(Object.class, new ForensicCellRenderer());
-
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -160,20 +141,9 @@ public class ForensicAuditPanel extends JPanel {
             }
         });
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-shield-alt", UIHelper.REJECTED_RED);
-            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 2)));
-            peek.setSubtitle("Ref: " + tableModel.getValueAt(row, 3) + " • " + tableModel.getValueAt(row, 0));
-            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 1)), UIHelper.REJECTED_RED);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Operador", String.valueOf(tableModel.getValueAt(row, 4)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Impacto Financeiro", String.valueOf(tableModel.getValueAt(row, 5)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Detalhes da Ocorrência", String.valueOf(tableModel.getValueAt(row, 6)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Recomendação Preventiva", String.valueOf(tableModel.getValueAt(row, 7)), false));
-            peek.setItems(items);
-            peek.getOpenFullButton().setText("Ver Ficha Completa");
-            peek.setOnOpenFullAction(v -> showAnomalyDetails(row));
+            ForensicAuditOperationsCoordinator.populatePeek(peek, tableModel, row, this::showAnomalyDetails);
         });
 
         JScrollPane scrollPane = new JScrollPane(table);
@@ -235,13 +205,13 @@ public class ForensicAuditPanel extends JPanel {
         busyBar.setVisible(true);
         busyBar.setIndeterminate(true);
 
-        LocalDate start = parseDate(startDateField.getText().trim());
-        LocalDate end = parseDate(endDateField.getText().trim());
-        ForensicSeverity sev = parseSeverity();
-        ForensicCategory cat = parseCategory();
+        LocalDate start = ForensicAuditOperationsCoordinator.parseDate(startDateField.getText().trim());
+        LocalDate end = ForensicAuditOperationsCoordinator.parseDate(endDateField.getText().trim());
+        ForensicSeverity sev = ForensicAuditOperationsCoordinator.parseSeverity(severityCombo.getSelectedIndex());
+        ForensicCategory cat = ForensicAuditOperationsCoordinator.parseCategory(categoryCombo.getSelectedIndex());
         String operator = operatorField.getText().trim();
 
-        SwingWorker<ForensicAuditSummaryDTO, Void> worker = new SwingWorker<>() {
+        new SwingWorker<ForensicAuditSummaryDTO, Void>() {
             @Override
             protected ForensicAuditSummaryDTO doInBackground() {
                 return apiClient.getSummary(start, end, sev, cat, operator);
@@ -258,8 +228,7 @@ public class ForensicAuditPanel extends JPanel {
                     ToastManager.show(ForensicAuditPanel.this, FeedbackType.ERROR, "Falha ao carregar auditoria forense: " + ex.getMessage());
                 }
             }
-        };
-        worker.execute();
+        }.execute();
     }
 
     void renderSummary(ForensicAuditSummaryDTO summary) {
@@ -291,147 +260,17 @@ public class ForensicAuditPanel extends JPanel {
     }
 
     private void emitForensicPdf() {
-        busyBar.setVisible(true);
-        busyBar.setIndeterminate(true);
-
-        LocalDate start = parseDate(startDateField.getText().trim());
-        LocalDate end = parseDate(endDateField.getText().trim());
-        ForensicSeverity sev = parseSeverity();
-        ForensicCategory cat = parseCategory();
+        LocalDate start = ForensicAuditOperationsCoordinator.parseDate(startDateField.getText().trim());
+        LocalDate end = ForensicAuditOperationsCoordinator.parseDate(endDateField.getText().trim());
+        ForensicSeverity sev = ForensicAuditOperationsCoordinator.parseSeverity(severityCombo.getSelectedIndex());
+        ForensicCategory cat = ForensicAuditOperationsCoordinator.parseCategory(categoryCombo.getSelectedIndex());
         String operator = operatorField.getText().trim();
 
-        SwingWorker<byte[], Void> worker = new SwingWorker<>() {
-            @Override
-            protected byte[] doInBackground() {
-                return apiClient.getPdf(start, end, sev, cat, operator);
-            }
-
-            @Override
-            protected void done() {
-                busyBar.setIndeterminate(false);
-                busyBar.setVisible(false);
-                try {
-                    byte[] pdf = get();
-                    if (pdf != null && pdf.length > 0) {
-                        PrintPreviewDialog.show(ForensicAuditPanel.this, pdf, "dossie-auditoria-forense");
-                    } else {
-                        ToastManager.show(ForensicAuditPanel.this, FeedbackType.WARNING, "Dossiê PDF vazio devolvido pelo servidor.");
-                    }
-                } catch (Exception ex) {
-                    ToastManager.show(ForensicAuditPanel.this, FeedbackType.ERROR, "Erro ao gerar PDF forense: " + ex.getMessage());
-                }
-            }
-        };
-        worker.execute();
+        ForensicAuditOperationsCoordinator.emitForensicPdf(this, apiClient, busyBar, start, end, sev, cat, operator);
     }
 
     private void showAnomalyDetails(int rowIndex) {
         if (rowIndex < 0 || rowIndex >= currentAnomalies.size()) return;
-        ForensicAnomalyDTO a = currentAnomalies.get(rowIndex);
-
-        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Dossiê de Anomalia Forense", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setSize(580, 420);
-        dialog.setLocationRelativeTo(this);
-
-        JPanel p = new JPanel(new BorderLayout(0, 14));
-        p.setBackground(UIHelper.BG_CARD);
-        p.setBorder(new EmptyBorder(16, 20, 16, 20));
-
-        JLabel title = UIHelper.createHeading("Ocorrência: " + a.documentOrReference());
-        p.add(title, BorderLayout.NORTH);
-
-        JTextArea area = new JTextArea();
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
-        area.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        area.setBackground(UIHelper.BG_DARK);
-        area.setForeground(UIHelper.TEXT_LIGHT);
-        area.setBorder(new EmptyBorder(12, 12, 12, 12));
-
-        String content = "Data/Hora: " + a.timestamp().format(UIHelper.DATETIME_FMT) + "\n"
-                + "Severidade: " + a.severity() + "\n"
-                + "Categoria: " + a.categoryLabel() + "\n"
-                + "Operador / Utilizador: " + a.operator() + "\n"
-                + "Impacto Financeiro: " + UIHelper.formatMzn(a.financialImpact()) + "\n"
-                + "Motivo Original Declarado: " + a.justification() + "\n\n"
-                + "DETALHES ANALÍTICOS:\n" + a.details() + "\n\n"
-                + "RECOMENDAÇÃO PREVENTIVA DA AUDITORIA:\n" + a.recommendation();
-
-        area.setText(content);
-        p.add(new JScrollPane(area), BorderLayout.CENTER);
-
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnRow.setOpaque(false);
-        ModernButton closeBtn = UIHelper.createSecondaryButton("Fechar");
-        closeBtn.addActionListener(e -> dialog.dispose());
-        btnRow.add(closeBtn);
-        p.add(btnRow, BorderLayout.SOUTH);
-
-        dialog.setContentPane(p);
-        dialog.setVisible(true);
-    }
-
-    private LocalDate parseDate(String text) {
-        if (text == null || text.isBlank()) return null;
-        try {
-            return LocalDate.parse(text);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private ForensicSeverity parseSeverity() {
-        int idx = severityCombo.getSelectedIndex();
-        if (idx == 1) return ForensicSeverity.CRITICAL;
-        if (idx == 2) return ForensicSeverity.SUSPICIOUS;
-        if (idx == 3) return ForensicSeverity.INFO;
-        return null;
-    }
-
-    private ForensicCategory parseCategory() {
-        int idx = categoryCombo.getSelectedIndex();
-        return switch (idx) {
-            case 1 -> ForensicCategory.DOC_CANCELLATION;
-            case 2 -> ForensicCategory.EXCESSIVE_DISCOUNT;
-            case 3 -> ForensicCategory.STOCK_SHRINKAGE;
-            case 4 -> ForensicCategory.CREDIT_OVERRIDE;
-            case 5 -> ForensicCategory.PAYMENT_VOID;
-            case 6 -> ForensicCategory.AUDIT_SECURITY;
-            default -> null;
-        };
-    }
-
-    private static class ForensicCellRenderer extends DefaultTableCellRenderer {
-        @Override
-        public Component getTableCellRendererComponent(JTable tbl, Object val, boolean isSel, boolean hasFocus, int row, int col) {
-            Component c = super.getTableCellRendererComponent(tbl, val, isSel, hasFocus, row, col);
-
-            if (!isSel) {
-                c.setBackground(row % 2 == 0 ? UIHelper.BG_CARD : UIHelper.BG_DARK);
-            }
-
-            if (col == 1) { // Severidade
-                String sev = String.valueOf(val);
-                if ("CRITICAL".equals(sev)) {
-                    c.setForeground(UIHelper.REJECTED_RED);
-                    setFont(getFont().deriveFont(Font.BOLD));
-                } else if ("SUSPICIOUS".equals(sev)) {
-                    c.setForeground(UIHelper.PENDING_YELLOW);
-                    setFont(getFont().deriveFont(Font.BOLD));
-                } else {
-                    c.setForeground(UIHelper.TEXT_MUTED);
-                }
-                setHorizontalAlignment(CENTER);
-            } else if (col == 5) { // Impacto
-                setHorizontalAlignment(RIGHT);
-                c.setForeground(UIHelper.TEXT_LIGHT);
-            } else {
-                c.setForeground(UIHelper.TEXT_LIGHT);
-                setHorizontalAlignment(LEFT);
-            }
-
-            return c;
-        }
+        ForensicAnomalyDetailsDialog.show(this, currentAnomalies.get(rowIndex));
     }
 }

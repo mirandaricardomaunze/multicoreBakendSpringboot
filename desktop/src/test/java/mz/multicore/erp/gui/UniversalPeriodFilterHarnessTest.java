@@ -119,7 +119,7 @@ public class UniversalPeriodFilterHarnessTest {
 
                 JTable table = panel.invoicesTable;
                 assertNotNull(table, "invoicesTable deve estar inicializada");
-                assertEquals(7, table.getColumnCount(), "invoicesTable deve ter 7 colunas (incluindo Data)");
+                assertEquals(9, table.getColumnCount(), "invoicesTable deve ter as colunas operacionais (incluindo Negócio e Impressão)");
                 assertEquals("Data", table.getColumnName(3), "A coluna 3 deve ser 'Data'");
             } finally {
                 CurrentUserContext.clear();

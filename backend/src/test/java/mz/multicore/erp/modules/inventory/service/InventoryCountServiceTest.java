@@ -98,7 +98,7 @@ class InventoryCountServiceTest {
     @Test
     void applySession_ajustaSoLinhasContadas_eFechaSessao() {
         InventoryCount count = draftWith(line(p1, new BigDecimal("8")), line(p2, null));
-        when(inventoryCountRepository.findById(5L)).thenReturn(Optional.of(count));
+        when(inventoryCountRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(count));
         when(inventoryService.getStocksByWarehouse(WAREHOUSE_ID))
                 .thenReturn(List.of(stock(p1, new BigDecimal("10")), stock(p2, new BigDecimal("5"))));
 
@@ -116,7 +116,7 @@ class InventoryCountServiceTest {
         // p1 contado 10 = sistema 10 (sem diferença → não chama adjustStock, que rejeitaria delta zero);
         // p2 contado 3 ≠ sistema 5 → gera ajuste. Aplica na mesma (não faz rollback).
         InventoryCount count = draftWith(line(p1, new BigDecimal("10")), line(p2, new BigDecimal("3")));
-        when(inventoryCountRepository.findById(5L)).thenReturn(Optional.of(count));
+        when(inventoryCountRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(count));
         when(inventoryService.getStocksByWarehouse(WAREHOUSE_ID))
                 .thenReturn(List.of(stock(p1, new BigDecimal("10")), stock(p2, new BigDecimal("5"))));
 
@@ -132,7 +132,7 @@ class InventoryCountServiceTest {
     void applySession_naoDraft_lanca() {
         InventoryCount count = draftWith(line(p1, new BigDecimal("8")));
         count.setStatus(InventoryCountStatus.APPLIED);
-        when(inventoryCountRepository.findById(5L)).thenReturn(Optional.of(count));
+        when(inventoryCountRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(count));
 
         assertThrows(BusinessRuleException.class, () -> service.applySession(5L));
         verify(inventoryService, never()).adjustStock(any());
@@ -141,7 +141,7 @@ class InventoryCountServiceTest {
     @Test
     void saveCounts_atualizaContagemDoArtigo() {
         InventoryCount count = draftWith(line(p1, null), line(p2, null));
-        when(inventoryCountRepository.findById(5L)).thenReturn(Optional.of(count));
+        when(inventoryCountRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(count));
 
         InventoryCountDTO dto = service.saveCounts(5L, Map.of(100L, new BigDecimal("7")));
 
@@ -151,7 +151,7 @@ class InventoryCountServiceTest {
     @Test
     void cancelSession_marcaCancelada() {
         InventoryCount count = draftWith(line(p1, null));
-        when(inventoryCountRepository.findById(5L)).thenReturn(Optional.of(count));
+        when(inventoryCountRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(count));
 
         service.cancelSession(5L);
 

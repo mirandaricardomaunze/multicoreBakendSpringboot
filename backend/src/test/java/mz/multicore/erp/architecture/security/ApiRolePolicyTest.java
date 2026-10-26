@@ -34,6 +34,9 @@ class ApiRolePolicyTest {
         assertFalse(ApiRolePolicy.allows("SELLER", "POST", "/api/pos/returns"));
         assertFalse(ApiRolePolicy.allows("SELLER", "GET", "/api/finance/accounts"));
         assertFalse(ApiRolePolicy.allows("SELLER", "GET", "/api/users"));
+        assertFalse(ApiRolePolicy.allows("SELLER", "GET", "/api/inventory/movements"));
+        assertFalse(ApiRolePolicy.allows("SELLER", "GET", "/api/inventory/warehouses/all"));
+        assertTrue(ApiRolePolicy.allows("SELLER", "GET", "/api/inventory/stocks?companyId=1"));
     }
 
     @Test
@@ -41,8 +44,11 @@ class ApiRolePolicyTest {
         assertTrue(ApiRolePolicy.allows("MANAGER", "GET", "/api/finance/accounts"));
         assertTrue(ApiRolePolicy.allows("MANAGER", "POST", "/api/comercial/orders/10/approve"));
         assertTrue(ApiRolePolicy.allows("MANAGER", "GET", "/api/hr/employees"));
+        assertTrue(ApiRolePolicy.allows("MANAGER", "GET", "/api/inventory/movements"));
+        assertTrue(ApiRolePolicy.allows("MANAGER", "GET", "/api/inventory/warehouses/all"));
         assertFalse(ApiRolePolicy.allows("MANAGER", "GET", "/api/users"));
         assertFalse(ApiRolePolicy.allows("MANAGER", "POST", "/api/backup/physical"));
+        assertFalse(ApiRolePolicy.allows("MANAGER", "GET", "/api/new-unclassified-area"));
     }
 
     @Test
@@ -50,5 +56,14 @@ class ApiRolePolicyTest {
         assertTrue(ApiRolePolicy.allows("ADMIN", "GET", "/api/users"));
         assertTrue(ApiRolePolicy.allows("ADMIN", "POST", "/api/backup/physical"));
         assertTrue(ApiRolePolicy.allows("ADMIN", "GET", "/api/unknown"));
+    }
+
+    @Test
+    void classification_distinguishesDeniedFromForgottenEndpoint() {
+        assertTrue(ApiRolePolicy.isExplicitlyClassified("GET", "/api/finance/accounts"));
+        assertTrue(ApiRolePolicy.isExplicitlyClassified("POST", "/api/comercial/orders"));
+        assertTrue(ApiRolePolicy.isExplicitlyClassified("GET", "/api/platform/companies"));
+        assertFalse(ApiRolePolicy.isExplicitlyClassified("GET", "/api/new-unclassified-area"));
+        assertFalse(ApiRolePolicy.isExplicitlyClassified(null, "/api/finance/accounts"));
     }
 }

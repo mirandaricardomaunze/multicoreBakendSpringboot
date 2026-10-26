@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,8 +19,19 @@ import java.util.List;
  */
 public record ReceivePurchaseOrderRequest(
         @NotEmpty(message = "Indique pelo menos uma linha a receber.")
-        @Valid List<ReceiveLine> lines
+        @Valid List<ReceiveLine> lines,
+        @Size(max = 60, message = "A chave de idempotência não pode exceder 60 caracteres.")
+        String idempotencyKey
 ) {
+    public ReceivePurchaseOrderRequest {
+        idempotencyKey = idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim();
+    }
+
+    /** Construtor retrocompatível anterior à protecção de recepções parciais. */
+    public ReceivePurchaseOrderRequest(List<ReceiveLine> lines) {
+        this(lines, null);
+    }
+
     /**
      * Uma linha da conferência. O que se encomendou reparte-se em três:
      * <pre>

@@ -139,6 +139,43 @@ class SecurityApiIntegrationTest {
                 .andExpect(jsonPath("$.message", containsString("Cliente")));
     }
 
+    @Test
+    void tenantDaQueryDiferenteDoCabecalho_eBloqueado() throws Exception {
+        String token = login("ana");
+        mockMvc.perform(get("/api/comercial/invoices")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId(PT_TAX_ID))
+                        .param("companyId", companyId(MZ_TAX_ID)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void tenantDoCorpoDiferenteDoCabecalho_eBloqueadoAntesDoService() throws Exception {
+        String token = login("ana");
+        mockMvc.perform(post("/api/comercial/invoices")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId(PT_TAX_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invoiceBody(companyId(MZ_TAX_ID))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("outra empresa")));
+    }
+
+    @Test
+    void campoJsonDesconhecido_eRejeitado() throws Exception {
+        String token = login("ana");
+        String body = invoiceBody(companyId(PT_TAX_ID)).replace(
+                "\"warehouseId\": 999999,",
+                "\"warehouseId\": 999999, \"status\": \"PAID\",");
+        mockMvc.perform(post("/api/comercial/invoices")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Company-Id", companyId(PT_TAX_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("corpo do pedido")));
+    }
+
     // ────────────────────────── helpers ──────────────────────────
 
     private String invoiceBody(String companyId) {

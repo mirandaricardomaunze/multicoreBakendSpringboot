@@ -34,6 +34,34 @@ class CanonicalControlsTest {
     }
 
     @Test
+    void styledControls_haveCanonicalArcRadius() {
+        assertEquals(10, UIHelper.CONTROL_ARC);
+
+        javax.swing.JTextField field = new javax.swing.JTextField();
+        UIHelper.styleTextField(field);
+        assertEquals(UIHelper.CONTROL_ARC, field.getClientProperty("Component.arc"));
+
+        JComboBox<String> combo = UIHelper.createComboBox(new String[]{"Opcao"}, s -> s);
+        assertEquals(UIHelper.CONTROL_ARC, combo.getClientProperty("Component.arc"));
+
+        javax.swing.JSpinner spinner = new javax.swing.JSpinner();
+        UIHelper.styleSpinner(spinner);
+        assertEquals(UIHelper.CONTROL_ARC, spinner.getClientProperty("Component.arc"));
+
+        javax.swing.JPasswordField pwd = new javax.swing.JPasswordField();
+        UIHelper.stylePasswordField(pwd);
+        assertEquals(UIHelper.CONTROL_ARC, pwd.getClientProperty("Component.arc"));
+
+        javax.swing.JTextArea area = new javax.swing.JTextArea();
+        UIHelper.styleTextArea(area);
+        assertEquals(UIHelper.CONTROL_ARC, area.getClientProperty("Component.arc"));
+
+        javax.swing.border.Border border = UIHelper.fieldBorder(UIHelper.BORDER, 1);
+        assertNotNull(border);
+        assertNotNull(border.getBorderInsets(field));
+    }
+
+    @Test
     void humanStatus_parcialmentePaga_traduz() {
         assertEquals("Parcialmente paga", UIHelper.humanStatus("PARTIALLY_PAID"));
     }

@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.comercial.repository.OrderLineRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.printing.OrderPickingPrintService;
+import mz.multicore.erp.modules.printing.OrderPickingSheetPrintService;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.service.AppUserService;
@@ -27,18 +28,29 @@ public class CustomerOrderFulfillmentService {
     private final OrderEventRepository eventRepository;
     private final InventoryService inventoryService;
     private final OrderPickingPrintService printService;
+    private final OrderPickingSheetPrintService sheetPrintService;
     private final AppUserService appUserService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public CustomerOrderFulfillmentService(ComercialService comercialService, OrderRepository orderRepository,
             OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
-            InventoryService inventoryService, OrderPickingPrintService printService, AppUserService appUserService) {
+            InventoryService inventoryService, OrderPickingPrintService printService,
+            OrderPickingSheetPrintService sheetPrintService, AppUserService appUserService) {
         this.comercialService = comercialService;
         this.orderRepository = orderRepository;
         this.orderLineRepository = orderLineRepository;
         this.eventRepository = eventRepository;
         this.inventoryService = inventoryService;
         this.printService = printService;
+        this.sheetPrintService = sheetPrintService;
         this.appUserService = appUserService;
+    }
+
+    public CustomerOrderFulfillmentService(ComercialService comercialService, OrderRepository orderRepository,
+            OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
+            InventoryService inventoryService, OrderPickingPrintService printService, AppUserService appUserService) {
+        this(comercialService, orderRepository, orderLineRepository, eventRepository, inventoryService,
+                printService, new OrderPickingSheetPrintService(orderRepository), appUserService);
     }
 
     @Transactional
@@ -106,6 +118,102 @@ public class CustomerOrderFulfillmentService {
         registerPrint(order, request.terminalName(), "PICKING_REPRINTED",
                 "Autorizado por " + approver.getUsername() + ". Motivo: " + request.reason().trim());
         return document;
+    }
+
+    @Transactional(readOnly = true)
+    public OrderPickingDetailsDTO getPickingDetails(Long id) {
+        Order order = requireOrder(id);
+        BigDecimal totalBoxes = BigDecimal.ZERO;
+        java.util.List<OrderPickingLineDTO> lines = new java.util.ArrayList<>();
+        for (OrderLine line : order.getLines()) {
+            Product p = line.getProduct();
+            String ref = p != null && p.getReference() != null ? p.getReference() : "—";
+            String barcode = p != null && p.getBarcode() != null ? p.getBarcode() : "—";
+            String name = p != null ? p.getName() : "Artigo";
+            int pkgsPerBox = p != null ? p.getPackagesPerBox() : 1;
+            int unitsPerPkg = p != null ? p.getUnitsPerPackage() : 1;
+            BigDecimal boxes = BigDecimal.ZERO;
+            if (pkgsPerBox > 1 || unitsPerPkg > 1) {
+                long totalUnits = (long) pkgsPerBox * (unitsPerPkg > 0 ? unitsPerPkg : 1);
+                if (totalUnits > 0 && line.getQuantity() != null) {
+                    boxes = line.getQuantity().divide(BigDecimal.valueOf(totalUnits), 2, java.math.RoundingMode.HALF_UP);
+                }
+            }
+            totalBoxes = totalBoxes.add(boxes);
+            lines.add(new OrderPickingLineDTO(
+                    line.getId(),
+                    p != null ? p.getId() : null,
+                    ref,
+                    barcode,
+                    name,
+                    line.getQuantity(),
+                    line.getSeparatedQuantity() != null ? line.getSeparatedQuantity() : BigDecimal.ZERO,
+                    pkgsPerBox,
+                    unitsPerPkg,
+                    boxes,
+                    line.getBatchNumber(),
+                    null,
+                    order.getWarehouse() != null ? order.getWarehouse().getName() : "Armazém"
+            ));
+        }
+        return new OrderPickingDetailsDTO(
+                order.getId(),
+                order.getOrderNumber(),
+                order.getClient() != null ? order.getClient().getName() : "Consumidor Final",
+                order.getWarehouse() != null ? order.getWarehouse().getName() : "Central",
+                order.getStatus(),
+                lines,
+                lines.size(),
+                totalBoxes.setScale(2, java.math.RoundingMode.HALF_UP)
+        );
+    }
+
+    @Transactional
+    public byte[] printForPickingA4(Long id, String terminal) {
+        PermissionGuard.requireManagerOrAdmin("imprimir guia de separacao A4");
+        Order order = requireOrder(id);
+        if (OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(order.getStatus())
+                || "PENDING".equalsIgnoreCase(order.getStatus())) {
+            order.setStatus(OrderFulfillmentStatus.IN_SEPARATION.name());
+        }
+        byte[] document = sheetPrintService.renderA4(id, false);
+        registerPrint(order, terminal, "PICKING_A4_PRINTED", "Guia de separação A4 impressa; separação iniciada.");
+        return document;
+    }
+
+    @Transactional
+    public OrderDTO completeSeparationWithConfirmation(CompleteOrderPickingRequest request) {
+        PermissionGuard.requireManagerOrAdmin("concluir separacao com conferencia");
+        Order order = requireOrder(request.orderId());
+        if (!OrderFulfillmentStatus.IN_SEPARATION.name().equals(order.getStatus())
+                && !OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(order.getStatus())
+                && !"PENDING".equalsIgnoreCase(order.getStatus())) {
+            throw new BusinessRuleException("Apenas encomendas pendentes ou em separação podem ser conferidas.");
+        }
+
+        if (request.lines() != null && !request.lines().isEmpty()) {
+            for (OrderPickingConfirmationLineRequest cl : request.lines()) {
+                order.getLines().stream()
+                        .filter(l -> l.getId().equals(cl.lineId()))
+                        .findFirst()
+                        .ifPresent(l -> {
+                            l.setSeparatedQuantity(cl.confirmedQuantity() != null ? cl.confirmedQuantity() : l.getQuantity());
+                            if (cl.batchNumber() != null && !cl.batchNumber().isBlank()) {
+                                l.setBatchNumber(cl.batchNumber().trim());
+                            }
+                        });
+            }
+        } else {
+            order.getLines().forEach(line -> line.setSeparatedQuantity(line.getQuantity()));
+        }
+
+        String previous = order.getStatus();
+        order.setStatus(OrderFulfillmentStatus.SEPARATED.name());
+        orderRepository.save(order);
+        String details = "Conferência óptica de separação concluída."
+                + (request.notes() != null && !request.notes().isBlank() ? " Notas: " + request.notes().trim() : "");
+        record(order, "SEPARATION_VERIFIED", previous, order.getStatus(), request.terminalName(), details);
+        return comercialService.toDTO(order);
     }
 
     @Transactional

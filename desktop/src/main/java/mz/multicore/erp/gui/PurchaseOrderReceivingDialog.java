@@ -167,7 +167,8 @@ public class PurchaseOrderReceivingDialog {
                 throw new IllegalArgumentException("Indique pelo menos uma quantidade a receber, danificada ou em falta.");
             }
 
-            onConfirm.accept(new ReceivePurchaseOrderRequest(toReceive));
+            onConfirm.accept(new ReceivePurchaseOrderRequest(
+                    toReceive, "PURCHASE-RECV-" + java.util.UUID.randomUUID()));
         });
 
         dlg.showDialog();

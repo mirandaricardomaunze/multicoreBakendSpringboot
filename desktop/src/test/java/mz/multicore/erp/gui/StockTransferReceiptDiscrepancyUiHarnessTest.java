@@ -58,7 +58,7 @@ class StockTransferReceiptDiscrepancyUiHarnessTest {
     @Test
     @DisplayName("StockPanel inclui opção no filtro de estados e contabiliza no KPI de concluídas")
     void stockPanel_filtroContemRecebidoComDivergencia() throws Exception {
-        String panel = source("StockPanel.java");
+        String panel = source("StockPanel.java") + source("StockTransferActions.java");
 
         assertThat(panel).contains("\"Recebido c/ divergência\"");
         assertThat(panel).contains("\"RECEIVED_WITH_DISCREPANCY\".equals(status)");

@@ -2,23 +2,9 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.NotificationFeed.NotificationItem;
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.InlineFeedbackPanel;
+import mz.multicore.erp.gui.components.*;
 
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextField;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
@@ -34,8 +20,8 @@ import java.util.function.IntConsumer;
  */
 public class NotificationsPanel extends JPanel {
 
-    static final String READ_LABEL = "Lida";
-    static final String UNREAD_LABEL = "Por ler";
+    static final String READ_LABEL = NotificationsViewCoordinator.READ_LABEL;
+    static final String UNREAD_LABEL = NotificationsViewCoordinator.UNREAD_LABEL;
 
     private final NotificationFeed feed;
     private final NotificationReadStore readStore;
@@ -50,10 +36,6 @@ public class NotificationsPanel extends JPanel {
     private int refreshVersion;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
-    /**
-     * @param onUnreadCountChanged recebe o número de não-lidas sempre que a lista ou o estado muda
-     *                             (o {@code MainFrame} liga-o ao badge do sino).
-     */
     public NotificationsPanel(NotificationFeed feed, NotificationReadStore readStore,
                               Consumer<String> navigator, IntConsumer onUnreadCountChanged) {
         this.feed = feed;
@@ -63,7 +45,6 @@ public class NotificationsPanel extends JPanel {
         setLayout(new BorderLayout(0, 16));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(22, 25, 22, 25));
-
         summaryLabel = new JLabel("Alertas operacionais da empresa ativa");
         summaryLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         summaryLabel.setForeground(UIHelper.TEXT_MUTED);
@@ -82,37 +63,25 @@ public class NotificationsPanel extends JPanel {
         UIHelper.ensureHeadersFit(table);
         table.setFillsViewportHeight(true);
         table.putClientProperty("emptyText", "Sem notificações.");
-        table.getColumnModel().getColumn(0).setPreferredWidth(100);
-        table.getColumnModel().getColumn(1).setPreferredWidth(240);
-        table.getColumnModel().getColumn(2).setPreferredWidth(330);
-        table.getColumnModel().getColumn(3).setPreferredWidth(120);
-        table.getColumnModel().getColumn(4).setPreferredWidth(80);
+        int[] widths = {100, 240, 330, 120, 80};
+        for (int i = 0; i < widths.length; i++) table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-bell", UIHelper.ACCENT_BLUE);
-            peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
-            peek.setSubtitle("Tipo: " + tableModel.getValueAt(row, 0) + " • " + tableModel.getValueAt(row, 3));
-            peek.setStatus(String.valueOf(tableModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Tipo", String.valueOf(tableModel.getValueAt(row, 0)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data / Estado", String.valueOf(tableModel.getValueAt(row, 3)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Detalhes Completos", String.valueOf(tableModel.getValueAt(row, 2)), true));
-            peek.setItems(items);
-            peek.getOpenFullButton().setText("Abrir Módulo");
-            peek.setOnOpenFullAction(v -> openSelectedModule());
+            NotificationsViewCoordinator.populateQuickPeek(peek, tableModel, row, this::openSelectedModule);
         });
 
         JTextField search = TableFilter.searchField("Pesquisar notificações…");
-        JComboBox<String> type = TableFilter.combo("Todos os tipos",
-                "Aprovações", "Stock", "Validades", "Assinatura");
+        JComboBox<String> type = TableFilter.combo("Todos os tipos", "Aprovações", "Stock", "Validades", "Assinatura");
         JComboBox<String> readState = TableFilter.combo("Lidas e por ler", UNREAD_LABEL, READ_LABEL);
         TableFilter.install(table, search,
                 new TableFilter.ColumnFilter(type, 0),
                 new TableFilter.ColumnFilter(readState, 4));
+
         ModernButton openButton = UIHelper.createPrimaryButton("Abrir módulo");
         openButton.setIcon(UIHelper.icon("fas-external-link-alt", 14));
         openButton.addActionListener(e -> openSelectedModule());
+
         refreshButton = UIHelper.createSecondaryButton("Actualizar");
         refreshButton.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshButton.addActionListener(e -> refreshData());
@@ -121,17 +90,16 @@ public class NotificationsPanel extends JPanel {
                 .addAction("Marcar como lida", UIHelper.icon("fas-check", 14), this::markSelectedRead)
                 .addAction("Marcar todas como lidas", UIHelper.icon("fas-check-double", 14), this::markAllRead);
         readingMenu.setActionEnabled(1, false);
-        JPanel filters = UIHelper.filterBar(
-                new JComponent[]{search, TableFilter.label("Tipo:"), type,
-                        TableFilter.label("Leitura:"), readState},
-                null);
+
+        JPanel filters = UIHelper.filterBar(new JComponent[]{
+                search, TableFilter.label("Tipo:"), type, TableFilter.label("Leitura:"), readState}, null);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+
         JPanel filterStack = new JPanel(new BorderLayout(0, 6));
         filterStack.setOpaque(false);
         filterStack.add(summaryLabel, BorderLayout.NORTH);
         filterStack.add(filters, BorderLayout.CENTER);
-        card.add(UIHelper.tableCardTop("Notificações", filterStack,
-                refreshButton, readingMenu, openButton), BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Notificações", filterStack, refreshButton, readingMenu, openButton), BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
@@ -143,15 +111,6 @@ public class NotificationsPanel extends JPanel {
         refreshData();
     }
 
-    /**
-     * Carregamento pelo caminho canónico ({@code UIHelper.loadAsync}): cursor de espera,
-     * propagação do contexto de utilizador/empresa e entrega do erro no EDT, tudo num só sítio
-     * em vez de um {@code SwingWorker} escrito à mão aqui.
-     *
-     * <p>O contador de versão mantém-se: o {@code loadAsync} descarta respostas de um tenant que
-     * deixou de estar activo, mas não respostas fora de ordem <b>da mesma empresa</b> — é o que
-     * acontece a carregar "Actualizar" duas vezes seguidas.
-     */
     private void refreshData() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         int version = ++refreshVersion;
@@ -178,7 +137,6 @@ public class NotificationsPanel extends JPanel {
         renderRows();
     }
 
-    /** Repinta a tabela a partir de {@link #items} + estado de leitura (sem ir à rede). */
     private void renderRows() {
         tableModel.setRowCount(0);
         for (NotificationItem item : items) {
@@ -190,49 +148,29 @@ public class NotificationsPanel extends JPanel {
         unreadCountListener.accept(unread);
     }
 
-    /** Linha da tabela — pura, testável (NL-06). */
     static Object[] rowFor(NotificationItem item, boolean read) {
-        return new Object[]{item.type(), item.title(), item.detail(), item.when(),
-                read ? READ_LABEL : UNREAD_LABEL};
+        return NotificationsViewCoordinator.rowFor(item, read);
     }
 
-    /** Texto do resumo — puro, testável (NL-07). */
     static String summaryText(int total, int unread) {
-        if (total == 0) return "Não há notificações pendentes.";
-        if (unread == 0) return total == 1 ? "1 notificação, já lida." : total + " notificações, todas lidas.";
-        return unread + " por ler de " + total + (total == 1 ? " notificação." : " notificações.");
+        return NotificationsViewCoordinator.summaryText(total, unread);
     }
 
     private void markSelectedRead() {
-        int row = TableFilter.selectedModelRow(table);
-        if (row < 0) {
-            feedback.show(FeedbackType.WARNING, "Seleccione uma notificação",
-                    "Escolha uma notificação para marcar como lida.", null, null);
-            return;
-        }
-        readStore.markRead(items.get(row));
-        renderRows();
+        NotificationsViewCoordinator.markSelectedRead(table, items, readStore, feedback, this::renderRows);
     }
 
     private void markAllRead() {
-        if (items.isEmpty()) return;
-        readStore.markAllRead(items);
-        renderRows();
+        if (!items.isEmpty()) { readStore.markAllRead(items); renderRows(); }
     }
 
     private void openSelectedModule() {
-        int row = TableFilter.selectedModelRow(table);
-        if (row < 0) {
-            feedback.show(FeedbackType.WARNING, "Seleccione uma notificação",
-                    "Escolha uma notificação para abrir o respectivo módulo.", null, null);
-            return;
-        }
-        navigator.accept(items.get(row).moduleCard());
+        NotificationsViewCoordinator.openSelectedModule(table, items, navigator, feedback);
     }
 
     private static String rootMessage(Throwable ex) {
-        Throwable cause = ex;
-        while (cause.getCause() != null) cause = cause.getCause();
-        return cause.getMessage() == null ? "Falha inesperada." : cause.getMessage();
+        Throwable c = ex;
+        while (c.getCause() != null) c = c.getCause();
+        return c.getMessage() == null ? "Falha inesperada." : c.getMessage();
     }
 }

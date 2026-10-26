@@ -25,13 +25,17 @@ public final class PdfDocumentBuilder {
     private PdfDocumentBuilder() {}
 
     public static byte[] build(Rectangle pageSize, Consumer<Document> body) {
+        return build(pageSize, null, body);
+    }
+
+    public static byte[] build(Rectangle pageSize, com.lowagie.text.pdf.PdfPageEvent pageEvent, Consumer<Document> body) {
         Document document = new Document(pageSize,
                 PdfTheme.MARGIN_LEFT, PdfTheme.MARGIN_RIGHT,
                 PdfTheme.MARGIN_TOP, PdfTheme.MARGIN_BOTTOM);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             PdfWriter writer = PdfWriter.getInstance(document, out);
-            writer.setPageEvent(new FooterStamp());
+            writer.setPageEvent(pageEvent != null ? pageEvent : new FooterStamp());
             document.open();
             body.accept(document);
             document.close();
@@ -42,7 +46,11 @@ public final class PdfDocumentBuilder {
     }
 
     public static byte[] buildA4(Consumer<Document> body) {
-        return build(PageSize.A4, body);
+        return build(PageSize.A4, null, body);
+    }
+
+    public static byte[] buildA4(com.lowagie.text.pdf.PdfPageEvent pageEvent, Consumer<Document> body) {
+        return build(PageSize.A4, pageEvent, body);
     }
 
     /** 80mm × 297mm thermal-style receipt strip. */

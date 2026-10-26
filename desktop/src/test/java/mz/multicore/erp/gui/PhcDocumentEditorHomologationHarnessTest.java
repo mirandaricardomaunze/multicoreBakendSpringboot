@@ -36,7 +36,7 @@ class PhcDocumentEditorHomologationHarnessTest {
     @Test
     void hmg02_todosOsEditoresFechamACelulaEValidamAntesDeGravar() throws Exception {
         String order = gui("CommercialOrderSubmission.java");
-        String invoice = gui("ComercialPanel.java");
+        String invoice = gui("ComercialPanel.java") + gui("CommercialInvoiceDraftActions.java");
         String purchase = gui("PurchaseOrdersPanel.java");
         String quotation = gui(Path.of("commercial", "QuotationEditorForm.java").toString());
         String transfer = gui("StockTransferEditorForm.java");
@@ -44,7 +44,7 @@ class PhcDocumentEditorHomologationHarnessTest {
         assertThat(order).contains("CommercialOrderEditorActions.stopCellEditing(owner)")
                 .contains("for (int row = 0; row < owner.draftOrderLines.size(); row++)");
         assertThat(invoice).contains("stopInvoiceCellEditing()")
-                .contains("for (int row = 0; row < draftLines.size(); row++)");
+                .contains("for (int row = 0; row < panel.draftLines.size(); row++)");
         assertThat(purchase).contains("stopPoCellEditing()")
                 .contains("for (int row = 0; row < owner.poDraftLines.size(); row++)");
         assertThat(quotation).contains("stopCellEditing()")
@@ -56,10 +56,10 @@ class PhcDocumentEditorHomologationHarnessTest {
     @Test
     void hmg03_composicaoDeEmbalagemChegaAQuantidadeTotal() throws Exception {
         String orders = gui("CommercialOrderEditorActions.java");
-        String invoices = gui("ComercialPanel.java");
+        String invoices = gui("ComercialPanel.java") + gui("CommercialInvoiceDraftActions.java");
         String purchase = gui("PurchaseOrdersPanel.java");
         String quotation = gui(Path.of("commercial", "QuotationEditorForm.java").toString());
-        String transfer = gui("StockTransferEditorForm.java");
+        String transfer = gui("StockTransferEditorForm.java") + gui("StockTransferEditorRowCalculator.java");
 
         for (String source : new String[]{orders, invoices, purchase, quotation, transfer}) {
             assertThat(source).contains("packagesPerBox()", "unitsPerPackage()")

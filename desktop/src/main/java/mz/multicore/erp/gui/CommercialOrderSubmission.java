@@ -111,8 +111,10 @@ final class CommercialOrderSubmission {
                 ? destinationWarehouseId(owner, warehouse) : null;
         String updateNotes = owner.orderNotesField == null ? null : owner.orderNotesField.getText().trim();
         if (updateNotes != null && updateNotes.isEmpty()) updateNotes = null;
+        String paymentTerms = owner.orderPaymentTermsCombo != null && owner.orderPaymentTermsCombo.getSelectedItem() != null
+                ? owner.orderPaymentTermsCombo.getSelectedItem().toString().trim() : null;
         return new UpdateOrderRequest(owner.editingOrder.version(), clientId, walkInName,
-                warehouse.id(), destinationId, new ArrayList<>(owner.draftOrderLines), updateNotes);
+                warehouse.id(), destinationId, new ArrayList<>(owner.draftOrderLines), updateNotes, paymentTerms);
     }
 
     /** Validação do rascunho. Lança {@link RuntimeException} em erro para manter o editor aberto. */
@@ -153,9 +155,11 @@ final class CommercialOrderSubmission {
                     warehouse.id(), destinationWarehouseId(owner, warehouse),
                     new ArrayList<>(owner.draftOrderLines));
         }
+        String paymentTerms = owner.orderPaymentTermsCombo != null && owner.orderPaymentTermsCombo.getSelectedItem() != null
+                ? owner.orderPaymentTermsCombo.getSelectedItem().toString().trim() : "Pronto Pagamento";
         return new CreateOrderRequest(clientId, walkInName, CurrentUserContext.getCurrentCompanyId(),
                 warehouse.id(), new ArrayList<>(owner.draftOrderLines), kind,
-                null, null, null, null, createNotes);
+                paymentTerms, null, null, null, createNotes);
     }
 
     /** A loja que recebe. Validado aqui só para o operador não ir ao servidor descobrir o óbvio. */

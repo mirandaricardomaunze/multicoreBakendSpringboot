@@ -84,6 +84,7 @@ public class MainFrame extends JFrame {
     private final ManufacturingPanel manufacturingPanel;
     private final FleetPanel fleetPanel;
     private final RecurringContractsPanel recurringContractsPanel;
+    private final QualityPanel qualityPanel;
     private final ApprovalsPanel approvalsPanel;
     private final POSPanel posPanel;
     private final StockPanel stockPanel;
@@ -102,12 +103,12 @@ public class MainFrame extends JFrame {
     private final MySubscriptionApiClient mySubscriptionApiClient;
     private final BackupApiClient backupApiClient;
     private final boolean superAdmin;
+    private final MainFrameTopBarBuilder topBarBuilder = new MainFrameTopBarBuilder();
+    private final MainFrameNotificationCoordinator notificationCoordinator;
     private TopNavBar topBar;
     private CollapsibleSidebar sidebar;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
-    private JLabel notificationBadgeLabel;
-    private int notificationBadgeLoadVersion;
 
     /** Antecedência (dias) a partir da qual se avisa o assinante que a assinatura vai expirar. */
     private static final long SUB_ALERT_DAYS = 7;
@@ -155,7 +156,8 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.FleetApiClient fleetApiClient,
             mz.multicore.erp.desktop.client.RecurringContractApiClient recurringContractApiClient,
             mz.multicore.erp.desktop.client.DashboardApiClient dashboardApiClient,
-            AiAssistantApiClient aiAssistantApiClient
+            AiAssistantApiClient aiAssistantApiClient,
+            mz.multicore.erp.desktop.client.QualityApiClient qualityApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -176,12 +178,13 @@ public class MainFrame extends JFrame {
 
         if (superAdmin) {
             dashboardPanel = null; sellerDashboardPanel = null; comercialPanel = null; financeiroPanel = null; hrPanel = null;
-            crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null;
+            crmPanel = null; clientesPanel = null; fiscalPanel = null; approvalsPanel = null; qualityPanel = null;
             accountingPanel = null; assetsPanel = null; manufacturingPanel = null; fleetPanel = null; recurringContractsPanel = null; performancePanel = null; forensicAuditPanel = null; aiAssistantPanel = null;
             posPanel = null; stockPanel = null; comprasPanel = null; configPanel = null;
             notificationFeed = null; notificationsPanel = null; notificationReadStore = null;
             plataformaPanel = new PlataformaPanel(platformApiClient, systemMonitoringApiClient);
             contentPanel.add(plataformaPanel, "plataforma");
+            notificationCoordinator = null;
         } else {
             boolean sellerSession = "SELLER".equalsIgnoreCase(desktopSessionStore.requireSession().activeRole());
             dashboardPanel = sellerSession ? null : new DashboardPanel(
@@ -191,60 +194,67 @@ public class MainFrame extends JFrame {
             sellerDashboardPanel = sellerSession
                     ? new SellerDashboardPanel(comercialApiClient, posApiClient, this::handleSellerDashboardAction)
                     : null;
-            stockPanel      = new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient);
+            stockPanel = sellerSession ? null : new StockPanel(inventoryApiClient, comercialApiClient, stockTransferApiClient, inventoryCountApiClient, productCategoryApiClient, printApiClient, stockWasteApiClient, inventoryPhysicalCountingApiClient);
             comercialPanel  = new ComercialPanel(comercialApiClient, inventoryApiClient, financeApiClient, creditNoteApiClient, debitNoteApiClient, posApiClient, movimentosApiClient, promotionApiClient, printApiClient,
                     productionApiClient, fleetApiClient,
                     () -> {
                         navigate("stock");
                         if (topBar != null) topBar.setActive("Stock & Armazéns");
                         if (sidebar != null) sidebar.setActive("Stock & Armazéns");
-                        stockPanel.showWarehouseTransfers();
+                        if (stockPanel != null) stockPanel.showWarehouseTransfers();
                     });
-            financeiroPanel = new FinanceiroPanel(financeApiClient, comercialApiClient, bankReconciliationApiClient, cashFlowForecastApiClient);
-            hrPanel         = new HRPanel(hrApiClient, printApiClient);
+            financeiroPanel = sellerSession ? null : new FinanceiroPanel(financeApiClient, comercialApiClient, bankReconciliationApiClient, cashFlowForecastApiClient);
+            hrPanel         = sellerSession ? null : new HRPanel(hrApiClient, printApiClient);
             crmPanel        = new CRMPanel(crmApiClient, comercialApiClient);
             clientesPanel   = new ClientesPanel(comercialApiClient, printApiClient, creditRiskApiClient, accountStatementApiClient);
-            fiscalPanel     = new FiscalPanel(fiscalApiClient);
-            accountingPanel = new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
-            assetsPanel     = new AssetsPanel(assetApiClient, printApiClient);
-            manufacturingPanel = new ManufacturingPanel(productionApiClient, comercialApiClient, inventoryApiClient);
-            fleetPanel      = new FleetPanel(fleetApiClient);
-            recurringContractsPanel = new RecurringContractsPanel(recurringContractApiClient);
-            approvalsPanel  = new ApprovalsPanel(approvalApiClient, stockTransferApiClient,
+            fiscalPanel     = sellerSession ? null : new FiscalPanel(fiscalApiClient);
+            accountingPanel = sellerSession ? null : new mz.multicore.erp.gui.accounting.AccountingPanel(accountingApiClient);
+            assetsPanel     = sellerSession ? null : new AssetsPanel(assetApiClient, printApiClient);
+            manufacturingPanel = sellerSession ? null : new ManufacturingPanel(productionApiClient, comercialApiClient, inventoryApiClient);
+            fleetPanel      = sellerSession ? null : new FleetPanel(fleetApiClient);
+            recurringContractsPanel = sellerSession ? null : new RecurringContractsPanel(recurringContractApiClient);
+            qualityPanel    = sellerSession ? null : new QualityPanel(qualityApiClient, hrApiClient, printApiClient);
+            approvalsPanel  = sellerSession ? null : new ApprovalsPanel(approvalApiClient, stockTransferApiClient,
                     comercialApiClient, printApiClient);
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
-            comprasPanel    = new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
-            configPanel     = new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
-            performancePanel = new PerformancePanel(performanceApiClient, desktopSessionStore);
-            forensicAuditPanel = new ForensicAuditPanel(forensicAuditApiClient);
-            aiAssistantPanel = new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
+            comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
+            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
+            performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
+            forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
+            aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
             notificationFeed = new NotificationFeed(approvalApiClient, inventoryApiClient,
-                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient);
+                    mySubscriptionApiClient, hrApiClient, performanceApiClient, creditRiskApiClient, stockWasteApiClient, systemMonitoringApiClient, stockTransferApiClient, qualityApiClient);
             notificationReadStore = new NotificationReadStore();
             notificationsPanel = new NotificationsPanel(notificationFeed, notificationReadStore,
                     this::navigateFromNotification, this::updateNotificationBadge);
+            notificationCoordinator = new MainFrameNotificationCoordinator(notificationFeed, notificationReadStore, this::navigateFromNotification);
             plataformaPanel = null;
-            contentPanel.add(sellerDashboardPanel != null ? sellerDashboardPanel : dashboardPanel, "dashboard");
-            contentPanel.add(posPanel, "pos");
-            contentPanel.add(comercialPanel, "comercial"); contentPanel.add(comprasPanel, "compras");
-            contentPanel.add(stockPanel, "stock"); contentPanel.add(financeiroPanel, "financeiro");
-            contentPanel.add(hrPanel, "hr"); contentPanel.add(performancePanel, "desempenho");
-            contentPanel.add(crmPanel, "crm"); contentPanel.add(clientesPanel, "clientes");
-            contentPanel.add(fiscalPanel, "fiscal"); contentPanel.add(accountingPanel, "contabilidade");
-            contentPanel.add(assetsPanel, "assets");
-            contentPanel.add(manufacturingPanel, "manufacturing");
-            contentPanel.add(fleetPanel, "fleet");
-            contentPanel.add(recurringContractsPanel, "recurring");
-            contentPanel.add(approvalsPanel, "approvals"); contentPanel.add(configPanel, "config");
-            contentPanel.add(forensicAuditPanel, "auditoria_forense");
-            contentPanel.add(aiAssistantPanel, "assistente_ia");
-            contentPanel.add(notificationsPanel, "notifications");
+            addCard(sellerDashboardPanel != null ? sellerDashboardPanel : dashboardPanel, "dashboard");
+            addCard(posPanel, "pos");
+            addCard(comercialPanel, "comercial"); addCard(comprasPanel, "compras");
+            addCard(stockPanel, "stock"); addCard(financeiroPanel, "financeiro");
+            addCard(hrPanel, "hr"); addCard(performancePanel, "desempenho");
+            addCard(crmPanel, "crm"); addCard(clientesPanel, "clientes");
+            addCard(fiscalPanel, "fiscal"); addCard(accountingPanel, "contabilidade");
+            addCard(assetsPanel, "assets");
+            addCard(manufacturingPanel, "manufacturing");
+            addCard(fleetPanel, "fleet");
+            addCard(recurringContractsPanel, "recurring");
+            addCard(qualityPanel, "quality");
+            addCard(approvalsPanel, "approvals"); addCard(configPanel, "config");
+            addCard(forensicAuditPanel, "auditoria_forense");
+            addCard(aiAssistantPanel, "assistente_ia");
+            addCard(notificationsPanel, "notifications");
         }
 
         setLayout(new BorderLayout());
         sidebar = buildSidebar();
-        topBar = buildTopBar();
+        topBar = topBarBuilder.build(superAdmin, this, this::openGlobalSearch, this::openRecentItemsHistory,
+                notificationCoordinator != null ? notificationCoordinator.buildNotificationBell() : null,
+                buildSubscriptionChip(), buildCompanyCombo(),
+                desktopSessionStore.requireSession().companies().size() > 1);
+        if (notificationCoordinator != null) notificationCoordinator.attachNavComponents(topBar, sidebar);
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
 
         JPanel centerContainer = new JPanel(new BorderLayout());
@@ -277,14 +287,17 @@ public class MainFrame extends JFrame {
         startSubscriptionWatch();
     }
 
+    private void addCard(JComponent panel, String name) {
+        if (panel != null) contentPanel.add(panel, name);
+    }
+
     /** Called by the application bootstrap once the user is authenticated. */
     public void applyAuthenticatedUser(String displayName, String role) {
         sessionDisplayName = displayName;
         String activeRole = CurrentUserContext.getRole();
         if (dashboardPanel != null) dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sellerDashboardPanel != null) sellerDashboardPanel.updateWelcomeMessage(displayName);
-        if (sessionUserLabel != null) sessionUserLabel.setText(displayName);
-        if (sessionRoleLabel != null) sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
+        topBarBuilder.updateUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (sidebar != null) sidebar.setUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (statusBar != null) {
             DesktopSession s = desktopSessionStore.requireSession();
@@ -317,156 +330,17 @@ public class MainFrame extends JFrame {
         }.execute();
     }
 
-    private javax.swing.Icon navIcon(String code) {
-        return UIHelper.icon(code, 20, topBarIconTint());
-    }
-
-    /** Tinta dos ícones da barra de topo — escura sobre barra clara, clara sobre barra escura. */
-    private static Color topBarIconTint() {
-        return UIHelper.TEXT_MUTED;
-    }
-
-    private TopNavBar buildTopBar() {
-        if (superAdmin) {
-            return buildSuperAdminTopBar();
-        }
-
-        TopNavBar bar = new TopNavBar("Painel Inicial", "");
-        bar.setSearchAction(this::openGlobalSearch);
-
-        // Área direita: utilitários + seletor de empresa + chip de utilizador.
-        JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
-        UIHelper.styleComboBox(companyCombo);
-        companyCombo.setToolTipText("Empresa ativa");
-        companyCombo.setPreferredSize(new Dimension(210, 32));
-        // Reaplicar o renderer DEPOIS de styleComboBox (senão mostraria CompanyAccess[...]).
-        applyCompanyRenderer(companyCombo);
-        bar.addTrailing(buildHistoryButton());
-        bar.addTrailing(buildThemeToggle());
-        bar.addTrailing(buildNotificationBell());
-        javax.swing.JComponent subChip = buildSubscriptionChip();
-        if (subChip != null) bar.addTrailing(subChip);
-        // Seletor de empresa só quando há mais de uma — com uma só é redundante (a barra lateral já mostra
-        // o nome). O combo é sempre construído (selecciona a empresa activa no contexto), mas só se
-        // mostra quando há escolha a fazer.
-        if (desktopSessionStore.requireSession().companies().size() > 1) {
-            bar.addTrailing(companyCombo);
-        }
-        bar.addTrailing(buildUserChip());
-
-        return bar;
-    }
-
-    /** Barra do superadmin: cabeçalho limpo com utilitários e chip de utilizador. */
-    private TopNavBar buildSuperAdminTopBar() {
-        TopNavBar bar = new TopNavBar("Consola da Plataforma", "");
-        bar.setSearchAction(this::openGlobalSearch);
-        bar.addTrailing(buildThemeToggle());
-        bar.addTrailing(buildUserChip());
-        return bar;
-    }
-
     public CollapsibleSidebar getSidebar() {
         return sidebar;
     }
 
     private CollapsibleSidebar buildSidebar() {
-        DesktopSession initialSession = desktopSessionStore.requireSession();
-        String subBrand = initialSession.companies().isEmpty() ? "ERP Profissional" : initialSession.companies().get(0).name();
-        CollapsibleSidebar sb = new CollapsibleSidebar("MULTICORE", subBrand);
-
-        if (superAdmin) {
-            sb.addSection("Plataforma");
-            sb.addItem(UIHelper.icon("fas-server", 16, UIHelper.ACCENT_BLUE), "Plataforma", UIHelper.ACCENT_BLUE, () -> navigate("plataforma"));
-            return sb;
-        }
-
-        String activeRole = initialSession.activeRole();
-        if ("SELLER".equalsIgnoreCase(activeRole)) {
-            sb.addSection("Vendas");
-            sb.addItem(UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), "Painel do Vendedor", UIHelper.MODULE_DASHBOARD, () -> navigate("dashboard"));
-            sb.addItem(UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), "POS — Caixa", UIHelper.MODULE_POS, () -> navigate("pos"));
-            sb.addItem(UIHelper.icon("fas-clipboard-list", 16, UIHelper.MODULE_COMERCIAL), "Pedidos e Cotações", UIHelper.MODULE_COMERCIAL, () -> navigate("comercial"));
-            sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate("clientes"));
-            sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM e Assistência", UIHelper.MODULE_CRM, () -> navigate("crm"));
-            sb.addSection("Avisos");
-            sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_ORANGE), "Notificações", UIHelper.ACCENT_ORANGE, () -> navigate("notifications"));
-            return sb;
-        }
-        if (!"MANAGER".equalsIgnoreCase(activeRole) && !"ADMIN".equalsIgnoreCase(activeRole)) {
-            sb.addSection("Área pessoal");
-            sb.addItem(UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), "Painel Inicial", UIHelper.MODULE_DASHBOARD, () -> navigate("dashboard"));
-            sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_ORANGE), "Notificações", UIHelper.ACCENT_ORANGE, () -> navigate("notifications"));
-            return sb;
-        }
-
-        // 1. OPERAÇÕES
-        sb.addSection("Operações");
-        sb.addItem(UIHelper.icon("fas-th-large", 16, UIHelper.MODULE_DASHBOARD), "Painel Inicial", UIHelper.MODULE_DASHBOARD, () -> navigate("dashboard"));
-        sb.addItem(UIHelper.icon("fas-cash-register", 16, UIHelper.MODULE_POS), "POS — Caixa", UIHelper.MODULE_POS, () -> navigate("pos"));
-        sb.addItem(UIHelper.icon("fas-clipboard-list", 16, UIHelper.MODULE_COMERCIAL), "Pedidos", UIHelper.MODULE_COMERCIAL, () -> {
-            navigate("comercial");
-            comercialPanel.showCustomerOrders();
-        });
-        sb.addItem(UIHelper.icon("fas-shopping-cart", 16, UIHelper.MODULE_COMPRAS), "Compras", UIHelper.MODULE_COMPRAS, () -> navigate("compras"));
-        sb.addItem(UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), "Stock & Armazéns", UIHelper.MODULE_STOCK, () -> navigate("stock"));
-        sb.addItem(UIHelper.icon("fas-exchange-alt", 16, UIHelper.ACCENT_BLUE), "Movimentos", UIHelper.ACCENT_BLUE, () -> {
-            navigate("comercial");
-            comercialPanel.showMovements();
-        });
-        sb.addItem(UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_BLUE), "Produção & Fabrico", UIHelper.ACCENT_BLUE, () -> navigate("manufacturing"));
-        sb.addItem(UIHelper.icon("fas-car", 16, UIHelper.ACCENT_CYAN), "Gestão de Frotas", UIHelper.ACCENT_CYAN, () -> navigate("fleet"));
-
-        // 2. GESTÃO & CRM
-        sb.addSection("Gestão & CRM");
-        if ("MANAGER".equalsIgnoreCase(activeRole) || "ADMIN".equalsIgnoreCase(activeRole)) {
-            sb.addItem(UIHelper.icon("fas-lightbulb", 16, UIHelper.ACCENT_ORANGE), "Assistente de Gestão", UIHelper.ACCENT_ORANGE, () -> navigate("assistente_ia"));
-        }
-        sb.addItem(UIHelper.icon("fas-coins", 16, UIHelper.MODULE_FINANCEIRO), "Tesouraria", UIHelper.MODULE_FINANCEIRO, () -> navigate("financeiro"));
-        sb.addItem(UIHelper.icon("fas-users", 16, UIHelper.MODULE_HR), "Recursos Humanos", UIHelper.MODULE_HR, () -> navigate("hr"));
-        sb.addItem(UIHelper.icon("fas-trophy", 16, UIHelper.MODULE_COMERCIAL), "Desempenho", UIHelper.MODULE_COMERCIAL, () -> navigate("desempenho"));
-        sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM & Assistência", UIHelper.MODULE_CRM, () -> navigate("crm"));
-        sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate("clientes"));
-        sb.addItem(UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), "Avenças & Contratos", UIHelper.ACCENT_BLUE, () -> navigate("recurring"));
-
-        // 3. FISCAL & AUDITORIA
-        sb.addSection("Fiscal & Auditoria");
-        sb.addItem(UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), "Área Fiscal", UIHelper.MODULE_FISCAL, () -> navigate("fiscal"));
-        sb.addItem(UIHelper.icon("fas-calculator", 16, UIHelper.MODULE_ACCOUNTING), "Contabilidade", UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"));
-        sb.addItem(UIHelper.icon("fas-building", 16, UIHelper.ACCENT_BLUE), "Activos & Património", UIHelper.ACCENT_BLUE, () -> navigate("assets"));
-        sb.addItem(UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_APPROVALS), "Aprovações", UIHelper.MODULE_APPROVALS, () -> navigate("approvals"));
-        sb.addItem(UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), "Auditoria Forense", UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"));
-
-        // 4. SISTEMA
-        sb.addSection("Sistema");
-        sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_CYAN), "Notificações", UIHelper.ACCENT_CYAN, () -> navigate("notifications"));
-        sb.addItem(UIHelper.icon("fas-cog", 16, UIHelper.ACCENT_BLUE), "Configurações", UIHelper.ACCENT_BLUE, () -> navigate("config"));
-
-        return sb;
-    }
-
-    /** Botão Sobre o Multicore ERP na barra superior (F12). */
-    private javax.swing.JComponent buildAboutButton() {
-        JLabel btn = new JLabel(UIHelper.icon("fas-info-circle", 18, topBarIconTint()));
-        btn.setToolTipText("Sobre o Multicore ERP (F12)");
-        btn.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-        btn.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mousePressed(java.awt.event.MouseEvent e) { openAboutDialog(); }
-        });
-        return btn;
-    }
-
-    /** Botão de histórico recente na barra de menu (Ctrl+H). */
-    private javax.swing.JComponent buildHistoryButton() {
-        JLabel btn = new JLabel(UIHelper.icon("fas-history", 18, topBarIconTint()));
-        btn.setToolTipText("Histórico de Itens Recentes (Ctrl+H)");
-        btn.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-        btn.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mousePressed(java.awt.event.MouseEvent e) { openRecentItemsHistory(); }
-        });
-        return btn;
+        return MainFrameSidebarBuilder.build(
+                desktopSessionStore.requireSession(),
+                superAdmin,
+                this::navigate,
+                comercialPanel
+        );
     }
 
     public void openRecentItemsHistory() {
@@ -475,197 +349,18 @@ public class MainFrame extends JFrame {
         });
     }
 
-    /** Botão de tema na barra de menu (sol/lua/ajuste). Trocar reconstrói a janela no tema escolhido. */
-    private javax.swing.JComponent buildThemeToggle() {
-        String code = UIHelper.isHighContrast() ? "fas-adjust" : (UIHelper.isLight() ? "fas-moon" : "fas-sun");
-        String tip = UIHelper.isHighContrast()
-                ? "Mudar para Tema Escuro (Atual: Alto Contraste)"
-                : (UIHelper.isLight() ? "Mudar para Alto Contraste (Atual: Claro)" : "Mudar para Tema Claro (Atual: Escuro)");
-        JLabel toggle = new JLabel(UIHelper.icon(code, 18, topBarIconTint()));
-        toggle.setToolTipText(tip);
-        toggle.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-        toggle.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
-        toggle.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
-                UIHelper.cycleTheme();
-            }
-        });
-        return toggle;
-    }
-
-    /** Bell da barra superior: prévia curta e acesso à página completa por "Ver todas". */
-    private javax.swing.JComponent buildNotificationBell() {
-        JPanel bell = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 3, 5));
-        bell.setOpaque(false);
-        bell.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-        bell.setToolTipText("Notificações");
-
-        JLabel icon = new JLabel(UIHelper.icon("fas-bell", 19, topBarIconTint()));
-        notificationBadgeLabel = new JLabel("0");
-        notificationBadgeLabel.setOpaque(true);
-        notificationBadgeLabel.setBackground(UIHelper.REJECTED_RED);
-        notificationBadgeLabel.setForeground(Color.WHITE);
-        notificationBadgeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 9));
-        notificationBadgeLabel.setHorizontalAlignment(JLabel.CENTER);
-        notificationBadgeLabel.setBorder(BorderFactory.createEmptyBorder(1, 4, 1, 4));
-        notificationBadgeLabel.setVisible(false);
-        bell.add(icon);
-        bell.add(notificationBadgeLabel);
-
-        bell.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mousePressed(java.awt.event.MouseEvent e) {
-                showNotificationPreview(bell);
-            }
-        });
-        javax.swing.SwingUtilities.invokeLater(this::refreshNotificationBadgeAsync);
-        return bell;
-    }
-
-    private void showNotificationPreview(javax.swing.JComponent anchor) {
-        Long companyId = CurrentUserContext.findCurrentCompanyId();
-        if (companyId == null) return; // superadmin: sem empresa activa, sem notificações de tenant
-        javax.swing.JPopupMenu popup = new javax.swing.JPopupMenu();
-        popup.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.BORDER),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-        javax.swing.JMenuItem loading = new javax.swing.JMenuItem("A carregar notificações…");
-        loading.setEnabled(false);
-        popup.add(loading);
-        popup.show(anchor, -220, anchor.getHeight());
-
-        new javax.swing.SwingWorker<List<NotificationFeed.NotificationItem>, Void>() {
-            @Override protected List<NotificationFeed.NotificationItem> doInBackground() {
-                return notificationFeed.load(companyId);
-            }
-
-            @Override protected void done() {
-                try {
-                    List<NotificationFeed.NotificationItem> items = get();
-                    List<NotificationFeed.NotificationItem> unread = notificationReadStore.unread(items);
-                    updateNotificationBadge(unread.size());
-                    popup.removeAll();
-                    if (unread.isEmpty()) {
-                        javax.swing.JMenuItem empty = new javax.swing.JMenuItem("Não há notificações por ler.");
-                        empty.setEnabled(false);
-                        popup.add(empty);
-                    } else {
-                        unread.stream().limit(5).forEach(item -> {
-                            javax.swing.JMenu itemMenu = new javax.swing.JMenu(
-                                    item.type() + " · " + shorten(item.title(), 44));
-                            itemMenu.setToolTipText(item.detail());
-                            javax.swing.JMenuItem open = new javax.swing.JMenuItem(
-                                    "Abrir módulo", UIHelper.icon("fas-external-link-alt", 12));
-                            open.addActionListener(e -> navigateFromNotification(item.moduleCard()));
-                            javax.swing.JMenuItem markRead = new javax.swing.JMenuItem(
-                                    "Marcar como lida", UIHelper.icon("fas-check", 12));
-                            markRead.addActionListener(e -> {
-                                notificationReadStore.markRead(item);
-                                updateNotificationBadge(notificationReadStore.unreadCount(items));
-                                popup.setVisible(false);
-                            });
-                            itemMenu.add(open);
-                            itemMenu.add(markRead);
-                            popup.add(itemMenu);
-                        });
-                    }
-                    popup.addSeparator();
-                    javax.swing.JMenuItem markAll = new javax.swing.JMenuItem(
-                            "Marcar todas como lidas", UIHelper.icon("fas-check-double", 13));
-                    markAll.setEnabled(!unread.isEmpty());
-                    markAll.addActionListener(e -> {
-                        notificationReadStore.markAllRead(items);
-                        updateNotificationBadge(0);
-                        popup.setVisible(false);
-                    });
-                    popup.add(markAll);
-                    javax.swing.JMenuItem viewAll = new javax.swing.JMenuItem("Ver todas");
-                    viewAll.setIcon(UIHelper.icon("fas-list", 13));
-                    viewAll.addActionListener(e -> {
-                        topBar.setActive("__notifications__");
-                        navigate("notifications");
-                    });
-                    popup.add(viewAll);
-                    popup.setVisible(false);
-                    popup.show(anchor, -220, anchor.getHeight());
-                } catch (Exception ex) {
-                    popup.removeAll();
-                    javax.swing.JMenuItem error = new javax.swing.JMenuItem("Não foi possível carregar as notificações.");
-                    error.setEnabled(false);
-                    popup.add(error);
-                    popup.setVisible(false);
-                    popup.show(anchor, -260, anchor.getHeight());
-                }
-            }
-        }.execute();
-    }
-
     private void refreshNotificationBadgeAsync() {
-        if (notificationFeed == null) return;
-        // Sem empresa activa (superadmin) não há notificações de tenant para contar. Antes o contexto
-        // assumia a empresa 1 e o sino mostrava alertas de uma empresa que não é a do utilizador.
-        Long companyId = CurrentUserContext.findCurrentCompanyId();
-        if (companyId == null) return;
-        int version = ++notificationBadgeLoadVersion;
-        new javax.swing.SwingWorker<Integer, Void>() {
-            @Override protected Integer doInBackground() {
-                return notificationReadStore.unreadCount(notificationFeed.load(companyId));
-            }
-
-            @Override protected void done() {
-                if (version != notificationBadgeLoadVersion) return;
-                try {
-                    updateNotificationBadge(get());
-                } catch (Exception ignored) {
-                    updateNotificationBadge(0);
-                }
-            }
-        }.execute();
+        if (notificationCoordinator != null) notificationCoordinator.refreshNotificationBadgeAsync();
     }
 
     private void updateNotificationBadge(int count) {
-        if (notificationBadgeLabel != null) {
-            notificationBadgeLabel.setText(count > 99 ? "99+" : String.valueOf(count));
-            notificationBadgeLabel.setVisible(count > 0);
-            notificationBadgeLabel.setToolTipText(count + " notificação" + (count == 1 ? " pendente" : " pendentes"));
-        }
-        if (sidebar != null) {
-            sidebar.setBadge("Notificações", count);
-        }
-    }
-
-    private static String shorten(String value, int maxLength) {
-        if (value == null || value.length() <= maxLength) return value == null ? "" : value;
-        return value.substring(0, maxLength - 1) + "…";
+        if (notificationCoordinator != null) notificationCoordinator.updateNotificationBadge(count);
     }
 
     private JComboBox<DesktopSession.CompanyAccess> buildCompanyCombo() {
-        DesktopSession session = desktopSessionStore.requireSession();
-        List<DesktopSession.CompanyAccess> companies = session.companies();
-        JComboBox<DesktopSession.CompanyAccess> combo =
-                new JComboBox<>(companies.toArray(new DesktopSession.CompanyAccess[0]));
-
-        java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(MainFrame.class);
-        String prefKey = "last_selected_company_id_" + (session.username() != null ? session.username() : "default");
-        long lastCompanyId = prefs.getLong(prefKey, -1L);
-
-        DesktopSession.CompanyAccess initial = companies.stream()
-                .filter(c -> c.id().equals(lastCompanyId))
-                .findFirst()
-                .orElse(companies.isEmpty() ? null : companies.get(0));
-
-        if (initial != null) {
-            combo.setSelectedItem(initial);
-            selectDesktopCompany(initial);
-        }
-
-        combo.addActionListener(e -> {
-            DesktopSession.CompanyAccess selected = (DesktopSession.CompanyAccess) combo.getSelectedItem();
+        return MainFrameCompanySelector.buildCompanyCombo(desktopSessionStore, () -> {
+            DesktopSession.CompanyAccess selected = desktopSessionStore.requireSession().activeCompany();
             if (selected != null) {
-                try {
-                    prefs.putLong(prefKey, selected.id());
-                } catch (Exception ignored) {}
-                selectDesktopCompany(selected);
                 if (topBar != null) topBar.setSubBrand(selected.name());
                 if (sidebar != null) sidebar.setSubBrand(selected.name());
                 updateSessionRole();
@@ -673,157 +368,26 @@ public class MainFrame extends JFrame {
                 refreshNotificationBadgeAsync();
             }
         });
-        return combo;
     }
 
-    /**
-     * Renderer do combo de empresas: nome em destaque e perfil traduzido para PT em tom
-     * discreto. Tem de ser aplicado depois de {@code UIHelper.styleComboBox}, que substitui
-     * o renderer e mostraria o {@code toString()} do record ({@code CompanyAccess[...]}).
-     */
-    private void applyCompanyRenderer(JComboBox<DesktopSession.CompanyAccess> combo) {
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? UIHelper.GRID : UIHelper.BG_CARD);
-                setForeground(UIHelper.TEXT_LIGHT);
-                setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
-                if (value instanceof DesktopSession.CompanyAccess company) {
-                    String roleColor = isSelected ? "#E5E7EB" : "#9CA3AF";
-                    setText("<html>" + company.name()
-                            + " <font color='" + roleColor + "'>· " + UIHelper.humanRole(company.role())
-                            + "</font></html>");
-                }
-                return this;
-            }
-        });
-    }
-
-    private void selectDesktopCompany(DesktopSession.CompanyAccess company) {
-        DesktopSession session = desktopSessionStore.requireSession();
-        session.selectCompany(company.id());
-        CurrentUserContext.setCurrentUser(session.username(), company.role());
-        CurrentUserContext.setCurrentCompanyId(company.id());
-    }
-
-    private JLabel sessionUserLabel;
-    private JLabel sessionRoleLabel;
-
-    /** Compact horizontal user chip for the top bar: avatar + name/role stacked. */
-    private JPanel buildUserChip() {
-        JPanel chip = new JPanel(new BorderLayout(8, 0));
-        chip.setOpaque(false);
-
-        JLabel avatar = new JLabel(UIHelper.icon("fas-user-circle", 28, UIHelper.ACCENT));
-        chip.add(avatar, BorderLayout.WEST);
-
-        JPanel textStack = new JPanel();
-        textStack.setOpaque(false);
-        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
-        sessionUserLabel = new JLabel("—");
-        sessionUserLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        sessionUserLabel.setForeground(UIHelper.TEXT_LIGHT);
-        sessionRoleLabel = new JLabel("—");
-        sessionRoleLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        sessionRoleLabel.setForeground(UIHelper.TEXT_MUTED);
-        textStack.add(sessionUserLabel);
-        textStack.add(sessionRoleLabel);
-        chip.add(textStack, BorderLayout.CENTER);
-
-        JButton logoutBtn = new JButton(UIHelper.icon("fas-sign-out-alt", 15, UIHelper.REJECTED_RED));
-        logoutBtn.setToolTipText("Terminar Sessão (Logout)");
-        logoutBtn.setFocusPainted(false);
-        logoutBtn.setBorderPainted(false);
-        logoutBtn.setContentAreaFilled(false);
-        logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        logoutBtn.addActionListener(e -> UIHelper.requestLogout(this));
-        chip.add(logoutBtn, BorderLayout.EAST);
-
-        return chip;
-    }
-
-    /** Assinatura da empresa activa (null para superadmin ou se falhar). Nunca deixa a UI rebentar. */
-    private mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO mySubscriptionSafe() {
-        if (superAdmin) return null;
-        try {
-            return mySubscriptionApiClient.getMySubscription();
-        } catch (RuntimeException ex) {
-            return null;
+    private void updateSessionRole() {
+        String activeRole = CurrentUserContext.getRole();
+        topBarBuilder.updateRole(UIHelper.humanRole(activeRole));
+        if (sessionDisplayName != null && dashboardPanel != null) {
+            dashboardPanel.updateWelcomeMessage(sessionDisplayName, activeRole);
         }
     }
 
-    /** -1 = expirada/suspensa (vermelho); 0 = a expirar em ≤7 dias (amarelo); 1 = ok (sem chip). */
-    private static int subscriptionSeverity(mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO s) {
-        if (s == null || !s.hasSubscription()) return 1;
-        if ("EXPIRED".equals(s.status()) || "SUSPENDED".equals(s.status())) return -1;
-        Long d = s.daysRemaining();
-        if (d != null && d >= 0 && d <= SUB_ALERT_DAYS) return 0;
-        return 1;
-    }
-
-    /** Chip na barra de topo — só aparece quando a assinatura está a expirar ou já expirou. */
     private javax.swing.JComponent buildSubscriptionChip() {
-        mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
-        int sev = subscriptionSeverity(s);
-        if (sev == 1) return null;
-
-        boolean expired = sev == -1;
-        Color color = expired ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW;
-        String text = expired
-                ? "Assinatura " + s.statusLabel().toLowerCase()
-                : (s.daysRemaining() == 0 ? "Assinatura expira hoje" : "Assinatura: " + s.daysRemaining() + " dia(s)");
-
-        JLabel chip = new JLabel(text, UIHelper.icon("fas-exclamation-triangle", 14, color), JLabel.LEFT);
-        chip.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        chip.setForeground(color);
-        chip.setToolTipText("Veja Configurações → A Minha Assinatura, ou contacte o suporte.");
-        chip.setBorder(new javax.swing.border.EmptyBorder(0, 6, 0, 6));
-        return chip;
+        return MainFrameSubscriptionCoordinator.buildSubscriptionChip(mySubscriptionApiClient, superAdmin);
     }
 
-    /** Aviso único no arranque quando a assinatura está a expirar/expirada. Chamado após a janela abrir. */
     public void checkSubscriptionOnStartup() {
-        mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
-        int sev = subscriptionSeverity(s);
-        if (sev == 1) return;
-        if (sev == -1) { enforceExpiredSubscription(s); return; }
-        // sev == 0: aviso ≤7 dias — só informa, não bloqueia.
-        String msg = "A assinatura da sua empresa expira "
-                + (s.daysRemaining() == 0 ? "hoje" : "em " + s.daysRemaining() + " dia(s)")
-                + " (" + s.validUntil() + ").\nContacte o suporte da plataforma para renovar a tempo.";
-        ToastManager.show(this, FeedbackType.WARNING, msg);
+        MainFrameSubscriptionCoordinator.checkSubscriptionOnStartup(this, mySubscriptionApiClient, superAdmin, UIHelper.onForcedLogout);
     }
 
-    /**
-     * Vigia periódica (6h) da assinatura com a app aberta. Ao detetar expiração/suspensão, avisa e
-     * força o logout para o ecrã de login — onde o re-login fica bloqueado ({@code allowsLogin}) até
-     * renovar. Superadmin não tem assinatura, por isso não é vigiado.
-     */
     private void startSubscriptionWatch() {
-        if (superAdmin) return;
-        subscriptionWatch = new javax.swing.Timer(SUB_WATCH_INTERVAL_MS, e -> {
-            mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO s = mySubscriptionSafe();
-            if (subscriptionSeverity(s) == -1) enforceExpiredSubscription(s);
-        });
-        // O arranque já é coberto por checkSubscriptionOnStartup; a vigia trata da app já aberta.
-        subscriptionWatch.setInitialDelay(SUB_WATCH_INTERVAL_MS);
-        subscriptionWatch.start();
-    }
-
-    /** Aviso de expiração + logout forçado. Idempotente — dispara uma única vez. */
-    private void enforceExpiredSubscription(mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO s) {
-        if (subscriptionEnforced) return;
-        subscriptionEnforced = true;
-        if (subscriptionWatch != null) subscriptionWatch.stop();
-        String estado = (s != null && s.statusLabel() != null) ? s.statusLabel().toLowerCase() : "expirada";
-        javax.swing.JOptionPane.showMessageDialog(this,
-                "A assinatura da sua empresa está " + estado + ".\n"
-                        + "O acesso vai ser suspenso. Contacte o suporte da plataforma para regularizar.",
-                "Assinatura", javax.swing.JOptionPane.ERROR_MESSAGE);
-        if (UIHelper.onForcedLogout != null) {
-            UIHelper.onForcedLogout.run();
-        }
+        subscriptionWatch = MainFrameSubscriptionCoordinator.startSubscriptionWatch(this, mySubscriptionApiClient, superAdmin, UIHelper.onForcedLogout);
     }
 
     @Override
@@ -869,6 +433,7 @@ public class MainFrame extends JFrame {
             case "manufacturing" -> "Produção & Fabrico";
             case "fleet"      -> "Gestão de Frotas";
             case "recurring"  -> "Avenças & Contratos";
+            case "quality"    -> "Qualidade & HST";
             case "approvals"  -> "Aprovações";
             case "auditoria_forense" -> "Auditoria Forense";
             case "assistente_ia" -> "Assistente de Gestão";
@@ -899,6 +464,7 @@ public class MainFrame extends JFrame {
             case "manufacturing" -> manufacturingPanel.onPanelSelected();
             case "fleet"      -> fleetPanel.onPanelSelected();
             case "recurring"  -> recurringContractsPanel.onPanelSelected();
+            case "quality"    -> qualityPanel.onPanelSelected();
             case "approvals"  -> approvalsPanel.onPanelSelected();
             case "auditoria_forense" -> forensicAuditPanel.loadData();
             case "pos"        -> posPanel.onPanelSelected();
@@ -916,6 +482,7 @@ public class MainFrame extends JFrame {
             case "stock", "stock_waste" -> "Stock & Armazéns";
             case "config" -> "Configurações";
             case "clientes", "risco_credito" -> "Clientes";
+            case "quality" -> "Qualidade & HST";
             default -> null;
         };
         topBar.setActive(navLabel);
@@ -939,6 +506,7 @@ public class MainFrame extends JFrame {
             else if (comp instanceof ManufacturingPanel p) p.onPanelSelected();
             else if (comp instanceof FleetPanel p)         p.onPanelSelected();
             else if (comp instanceof RecurringContractsPanel p) p.onPanelSelected();
+            else if (comp instanceof QualityPanel p)    p.onPanelSelected();
             else if (comp instanceof ApprovalsPanel p)  p.onPanelSelected();
             else if (comp instanceof POSPanel p)        p.onPanelSelected();
             else if (comp instanceof StockPanel p)      p.onPanelSelected();
@@ -946,16 +514,6 @@ public class MainFrame extends JFrame {
             else if (comp instanceof ConfigPanel p)     p.onPanelSelected();
             else if (comp instanceof NotificationsPanel p) p.onPanelSelected();
             else if (comp instanceof PlataformaPanel p) p.onPanelSelected();
-        }
-    }
-
-    private void updateSessionRole() {
-        String activeRole = CurrentUserContext.getRole();
-        if (sessionRoleLabel != null) {
-            sessionRoleLabel.setText(UIHelper.humanRole(activeRole));
-        }
-        if (sessionDisplayName != null && dashboardPanel != null) {
-            dashboardPanel.updateWelcomeMessage(sessionDisplayName, activeRole);
         }
     }
 
@@ -1075,25 +633,14 @@ public class MainFrame extends JFrame {
                 UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), UIHelper.MODULE_CLIENTES,
                 () -> navigate("clientes"), List.of("contactos", "nuit", "saldo", "extrato")
         ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "mod_credit_risk", "Risco de Crédito & Cobrança (Aging)", "Módulos", null,
-                UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.MODULE_COMERCIAL), UIHelper.MODULE_COMERCIAL,
-                () -> {
-                    navigate("clientes");
-                    if (clientesPanel != null) clientesPanel.selectCreditRiskTab();
-                },
-                List.of("aging", "cobranca", "risco", "credito", "mora", "devedores", "bloqueio")
-        ));
-        items.add(new GlobalSearchDialog.SearchItem(
-                "mod_fiscal", "Área Fiscal & IVA", "Módulos", null,
-                UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), UIHelper.MODULE_FISCAL,
-                () -> navigate("fiscal"), List.of("imposto", "declaracao", "mapa", "retencoes")
-        ));
+        items.add(new GlobalSearchDialog.SearchItem("mod_credit_risk", "Risco de Crédito & Cobrança (Aging)", "Módulos", null, UIHelper.icon("fas-file-invoice-dollar", 16, UIHelper.MODULE_COMERCIAL), UIHelper.MODULE_COMERCIAL, () -> { navigate("clientes"); if (clientesPanel != null) clientesPanel.selectCreditRiskTab(); }, List.of("aging", "cobranca", "risco", "credito", "mora", "devedores", "bloqueio")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_fiscal", "Área Fiscal & IVA", "Módulos", null, UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), UIHelper.MODULE_FISCAL, () -> navigate("fiscal"), List.of("imposto", "declaracao", "mapa", "retencoes")));
         items.add(new GlobalSearchDialog.SearchItem("mod_contabilidade", "Contabilidade & Razão", "Módulos", null, UIHelper.icon("fas-calculator", 16, UIHelper.MODULE_ACCOUNTING), UIHelper.MODULE_ACCOUNTING, () -> navigate("contabilidade"), List.of("lancamentos", "diario", "balancete", "contas")));
         items.add(new GlobalSearchDialog.SearchItem("mod_assets", "Activos Fixos & Património", "Módulos", null, UIHelper.icon("fas-building", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("assets"), List.of("activos", "patrimonio", "imobilizado", "amortizacoes", "depreciacao", "vlc")));
         items.add(new GlobalSearchDialog.SearchItem("mod_manufacturing", "Produção & Transformação Industrial", "Módulos", null, UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("manufacturing"), List.of("producao", "fabrico", "bom", "ficha tecnica", "ordem de producao", "cip", "industria")));
         items.add(new GlobalSearchDialog.SearchItem("mod_fleet", "Gestão de Frotas & Viaturas", "Módulos", null, UIHelper.icon("fas-car", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("fleet"), List.of("frota", "viaturas", "carros", "combustivel", "abastecimento", "odometro", "km/l", "motoristas")));
         items.add(new GlobalSearchDialog.SearchItem("mod_recurring", "Avenças & Contratos Recorrentes", "Módulos", null, UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("recurring"), List.of("avencas", "contratos", "recorrente", "mensalidades", "subscricoes", "servicos", "batch", "faturacao")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_quality", "Qualidade & HST (Equipamentos)", "Módulos", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("quality"), List.of("qualidade", "hst", "epi", "equipamento", "seguranca", "trabalhador", "validade")));
         items.add(new GlobalSearchDialog.SearchItem("mod_approvals", "Aprovações Pendentes", "Módulos", null, UIHelper.icon("fas-check-double", 16, UIHelper.MODULE_APPROVALS), UIHelper.MODULE_APPROVALS, () -> navigate("approvals"), List.of("autorizar", "pendencias", "requisicoes")));
         items.add(new GlobalSearchDialog.SearchItem("mod_notifications", "Notificações & Avisos", "Módulos", null, UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("notifications"), List.of("alertas", "sino", "avisos", "validade")));
         items.add(new GlobalSearchDialog.SearchItem("mod_config", "Configurações do Sistema", "Módulos", null, UIHelper.icon("fas-cog", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("config"), List.of("utilizadores", "empresa", "auditoria", "backup", "licenca")));

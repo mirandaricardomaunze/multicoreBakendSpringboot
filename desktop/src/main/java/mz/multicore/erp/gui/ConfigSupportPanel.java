@@ -3,7 +3,6 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.desktop.session.SignedInUser;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.support.dto.SupportTicketDTO;
-import mz.multicore.erp.modules.support.dto.CreateTicketRequest;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -13,7 +12,6 @@ import java.util.List;
 
 /** Gestão e conversação de pedidos de suporte. */
 final class ConfigSupportPanel {
-    private static final String[] TICKET_PRIORITIES = {"LOW", "NORMAL", "HIGH", "URGENT"};
     private final ConfigPanel owner;
     ConfigSupportPanel(ConfigPanel owner) { this.owner = owner; }
 
@@ -24,10 +22,13 @@ final class ConfigSupportPanel {
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
+        newBtn.addActionListener(e -> ConfigSupportTicketDialog.openNewTicket(owner, this::refresh));
         ModernButton viewBtn = UIHelper.createPrimaryButton("Ver / Responder");
         viewBtn.setIcon(UIHelper.icon("fas-comments", 14));
+        viewBtn.addActionListener(e -> viewSupportTicket());
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        refreshBtn.addActionListener(e -> refresh());
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());
@@ -35,16 +36,14 @@ final class ConfigSupportPanel {
 
         String[] cols = {"#", "Assunto", "Prioridade", "Estado", "Mensagens"};
         owner.supportModel = new DefaultTableModel(cols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.supportTable = new JTable(owner.supportModel);
         UIHelper.styleTable(owner.supportTable);
         UIHelper.ensureHeadersFit(owner.supportTable);
         owner.supportTable.putClientProperty("noRowInspector", Boolean.TRUE);
         owner.supportTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2) viewSupportTicket();
             }
         });
@@ -58,28 +57,18 @@ final class ConfigSupportPanel {
         listCard.add(UIHelper.tableCardTop("Pedidos de Assistência à Plataforma", supBar, refreshBtn, viewBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
         TableQuickPeekController.install(owner.supportTable, listCard, (peek, row) -> {
-            String id = String.valueOf(owner.supportModel.getValueAt(row, 0));
-            String subj = String.valueOf(owner.supportModel.getValueAt(row, 1));
-            String prio = String.valueOf(owner.supportModel.getValueAt(row, 2));
-            String status = String.valueOf(owner.supportModel.getValueAt(row, 3));
-            String msgs = String.valueOf(owner.supportModel.getValueAt(row, 4));
+            String id = String.valueOf(owner.supportModel.getValueAt(row, 0)), subj = String.valueOf(owner.supportModel.getValueAt(row, 1)),
+                    prio = String.valueOf(owner.supportModel.getValueAt(row, 2)), status = String.valueOf(owner.supportModel.getValueAt(row, 3)),
+                    msgs = String.valueOf(owner.supportModel.getValueAt(row, 4));
             peek.setHeaderIcon("fas-headset", UIHelper.ACCENT_CYAN);
             peek.setTitle(subj);
             peek.setSubtitle("Ticket #" + id);
             peek.setStatus(status, UIHelper.ACCENT_BLUE);
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("Prioridade", prio, false),
-                    new QuickPeekPanel.PeekItem("Mensagens", msgs, false)
-            ));
+            peek.setItems(List.of(new QuickPeekPanel.PeekItem("Prioridade", prio, false), new QuickPeekPanel.PeekItem("Mensagens", msgs, false)));
             peek.getOpenFullButton().setText("Ver / Responder");
             peek.setOnOpenFullAction(v -> viewSupportTicket());
         });
         panel.add(listCard, BorderLayout.CENTER);
-
-        newBtn.addActionListener(e -> newSupportTicket());
-        viewBtn.addActionListener(e -> viewSupportTicket());
-        refreshBtn.addActionListener(e -> refresh());
-
         return panel;
     }
 
@@ -103,86 +92,12 @@ final class ConfigSupportPanel {
         });
     }
 
-    private void newSupportTicket() {
-        JTextField subjectField = new JTextField();
-        JComboBox<String> priorityCombo = new JComboBox<>(TICKET_PRIORITIES);
-        priorityCombo.setSelectedItem("NORMAL");
-        JTextArea descArea = new JTextArea(4, 30);
-        descArea.setLineWrap(true);
-        descArea.setWrapStyleWord(true);
-        UIHelper.styleTextField(subjectField);
-        UIHelper.styleComboBox(priorityCombo);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Assunto:", subjectField,
-                "Prioridade:", priorityCombo,
-                "Descrição:", new JScrollPane(descArea)
-        );
-
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Novo Pedido de Assistência",
-                "fas-headset", "Contactar o suporte da plataforma", form).setConfirmButton("Enviar", "fas-paper-plane");
-        dlg.setOnSaveAsync(() -> {
-            if (subjectField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O assunto é obrigatório.");
-            }
-            CreateTicketRequest request = new CreateTicketRequest(subjectField.getText().trim(),
-                    descArea.getText().trim(), (String) priorityCombo.getSelectedItem());
-            return () -> owner.supportApiClient.openTicket(request);
-        });
-
-        if (dlg.showDialog()) {
-            JOptionPane.showMessageDialog(owner, "Pedido enviado ao suporte.", "Sucesso",
-                    JOptionPane.INFORMATION_MESSAGE);
-            refresh();
-        }
-    }
-
     private void viewSupportTicket() {
         int row = TableFilter.selectedModelRow(owner.supportTable);
         if (row < 0 || row >= owner.supportTickets.size()) {
-            JOptionPane.showMessageDialog(owner, "Selecione um pedido.", "Suporte", JOptionPane.WARNING_MESSAGE);
+            ToastManager.show(owner, FeedbackType.WARNING, "Selecione um pedido.");
             return;
         }
-        SupportTicketDTO ticket = owner.supportTickets.get(row);
-        UIHelper.loadAsync(owner, () -> owner.supportApiClient.listCompanyMessages(ticket.id()),
-                messages -> showSupportThread(ticket, PlataformaPanel.renderThread(messages)),
-                error -> owner.showConfigError("conversa de suporte", error));
+        ConfigSupportTicketDialog.viewTicket(owner, owner.supportTickets.get(row), this::refresh);
     }
-
-    private void showSupportThread(SupportTicketDTO ticket, String renderedThread) {
-        JTextArea thread = new JTextArea(renderedThread);
-        thread.setEditable(false);
-        thread.setLineWrap(true);
-        thread.setWrapStyleWord(true);
-        JScrollPane threadScroll = new JScrollPane(thread);
-        threadScroll.setMinimumSize(new Dimension(420, 180));
-
-        JTextArea reply = new JTextArea(3, 40);
-        reply.setLineWrap(true);
-        reply.setWrapStyleWord(true);
-        JPanel form = new JPanel(new BorderLayout(0, 8));
-        form.setOpaque(false);
-        form.add(threadScroll, BorderLayout.CENTER);
-        JPanel replyBox = new JPanel(new BorderLayout(0, 4));
-        replyBox.setOpaque(false);
-        JLabel lbl = new JLabel("Responder (deixe vazio para só consultar):");
-        lbl.setForeground(UIHelper.TEXT_MUTED);
-        replyBox.add(lbl, BorderLayout.NORTH);
-        replyBox.add(new JScrollPane(reply), BorderLayout.CENTER);
-        form.add(replyBox, BorderLayout.SOUTH);
-
-        int result = JOptionPane.showConfirmDialog(owner, form,
-                "Pedido #" + ticket.id() + " — " + ticket.subject(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result == JOptionPane.OK_OPTION && !reply.getText().trim().isEmpty()) {
-            String message = reply.getText().trim();
-            UIHelper.runWithProgress(owner, "A enviar resposta…", () -> {
-                owner.supportApiClient.addCompanyMessage(ticket.id(), message);
-                return null;
-            }, ignored -> refresh(), error -> owner.showConfigError("resposta ao suporte", error));
-        }
-    }
-
-    // ------------------------------------------------------------- TAB 6: A Minha Assinatura
-
 }

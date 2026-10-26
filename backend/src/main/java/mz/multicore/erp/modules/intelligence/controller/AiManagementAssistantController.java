@@ -38,7 +38,7 @@ public class AiManagementAssistantController {
     }
 
     @PostMapping(value = "/report.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> report(@RequestBody AiAssistantResponse response) {
+    public ResponseEntity<byte[]> report(@Valid @RequestBody AiAssistantResponse response) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=relatorio-gestao-ia.pdf")
                 .contentType(MediaType.APPLICATION_PDF)

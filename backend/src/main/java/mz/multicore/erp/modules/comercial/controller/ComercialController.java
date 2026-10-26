@@ -31,6 +31,11 @@ public class ComercialController {
         return ResponseEntity.ok(comercialService.getAllClients());
     }
 
+    @GetMapping("/clients/{id}/credit-eligibility")
+    public ResponseEntity<ClientCreditEligibilityDTO> getClientCreditEligibility(@PathVariable Long id) {
+        return ResponseEntity.ok(comercialService.getClientCreditEligibility(id));
+    }
+
     @PostMapping("/clients")
     public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid SaveClientRequest request) {
         return ResponseEntity.ok(comercialService.createClient(request));

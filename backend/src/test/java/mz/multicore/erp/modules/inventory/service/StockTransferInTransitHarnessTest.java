@@ -82,6 +82,9 @@ class StockTransferInTransitHarnessTest {
 
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("joao", "ADMIN");
+        when(transferRepository.lockByIdAndCompanyId(anyLong(), anyLong()))
+                .thenAnswer(inv -> transferRepository.findByIdWithLinesAndCompanyId(
+                        inv.getArgument(0), inv.getArgument(1)));
         when(transferRepository.save(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
         when(stockRepository.findByProductIdAndWarehouseId(anyLong(), anyLong())).thenReturn(Optional.empty());
     }

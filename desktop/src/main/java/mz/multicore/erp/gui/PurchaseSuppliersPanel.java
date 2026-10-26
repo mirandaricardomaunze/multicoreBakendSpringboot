@@ -1,6 +1,5 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.purchases.dto.SupplierDTO;
 
@@ -13,6 +12,7 @@ import java.awt.*;
 final class PurchaseSuppliersPanel {
     private final ComprasPanel owner;
     private JTextField supplierSearchField;
+
     PurchaseSuppliersPanel(ComprasPanel owner) { this.owner = owner; }
 
     public JPanel buildPanel() {
@@ -22,10 +22,11 @@ final class PurchaseSuppliersPanel {
 
         ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações")
                 .addAction("Editar", UIHelper.icon("fas-edit", 14), () -> {
-                    SupplierDTO sel = selectedSupplier();
+                    SupplierDTO sel = PurchaseSuppliersViewCoordinator.selectedSupplier(owner);
                     if (sel != null) openSupplierDialog(sel);
                 })
-                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedSupplier);
+                .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14),
+                        () -> PurchaseSuppliersViewCoordinator.toggleSelectedSupplier(owner));
 
         ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
@@ -35,15 +36,13 @@ final class PurchaseSuppliersPanel {
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newSupBtn.addActionListener(e -> openSupplierDialog(null));
 
-        // Table full-width
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout(0, 6));
         listCard.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         String[] supCols = {"Nome do Fornecedor", "NUIT/NIF", "Telefone", "Contacto", "Correio Eletrónico", "Endereço", "Estado"};
         owner.suppliersModel = new DefaultTableModel(supCols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.suppliersTable = new JTable(owner.suppliersModel);
         UIHelper.styleTable(owner.suppliersTable);
@@ -79,102 +78,15 @@ final class PurchaseSuppliersPanel {
         listCard.add(scroll, BorderLayout.CENTER);
         listCard.add(ClientTablePagination.install(owner.suppliersTable), BorderLayout.SOUTH);
 
-        TableQuickPeekController peek = TableQuickPeekController.install(owner.suppliersTable, listCard, this::populatePeek);
+        TableQuickPeekController peek = TableQuickPeekController.install(owner.suppliersTable, listCard,
+                (p, mr) -> PurchaseSuppliersViewCoordinator.populatePeek(p, mr, owner, this::openSupplierDialog));
         peekToggleBtn.addActionListener(e -> peek.toggle());
 
         panel.add(listCard, BorderLayout.CENTER);
         return panel;
     }
 
-    private void populatePeek(QuickPeekPanel peek, int modelRow) {
-        if (owner.suppliersList == null || modelRow < 0 || modelRow >= owner.suppliersList.size()) return;
-        SupplierDTO sup = owner.suppliersList.get(modelRow);
-        boolean active = sup.active();
-        peek.setHeaderIcon("fas-truck-loading", UIHelper.ACCENT_BLUE);
-        peek.setTitle(sup.name() != null ? sup.name() : "");
-        peek.setSubtitle("NUIT: " + (sup.taxId() != null ? sup.taxId() : "—"));
-        peek.setStatus(active ? "ACTIVO" : "INACTIVO", active ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
-
-        java.util.List<QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("NUIT / NIF", sup.taxId() != null ? sup.taxId() : "-", false));
-        items.add(new QuickPeekPanel.PeekItem("Pessoa de Contacto", sup.contactPerson() != null ? sup.contactPerson() : "-", false));
-        items.add(new QuickPeekPanel.PeekItem("Telefone", sup.phone() != null ? sup.phone() : "-", false));
-        items.add(new QuickPeekPanel.PeekItem("Correio Eletrónico", sup.email() != null ? sup.email() : "-", false));
-        items.add(new QuickPeekPanel.PeekItem("Endereço", sup.address() != null ? sup.address() : "-", false));
-        peek.setItems(items);
-
-        peek.getOpenFullButton().setText("Editar Fornecedor");
-        peek.setOnOpenFullAction(ignored -> openSupplierDialog(sup));
-    }
-
-    private SupplierDTO selectedSupplier() {
-        int row = TableFilter.selectedModelRow(owner.suppliersTable);
-        if (row < 0 || row >= owner.suppliersList.size()) {
-            owner.showPurchaseNotice(FeedbackType.WARNING, "Seleccione um fornecedor", "Escolha um fornecedor na tabela para continuar.");
-            return null;
-        }
-        return owner.suppliersList.get(row);
-    }
-
-    private void toggleSelectedSupplier() {
-        SupplierDTO sel = selectedSupplier();
-        if (sel == null) return;
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.runWithProgress(owner, "A actualizar fornecedor…",
-                () -> owner.purchaseApiClient.setSupplierActive(sel.id(), companyId, !sel.active()),
-                ignored -> owner.loadSuppliers(), owner::showPurchaseError);
-    }
-
     private void openSupplierDialog(SupplierDTO existing) {
-        boolean editing = existing != null;
-        JTextField nameField = new JTextField(editing ? existing.name() : "");
-        JTextField taxIdField = new JTextField(editing ? existing.taxId() : "");
-        JTextField phoneField = new JTextField(editing && existing.phone() != null ? existing.phone() : "");
-        JTextField contactField = new JTextField(editing && existing.contactPerson() != null ? existing.contactPerson() : "");
-        JTextField emailField = new JTextField(editing && existing.email() != null ? existing.email() : "");
-        JTextField addressField = new JTextField(editing && existing.address() != null ? existing.address() : "");
-
-        JPanel form = UIHelper.createDialogForm(
-                "Nome / Empresa:", nameField,
-                "NUIT / NIF (9 dígitos):", taxIdField,
-                "Telefone:", phoneField,
-                "Pessoa de Contacto:", contactField,
-                "Correio Eletrónico:", emailField,
-                "Endereço:", addressField
-        );
-
-        Window parent = SwingUtilities.getWindowAncestor(owner);
-        ModernFormDialog dlg = new ModernFormDialog(parent, editing ? "Editar Fornecedor" : "Novo Fornecedor", form);
-        dlg.setSize(520, 480);
-        dlg.setOnSaveAsync(() -> {
-            String name = nameField.getText().trim();
-            String taxId = taxIdField.getText().trim();
-            if (name.isEmpty() || taxId.isEmpty()) {
-                throw new RuntimeException("Nome e NUIT/NIF são campos obrigatórios.");
-            }
-            mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest req =
-                    new mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest(
-                            name, taxId,
-                            emailField.getText().trim(),
-                            addressField.getText().trim(),
-                            phoneField.getText().trim(),
-                            contactField.getText().trim(),
-                            CurrentUserContext.getCurrentCompanyId());
-            return () -> editing ? owner.purchaseApiClient.updateSupplier(existing.id(), req)
-                    : owner.purchaseApiClient.createSupplier(req);
-        });
-
-        if (dlg.showDialog()) {
-            owner.showPurchaseSuccess("Fornecedor '" + nameField.getText().trim()
-                    + (editing ? "' actualizado." : "' registado."));
-            owner.loadSuppliers();
-        }
-    }
-
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        label.setForeground(UIHelper.TEXT_MUTED);
-        return label;
+        SupplierFormDialog.show(owner, existing);
     }
 }

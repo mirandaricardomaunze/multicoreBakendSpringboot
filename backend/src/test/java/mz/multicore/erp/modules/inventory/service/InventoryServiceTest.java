@@ -6,7 +6,15 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
+import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
+import mz.multicore.erp.modules.inventory.model.StockAdjustmentOperation;
+import mz.multicore.erp.modules.inventory.model.StockMovement;
+import mz.multicore.erp.modules.inventory.model.StockMovementType;
+import mz.multicore.erp.modules.inventory.model.StockMovementOperation;
+import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
 import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
+import mz.multicore.erp.modules.inventory.repository.StockMovementOperationRepository;
+import mz.multicore.erp.modules.inventory.repository.StockAdjustmentOperationRepository;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +41,9 @@ class InventoryServiceTest {
     private WarehouseRepository warehouseRepository;
     private StockRepository stockRepository;
     private ProductRepository productRepository;
+    private StockMovementRepository stockMovementRepository;
+    private StockMovementOperationRepository stockMovementOperationRepository;
+    private StockAdjustmentOperationRepository adjustmentOperationRepository;
     private InventoryService service;
 
     @BeforeEach
@@ -41,10 +52,15 @@ class InventoryServiceTest {
         warehouseRepository = mock(WarehouseRepository.class);
         stockRepository = mock(StockRepository.class);
         productRepository = mock(ProductRepository.class);
+        stockMovementRepository = mock(StockMovementRepository.class);
+        stockMovementOperationRepository = mock(StockMovementOperationRepository.class);
+        adjustmentOperationRepository = mock(StockAdjustmentOperationRepository.class);
         service = new InventoryService(
                 warehouseRepository,
                 stockRepository,
-                mock(StockMovementRepository.class),
+                stockMovementRepository,
+                stockMovementOperationRepository,
+                adjustmentOperationRepository,
                 mock(CompanyRepository.class),
                 productBatchService,
                 productRepository,
@@ -132,6 +148,136 @@ class InventoryServiceTest {
                 .map(mz.multicore.erp.modules.inventory.dto.StockAlertDTO::productId)
                 .collect(java.util.stream.Collectors.toSet());
         assertEquals(java.util.Set.of(2L, 4L), ids);
+    }
+
+    @Test
+    void warehouseScopedReads_rejeitamArmazemDeOutraEmpresaAntesDaConsulta() {
+        var foreignCompany = new mz.multicore.erp.modules.company.model.Company();
+        foreignCompany.setId(99L);
+        var foreignWarehouse = warehouse("Outra empresa", true, true);
+        foreignWarehouse.setId(90L);
+        foreignWarehouse.setCompany(foreignCompany);
+        when(warehouseRepository.findById(90L)).thenReturn(java.util.Optional.of(foreignWarehouse));
+
+        assertThrows(BusinessRuleException.class, () -> service.findStocksByWarehouse(90L));
+        assertThrows(BusinessRuleException.class, () -> service.findBatchesByWarehouse(90L));
+        assertThrows(BusinessRuleException.class, () -> service.findNextFEFO(100L, 90L));
+
+        verify(stockRepository, never()).findByWarehouseId(90L);
+        verify(productBatchService, never()).findByWarehouse(90L);
+        verify(productBatchService, never()).findNextFEFO(anyLong(), eq(90L));
+    }
+
+    @Test
+    void adjustStock_replayIdentico_devolveMovimentoSemNovoEfeito() {
+        var product = product(100L, "SKU-100", "Arroz", true);
+        var warehouse = warehouse("Central", true, true);
+        warehouse.setId(10L);
+        StockMovement movement = new StockMovement();
+        movement.setId(77L);
+        movement.setProduct(product);
+        movement.setWarehouse(warehouse);
+        movement.setQuantity(new BigDecimal("2"));
+        movement.setMovementType(StockMovementType.ADJUSTMENT);
+        StockAdjustmentOperation operation = new StockAdjustmentOperation();
+        operation.setRequestFingerprint(fingerprint(1L, 100L, 10L, "12", "Contagem física"));
+        operation.setStockMovement(movement);
+        when(adjustmentOperationRepository.findByCompanyIdAndIdempotencyKey(1L, "ADJUST-1"))
+                .thenReturn(java.util.Optional.of(operation));
+
+        var result = service.adjustStock(new CreateStockAdjustmentRequest(
+                1L, 100L, 10L, new BigDecimal("12.0"), "Contagem física", "ADJUST-1"));
+
+        assertEquals(77L, result.id());
+        verifyNoInteractions(stockRepository, productBatchService);
+        verify(stockMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void adjustStock_mesmaChaveComPayloadDiferente_rejeitaAntesDoStock() {
+        StockAdjustmentOperation operation = new StockAdjustmentOperation();
+        operation.setRequestFingerprint("outro-fingerprint");
+        when(adjustmentOperationRepository.findByCompanyIdAndIdempotencyKey(1L, "ADJUST-2"))
+                .thenReturn(java.util.Optional.of(operation));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.adjustStock(
+                new CreateStockAdjustmentRequest(1L, 100L, 10L, new BigDecimal("8"), "Acerto", "ADJUST-2")));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verifyNoInteractions(stockRepository, productBatchService);
+        verify(stockMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void registerMovement_replayIdentico_devolveMovimentoSemNovoEfeito() {
+        var product = product(100L, "SKU-100", "Arroz", true);
+        var warehouse = warehouse("Central", true, true);
+        warehouse.setId(10L);
+        StockMovement movement = new StockMovement();
+        movement.setId(88L);
+        movement.setProduct(product);
+        movement.setWarehouse(warehouse);
+        movement.setQuantity(new BigDecimal("3"));
+        movement.setMovementType(StockMovementType.ENTRY);
+        StockMovementOperation operation = new StockMovementOperation();
+        RegisterMovementRequest request = new RegisterMovementRequest(
+                100L, 10L, new BigDecimal("3.0"), "ENTRY", "L-1", null,
+                "Entrada", LocalDate.of(2027, 1, 1), "MOVEMENT-1");
+        operation.setRequestFingerprint(movementFingerprint(request));
+        operation.setStockMovement(movement);
+        when(stockMovementOperationRepository.findByCompanyIdAndIdempotencyKey(1L, "MOVEMENT-1"))
+                .thenReturn(java.util.Optional.of(operation));
+
+        var result = service.registerMovement(request);
+
+        assertEquals(88L, result.id());
+        verifyNoInteractions(stockRepository, productBatchService);
+        verify(stockMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void registerMovement_mesmaChaveComPayloadDiferente_rejeitaAntesDoStock() {
+        StockMovementOperation operation = new StockMovementOperation();
+        operation.setRequestFingerprint("outro-fingerprint");
+        when(stockMovementOperationRepository.findByCompanyIdAndIdempotencyKey(1L, "MOVEMENT-2"))
+                .thenReturn(java.util.Optional.of(operation));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.registerMovement(
+                new RegisterMovementRequest(100L, 10L, BigDecimal.ONE, "ENTRY", null, null,
+                        "Entrada", null, "MOVEMENT-2")));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verifyNoInteractions(stockRepository, productBatchService);
+        verify(stockMovementRepository, never()).save(any());
+    }
+
+    private static String fingerprint(Long companyId, Long productId, Long warehouseId,
+                                      String counted, String reason) {
+        String canonical = companyId + "|" + productId + "|" + warehouseId + "|"
+                + new BigDecimal(counted).stripTrailingZeros().toPlainString() + "|" + reason;
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    private static String movementFingerprint(RegisterMovementRequest request) {
+        String canonical = COMPANY_ID + "|" + request.productId() + "|" + request.warehouseId() + "|"
+                + request.quantity().stripTrailingZeros().toPlainString() + "|" + request.movementType().trim()
+                + "|" + value(request.batchNumber()) + "|" + value(request.serialNumber()) + "|"
+                + value(request.description()) + "|" + value(request.expirationDate());
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    private static String value(Object value) {
+        return value == null ? "<null>" : value.toString().trim();
     }
 
     private mz.multicore.erp.modules.comercial.model.Product product(Long id, String sku, String name, boolean stockTracked) {

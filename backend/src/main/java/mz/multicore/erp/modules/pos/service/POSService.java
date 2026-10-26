@@ -488,6 +488,8 @@ public class POSService {
         CurrentUserContext.requireCompany(request.companyId());
         requireOwnOperatorForSeller(request.operator());
 
+        String requestFingerprint = posRequestFingerprint(request);
+
         // Idempotência para Modo de Contingência (Offline-First):
         // Se a venda com esta referência de contingência já foi sincronizada anteriormente,
         // devolve o documento emitido sem duplicar cobrança ou saída de stock.
@@ -495,7 +497,14 @@ public class POSService {
             java.util.Optional<Invoice> existing = invoiceRepository.findByCompanyIdAndContingencyReference(
                     request.companyId(), request.contingencyReference().trim());
             if (existing.isPresent()) {
-                return existing.get();
+                Invoice previous = existing.get();
+                if (previous.getPosRequestFingerprint() != null
+                        && !previous.getPosRequestFingerprint().equals(requestFingerprint)) {
+                    throw new BusinessRuleException(
+                            "A chave de idempotência desta venda já foi usada com dados diferentes. "
+                                    + "Actualize a venda e tente novamente com uma nova chave.");
+                }
+                return previous;
             }
         }
 
@@ -527,6 +536,7 @@ public class POSService {
         Invoice invoice = new Invoice();
         if (request.contingencyReference() != null && !request.contingencyReference().isBlank()) {
             invoice.setContingencyReference(request.contingencyReference().trim());
+            invoice.setPosRequestFingerprint(requestFingerprint);
         }
         invoice.setClient(client);
         // Nome a imprimir no recibo: o rótulo walk-in escrito pelo operador, ou o nome do
@@ -684,6 +694,55 @@ public class POSService {
         return savedInvoice;
     }
 
+    /** Representação canónica e estável do comando financeiro; não depende do JSON nem da ordem
+     * das propriedades, mas preserva a ordem das linhas e pagamentos submetidos. */
+    private static String posRequestFingerprint(POSCheckoutRequest request) {
+        StringBuilder canonical = new StringBuilder(512);
+        appendFingerprintPart(canonical, request.operator());
+        appendFingerprintPart(canonical, request.companyId());
+        appendFingerprintPart(canonical, request.clientId());
+        appendFingerprintPart(canonical, request.walkInName());
+        appendFingerprintPart(canonical, request.warehouseId());
+        appendFingerprintPart(canonical, request.treasuryAccountId());
+        appendFingerprintPart(canonical, request.quotationId());
+        if (request.lines() != null) {
+            request.lines().forEach(line -> {
+                appendFingerprintPart(canonical, line.productId());
+                appendFingerprintPart(canonical, canonicalDecimal(line.quantity()));
+                appendFingerprintPart(canonical, canonicalDecimal(line.discountPercentage()));
+                appendFingerprintPart(canonical, line.batchNumber());
+                appendFingerprintPart(canonical, line.serialNumber());
+                appendFingerprintPart(canonical, canonicalDecimal(line.unitPrice()));
+            });
+        }
+        canonical.append("|payments|");
+        if (request.payments() != null) {
+            request.payments().forEach(payment -> {
+                appendFingerprintPart(canonical, payment.method());
+                appendFingerprintPart(canonical, canonicalDecimal(payment.amount()));
+                appendFingerprintPart(canonical, canonicalDecimal(payment.tenderedAmount()));
+                appendFingerprintPart(canonical, payment.reference());
+                appendFingerprintPart(canonical, payment.treasuryAccountId());
+            });
+        }
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 indisponível no runtime Java.", impossible);
+        }
+    }
+
+    private static String canonicalDecimal(BigDecimal value) {
+        return value == null ? null : value.stripTrailingZeros().toPlainString();
+    }
+
+    private static void appendFingerprintPart(StringBuilder target, Object value) {
+        String text = value == null ? "<null>" : value.toString().trim();
+        target.append(text.length()).append(':').append(text).append('|');
+    }
+
     /**
      * Devolve produtos vendidos no POS por nota de credito RETURN e regista o reembolso.
      * A nota e aprovada dentro da mesma transaccao para repor stock apenas uma vez.
@@ -693,9 +752,24 @@ public class POSService {
         PermissionGuard.requireManagerOrAdmin("registar devolução no POS");
         CurrentUserContext.requireCompany(request.companyId());
 
-        Invoice invoice = invoiceRepository.findById(request.invoiceId())
+        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(request.invoiceId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
-        CurrentUserContext.requireCompany(invoice.getCompany().getId());
+        String key = request.idempotencyKey();
+        String fingerprint = key == null ? null : posReturnRequestFingerprint(request);
+        if (key != null) {
+            java.util.Optional<CreditNote> previous =
+                    creditNoteRepository.findByInvoiceIdAndPosReturnIdempotencyKey(request.invoiceId(), key);
+            if (previous.isPresent()) {
+                CreditNote note = previous.get();
+                if (!fingerprint.equals(note.getPosReturnRequestFingerprint())) {
+                    throw new BusinessRuleException(
+                            "A chave de idempotência desta devolução já foi usada com dados diferentes.");
+                }
+                StoreVoucher voucher = storeVoucherRepository.findByCreditNoteId(note.getId()).orElse(null);
+                return new POSReturnResultDTO(
+                        creditNoteService.findById(note.getId()), voucher == null ? null : toDTO(voucher));
+            }
+        }
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new BusinessRuleException("Não é possível devolver uma fatura anulada.");
         }
@@ -710,6 +784,13 @@ public class POSService {
                 request.reason(),
                 request.lines()
         ));
+        if (key != null) {
+            CreditNote createdEntity = creditNoteRepository.findById(created.id())
+                    .orElseThrow(() -> new IllegalStateException("Nota de crédito criada não foi encontrada."));
+            createdEntity.setPosReturnIdempotencyKey(key);
+            createdEntity.setPosReturnRequestFingerprint(fingerprint);
+            creditNoteRepository.save(createdEntity);
+        }
         CreditNoteDTO approved = creditNoteService.approve(created.id());
         StoreVoucher voucher = applyRefund(request, approved, invoice);
         auditLogService.logCurrent("POS_RETURN",
@@ -718,6 +799,31 @@ public class POSService {
                         + ". Total: " + approved.totalAmount() + " MT. Motivo: " + request.reason()
                         + (voucher != null ? " (Vale emitido: " + voucher.getCode() + ")" : ""));
         return new POSReturnResultDTO(approved, voucher != null ? toDTO(voucher) : null);
+    }
+
+    private static String posReturnRequestFingerprint(POSReturnRequest request) {
+        StringBuilder canonical = new StringBuilder(320);
+        appendFingerprintPart(canonical, request.operator());
+        appendFingerprintPart(canonical, request.companyId());
+        appendFingerprintPart(canonical, request.invoiceId());
+        appendFingerprintPart(canonical, request.warehouseId());
+        appendFingerprintPart(canonical, request.reason());
+        appendFingerprintPart(canonical, request.refundMethod());
+        appendFingerprintPart(canonical, request.treasuryAccountId());
+        request.lines().stream()
+                .sorted(java.util.Comparator.comparing(
+                        mz.multicore.erp.modules.comercial.dto.CreateCreditNoteLineRequest::invoiceLineId))
+                .forEach(line -> {
+                    appendFingerprintPart(canonical, line.invoiceLineId());
+                    appendFingerprintPart(canonical, canonicalDecimal(line.quantity()));
+                });
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 indisponível no runtime Java.", impossible);
+        }
     }
 
     private StoreVoucher applyRefund(POSReturnRequest request, CreditNoteDTO note, Invoice invoice) {
@@ -854,6 +960,8 @@ public class POSService {
         entry.setTenderedAmount(tendered);
         entry.setChangeGiven(change);
         entry.setReference(req.reference());
+        entry.setIdempotencyKey(req.idempotencyKey());
+        entry.setRequestFingerprint(req.idempotencyKey() == null ? null : paymentRequestFingerprint(req));
         entry.setPaidAt(LocalDateTime.now());
         entry.setCreatedBy("SYSTEM");
         paymentEntryRepository.save(entry);
@@ -996,9 +1104,23 @@ public class POSService {
      */
     @Transactional
     public Invoice registerLatePayment(Long invoiceId, PosPaymentRequest req) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
+        PermissionGuard.requireSeller("registar pagamento posterior");
+        Long companyId = CurrentUserContext.requireCurrentCompanyId();
+        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
-        CurrentUserContext.requireCompany(invoice.getCompany().getId());
+        String key = req.idempotencyKey();
+        String fingerprint = key == null ? null : paymentRequestFingerprint(req);
+        if (key != null) {
+            java.util.Optional<PaymentEntry> previous =
+                    paymentEntryRepository.findByInvoiceIdAndIdempotencyKey(invoiceId, key);
+            if (previous.isPresent()) {
+                if (!fingerprint.equals(previous.get().getRequestFingerprint())) {
+                    throw new BusinessRuleException(
+                            "A chave de idempotência deste pagamento já foi usada com dados diferentes.");
+                }
+                return invoice;
+            }
+        }
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new BusinessRuleException("Esta fatura está cancelada.");
         }
@@ -1017,6 +1139,22 @@ public class POSService {
         invoice.setAmountPaid(newPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
         return invoiceRepository.save(invoice);
+    }
+
+    private static String paymentRequestFingerprint(PosPaymentRequest request) {
+        StringBuilder canonical = new StringBuilder(160);
+        appendFingerprintPart(canonical, request.method());
+        appendFingerprintPart(canonical, canonicalDecimal(request.amount()));
+        appendFingerprintPart(canonical, canonicalDecimal(request.tenderedAmount()));
+        appendFingerprintPart(canonical, request.reference());
+        appendFingerprintPart(canonical, request.treasuryAccountId());
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 indisponível no runtime Java.", impossible);
+        }
     }
 
     public TillSessionDTO toDTO(TillSession s) {

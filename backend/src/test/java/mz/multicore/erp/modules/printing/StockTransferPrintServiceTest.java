@@ -64,8 +64,9 @@ class StockTransferPrintServiceTest {
 
         String text = extract(pdf);
 
-        assertTrue(text.contains("Motorista: _____"), "Devia conter linha para preenchimento de motorista: " + text);
-        assertTrue(text.contains("Matrícula: _____"), "Devia conter linha para preenchimento de matrícula: " + text);
+        assertTrue(text.contains("TRANSPORTADOR"), "Devia conter o campo do transportador: " + text);
+        assertTrue(text.contains("MATRÍCULA"), "Devia conter o campo da matrícula: " + text);
+        assertTrue(text.contains("____________________"), "Devia conter linhas para preenchimento manual: " + text);
     }
 
     @Test
@@ -87,16 +88,19 @@ class StockTransferPrintServiceTest {
 
         String text = extract(pdf);
 
-        // Cabeçalhos das 9 colunas obrigatórias
+        // Cabeçalhos logísticos do modelo profissional
         assertTrue(text.contains("Referência"), "Devia conter cabeçalho Referência: " + text);
-        assertTrue(text.contains("Cód. Barras"), "Devia conter cabeçalho Cód. Barras: " + text);
-        assertTrue(text.contains("Produto"), "Devia conter cabeçalho Produto: " + text);
-        assertTrue(text.contains("Qtd"), "Devia conter cabeçalho Qtd: " + text);
-        assertTrue(text.contains("Embalagem"), "Devia conter cabeçalho Embalagem: " + text);
-        assertTrue(text.contains("Caixa"), "Devia conter cabeçalho Caixa: " + text);
-        assertTrue(text.contains("% da Caixa"), "Devia conter cabeçalho % da Caixa: " + text);
-        assertTrue(text.contains("Valor Unit."), "Devia conter cabeçalho Valor Unit.: " + text);
-        assertTrue(text.contains("IVA"), "Devia conter cabeçalho IVA: " + text);
+        assertTrue(text.contains("Código de barras"), "Devia conter cabeçalho Código de barras: " + text);
+        assertTrue(text.contains("Designação"), "Devia conter cabeçalho Designação: " + text);
+        assertTrue(text.contains("Quantidade"), "Devia conter cabeçalho Quantidade: " + text);
+        assertTrue(text.contains("Emb."), "Devia conter cabeçalho Emb.: " + text);
+        assertTrue(text.contains("Caixas"), "Devia conter cabeçalho Caixas: " + text);
+        assertTrue(text.contains("Lote"), "Devia conter cabeçalho Lote: " + text);
+        assertTrue(text.contains("Validade"), "Devia conter cabeçalho Validade: " + text);
+        assertTrue(text.contains("Peso total") && text.contains("(kg)"),
+                "Devia conter cabeçalho Peso total (kg): " + text);
+        assertTrue(text.contains("Preço unit."), "Devia conter cabeçalho Preço unitário: " + text);
+        assertTrue(text.contains("Total"), "Devia conter cabeçalho Total: " + text);
 
         // Valores da linha
         assertTrue(text.contains("REF-TRF-01"), "Devia conter a referência: " + text);
@@ -105,14 +109,11 @@ class StockTransferPrintServiceTest {
         assertTrue(text.contains("18"), "Devia conter a quantidade: " + text);
         assertTrue(text.contains("3"), "Devia conter as embalagens (18 / 6 = 3): " + text);
         assertTrue(text.contains("0.25"), "Devia conter as caixas (18 / 72 = 0.25): " + text);
-        assertTrue(text.contains("25%"), "Devia conter a percentagem da caixa (25%): " + text);
-        assertTrue(text.contains("100,00"), "Devia conter o valor unitário: " + text);
-        assertTrue(text.contains("16%"), "Devia conter a taxa de IVA: " + text);
-
-        // Bloco de totais
-        assertTrue(text.contains("Total Mercadoria (Líquido)"), "Devia conter total líquido: " + text);
-        assertTrue(text.contains("Total IVA"), "Devia conter total IVA: " + text);
-        assertTrue(text.contains("Total Geral"), "Devia conter total geral: " + text);
+        assertTrue(text.contains("Quantidade total"), "Devia conter a quantidade total: " + text);
+        assertTrue(text.contains("PESO TOTAL (kg)"), "Devia conter o resumo de peso: " + text);
+        assertTrue(text.contains("100,00"), "Devia conter o preço unitário: " + text);
+        assertTrue(text.contains("1.800,00"), "Devia conter o total da linha: " + text);
+        assertTrue(text.contains("VALOR TOTAL"), "Devia conter o valor total da guia: " + text);
     }
 
     @Test
@@ -127,6 +128,8 @@ class StockTransferPrintServiceTest {
         PdfReader reader = new PdfReader(pdf);
         try {
             assertEquals(3, reader.getNumberOfPages(), "A guia de transferência deve ter 3 vias (3 páginas)");
+            assertTrue(reader.getPageSizeWithRotation(1).getWidth() > reader.getPageSizeWithRotation(1).getHeight(),
+                    "A guia profissional deve ser emitida em A4 horizontal");
         } finally {
             reader.close();
         }

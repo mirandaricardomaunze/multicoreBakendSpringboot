@@ -2,13 +2,12 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.modules.inventory.dto.*;
+import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.math.BigDecimal;
 import java.util.List;
 
 /** Vista e operações de gestão de armazéns. */
@@ -96,35 +95,11 @@ final class StockWarehousesPanel {
         card.add(UIHelper.tableCardTop("Gestão de Armazéns", whFilters,
                 refreshBtn, moreBtn, editBtn, newBtn), BorderLayout.NORTH);
         UIHelper.ensureHeadersFit(owner.warehousesTable);
-        TableQuickPeekController peekController = TableQuickPeekController.install(owner.warehousesTable, card, (peek, mr) -> {
-            if (mr < 0 || mr >= owner.warehousesModel.getRowCount()) return;
-            String name = String.valueOf(owner.warehousesModel.getValueAt(mr, 0));
-            String num = String.valueOf(owner.warehousesModel.getValueAt(mr, 1));
-            String type = String.valueOf(owner.warehousesModel.getValueAt(mr, 2));
-            String cap = String.valueOf(owner.warehousesModel.getValueAt(mr, 3));
-            String loc = String.valueOf(owner.warehousesModel.getValueAt(mr, 4));
-            String resp = String.valueOf(owner.warehousesModel.getValueAt(mr, 5));
-            String tel = String.valueOf(owner.warehousesModel.getValueAt(mr, 6));
-            String email = String.valueOf(owner.warehousesModel.getValueAt(mr, 7));
-            String status = String.valueOf(owner.warehousesModel.getValueAt(mr, 8));
-
-            peek.setTitle(name);
-            peek.setSubtitle("Nº " + num + " • " + type);
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("Tipo", type, false),
-                    new QuickPeekPanel.PeekItem("Capacidade", cap, false),
-                    new QuickPeekPanel.PeekItem("Localização", loc, false),
-                    new QuickPeekPanel.PeekItem("Responsável", resp, false),
-                    new QuickPeekPanel.PeekItem("Telefone", tel, false),
-                    new QuickPeekPanel.PeekItem("Email", email, false),
-                    new QuickPeekPanel.PeekItem("Estado", status, true)
-            ));
-            peek.getOpenFullButton().setText("Editar Armazém");
-            peek.setOnOpenFullAction(v -> {
-                WarehouseDTO w = selectedManagedWarehouse();
-                if (w != null) warehouseDialog(w);
-            });
-        });
+        TableQuickPeekController peekController = TableQuickPeekController.install(owner.warehousesTable, card,
+                (peek, mr) -> StockWarehouseViewCoordinator.populatePeek(peek, owner.warehousesModel, mr, () -> {
+                    WarehouseDTO w = selectedManagedWarehouse();
+                    if (w != null) warehouseDialog(w);
+                }));
         peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         card.add(scroll, BorderLayout.CENTER);
@@ -160,48 +135,13 @@ final class StockWarehousesPanel {
     }
 
     public void updateKpis() {
-        if (owner.warehousesFullList == null) return;
-        List<WarehouseDTO> list = owner.warehousesFullList;
-        long totalCount = list.size();
-        long activeCount = list.stream().filter(WarehouseDTO::active).count();
-        long salesCount = list.stream().filter(w -> w.active() && w.allowsSales()).count();
-        long storageCount = Math.max(0, activeCount - salesCount);
-
-        kpiActiveWarehouses.setText(activeCount + " / " + totalCount);
-        kpiActiveSubtitle.setText(salesCount + " loja(s) POS · " + storageCount + " depósito(s)");
-
-        BigDecimal totalCapacity = list.stream()
-                .filter(WarehouseDTO::active)
-                .map(w -> w.capacity() != null ? w.capacity() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (totalCapacity.compareTo(BigDecimal.ZERO) > 0) {
-            kpiTotalCapacity.setText(String.format("%,.0f un", totalCapacity));
-        } else {
-            kpiTotalCapacity.setText("—");
-        }
-
-        BigDecimal totalStockVal = BigDecimal.ZERO;
-        if (owner.stocksList != null) {
-            for (StockDTO s : owner.stocksList) {
-                BigDecimal qty = s.quantity() != null ? s.quantity() : BigDecimal.ZERO;
-                BigDecimal price = s.unitPrice() != null ? s.unitPrice() : BigDecimal.ZERO;
-                totalStockVal = totalStockVal.add(qty.multiply(price));
-            }
-        }
-        kpiTotalStockValue.setText(UIHelper.formatMzn(totalStockVal));
-
-        long distinctTypes = list.stream()
-                .filter(WarehouseDTO::active)
-                .map(WarehouseDTO::type)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .count();
-        kpiDistributionNetwork.setText(distinctTypes + " " + (distinctTypes == 1 ? "Tipo" : "Tipos"));
+        StockWarehouseViewCoordinator.updateKpis(owner.warehousesFullList, owner.stocksList,
+                kpiActiveWarehouses, kpiActiveSubtitle, kpiTotalCapacity, kpiTotalStockValue, kpiDistributionNetwork);
     }
 
     private WarehouseDTO selectedManagedWarehouse() {
         int row = owner.warehousesTable == null ? -1 : owner.warehousesTable.getSelectedRow();
-        if (row < 0 || row >= owner.warehousesFullList.size()) {
+        if (row < 0 || owner.warehousesFullList == null || row >= owner.warehousesFullList.size()) {
             owner.showStockNotice(FeedbackType.WARNING, "Seleccione um armazém", "Escolha um armazém na tabela para continuar.");
             return null;
         }
@@ -220,93 +160,7 @@ final class StockWarehousesPanel {
         warehouseDialog(null);
     }
 
-    /** Diálogo de criar/editar armazém. {@code existing == null} → criar; senão → editar. */
     private void warehouseDialog(WarehouseDTO existing) {
-        boolean editing = existing != null;
-        JTextField nameField = new JTextField(editing ? existing.name() : "");
-        JTextField numberField = new JTextField(editing && existing.warehouseNumber() != null ? existing.warehouseNumber() : "");
-        JTextField capacityField = new JTextField(editing && existing.capacity() != null ? existing.capacity().toPlainString() : "0");
-        JTextField locField = new JTextField(editing && existing.location() != null ? existing.location() : "");
-        JComboBox<String> typeCombo = new JComboBox<>();
-        for (var t : mz.multicore.erp.modules.inventory.model.WarehouseType.values()) typeCombo.addItem(t.label());
-        UIHelper.styleComboBox(typeCombo);
-        if (editing && existing.type() != null) typeCombo.setSelectedIndex(existing.type().ordinal());
-        JTextField managerField = new JTextField(editing && existing.manager() != null ? existing.manager() : "");
-        JTextField phoneField = new JTextField(editing && existing.phone() != null ? existing.phone() : "");
-        UIHelper.styleTextField(managerField);
-        UIHelper.styleTextField(phoneField);
-        JCheckBox allowsSalesCheck = new JCheckBox("Permite vendas ao balcão (POS)", editing ? existing.allowsSales() : true);
-        allowsSalesCheck.setOpaque(false);
-        allowsSalesCheck.setForeground(UIHelper.TEXT_LIGHT);
-
-        JPanel dialogPanel = UIHelper.createDialogForm(
-                "Nome do Armazem:", nameField,
-                "Numero do Armazem:", numberField,
-                "Tipo:", typeCombo,
-                "Capacidade:", capacityField,
-                "Localizacao / Endereco:", locField,
-                "Responsável:", managerField,
-                "Telefone:", phoneField,
-                "Vendas:", allowsSalesCheck
-        );
-
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
-                editing ? "Editar Armazém" : "Criar Novo Armazém", "fas-warehouse",
-                editing ? "Actualize os dados do local" : "Registe um novo local de stock", dialogPanel).showDialog();
-        if (confirmed) {
-            String name = nameField.getText().trim();
-            String warehouseNumber = numberField.getText().trim();
-            String capacityStr = capacityField.getText().trim();
-            String location = locField.getText().trim();
-
-            if (name.isEmpty() || warehouseNumber.isEmpty()) {
-                owner.showStockNotice(FeedbackType.ERROR, "Campos obrigatórios", "Nome e número do armazém são obrigatórios.");
-                return;
-            }
-
-            try {
-                BigDecimal capacity = capacityStr.isEmpty() ? BigDecimal.ZERO : new BigDecimal(capacityStr);
-                if (capacity.compareTo(BigDecimal.ZERO) < 0) {
-                    owner.showStockNotice(FeedbackType.ERROR, "Capacidade inválida", "A capacidade deve ser zero ou superior.");
-                    return;
-                }
-                mz.multicore.erp.modules.inventory.model.WarehouseType type =
-                        mz.multicore.erp.modules.inventory.model.WarehouseType.values()[Math.max(0, typeCombo.getSelectedIndex())];
-
-                boolean allowsSales = allowsSalesCheck.isSelected();
-                String manager = managerField.getText().trim();
-                String phone = phoneField.getText().trim();
-                Long companyId = CurrentUserContext.getCurrentCompanyId();
-                UIHelper.runWithProgress(owner, "A guardar armazém…", () -> {
-                    if (editing) {
-                        return owner.inventoryApiClient.updateWarehouse(existing.id(), new UpdateWarehouseRequest(
-                                name, warehouseNumber, capacity, location, type, allowsSales, manager, phone));
-                    }
-                    return owner.inventoryApiClient.createWarehouse(new CreateWarehouseRequest(
-                            name, warehouseNumber, capacity, location, companyId, type, allowsSales, manager, phone));
-                }, ignored -> {
-                    owner.showStockSuccess(editing ? "Armazém '" + name + "' actualizado."
-                            : "Armazém '" + name + "' criado com sucesso.");
-                    owner.onPanelSelected();
-                }, owner::showStockError);
-            } catch (NumberFormatException ex) {
-                owner.showStockNotice(FeedbackType.ERROR, "Capacidade inválida", "A capacidade deve ser um valor numérico.");
-            } catch (Exception ex) {
-                owner.showStockNotice(FeedbackType.ERROR, "Não foi possível gravar o armazém", ex.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Inventário físico (contagem cega): imprime a folha de contagem, permite introduzir as contagens
-     * por artigo de um armazém e reconcilia — cada artigo contado gera um ajuste de stock (define a
-     * quantidade contada) e mostra a diferença face ao sistema. Artigos deixados em branco não são
-     * tocados (só se ajusta o que foi efectivamente contado).
-     */
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        label.setForeground(UIHelper.TEXT_MUTED);
-        return label;
+        WarehouseFormDialog.show(owner, existing);
     }
 }

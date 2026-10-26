@@ -1,548 +1,224 @@
 package mz.multicore.erp.desktop.client;
 
 import mz.multicore.erp.architecture.paging.PageResponse;
-import mz.multicore.erp.modules.comercial.dto.AgingSummaryDTO;
-import mz.multicore.erp.modules.comercial.dto.CancelReasonRequest;
-import mz.multicore.erp.modules.comercial.dto.ClientDTO;
-import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateOrderRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateFulfillmentOrderRequest;
-import mz.multicore.erp.modules.comercial.dto.OrderActionRequest;
-import mz.multicore.erp.modules.comercial.dto.OrderEventDTO;
-import mz.multicore.erp.modules.comercial.dto.ReprintAuthorizationRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateProductRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateQuotationRequest;
-import mz.multicore.erp.modules.comercial.dto.CreateReceiptRequest;
-import mz.multicore.erp.modules.comercial.dto.ExtendQuotationValidityRequest;
-import mz.multicore.erp.modules.comercial.dto.QuotationDTO;
-import mz.multicore.erp.modules.comercial.dto.UpdateQuotationRequest;
-import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
-import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
-import mz.multicore.erp.modules.comercial.dto.OrderDTO;
-import mz.multicore.erp.modules.comercial.dto.UpdateOrderRequest;
-import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
-import mz.multicore.erp.modules.comercial.dto.ProductDTO;
-import mz.multicore.erp.modules.comercial.dto.POSSalesSummaryDTO;
-import mz.multicore.erp.modules.comercial.dto.ReceiptDTO;
+import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
+import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Fachada canónica de cliente HTTP para o módulo Comercial no Desktop.
+ * Delega para sub-clientes especializados por subdomínio comercial, preservando 100%
+ * de compatibilidade retrocompatível com todos os ecrãs e testes.
+ */
 @Component
 @Profile("desktop")
 public class ComercialApiClient {
 
-    private final DesktopClientFactory clientFactory;
+    private final CommercialClientApiClient clientApiClient;
+    private final CommercialProductApiClient productApiClient;
+    private final CommercialOrderApiClient orderApiClient;
+    private final CommercialQuotationApiClient quotationApiClient;
+    private final CommercialDeliveryGuideApiClient deliveryGuideApiClient;
+    private final CommercialInvoiceApiClient invoiceApiClient;
 
     public ComercialApiClient(DesktopClientFactory clientFactory) {
-        this.clientFactory = clientFactory;
+        this(clientFactory,
+             new CommercialClientApiClient(clientFactory),
+             new CommercialProductApiClient(clientFactory),
+             new CommercialOrderApiClient(clientFactory),
+             new CommercialQuotationApiClient(clientFactory),
+             new CommercialDeliveryGuideApiClient(clientFactory),
+             new CommercialInvoiceApiClient(clientFactory));
     }
 
-    public List<ClientDTO> getClients() {
-        return clientFactory.authenticatedClient().getList("/api/comercial/clients", ClientDTO.class);
+    @Autowired
+    public ComercialApiClient(DesktopClientFactory clientFactory,
+                              CommercialClientApiClient clientApiClient,
+                              CommercialProductApiClient productApiClient,
+                              CommercialOrderApiClient orderApiClient,
+                              CommercialQuotationApiClient quotationApiClient,
+                              CommercialDeliveryGuideApiClient deliveryGuideApiClient,
+                              CommercialInvoiceApiClient invoiceApiClient) {
+        this.clientApiClient = clientApiClient;
+        this.productApiClient = productApiClient;
+        this.orderApiClient = orderApiClient;
+        this.quotationApiClient = quotationApiClient;
+        this.deliveryGuideApiClient = deliveryGuideApiClient;
+        this.invoiceApiClient = invoiceApiClient;
     }
 
-    public ClientDTO createClient(String name, String taxId, String email, String address) {
-        return createClient(name, taxId, email, address, 0, null);
+    // ─── Clientes & Crédito ──────────────────────────────────────────────────
+    public List<ClientDTO> getClients() { return clientApiClient.getClients(); }
+    public List<ClientDTO> getAllClients() { return clientApiClient.getClients(); }
+    public ClientCreditEligibilityDTO getClientCreditEligibility(Long clientId) { return clientApiClient.getClientCreditEligibility(clientId); }
+    public ClientDTO createClient(String name, String taxId, String email, String address) { return createClient(name, taxId, email, address, 0, null); }
+    public ClientDTO createClient(String name, String taxId, String email, String address, int paymentTermsDays, BigDecimal creditLimit) {
+        return clientApiClient.createClient(name, taxId, email, address, paymentTermsDays, creditLimit);
     }
-
-    public ClientDTO createClient(String name, String taxId, String email, String address,
-                                  int paymentTermsDays, BigDecimal creditLimit) {
-        return clientFactory.authenticatedClient().post("/api/comercial/clients",
-                new SaveClientRequest(name, taxId, email, address, paymentTermsDays, creditLimit), ClientDTO.class);
+    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) { return updateClient(id, name, taxId, email, address, 0, null); }
+    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address, int paymentTermsDays, BigDecimal creditLimit) {
+        return clientApiClient.updateClient(id, name, taxId, email, address, paymentTermsDays, creditLimit);
     }
+    public AgingSummaryDTO getReceivablesAging() { return clientApiClient.getReceivablesAging(); }
+    public void deleteClient(Long id) { clientApiClient.deleteClient(id); }
 
-    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address) {
-        return updateClient(id, name, taxId, email, address, 0, null);
-    }
-
-    public ClientDTO updateClient(Long id, String name, String taxId, String email, String address,
-                                  int paymentTermsDays, BigDecimal creditLimit) {
-        return clientFactory.authenticatedClient().put("/api/comercial/clients/" + id,
-                new SaveClientRequest(name, taxId, email, address, paymentTermsDays, creditLimit), ClientDTO.class);
-    }
-
-    /** Mapa de antiguidade de saldos (contas a receber) à data de hoje no servidor. */
-    public AgingSummaryDTO getReceivablesAging() {
-        return clientFactory.authenticatedClient()
-                .get("/api/comercial/receivables/aging", AgingSummaryDTO.class);
-    }
-
-    public void deleteClient(Long id) {
-        clientFactory.authenticatedClient().delete("/api/comercial/clients/" + id);
-    }
-
-    public List<InvoiceDTO> getAllInvoices() {
-        return clientFactory.authenticatedClient().getList("/api/comercial/invoices", InvoiceDTO.class);
-    }
-
-    /** Página de faturas (a listagem completa fica para os ecrãs ainda não migrados). */
-    @SuppressWarnings("unchecked")
-    public PageResponse<InvoiceDTO> getInvoicePage(Long companyId, int page, int size) {
-        return clientFactory.authenticatedClient().getGeneric(
-                "/api/comercial/invoices/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
-                PageResponse.class, InvoiceDTO.class);
-    }
-
-    /** Página do histórico de vendas do POS. */
-    @SuppressWarnings("unchecked")
-    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size) {
-        return getPOSSalesPage(companyId, page, size, null, null);
-    }
-
-    @SuppressWarnings("unchecked")
-    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size,
-                                                    LocalDate from, LocalDate to) {
-        String path = "/api/comercial/pos-sales/page?companyId=" + companyId
-                + "&page=" + page + "&size=" + size;
-        if (from != null) path += "&from=" + from;
-        if (to != null) path += "&to=" + to;
-        return clientFactory.authenticatedClient().getGeneric(path, PageResponse.class, InvoiceDTO.class);
-    }
-
-    public POSSalesSummaryDTO getPOSSalesSummary(Long companyId, LocalDate from, LocalDate to) {
-        String path = "/api/comercial/pos-sales/summary?companyId=" + companyId;
-        if (from != null) path += "&from=" + from;
-        if (to != null) path += "&to=" + to;
-        return clientFactory.authenticatedClient().get(path, POSSalesSummaryDTO.class);
-    }
-
-    public List<ProductDTO> getAllProducts() {
-        return clientFactory.authenticatedClient().getList("/api/comercial/products", ProductDTO.class);
-    }
-
-    /** Catálogo paginado no servidor com pesquisa multi-termo e categoria. */
-    @SuppressWarnings("unchecked")
+    // ─── Artigos & Catálogo POS ──────────────────────────────────────────────
+    public List<ProductDTO> getAllProducts() { return productApiClient.getAllProducts(); }
     public PageResponse<ProductDTO> getProductsPage(String query, Long categoryId, int page, int size) {
-        StringBuilder path = new StringBuilder("/api/comercial/products/page?page=").append(page)
-                .append("&size=").append(size);
-        if (query != null && !query.isBlank()) {
-            path.append("&query=").append(URLEncoder.encode(query.trim(), StandardCharsets.UTF_8));
-        }
-        if (categoryId != null) {
-            path.append("&categoryId=").append(categoryId);
-        }
-        return clientFactory.authenticatedClient().getGeneric(path.toString(), PageResponse.class, ProductDTO.class);
+        return productApiClient.getProductsPage(query, categoryId, page, size);
     }
-
-    public List<ClientDTO> getAllClients() {
-        return getClients();
+    public List<ProductDTO> getSellableProducts() { return productApiClient.getSellableProducts(); }
+    public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(String query, boolean availableOnly, int page, int size) {
+        return productApiClient.getPOSCatalogPage(query, availableOnly, null, page, size);
     }
-
-    /** Produtos vendáveis no POS (stock rastreado + activos). */
-    public List<ProductDTO> getSellableProducts() {
-        return clientFactory.authenticatedClient().getList("/api/comercial/products/sellable", ProductDTO.class);
+    public PageResponse<POSCatalogItemDTO> getPOSCatalogPage(String query, boolean availableOnly, Long warehouseId, int page, int size) {
+        return productApiClient.getPOSCatalogPage(query, availableOnly, warehouseId, page, size);
     }
-
-    public PageResponse<mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO> getPOSCatalogPage(
-            String query, boolean availableOnly, int page, int size) {
-        return getPOSCatalogPage(query, availableOnly, null, page, size);
-    }
-
-    public PageResponse<mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO> getPOSCatalogPage(
-            String query, boolean availableOnly, Long warehouseId, int page, int size) {
-        String encoded = URLEncoder.encode(query == null ? "" : query, StandardCharsets.UTF_8);
-        String path = "/api/comercial/products/pos-catalog/page?query=" + encoded
-                + "&availableOnly=" + availableOnly
-                + (warehouseId != null ? "&warehouseId=" + warehouseId : "")
-                + "&page=" + page + "&size=" + size;
-        return clientFactory.authenticatedClient().getGeneric(path, PageResponse.class,
-                mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO.class);
-    }
-
-    public mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) {
-        return findPOSCatalogItemByBarcode(barcode, null);
-    }
-
-    public mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode, Long warehouseId) {
-        String encoded = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);
-        String path = "/api/comercial/products/pos-catalog/by-barcode?barcode=" + encoded
-                + (warehouseId != null ? "&warehouseId=" + warehouseId : "");
-        return clientFactory.authenticatedClient().get(
-                path,
-                mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO.class);
-    }
-
-    /** Produto pelo código de barras (leitor do POS); {@code null} se não existir. */
-    public ProductDTO findProductByBarcode(String barcode) {
-        String enc = URLEncoder.encode(barcode == null ? "" : barcode, StandardCharsets.UTF_8);
-        return clientFactory.authenticatedClient()
-                .get("/api/comercial/products/by-barcode?barcode=" + enc, ProductDTO.class);
-    }
-
-    /** Histórico de vendas de balcão (POS) da empresa. */
-    public List<InvoiceDTO> getPOSSalesByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/pos-sales?companyId=" + companyId, InvoiceDTO.class);
-    }
-
-    public List<ProductCategoryDTO> getActiveCategories() {
-        return clientFactory.authenticatedClient()
-                .getList("/api/product-categories?onlyActive=true", ProductCategoryDTO.class);
-    }
-
-    public List<TaxRateDTO> getActiveVatRates() {
-        return clientFactory.authenticatedClient().getList("/api/comercial/vat-rates", TaxRateDTO.class);
-    }
-
+    public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode) { return productApiClient.findPOSCatalogItemByBarcode(barcode, null); }
+    public POSCatalogItemDTO findPOSCatalogItemByBarcode(String barcode, Long warehouseId) { return productApiClient.findPOSCatalogItemByBarcode(barcode, warehouseId); }
+    public ProductDTO findProductByBarcode(String barcode) { return productApiClient.findProductByBarcode(barcode); }
+    public List<ProductCategoryDTO> getActiveCategories() { return productApiClient.getActiveCategories(); }
+    public List<TaxRateDTO> getActiveVatRates() { return productApiClient.getActiveVatRates(); }
     public ProductDTO createProduct(String sku, String reference, String barcode, String name, BigDecimal unitPrice,
-            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
-            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
-            boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
-            BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
-        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
-                taxRateId, description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
+        return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock, unitsPerBox,
+                packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId, description,
+                wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
     }
-
     public ProductDTO createProduct(String sku, String reference, String barcode, String name, BigDecimal unitPrice,
-            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
-            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
-            boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
-            BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
             Long businessUnitId) {
-        return clientFactory.authenticatedClient().post("/api/comercial/products",
-                new CreateProductRequest(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                        unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
-                        taxRateId, description, wholesalePrice,
-                        wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId), ProductDTO.class);
+        return productApiClient.createProduct(new CreateProductRequest(sku, reference, barcode, name, unitPrice, purchasePrice,
+                minStock, unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId,
+                description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId));
     }
-
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
-            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
-            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
-            boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
-            BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
-        return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
-                taxRateId, description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
+        return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock, unitsPerBox,
+                packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId, description,
+                wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
     }
-
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
-            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox,
-            int packagesPerBox, int unitsPerPackage, Long categoryId, String saleType,
-            boolean stockTracked, Long taxRateId, String description, BigDecimal wholesalePrice,
-            BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
+            BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
             Long businessUnitId) {
-        return clientFactory.authenticatedClient().put("/api/comercial/products/" + id,
-                new CreateProductRequest(null, reference, barcode, name, unitPrice, purchasePrice, minStock,
-                        unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked,
-                        taxRateId, description, wholesalePrice,
-                        wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId), ProductDTO.class);
+        return productApiClient.updateProduct(id, new CreateProductRequest(null, reference, barcode, name, unitPrice,
+                purchasePrice, minStock, unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType,
+                stockTracked, taxRateId, description, wholesalePrice, wholesaleMinQty, netUnitWeightKg,
+                grossUnitWeightKg, businessUnitId));
     }
-
-    public void updateProductImage(Long productId, byte[] imageData) {
-        clientFactory.authenticatedClient().postBytes("/api/comercial/products/" + productId + "/image", imageData);
-    }
-
-    // ─── Faturas ─────────────────────────────────────────────────────────────
-    public InvoiceDTO createInvoice(CreateInvoiceRequest request) {
-        return clientFactory.authenticatedClient().post("/api/comercial/invoices", request, InvoiceDTO.class);
-    }
-
-    public List<InvoiceDTO> getInvoicesByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/invoices?companyId=" + companyId, InvoiceDTO.class);
-    }
-
-    public List<InvoiceDTO> searchInvoices(String query) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/invoices/search?query=" + enc(query), InvoiceDTO.class);
-    }
-
-    public List<InvoiceDTO> getOutstandingInvoicesByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/invoices/outstanding?companyId=" + companyId, InvoiceDTO.class);
-    }
-
-    public void cancelInvoice(Long invoiceId, String reason) {
-        clientFactory.authenticatedClient()
-                .post("/api/comercial/invoices/" + invoiceId + "/cancel", new CancelReasonRequest(reason));
-    }
+    public void updateProductImage(Long productId, byte[] imageData) { productApiClient.updateProductImage(productId, imageData); }
 
     // ─── Encomendas ──────────────────────────────────────────────────────────
-    public List<OrderDTO> getOrdersByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/orders?companyId=" + companyId, OrderDTO.class);
-    }
-
-    public PageResponse<OrderDTO> getOrdersPage(Long companyId, int page, int size) {
-        return clientFactory.authenticatedClient()
-                .getGeneric("/api/comercial/orders/page?companyId=" + companyId + "&page=" + page + "&size=" + size,
-                        PageResponse.class, OrderDTO.class);
-    }
-
-    public List<OrderDTO> getPendingOrdersByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/orders/pending?companyId=" + companyId, OrderDTO.class);
-    }
-
-    public List<OrderDTO> searchPendingOrders(String query) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/orders/pending/search?query=" + enc(query), OrderDTO.class);
-    }
-
-    public List<OrderDTO> searchCancellableOrders(String query) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/orders/cancellable/search?query=" + enc(query), OrderDTO.class);
-    }
-
-    public OrderDTO getOrderById(Long orderId) {
-        return clientFactory.authenticatedClient().get("/api/comercial/orders/" + orderId, OrderDTO.class);
-    }
-
-    public OrderDTO createOrder(CreateOrderRequest request) {
-        return clientFactory.authenticatedClient().post("/api/comercial/orders", request, OrderDTO.class);
-    }
-
+    public List<OrderDTO> getOrdersByCompany(Long companyId) { return orderApiClient.getOrdersByCompany(companyId); }
+    public PageResponse<OrderDTO> getOrdersPage(Long companyId, int page, int size) { return orderApiClient.getOrdersPage(companyId, page, size); }
+    public List<OrderDTO> getPendingOrdersByCompany(Long companyId) { return orderApiClient.getPendingOrdersByCompany(companyId); }
+    public List<OrderDTO> searchPendingOrders(String query) { return orderApiClient.searchPendingOrders(query); }
+    public List<OrderDTO> searchCancellableOrders(String query) { return orderApiClient.searchCancellableOrders(query); }
+    public OrderDTO getOrderById(Long orderId) { return orderApiClient.getOrderById(orderId); }
+    public OrderDTO createOrder(CreateOrderRequest request) { return orderApiClient.createOrder(request); }
     public OrderDTO updateOrder(Long id, UpdateOrderRequest request) {
-        return clientFactory.authenticatedClient().put("/api/comercial/orders/" + id, request, OrderDTO.class);
+        // Delega para CommercialOrderApiClient .put("/api/comercial/orders/" + id
+        return orderApiClient.updateOrder(id, request);
     }
+    public OrderDTO submitFulfillmentOrder(CreateOrderRequest req, String k, String t) { return orderApiClient.submitFulfillmentOrder(req, k, t); }
+    public byte[] printPicking(Long id, String t) { return orderApiClient.printPicking(id, t); }
+    public byte[] reprintPicking(Long id, String u, String p, String r, String t) { return orderApiClient.reprintPicking(id, u, p, r, t); }
+    public OrderPickingDetailsDTO getOrderPickingDetails(Long id) { return orderApiClient.getOrderPickingDetails(id); }
+    public byte[] printPickingA4(Long id, String t) { return orderApiClient.printPickingA4(id, t); }
+    public OrderDTO confirmOrderPicking(Long id, CompleteOrderPickingRequest r) { return orderApiClient.confirmOrderPicking(id, r); }
+    public OrderDTO completeSeparation(Long id, String t) { return orderApiClient.completeSeparation(id, t); }
+    public InvoiceDTO billFulfillmentOrder(Long id, String t) { return orderApiClient.billFulfillmentOrder(id, t); }
+    public List<OrderEventDTO> getOrderEvents(Long id) { return orderApiClient.getOrderEvents(id); }
+    public InvoiceDTO billOrder(Long orderId) { return orderApiClient.billOrder(orderId); }
+    public void cancelOrder(Long orderId, String reason) { orderApiClient.cancelOrder(orderId, reason); }
+    public OrderDTO approveOrder(Long orderId, String comments) { return orderApiClient.approveOrder(orderId, comments); }
+    public OrderDTO rejectOrder(Long orderId, String reason) { return orderApiClient.rejectOrder(orderId, reason); }
+    public OrderDTO markOrderPrinted(Long orderId, String operator) { return orderApiClient.markOrderPrinted(orderId, operator); }
 
-    public OrderDTO submitFulfillmentOrder(CreateOrderRequest request, String key, String terminal) {
-        return clientFactory.authenticatedClient().post("/api/comercial/orders/fulfillment",
-                new CreateFulfillmentOrderRequest(key, request, terminal), OrderDTO.class);
+    // ─── Cotações ────────────────────────────────────────────────────────────
+    public List<QuotationDTO> getQuotationsByCompany(Long companyId) { return quotationApiClient.getQuotationsByCompany(companyId); }
+    public QuotationDTO getQuotationById(Long id) { return quotationApiClient.getQuotationById(id); }
+    public QuotationDTO createQuotation(CreateQuotationRequest req) { return quotationApiClient.createQuotation(req); }
+    public QuotationDTO updateQuotation(Long id, UpdateQuotationRequest req) { return quotationApiClient.updateQuotation(id, req); }
+    public QuotationDTO sendQuotation(Long id) { return quotationApiClient.sendQuotation(id); }
+    public QuotationDTO acceptQuotation(Long id) { return quotationApiClient.acceptQuotation(id); }
+    public QuotationDTO rejectQuotation(Long id, String reason) { return quotationApiClient.rejectQuotation(id, reason); }
+    public QuotationDTO cancelQuotation(Long id) { return quotationApiClient.cancelQuotation(id); }
+    public QuotationDTO extendQuotationValidity(Long id, LocalDate validUntil) { return quotationApiClient.extendQuotationValidity(id, validUntil); }
+    public OrderDTO convertQuotation(Long id) { return quotationApiClient.convertQuotation(id); }
+    public InvoiceDTO convertQuotationToInvoice(Long id) { return quotationApiClient.convertQuotationToInvoice(id); }
+    public List<QuotationDTO> getOpenQuotationsByCompany(Long companyId) { return quotationApiClient.getOpenQuotationsByCompany(companyId); }
+    public byte[] renderQuotation(Long id) { return quotationApiClient.renderQuotation(id); }
+    public byte[] renderQuotationThermal(Long id) { return quotationApiClient.renderQuotationThermal(id); }
+
+    // ─── Guias de Remessa ────────────────────────────────────────────────────
+    public List<DeliveryGuideDTO> getDeliveryGuidesByCompany(Long companyId) { return deliveryGuideApiClient.getDeliveryGuidesByCompany(companyId); }
+    public DeliveryGuideDTO getDeliveryGuideById(Long id) { return deliveryGuideApiClient.getDeliveryGuideById(id); }
+    public mz.multicore.erp.modules.inventory.dto.StockTransferDTO convertOrderToTransfer(Long orderId, String resp, String veh, String notes) {
+        return convertOrderToTransfer(orderId, resp, veh, notes, null, null);
     }
-
-    public byte[] printPicking(Long id, String terminal) {
-        return clientFactory.authenticatedClient().postForBytes("/api/comercial/orders/" + id + "/picking-print",
-                new OrderActionRequest(null, terminal));
-    }
-
-    public byte[] reprintPicking(Long id, String username, String password, String reason, String terminal) {
-        return clientFactory.authenticatedClient().postForBytes("/api/comercial/orders/" + id + "/picking-reprint",
-                new ReprintAuthorizationRequest(username, password, reason, terminal));
-    }
-
-    public OrderDTO completeSeparation(Long id, String terminal) {
-        return clientFactory.authenticatedClient().post("/api/comercial/orders/" + id + "/separate",
-                new OrderActionRequest(null, terminal), OrderDTO.class);
-    }
-
-    public InvoiceDTO billFulfillmentOrder(Long id, String terminal) {
-        return clientFactory.authenticatedClient().post("/api/comercial/orders/" + id + "/fulfillment-bill",
-                new OrderActionRequest(null, terminal), InvoiceDTO.class);
-    }
-
-    public List<OrderEventDTO> getOrderEvents(Long id) {
-        return clientFactory.authenticatedClient().getList("/api/comercial/orders/" + id + "/events", OrderEventDTO.class);
-    }
-
-    public InvoiceDTO billOrder(Long orderId) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/orders/" + orderId + "/bill", null, InvoiceDTO.class);
-    }
-
-    public void cancelOrder(Long orderId, String reason) {
-        clientFactory.authenticatedClient()
-                .post("/api/comercial/orders/" + orderId + "/cancel", new CancelReasonRequest(reason));
-    }
-
-    public OrderDTO approveOrder(Long orderId, String comments) {
-        return clientFactory.authenticatedClient().post(
-                "/api/comercial/orders/" + orderId + "/approve",
-                new mz.multicore.erp.modules.approvals.dto.ApprovalActionDTO(comments),
-                OrderDTO.class);
-    }
-
-    public OrderDTO rejectOrder(Long orderId, String reason) {
-        return clientFactory.authenticatedClient().post(
-                "/api/comercial/orders/" + orderId + "/reject",
-                new CancelReasonRequest(reason),
-                OrderDTO.class);
-    }
-
-    public OrderDTO markOrderPrinted(Long orderId, String operator) {
-        return clientFactory.authenticatedClient().post(
-                "/api/comercial/orders/" + orderId + "/print?operator=" + enc(operator), null, OrderDTO.class);
-    }
-
-    // ─── Cotações (CT) ───────────────────────────────────────────────────────
-    public List<QuotationDTO> getQuotationsByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/quotations?companyId=" + companyId, QuotationDTO.class);
-    }
-
-    public QuotationDTO getQuotationById(Long id) {
-        return clientFactory.authenticatedClient()
-                .get("/api/comercial/quotations/" + id, QuotationDTO.class);
-    }
-
-    public QuotationDTO createQuotation(CreateQuotationRequest request) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/quotations", request, QuotationDTO.class);
-    }
-
-    public QuotationDTO updateQuotation(Long id, UpdateQuotationRequest request) {
-        return clientFactory.authenticatedClient()
-                .put("/api/comercial/quotations/" + id, request, QuotationDTO.class);
-    }
-
-    public QuotationDTO sendQuotation(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/quotations/" + id + "/send", null, QuotationDTO.class);
-    }
-
-    public QuotationDTO acceptQuotation(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/quotations/" + id + "/accept", null, QuotationDTO.class);
-    }
-
-    public QuotationDTO rejectQuotation(Long id, String reason) {
-        return clientFactory.authenticatedClient().post("/api/comercial/quotations/" + id + "/reject",
-                new CancelReasonRequest(reason), QuotationDTO.class);
-    }
-
-    public QuotationDTO cancelQuotation(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/quotations/" + id + "/cancel", null, QuotationDTO.class);
-    }
-
-    public QuotationDTO extendQuotationValidity(Long id, java.time.LocalDate validUntil) {
-        return clientFactory.authenticatedClient().post("/api/comercial/quotations/" + id + "/extend",
-                new ExtendQuotationValidityRequest(validUntil), QuotationDTO.class);
-    }
-
-    /** Converte a cotação e devolve a <b>encomenda</b> gerada — é o número dela que o operador quer. */
-    public OrderDTO convertQuotation(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/quotations/" + id + "/convert", null, OrderDTO.class);
-    }
-
-    /** Converte a cotação directamente em factura comercial (FT). */
-    public InvoiceDTO convertQuotationToInvoice(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/quotations/" + id + "/convert-to-invoice", null, InvoiceDTO.class);
-    }
-
-    /** Lista cotações em aberto e vigentes da empresa para importação no POS e seletores rápidos. */
-    public List<QuotationDTO> getOpenQuotationsByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/quotations/open?companyId=" + companyId, QuotationDTO.class);
-    }
-
-    public byte[] renderQuotation(Long id) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/quotation/" + id);
-    }
-
-    public byte[] renderQuotationThermal(Long id) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/quotation/" + id + "/thermal");
-    }
-
-    // ─── Guias de Remessa (GR) ───────────────────────────────────────────────
-    public List<DeliveryGuideDTO> getDeliveryGuidesByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/delivery-guides?companyId=" + companyId, DeliveryGuideDTO.class);
-    }
-
-    public DeliveryGuideDTO getDeliveryGuideById(Long id) {
-        return clientFactory.authenticatedClient()
-                .get("/api/comercial/delivery-guides/" + id, DeliveryGuideDTO.class);
-    }
-
-    /**
-     * Converte uma reposição interna na transferência entre armazéns que a cumpre.
-     * Ver {@code docs/REPOSICAO_INTERNA_SPEC.md}.
-     */
     public mz.multicore.erp.modules.inventory.dto.StockTransferDTO convertOrderToTransfer(
-            Long orderId, String responsible, String vehicle, String notes) {
-        return convertOrderToTransfer(orderId, responsible, vehicle, notes, null, null);
+            Long orderId, String resp, String veh, String notes, String driver, String plate) {
+        return deliveryGuideApiClient.convertOrderToTransfer(orderId, resp, veh, notes, driver, plate);
     }
-
-    public mz.multicore.erp.modules.inventory.dto.StockTransferDTO convertOrderToTransfer(
-            Long orderId, String responsible, String vehicle, String notes, String driverName, String vehiclePlate) {
-        return clientFactory.authenticatedClient().post("/api/comercial/orders/" + orderId + "/transfer",
-                new mz.multicore.erp.modules.comercial.dto.ConvertOrderToTransferRequest(responsible, vehicle, notes, driverName, vehiclePlate),
-                mz.multicore.erp.modules.inventory.dto.StockTransferDTO.class);
+    public DeliveryGuideDTO createDeliveryGuide(Long orderId, String resp, String veh, String notes) {
+        return deliveryGuideApiClient.createDeliveryGuide(orderId, resp, veh, notes);
     }
-
-    public DeliveryGuideDTO createDeliveryGuide(Long orderId, String responsible, String vehicle, String notes) {
-        return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides",
-                new CreateDeliveryGuideRequest(orderId, responsible, vehicle, notes), DeliveryGuideDTO.class);
+    public DeliveryGuideDTO createStandaloneDeliveryGuide(CreateStandaloneDeliveryGuideRequest req) {
+        return deliveryGuideApiClient.createStandaloneDeliveryGuide(req);
     }
+    public DeliveryGuideDTO approveDeliveryGuide(Long id) { return deliveryGuideApiClient.approveDeliveryGuide(id); }
+    public DeliveryGuideDTO rejectDeliveryGuide(Long id, String reason) { return deliveryGuideApiClient.rejectDeliveryGuide(id, reason); }
+    public DeliveryGuideDTO cancelDeliveryGuide(Long id) { return deliveryGuideApiClient.cancelDeliveryGuide(id); }
+    public byte[] renderDeliveryGuide(Long id) { return deliveryGuideApiClient.renderDeliveryGuide(id); }
 
-    public DeliveryGuideDTO createStandaloneDeliveryGuide(CreateStandaloneDeliveryGuideRequest request) {
-        return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides/standalone",
-                request, DeliveryGuideDTO.class);
+    // ─── Faturas, Recibos & Cobrança ─────────────────────────────────────────
+    public List<InvoiceDTO> getAllInvoices() { return invoiceApiClient.getAllInvoices(); }
+    public PageResponse<InvoiceDTO> getInvoicePage(Long companyId, int page, int size) { return invoiceApiClient.getInvoicePage(companyId, page, size); }
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size) { return invoiceApiClient.getPOSSalesPage(companyId, page, size, null, null); }
+    public PageResponse<InvoiceDTO> getPOSSalesPage(Long companyId, int page, int size, LocalDate from, LocalDate to) {
+        return invoiceApiClient.getPOSSalesPage(companyId, page, size, from, to);
     }
+    public POSSalesSummaryDTO getPOSSalesSummary(Long companyId, LocalDate from, LocalDate to) { return invoiceApiClient.getPOSSalesSummary(companyId, from, to); }
+    public List<InvoiceDTO> getPOSSalesByCompany(Long companyId) { return invoiceApiClient.getPOSSalesByCompany(companyId); }
+    public InvoiceDTO createInvoice(CreateInvoiceRequest request) { return invoiceApiClient.createInvoice(request); }
+    public List<InvoiceDTO> getInvoicesByCompany(Long companyId) { return invoiceApiClient.getInvoicesByCompany(companyId); }
+    public List<InvoiceDTO> searchInvoices(String query) { return invoiceApiClient.searchInvoices(query); }
+    public List<InvoiceDTO> getOutstandingInvoicesByCompany(Long companyId) { return invoiceApiClient.getOutstandingInvoicesByCompany(companyId); }
+    public void cancelInvoice(Long invoiceId, String reason) { invoiceApiClient.cancelInvoice(invoiceId, reason); }
+    public List<ReceiptDTO> getReceiptsByCompany(Long companyId) { return invoiceApiClient.getReceiptsByCompany(companyId); }
+    public ReceiptDTO createReceipt(Long invId, Long accId, String method, BigDecimal amount) { return invoiceApiClient.createReceipt(invId, accId, method, amount); }
+    public void cancelReceipt(Long receiptId, String reason) { invoiceApiClient.cancelReceipt(receiptId, reason); }
+    public byte[] renderInvoice(Long invoiceId) { return invoiceApiClient.renderInvoice(invoiceId); }
+    public byte[] renderInvoiceThermal(Long invoiceId) { return invoiceApiClient.renderInvoiceThermal(invoiceId); }
+    public byte[] renderOrder(Long orderId) { return invoiceApiClient.renderOrder(orderId); }
+    public byte[] renderGuide(Long invoiceId) { return invoiceApiClient.renderGuide(invoiceId); }
+    public List<BusinessUnitDTO> getActiveBusinessUnits(Long companyId) { return invoiceApiClient.getActiveBusinessUnits(companyId); }
+    public List<InvoiceInstallmentDTO> createInvoiceInstallmentPlan(Long invoiceId, CreateInstallmentPlanRequest req) { return invoiceApiClient.createInvoiceInstallmentPlan(invoiceId, req); }
+    public List<InvoiceInstallmentDTO> getInvoiceInstallments(Long invoiceId) { return invoiceApiClient.getInvoiceInstallments(invoiceId); }
+    public List<InvoiceInstallmentDTO> payInvoiceInstallment(Long invoiceId, BigDecimal amount) { return invoiceApiClient.payInvoiceInstallment(invoiceId, amount); }
+    public CollectionRadarSummaryDTO getCollectionRadarSummary(Long companyId) { return invoiceApiClient.getCollectionRadarSummary(companyId); }
+    public List<CollectionRadarItemDTO> getCollectionRadarItems(Long companyId, String bucket) { return invoiceApiClient.getCollectionRadarItems(companyId, bucket); }
+    public CollectionReminderTemplateDTO getCollectionReminderTemplate(Long invoiceId, String channel) { return invoiceApiClient.getCollectionReminderTemplate(invoiceId, channel); }
+    public List<ReturnableInvoiceLineDTO> getReturnableInvoiceLines(Long invoiceId) { return invoiceApiClient.getReturnableInvoiceLines(invoiceId); }
+    public SalesReturnWizardResultDTO processSalesReturn(Long invoiceId, SalesReturnWizardRequest req) { return invoiceApiClient.processSalesReturn(invoiceId, req); }
 
-    public DeliveryGuideDTO approveDeliveryGuide(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/delivery-guides/" + id + "/approve", null, DeliveryGuideDTO.class);
-    }
-
-    public DeliveryGuideDTO rejectDeliveryGuide(Long id, String reason) {
-        return clientFactory.authenticatedClient().post(
-                "/api/comercial/delivery-guides/" + id + "/reject", new RejectGuideRequest(reason), DeliveryGuideDTO.class);
-    }
-
-    public DeliveryGuideDTO cancelDeliveryGuide(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/delivery-guides/" + id + "/cancel", null, DeliveryGuideDTO.class);
-    }
-
-    public byte[] renderDeliveryGuide(Long id) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/delivery-guide/" + id);
-    }
-
-    // ─── Recibos ─────────────────────────────────────────────────────────────
-    public List<ReceiptDTO> getReceiptsByCompany(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/comercial/receipts?companyId=" + companyId, ReceiptDTO.class);
-    }
-
-    public ReceiptDTO createReceipt(Long invoiceId, Long treasuryAccountId, String paymentMethod,
-                                    BigDecimal amountPaid) {
-        return clientFactory.authenticatedClient().post("/api/comercial/receipts",
-                new CreateReceiptRequest(invoiceId, treasuryAccountId, paymentMethod, amountPaid), ReceiptDTO.class);
-    }
-
-    public void cancelReceipt(Long receiptId, String reason) {
-        clientFactory.authenticatedClient()
-                .post("/api/comercial/receipts/" + receiptId + "/cancel", new CancelReasonRequest(reason));
-    }
-
-    // ─── Impressões (PDF) ────────────────────────────────────────────────────
-    public byte[] renderInvoice(Long invoiceId) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/invoice/" + invoiceId);
-    }
-
-    public byte[] renderInvoiceThermal(Long invoiceId) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/invoice/" + invoiceId + "/thermal");
-    }
-
-    public byte[] renderOrder(Long orderId) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/order/" + orderId);
-    }
-
-    public byte[] renderGuide(Long invoiceId) {
-        return clientFactory.authenticatedClient().getBytes("/api/print/guide/" + invoiceId);
-    }
-
-    public List<mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO> getActiveBusinessUnits(Long companyId) {
-        return clientFactory.authenticatedClient()
-                .getList("/api/business-units/active?companyId=" + companyId, mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO.class);
-    }
-
-    private static String enc(String value) {
-        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Espelha o corpo esperado pelo controller. {@code paymentTermsDays} = prazo acordado, em
-     * dias; {@code creditLimit} nulo = sem limite de crédito.
-     */
-    record SaveClientRequest(String name, String taxId, String email, String address,
-                             int paymentTermsDays, BigDecimal creditLimit) {}
-
-    /** Corpo do reject da guia — chave "rejectionReason" espelha o esperado pelo controller. */
-    record RejectGuideRequest(String rejectionReason) {}
+    // Compatibilidade retrocompatível de classes internas
+    public static record SaveClientRequest(String name, String taxId, String email, String address, int paymentTermsDays, BigDecimal creditLimit) {}
+    public static record RejectGuideRequest(String rejectionReason) {}
 }

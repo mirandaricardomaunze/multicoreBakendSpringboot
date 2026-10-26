@@ -6,19 +6,16 @@ import mz.multicore.erp.desktop.client.ProductionApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
-import mz.multicore.erp.modules.manufacturing.dto.*;
-import mz.multicore.erp.modules.manufacturing.model.BomType;
+import mz.multicore.erp.modules.manufacturing.dto.BillOfMaterialsDTO;
+import mz.multicore.erp.modules.manufacturing.dto.ProductionOrderDTO;
 import mz.multicore.erp.modules.manufacturing.model.ProductionOrderStatus;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +32,7 @@ public final class ManufacturingPanel extends JPanel {
     private final ProductionApiClient productionApiClient;
     private final ComercialApiClient comercialApiClient;
     private final InventoryApiClient inventoryApiClient;
+    private final ProductionOrderOperationsCoordinator coordinator;
 
     final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiInProgress = new JLabel("0 OPs");
@@ -58,6 +56,7 @@ public final class ManufacturingPanel extends JPanel {
         this.productionApiClient = productionApiClient;
         this.comercialApiClient = comercialApiClient;
         this.inventoryApiClient = inventoryApiClient;
+        this.coordinator = new ProductionOrderOperationsCoordinator(productionApiClient, comercialApiClient, inventoryApiClient);
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
@@ -137,33 +136,25 @@ public final class ManufacturingPanel extends JPanel {
         refreshBtn.addActionListener(e -> loadData());
 
         ActionMenuButton mfgActionsMenu = UIHelper.createActionMenuButton("Produção")
-                .addAction("Modo Coletor (Scanner)", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT_BLUE), this::openBarcodeCollector)
-                .addAction("Nova Ficha (BOM)", UIHelper.icon("fas-file-alt", 14, UIHelper.PENDING_YELLOW), this::openNewBomDialog)
-                .addAction("Etiquetas de Produção", UIHelper.icon("fas-tags", 14, UIHelper.APPROVED_GREEN), this::openProductionLabels);
+                .addAction("Modo Coletor (Scanner)", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT_BLUE),
+                        () -> coordinator.openBarcodeCollector(this, this::loadData))
+                .addAction("Nova Ficha (BOM)", UIHelper.icon("fas-file-alt", 14, UIHelper.PENDING_YELLOW),
+                        this::openNewBomDialog)
+                .addAction("Etiquetas de Produção", UIHelper.icon("fas-tags", 14, UIHelper.APPROVED_GREEN),
+                        () -> coordinator.openProductionLabels(SwingUtilities.getWindowAncestor(this), cachedProducts));
         mfgActionsMenu.setToolTipText("Apontamento ágil por leitor, nova fórmula ou emissão de etiquetas");
 
         ModernButton newOrderBtn = UIHelper.createSuccessButton("Lançar Ordem");
         newOrderBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newOrderBtn.setToolTipText("Criar nova ordem de fabrico industrial");
-        newOrderBtn.addActionListener(e -> openNewOrderDialog());
+        newOrderBtn.addActionListener(e -> coordinator.openNewOrderDialog(
+                SwingUtilities.getWindowAncestor(this), currentBoms, cachedWarehouses, feedback, this::loadData));
 
         card.add(UIHelper.tableCardTop("Ordens de Fabrico & Fichas Técnicas de Transformação", filterBar,
                 refreshBtn, mfgActionsMenu, newOrderBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         add(card, BorderLayout.CENTER);
-    }
-
-    private void openBarcodeCollector() {
-        var collectorDialog = new BarcodeScannerCollectorDialog(
-                SwingUtilities.getWindowAncestor(this),
-                BarcodeScannerCollectorDialog.CollectorMode.MANUFACTURING,
-                comercialApiClient,
-                productionApiClient,
-                inventoryApiClient,
-                this::loadData
-        );
-        collectorDialog.showDialog();
     }
 
     public void onPanelSelected() {
@@ -231,199 +222,14 @@ public final class ManufacturingPanel extends JPanel {
         kpiTotalCost.setText(MONEY_FMT.format(totalCost));
     }
 
-    private void openNewOrderDialog() {
-        if (currentBoms.isEmpty()) {
-            feedback.show(FeedbackType.WARNING, "Crie primeiro pelo menos uma Ficha Técnica (BOM) antes de lançar ordens de produção.");
-            return;
-        }
-
-        Window parent = SwingUtilities.getWindowAncestor(this);
-        JComboBox<BillOfMaterialsDTO> bomCombo = new JComboBox<>(currentBoms.toArray(new BillOfMaterialsDTO[0]));
-        UIHelper.styleComboBox(bomCombo);
-        bomCombo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof BillOfMaterialsDTO b) {
-                    setText(b.bomCode() + " - " + b.finishedProductName() + " (" + b.name() + ")");
-                }
-                return this;
-            }
-        });
-
-        JTextField qtyField = new JTextField("1.0", 10);
-        JComboBox<WarehouseDTO> sourceWhCombo = new JComboBox<>(cachedWarehouses.toArray(new WarehouseDTO[0]));
-        JComboBox<WarehouseDTO> targetWhCombo = new JComboBox<>(cachedWarehouses.toArray(new WarehouseDTO[0]));
-        UIHelper.styleComboBox(sourceWhCombo);
-        UIHelper.styleComboBox(targetWhCombo);
-
-        DefaultListCellRenderer whRenderer = new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof WarehouseDTO w) {
-                    setText(w.name() + (w.warehouseNumber() != null ? " (" + w.warehouseNumber() + ")" : ""));
-                }
-                return this;
-            }
-        };
-        sourceWhCombo.setRenderer(whRenderer);
-        targetWhCombo.setRenderer(whRenderer);
-
-        DateField endDateField = new DateField();
-        endDateField.setText(LocalDate.now().plusDays(7).toString());
-
-        JPanel form = UIHelper.createDialogForm(
-                "Ficha Técnica (BOM) *:", bomCombo,
-                "Quantidade a Produzir *:", qtyField,
-                "Armazém Matéria-Prima *:", sourceWhCombo,
-                "Armazém Produto Acabado *:", targetWhCombo,
-                "Data Limite Prevista:", endDateField
-        );
-
-        ModernFormDialog dialog = new ModernFormDialog(parent, "Lançar Nova Ordem de Produção", "fas-industry",
-                "Emissão de ordem de fabrico com apuramento de componentes", form);
-
-        dialog.setOnSave(() -> {
-            BillOfMaterialsDTO selectedBom = (BillOfMaterialsDTO) bomCombo.getSelectedItem();
-            if (selectedBom == null) throw new IllegalArgumentException("Selecione a ficha técnica.");
-
-            BigDecimal qty;
-            try {
-                qty = new BigDecimal(qtyField.getText().trim().replace(",", "."));
-                if (qty.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
-            } catch (Exception ex) {
-                qtyField.requestFocus();
-                throw new IllegalArgumentException("A quantidade a produzir deve ser maior que zero.");
-            }
-
-            WarehouseDTO srcWh = (WarehouseDTO) sourceWhCombo.getSelectedItem();
-            WarehouseDTO tgtWh = (WarehouseDTO) targetWhCombo.getSelectedItem();
-            if (srcWh == null || tgtWh == null) {
-                throw new IllegalArgumentException("Selecione os armazéns de origem e destino.");
-            }
-
-            LocalDate endDate = null;
-            if (!endDateField.getText().trim().isEmpty()) {
-                try {
-                    endDate = LocalDate.parse(endDateField.getText().trim());
-                } catch (Exception ex) {
-                    endDateField.requestFocus();
-                    throw new IllegalArgumentException("Data inválida. Use AAAA-MM-DD.");
-                }
-            }
-
-            CreateProductionOrderRequest req = new CreateProductionOrderRequest(
-                    selectedBom.id(),
-                    qty,
-                    srcWh.id(),
-                    tgtWh.id(),
-                    endDate
-            );
-
-            productionApiClient.createOrder(req);
-        });
-
-        if (dialog.showDialog()) {
-            feedback.show(FeedbackType.SUCCESS, "Ordem de produção criada com sucesso.");
-            loadData();
-        }
-    }
-
     private void openNewBomDialog() {
-        Window parent = SwingUtilities.getWindowAncestor(this);
-
-        JTextField codeField = new JTextField(10);
-        JTextField nameField = new JTextField(20);
-        JComboBox<ProductDTO> productCombo = new JComboBox<>(cachedProducts.toArray(new ProductDTO[0]));
-        UIHelper.styleComboBox(productCombo);
-        productCombo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof ProductDTO p) {
-                    setText(p.sku() + " - " + p.name());
-                }
-                return this;
-            }
-        });
-
-        JTextField baseQtyField = new JTextField("1.0", 8);
-        JTextField laborCostField = new JTextField("0.00", 10);
-        JTextField overheadCostField = new JTextField("0.00", 10);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Código da Ficha *:", codeField,
-                "Nome da Ficha *:", nameField,
-                "Produto Acabado *:", productCombo,
-                "Quantidade Base *:", baseQtyField,
-                "Mão de Obra Est. (MT):", laborCostField,
-                "Custos Gerais Est. (MT):", overheadCostField
+        BomFormDialog.show(
+                SwingUtilities.getWindowAncestor(this),
+                cachedProducts,
+                productionApiClient,
+                feedback,
+                this::loadData
         );
-
-        ModernFormDialog dialog = new ModernFormDialog(parent, "Criar Nova Ficha Técnica (BOM)", "fas-file-alt",
-                "Definição da fórmula e matérias-primas para fabrico", form);
-
-        dialog.setOnSave(() -> {
-            String code = codeField.getText().trim();
-            if (code.isEmpty()) {
-                codeField.requestFocus();
-                throw new IllegalArgumentException("O código da ficha é obrigatório.");
-            }
-            String name = nameField.getText().trim();
-            if (name.isEmpty()) {
-                nameField.requestFocus();
-                throw new IllegalArgumentException("O nome da ficha é obrigatório.");
-            }
-            ProductDTO prod = (ProductDTO) productCombo.getSelectedItem();
-            if (prod == null) throw new IllegalArgumentException("Selecione o produto final.");
-
-            BigDecimal baseQty;
-            try {
-                baseQty = new BigDecimal(baseQtyField.getText().trim().replace(",", "."));
-                if (baseQty.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
-            } catch (Exception ex) {
-                baseQtyField.requestFocus();
-                throw new IllegalArgumentException("A quantidade base deve ser positiva.");
-            }
-
-            BigDecimal labor = BigDecimal.ZERO;
-            if (!laborCostField.getText().trim().isEmpty()) {
-                labor = new BigDecimal(laborCostField.getText().trim().replace(",", "."));
-            }
-            BigDecimal overhead = BigDecimal.ZERO;
-            if (!overheadCostField.getText().trim().isEmpty()) {
-                overhead = new BigDecimal(overheadCostField.getText().trim().replace(",", "."));
-            }
-
-            // Seleciona um componente para exemplo ou o próprio primeiro produto disponível
-            ProductDTO defaultComponent = cachedProducts.stream()
-                    .filter(p -> !p.id().equals(prod.id()))
-                    .findFirst()
-                    .orElse(prod);
-
-            List<CreateBomRequest.CreateBomItemRequest> items = List.of(
-                    new CreateBomRequest.CreateBomItemRequest(defaultComponent.id(), BigDecimal.ONE, BigDecimal.ZERO)
-            );
-
-            CreateBomRequest req = new CreateBomRequest(
-                    code,
-                    name,
-                    prod.id(),
-                    baseQty,
-                    BomType.STANDARD,
-                    labor,
-                    overhead,
-                    items
-            );
-
-            productionApiClient.createBom(req);
-        });
-
-        if (dialog.showDialog()) {
-            feedback.show(FeedbackType.SUCCESS, "Ficha técnica registada com sucesso.");
-            loadData();
-        }
     }
 
     void showOrderActions() {
@@ -437,106 +243,12 @@ public final class ManufacturingPanel extends JPanel {
         if (modelRow >= currentOrders.size()) return;
         ProductionOrderDTO order = currentOrders.get(modelRow);
 
-        Window parent = SwingUtilities.getWindowAncestor(this);
-
-        JPanel panel = new JPanel(new GridLayout(4, 1, 10, 10));
-        panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        ModernButton startBtn = UIHelper.createPrimaryButton("Iniciar Produção (Passar a EM_PRODUÇÃO)");
-        startBtn.setIcon(UIHelper.icon("fas-play", 14));
-        startBtn.setEnabled(order.status() == ProductionOrderStatus.PLANNED);
-
-        ModernButton completeBtn = UIHelper.createSuccessButton("Concluir Produção & Dar Entrada no Stock");
-        completeBtn.setIcon(UIHelper.icon("fas-check-double", 14));
-        completeBtn.setEnabled(order.status() == ProductionOrderStatus.IN_PROGRESS || order.status() == ProductionOrderStatus.PLANNED);
-
-        ModernButton labelsBtn = UIHelper.createSecondaryButton("Imprimir Etiquetas do Lote / OP");
-        labelsBtn.setIcon(UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT_BLUE));
-
-        ModernButton cancelBtn = UIHelper.createSecondaryButton("Cancelar Ordem");
-        cancelBtn.setIcon(UIHelper.icon("fas-times", 14));
-        cancelBtn.setEnabled(order.status() != ProductionOrderStatus.COMPLETED && order.status() != ProductionOrderStatus.CANCELLED);
-
-        panel.add(startBtn);
-        panel.add(completeBtn);
-        panel.add(labelsBtn);
-        panel.add(cancelBtn);
-
-        ModernFormDialog dialog = new ModernFormDialog(parent, "Gerir Ordem " + order.orderNumber(), "fas-cogs",
-                "Estado actual: " + order.status().name(), panel);
-
-        labelsBtn.addActionListener(e -> {
-            dialog.close();
-            printOrderLabels(order);
-        });
-
-        startBtn.addActionListener(e -> {
-            try {
-                productionApiClient.startOrder(order.id());
-                feedback.show(FeedbackType.SUCCESS, "Ordem " + order.orderNumber() + " iniciada com sucesso.");
-                dialog.close();
-                loadData();
-            } catch (Exception ex) {
-                feedback.show(FeedbackType.ERROR, "Erro: " + ex.getMessage());
-            }
-        });
-
-        completeBtn.addActionListener(e -> {
-            try {
-                productionApiClient.completeOrder(order.id(), order.plannedQuantity());
-                feedback.show(FeedbackType.SUCCESS, "Ordem " + order.orderNumber() + " concluída! Stock do produto acabado e CIP apurados.");
-                dialog.close();
-                loadData();
-            } catch (Exception ex) {
-                feedback.show(FeedbackType.ERROR, "Erro: " + ex.getMessage());
-            }
-        });
-
-        cancelBtn.addActionListener(e -> {
-            try {
-                productionApiClient.cancelOrder(order.id());
-                feedback.show(FeedbackType.SUCCESS, "Ordem " + order.orderNumber() + " cancelada.");
-                dialog.close();
-                loadData();
-            } catch (Exception ex) {
-                feedback.show(FeedbackType.ERROR, "Erro: " + ex.getMessage());
-            }
-        });
-
-        dialog.showDialog();
-    }
-
-    private void openProductionLabels() {
-        Window parent = SwingUtilities.getWindowAncestor(this);
-        List<ProductDTO> products = !cachedProducts.isEmpty() ? cachedProducts : comercialApiClient.getAllProducts();
-        ShelfLabelsDialog.show(parent, products);
-    }
-
-    private void printOrderLabels(ProductionOrderDTO order) {
-        Window parent = SwingUtilities.getWindowAncestor(this);
-        ProductDTO finishedProd = cachedProducts.stream()
-                .filter(p -> p.name().equalsIgnoreCase(order.finishedProductName()) || p.sku().equalsIgnoreCase(order.bomCode()))
-                .findFirst()
-                .orElse(null);
-
-        if (finishedProd == null) {
-            try {
-                finishedProd = comercialApiClient.getAllProducts().stream()
-                        .filter(p -> p.name().equalsIgnoreCase(order.finishedProductName()))
-                        .findFirst()
-                        .orElse(null);
-            } catch (Exception ignored) {}
-        }
-
-        List<ProductDTO> list = finishedProd != null ? List.of(finishedProd) : cachedProducts;
-        int copies = 1;
-        if (order.producedQuantity() != null && order.producedQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            copies = order.producedQuantity().intValue();
-        } else if (order.plannedQuantity() != null && order.plannedQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            copies = order.plannedQuantity().intValue();
-        }
-
-        ShelfLabelsDialog.showWithBatch(parent, list, order.orderNumber(), Math.max(1, copies));
+        coordinator.showOrderManagementDialog(
+                SwingUtilities.getWindowAncestor(this),
+                order,
+                cachedProducts,
+                feedback,
+                this::loadData
+        );
     }
 }

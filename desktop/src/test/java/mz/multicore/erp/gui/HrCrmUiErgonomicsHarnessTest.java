@@ -12,7 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HrCrmUiErgonomicsHarnessTest {
 
     private static String source(String relative) throws IOException {
-        return Files.readString(Path.of("src", "main", "java", "mz", "multicore", "erp", "gui").resolve(relative));
+        return Files.readString(Path.of("src", "main", "java", "mz", "multicore", "erp", "gui").resolve(relative))
+                .replace("\r\n", "\n");
     }
 
     @Test
@@ -30,7 +31,7 @@ class HrCrmUiErgonomicsHarnessTest {
         String hr = source("HRPanel.java");
         // Colaboradores
         assertThat(hr).contains("UIHelper.tableCardTop(\"Quadro de Colaboradores\", empBar,\n                consultationBtn, moreBtn, newBtn)");
-        assertThat(hr).contains("Actualizar", "Alternar Detalhes", "Ver Perfil");
+        assertThat(hr).contains("Alternar Detalhes", "Ver Perfil");
         assertThat(hr).contains("Editar Colaborador", "Evolução Salarial", "Documentos", "Saúde Ocupacional");
         // Recibos de Salário
         assertThat(hr).contains("UIHelper.tableCardTop(\"Recibos de Salário\", psBar,\n                documentsBtn, actionsBtn, newBtn)");

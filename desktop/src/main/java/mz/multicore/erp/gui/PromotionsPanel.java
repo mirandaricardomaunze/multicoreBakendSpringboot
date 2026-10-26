@@ -4,26 +4,20 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PromotionApiClient;
-import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
-import mz.multicore.erp.modules.comercial.dto.ProductDTO;
-import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
 import mz.multicore.erp.modules.promotions.dto.PromotionDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
- * Gestão de promoções de loja: lista, criação (percentagem ou "leve X, pague Y", por produto ou
- * categoria, com janela de validade) e activação/desactivação. UI fina — a lógica vive no backend,
- * acedida via {@link PromotionApiClient}.
+ * Gestão de promoções de loja: lista, criação e activação/desactivação.
  */
 public class PromotionsPanel extends JPanel {
 
@@ -35,7 +29,7 @@ public class PromotionsPanel extends JPanel {
     private final DefaultTableModel model;
     private final JTable table;
     private final ModernButton toggleBtn;
-    private JComboBox<String> promoBusinessUnitCombo;
+    private final JComboBox<String> promoBusinessUnitCombo;
     private List<PromotionDTO> promotions = new ArrayList<>();
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
@@ -107,29 +101,8 @@ public class PromotionsPanel extends JPanel {
         promoFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
 
         UIHelper.ensureHeadersFit(table);
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
-            if (mr < 0 || mr >= model.getRowCount()) return;
-            String name = String.valueOf(model.getValueAt(mr, 0));
-            String tipo = String.valueOf(model.getValueAt(mr, 1));
-            String scope = String.valueOf(model.getValueAt(mr, 2));
-            String benefit = String.valueOf(model.getValueAt(mr, 3));
-            String start = String.valueOf(model.getValueAt(mr, 4));
-            String end = String.valueOf(model.getValueAt(mr, 5));
-            String status = String.valueOf(model.getValueAt(mr, 6));
-
-            peek.setTitle(name);
-            peek.setSubtitle(tipo + " • " + scope);
-            String bu = mr < model.getRowCount() ? String.valueOf(model.getValueAt(mr, 7)) : "—";
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("Benefício", benefit, true),
-                    new QuickPeekPanel.PeekItem("Data Início", start, false),
-                    new QuickPeekPanel.PeekItem("Data Fim", end, false),
-                    new QuickPeekPanel.PeekItem("Estado", status, false),
-                    new QuickPeekPanel.PeekItem("Linha de Negócio", bu, false)
-            ));
-            peek.getOpenFullButton().setText("Activar / Desactivar");
-            peek.setOnOpenFullAction(v -> toggleBtn.doClick());
-        });
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card,
+                (peek, mr) -> PromotionsOperationsCoordinator.populatePeek(peek, model, mr, toggleBtn::doClick));
         peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         card.add(UIHelper.tableCardTop("Promoções de Loja", promoFilters,
@@ -141,9 +114,7 @@ public class PromotionsPanel extends JPanel {
 
     public void reload() {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        if (companyId == null) {
-            return;
-        }
+        if (companyId == null) return;
         UIHelper.loadAsync(this, () -> promotionApiClient.findByCompany(companyId), this::applyPromotions,
                 error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar as promoções",
                         error.getMessage(), "Tentar novamente", this::reload));
@@ -152,7 +123,7 @@ public class PromotionsPanel extends JPanel {
     private void applyPromotions(List<PromotionDTO> loaded) {
         promotions = loaded;
         model.setRowCount(0);
-        java.util.Set<String> bus = new java.util.TreeSet<>();
+        Set<String> bus = new TreeSet<>();
         for (PromotionDTO p : promotions) {
             String buName = p.businessUnitName() != null && !p.businessUnitName().isBlank() ? p.businessUnitName() : "—";
             if (!"—".equals(buName)) bus.add(buName);
@@ -161,7 +132,7 @@ public class PromotionsPanel extends JPanel {
                     "PERCENT".equals(p.type()) ? "Percentagem" : "Leve X, pague Y",
                     p.productName() != null ? "Produto: " + p.productName()
                             : p.categoryName() != null ? "Categoria: " + p.categoryName() : "—",
-                    benefit(p),
+                    PromotionsOperationsCoordinator.benefit(p),
                     p.startDate() != null ? p.startDate().format(FMT) : "—",
                     p.endDate() != null ? p.endDate().format(FMT) : "—",
                     p.active() ? "ACTIVA" : "INACTIVA",
@@ -175,13 +146,6 @@ public class PromotionsPanel extends JPanel {
             for (String b : bus) promoBusinessUnitCombo.addItem(b);
             if (prev != null) promoBusinessUnitCombo.setSelectedItem(prev);
         }
-    }
-
-    private String benefit(PromotionDTO p) {
-        if ("PERCENT".equals(p.type())) {
-            return p.percentValue() == null ? "—" : "-" + p.percentValue().stripTrailingZeros().toPlainString() + "%";
-        }
-        return "Leve " + p.buyQuantity() + ", pague " + p.payQuantity();
     }
 
     private void toggleSelected() {
@@ -200,105 +164,6 @@ public class PromotionsPanel extends JPanel {
     }
 
     private void createPromotionDialog() {
-        UIHelper.loadAsync(this,
-                () -> new PromotionOptions(comercialApiClient.getAllProducts(),
-                        comercialApiClient.getActiveCategories()),
-                this::openPromotionDialog,
-                error -> feedback.show(FeedbackType.ERROR, "Não foi possível carregar produtos e categorias",
-                        error.getMessage(), "Tentar novamente", this::createPromotionDialog));
-    }
-
-    private void openPromotionDialog(PromotionOptions options) {
-        List<ProductDTO> products = options.products();
-        List<ProductCategoryDTO> categories = options.categories();
-
-        JTextField nameField = new JTextField();
-        JComboBox<String> typeCombo = new JComboBox<>(new String[]{"Percentagem", "Leve X, pague Y"});
-        JComboBox<String> scopeCombo = new JComboBox<>(new String[]{"Produto", "Categoria"});
-        ProductSearchComboBox productCombo = new ProductSearchComboBox();
-        JComboBox<String> categoryCombo = new JComboBox<>();
-        productCombo.setProducts(products);
-        for (ProductCategoryDTO c : categories) categoryCombo.addItem(c.name());
-
-        MoneyField percentField = new MoneyField();
-        QuantityField buyField = new QuantityField("", true);
-        QuantityField payField = new QuantityField("", true);
-        DateField startField = new DateField(LocalDate.now());
-        DateField endField = new DateField(LocalDate.now().plusMonths(1));
-
-        UIHelper.styleTextField(nameField);
-        UIHelper.styleComboBox(typeCombo);
-        UIHelper.styleComboBox(scopeCombo);
-        UIHelper.styleComboBox(categoryCombo);
-
-        // "Leve X, pague Y" só faz sentido por produto → força e bloqueia o alcance.
-        Runnable syncEnabled = () -> {
-            boolean percent = typeCombo.getSelectedIndex() == 0;
-            if (!percent) {
-                scopeCombo.setSelectedIndex(0); // Produto
-            }
-            scopeCombo.setEnabled(percent);
-            boolean byProduct = scopeCombo.getSelectedIndex() == 0;
-            productCombo.setEnabled(byProduct);
-            categoryCombo.setEnabled(!byProduct);
-            percentField.setEnabled(percent);
-            buyField.setEnabled(!percent);
-            payField.setEnabled(!percent);
-        };
-        typeCombo.addActionListener(e -> syncEnabled.run());
-        scopeCombo.addActionListener(e -> syncEnabled.run());
-        syncEnabled.run();
-
-        FormField nameForm = new FormField("Nome", nameField, true, null);
-        JPanel form = UIHelper.createDialogForm(
-                "", nameForm,
-                "Tipo:", typeCombo,
-                "Alcance:", scopeCombo,
-                "Produto:", productCombo,
-                "Categoria:", categoryCombo,
-                "Desconto (%):", percentField,
-                "Leve (X):", buyField,
-                "Pague (Y):", payField,
-                "Início (yyyy-MM-dd):", startField,
-                "Fim (yyyy-MM-dd):", endField
-        );
-
-        ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Nova Promoção",
-                "fas-percent", "Campanha de desconto na loja", form);
-        dialog.setOnSaveAsync(() -> {
-            if (!nameForm.validateRequired()) throw new IllegalArgumentException("Indique o nome da promoção.");
-            boolean percent = typeCombo.getSelectedIndex() == 0;
-            boolean byProduct = scopeCombo.getSelectedIndex() == 0;
-            ProductDTO selectedProduct = productCombo.selectedProduct();
-            int categoryIndex = categoryCombo.getSelectedIndex();
-            if (byProduct && selectedProduct == null)
-                throw new IllegalArgumentException("Selecione um produto.");
-            if (!byProduct && (categoryIndex < 0 || categoryIndex >= categories.size()))
-                throw new IllegalArgumentException("Selecione uma categoria.");
-            BigDecimal percentValue = percent ? percentField.value() : null;
-            Integer buy = percent ? null : buyField.value().intValueExact();
-            Integer pay = percent ? null : payField.value().intValueExact();
-            LocalDate start = startField.value();
-            LocalDate end = endField.value();
-            CreatePromotionRequest request = new CreatePromotionRequest(
-                    CurrentUserContext.getCurrentCompanyId(), nameField.getText().trim(),
-                    percent ? "PERCENT" : "BUY_X_GET_Y",
-                    byProduct ? selectedProduct.id() : null,
-                    byProduct ? null : categories.get(categoryIndex).id(),
-                    percentValue, buy, pay, start, end);
-            return () -> { promotionApiClient.createPromotion(request); return null; };
-        });
-        if (dialog.showDialog()) {
-            reload();
-            ToastManager.success(this, "Promoção criada.");
-        }
-    }
-
-    private record PromotionOptions(List<ProductDTO> products, List<ProductCategoryDTO> categories) {}
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        label.setForeground(UIHelper.TEXT_MUTED);
-        return label;
+        PromotionFormDialog.show(this, promotionApiClient, comercialApiClient, this::reload, feedback);
     }
 }

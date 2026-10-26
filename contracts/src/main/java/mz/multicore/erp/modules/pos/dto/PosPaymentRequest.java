@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
@@ -20,5 +21,17 @@ public record PosPaymentRequest(
         @NotNull @Positive BigDecimal amount,
         @PositiveOrZero BigDecimal tenderedAmount,
         String reference,
-        Long treasuryAccountId
-) {}
+        Long treasuryAccountId,
+        @Size(max = 60, message = "A chave de idempotência não pode exceder 60 caracteres.")
+        String idempotencyKey
+) {
+    public PosPaymentRequest {
+        idempotencyKey = idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim();
+    }
+
+    /** Construtor retrocompatível anterior à protecção de pagamentos posteriores. */
+    public PosPaymentRequest(String method, BigDecimal amount, BigDecimal tenderedAmount,
+                             String reference, Long treasuryAccountId) {
+        this(method, amount, tenderedAmount, reference, treasuryAccountId, null);
+    }
+}

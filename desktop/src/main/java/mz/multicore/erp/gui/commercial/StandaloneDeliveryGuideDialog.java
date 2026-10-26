@@ -186,7 +186,7 @@ final class StandaloneDeliveryGuideDialog {
                                     first(product.barcode(), "—"), item.stockQuantity(), product.unitPrice()});
                         }
                         pager[0].apply(response);
-                    }, error -> JOptionPane.showMessageDialog(owner, error.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE));
+                    }, error -> ToastManager.show(owner, FeedbackType.ERROR, "Erro: " + error.getMessage()));
             pager[0] = new TablePager(load);
             search.addActionListener(event -> pager[0].reload());
 

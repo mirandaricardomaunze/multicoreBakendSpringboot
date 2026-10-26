@@ -2,18 +2,18 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.modules.inventory.dto.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
-import java.time.LocalDate;
-import java.util.List;
 
-/** Alertas de rupturas e validades do stock com alinhamento canónico ao design system. */
+/**
+ * Alertas de rupturas e validades do stock com alinhamento canónico ao design system.
+ */
 final class StockAlertsPanel {
-    private static final String MASK = "•••";
+
     private final StockPanel owner;
     private JLabel outSummary;
     private JComboBox<String> expBusinessUnitCombo;
@@ -31,9 +31,7 @@ final class StockAlertsPanel {
         JTabbedPane sub = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(sub);
 
-        // ==========================================
         // 1. Sub-aba: Lotes Expirados e a Expirar
-        // ==========================================
         String[] expCols = {"SKU", "Nome do Artigo", "Nº Lote", "Armazém", "Validade", "Dias", "Qtd", "Estado", "Negócio"};
         owner.alertsExpModel = new DefaultTableModel(expCols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -42,17 +40,8 @@ final class StockAlertsPanel {
         UIHelper.styleTable(owner.alertsExpTable);
         owner.alertsExpTable.setAutoCreateRowSorter(true);
 
-        javax.swing.table.TableCellRenderer expBase = owner.alertsExpTable.getDefaultRenderer(Object.class);
-        owner.alertsExpTable.setDefaultRenderer(Object.class, (t, v, sel, foc, row, col) -> {
-            Component c = expBase.getTableCellRendererComponent(t, v, sel, foc, row, col);
-            int modelRow = row >= 0 ? owner.alertsExpTable.convertRowIndexToModel(row) : -1;
-            if (!sel && modelRow >= 0 && modelRow < owner.alertsExpModel.getRowCount()) {
-                Object d = owner.alertsExpModel.getValueAt(modelRow, 5);
-                long days = d instanceof Number n ? n.longValue() : 0;
-                c.setForeground(days < 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
-            }
-            return c;
-        });
+        TableCellRenderer expBase = owner.alertsExpTable.getDefaultRenderer(Object.class);
+        owner.alertsExpTable.setDefaultRenderer(Object.class, StockAlertsViewCoordinator.createExpirationRenderer(owner, expBase));
 
         ModernPanel expCard = new ModernPanel(16);
         expCard.setLayout(new BorderLayout());
@@ -95,9 +84,7 @@ final class StockAlertsPanel {
         expCard.add(UIHelper.tableCardTop("Lotes Expirados e a Expirar", expHeaderPanel, refreshExpBtn), BorderLayout.NORTH);
         sub.addTab("Validade (expirados / a expirar)", UIHelper.icon("fas-calendar-times", 15, UIHelper.PENDING_YELLOW), expCard);
 
-        // ==========================================
         // 2. Sub-aba: Produtos Esgotados
-        // ==========================================
         String[] outCols = {"Artigo (SKU)", "Nome do Artigo", "Stock Actual", "Negócio"};
         owner.alertsOutModel = new DefaultTableModel(outCols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -112,16 +99,9 @@ final class StockAlertsPanel {
 
         JScrollPane outScroll = new JScrollPane(owner.alertsOutTable);
         UIHelper.styleScrollPane(outScroll);
-        TableQuickPeekController outPeekController = TableQuickPeekController.install(owner.alertsOutTable, outCard, (peek, mr) -> {
+        TableQuickPeekController.install(owner.alertsOutTable, outCard, (peek, mr) -> {
             int row = owner.alertsOutTable.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-ban", UIHelper.REJECTED_RED);
-            peek.setTitle(String.valueOf(owner.alertsOutModel.getValueAt(row, 1)));
-            peek.setSubtitle("SKU: " + owner.alertsOutModel.getValueAt(row, 0));
-            peek.setStatus("ESGOTADO", UIHelper.REJECTED_RED);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Artigo", String.valueOf(owner.alertsOutModel.getValueAt(row, 1)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Stock Actual", String.valueOf(owner.alertsOutModel.getValueAt(row, 2)), true));
-            peek.setItems(items);
+            StockAlertsViewCoordinator.populateOutOfStockPeek(peek, owner, row);
         });
 
         outCard.add(outScroll, BorderLayout.CENTER);
@@ -162,91 +142,10 @@ final class StockAlertsPanel {
         if (owner.alertsOutModel == null) return;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         boolean hide = owner.stockHidden();
-        UIHelper.loadAsync(owner, () -> new StockAlerts(owner.inventoryApiClient.findOutOfStockProducts(companyId),
+        UIHelper.loadAsync(owner, () -> new StockAlertsViewCoordinator.StockAlerts(
+                        owner.inventoryApiClient.findOutOfStockProducts(companyId),
                         owner.inventoryApiClient.findExpiringBatches(companyId, 30)),
-                alerts -> applyAlerts(alerts, hide), error -> owner.showStockLoadError("alertas", error));
+                alerts -> StockAlertsViewCoordinator.applyAlerts(owner, alerts, hide, outBusinessUnitCombo, expBusinessUnitCombo, outSummary),
+                error -> owner.showStockLoadError("alertas", error));
     }
-
-    private void applyAlerts(StockAlerts alerts, boolean hide) {
-        var esgotados = alerts.outOfStock();
-        owner.alertsOutModel.setRowCount(0);
-        java.util.Set<String> outBus = new java.util.TreeSet<>();
-        for (var a : esgotados) {
-            String buName = a.businessUnitName() != null && !a.businessUnitName().isBlank() ? a.businessUnitName() : "—";
-            if (!"—".equals(buName)) outBus.add(buName);
-            owner.alertsOutModel.addRow(new Object[]{
-                    a.sku(), a.name(),
-                    hide ? MASK : (a.currentStock() == null ? "0" : a.currentStock().toPlainString()),
-                    buName});
-        }
-        if (outBusinessUnitCombo != null) {
-            Object prev = outBusinessUnitCombo.getSelectedItem();
-            outBusinessUnitCombo.removeAllItems();
-            outBusinessUnitCombo.addItem("Todos os negócios");
-            for (String b : outBus) outBusinessUnitCombo.addItem(b);
-            if (prev != null) outBusinessUnitCombo.setSelectedItem(prev);
-        }
-
-        var expiring = alerts.expiring();
-        owner.alertsExpModel.setRowCount(0);
-        LocalDate today = LocalDate.now();
-        long expired = 0, soon = 0;
-        for (var b : expiring) {
-            long days = b.expirationDate() == null ? 0
-                    : java.time.temporal.ChronoUnit.DAYS.between(today, b.expirationDate());
-            boolean isExpired = days < 0;
-            if (isExpired) expired++; else soon++;
-            owner.alertsExpModel.addRow(new Object[]{
-                    b.sku(), b.productName(), b.batchNumber(), b.warehouseName(),
-                    b.expirationDate() == null ? "—" : b.expirationDate().toString(),
-                    days, hide ? MASK : (b.quantity() == null ? "" : b.quantity().toPlainString()),
-                    isExpired ? "Expirado" : "A expirar"});
-        }
-
-        if (owner.alertsSummary != null) {
-            if (hide) {
-                owner.alertsSummary.setForeground(UIHelper.TEXT_MUTED);
-                owner.alertsSummary.setText("Quantidades ocultas — stock trancado (visível só para administradores).");
-            } else if (expired == 0 && soon == 0) {
-                owner.alertsSummary.setForeground(UIHelper.APPROVED_GREEN);
-                owner.alertsSummary.setText("Nenhum lote expirado ou a expirar nos próximos 30 dias.");
-            } else {
-                owner.alertsSummary.setForeground(expired > 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
-                if (expBusinessUnitCombo != null) {
-            Object prev = expBusinessUnitCombo.getSelectedItem();
-            java.util.Set<String> expBus = new java.util.TreeSet<>();
-            for (var b : expiring) {
-                if (b.businessUnitName() != null && !b.businessUnitName().isBlank()) expBus.add(b.businessUnitName());
-            }
-            expBusinessUnitCombo.removeAllItems();
-            expBusinessUnitCombo.addItem("Todos os negócios");
-            for (String b : expBus) expBusinessUnitCombo.addItem(b);
-            if (prev != null) expBusinessUnitCombo.setSelectedItem(prev);
-        }
-        owner.alertsSummary.setText(String.format("%d lote(s) expirado(s)  ·  %d a expirar em ≤ 30 dias", expired, soon));
-            }
-        }
-
-        if (outSummary != null) {
-            if (hide) {
-                outSummary.setForeground(UIHelper.TEXT_MUTED);
-                outSummary.setText("Quantidades ocultas — stock trancado.");
-            } else if (esgotados.isEmpty()) {
-                outSummary.setForeground(UIHelper.APPROVED_GREEN);
-                outSummary.setText("Nenhum artigo esgotado no armazém.");
-            } else {
-                outSummary.setForeground(UIHelper.REJECTED_RED);
-                outSummary.setText(esgotados.size() + " artigo(s) actualmente sem stock.");
-            }
-        }
-    }
-
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setForeground(UIHelper.TEXT_MUTED);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        return label;
-    }
-
-    private record StockAlerts(List<StockAlertDTO> outOfStock, List<ProductBatchDTO> expiring) {}
 }

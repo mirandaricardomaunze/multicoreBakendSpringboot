@@ -68,4 +68,10 @@ public class StockWaste extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stock_movement_id")
     private StockMovement stockMovement;
+
+    @Column(name = "idempotency_key", length = 60)
+    private String idempotencyKey;
+
+    @Column(name = "request_fingerprint", length = 64)
+    private String requestFingerprint;
 }

@@ -1,15 +1,6 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernPanel;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
-import mz.multicore.erp.gui.components.TableFilter;
-import mz.multicore.erp.gui.components.TableCellRenderers;
-import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.gui.components.InlineFeedbackPanel;
-import mz.multicore.erp.gui.components.ToastManager;
+import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.desktop.client.CRMApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.modules.crm.dto.*;
@@ -18,34 +9,23 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * CRM & Assistência: pedidos dos clientes da loja e folhas de obra dos técnicos.
- *
- * <p>O painel trata do <b>layout e dos dados</b>; os diálogos e as regras de cada acção vivem em
- * {@link CrmTicketActions} e {@link CrmWorkSheetActions}, no mesmo molde do
- * {@code StockTransferActions}/{@code PosCashSessionActions}. Antes a aba dos pedidos não tinha
- * uma única acção — nem sequer era possível abrir um pedido de assistência a partir da aplicação.
  */
 public class CRMPanel extends JPanel {
 
-    static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
+    static final java.time.format.DateTimeFormatter DATE_FMT = CrmViewCoordinator.DATE_FMT;
     final CRMApiClient crmApiClient;
     private final CrmTicketActions ticketActions;
     private final CrmWorkSheetActions workSheetActions;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
-
     private DefaultTableModel ticketsModel;
     JTable ticketsTable;
-
     private DefaultTableModel worksheetsModel;
     JTable worksheetsTable;
-
-    /** Pedidos e folhas na ordem do modelo — as acções resolvem a selecção por aqui. */
     List<SupportTicketDTO> ticketsList = new ArrayList<>();
     List<WorkSheetDTO> worksheetsList = new ArrayList<>();
 
@@ -68,21 +48,13 @@ public class CRMPanel extends JPanel {
         north.add(feedback);
         add(north, BorderLayout.NORTH);
 
-        // Cada tabela na sua aba, para ganhar espaço vertical em vez de ficarem apertadas juntas.
         JTabbedPane tabbedPane = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabbedPane);
-        tabbedPane.addTab("Pedidos de Assistência", UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM),
-                createTicketsTab());
-        tabbedPane.addTab("Folhas de Obra", UIHelper.icon("fas-tools", 16, UIHelper.ACCENT_ORANGE),
-                createWorkSheetsTab());
+        tabbedPane.addTab("Pedidos de Assistência", UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), createTicketsTab());
+        tabbedPane.addTab("Folhas de Obra", UIHelper.icon("fas-tools", 16, UIHelper.ACCENT_ORANGE), createWorkSheetsTab());
         add(tabbedPane, BorderLayout.CENTER);
-
-        // Carregamento preguiçoso: os dados vêm por HTTP em onPanelSelected() (via navigate), não no
-        // construtor — evita uma chamada à API no arranque para quem não tem empresa activa. Mesmo
-        // padrão do ClientesPanel/ApprovalsPanel.
     }
 
-    /** Aba dos pedidos de assistência: acções no topo, tabela por baixo. */
     private JPanel createTicketsTab() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setOpaque(false);
@@ -92,12 +64,10 @@ public class CRMPanel extends JPanel {
         newTicketBtn.setIcon(UIHelper.icon("fas-headset", 14));
         newTicketBtn.setToolTipText("Abrir um pedido de assistência para um cliente");
         newTicketBtn.addActionListener(e -> ticketActions.createTicket());
-
         ModernButton detailBtn = UIHelper.createPrimaryButton("Abrir Pedido");
         detailBtn.setIcon(UIHelper.icon("fas-folder-open", 14));
         detailBtn.setToolTipText("Ver o pedido, atribuir técnico, resolver, anular ou reabrir");
         detailBtn.addActionListener(e -> ticketActions.openSelectedTicket());
-
         ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> refreshData());
@@ -108,8 +78,7 @@ public class CRMPanel extends JPanel {
 
         String[] ticketCols = {"ID", "Data", "Cliente", "Assunto", "Prioridade", "Técnico", "Estado"};
         ticketsModel = new DefaultTableModel(ticketCols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         ticketsTable = new JTable(ticketsModel);
         UIHelper.styleTable(ticketsTable);
@@ -122,20 +91,9 @@ public class CRMPanel extends JPanel {
             }
         });
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(ticketsTable, ticketsCard, (peek, mr) -> {
+        TableQuickPeekController.install(ticketsTable, ticketsCard, (peek, mr) -> {
             int row = ticketsTable.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-headset", UIHelper.ACCENT_BLUE);
-            peek.setTitle(String.valueOf(ticketsModel.getValueAt(row, 3)));
-            peek.setSubtitle("Ticket #" + ticketsModel.getValueAt(row, 0) + " • " + ticketsModel.getValueAt(row, 2));
-            peek.setStatus(String.valueOf(ticketsModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Data de Abertura", String.valueOf(ticketsModel.getValueAt(row, 1)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Cliente", String.valueOf(ticketsModel.getValueAt(row, 2)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Prioridade", String.valueOf(ticketsModel.getValueAt(row, 4)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Técnico Responsável", String.valueOf(ticketsModel.getValueAt(row, 5)), false));
-            peek.setItems(items);
-            peek.getOpenFullButton().setText("Abrir Pedido");
-            peek.setOnOpenFullAction(v -> ticketActions.openSelectedTicket());
+            CrmViewCoordinator.populateTicketPeek(peek, ticketsModel, row, ticketActions::openSelectedTicket);
         });
 
         JScrollPane tScroll = new JScrollPane(ticketsTable);
@@ -143,16 +101,13 @@ public class CRMPanel extends JPanel {
 
         JTextField tSearch = TableFilter.searchField("Cliente, assunto ou técnico…");
         tSearch.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
-        JComboBox<String> tEstado = TableFilter.combo("Todos os estados",
-                "Aberto", "Em curso", "Resolvido", "Anulado");
-        JComboBox<String> tPrioridade = TableFilter.combo("Todas as prioridades",
-                "Urgente", "Alta", "Normal", "Baixa");
+        JComboBox<String> tEstado = TableFilter.combo("Todos os estados", "Aberto", "Em curso", "Resolvido", "Anulado");
+        JComboBox<String> tPrioridade = TableFilter.combo("Todas as prioridades", "Urgente", "Alta", "Normal", "Baixa");
         JComboBox<String> tPeriodo = TableFilter.periodCombo();
         tPeriodo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(ticketsTable, tSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(tEstado, 6),
-                        new TableFilter.ColumnFilter(tPrioridade, 4)),
-                java.util.List.of(new TableFilter.PeriodFilter(tPeriodo, 1)));
+                List.of(new TableFilter.ColumnFilter(tEstado, 6), new TableFilter.ColumnFilter(tPrioridade, 4)),
+                List.of(new TableFilter.PeriodFilter(tPeriodo, 1)));
         JPanel tBar = TableFilter.bar(tSearch, TableFilter.label("Estado:"), tEstado,
                 TableFilter.label("Prioridade:", "fas-flag"), tPrioridade,
                 TableFilter.label("Data:", "fas-calendar-alt"), tPeriodo);
@@ -164,7 +119,6 @@ public class CRMPanel extends JPanel {
         return panel;
     }
 
-    /** Aba das folhas de obra (cabeçalho com acções + tabela). */
     private JPanel createWorkSheetsTab() {
         JPanel wsPanel = new JPanel(new BorderLayout(0, 10));
         wsPanel.setOpaque(false);
@@ -173,11 +127,9 @@ public class CRMPanel extends JPanel {
         ModernButton newWsBtn = UIHelper.createSuccessButton("Registar Folha de Obra");
         newWsBtn.setIcon(UIHelper.icon("fas-tools", 14));
         newWsBtn.addActionListener(e -> workSheetActions.registerWorkSheet());
-
         ModernButton billBtn = UIHelper.createPrimaryButton("Faturar Folha de Obra");
         billBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
         billBtn.addActionListener(e -> workSheetActions.billWorkSheet());
-
         ModernButton refreshWsBtn = UIHelper.createRefreshButton(this::refreshData);
 
         ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Ações da Folha")
@@ -192,8 +144,7 @@ public class CRMPanel extends JPanel {
 
         String[] wsCols = {"ID", "Data", "Cliente", "Técnico", "Horas", "Tarifa/h", "Total", "Estado"};
         worksheetsModel = new DefaultTableModel(wsCols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         worksheetsTable = new JTable(worksheetsModel);
         UIHelper.styleTable(worksheetsTable);
@@ -211,18 +162,17 @@ public class CRMPanel extends JPanel {
 
         JTextField wsSearch = TableFilter.searchField("Cliente ou técnico…");
         wsSearch.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
-        JComboBox<String> wsEstado = TableFilter.combo("Todos os estados",
-                "Por faturar", "Faturada", "Anulada");
+        JComboBox<String> wsEstado = TableFilter.combo("Todos os estados", "Por faturar", "Faturada", "Anulada");
         JComboBox<String> wsPeriodo = TableFilter.periodCombo();
         wsPeriodo.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
         TableFilter.install(worksheetsTable, wsSearch,
-                java.util.List.of(new TableFilter.ColumnFilter(wsEstado, 7)),
-                java.util.List.of(new TableFilter.PeriodFilter(wsPeriodo, 1)));
+                List.of(new TableFilter.ColumnFilter(wsEstado, 7)),
+                List.of(new TableFilter.PeriodFilter(wsPeriodo, 1)));
         JPanel wsBar = TableFilter.bar(wsSearch, TableFilter.label("Estado:"), wsEstado,
-                TableFilter.label("Data:", "fas-calendar-alt"), wsPeriodo);
+                TableFilter.label("Data:", "fas-calendar-alt"), wsPeriodo, refreshWsBtn);
         wsBar.setBorder(new EmptyBorder(0, 0, 10, 0));
         wsCard.add(UIHelper.tableCardTop("Folhas de Obra Registadas", wsBar,
-                refreshWsBtn, moreBtn, billBtn, newWsBtn), BorderLayout.NORTH);
+                moreBtn, billBtn, newWsBtn), BorderLayout.NORTH);
         wsCard.add(wsScroll, BorderLayout.CENTER);
         wsPanel.add(wsCard, BorderLayout.CENTER);
         return wsPanel;
@@ -237,62 +187,17 @@ public class CRMPanel extends JPanel {
     }
 
     private void applyData(CRMData data) {
-        ticketsList = data.tickets();
-        ticketsModel.setRowCount(0);
-        for (SupportTicketDTO ticket : ticketsList) {
-            ticketsModel.addRow(new Object[]{
-                    ticket.id(),
-                    ticket.createdAt().format(DATE_FMT),
-                    ticket.clientName(),
-                    ticket.subject(),
-                    ticket.priorityLabel(),
-                    ticket.assignedTechnician() == null ? "—" : ticket.assignedTechnician(),
-                    ticket.statusLabel()
-            });
-        }
-
-        worksheetsList = data.worksheets();
-        worksheetsModel.setRowCount(0);
-        for (WorkSheetDTO ws : worksheetsList) {
-            worksheetsModel.addRow(new Object[]{
-                    ws.id(),
-                    ws.createdAt().format(DATE_FMT),
-                    ws.clientName(),
-                    ws.technicianName(),
-                    ws.hoursWorked() + " h",
-                    ws.hourlyRate(),
-                    ws.totalValue(),
-                    ws.statusLabel()
-            });
-        }
+        CrmViewCoordinator.populateTicketsModel(ticketsModel, ticketsList = data.tickets());
+        CrmViewCoordinator.populateWorksheetsModel(worksheetsModel, worksheetsList = data.worksheets());
     }
 
-    /** Pedidos que ainda aceitam trabalho — o combo do registo de folha só mostra estes. */
-    List<SupportTicketDTO> openTickets() {
-        List<SupportTicketDTO> open = new ArrayList<>();
-        for (SupportTicketDTO ticket : ticketsList) {
-            if ("OPEN".equals(ticket.status()) || "IN_PROGRESS".equals(ticket.status())) {
-                open.add(ticket);
-            }
-        }
-        return open;
-    }
-
-    void showNotice(FeedbackType type, String title, String message) {
-        showNotice(type, title, message, null, null);
-    }
-
+    List<SupportTicketDTO> openTickets() { return CrmViewCoordinator.filterOpenTickets(ticketsList); }
+    void showNotice(FeedbackType type, String title, String message) { showNotice(type, title, message, null, null); }
     void showNotice(FeedbackType type, String title, String message, String actionLabel, Runnable action) {
         feedback.show(type, title, message, actionLabel, action);
     }
-
-    void showSuccess(String message) {
-        ToastManager.success(this, message);
-    }
+    void showSuccess(String message) { ToastManager.success(this, message); }
+    public void onPanelSelected() { refreshData(); }
 
     private record CRMData(List<SupportTicketDTO> tickets, List<WorkSheetDTO> worksheets) {}
-
-    public void onPanelSelected() {
-        refreshData();
-    }
 }

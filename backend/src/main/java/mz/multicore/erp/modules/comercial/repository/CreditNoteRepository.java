@@ -43,5 +43,7 @@ public interface CreditNoteRepository extends JpaRepository<CreditNote, Long> {
             "WHERE n.id = :id AND n.company.id = :companyId")
     Optional<CreditNote> findByIdWithLinesAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
 
+    Optional<CreditNote> findByInvoiceIdAndPosReturnIdempotencyKey(Long invoiceId, String posReturnIdempotencyKey);
+
     long countByCompanyId(Long companyId);
 }

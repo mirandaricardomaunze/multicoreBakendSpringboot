@@ -77,6 +77,13 @@ class InvoicePrintServiceTest {
         assertTrue(text.contains("3.ª VIA — TRIPLICADO (Arquivo / Cobrança)"), "Devia conter 3.ª Via Triplicado: " + text);
         assertTrue(text.contains("4.ª VIA — QUADRUPLICADO (Arquivo Geral)"), "Devia conter 4.ª Via Quadruplicado: " + text);
         assertTrue(text.contains("Cliente Teste Lda"), "Devia conter o cliente: " + text);
+        assertTrue(text.contains("Código de Barras"), "Devia conter a coluna Código de Barras: " + text);
+        assertTrue(text.contains("5601234567890"), "Devia conter o código de barras do artigo: " + text);
+        assertTrue(text.contains("Subtotal (sem IVA)"), "Devia conter Subtotal (sem IVA): " + text);
+        assertTrue(text.contains("TOTAL A PAGAR"), "Devia conter TOTAL A PAGAR: " + text);
+        assertTrue(text.contains("DADOS PARA PAGAMENTO"), "Devia conter DADOS PARA PAGAMENTO: " + text);
+        assertTrue(text.contains("OBSERVAÇÕES"), "Devia conter OBSERVAÇÕES: " + text);
+        assertTrue(text.contains("Os bens/serviços foram colocados à disposição"), "Devia conter aviso legal: " + text);
     }
 
     private static Invoice sampleInvoice() {
@@ -98,6 +105,7 @@ class InvoicePrintServiceTest {
         product.setId(100L);
         product.setName("Cimento Portland 50kg");
         product.setReference("CIM-01");
+        product.setBarcode("5601234567890");
 
         Invoice invoice = new Invoice();
         invoice.setId(10L);

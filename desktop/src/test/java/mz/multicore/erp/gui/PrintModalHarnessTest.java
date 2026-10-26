@@ -38,22 +38,22 @@ class PrintModalHarnessTest {
     private static final List<String> PRINTING_SCREENS = List.of(
             "ComercialPanel.java",
             "commercial/CommercialNotesPanel.java",
-            "commercial/DeliveryGuidesPanel.java",
+            "commercial/DeliveryGuidesOperationsCoordinator.java",
             "commercial/OrderDetailsDialog.java",
             "commercial/QuotationsPanel.java",
             "CrmWorkSheetActions.java",
             "CustomerOrderFulfillmentActions.java",
-            "FiscalPanel.java",
-            "HRContractsPanel.java",
+            "FiscalIvaTab.java",
+            "HRContractsOperationsCoordinator.java",
             "HRPanel.java",
-            "HRTerminationsPanel.java",
+            "HRTerminationsOperationsCoordinator.java",
             "pos/PosBlindCloseDialog.java",
             "pos/PosSessionHistoryDialog.java",
-            "POSPanel.java",
+            "PosCheckoutCoordinator.java",
             "PosSalesHistoryPanel.java",
-            "StockBatchesPanel.java",
+            "StockBatchesViewCoordinator.java",
             "StockInventoryCountActions.java",
-            "StockPanel.java",
+            "StockReportsCoordinator.java",
             "StockTransferActions.java");
 
     // ── IM-01 / IM-02: o modal é o único caminho para o papel ─────────────────────────────────
@@ -84,7 +84,8 @@ class PrintModalHarnessTest {
             // e um ecrã que só exporta listagens não tem de repetir a chamada.
             assertThat(source.contains("PrintPreviewDialog.show(")
                     || source.contains("TableExportAction.export(")
-                    || source.contains("PosReceiptPrinter.printReceiptIfConfirmed("))
+                    || source.contains("PosReceiptPrinter.printReceiptIfConfirmed(")
+                    || source.contains("SensitivePrintCoordinator.print("))
                     .as("%s deixou de abrir o modal de impressão", screen)
                     .isTrue();
         }
@@ -93,7 +94,9 @@ class PrintModalHarnessTest {
     @Test
     void oDelegadoDeImpressaoPosAbreOModal() throws IOException {
         String source = Files.readString(GUI.resolve("PosReceiptPrinter.java"));
-        assertThat(source).contains("PrintPreviewDialog.show(");
+        assertThat(source).contains("SensitivePrintCoordinator.print(");
+        String coordinator = Files.readString(GUI.resolve(Path.of("components", "SensitivePrintCoordinator.java")));
+        assertThat(coordinator).contains("PrintPreviewDialog.show(");
     }
 
     @Test

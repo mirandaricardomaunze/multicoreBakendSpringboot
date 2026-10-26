@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.inventory.repository;
 
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -32,6 +33,10 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
             "JOIN FETCH t.company LEFT JOIN FETCH t.lines l LEFT JOIN FETCH l.product " +
             "WHERE t.id = :id AND t.company.id = :companyId")
     Optional<StockTransfer> findByIdWithLinesAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM StockTransfer t WHERE t.id = :id AND t.company.id = :companyId")
+    Optional<StockTransfer> lockByIdAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
 
     @Query("SELECT t FROM StockTransfer t " +
             "JOIN FETCH t.originWarehouse o " +

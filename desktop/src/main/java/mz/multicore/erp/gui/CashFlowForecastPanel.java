@@ -4,20 +4,17 @@ import mz.multicore.erp.desktop.client.CashFlowForecastApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.financeira.dto.CashFlowBucketDTO;
 import mz.multicore.erp.modules.financeira.dto.CashFlowForecastDTO;
-import mz.multicore.erp.modules.financeira.dto.CashFlowItemDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 
+/**
+ * Painel Executivo de Projeção de Fluxo de Caixa Previsional (Cash Flow Forecast).
+ * Monitorização de horizontes de liquidez, baldes temporais, alertas e maiores recebimentos/pagamentos.
+ */
 public class CashFlowForecastPanel extends JPanel {
-
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final CashFlowForecastApiClient forecastApiClient;
 
@@ -32,12 +29,7 @@ public class CashFlowForecastPanel extends JPanel {
 
     private DefaultTableModel bucketsTableModel;
     private JTable bucketsTable;
-
-    private DefaultTableModel topReceivablesModel;
-    private JTable topReceivablesTable;
-
-    private DefaultTableModel topPayablesModel;
-    private JTable topPayablesTable;
+    private CashFlowForecastDetailsPanel detailsPanel;
 
     private final JProgressBar busyBar = new JProgressBar();
     private CashFlowForecastDTO currentForecast;
@@ -53,15 +45,10 @@ public class CashFlowForecastPanel extends JPanel {
         mainContent.setLayout(new BoxLayout(mainContent, BoxLayout.Y_AXIS));
         mainContent.setBorder(new EmptyBorder(8, 8, 16, 8));
 
-        // 1. Toolbar superior com título e botões
         mainContent.add(buildToolbar());
         mainContent.add(Box.createVerticalStrut(10));
-
-        // 2. Cartões de Resumo Métrico Superior
         mainContent.add(buildSummaryCards());
         mainContent.add(Box.createVerticalStrut(10));
-
-        // 3. Banner de Alerta e Recomendações
         mainContent.add(buildAlertBannerPanel());
         mainContent.add(Box.createVerticalStrut(8));
 
@@ -70,18 +57,15 @@ public class CashFlowForecastPanel extends JPanel {
         mainContent.add(busyBar);
         mainContent.add(Box.createVerticalStrut(6));
 
-        // 4. Matriz de Baldes Temporais (tamanho natural para 5 linhas completas)
         mainContent.add(buildBucketsCard());
         mainContent.add(Box.createVerticalStrut(12));
 
-        // 5. Abas com Detalhes dos Maiores Movimentos
-        mainContent.add(buildDetailsCard());
+        detailsPanel = new CashFlowForecastDetailsPanel();
+        mainContent.add(detailsPanel);
 
-        // Painel de Scroll com rastreio de largura integral e setas suaves
         ArrowScrollPanel scroll = new ArrowScrollPanel(mainContent);
         add(scroll, BorderLayout.CENTER);
 
-        // Carrega os dados assincronamente ao iniciar
         loadForecast();
     }
 
@@ -114,12 +98,10 @@ public class CashFlowForecastPanel extends JPanel {
 
     private JPanel buildSummaryCards() {
         JPanel grid = KpiCard.createGrid(4);
-
         grid.add(KpiCard.createCard("Disponível Imediato", lblLiquidityVal, "fas-wallet", UIHelper.ACCENT_BLUE));
         grid.add(KpiCard.createCard("Contas a Receber", lblReceivablesVal, "fas-arrow-circle-down", UIHelper.APPROVED_GREEN));
         grid.add(KpiCard.createCard("Contas a Pagar", lblPayablesVal, "fas-arrow-circle-up", UIHelper.REJECTED_RED));
         grid.add(KpiCard.createCard("Saldo Projetado Líquido", lblNetVal, "fas-chart-line", UIHelper.TEXT_LIGHT));
-
         return grid;
     }
 
@@ -151,16 +133,12 @@ public class CashFlowForecastPanel extends JPanel {
 
         String[] cols = {"Período Temporal", "Entradas Previstas (+)", "Saídas Previstas (-)", "Movimento Líquido", "Saldo Projetado Cumulativo"};
         bucketsTableModel = new DefaultTableModel(cols, 0) {
-            @Override
-            public boolean isCellEditable(int row, int col) { return false; }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
         bucketsTable = new JTable(bucketsTableModel);
-        // Matriz executiva fixa: tem poucos horizontes e deve permanecer integralmente visível.
         bucketsTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(bucketsTable);
-
-        // Exibe todas as 5 linhas da matriz temporal de liquidez com altura confortável
         bucketsTable.setPreferredScrollableViewportSize(new Dimension(100, 5 * 35));
 
         bucketsTable.getColumnModel().getColumn(0).setPreferredWidth(140);
@@ -170,7 +148,7 @@ public class CashFlowForecastPanel extends JPanel {
         bucketsTable.getColumnModel().getColumn(4).setPreferredWidth(140);
 
         for (int c : new int[]{1, 2, 3, 4}) {
-            bucketsTable.getColumnModel().getColumn(c).setCellRenderer(new MoneyCellRenderer(c == 4));
+            bucketsTable.getColumnModel().getColumn(c).setCellRenderer(new CashFlowMoneyCellRenderer(c == 4));
         }
         UIHelper.ensureHeadersFit(bucketsTable);
 
@@ -184,92 +162,18 @@ public class CashFlowForecastPanel extends JPanel {
         return card;
     }
 
-    private ModernPanel buildDetailsCard() {
-        ModernPanel card = new ModernPanel(16);
-        card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        JTabbedPane tabs = new JTabbedPane();
-        UIHelper.styleTabbedPaneMulticore(tabs);
-
-        // Aba 1: Maiores Contas a Receber
-        String[] rCols = {"Documento", "Cliente", "Vencimento", "Montante Pendente", "Período"};
-        topReceivablesModel = new DefaultTableModel(rCols, 0) {
-            @Override
-            public boolean isCellEditable(int row, int col) { return false; }
-        };
-        topReceivablesTable = new JTable(topReceivablesModel);
-        topReceivablesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
-        UIHelper.styleTable(topReceivablesTable);
-        topReceivablesTable.setPreferredScrollableViewportSize(new Dimension(100, 260));
-        topReceivablesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
-        UIHelper.ensureHeadersFit(topReceivablesTable);
-        JScrollPane rScroll = new JScrollPane(topReceivablesTable);
-        UIHelper.styleScrollPane(rScroll);
-        tabs.addTab("Maiores Recebimentos Previstos", UIHelper.icon("fas-hand-holding-usd", 13, UIHelper.APPROVED_GREEN), rScroll);
-
-        // Aba 2: Maiores Contas a Pagar
-        String[] pCols = {"Documento", "Fornecedor", "Vencimento", "Montante Pendente", "Período"};
-        topPayablesModel = new DefaultTableModel(pCols, 0) {
-            @Override
-            public boolean isCellEditable(int row, int col) { return false; }
-        };
-        topPayablesTable = new JTable(topPayablesModel);
-        topPayablesTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
-        UIHelper.styleTable(topPayablesTable);
-        topPayablesTable.setPreferredScrollableViewportSize(new Dimension(100, 260));
-        topPayablesTable.getColumnModel().getColumn(3).setCellRenderer(TableCellRenderers.money());
-        UIHelper.ensureHeadersFit(topPayablesTable);
-        JScrollPane pScroll = new JScrollPane(topPayablesTable);
-        UIHelper.styleScrollPane(pScroll);
-        tabs.addTab("Maiores Pagamentos a Fornecedores", UIHelper.icon("fas-file-invoice-dollar", 13, UIHelper.REJECTED_RED), pScroll);
-
-        UIHelper.installQuickPeek(topReceivablesTable, card);
-        UIHelper.installQuickPeek(topPayablesTable, card);
-
-        card.add(tabs, BorderLayout.CENTER);
-        card.setPreferredSize(new Dimension(0, 360));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 360));
-        return card;
-    }
-
     public void loadForecast() {
-        busyBar.setVisible(true);
-
-        new SwingWorker<CashFlowForecastDTO, Void>() {
-            @Override
-            protected CashFlowForecastDTO doInBackground() {
-                try {
-                    return forecastApiClient.getForecast();
-                } catch (Exception ex) {
-                    return null;
-                }
-            }
-
-            @Override
-            protected void done() {
-                busyBar.setVisible(false);
-                try {
-                    CashFlowForecastDTO data = get();
-                    if (data != null) {
-                        displayForecast(data);
-                    } else {
-                        ToastManager.show(CashFlowForecastPanel.this, FeedbackType.WARNING, "Não foi possível carregar a projeção de tesouraria.");
-                    }
-                } catch (Exception ignored) {}
-            }
-        }.execute();
+        CashFlowForecastOperationsCoordinator.loadForecast(this, forecastApiClient, busyBar, this::displayForecast);
     }
 
     public void displayForecast(CashFlowForecastDTO data) {
         this.currentForecast = data;
 
-        lblLiquidityVal.setText(formatMoney(data.totalAvailableLiquidity()));
-        lblReceivablesVal.setText(formatMoney(data.totalReceivables()));
-        lblPayablesVal.setText(formatMoney(data.totalPayables()));
-        lblNetVal.setText(formatMoney(data.netProjectedPosition()));
+        lblLiquidityVal.setText(CashFlowForecastOperationsCoordinator.formatMoney(data.totalAvailableLiquidity()));
+        lblReceivablesVal.setText(CashFlowForecastOperationsCoordinator.formatMoney(data.totalReceivables()));
+        lblPayablesVal.setText(CashFlowForecastOperationsCoordinator.formatMoney(data.totalPayables()));
+        lblNetVal.setText(CashFlowForecastOperationsCoordinator.formatMoney(data.netProjectedPosition()));
 
-        // Actualizar Banner de Alerta
         if (data.alert() != null) {
             String status = data.alert().status();
             if ("CRITICAL".equals(status)) {
@@ -288,75 +192,20 @@ public class CashFlowForecastPanel extends JPanel {
             lblAlertRecommendation.setText("Recomendação: " + (data.alert().recommendation() != null ? data.alert().recommendation() : "Manter acompanhamento de rotina."));
         }
 
-        // Preencher Matriz de Baldes
         bucketsTableModel.setRowCount(0);
         for (CashFlowBucketDTO b : data.buckets()) {
             bucketsTableModel.addRow(new Object[]{
-                    b.bucketLabel(),
-                    b.inflows(),
-                    b.outflows(),
-                    b.netMovement(),
-                    b.projectedCumulativeBalance()
+                    b.bucketLabel(), b.inflows(), b.outflows(), b.netMovement(), b.projectedCumulativeBalance()
             });
         }
 
-        // Preencher Top Receivables
-        topReceivablesModel.setRowCount(0);
-        if (data.topReceivables() != null) {
-            for (CashFlowItemDTO r : data.topReceivables()) {
-                topReceivablesModel.addRow(new Object[]{
-                        r.documentNumber(),
-                        r.entityName(),
-                        r.dueDate() != null ? r.dueDate().format(DATE_FMT) : "-",
-                        r.amount(),
-                        r.bucketCode()
-                });
-            }
-        }
-
-        // Preencher Top Payables
-        topPayablesModel.setRowCount(0);
-        if (data.topPayables() != null) {
-            for (CashFlowItemDTO p : data.topPayables()) {
-                topPayablesModel.addRow(new Object[]{
-                        p.documentNumber(),
-                        p.entityName(),
-                        p.dueDate() != null ? p.dueDate().format(DATE_FMT) : "-",
-                        p.amount(),
-                        p.bucketCode()
-                });
-            }
+        if (detailsPanel != null) {
+            detailsPanel.populate(data.topReceivables(), data.topPayables());
         }
     }
 
     private void printForecastPdf() {
-        busyBar.setVisible(true);
-
-        new SwingWorker<byte[], Void>() {
-            @Override
-            protected byte[] doInBackground() {
-                try {
-                    return forecastApiClient.getForecastPdf();
-                } catch (Exception ex) {
-                    return null;
-                }
-            }
-
-            @Override
-            protected void done() {
-                busyBar.setVisible(false);
-                try {
-                    byte[] pdfBytes = get();
-                    if (pdfBytes != null && pdfBytes.length > 0) {
-                        PrintPreviewDialog.show(CashFlowForecastPanel.this, pdfBytes, "fluxo-caixa-previsional.pdf");
-                    } else {
-                        ToastManager.show(CashFlowForecastPanel.this, FeedbackType.ERROR, "Não foi possível gerar o PDF de fluxo de caixa.");
-                    }
-                } catch (Exception ex) {
-                    ToastManager.show(CashFlowForecastPanel.this, FeedbackType.ERROR, "Erro ao gerar PDF: " + ex.getMessage());
-                }
-            }
-        }.execute();
+        CashFlowForecastOperationsCoordinator.printForecastPdf(this, forecastApiClient, busyBar);
     }
 
     public JTable getBucketsTable() {
@@ -369,42 +218,5 @@ public class CashFlowForecastPanel extends JPanel {
 
     public CashFlowForecastDTO getCurrentForecast() {
         return currentForecast;
-    }
-
-    private String formatMoney(BigDecimal val) {
-        if (val == null) return "0,00 MT";
-        return String.format(java.util.Locale.forLanguageTag("pt-MZ"), "%,.2f MT", val);
-    }
-
-    private static class MoneyCellRenderer extends DefaultTableCellRenderer {
-        private final boolean isCumulative;
-
-        public MoneyCellRenderer(boolean isCumulative) {
-            this.isCumulative = isCumulative;
-            setHorizontalAlignment(RIGHT);
-        }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
-            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
-            if (value instanceof BigDecimal val) {
-                setText(String.format(java.util.Locale.forLanguageTag("pt-MZ"), "%,.2f MT", val));
-                if (isCumulative) {
-                    setFont(getFont().deriveFont(Font.BOLD));
-                    if (val.compareTo(BigDecimal.ZERO) < 0) {
-                        setForeground(UIHelper.REJECTED_RED);
-                    } else {
-                        setForeground(UIHelper.APPROVED_GREEN);
-                    }
-                } else if (col == 3) { // Movimento Líquido
-                    if (val.compareTo(BigDecimal.ZERO) < 0) {
-                        setForeground(UIHelper.REJECTED_RED);
-                    } else if (val.compareTo(BigDecimal.ZERO) > 0) {
-                        setForeground(UIHelper.APPROVED_GREEN);
-                    }
-                }
-            }
-            return c;
-        }
     }
 }

@@ -72,16 +72,16 @@ class SecurityAttackSurfaceTest {
         when(users.findByUsername("operador-a")).thenReturn(Optional.of(ownUser));
         when(users.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThrows(BusinessRuleException.class, () -> userService.resetPassword("superadmin", "nova-senha"));
-        assertThrows(BusinessRuleException.class, () -> userService.resetPassword("admin-b", "nova-senha"));
+        assertThrows(BusinessRuleException.class, () -> userService.resetPassword("superadmin", "NovaSenha2026"));
+        assertThrows(BusinessRuleException.class, () -> userService.resetPassword("admin-b", "NovaSenha2026"));
         assertThrows(BusinessRuleException.class, () -> userService.setManagerPin("admin-b", "1234"));
         verify(users, never()).save(platform);
         verify(users, never()).save(otherTenant);
 
         String token = sessions.create(ownUser).token();
-        userService.resetPassword("operador-a", "nova-senha");
+        userService.resetPassword("operador-a", "NovaSenha2026");
         assertThrows(BusinessRuleException.class, () -> sessions.requireValid(token));
-        assertTrue(passwords.matches("nova-senha", ownUser.getPassword()));
+        assertTrue(passwords.matches("NovaSenha2026", ownUser.getPassword()));
     }
 
     @Test

@@ -1,43 +1,26 @@
 package mz.multicore.erp.gui;
 
-import mz.multicore.erp.gui.components.DateField;
 import mz.multicore.erp.gui.components.ActionMenuButton;
-import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
 import mz.multicore.erp.gui.components.TableFilter;
+import mz.multicore.erp.gui.components.TableQuickPeekController;
 import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.gui.components.FeedbackType;
-import mz.multicore.erp.modules.hr.dto.HrPolicyConfigDTO;
-import mz.multicore.erp.modules.hr.dto.PayrollCostDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
-import mz.multicore.erp.modules.hr.dto.SaveHrPolicyConfigRequest;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Separador das <b>retenções por entregar</b> — o dinheiro que a empresa reteve e ainda deve ao
- * Estado. Ver docs/RH_COMPLETO_SPEC.md §B5.
- *
- * <p>Este ecrã existe porque, até agora, esse dinheiro não estava em lado nenhum: era calculado,
- * impresso no mapa fiscal e desaparecia. Ficava na conta da empresa <b>indistinguível de dinheiro
- * próprio</b>, e quem o gastasse só descobria o buraco no dia da entrega.
- *
- * <p>É também aqui que vivem os <b>valores legais</b> (§6) — prazos de entrega, dias de férias por
- * antiguidade, aviso prévio. Ficam ao lado das retenções porque é a olhar para uma retenção sem
- * prazo que se percebe que faltam.
+ * Separador das retenções por entregar ao Estado de Moçambique (IRPS e INSS)
+ * e acompanhamento do custo total do trabalhador.
  */
 final class HRLiabilitiesPanel {
-
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final HRPanel owner;
 
@@ -63,7 +46,7 @@ final class HRLiabilitiesPanel {
 
         ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações")
                 .addAction("Apurar Período", UIHelper.icon("fas-calculator", 14), this::accrue)
-                .addAction("Valores Legais", UIHelper.icon("fas-balance-scale", 14), this::openPolicyDialog);
+                .addAction("Valores Legais", UIHelper.icon("fas-balance-scale", 14), () -> HrPolicyConfigDialog.show(owner, this::load));
 
         ModernButton deliverBtn = UIHelper.createSuccessButton("Marcar Entregue");
         deliverBtn.setIcon(UIHelper.icon("fas-check-double", 14));
@@ -85,18 +68,9 @@ final class HRLiabilitiesPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
-            peek.setHeaderIcon("fas-university", UIHelper.ACCENT_BLUE);
-            peek.setTitle(String.valueOf(model.getValueAt(row, 2)));
-            peek.setSubtitle("Período: " + model.getValueAt(row, 1));
-            peek.setStatus(String.valueOf(model.getValueAt(row, 5)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor da Retenção", String.valueOf(model.getValueAt(row, 3)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Prazo Limite", String.valueOf(model.getValueAt(row, 4)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Entregue Por", String.valueOf(model.getValueAt(row, 6)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Referência de Pagamento", String.valueOf(model.getValueAt(row, 7)), false));
-            peek.setItems(items);
+            HRLiabilitiesOperationsCoordinator.populatePeek(peek, model, row);
         });
 
         JTextField search = TableFilter.searchField("Retenção ou período…");
@@ -113,11 +87,6 @@ final class HRLiabilitiesPanel {
         return tab;
     }
 
-    /**
-     * O <b>custo total do trabalhador</b> ao pé das retenções (RHC-55): base + subsídios + extra +
-     * INSS patronal. O patronal é custo da empresa e não aparecia em relatório nenhum — quem olhava
-     * para a folha via o ilíquido e pensava que era o que a empresa gasta.
-     */
     private JPanel buildCostBar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bar.setOpaque(false);
@@ -158,7 +127,7 @@ final class HRLiabilitiesPanel {
                     String.format("%02d/%d", l.month(), l.year()),
                     l.liabilityTypeLabel(),
                     l.amount(),
-                    dueLabel(l),
+                    HRLiabilitiesOperationsCoordinator.dueLabel(l),
                     l.statusLabel(),
                     l.deliveredBy() == null ? "-" : l.deliveredBy(),
                     l.paymentReference() == null ? "-" : l.paymentReference()
@@ -166,35 +135,13 @@ final class HRLiabilitiesPanel {
         }
     }
 
-    /**
-     * Uma retenção sem prazo <b>não fica em branco</b>: diz que o prazo está por configurar. Em
-     * branco parecia "sem urgência", que é exactamente a leitura errada.
-     */
-    private String dueLabel(PayrollLiabilityDTO l) {
-        if (l.dueDate() == null) {
-            return "Prazo por configurar";
-        }
-        String date = l.dueDate().format(DATE_FMT);
-        return l.overdue() ? date + " (em atraso)" : date;
-    }
-
     private void loadCost() {
         int year = (Integer) yearSpinner.getValue();
         int month = (Integer) monthSpinner.getValue();
         UIHelper.runWithProgress(owner, "A apurar o custo do mês…",
                 () -> owner.hrApiClient.getPayrollCost(year, month),
-                cost -> costLabel.setText(costText(cost)),
+                cost -> costLabel.setText(HRLiabilitiesOperationsCoordinator.costText(cost)),
                 owner::showActionError);
-    }
-
-    private String costText(PayrollCostDTO cost) {
-        if (cost == null) {
-            return "Custo total do trabalhador: —";
-        }
-        return String.format("Custo total %02d/%d: %s  (ilíquido %s + INSS patronal %s) · líquido pago %s",
-                cost.month(), cost.year(), money(cost.totalCost()),
-                money(cost.grossPay()), money(cost.employerInss()),
-                money(cost.netPay()));
     }
 
     private void accrue() {
@@ -206,109 +153,6 @@ final class HRLiabilitiesPanel {
     }
 
     private void deliver() {
-        int row = TableFilter.selectedModelRow(table);
-        if (row < 0) {
-            owner.showNotice(FeedbackType.WARNING, "Seleccione uma retenção", "Escolha uma retenção na tabela para continuar.");
-            return;
-        }
-        PayrollLiabilityDTO sel = liabilities.get(row);
-        if (!"POR_ENTREGAR".equals(sel.status())) {
-            owner.showNotice(FeedbackType.INFO, "Retenção entregue", "Esta retenção já foi entregue.");
-            return;
-        }
-        String reference = JOptionPane.showInputDialog(owner, String.format(
-                "Entregar %s de %02d/%d, no valor de %s.\nReferência do pagamento (opcional):",
-                sel.liabilityTypeLabel(), sel.month(), sel.year(), money(sel.amount())),
-                "Entregar Retenção", JOptionPane.QUESTION_MESSAGE);
-        if (reference == null) {
-            return; // cancelou
-        }
-        UIHelper.runWithProgress(owner, "A registar a entrega…",
-                () -> owner.hrApiClient.deliverPayrollLiability(sel.id(), reference),
-                ignored -> load(), owner::showActionError);
-    }
-
-    /**
-     * Configuração dos valores legais (§6). Todos os campos são <b>opcionais</b>: uma empresa pode
-     * confirmar os prazos com o contabilista esta semana e o direito a férias só no mês que vem.
-     * Obrigar a preencher tudo de uma vez levaria a preencher à sorte — que é o que esta
-     * configuração existe para evitar.
-     */
-    private void openPolicyDialog() {
-        List<HrPolicyConfigDTO> existing;
-        try {
-            existing = owner.hrApiClient.getHrPolicies();
-        } catch (RuntimeException ex) {
-            owner.showActionError(ex);
-            return;
-        }
-        HrPolicyConfigDTO current = existing.stream().filter(HrPolicyConfigDTO::active)
-                .findFirst().orElse(null);
-
-        JTextField nameField = new JTextField(current == null ? "Valores legais" : current.name());
-        UIHelper.styleTextField(nameField);
-        DateField fromField = new DateField(LocalDate.now().withDayOfYear(1));
-        JSpinner vac1 = optionalSpinner(current == null ? null : current.vacationDaysYear1(), 0, 365);
-        JSpinner vac2 = optionalSpinner(current == null ? null : current.vacationDaysYear2(), 0, 365);
-        JSpinner vac3 = optionalSpinner(current == null ? null : current.vacationDaysYear3Plus(), 0, 365);
-        JSpinner irpsDay = optionalSpinner(current == null ? null : current.irpsDeliveryDay(), 0, 31);
-        JSpinner inssDay = optionalSpinner(current == null ? null : current.inssDeliveryDay(), 0, 31);
-        JSpinner noticeEmp = optionalSpinner(current == null ? null : current.noticeDaysEmployee(), 0, 365);
-        JSpinner noticeEmpr = optionalSpinner(current == null ? null : current.noticeDaysEmployer(), 0, 365);
-        JTextField basisField = new JTextField(current == null ? "" : orEmpty(current.legalBasis()));
-        UIHelper.styleTextField(basisField);
-
-        JPanel form = UIHelper.createDialogForm(
-                "Nome:", nameField,
-                "Vigora a partir de:", fromField,
-                "Férias — 1.º ano (0 = por confirmar):", vac1,
-                "Férias — 2.º ano:", vac2,
-                "Férias — 3.º ano em diante:", vac3,
-                "IRPS: dia de entrega do mês seguinte:", irpsDay,
-                "INSS: dia de entrega do mês seguinte:", inssDay,
-                "Aviso prévio — trabalhador (dias):", noticeEmp,
-                "Aviso prévio — empregador (dias):", noticeEmpr,
-                "Base legal:", basisField
-        );
-
-        boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Valores Legais de RH",
-                "fas-balance-scale",
-                "Confirme estes valores com o contabilista. O que ficar a zero é tratado como "
-                        + "não configurado — e o sistema di-lo em vez de adivinhar.", form).showDialog();
-        if (!confirmed) {
-            return;
-        }
-
-        SaveHrPolicyConfigRequest request = new SaveHrPolicyConfigRequest(
-                nameField.getText().trim(), fromField.value(), null,
-                optionalValue(vac1), optionalValue(vac2), optionalValue(vac3),
-                optionalValue(irpsDay), optionalValue(inssDay),
-                optionalValue(noticeEmp), optionalValue(noticeEmpr),
-                basisField.getText().trim().isEmpty() ? null : basisField.getText().trim());
-        UIHelper.runWithProgress(owner, "A gravar valores legais…",
-                () -> owner.hrApiClient.createHrPolicy(request),
-                ignored -> {
-                    owner.showSuccess("Valores legais gravados; as retenções passam a ter prazo a partir do próximo apuramento.");
-                    load();
-                }, owner::showActionError);
-    }
-
-    /** Zero significa <b>não configurado</b> — o Swing não tem spinner vazio, e nulo tem de caber. */
-    private JSpinner optionalSpinner(Integer value, int min, int max) {
-        return new JSpinner(new SpinnerNumberModel(value == null ? 0 : value, min, max, 1));
-    }
-
-    private Integer optionalValue(JSpinner spinner) {
-        int value = (Integer) spinner.getValue();
-        return value <= 0 ? null : value;
-    }
-
-    /** Formato de dinheiro do projecto: separador de milhares, duas casas, sufixo MT. */
-    private static String money(java.math.BigDecimal value) {
-        return value == null ? "—" : String.format("%,.2f MT", value);
-    }
-
-    private static String orEmpty(String value) {
-        return value == null ? "" : value;
+        HRLiabilitiesOperationsCoordinator.deliver(owner, table, liabilities, this::load);
     }
 }

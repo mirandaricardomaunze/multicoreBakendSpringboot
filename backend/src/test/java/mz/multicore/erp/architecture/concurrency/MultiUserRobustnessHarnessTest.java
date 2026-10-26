@@ -46,6 +46,17 @@ class MultiUserRobustnessHarnessTest {
     }
 
     @Test
+    void everyStockBalanceMutationUsesThePessimisticReservationLock() throws Exception {
+        assertThat(read("backend/src/main/java/mz/multicore/erp/modules/inventory/service/InventoryService.java"))
+                .contains("Stock stock = stockRepository.findForReservation")
+                .contains("BigDecimal current = stockRepository.findForReservation");
+        assertThat(read("backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java"))
+                .contains("Stock stock = stockRepository.findForReservation");
+        assertThat(read("backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferTransitService.java"))
+                .contains("Stock stock = stockRepository.findForReservation");
+    }
+
+    @Test
     void mutableCriticalAggregatesKeepOptimisticVersions() throws Exception {
         assertVersioned("backend/src/main/java/mz/multicore/erp/modules/inventory/model/Stock.java");
         assertVersioned("backend/src/main/java/mz/multicore/erp/modules/inventory/model/ProductBatch.java");

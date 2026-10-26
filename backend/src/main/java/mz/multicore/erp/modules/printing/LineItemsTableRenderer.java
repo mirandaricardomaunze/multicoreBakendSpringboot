@@ -81,6 +81,121 @@ public final class LineItemsTableRenderer {
         return table;
     }
 
+    /**
+     * Tabela de linhas do modelo corporativo canónico:
+     * Referência · Código de Barras · Designação · Qtd. · Emb. · Cx. · Valor unit. · IVA · Total (s/ IVA)
+     */
+    public static PdfPTable buildModelTable(List<Row> rows) {
+        float[] widths = new float[]{11f, 14f, 27f, 7f, 6.5f, 6.5f, 11f, 5f, 12f};
+        PdfPTable table = new PdfPTable(widths);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(6f);
+        table.setSpacingAfter(4f);
+
+        // Cabeçalhos
+        addModelHeaderCell(table, "Referência", Element.ALIGN_LEFT);
+        addModelHeaderCell(table, "Código de Barras", Element.ALIGN_LEFT);
+        addModelHeaderCell(table, "Designação", Element.ALIGN_LEFT);
+        addModelHeaderCell(table, "Qtd.", Element.ALIGN_RIGHT);
+        addModelHeaderCell(table, "Emb.", Element.ALIGN_RIGHT);
+        addModelHeaderCell(table, "Cx.", Element.ALIGN_RIGHT);
+        addModelHeaderCell(table, "Valor unit.", Element.ALIGN_RIGHT);
+        addModelHeaderCell(table, "IVA", Element.ALIGN_RIGHT);
+        addModelHeaderCell(table, "Total (s/ IVA)", Element.ALIGN_RIGHT);
+
+        // Linhas de Artigos
+        for (int i = 0; i < rows.size(); i++) {
+            Row row = rows.get(i);
+            boolean isLast = (i == rows.size() - 1);
+
+            BigDecimal subtotal = LineItemsTableRenderer.subtotal(row);
+            String ref = row.reference() != null && !row.reference().isBlank() ? row.reference().trim() : "—";
+            String barcode = row.barcode() != null && !row.barcode().isBlank() ? row.barcode().trim() : "—";
+            String desc = row.description() != null ? row.description().trim() : "";
+            String qty = row.quantity() != null ? row.quantity().stripTrailingZeros().toPlainString() : "0";
+            String emb = formatModelPackages(row);
+            String cx = formatModelBoxes(row);
+            String unitPrice = row.unitPrice() != null ? MoneyFormat.formatPlain(row.unitPrice()) + " MT" : "0,00 MT";
+            String vat = formatRate(row.taxRate());
+            String total = MoneyFormat.formatPlain(subtotal) + " MT";
+
+            addModelDataCell(table, ref, Element.ALIGN_LEFT, isLast);
+            addModelDataCell(table, barcode, Element.ALIGN_LEFT, isLast);
+            addModelDataCell(table, desc, Element.ALIGN_LEFT, isLast);
+            addModelDataCell(table, qty, Element.ALIGN_RIGHT, isLast);
+            addModelDataCell(table, emb, Element.ALIGN_RIGHT, isLast);
+            addModelDataCell(table, cx, Element.ALIGN_RIGHT, isLast);
+            addModelDataCell(table, unitPrice, Element.ALIGN_RIGHT, isLast);
+            addModelDataCell(table, vat, Element.ALIGN_RIGHT, isLast);
+            addModelDataCell(table, total, Element.ALIGN_RIGHT, isLast);
+        }
+
+        return table;
+    }
+
+    /** Quantidade em embalagens comerciais equivalentes para o modelo corporativo. */
+    static String formatModelPackages(Row row) {
+        if (!hasMultiLevelPackaging(row)) return "0";
+        int unitsPerPkg = (row.unitsPerPackage() != null && row.unitsPerPackage() > 0) ? row.unitsPerPackage() : 1;
+        BigDecimal packages = safeQuantity(row.quantity())
+                .divide(BigDecimal.valueOf(unitsPerPkg), 2, RoundingMode.HALF_UP);
+        if (packages.signum() == 0) return "0";
+        return packages.stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * Quantidade em caixas equivalentes com suporte a fração/percentagem decimal (ex.: 0.75 para 3 de 4 embalagens).
+     * Se não tiver caixa configurada, exibe "0.00" em vez de travessão.
+     */
+    static String formatModelBoxes(Row row) {
+        if (!hasMultiLevelPackaging(row)) return "0.00";
+        int pkgsPerBox = (row.packagesPerBox() != null && row.packagesPerBox() > 0) ? row.packagesPerBox() : 1;
+        int unitsPerPkg = (row.unitsPerPackage() != null && row.unitsPerPackage() > 0) ? row.unitsPerPackage() : 1;
+        long unitsPerBox = (long) pkgsPerBox * unitsPerPkg;
+        if (unitsPerBox <= 0) return "0.00";
+        BigDecimal boxes = safeQuantity(row.quantity())
+                .divide(BigDecimal.valueOf(unitsPerBox), 2, RoundingMode.HALF_UP);
+        if (boxes.signum() == 0) return "0.00";
+        return boxes.stripTrailingZeros().toPlainString();
+    }
+
+    private static boolean hasMultiLevelPackaging(Row row) {
+        if (row == null) return false;
+        int pkgs = row.packagesPerBox() != null ? row.packagesPerBox() : 1;
+        int units = row.unitsPerPackage() != null ? row.unitsPerPackage() : 1;
+        return pkgs > 1 || units > 1;
+    }
+
+    private static void addModelHeaderCell(PdfPTable table, String text, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, com.lowagie.text.FontFactory.getFont(com.lowagie.text.FontFactory.HELVETICA_BOLD, 8f, PdfTheme.BRAND)));
+        cell.setBorder(PdfPCell.TOP | PdfPCell.BOTTOM);
+        cell.setBorderWidthTop(0.75f);
+        cell.setBorderWidthBottom(0.75f);
+        cell.setBorderColorTop(PdfTheme.BRAND);
+        cell.setBorderColorBottom(PdfTheme.BRAND);
+        cell.setHorizontalAlignment(align);
+        cell.setPaddingTop(5f);
+        cell.setPaddingBottom(5f);
+        cell.setPaddingLeft(2f);
+        cell.setPaddingRight(2f);
+        table.addCell(cell);
+    }
+
+    private static void addModelDataCell(PdfPTable table, String text, int align, boolean isLast) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, com.lowagie.text.FontFactory.getFont(com.lowagie.text.FontFactory.HELVETICA, 8f, PdfTheme.TEXT)));
+        cell.setBorder(isLast ? PdfPCell.BOTTOM : PdfPCell.NO_BORDER);
+        if (isLast) {
+            cell.setBorderWidthBottom(0.75f);
+            cell.setBorderColorBottom(PdfTheme.BRAND);
+        }
+        cell.setHorizontalAlignment(align);
+        cell.setPaddingTop(4f);
+        cell.setPaddingBottom(4f);
+        cell.setPaddingLeft(2f);
+        cell.setPaddingRight(2f);
+        table.addCell(cell);
+    }
+
     private static List<Column> activeColumns(DocumentColumnsDTO cols) {
         List<Column> columns = new ArrayList<>();
         if (cols.barcode()) {

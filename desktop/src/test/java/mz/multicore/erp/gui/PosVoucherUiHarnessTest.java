@@ -13,6 +13,7 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -113,5 +114,38 @@ public class PosVoucherUiHarnessTest {
                 null, null, null, java.time.LocalDate.now().plusDays(10), "FULLY_REDEEMED", "admin"
         );
         assertFalse(fullyRedeemed.isActive());
+    }
+
+    @Test
+    @DisplayName("UI-VOUCH-06: consulta e confirmação de vale nunca executam HTTP no EDT")
+    void voucherRemoteCallsAreAsync() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/PosPaymentDialog.java"));
+        assertTrue(source.contains("UIHelper.submitAsync(checkVoucherBtn"));
+        assertTrue(source.contains(".setOnSaveAsync(() ->"));
+        assertFalse(source.contains(".setOnSave(() ->"));
+        assertTrue(source.contains("A VALIDAR VALE..."));
+    }
+
+    @Test
+    @DisplayName("UI-VOUCH-07: validação partilhada preserva estado, validade e saldo")
+    void sharedVoucherValidationPreservesBusinessRules() {
+        StoreVoucherDTO valid = voucher("ACTIVE", new BigDecimal("500"), LocalDate.now().plusDays(2));
+        assertSame(valid, PosPaymentDialog.validateVoucher(Optional.of(valid), new BigDecimal("200"), valid.code()));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> PosPaymentDialog.validateVoucher(Optional.empty(), BigDecimal.TEN, "VALE-X"));
+        assertThrows(IllegalArgumentException.class,
+                () -> PosPaymentDialog.validateVoucher(
+                        Optional.of(voucher("FULLY_REDEEMED", new BigDecimal("500"), LocalDate.now().plusDays(2))),
+                        new BigDecimal("200"), "VALE-X"));
+        assertThrows(IllegalArgumentException.class,
+                () -> PosPaymentDialog.validateVoucher(
+                        Optional.of(voucher("ACTIVE", new BigDecimal("100"), LocalDate.now().plusDays(2))),
+                        new BigDecimal("200"), "VALE-X"));
+    }
+
+    private StoreVoucherDTO voucher(String status, BigDecimal balance, LocalDate expiry) {
+        return new StoreVoucherDTO(10L, "VALE-TESTE", new BigDecimal("500"), balance, 1L,
+                null, "Cliente Teste", null, null, null, expiry, status, "admin");
     }
 }

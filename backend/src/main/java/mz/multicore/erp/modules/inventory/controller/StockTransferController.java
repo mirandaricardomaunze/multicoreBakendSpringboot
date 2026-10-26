@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.inventory.controller;
 
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
+import mz.multicore.erp.modules.inventory.dto.RejectStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.UpdateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.service.StockTransferService;
 import jakarta.validation.Valid;
@@ -43,7 +44,7 @@ public class StockTransferController {
             @RequestBody(required = false) @Valid mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest body) {
         return ResponseEntity.ok(body == null
                 ? transitService.receive(id, null)
-                : transitService.receive(id, body.notes(), body.lines()));
+                : transitService.receive(id, body.notes(), body.lines(), body.idempotencyKey()));
     }
 
     @GetMapping
@@ -84,8 +85,8 @@ public class StockTransferController {
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<StockTransferDTO> reject(@PathVariable Long id,
-                                                   @RequestBody(required = false) Map<String, String> body) {
-        String reason = body == null ? null : body.get("rejectionReason");
+                                                   @RequestBody(required = false) @Valid RejectStockTransferRequest body) {
+        String reason = body == null ? null : body.rejectionReason();
         return ResponseEntity.ok(stockTransferService.reject(id, reason));
     }
 

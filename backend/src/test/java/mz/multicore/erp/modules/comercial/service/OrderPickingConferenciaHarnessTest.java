@@ -1,0 +1,209 @@
+package mz.multicore.erp.modules.comercial.service;
+
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.comercial.dto.*;
+import mz.multicore.erp.modules.comercial.model.*;
+import mz.multicore.erp.modules.comercial.repository.OrderEventRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderLineRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.company.model.Company;
+import mz.multicore.erp.modules.inventory.model.Warehouse;
+import mz.multicore.erp.modules.inventory.service.InventoryService;
+import mz.multicore.erp.modules.printing.OrderPickingPrintService;
+import mz.multicore.erp.modules.printing.OrderPickingSheetPrintService;
+import mz.multicore.erp.modules.users.service.AppUserService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class OrderPickingConferenciaHarnessTest {
+
+    private ComercialService comercialService;
+    private OrderRepository orderRepository;
+    private OrderLineRepository orderLineRepository;
+    private OrderEventRepository eventRepository;
+    private InventoryService inventoryService;
+    private OrderPickingPrintService printService;
+    private OrderPickingSheetPrintService sheetPrintService;
+    private AppUserService appUserService;
+    private CustomerOrderFulfillmentService service;
+
+    private Company company;
+    private Warehouse warehouse;
+    private Client client;
+
+    @BeforeEach
+    void setup() {
+        comercialService = mock(ComercialService.class);
+        orderRepository = mock(OrderRepository.class);
+        orderLineRepository = mock(OrderLineRepository.class);
+        eventRepository = mock(OrderEventRepository.class);
+        inventoryService = mock(InventoryService.class);
+        printService = mock(OrderPickingPrintService.class);
+        sheetPrintService = mock(OrderPickingSheetPrintService.class);
+        appUserService = mock(AppUserService.class);
+
+        service = new CustomerOrderFulfillmentService(
+                comercialService, orderRepository, orderLineRepository, eventRepository,
+                inventoryService, printService, sheetPrintService, appUserService
+        );
+
+        company = new Company();
+        company.setId(1L);
+        company.setName("Distribuidora Global");
+
+        warehouse = new Warehouse();
+        warehouse.setId(10L);
+        warehouse.setName("Armazém Central");
+
+        client = new Client();
+        client.setId(20L);
+        client.setName("Mercearia Maputo");
+
+        CurrentUserContext.setCurrentCompanyId(1L);
+        CurrentUserContext.setCurrentUser("conferidor", "MANAGER");
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentUserContext.clear();
+    }
+
+    @Test
+    @DisplayName("getPickingDetails calcula correctamente as caixas e transporta códigos de barras")
+    void getPickingDetails_calculatesBoxesAndPackaging() {
+        Product p = new Product();
+        p.setId(5L);
+        p.setName("Leite Condensado");
+        p.setReference("LEI-01");
+        p.setBarcode("5601234567890");
+        p.setPackagesPerBox(24);
+        p.setUnitsPerPackage(1);
+
+        OrderLine line = new OrderLine();
+        line.setId(101L);
+        line.setProduct(p);
+        line.setQuantity(new BigDecimal("48")); // 2 caixas completas
+        line.setSeparatedQuantity(BigDecimal.ZERO);
+
+        Order order = new Order();
+        order.setId(1L);
+        order.setOrderNumber("ENC-001");
+        order.setStatus("AWAITING_SEPARATION");
+        order.setCompany(company);
+        order.setWarehouse(warehouse);
+        order.setClient(client);
+        order.setLines(new ArrayList<>(List.of(line)));
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        OrderPickingDetailsDTO details = service.getPickingDetails(1L);
+        assertNotNull(details);
+        assertEquals("ENC-001", details.orderNumber());
+        assertEquals("Mercearia Maputo", details.clientName());
+        assertEquals(1, details.lines().size());
+
+        OrderPickingLineDTO item = details.lines().get(0);
+        assertEquals("LEI-01", item.productReference());
+        assertEquals("5601234567890", item.barcode());
+        assertEquals(new BigDecimal("48"), item.requestedQuantity());
+        assertEquals(new BigDecimal("2.00"), item.boxes());
+        assertEquals(new BigDecimal("2.00"), details.totalBoxes());
+    }
+
+    @Test
+    @DisplayName("completeSeparationWithConfirmation actualiza quantidades conferidas e lotes bipados")
+    void completeSeparationWithConfirmation_updatesQuantitiesAndBatches() {
+        Product p = new Product();
+        p.setId(5L);
+        p.setName("Óleo 1L");
+        p.setPackagesPerBox(4);
+        p.setUnitsPerPackage(1);
+
+        OrderLine line = new OrderLine();
+        line.setId(101L);
+        line.setProduct(p);
+        line.setQuantity(new BigDecimal("12"));
+        line.setSeparatedQuantity(BigDecimal.ZERO);
+
+        Order order = new Order();
+        order.setId(1L);
+        order.setOrderNumber("ENC-001");
+        order.setStatus("IN_SEPARATION");
+        order.setCompany(company);
+        order.setWarehouse(warehouse);
+        order.setClient(client);
+        order.setLines(new ArrayList<>(List.of(line)));
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderDTO mockDto = mock(OrderDTO.class);
+        when(comercialService.toDTO(any(Order.class))).thenReturn(mockDto);
+
+        CompleteOrderPickingRequest request = new CompleteOrderPickingRequest(
+                1L,
+                "LEITOR-01",
+                "Conferido com sucesso na palete 3",
+                List.of(new OrderPickingConfirmationLineRequest(101L, new BigDecimal("12"), "LOTE-NOV-26"))
+        );
+
+        OrderDTO result = service.completeSeparationWithConfirmation(request);
+        assertEquals("SEPARATED", order.getStatus());
+        assertEquals(new BigDecimal("12"), line.getSeparatedQuantity());
+        assertEquals("LOTE-NOV-26", line.getBatchNumber());
+        verify(orderRepository).save(order);
+        verify(eventRepository).save(any(OrderEvent.class));
+    }
+
+    @Test
+    @DisplayName("completeSeparationWithConfirmation sem linhas explícitas assume 100% separado")
+    void completeSeparationWithConfirmation_emptyLinesAssumesFullQuantity() {
+        Product p = new Product();
+        p.setId(5L);
+        p.setName("Arroz");
+
+        OrderLine line = new OrderLine();
+        line.setId(101L);
+        line.setProduct(p);
+        line.setQuantity(new BigDecimal("10"));
+
+        Order order = new Order();
+        order.setId(1L);
+        order.setStatus("IN_SEPARATION");
+        order.setCompany(company);
+        order.setLines(new ArrayList<>(List.of(line)));
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderDTO mockDto = mock(OrderDTO.class);
+        when(comercialService.toDTO(any(Order.class))).thenReturn(mockDto);
+
+        CompleteOrderPickingRequest request = new CompleteOrderPickingRequest(1L, "TERM-01");
+        service.completeSeparationWithConfirmation(request);
+
+        assertEquals("SEPARATED", order.getStatus());
+        assertEquals(new BigDecimal("10"), line.getSeparatedQuantity());
+    }
+
+    @Test
+    @DisplayName("completeSeparationWithConfirmation rejeita encomenda já facturada")
+    void completeSeparationWithConfirmation_rejectsInvoicedOrder() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setStatus("INVOICED");
+        order.setCompany(company);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        CompleteOrderPickingRequest request = new CompleteOrderPickingRequest(1L, "TERM-01");
+        assertThrows(BusinessRuleException.class, () -> service.completeSeparationWithConfirmation(request));
+    }
+}

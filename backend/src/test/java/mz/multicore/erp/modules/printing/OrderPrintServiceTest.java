@@ -109,7 +109,7 @@ class OrderPrintServiceTest {
         // Estado no documento
         assertTrue(text.contains("EC-2026/1"), text);
         assertTrue(text.contains("Estado:"), text);
-        assertTrue(text.contains("Por facturar") || text.contains("Pendente de aprovação"), text);
+        assertTrue(text.contains("Por faturar") || text.contains("Por facturar") || text.contains("Pendente de aprovação"), text);
 
         // O traço sentinela de endereço não deve ser impresso
         assertFalse(text.contains("NUIT: 000000000\n—") || text.contains("000000000\n—"), "Não deve conter traço solto: " + text);
@@ -120,6 +120,11 @@ class OrderPrintServiceTest {
         // Validade fictícia e lote legado não devem poluir a descrição
         assertFalse(text.contains("Val: 31/12/9999"), "Não deve conter data fictícia 9999: " + text);
         assertFalse(text.contains("LEGACY-1"), "Não deve conter lote LEGACY-1 na descrição: " + text);
+
+        // Modelo canónico e coluna de Código de Barras
+        assertTrue(text.contains("Código de Barras"), "Devia conter a coluna Código de Barras: " + text);
+        assertTrue(text.contains("5601000000017"), "Devia conter o código de barras do artigo: " + text);
+        assertTrue(text.contains("TOTAL A PAGAR"), "Devia conter TOTAL A PAGAR: " + text);
     }
 
     @Test

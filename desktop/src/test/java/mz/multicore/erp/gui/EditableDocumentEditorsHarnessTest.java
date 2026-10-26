@@ -41,7 +41,8 @@ class EditableDocumentEditorsHarnessTest {
 
     @Test
     void ede02_encomendaFornecedorUsaMesmoEditorParaCriarActualizarEConsultar() throws Exception {
-        String panel = gui("PurchaseOrdersPanel.java");
+        String panel = gui("PurchaseOrdersPanel.java") + gui("PurchaseOrderEditorCoordinator.java")
+                + gui("PurchaseOrderOperationsCoordinator.java");
 
         assertThat(panel).contains("new CardLayout()", "new DocumentEditorHost(")
                 .contains("Editar / Consultar")

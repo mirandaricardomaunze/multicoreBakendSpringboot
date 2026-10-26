@@ -2,23 +2,16 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.desktop.client.FleetApiClient;
 import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.modules.fleet.dto.CreateVehicleRequest;
-import mz.multicore.erp.modules.fleet.dto.FuelLogDTO;
-import mz.multicore.erp.modules.fleet.dto.RecordFuelLogRequest;
 import mz.multicore.erp.modules.fleet.dto.VehicleDTO;
-import mz.multicore.erp.modules.fleet.model.FuelType;
 import mz.multicore.erp.modules.fleet.model.VehicleStatus;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +27,7 @@ public final class FleetPanel extends JPanel {
     private static final DecimalFormat CONSUMPTION_FMT = new DecimalFormat("#0.0 Km/L");
 
     private final FleetApiClient fleetApiClient;
+    private final FuelOperationsCoordinator fuelCoordinator;
 
     final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiActiveCount = new JLabel("0 Viaturas");
@@ -51,6 +45,7 @@ public final class FleetPanel extends JPanel {
 
     public FleetPanel(FleetApiClient fleetApiClient) {
         this.fleetApiClient = fleetApiClient;
+        this.fuelCoordinator = new FuelOperationsCoordinator(fleetApiClient);
 
         setLayout(new BorderLayout(0, 12));
         setBackground(UIHelper.BG_DARK);
@@ -128,18 +123,23 @@ public final class FleetPanel extends JPanel {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> loadVehicles());
 
+        ModernButton manifestBtn = UIHelper.createSecondaryButton("Manifestos de Carga");
+        manifestBtn.setIcon(UIHelper.icon("fas-route", 14));
+        manifestBtn.setToolTipText("Consultar e emitir manifestos de carga e rotas de distribuição");
+        manifestBtn.addActionListener(e -> FleetManifestsViewDialog.show(SwingUtilities.getWindowAncestor(this), fleetApiClient));
+
         ModernButton fuelBtn = UIHelper.createPrimaryButton("Registar Abastecimento");
         fuelBtn.setIcon(UIHelper.icon("fas-gas-pump", 14));
         fuelBtn.setToolTipText("Registar entrada de combustível e actualizar odómetro");
-        fuelBtn.addActionListener(e -> openFuelDialog());
+        fuelBtn.addActionListener(e -> fuelCoordinator.openFuelDialog(SwingUtilities.getWindowAncestor(this), currentVehicles, feedback, this::loadVehicles));
 
         ModernButton newVehicleBtn = UIHelper.createSuccessButton("Nova Viatura");
         newVehicleBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newVehicleBtn.setToolTipText("Registar nova viatura na frota da empresa");
-        newVehicleBtn.addActionListener(e -> openNewVehicleDialog());
+        newVehicleBtn.addActionListener(e -> VehicleFormDialog.show(SwingUtilities.getWindowAncestor(this), fleetApiClient, feedback, this::loadVehicles));
 
         card.add(UIHelper.tableCardTop("Inventário e Monitorização Operacional de Viaturas", filterBar,
-                refreshBtn, fuelBtn, newVehicleBtn), BorderLayout.NORTH);
+                refreshBtn, manifestBtn, fuelBtn, newVehicleBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         add(card, BorderLayout.CENTER);
@@ -151,6 +151,7 @@ public final class FleetPanel extends JPanel {
 
     private void loadVehicles() {
         feedback.clear();
+        if (fleetApiClient == null) return;
         SwingWorker<List<VehicleDTO>, Void> worker = new SwingWorker<>() {
             @Override
             protected List<VehicleDTO> doInBackground() {
@@ -214,235 +215,10 @@ public final class FleetPanel extends JPanel {
         kpiMaintenanceCount.setText(maintenance + " Viaturas");
 
         if (withConsumptionCount > 0) {
-            BigDecimal avg = totalConsumption.divide(BigDecimal.valueOf(withConsumptionCount), 1, java.math.RoundingMode.HALF_UP);
+            BigDecimal avg = totalConsumption.divide(BigDecimal.valueOf(withConsumptionCount), 1, RoundingMode.HALF_UP);
             kpiAvgConsumption.setText(CONSUMPTION_FMT.format(avg));
         } else {
             kpiAvgConsumption.setText("0.0 Km/L");
-        }
-    }
-
-    private void openNewVehicleDialog() {
-        Window parent = SwingUtilities.getWindowAncestor(this);
-
-        JTextField plateField = new JTextField(10);
-        JTextField makeField = new JTextField(15);
-        JTextField modelField = new JTextField(15);
-        JTextField yearField = new JTextField(String.valueOf(LocalDate.now().getYear()), 6);
-        JComboBox<FuelType> fuelCombo = new JComboBox<>(FuelType.values());
-        UIHelper.styleComboBox(fuelCombo);
-        fuelCombo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof FuelType f) {
-                    setText(f.label());
-                }
-                return this;
-            }
-        });
-        JTextField odoField = new JTextField("0", 10);
-        JTextField driverField = new JTextField(20);
-        DateField insuranceField = new DateField();
-        DateField inspectionField = new DateField();
-
-        JPanel form = UIHelper.createDialogForm(
-                "Matrícula *:", plateField,
-                "Marca *:", makeField,
-                "Modelo *:", modelField,
-                "Ano de Fabrico *:", yearField,
-                "Tipo de Combustível *:", fuelCombo,
-                "Odómetro Inicial (Km) *:", odoField,
-                "Condutor Habitual:", driverField,
-                "Validade do Seguro:", insuranceField,
-                "Validade da Inspecção:", inspectionField
-        );
-
-        ModernFormDialog dialog = new ModernFormDialog(parent, "Registar Nova Viatura", "fas-car",
-                "Adicionar veículo ao controlo da frota empresarial", form);
-
-        dialog.setOnSave(() -> {
-            String plate = plateField.getText().trim();
-            if (plate.isEmpty()) {
-                plateField.requestFocus();
-                throw new IllegalArgumentException("A matrícula é obrigatória.");
-            }
-            String make = makeField.getText().trim();
-            if (make.isEmpty()) {
-                makeField.requestFocus();
-                throw new IllegalArgumentException("A marca é obrigatória.");
-            }
-            String model = modelField.getText().trim();
-            if (model.isEmpty()) {
-                modelField.requestFocus();
-                throw new IllegalArgumentException("O modelo é obrigatório.");
-            }
-
-            int year;
-            try {
-                year = Integer.parseInt(yearField.getText().trim());
-                if (year < 1950 || year > 2100) throw new Exception();
-            } catch (Exception ex) {
-                yearField.requestFocus();
-                throw new IllegalArgumentException("Ano de fabrico inválido.");
-            }
-
-            BigDecimal odo;
-            try {
-                odo = new BigDecimal(odoField.getText().trim().replace(",", "."));
-                if (odo.compareTo(BigDecimal.ZERO) < 0) throw new Exception();
-            } catch (Exception ex) {
-                odoField.requestFocus();
-                throw new IllegalArgumentException("Odómetro não pode ser negativo.");
-            }
-
-            LocalDate insDate = null;
-            if (!insuranceField.getText().trim().isEmpty()) {
-                try {
-                    insDate = LocalDate.parse(insuranceField.getText().trim());
-                } catch (Exception ex) {
-                    insuranceField.requestFocus();
-                    throw new IllegalArgumentException("Data de seguro inválida. Use AAAA-MM-DD.");
-                }
-            }
-
-            LocalDate inspDate = null;
-            if (!inspectionField.getText().trim().isEmpty()) {
-                try {
-                    inspDate = LocalDate.parse(inspectionField.getText().trim());
-                } catch (Exception ex) {
-                    inspectionField.requestFocus();
-                    throw new IllegalArgumentException("Data de inspecção inválida. Use AAAA-MM-DD.");
-                }
-            }
-
-            CreateVehicleRequest req = new CreateVehicleRequest(
-                    plate,
-                    make,
-                    model,
-                    year,
-                    (FuelType) fuelCombo.getSelectedItem(),
-                    odo,
-                    driverField.getText().trim().isEmpty() ? null : driverField.getText().trim(),
-                    insDate,
-                    inspDate
-            );
-
-            fleetApiClient.createVehicle(req);
-        });
-
-        if (dialog.showDialog()) {
-            feedback.show(FeedbackType.SUCCESS, "Viatura registada com sucesso.");
-            loadVehicles();
-        }
-    }
-
-    private void openFuelDialog() {
-        if (currentVehicles.isEmpty()) {
-            feedback.show(FeedbackType.WARNING, "Registe primeiro pelo menos uma viatura.");
-            return;
-        }
-
-        Window parent = SwingUtilities.getWindowAncestor(this);
-
-        JComboBox<VehicleDTO> vehicleCombo = new JComboBox<>(currentVehicles.toArray(new VehicleDTO[0]));
-        UIHelper.styleComboBox(vehicleCombo);
-        vehicleCombo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof VehicleDTO v) {
-                    setText(v.licensePlate() + " - " + v.make() + " " + v.model() + " (Odóm: " + v.currentOdometerKm() + " Km)");
-                }
-                return this;
-            }
-        });
-
-        JTextField odoField = new JTextField(10);
-        JTextField litersField = new JTextField(8);
-        JTextField priceField = new JTextField("86.25", 8);
-        JTextField stationField = new JTextField(15);
-        JTextField driverField = new JTextField(15);
-
-        vehicleCombo.addActionListener(e -> {
-            VehicleDTO v = (VehicleDTO) vehicleCombo.getSelectedItem();
-            if (v != null) {
-                odoField.setText(v.currentOdometerKm().toPlainString());
-                if (v.assignedDriverName() != null) {
-                    driverField.setText(v.assignedDriverName());
-                }
-            }
-        });
-
-        if (vehicleCombo.getSelectedItem() != null) {
-            VehicleDTO v = (VehicleDTO) vehicleCombo.getSelectedItem();
-            odoField.setText(v.currentOdometerKm().toPlainString());
-            if (v.assignedDriverName() != null) driverField.setText(v.assignedDriverName());
-        }
-
-        JPanel form = UIHelper.createDialogForm(
-                "Viatura *:", vehicleCombo,
-                "Novo Odómetro (Km) *:", odoField,
-                "Litros Abastecidos *:", litersField,
-                "Preço por Litro (MT) *:", priceField,
-                "Posto de Combustível:", stationField,
-                "Condutor / Operador:", driverField
-        );
-
-        ModernFormDialog dialog = new ModernFormDialog(parent, "Registar Abastecimento", "fas-gas-pump",
-                "Apontamento de combustível e apuramento do rendimento Km/L", form);
-
-        dialog.setOnSave(() -> {
-            VehicleDTO v = (VehicleDTO) vehicleCombo.getSelectedItem();
-            if (v == null) throw new IllegalArgumentException("Selecione a viatura.");
-
-            BigDecimal odo;
-            try {
-                odo = new BigDecimal(odoField.getText().trim().replace(",", "."));
-                if (odo.compareTo(v.currentOdometerKm()) < 0) {
-                    throw new IllegalArgumentException("Odómetro não pode ser inferior ao actual (" + v.currentOdometerKm() + " Km).");
-                }
-            } catch (IllegalArgumentException iae) {
-                odoField.requestFocus();
-                throw iae;
-            } catch (Exception ex) {
-                odoField.requestFocus();
-                throw new IllegalArgumentException("Odómetro inválido.");
-            }
-
-            BigDecimal liters;
-            try {
-                liters = new BigDecimal(litersField.getText().trim().replace(",", "."));
-                if (liters.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
-            } catch (Exception ex) {
-                litersField.requestFocus();
-                throw new IllegalArgumentException("Quantidade de litros deve ser maior que zero.");
-            }
-
-            BigDecimal price;
-            try {
-                price = new BigDecimal(priceField.getText().trim().replace(",", "."));
-                if (price.compareTo(BigDecimal.ZERO) <= 0) throw new Exception();
-            } catch (Exception ex) {
-                priceField.requestFocus();
-                throw new IllegalArgumentException("Preço por litro deve ser positivo.");
-            }
-
-            RecordFuelLogRequest req = new RecordFuelLogRequest(
-                    v.id(),
-                    LocalDateTime.now(),
-                    odo,
-                    liters,
-                    price,
-                    stationField.getText().trim().isEmpty() ? null : stationField.getText().trim(),
-                    driverField.getText().trim().isEmpty() ? null : driverField.getText().trim()
-            );
-
-            fleetApiClient.recordFuel(req);
-        });
-
-        if (dialog.showDialog()) {
-            feedback.show(FeedbackType.SUCCESS, "Abastecimento registado e consumo actualizado.");
-            loadVehicles();
         }
     }
 
@@ -456,49 +232,6 @@ public final class FleetPanel extends JPanel {
         int modelRow = table.convertRowIndexToModel(row);
         if (modelRow >= currentVehicles.size()) return;
         VehicleDTO vehicle = currentVehicles.get(modelRow);
-
-        Window parent = SwingUtilities.getWindowAncestor(this);
-        JPanel detailsPanel = new JPanel(new BorderLayout(0, 10));
-        detailsPanel.setOpaque(false);
-
-        String[] cols = {"Data/Hora", "Odómetro (Km)", "Litros", "Preço/L", "Custo Total", "Distância", "Consumo (Km/L)", "Posto"};
-        DefaultTableModel histModel = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        JTable histTable = new JTable(histModel);
-        UIHelper.styleTable(histTable);
-        histTable.getColumnModel().getColumn(4).setCellRenderer(TableCellRenderers.money());
-
-        JScrollPane histScroll = new JScrollPane(histTable);
-        histScroll.setPreferredSize(new Dimension(750, 260));
-        detailsPanel.add(histScroll, BorderLayout.CENTER);
-
-        try {
-            List<FuelLogDTO> logs = fleetApiClient.listFuelLogs(vehicle.id());
-            for (FuelLogDTO l : logs) {
-                String dtStr = l.logTimestamp() != null ? l.logTimestamp().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "—";
-                String distStr = l.distanceTraveledSinceLastFillKm() != null ? l.distanceTraveledSinceLastFillKm().toPlainString() + " Km" : "—";
-                String consStr = l.consumptionRateKmPerLiter() != null && l.consumptionRateKmPerLiter().compareTo(BigDecimal.ZERO) > 0
-                        ? l.consumptionRateKmPerLiter().toPlainString() + " Km/L"
-                        : "—";
-
-                histModel.addRow(new Object[]{
-                        dtStr,
-                        l.odometerKm() + " Km",
-                        l.litersFilled() + " L",
-                        l.pricePerLiter() + " MT",
-                        l.totalCost(),
-                        distStr,
-                        consStr,
-                        l.gasStationName() != null ? l.gasStationName() : "—"
-                });
-            }
-        } catch (Exception ex) {
-            feedback.show(FeedbackType.ERROR, "Falha ao obter histórico de abastecimento: " + ex.getMessage());
-        }
-
-        ModernFormDialog dialog = new ModernFormDialog(parent, "Histórico de Abastecimentos: " + vehicle.licensePlate(),
-                "fas-gas-pump", "Registo cronológico de combustível e rendimento do motor", detailsPanel);
-        dialog.showDialog();
+        fuelCoordinator.showFuelHistoryDialog(SwingUtilities.getWindowAncestor(this), vehicle, feedback);
     }
 }

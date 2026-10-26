@@ -37,6 +37,25 @@ public class CustomerOrderFulfillmentController {
         return pdf(service.reprint(id, request), "reimpressao-separacao-" + id);
     }
 
+    @GetMapping("/{id}/picking-details")
+    public ResponseEntity<OrderPickingDetailsDTO> getPickingDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getPickingDetails(id));
+    }
+
+    @GetMapping("/{id}/picking-sheet-a4")
+    public ResponseEntity<ByteArrayResource> printA4(@PathVariable Long id,
+            @RequestParam(required = false) String terminal) {
+        return pdf(service.printForPickingA4(id, terminal), "guia-separacao-a4-" + id);
+    }
+
+    @PostMapping("/{id}/picking-confirm")
+    public ResponseEntity<OrderDTO> confirmPicking(@PathVariable Long id,
+            @RequestBody @Valid CompleteOrderPickingRequest request) {
+        CompleteOrderPickingRequest effective = new CompleteOrderPickingRequest(
+                id, request.terminalName(), request.notes(), request.lines());
+        return ResponseEntity.ok(service.completeSeparationWithConfirmation(effective));
+    }
+
     @PostMapping("/{id}/separate")
     public ResponseEntity<OrderDTO> separate(@PathVariable Long id, @RequestBody @Valid OrderActionRequest request) {
         return ResponseEntity.ok(service.completeSeparation(id, request));

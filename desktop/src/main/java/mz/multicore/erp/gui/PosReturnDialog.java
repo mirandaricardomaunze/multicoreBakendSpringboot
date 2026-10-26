@@ -171,7 +171,8 @@ final class PosReturnDialog {
         POSReturnRequest request = new POSReturnRequest(
                 CurrentUserContext.getUsername(), CurrentUserContext.getCurrentCompanyId(), targetInvoice.id(),
                 owner.warehousesList.get(warehouseReturnCombo.getSelectedIndex()).id(),
-                reasonField.getText().trim(), method, accountId, lines);
+                reasonField.getText().trim(), method, accountId, lines,
+                "RETURN-" + java.util.UUID.randomUUID());
 
         UIHelper.runWithProgress(owner, "A registar devolução", () -> owner.posApiClient.returnSale(request), (POSReturnResultDTO result) -> {
             CreditNoteDTO note = result.creditNote();
@@ -212,7 +213,7 @@ final class PosReturnDialog {
         codeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
         codeField.setHorizontalAlignment(JTextField.CENTER);
         codeField.setBackground(UIHelper.ROW_ALT);
-        codeField.setBorder(BorderFactory.createLineBorder(UIHelper.APPROVED_GREEN, 2, true));
+        codeField.setBorder(UIHelper.fieldBorder(UIHelper.APPROVED_GREEN, 2));
         codeField.setMaximumSize(new Dimension(300, 44));
         codeField.setAlignmentX(Component.CENTER_ALIGNMENT);
 

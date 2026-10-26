@@ -91,6 +91,11 @@ public class Invoice extends BaseEntity {
     @Column(name = "contingency_reference", length = 60)
     private String contingencyReference;
 
+    /** SHA-256 do pedido POS associado à chave de idempotência. Impede reutilizar a mesma chave
+     * com linhas, pagamentos ou contexto diferentes. */
+    @Column(name = "pos_request_fingerprint", length = 64)
+    private String posRequestFingerprint;
+
     public void addLine(InvoiceLine line) {
         lines.add(line);
         line.setInvoice(this);

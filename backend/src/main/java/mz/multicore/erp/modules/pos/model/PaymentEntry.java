@@ -48,4 +48,10 @@ public class PaymentEntry extends BaseEntity {
 
     @Column(name = "paid_at", nullable = false)
     private LocalDateTime paidAt = LocalDateTime.now();
+
+    @Column(name = "idempotency_key", length = 60)
+    private String idempotencyKey;
+
+    @Column(name = "request_fingerprint", length = 64)
+    private String requestFingerprint;
 }

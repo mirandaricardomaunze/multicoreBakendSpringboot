@@ -49,6 +49,8 @@ class TenantAccessServiceTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer token-ana");
         when(request.getHeader("X-Company-Id")).thenReturn("2");
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/api/comercial/orders");
         when(sessions.requireValid("token-ana")).thenReturn(
                 new AuthSessionService.AuthSession("token-ana", "ana", java.time.Instant.now(),
                         java.time.Instant.now().plusSeconds(3600)));

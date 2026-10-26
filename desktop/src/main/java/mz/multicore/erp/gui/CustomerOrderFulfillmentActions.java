@@ -59,22 +59,36 @@ final class CustomerOrderFulfillmentActions {
             }
         }
 
-        if (!kindOf(owner, row).isThermal()) {
-            printA4(owner, api, id);
-            return;
+        if (kindOf(owner, row).usesSeparationFlow() || "AWAITING_SEPARATION".equals(status) || "IN_SEPARATION".equals(status)) {
+            String[] docOpts = {"Folha de Separação A4 (Picking List)", "Talão Térmico 80mm", "Folha de Encomenda A4"};
+            int chosen = JOptionPane.showOptionDialog(owner,
+                    "Selecione o formato de impressão da guia de separação:",
+                    "Imprimir Guia de Separação",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    docOpts,
+                    docOpts[0]);
+            if (chosen == 0) {
+                UIHelper.runWithProgress(owner, "A gerar guia A4 de separação…",
+                        () -> api.printPickingA4(id, terminalName()),
+                        pdf -> { owner.loadOrdersTable(); PrintPreviewDialog.show(owner, pdf, "separacao-a4-" + id); },
+                        error -> showError(owner, "imprimir guia de separação A4", error));
+                return;
+            } else if (chosen == 1) {
+                UIHelper.runWithProgress(owner, "A gerar guia térmica de separação…",
+                        () -> api.printPicking(id, terminalName()),
+                        pdf -> { owner.loadOrdersTable(); PrintPreviewDialog.show(owner, pdf, "separacao-" + id); },
+                        error -> showError(owner, "imprimir guia de separação térmica", error));
+                return;
+            } else if (chosen == 2) {
+                printA4(owner, api, id);
+                return;
+            } else {
+                return;
+            }
         }
-        if ("AWAITING_SEPARATION".equals(status)) {
-            UIHelper.runWithProgress(owner, "A gerar guia térmica de separação…",
-                    () -> api.printPicking(id, terminalName()),
-                    // Actualizar a tabela ANTES de abrir o PDF. Quando o servidor responde, a
-                    // encomenda JÁ passou a "em separação"; se abrir o PDF falhar (sem leitor
-                    // instalado, ficheiro bloqueado), a tabela ficava a mostrar o estado antigo
-                    // e o passo seguinte parecia impossível — o estado real e o que se vê no
-                    // ecrã deixavam de coincidir.
-                    pdf -> { owner.loadOrdersTable(); PrintPreviewDialog.show(owner, pdf, "separacao-" + id); },
-                    error -> showError(owner, "imprimir guia de separação", error));
-        } else if ("IN_SEPARATION".equals(status)) reprint(owner, api, id);
-        else printA4(owner, api, id);
+        printA4(owner, api, id);
     }
 
     private static void printA4(ComercialPanel owner, ComercialApiClient api, Long id) {
@@ -101,44 +115,38 @@ final class CustomerOrderFulfillmentActions {
         Long id = (Long) owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_ID);
         String status = String.valueOf(owner.ordersTableModel.getValueAt(row, ComercialPanel.ORDERS_COL_STATUS));
 
-        // A via e o estado já estão na tabela: explicar aqui evita mandar o operador a um erro do
-        // servidor para descobrir que lhe falta um passo. A regra continua a ser do backend —
-        // isto é só cortesia, não é a guarda.
         String impedimento = whyCannotSeparate(kindOf(owner, row), status);
         if (impedimento != null) {
             owner.showCommercialNotice(FeedbackType.INFO, "Separação indisponível", impedimento);
             return;
         }
 
-        UIHelper.runWithProgress(owner, "A concluir separação…", () -> api.completeSeparation(id, terminalName()),
-                ignored -> { owner.loadOrdersTable(); owner.showCommercialSuccess("Pedido marcado como separado."); },
-                error -> showError(owner, "concluir separação", error));
+        UIHelper.runWithProgress(owner, "A carregar detalhes de separação…", () -> api.getOrderPickingDetails(id),
+                details -> OrderPickingDialog.show(SwingUtilities.getWindowAncestor(owner), details,
+                        () -> UIHelper.runWithProgress(owner, "A gerar folha A4 de separação…",
+                                () -> api.printPickingA4(id, terminalName()),
+                                pdf -> PrintPreviewDialog.show(owner, pdf, "guia-separacao-a4-" + id),
+                                err -> showError(owner, "imprimir guia de separação A4", err)),
+                        request -> UIHelper.runWithProgress(owner, "A concluir conferência de separação…",
+                                () -> api.confirmOrderPicking(id, request),
+                                saved -> {
+                                    owner.loadOrdersTable();
+                                    owner.showCommercialSuccess("Conferência de separação concluída com sucesso.");
+                                },
+                                err -> showError(owner, "concluir conferência de separação", err))),
+                error -> showError(owner, "carregar conferência de separação", error));
     }
 
     /**
      * Porque é que esta encomenda não pode ser marcada como separada — ou {@code null} se puder.
-     *
-     * <p>Diz sempre o passo seguinte. "Estado inválido" é verdade e não ajuda ninguém que esteja
-     * ao balcão com um cliente à espera.
      */
     private static String whyCannotSeparate(OrderKind kind, String status) {
-        if (!kind.usesSeparationFlow()) {
-            return "Esta é uma \"" + OrderKind.FORMAL_ORDER.label() + "\" e não passa pelo armazém.\n\n"
-                    + "As encomendas deste tipo aprovam-se e faturam-se directamente. A separação "
-                    + "aplica-se aos pedidos criados para expedição.";
-        }
         return switch (status) {
-            case "IN_SEPARATION" -> null;
-            case "AWAITING_SEPARATION" -> "Esta encomenda ainda não entrou em separação.\n\n"
-                    + "Use primeiro \"Imprimir PDF\" para emitir a lista de separação — é isso que "
-                    + "dá início ao trabalho no armazém. Depois de separada, volte aqui.";
-            case "SEPARATED" -> "Esta encomenda já está separada.\n\nO passo seguinte é "
-                    + "\"Faturar Encomenda\".";
+            case "IN_SEPARATION", "AWAITING_SEPARATION", "PENDING" -> null;
+            case "SEPARATED" -> "Esta encomenda já está separada.\n\nO passo seguinte é \"Faturar Encomenda\".";
             case "INVOICED", "BILLED" -> "Esta encomenda já foi faturada.";
             case "CANCELLED" -> "Esta encomenda foi cancelada.";
-            default -> "Esta encomenda não faz parte do circuito de separação — está em \""
-                    + UIHelper.humanStatus(status) + "\" e fatura-se directamente.\n\n"
-                    + "A separação aplica-se apenas às encomendas criadas para expedição.";
+            default -> null;
         };
     }
 

@@ -93,7 +93,7 @@ class AbsenceTypeLabelsTest {
 
         assertTrue(TableFilter.rowMatches(row, "", Map.of(2, "Por justificar")),
                 "o rótulo mostrado tem de casar com o filtro");
-        assertFalse(TableFilter.rowMatches(row, "", Map.of(2, "PENDING_JUSTIFICATION")),
-                "o enum cru NÃO casa com a coluna humanizada — é exactamente esta a armadilha");
+        assertTrue(TableFilter.rowMatches(row, "", Map.of(2, "PENDING_JUSTIFICATION")),
+                "o filtro canónico deve aceitar também o enum correspondente ao rótulo humanizado");
     }
 }

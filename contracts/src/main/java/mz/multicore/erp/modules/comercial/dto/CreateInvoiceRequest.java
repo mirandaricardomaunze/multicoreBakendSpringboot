@@ -3,19 +3,21 @@ package mz.multicore.erp.modules.comercial.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public record CreateInvoiceRequest(
     /** Opcional. Se nulo, a fatura é emitida para Consumidor Final usando walk-in client. */
-    Long clientId,
+    @Positive Long clientId,
 
     @NotNull(message = "O ID da empresa é obrigatório.")
-    Long companyId,
+    @Positive Long companyId,
 
     @NotNull(message = "O ID do armazém é obrigatório.")
-    Long warehouseId,
+    @Positive Long warehouseId,
 
     @NotEmpty(message = "A fatura deve conter pelo menos uma linha.")
     @Valid
@@ -25,10 +27,10 @@ public record CreateInvoiceRequest(
     LocalDate dueDate,
 
     /** Linha de negócio exclusiva (opcional). Se nula, aceita produtos mistos. */
-    Long businessUnitId,
+    @Positive Long businessUnitId,
 
     /** Nome do comprador a mostrar no documento quando emitido para Consumidor Final ou cliente avulso. */
-    String customerName
+    @Size(max = 160) String customerName
 ) {
 
     public CreateInvoiceRequest(Long clientId, Long companyId, Long warehouseId,

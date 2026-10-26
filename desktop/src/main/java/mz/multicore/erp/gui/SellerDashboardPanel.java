@@ -3,26 +3,15 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.POSApiClient;
+import mz.multicore.erp.gui.SellerDashboardViewCoordinator.SellerSnapshot;
 import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.modules.pos.dto.PosZReportDTO;
-import mz.multicore.erp.modules.pos.dto.TillSessionDTO;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingWorker;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.math.BigDecimal;
-import java.util.Optional;
+import java.awt.*;
 import java.util.function.Consumer;
 
 /** Painel operacional do vendedor, sem indicadores financeiros globais ou funções de gestão. */
@@ -48,57 +37,22 @@ public final class SellerDashboardPanel extends JPanel {
         setLayout(new BorderLayout(0, 14));
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(20, 22, 20, 22));
-        add(buildHeader(), BorderLayout.NORTH);
+        add(SellerDashboardViewCoordinator.buildHeader(welcomeLabel, cashStatus), BorderLayout.NORTH);
 
         JPanel content = new JPanel();
         content.setOpaque(false);
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.add(buildKpis());
+        content.add(SellerDashboardViewCoordinator.buildKpis(salesValue, salesCount, ordersValue, quotationsValue, this::action));
         content.add(Box.createVerticalStrut(14));
         content.add(buildQuickActions());
         add(content, BorderLayout.CENTER);
-    }
-
-    private JPanel buildHeader() {
-        JPanel header = new JPanel(new BorderLayout(12, 6));
-        header.setOpaque(false);
-        JPanel titles = new JPanel();
-        titles.setOpaque(false);
-        titles.setLayout(new BoxLayout(titles, BoxLayout.Y_AXIS));
-        welcomeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 22));
-        welcomeLabel.setForeground(UIHelper.TEXT_LIGHT);
-        JLabel subtitle = new JLabel("Venda rapidamente e acompanhe apenas a sua operação comercial.");
-        subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-        subtitle.setForeground(UIHelper.TEXT_MUTED);
-        titles.add(welcomeLabel);
-        titles.add(subtitle);
-        cashStatus.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        cashStatus.setForeground(UIHelper.ACCENT_CYAN);
-        header.add(titles, BorderLayout.WEST);
-        header.add(cashStatus, BorderLayout.EAST);
-        return header;
-    }
-
-    private JPanel buildKpis() {
-        JPanel grid = KpiCard.createGrid(4, 10, 10);
-        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, KpiCard.STANDARD_CARD_HEIGHT));
-        grid.add(KpiCard.createInteractiveCard("VENDAS NA SESSÃO", salesValue, "Apenas o seu caixa actual",
-                "fas-cash-register", UIHelper.APPROVED_GREEN, "Abrir o POS", () -> action("pos")));
-        grid.add(KpiCard.createInteractiveCard("ATENDIMENTOS", salesCount, "Vendas concluídas na sessão",
-                "fas-shopping-basket", UIHelper.ACCENT_CYAN, "Abrir o POS", () -> action("pos")));
-        grid.add(KpiCard.createInteractiveCard("ENCOMENDAS PENDENTES", ordersValue, "Operação comercial da empresa",
-                "fas-clipboard-list", UIHelper.ACCENT_BLUE, "Consultar encomendas", () -> action("orders")));
-        grid.add(KpiCard.createInteractiveCard("COTAÇÕES ABERTAS", quotationsValue, "Propostas que exigem seguimento",
-                "fas-file-signature", UIHelper.PENDING_YELLOW, "Consultar cotações", () -> action("quotations")));
-        return grid;
     }
 
     private JPanel buildQuickActions() {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(BorderFactory.createCompoundBorder(card.getBorder(), new EmptyBorder(16, 16, 16, 16)));
-        JLabel title = UIHelper.createSubheading("Acções rápidas do vendedor");
-        card.add(title, BorderLayout.NORTH);
+        card.add(UIHelper.createSubheading("Acções rápidas do vendedor"), BorderLayout.NORTH);
 
         JPanel actions = new JPanel(new GridLayout(2, 3, 10, 10));
         actions.setOpaque(false);
@@ -112,11 +66,11 @@ public final class SellerDashboardPanel extends JPanel {
         return card;
     }
 
-    private ModernButton actionButton(String text, String icon, java.awt.Color color, String action) {
+    private ModernButton actionButton(String text, String icon, Color color, String act) {
         ModernButton button = UIHelper.createSecondaryButton(text);
         button.setIcon(UIHelper.icon(icon, 16, color));
         button.setPreferredSize(new Dimension(180, 48));
-        button.addActionListener(event -> action(action));
+        button.addActionListener(event -> action(act));
         return button;
     }
 
@@ -125,42 +79,26 @@ public final class SellerDashboardPanel extends JPanel {
     }
 
     public void updateWelcomeMessage(String displayName) {
-        String name = displayName == null || displayName.isBlank() ? "Vendedor" : displayName.trim();
-        welcomeLabel.setText("Olá, " + name + ". Pronto para vender?");
+        welcomeLabel.setText(SellerDashboardViewCoordinator.formatWelcome(displayName));
     }
 
     public void refreshData() {
         int version = ++refreshVersion;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         String username = CurrentUserContext.getUsername();
-        new SwingWorker<Snapshot, Void>() {
-            @Override protected Snapshot doInBackground() {
-                Optional<TillSessionDTO> session = posApiClient.getActiveSession(username, companyId);
-                PosZReportDTO z = session.map(value -> posApiClient.getZReport(value.id())).orElse(null);
-                long pendingOrders = comercialApiClient.getPendingOrdersByCompany(companyId).size();
-                long openQuotations = comercialApiClient.getOpenQuotationsByCompany(companyId).size();
-                return new Snapshot(session.isPresent(), z == null ? BigDecimal.ZERO : z.totalSales(),
-                        z == null ? 0 : z.saleCount(), pendingOrders, openQuotations);
+        new SwingWorker<SellerSnapshot, Void>() {
+            @Override protected SellerSnapshot doInBackground() {
+                return SellerDashboardViewCoordinator.loadSnapshot(comercialApiClient, posApiClient, companyId, username);
             }
-
             @Override protected void done() {
                 if (version != refreshVersion) return;
                 try {
-                    Snapshot value = get();
-                    salesValue.setText(String.format("%,.2f MT", value.sales()));
-                    salesCount.setText(String.valueOf(value.saleCount()));
-                    ordersValue.setText(String.valueOf(value.pendingOrders()));
-                    quotationsValue.setText(String.valueOf(value.openQuotations()));
-                    cashStatus.setText(value.cashOpen() ? "Caixa aberto no seu nome" : "Caixa fechado — abra-o antes de vender");
-                    cashStatus.setForeground(value.cashOpen() ? UIHelper.APPROVED_GREEN : UIHelper.PENDING_YELLOW);
+                    SellerDashboardViewCoordinator.applySnapshot(get(), salesValue, salesCount,
+                            ordersValue, quotationsValue, cashStatus);
                 } catch (Exception error) {
-                    cashStatus.setText("Não foi possível actualizar agora. Use Actualizar para tentar novamente.");
-                    cashStatus.setForeground(UIHelper.PENDING_YELLOW);
+                    SellerDashboardViewCoordinator.applyLoadError(cashStatus);
                 }
             }
         }.execute();
     }
-
-    private record Snapshot(boolean cashOpen, BigDecimal sales, int saleCount,
-                            long pendingOrders, long openQuotations) { }
 }

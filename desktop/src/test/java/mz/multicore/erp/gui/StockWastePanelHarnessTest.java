@@ -45,7 +45,7 @@ public class StockWastePanelHarnessTest {
                 assertNotNull(panel.kpiRiskBatches);
 
                 assertNotNull(panel.wasteTable);
-                assertEquals(12, panel.wasteTable.getColumnCount(), "A tabela de quebras deve possuir 12 colunas operacionais");
+                assertEquals(13, panel.wasteTable.getColumnCount(), "A tabela de quebras deve possuir 13 colunas operacionais");
                 assertEquals(42, panel.wasteTable.getRowHeight(), "A tabela de quebras deve ter altura de linha de 42px para conforto visual");
                 assertEquals(42, panel.radarTable.getRowHeight(), "A tabela do radar de validades deve ter altura de linha de 42px");
                 assertNotNull(panel.periodFilterCombo, "O filtro de período deve estar presente na barra de topo");

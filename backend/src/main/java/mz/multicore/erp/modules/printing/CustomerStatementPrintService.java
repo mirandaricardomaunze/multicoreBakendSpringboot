@@ -88,8 +88,16 @@ public class CustomerStatementPrintService {
         if (stmt.address() != null && !stmt.address().isBlank()) {
             left.addElement(new Paragraph("Endereço: " + stmt.address(), PdfTheme.smallFont()));
         }
+        StringBuilder contact = new StringBuilder();
         if (stmt.phone() != null && !stmt.phone().isBlank()) {
-            left.addElement(new Paragraph("Contacto: " + stmt.phone() + (stmt.email() != null ? " | " + stmt.email() : ""), PdfTheme.smallFont()));
+            contact.append("Tel: ").append(stmt.phone());
+        }
+        if (stmt.email() != null && !stmt.email().isBlank()) {
+            if (contact.length() > 0) contact.append(" | ");
+            contact.append("Email: ").append(stmt.email());
+        }
+        if (contact.length() > 0) {
+            left.addElement(new Paragraph("Contacto: " + contact, PdfTheme.smallFont()));
         }
 
         PdfPCell right = new PdfPCell();

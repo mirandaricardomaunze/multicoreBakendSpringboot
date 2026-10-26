@@ -13,5 +13,6 @@ public interface StoreVoucherRepository extends JpaRepository<StoreVoucher, Long
     Optional<StoreVoucher> findByCode(String code);
     List<StoreVoucher> findByCompanyIdOrderByIssuedAtDesc(Long companyId);
     List<StoreVoucher> findByClientIdAndCompanyIdOrderByIssuedAtDesc(Long clientId, Long companyId);
+    Optional<StoreVoucher> findByCreditNoteId(Long creditNoteId);
     boolean existsByCode(String code);
 }

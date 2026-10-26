@@ -86,7 +86,7 @@ final class CommercialInvoicesView {
         owner.linesTable.getColumnModel().getColumn(9).setCellRenderer(TableCellRenderers.money());
         owner.linesTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
         owner.linesTable.setSurrendersFocusOnKeystroke(true);
-        owner.linesTable.setToolTipText("Edite Produto, Qtd, Emb., Cx., desconto e série directamente.");
+        owner.linesTable.setToolTipText("Edite Produto, Qtd, Emb., Cx., desconto e série directamente (depois de emitida a fatura é imutável).");
         owner.linesTableModel.addTableModelListener(event -> {
             if (owner.syncingInvoiceGrid || event.getFirstRow() < 0
                     || event.getType() != javax.swing.event.TableModelEvent.UPDATE) return;
@@ -201,9 +201,10 @@ final class CommercialInvoicesView {
         JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
         cardHeader.setOpaque(false);
         cardHeader.add(UIHelper.createSubheading("Faturas Recentes"), BorderLayout.WEST);
-        cardHeader.add(mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()
-                ? UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn)
-                : UIHelper.actionsBar(refreshBtn, moreBtn), BorderLayout.EAST);
+        if (!mz.multicore.erp.desktop.session.SignedInUser.isManagerOrAdmin()) {
+            issueBtn.setVisible(false);
+        }
+        cardHeader.add(UIHelper.actionsBar(refreshBtn, moreBtn, issueBtn), BorderLayout.EAST);
 
         JPanel invFilters = UIHelper.filterBar(
                 new JComponent[]{invSearch,

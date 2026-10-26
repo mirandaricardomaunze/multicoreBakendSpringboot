@@ -2,22 +2,20 @@ package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
-import mz.multicore.erp.modules.inventory.dto.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 /** Lotes, validades, filtros e exportação. */
 final class StockBatchesPanel {
-    private static final String MASK = "•••";
     private final StockPanel owner;
-    StockBatchesPanel(StockPanel owner) { this.owner = owner; }
+    private final StockBatchesViewCoordinator coordinator = new StockBatchesViewCoordinator();
+
+    StockBatchesPanel(StockPanel owner) {
+        this.owner = owner;
+    }
 
     public JPanel buildPanel() {
         JPanel tab = new JPanel(new BorderLayout(0, 8));
@@ -29,11 +27,12 @@ final class StockBatchesPanel {
         addBatchBtn.addActionListener(e -> owner.createBatchEntryDialog(null));
         ModernButton exportBtn = UIHelper.createSecondaryButton("Exportar PDF");
         exportBtn.setIcon(UIHelper.icon("fas-file-pdf", 14));
-        exportBtn.addActionListener(e -> exportBatchesPdf());
+        exportBtn.addActionListener(e -> coordinator.exportBatchesPdf(owner));
+
         owner.batchWarehouseCombo = new JComboBox<>();
         UIHelper.styleComboBox(owner.batchWarehouseCombo);
         owner.batchWarehouseCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
-        owner.batchWarehouseCombo.addActionListener(e -> filterBatches());
+        owner.batchWarehouseCombo.addActionListener(e -> coordinator.filterBatches(owner));
 
         owner.batchExpirationCombo = new JComboBox<>(new String[]{
                 "Todos os lotes",
@@ -44,17 +43,17 @@ final class StockBatchesPanel {
         });
         UIHelper.styleComboBox(owner.batchExpirationCombo);
         owner.batchExpirationCombo.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
-        owner.batchExpirationCombo.addActionListener(e -> filterBatches());
+        owner.batchExpirationCombo.addActionListener(e -> coordinator.filterBatches(owner));
 
         owner.batchBusinessUnitCombo = new JComboBox<>();
         owner.batchBusinessUnitCombo.addItem("Todos os negócios");
         UIHelper.styleComboBox(owner.batchBusinessUnitCombo);
         owner.batchBusinessUnitCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
-        owner.batchBusinessUnitCombo.addActionListener(e -> filterBatches());
+        owner.batchBusinessUnitCombo.addActionListener(e -> coordinator.filterBatches(owner));
 
         owner.batchSearchField = new SearchField("Pesquisar por SKU, nome ou lote…");
         owner.batchSearchField.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
-        UIHelper.onTextChange(owner.batchSearchField, this::filterBatches);
+        UIHelper.onTextChange(owner.batchSearchField, () -> coordinator.filterBatches(owner));
 
         ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
         peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
@@ -97,46 +96,14 @@ final class StockBatchesPanel {
         UIHelper.styleTable(owner.batchesTable);
         owner.batchesTable.setAutoCreateRowSorter(true);
         UIHelper.ensureHeadersFit(owner.batchesTable);
-        TableQuickPeekController peekController = TableQuickPeekController.install(owner.batchesTable, card, (peek, mr) -> {
-            if (mr < 0 || mr >= owner.batchesModel.getRowCount()) return;
-            String sku = String.valueOf(owner.batchesModel.getValueAt(mr, 0));
-            String name = String.valueOf(owner.batchesModel.getValueAt(mr, 1));
-            String wh = String.valueOf(owner.batchesModel.getValueAt(mr, 2));
-            String batch = String.valueOf(owner.batchesModel.getValueAt(mr, 3));
-            String exp = String.valueOf(owner.batchesModel.getValueAt(mr, 4));
-            String days = String.valueOf(owner.batchesModel.getValueAt(mr, 5));
-            String qty = String.valueOf(owner.batchesModel.getValueAt(mr, 6));
-            String status = String.valueOf(owner.batchesModel.getValueAt(mr, 7));
-
-            peek.setTitle("Lote " + batch);
-            peek.setSubtitle(name + " (" + sku + ")");
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("Armazém", wh, false),
-                    new QuickPeekPanel.PeekItem("Nº Lote", batch, false),
-                    new QuickPeekPanel.PeekItem("Linha de Negócio", String.valueOf(owner.batchesModel.getValueAt(mr, 8)), false),
-                    new QuickPeekPanel.PeekItem("Validade", exp, false),
-                    new QuickPeekPanel.PeekItem("Dias Restantes", days, false),
-                    new QuickPeekPanel.PeekItem("Quantidade", qty, true),
-                    new QuickPeekPanel.PeekItem("Estado", status, false)
-            ));
-            peek.getOpenFullButton().setText("Ficha do Artigo");
-            peek.setOnOpenFullAction(v -> {
-                if (owner.batchesList != null && mr < owner.batchesList.size()) {
-                    var b = owner.batchesList.get(mr);
-                    if (b != null && b.productId() != null) {
-                        owner.showProductDetailDialog(b.productId());
-                    } else {
-                        owner.createBatchEntryDialog(null);
-                    }
-                }
-            });
-        });
+        TableQuickPeekController peekController = TableQuickPeekController.install(owner.batchesTable, card,
+                (peek, mr) -> coordinator.populateQuickPeek(peek, mr, owner));
         peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         JScrollPane scroll = new JScrollPane(owner.batchesTable);
         UIHelper.styleScrollPane(scroll);
         card.add(scroll, BorderLayout.CENTER);
-        card.add(mz.multicore.erp.gui.components.ClientTablePagination.install(owner.batchesTable), BorderLayout.SOUTH);
+        card.add(ClientTablePagination.install(owner.batchesTable), BorderLayout.SOUTH);
         tab.add(card, BorderLayout.CENTER);
         return tab;
     }
@@ -144,148 +111,8 @@ final class StockBatchesPanel {
     public void refresh() {
         if (owner.batchesModel == null) return;
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        UIHelper.loadAsync(owner, () -> owner.inventoryApiClient.findBatchesByCompany(companyId), this::applyBatches,
+        UIHelper.loadAsync(owner, () -> owner.inventoryApiClient.findBatchesByCompany(companyId),
+                loaded -> coordinator.applyBatches(owner, loaded),
                 error -> owner.showStockLoadError("lotes", error));
-    }
-
-    private void applyBatches(List<ProductBatchDTO> loaded) {
-        owner.batchesList = loaded;
-
-        // Sync the batch warehouse combo with the warehouses list (skipping the first time)
-        if (owner.batchWarehouseCombo != null) {
-            Object selected = owner.batchWarehouseCombo.getSelectedItem();
-            owner.batchWarehouseCombo.removeAllItems();
-            owner.batchWarehouseCombo.addItem("Todos os Armazéns");
-            for (WarehouseDTO w : owner.warehousesList) {
-                owner.batchWarehouseCombo.addItem(w.name());
-            }
-            if (selected != null) owner.batchWarehouseCombo.setSelectedItem(selected);
-        }
-        if (owner.batchBusinessUnitCombo != null) {
-            Object selectedBu = owner.batchBusinessUnitCombo.getSelectedItem();
-            java.util.Set<String> bus = new java.util.TreeSet<>();
-            for (var b : owner.batchesList) {
-                if (b.businessUnitName() != null && !b.businessUnitName().isBlank()) {
-                    bus.add(b.businessUnitName());
-                }
-            }
-            owner.batchBusinessUnitCombo.removeAllItems();
-            owner.batchBusinessUnitCombo.addItem("Todos os negócios");
-            owner.batchBusinessUnitCombo.addItem("—");
-            for (String n : bus) owner.batchBusinessUnitCombo.addItem(n);
-            if (selectedBu != null) owner.batchBusinessUnitCombo.setSelectedItem(selectedBu);
-        }
-        updateBatchesSummary();
-        filterBatches();
-    }
-
-    /** Resumo proativo: conta lotes (com stock) vencidos e a vencer em ≤ {@link #owner.EXPIRY_SOON_DAYS} dias. */
-    private void updateBatchesSummary() {
-        if (owner.batchesSummary == null) return;
-        LocalDate today = LocalDate.now();
-        long expired = 0;
-        long soon = 0;
-        for (var b : owner.batchesList) {
-            if (b.expirationDate() == null) continue;
-            if (b.quantity() == null || b.quantity().compareTo(BigDecimal.ZERO) <= 0) continue;
-            long days = java.time.temporal.ChronoUnit.DAYS.between(today, b.expirationDate());
-            if (days < 0) expired++;
-            else if (days <= owner.EXPIRY_SOON_DAYS) soon++;
-        }
-        if (expired == 0 && soon == 0) {
-            owner.batchesSummary.setForeground(UIHelper.APPROVED_GREEN);
-            owner.batchesSummary.setText("Sem lotes vencidos ou a vencer em breve.");
-        } else {
-            owner.batchesSummary.setForeground(expired > 0 ? UIHelper.REJECTED_RED : UIHelper.PENDING_YELLOW);
-            owner.batchesSummary.setText(String.format("%d lote%s vencido%s · %d a vencer em ≤ %d dias",
-                    expired, expired == 1 ? "" : "s", expired == 1 ? "" : "s", soon, owner.EXPIRY_SOON_DAYS));
-        }
-    }
-
-    private void filterBatches() {
-        if (owner.batchesModel == null) return;
-        owner.batchesModel.setRowCount(0);
-        boolean hide = owner.stockHidden();
-
-        Long filterWarehouseId = null;
-        if (owner.batchWarehouseCombo != null) {
-            int idx = owner.batchWarehouseCombo.getSelectedIndex();
-            if (idx > 0 && (idx - 1) < owner.warehousesList.size()) {
-                filterWarehouseId = owner.warehousesList.get(idx - 1).id();
-            }
-        }
-
-        String wantBu = owner.batchBusinessUnitCombo != null && owner.batchBusinessUnitCombo.getSelectedIndex() > 0
-                ? String.valueOf(owner.batchBusinessUnitCombo.getSelectedItem()) : null;
-
-        String query = owner.batchSearchField == null ? "" : owner.batchSearchField.getText().trim().toLowerCase();
-        int expIdx = owner.batchExpirationCombo == null ? 0 : owner.batchExpirationCombo.getSelectedIndex();
-        java.time.LocalDate today = java.time.LocalDate.now();
-
-        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-        for (var b : owner.batchesList) {
-            if (filterWarehouseId != null && !b.warehouseId().equals(filterWarehouseId)) continue;
-            if (wantBu != null) {
-                String bBu = b.businessUnitName() != null && !b.businessUnitName().isBlank() ? b.businessUnitName() : "—";
-                if (!wantBu.equalsIgnoreCase(bBu)) continue;
-            }
-
-            if (!query.isEmpty()) {
-                String sku = b.sku() == null ? "" : b.sku().toLowerCase();
-                String name = b.productName() == null ? "" : b.productName().toLowerCase();
-                String lote = b.batchNumber() == null ? "" : b.batchNumber().toLowerCase();
-                if (!sku.contains(query) && !name.contains(query) && !lote.contains(query)) continue;
-            }
-
-            long daysToExp = b.expirationDate() == null
-                    ? Long.MAX_VALUE
-                    : java.time.temporal.ChronoUnit.DAYS.between(today, b.expirationDate());
-
-            boolean match = switch (expIdx) {
-                case 1 -> daysToExp < 0;                   // Vencidos
-                case 2 -> daysToExp >= 0 && daysToExp <= 30;
-                case 3 -> daysToExp >= 0 && daysToExp <= 90;
-                case 4 -> daysToExp > 90;                  // Válidos
-                default -> true;
-            };
-            if (!match) continue;
-
-            String status;
-            if (daysToExp == Long.MAX_VALUE) status = "—";
-            else if (daysToExp < 0) status = "VENCIDO";
-            else if (daysToExp <= 30) status = "VENCE EM BREVE";
-            else status = "VÁLIDO";
-
-            String daysCell = daysToExp == Long.MAX_VALUE ? "—" : String.valueOf(daysToExp);
-
-            owner.batchesModel.addRow(new Object[]{
-                    b.sku(),
-                    b.productName(),
-                    b.warehouseName(),
-                    b.batchNumber(),
-                    b.expirationDate() == null ? "—" : b.expirationDate().format(fmt),
-                    daysCell,
-                    hide ? MASK : String.format("%,.2f", b.quantity()),
-                    status,
-                    b.businessUnitName() != null && !b.businessUnitName().isBlank() ? b.businessUnitName() : "—"
-            });
-        }
-    }
-
-    private void exportBatchesPdf() {
-        if (owner.batchesTable.getRowCount() == 0) {
-            owner.showStockNotice(FeedbackType.INFO, "Sem dados para exportar", "Não existem lotes na vista actual.");
-            return;
-        }
-        mz.multicore.erp.gui.components.TableExportAction.export(owner, owner.printApiClient,
-                owner.batchesTable, "Lotes & Validades", "lotes-validades");
-    }
-
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setForeground(UIHelper.TEXT_MUTED);
-        label.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        return label;
     }
 }

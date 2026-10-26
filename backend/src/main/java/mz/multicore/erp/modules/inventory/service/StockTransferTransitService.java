@@ -119,10 +119,26 @@ public class StockTransferTransitService {
      */
     @Transactional
     public StockTransferDTO receive(Long id, String notes, List<ReceiveStockTransferRequest.ReceiveLine> receiptLines) {
+        return receive(id, notes, receiptLines, null);
+    }
+
+    @Transactional
+    public StockTransferDTO receive(Long id, String notes,
+                                    List<ReceiveStockTransferRequest.ReceiveLine> receiptLines,
+                                    String idempotencyKey) {
         PermissionGuard.requireManagerOrAdmin("confirmar a recepção de guias de transferência");
+        String normalizedKey = idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim();
+        String fingerprint = receiptFingerprint(notes, receiptLines);
         StockTransfer transfer = transferRepository
-                .findByIdWithLinesAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
+                .lockByIdAndCompanyId(id, CurrentUserContext.getCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
+        if (normalizedKey != null && normalizedKey.equals(transfer.getReceiptIdempotencyKey())) {
+            if (!fingerprint.equals(transfer.getReceiptRequestFingerprint())) {
+                throw new BusinessRuleException(
+                        "A chave de idempotência desta recepção já foi usada com dados diferentes.");
+            }
+            return StockTransferDtoMapper.toDTO(transfer);
+        }
         if (transfer.getStatus() != TransferStatus.IN_TRANSIT) {
             throw new BusinessRuleException(
                     "Só guias em trânsito podem ter a recepção confirmada. Estado atual: "
@@ -185,6 +201,8 @@ public class StockTransferTransitService {
         transfer.setReceivedAt(LocalDateTime.now());
         transfer.setReceivedBy(CurrentUserContext.getUsername());
         transfer.setReceiptNotes(notes == null || notes.isBlank() ? null : notes.trim());
+        transfer.setReceiptIdempotencyKey(normalizedKey);
+        transfer.setReceiptRequestFingerprint(normalizedKey == null ? null : fingerprint);
         StockTransfer saved = transferRepository.save(transfer);
         if (anyDiscrepancy) {
             auditLogService.logCurrent("STOCK_TRANSFER_RECEIVE_DISCREPANCY",
@@ -196,6 +214,36 @@ public class StockTransferTransitService {
                     "Recepção da guia " + saved.getTransferNumber() + " confirmada em '" + destination.getName() + "'.");
         }
         return StockTransferDtoMapper.toDTO(saved);
+    }
+
+    private static String receiptFingerprint(
+            String notes, List<ReceiveStockTransferRequest.ReceiveLine> receiptLines) {
+        StringBuilder canonical = new StringBuilder();
+        appendFingerprintPart(canonical, notes);
+        if (receiptLines != null) {
+            receiptLines.stream()
+                    .sorted(java.util.Comparator.comparing(
+                            ReceiveStockTransferRequest.ReceiveLine::lineId,
+                            java.util.Comparator.nullsFirst(Long::compareTo)))
+                    .forEach(line -> {
+                        appendFingerprintPart(canonical, line.lineId());
+                        appendFingerprintPart(canonical, line.receivedQuantity() == null ? null
+                                : line.receivedQuantity().stripTrailingZeros().toPlainString());
+                        appendFingerprintPart(canonical, line.discrepancyReason());
+                    });
+        }
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 indisponível no runtime Java.", impossible);
+        }
+    }
+
+    private static void appendFingerprintPart(StringBuilder target, Object value) {
+        String text = value == null ? "<null>" : value.toString().trim();
+        target.append(text.length()).append(':').append(text).append('|');
     }
 
     private Map<Long, ReceiveStockTransferRequest.ReceiveLine> indexReceiptLines(
@@ -266,7 +314,7 @@ public class StockTransferTransitService {
     }
 
     private void adjustStock(Product product, Warehouse warehouse, BigDecimal delta) {
-        Stock stock = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+        Stock stock = stockRepository.findForReservation(product.getId(), warehouse.getId())
                 .orElseGet(() -> {
                     Stock s = new Stock();
                     s.setProduct(product);

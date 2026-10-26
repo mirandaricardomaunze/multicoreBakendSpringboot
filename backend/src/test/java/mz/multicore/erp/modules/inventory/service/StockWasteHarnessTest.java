@@ -84,13 +84,19 @@ class StockWasteHarnessTest {
             if (sw.getId() == null) sw.setId(999L);
             return sw;
         });
+        when(wasteRepository.saveAndFlush(any(StockWaste.class))).thenAnswer(i -> {
+            StockWaste sw = i.getArgument(0);
+            if (sw.getId() == null) sw.setId(999L);
+            return sw;
+        });
 
         CurrentUserContext.setCurrentUser("operador", "OPERATOR");
+        CurrentUserContext.setCurrentCompanyId(1L);
     }
 
     @AfterEach
     void tearDown() {
-        CurrentUserContext.setCurrentUser(null, null);
+        CurrentUserContext.clear();
     }
 
     @Test
@@ -244,6 +250,53 @@ class StockWasteHarnessTest {
                 1L, 10L, 100L, null, new BigDecimal("-5"), WasteReason.EXPIRED, "Negativo"
         );
         assertThrows(BusinessRuleException.class, () -> service.registerWaste(negQty));
+    }
+
+    @Test
+    void registerWaste_replayIdentico_naoAbateStockNemCriaAprovacaoNovamente() {
+        CreateStockWasteRequest request = new CreateStockWasteRequest(
+                1L, 10L, 100L, null, new BigDecimal("10.000"), WasteReason.EXPIRED,
+                "Vencido", "WASTE-123");
+        when(wasteRepository.findByCompanyIdAndIdempotencyKey(1L, "WASTE-123"))
+                .thenReturn(Optional.empty());
+        when(inventoryService.registerMovement(any(), any(), any(), eq("WASTE"), any(), any(), any(), any()))
+                .thenReturn(new StockMovement());
+
+        service.registerWaste(request);
+        org.mockito.ArgumentCaptor<StockWaste> captor = org.mockito.ArgumentCaptor.forClass(StockWaste.class);
+        verify(wasteRepository).saveAndFlush(captor.capture());
+        StockWaste first = captor.getValue();
+        assertNotNull(first.getRequestFingerprint());
+
+        clearInvocations(wasteRepository, inventoryService);
+        when(wasteRepository.findByCompanyIdAndIdempotencyKey(1L, "WASTE-123"))
+                .thenReturn(Optional.of(first));
+
+        StockWasteDTO replay = service.registerWaste(request);
+
+        assertEquals(first.getId(), replay.id());
+        verifyNoInteractions(inventoryService);
+        verify(wasteRepository, never()).save(any());
+        verify(wasteRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void registerWaste_mesmaChaveComPayloadDiferente_eRejeitadoAntesDoStock() {
+        StockWaste previous = new StockWaste();
+        previous.setRequestFingerprint("fingerprint-diferente");
+        when(wasteRepository.findByCompanyIdAndIdempotencyKey(1L, "WASTE-456"))
+                .thenReturn(Optional.of(previous));
+        CreateStockWasteRequest request = new CreateStockWasteRequest(
+                1L, 10L, 100L, null, new BigDecimal("5"), WasteReason.DAMAGED,
+                "Caixa partida", "WASTE-456");
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.registerWaste(request));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verifyNoInteractions(inventoryService);
+        verify(wasteRepository, never()).save(any());
+        verify(wasteRepository, never()).saveAndFlush(any());
     }
 
     @Test

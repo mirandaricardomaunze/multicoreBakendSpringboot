@@ -18,14 +18,12 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 
 /** Casos de uso de emissão e aprovação de notas de crédito e débito. */
 public final class CommercialNotesPanel {
 
     private static final String[] CREDIT_REASONS = {"RETURN", "DISCOUNT", "ERROR", "CANCELLATION"};
-    private static final String[] DEBIT_REASONS = {"FREIGHT", "SURCHARGE", "CORRECTION", "OTHER"};
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ComercialApiClient comercialApiClient;
@@ -92,14 +90,16 @@ public final class CommercialNotesPanel {
                 .addAction("Rejeitar", UIHelper.icon("fas-times", 14, UIHelper.REJECTED_RED), this::rejectCredit)
                 .addAction("Aprovar", UIHelper.icon("fas-check", 14, UIHelper.APPROVED_GREEN), this::approveCredit);
         return buildTab("Notas de Crédito", creditTable,
-                new String[]{"RETURN", "DISCOUNT", "ERROR", "CANCELLATION"}, 4, 7,
+                CREDIT_REASONS, 4, 7,
                 UIHelper.createRefreshButton(this::loadCredits), more, create);
     }
 
     private JPanel buildDebitTab() {
         ModernButton create = UIHelper.createSuccessButton("Emitir Nota");
         create.setIcon(UIHelper.icon("fas-plus", 14));
-        create.addActionListener(e -> loadInvoices(this::showDebitDialog));
+        create.addActionListener(e -> loadInvoices(invoices ->
+                DebitNoteFormDialog.show(debitTab, debitApiClient, invoices, this::loadDebits,
+                        err -> showError(debitTab, "emitir nota de débito", err))));
         ActionMenuButton more = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE), this::printDebit)
                 .addAction("Rejeitar", UIHelper.icon("fas-times", 14, UIHelper.REJECTED_RED), this::rejectDebit)
@@ -114,11 +114,11 @@ public final class CommercialNotesPanel {
         JPanel tab = new JPanel(new BorderLayout(0, 12));
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
-        InlineFeedbackPanel feedback = table == creditTable ? creditFeedback : debitFeedback;
-        tab.add(feedback, BorderLayout.NORTH);
+        tab.add(table == creditTable ? creditFeedback : debitFeedback, BorderLayout.NORTH);
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
+
         JTextField search = TableFilter.searchField("Nº nota, fatura ou cliente…");
         JComboBox<String> reason = TableFilter.combo(withFirst("Todos os motivos", reasons));
         UIHelper.styleComboBox(reason);
@@ -136,30 +136,30 @@ public final class CommercialNotesPanel {
                 List.of(new TableFilter.ColumnFilter(reason, reasonColumn), new TableFilter.ColumnFilter(status, statusColumn)),
                 List.of(new TableFilter.PeriodFilter(period, 1)));
 
-        UIHelper.ensureHeadersFit(table);
-        JPanel filters = TableFilter.bar(
-                search,
+        UIHelper.ensureHeadersFit(creditTable);
+        UIHelper.ensureHeadersFit(debitTable);
+        JPanel filters = TableFilter.bar(search,
                 TableFilter.label("Motivo:"), reason,
                 TableFilter.label("Estado:"), status,
-                TableFilter.label("Período:"), period
-        );
+                TableFilter.label("Período:"), period);
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
+
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
+        TableQuickPeekController.install(table, card, (peek, mr) -> {
             int row = table.convertRowIndexToModel(mr);
             peek.setHeaderIcon("fas-file-invoice", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(table.getModel().getValueAt(row, 0)));
             peek.setSubtitle("Cliente: " + table.getModel().getValueAt(row, 2) + " • Data: " + table.getModel().getValueAt(row, 1));
             peek.setStatus(String.valueOf(table.getModel().getValueAt(row, statusColumn)), UIHelper.ACCENT_BLUE);
-            java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Fatura Associada", String.valueOf(table.getModel().getValueAt(row, 2)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Motivo", String.valueOf(table.getModel().getValueAt(row, reasonColumn)), false));
+            List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
+            items.add(new QuickPeekPanel.PeekItem("Fatura Associada", String.valueOf(table.getModel().getValueAt(row, 2)), false));
+            items.add(new QuickPeekPanel.PeekItem("Motivo", String.valueOf(table.getModel().getValueAt(row, reasonColumn)), false));
             int moneyCol = table == creditTable ? 6 : 5;
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Total", String.valueOf(table.getModel().getValueAt(row, moneyCol)), true));
+            items.add(new QuickPeekPanel.PeekItem("Valor Total", String.valueOf(table.getModel().getValueAt(row, moneyCol)), true));
             int printCol = table == creditTable ? 8 : 7;
             if (printCol < table.getModel().getColumnCount()) {
-                items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Vias Impressas", String.valueOf(table.getModel().getValueAt(row, printCol)), false));
+                items.add(new QuickPeekPanel.PeekItem("Vias Impressas", String.valueOf(table.getModel().getValueAt(row, printCol)), false));
             }
             peek.setItems(items);
         });
@@ -178,40 +178,19 @@ public final class CommercialNotesPanel {
             creditModel.setRowCount(0);
             for (CreditNoteDTO note : loaded) {
                 String bu = note.businessUnitName() != null && !note.businessUnitName().isBlank() ? note.businessUnitName() : "—";
-                creditModel.addRow(new Object[]{note.noteNumber(),
-                    note.issueDate().format(DATE_TIME), note.invoiceNumber(), note.clientName(), note.reason(),
-                    note.warehouseName() == null ? "-" : note.warehouseName(), note.totalAmount(), note.status(),
-                    printApiClient == null ? "—" : "A verificar…", bu});
+                creditModel.addRow(new Object[]{note.noteNumber(), note.issueDate().format(DATE_TIME),
+                        note.invoiceNumber(), note.clientName(), note.reason(),
+                        note.warehouseName() == null ? "-" : note.warehouseName(), note.totalAmount(), note.status(),
+                        printApiClient == null ? "—" : "A verificar…", bu});
             }
             UIHelper.ensureHeadersFit(creditTable);
             if (printApiClient != null && !loaded.isEmpty()) {
                 List<Long> ids = loaded.stream().map(CreditNoteDTO::id).toList();
-                UIHelper.loadAsync(creditTab,
-                        () -> printApiClient.getPrintStatuses(SensitiveDocumentType.CREDIT_NOTE, ids),
-                        this::applyCreditPrintStatuses,
-                        error -> {
-                            for (int r = 0; r < creditModel.getRowCount(); r++) {
-                                creditModel.setValueAt("Indisponível", r, 8);
-                            }
-                        });
+                UIHelper.loadAsync(creditTab, () -> printApiClient.getPrintStatuses(SensitiveDocumentType.CREDIT_NOTE, ids),
+                        st -> CommercialNotesOperationsCoordinator.applyPrintStatuses(creditNotes, creditModel, 8, st, CreditNoteDTO::id),
+                        err -> { for (int r = 0; r < creditModel.getRowCount(); r++) creditModel.setValueAt("Indisponível", r, 8); });
             }
         }, error -> showError(creditTab, "carregar notas de crédito", error));
-    }
-
-    private void applyCreditPrintStatuses(List<mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> statuses) {
-        Map<Long, mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> byId = statuses.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO::documentId, s -> s));
-        for (int row = 0; row < creditNotes.size() && row < creditModel.getRowCount(); row++) {
-            Long id = creditNotes.get(row).id();
-            mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO st = byId.get(id);
-            if (st == null || st.printCount() == 0) {
-                creditModel.setValueAt("Não impressa", row, 8);
-            } else {
-                String label = st.printCount() == 1 ? "1 via" : st.printCount() + " vias";
-                creditModel.setValueAt(label, row, 8);
-            }
-        }
     }
 
     private void loadDebits() {
@@ -221,37 +200,15 @@ public final class CommercialNotesPanel {
             debitModel.setRowCount(0);
             for (DebitNoteDTO note : loaded) debitModel.addRow(new Object[]{note.noteNumber(),
                     note.issueDate().format(DATE_TIME), note.invoiceNumber(), note.clientName(), note.reason(),
-                    note.totalAmount(), note.status(),
-                    printApiClient == null ? "—" : "A verificar…"});
+                    note.totalAmount(), note.status(), printApiClient == null ? "—" : "A verificar…"});
             UIHelper.ensureHeadersFit(debitTable);
             if (printApiClient != null && !loaded.isEmpty()) {
                 List<Long> ids = loaded.stream().map(DebitNoteDTO::id).toList();
-                UIHelper.loadAsync(debitTab,
-                        () -> printApiClient.getPrintStatuses(SensitiveDocumentType.DEBIT_NOTE, ids),
-                        this::applyDebitPrintStatuses,
-                        error -> {
-                            for (int r = 0; r < debitModel.getRowCount(); r++) {
-                                debitModel.setValueAt("Indisponível", r, 7);
-                            }
-                        });
+                UIHelper.loadAsync(debitTab, () -> printApiClient.getPrintStatuses(SensitiveDocumentType.DEBIT_NOTE, ids),
+                        st -> CommercialNotesOperationsCoordinator.applyPrintStatuses(debitNotes, debitModel, 7, st, DebitNoteDTO::id),
+                        err -> { for (int r = 0; r < debitModel.getRowCount(); r++) debitModel.setValueAt("Indisponível", r, 7); });
             }
         }, error -> showError(debitTab, "carregar notas de débito", error));
-    }
-
-    private void applyDebitPrintStatuses(List<mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> statuses) {
-        Map<Long, mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO> byId = statuses.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO::documentId, s -> s));
-        for (int row = 0; row < debitNotes.size() && row < debitModel.getRowCount(); row++) {
-            Long id = debitNotes.get(row).id();
-            mz.multicore.erp.modules.printing.dto.DocumentPrintStatusDTO st = byId.get(id);
-            if (st == null || st.printCount() == 0) {
-                debitModel.setValueAt("Não impressa", row, 7);
-            } else {
-                String label = st.printCount() == 1 ? "1 via" : st.printCount() + " vias";
-                debitModel.setValueAt(label, row, 7);
-            }
-        }
     }
 
     private CreditNoteDTO selectedCredit() {
@@ -271,24 +228,13 @@ public final class CommercialNotesPanel {
     }
 
     private void approveCredit() {
-        CreditNoteDTO selected = selectedCredit();
-        if (selected == null) return;
-        UIHelper.runWithProgress(creditTab, "A aprovar nota de crédito…", () -> creditApiClient.approve(selected.id()), approved -> {
-            String message = "Nota " + approved.noteNumber() + " aprovada.";
-            if ("RETURN".equals(approved.reason())) message += "\nStock devolvido ao armazém " + approved.warehouseName() + ".";
-            ToastManager.success(creditTab, message);
-            loadCredits();
-        }, error -> showError(creditTab, "aprovar nota de crédito", error));
+        CommercialNotesOperationsCoordinator.approveCredit(creditTab, selectedCredit(), creditApiClient,
+                this::loadCredits, err -> showError(creditTab, "aprovar nota de crédito", err));
     }
 
     private void rejectCredit() {
-        CreditNoteDTO selected = selectedCredit();
-        if (selected == null) return;
-        String reason = UIHelper.promptRequiredText("Rejeitar Nota de Crédito", "fas-times-circle",
-                "Indique o motivo da rejeição", "Motivo da rejeição:");
-        if (reason == null) return;
-        UIHelper.runWithProgress(creditTab, "A rejeitar nota de crédito…", () -> creditApiClient.reject(selected.id(), reason),
-                ignored -> loadCredits(), error -> showError(creditTab, "rejeitar nota de crédito", error));
+        CommercialNotesOperationsCoordinator.rejectCredit(creditTab, selectedCredit(), creditApiClient,
+                this::loadCredits, err -> showError(creditTab, "rejeitar nota de crédito", err));
     }
 
     private void printCredit() {
@@ -300,22 +246,13 @@ public final class CommercialNotesPanel {
     }
 
     private void approveDebit() {
-        DebitNoteDTO selected = selectedDebit();
-        if (selected == null) return;
-        UIHelper.runWithProgress(debitTab, "A aprovar nota de débito…", () -> debitApiClient.approve(selected.id()), ignored -> {
-            ToastManager.success(debitTab, "Nota " + selected.noteNumber() + " aprovada.");
-            loadDebits();
-        }, error -> showError(debitTab, "aprovar nota de débito", error));
+        CommercialNotesOperationsCoordinator.approveDebit(debitTab, selectedDebit(), debitApiClient,
+                this::loadDebits, err -> showError(debitTab, "aprovar nota de débito", err));
     }
 
     private void rejectDebit() {
-        DebitNoteDTO selected = selectedDebit();
-        if (selected == null) return;
-        String reason = UIHelper.promptRequiredText("Rejeitar Nota de Débito", "fas-times-circle",
-                "Indique o motivo da rejeição", "Motivo da rejeição:");
-        if (reason == null) return;
-        UIHelper.runWithProgress(debitTab, "A rejeitar nota de débito…", () -> debitApiClient.reject(selected.id(), reason),
-                ignored -> loadDebits(), error -> showError(debitTab, "rejeitar nota de débito", error));
+        CommercialNotesOperationsCoordinator.rejectDebit(debitTab, selectedDebit(), debitApiClient,
+                this::loadDebits, err -> showError(debitTab, "rejeitar nota de débito", err));
     }
 
     private void printDebit() {
@@ -348,8 +285,11 @@ public final class CommercialNotesPanel {
     }
 
     private void showCreditDialog(List<InvoiceDTO> invoices) {
-        JComboBox<String> invoice = invoiceCombo(invoices);
-        JComboBox<String> reason = styledCombo(CREDIT_REASONS);
+        JComboBox<String> invoice = new JComboBox<>();
+        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.clientName());
+        UIHelper.styleComboBox(invoice);
+        JComboBox<String> reason = new JComboBox<>(CREDIT_REASONS);
+        UIHelper.styleComboBox(reason);
         JComboBox<String> warehouse = new JComboBox<>();
         for (WarehouseDTO item : warehouses.get()) warehouse.addItem(item.name());
         UIHelper.styleComboBox(warehouse);
@@ -385,9 +325,10 @@ public final class CommercialNotesPanel {
             }
             if (requestedLines.isEmpty()) throw new IllegalArgumentException("Indique uma quantidade a devolver em pelo menos uma linha.");
             List<WarehouseDTO> available = warehouses.get();
+            String desc = description.getText() == null || description.getText().isBlank() ? null : description.getText().trim();
             CreateCreditNoteRequest request = new CreateCreditNoteRequest(invoices.get(invoice.getSelectedIndex()).id(),
                     String.valueOf(reason.getSelectedItem()), available.isEmpty() ? null : available.get(warehouse.getSelectedIndex()).id(),
-                    blank(description.getText()), requestedLines);
+                    desc, requestedLines);
             UIHelper.runWithProgress(creditTab, "A emitir nota de crédito…", () -> creditApiClient.create(request), created -> {
                 ToastManager.success(creditTab, "Nota " + created.noteNumber() + " emitida; pendente de aprovação.");
                 loadCredits();
@@ -410,74 +351,6 @@ public final class CommercialNotesPanel {
         }, error -> showError(creditTab, "carregar devoluções", error));
     }
 
-    private void showDebitDialog(List<InvoiceDTO> invoices) {
-        JComboBox<String> invoice = invoiceCombo(invoices);
-        JComboBox<String> reason = styledCombo(DEBIT_REASONS);
-        JTextField description = new JTextField();
-        UIHelper.styleTextField(description);
-        DefaultTableModel lines = new DefaultTableModel(new String[]{"Descrição", "Valor", "IVA (0.16)"}, 0);
-        lines.addRow(new Object[]{"Frete adicional", "0", "0"});
-        JTable lineTable = new JTable(lines);
-        UIHelper.styleTable(lineTable);
-        ModernButton add = UIHelper.createAddLineButton();
-        add.addActionListener(e -> lines.addRow(new Object[]{"", "0", "0"}));
-        ModernButton remove = UIHelper.createDangerButton("Remover");
-        remove.setIcon(UIHelper.icon("fas-minus", 14));
-        remove.addActionListener(e -> {
-            int sel = lineTable.getSelectedRow();
-            if (sel >= 0) {
-                lines.removeRow(sel);
-            } else {
-                ToastManager.show(UIHelper.mainWindow, FeedbackType.WARNING, "Seleccione na grelha a linha que pretende remover da nota.");
-            }
-        });
-        JPanel buttons = UIHelper.actionsBar(remove, add);
-        JScrollPane scroll = new JScrollPane(lineTable);
-        UIHelper.styleScrollPane(scroll);
-        JPanel tablePanel = new JPanel(new BorderLayout(0, 6));
-        tablePanel.setOpaque(false);
-        tablePanel.add(buttons, BorderLayout.NORTH);
-        tablePanel.add(scroll, BorderLayout.CENTER);
-        JPanel form = UIHelper.createDialogForm("Fatura:", invoice, "Motivo:", reason, "Descrição:", description);
-        JPanel content = new JPanel(new BorderLayout(0, 10));
-        content.setOpaque(false); content.add(form, BorderLayout.NORTH); content.add(tablePanel, BorderLayout.CENTER);
-        if (!new ModernFormDialog(UIHelper.mainWindow, "Emitir Nota de Débito", "fas-file-invoice-dollar",
-                "Débito adicional sobre fatura", content).setConfirmButton("Emitir", "fas-check").showDialog()) return;
-        if (lineTable.isEditing()) lineTable.getCellEditor().stopCellEditing();
-        try {
-            List<CreateDebitNoteLineRequest> requestedLines = new ArrayList<>();
-            for (int row = 0; row < lines.getRowCount(); row++) {
-                String text = String.valueOf(lines.getValueAt(row, 0)).trim();
-                if (text.isEmpty()) throw new IllegalArgumentException("Descrição da linha não pode estar vazia.");
-                requestedLines.add(new CreateDebitNoteLineRequest(text,
-                        new BigDecimal(String.valueOf(lines.getValueAt(row, 1)).trim().replace(',', '.')),
-                        new BigDecimal(String.valueOf(lines.getValueAt(row, 2)).trim().replace(',', '.'))));
-            }
-            if (requestedLines.isEmpty()) throw new IllegalArgumentException("Adicione pelo menos uma linha.");
-            CreateDebitNoteRequest request = new CreateDebitNoteRequest(invoices.get(invoice.getSelectedIndex()).id(),
-                    String.valueOf(reason.getSelectedItem()), blank(description.getText()), requestedLines);
-            UIHelper.runWithProgress(debitTab, "A emitir nota de débito…", () -> debitApiClient.create(request), created -> {
-                ToastManager.success(debitTab, "Nota " + created.noteNumber() + " emitida; pendente de aprovação.");
-                loadDebits();
-            }, error -> showError(debitTab, "emitir nota de débito", error));
-        } catch (RuntimeException error) {
-            showNotice(debitTab, FeedbackType.ERROR, "Dados da nota de débito inválidos", error.getMessage());
-        }
-    }
-
-    private static JComboBox<String> invoiceCombo(List<InvoiceDTO> invoices) {
-        JComboBox<String> combo = new JComboBox<>();
-        for (InvoiceDTO invoice : invoices) combo.addItem(invoice.invoiceNumber() + " — " + invoice.clientName());
-        UIHelper.styleComboBox(combo);
-        return combo;
-    }
-
-    private static JComboBox<String> styledCombo(String[] values) {
-        JComboBox<String> combo = new JComboBox<>(values);
-        UIHelper.styleComboBox(combo);
-        return combo;
-    }
-
     private static String[] withFirst(String first, String[] values) {
         String[] combined = new String[values.length + 1];
         combined[0] = first;
@@ -485,19 +358,11 @@ public final class CommercialNotesPanel {
         return combined;
     }
 
-    private static String blank(String value) { return value == null || value.isBlank() ? null : value.trim(); }
-
     private void showError(Component owner, String action, Throwable error) {
         showNotice(owner, FeedbackType.ERROR, "Não foi possível " + action, error.getMessage());
     }
 
     private void showNotice(Component owner, FeedbackType type, String title, String message) {
         (owner == debitTab ? debitFeedback : creditFeedback).show(type, title, message, null, null);
-    }
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        label.setForeground(UIHelper.TEXT_MUTED);
-        return label;
     }
 }

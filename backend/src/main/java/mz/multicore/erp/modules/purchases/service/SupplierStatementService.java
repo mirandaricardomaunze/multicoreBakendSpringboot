@@ -59,8 +59,8 @@ public class SupplierStatementService {
                 continue;
             }
 
-            LocalDate pDate = p.getPurchaseDate().toLocalDate();
-            LocalDateTime ts = p.getCreatedAt() != null ? p.getCreatedAt() : p.getPurchaseDate();
+            LocalDate pDate = p.getPurchaseDate() != null ? p.getPurchaseDate().toLocalDate() : (p.getCreatedAt() != null ? p.getCreatedAt().toLocalDate() : LocalDate.now());
+            LocalDateTime ts = p.getCreatedAt() != null ? p.getCreatedAt() : (p.getPurchaseDate() != null ? p.getPurchaseDate() : pDate.atStartOfDay());
 
             java.util.Set<String> bus = p.getLines() != null ? p.getLines().stream()
                     .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
@@ -75,9 +75,9 @@ public class SupplierStatementService {
             events.add(new RawSupplierMovement(
                     pDate,
                     "V/FT",
-                    p.getPurchaseNumber(),
+                    p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-",
                     "Factura de Fornecedor / Compra",
-                    p.getPurchaseNumber(),
+                    p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-",
                     BigDecimal.ZERO,
                     p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO,
                     ts,
@@ -91,9 +91,9 @@ public class SupplierStatementService {
                 events.add(new RawSupplierMovement(
                         pDate,
                         "PG",
-                        "PG/" + p.getPurchaseNumber(),
+                        "PG/" + (p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-"),
                         "Pagamento / Liquidação de Factura",
-                        p.getPurchaseNumber(),
+                        p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-",
                         p.getAmountPaid(),
                         BigDecimal.ZERO,
                         ts.plusSeconds(1),
@@ -104,9 +104,9 @@ public class SupplierStatementService {
             }
         }
 
-        // Ordenação cronológica estrita
-        events.sort(Comparator.comparing(RawSupplierMovement::date)
-                .thenComparing(RawSupplierMovement::timestamp)
+        // Ordenação cronológica estrita null-safe
+        events.sort(Comparator.comparing(RawSupplierMovement::date, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(RawSupplierMovement::timestamp, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparingInt(RawSupplierMovement::orderPriority));
 
         BigDecimal openingBalance = BigDecimal.ZERO;

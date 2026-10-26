@@ -88,6 +88,9 @@ class StockTransferReceiptDiscrepancyHarnessTest {
 
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("joao", "ADMIN");
+        when(transferRepository.lockByIdAndCompanyId(anyLong(), anyLong()))
+                .thenAnswer(inv -> transferRepository.findByIdWithLinesAndCompanyId(
+                        inv.getArgument(0), inv.getArgument(1)));
         when(transferRepository.save(any(StockTransfer.class))).thenAnswer(inv -> inv.getArgument(0));
         when(stockRepository.findByProductIdAndWarehouseId(anyLong(), anyLong())).thenReturn(Optional.empty());
         when(productBatchService.addToBatch(any(), any(), anyString(), any(), any()))
@@ -235,6 +238,40 @@ class StockTransferReceiptDiscrepancyHarnessTest {
     }
 
     // ───────────────────────── helpers ─────────────────────────
+
+    @Test
+    void replayComMesmaChaveEMesmoPedido_naoMovimentaStockNovamente() {
+        StockTransfer t = inTransit(parcel("LOTE-A", 5));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(t));
+        List<ReceiveLine> lines = List.of(new ReceiveLine(LINE_ID, new BigDecimal("5.000"), null));
+
+        transitService.receive(1L, "Conferido", lines, "RECV-123");
+        assertNotNull(t.getReceiptRequestFingerprint());
+        clearInvocations(productBatchService, stockRepository, stockMovementRepository, transferRepository, audit);
+
+        StockTransferDTO replay = transitService.receive(1L, "Conferido", lines, "RECV-123");
+
+        assertEquals("RECEIVED", replay.status());
+        verifyNoInteractions(productBatchService, stockRepository, stockMovementRepository, audit);
+        verify(transferRepository, never()).save(any());
+    }
+
+    @Test
+    void replayComMesmaChaveEDadosDiferentes_eRejeitadoAntesDeMovimentarStock() {
+        StockTransfer t = inTransit(parcel("LOTE-A", 5));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(t));
+        transitService.receive(1L, "Conferido", List.of(
+                new ReceiveLine(LINE_ID, new BigDecimal("5"), null)), "RECV-456");
+        clearInvocations(productBatchService, stockRepository, stockMovementRepository, transferRepository, audit);
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> transitService.receive(
+                1L, "Observação alterada", List.of(
+                        new ReceiveLine(LINE_ID, new BigDecimal("5"), null)), "RECV-456"));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verifyNoInteractions(productBatchService, stockRepository, stockMovementRepository, audit);
+        verify(transferRepository, never()).save(any());
+    }
 
     private StockTransferLineBatch parcel(String number, int qty) {
         StockTransferLineBatch p = new StockTransferLineBatch();

@@ -3,7 +3,6 @@ package mz.multicore.erp.modules.inventory.controller;
 import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
-import mz.multicore.erp.modules.inventory.service.ProductBatchService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -17,12 +16,9 @@ import java.util.List;
 public class InventoryController {
 
     private final InventoryService inventoryService;
-    private final ProductBatchService productBatchService;
 
-    public InventoryController(InventoryService inventoryService,
-                                ProductBatchService productBatchService) {
+    public InventoryController(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
-        this.productBatchService = productBatchService;
     }
 
     @GetMapping("/warehouses")
@@ -80,10 +76,10 @@ public class InventoryController {
             @RequestParam(required = false) Long warehouseId
     ) {
         if (warehouseId != null) {
-            return ResponseEntity.ok(productBatchService.findByWarehouse(warehouseId));
+            return ResponseEntity.ok(inventoryService.findBatchesByWarehouse(warehouseId));
         }
         if (companyId != null) {
-            return ResponseEntity.ok(productBatchService.findByCompany(companyId));
+            return ResponseEntity.ok(inventoryService.findBatchesByCompany(companyId));
         }
         return ResponseEntity.ok(List.of());
     }
@@ -93,7 +89,7 @@ public class InventoryController {
             @RequestParam Long companyId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate before
     ) {
-        return ResponseEntity.ok(productBatchService.findExpiringByCompany(companyId, before));
+        return ResponseEntity.ok(inventoryService.findExpiringBatchesByCompany(companyId, before));
     }
 
     // ─── Gestão de armazéns (todos + editar + activar) ────────────────────────

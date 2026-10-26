@@ -54,7 +54,17 @@ final class PosLayout {
      * (`fas-barcode`), para todos alinharem com os combos do cabeçalho.
      */
     static JPanel iconInputBox(String iconCode, int iconSize, Color iconColor, JTextField field) {
-        JPanel box = new JPanel(new BorderLayout(8, 0));
+        JPanel box = new JPanel(new BorderLayout(8, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, UIHelper.CONTROL_ARC, UIHelper.CONTROL_ARC);
+                g2.dispose();
+            }
+        };
+        box.setOpaque(false);
         box.setBackground(UIHelper.FIELD_BG);
         box.setBorder(iconBoxBorder(UIHelper.BORDER, 1));
 
@@ -79,9 +89,7 @@ final class PosLayout {
     }
 
     static javax.swing.border.Border iconBoxBorder(Color line, int thickness) {
-        return BorderFactory.createCompoundBorder(
-                new javax.swing.border.LineBorder(line, thickness, true),
-                new EmptyBorder(0, 10 - (thickness - 1), 0, 8));
+        return UIHelper.fieldBorder(line, thickness);
     }
 
     static int addSectionHeader(JPanel host, GridBagConstraints gbc, int row, String text) {
@@ -154,6 +162,7 @@ final class PosLayout {
 
     static mz.multicore.erp.gui.components.ModernPanel createTotalsRow(JLabel subtotalValue, JLabel ivaValue, JLabel totalValue) {
         mz.multicore.erp.gui.components.ModernPanel totalRow = new mz.multicore.erp.gui.components.ModernPanel(12);
+        boolean isLight = UIHelper.isLight();
         totalRow.setBackground(UIHelper.SELECTION_BG);
         totalRow.setLayout(new BorderLayout());
         totalRow.setBorder(new EmptyBorder(8, 14, 8, 14));
@@ -161,20 +170,24 @@ final class PosLayout {
         JPanel taxSummary = new JPanel(new GridLayout(2, 2, 12, 2));
         taxSummary.setOpaque(false);
 
+        Color labelColor = isLight ? UIHelper.TEXT_MUTED : UIHelper.TEXT_LIGHT;
+        Color valueColor = isLight ? UIHelper.TEXT_LIGHT : Color.WHITE;
+        Color totalColor = isLight ? UIHelper.ACCENT_BLUE : Color.WHITE;
+
         JLabel subCap = new JLabel("Subtotal s/ IVA");
         subCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subCap.setForeground(UIHelper.TEXT_MUTED);
+        subCap.setForeground(labelColor);
 
         JLabel ivaCap = new JLabel("IVA");
         ivaCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        ivaCap.setForeground(UIHelper.TEXT_MUTED);
+        ivaCap.setForeground(labelColor);
 
         subtotalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        subtotalValue.setForeground(UIHelper.TEXT_LIGHT);
+        subtotalValue.setForeground(valueColor);
         subtotalValue.setHorizontalAlignment(SwingConstants.RIGHT);
 
         ivaValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        ivaValue.setForeground(UIHelper.TEXT_LIGHT);
+        ivaValue.setForeground(valueColor);
         ivaValue.setHorizontalAlignment(SwingConstants.RIGHT);
 
         taxSummary.add(subCap);
@@ -184,15 +197,16 @@ final class PosLayout {
 
         JLabel totalCaption = new JLabel("TOTAL A PAGAR");
         totalCaption.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        totalCaption.setForeground(UIHelper.TEXT_MUTED);
+        totalCaption.setForeground(labelColor);
 
-        totalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
-        totalValue.setForeground(UIHelper.ACCENT_BLUE);
+        totalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 26));
+        totalValue.setForeground(totalColor);
 
         JPanel payable = new JPanel(new BorderLayout(14, 0));
         payable.setOpaque(false);
+        Color dividerColor = UIHelper.BORDER;
         payable.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 1, 0, 0, UIHelper.BORDER),
+                BorderFactory.createMatteBorder(0, 1, 0, 0, dividerColor),
                 new EmptyBorder(0, 12, 0, 0)));
         payable.add(totalCaption, BorderLayout.WEST);
         payable.add(totalValue, BorderLayout.EAST);

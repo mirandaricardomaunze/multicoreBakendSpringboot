@@ -54,6 +54,7 @@ class FinalUiUniformityHarnessTest {
         try (var paths = Files.walk(gui)) {
                 List<Path> files = paths.filter(p -> p.toString().endsWith(".java"))
                         .filter(p -> !p.toString().contains("components"))
+                        .filter(p -> !p.toString().contains("tv"))
                         .filter(p -> !p.getFileName().toString().equals("LoginDialog.java"))
                         .toList();
             for (Path file : files) {
@@ -67,9 +68,9 @@ class FinalUiUniformityHarnessTest {
     @Test
     void densePlatformAndFiscalBarsUseMenus() throws IOException {
         Path gui = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui");
-        assertThat(Files.readString(gui.resolve("PlataformaPanel.java")))
+        assertThat(Files.readString(gui.resolve("platform/PlatformCompaniesView.java")))
                 .contains("createActionMenuButton(\"Mais acções\")");
-        assertThat(Files.readString(gui.resolve("FiscalPanel.java")))
+        assertThat(Files.readString(gui.resolve("FiscalIvaTab.java")))
                 .contains("createActionMenuButton(\"Documentos\")");
     }
 

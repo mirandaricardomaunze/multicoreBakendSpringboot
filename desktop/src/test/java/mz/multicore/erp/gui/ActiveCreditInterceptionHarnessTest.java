@@ -79,12 +79,12 @@ class ActiveCreditInterceptionHarnessTest {
                 "POSPanel deve chamar CustomerCreditValidator.validateCreditPreFlight");
         assertFalse(posContent.contains("⭐") || posContent.contains("✅") || posContent.contains("❌"), "Sem emojis");
 
-        Path comercialPath = resolveSourcePath("src/main/java/mz/multicore/erp/gui/ComercialPanel.java");
-        assertTrue(Files.exists(comercialPath), "ComercialPanel.java deve existir");
+        Path comercialPath = resolveSourcePath("src/main/java/mz/multicore/erp/gui/CommercialInvoiceDraftActions.java");
+        assertTrue(Files.exists(comercialPath), "CommercialInvoiceDraftActions.java deve existir");
         String comercialContent = Files.readString(comercialPath);
 
         assertTrue(comercialContent.contains("CustomerCreditValidator.validateCreditPreFlight"),
-                "ComercialPanel deve chamar CustomerCreditValidator.validateCreditPreFlight");
+                "O colaborador de emissão comercial deve chamar CustomerCreditValidator.validateCreditPreFlight");
         assertFalse(comercialContent.contains("⭐") || comercialContent.contains("✅") || comercialContent.contains("❌"), "Sem emojis");
     }
 }

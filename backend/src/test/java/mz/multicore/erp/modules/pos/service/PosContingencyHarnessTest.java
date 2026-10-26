@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.pos.service;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Client;
@@ -263,5 +264,56 @@ class PosContingencyHarnessTest {
         assertEquals("FT 2026/0099", result.getInvoiceNumber());
         verify(invoiceRepository, never()).findByCompanyIdAndContingencyReference(anyLong(), anyString());
         verify(documentNumberService, times(1)).next(DocumentSeries.INVOICE);
+    }
+
+    @Test
+    @DisplayName("PCR-04: mesma chave e mesmo pedido devolvem a venda sem novo movimento")
+    void pcr04_sameKeyAndPayloadReturnsExistingInvoice() {
+        String key = "POS-58c668b1-c2c2-44da-84df-936e99c57f33";
+        POSCheckoutRequest request = keyedRequest(key, new BigDecimal("100.00"));
+        when(invoiceRepository.findByCompanyIdAndContingencyReference(COMPANY_ID, key))
+                .thenReturn(Optional.empty());
+
+        Invoice first = posService.checkout(request);
+        assertNotNull(first.getPosRequestFingerprint());
+
+        clearInvocations(documentNumberService, invoiceRepository, tillMovementRepository);
+        when(invoiceRepository.findByCompanyIdAndContingencyReference(COMPANY_ID, key))
+                .thenReturn(Optional.of(first));
+
+        assertSame(first, posService.checkout(request));
+        verify(documentNumberService, never()).next(any());
+        verify(invoiceRepository, never()).save(any());
+        verify(tillMovementRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("PCR-05: mesma chave com pedido diferente é rejeitada antes de movimentar stock ou dinheiro")
+    void pcr05_sameKeyWithDifferentPayloadIsRejected() {
+        String key = "POS-a69fef03-6cdd-4d55-a328-c48bd695eb16";
+        POSCheckoutRequest original = keyedRequest(key, new BigDecimal("100.00"));
+        when(invoiceRepository.findByCompanyIdAndContingencyReference(COMPANY_ID, key))
+                .thenReturn(Optional.empty());
+        Invoice first = posService.checkout(original);
+
+        clearInvocations(documentNumberService, invoiceRepository, tillMovementRepository, inventoryService);
+        when(invoiceRepository.findByCompanyIdAndContingencyReference(COMPANY_ID, key))
+                .thenReturn(Optional.of(first));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> posService.checkout(keyedRequest(key, new BigDecimal("99.00"))));
+
+        assertTrue(error.getMessage().contains("chave de idempotência"));
+        verify(documentNumberService, never()).next(any());
+        verify(invoiceRepository, never()).save(any());
+        verifyNoInteractions(inventoryService);
+    }
+
+    private POSCheckoutRequest keyedRequest(String key, BigDecimal paymentAmount) {
+        return new POSCheckoutRequest(
+                OPERATOR, COMPANY_ID, null, "Cliente Avulso", WAREHOUSE_ID, null,
+                List.of(new POSCheckoutLineRequest(PRODUCT_ID, BigDecimal.ONE, null, null, null)),
+                List.of(new PosPaymentRequest("CASH", paymentAmount, null, null, null)),
+                key);
     }
 }

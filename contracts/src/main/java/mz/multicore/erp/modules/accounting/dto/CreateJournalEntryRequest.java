@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,7 +16,7 @@ public record CreateJournalEntryRequest(
         @NotNull(message = "A data do lançamento é obrigatória.")
         LocalDate entryDate,
 
-        @NotBlank(message = "A descrição do lançamento é obrigatória.")
+        @NotBlank(message = "A descrição do lançamento é obrigatória.") @Size(max = 500)
         String description,
 
         @NotEmpty(message = "O lançamento tem de ter partidas.")
@@ -24,10 +26,10 @@ public record CreateJournalEntryRequest(
 
     /** Uma partida: conta + valor a débito <b>ou</b> a crédito. */
     public record Line(
-            @NotBlank(message = "Indique a conta da partida.")
+            @NotBlank(message = "Indique a conta da partida.") @Size(max = 50)
             String accountCode,
-            BigDecimal debit,
-            BigDecimal credit,
-            String description
+            @PositiveOrZero BigDecimal debit,
+            @PositiveOrZero BigDecimal credit,
+            @Size(max = 500) String description
     ) {}
 }

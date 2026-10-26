@@ -27,9 +27,19 @@ public record CreateStockWasteRequest(
         WasteReason reason,
 
         @Size(max = 500, message = "As observações não podem exceder 500 caracteres.")
-        String notes
+        String notes,
+
+        @Size(max = 60, message = "A chave de idempotência não pode exceder 60 caracteres.")
+        String idempotencyKey
 ) {
     public CreateStockWasteRequest {
         notes = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeNotes(notes, 500);
+        idempotencyKey = idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim();
+    }
+
+    /** Construtor retrocompatível anterior à protecção contra replay. */
+    public CreateStockWasteRequest(Long companyId, Long warehouseId, Long productId, Long batchId,
+                                   BigDecimal quantity, WasteReason reason, String notes) {
+        this(companyId, warehouseId, productId, batchId, quantity, reason, notes, null);
     }
 }

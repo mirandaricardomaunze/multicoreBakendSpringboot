@@ -12,7 +12,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+import mz.multicore.erp.gui.components.ToastManager;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -283,7 +283,7 @@ public final class BusinessUnitGoalManager {
         });
 
         if (dialog.showDialog()) {
-            JOptionPane.showMessageDialog(parent, "Metas e módulos de negócio configurados com sucesso!", "Metas Salvas", JOptionPane.INFORMATION_MESSAGE);
+            ToastManager.success(parent, "Metas e módulos de negócio configurados com sucesso!");
         }
     }
 }

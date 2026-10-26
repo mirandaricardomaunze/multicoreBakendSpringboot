@@ -77,7 +77,7 @@ public class InventoryCountService {
     @Transactional
     public InventoryCountDTO saveCounts(Long sessionId, Map<Long, BigDecimal> countsByProduct) {
         PermissionGuard.requireManagerOrAdmin("guardar contagem de inventário");
-        InventoryCount count = loadForCompany(sessionId);
+        InventoryCount count = loadForCompanyForUpdate(sessionId);
         requireDraft(count);
         for (InventoryCountLine line : count.getLines()) {
             if (countsByProduct.containsKey(line.getProduct().getId())) {
@@ -93,7 +93,7 @@ public class InventoryCountService {
     @Transactional
     public InventoryCountDTO applySession(Long sessionId) {
         PermissionGuard.requireManagerOrAdmin("aplicar contagem de inventário");
-        InventoryCount count = loadForCompany(sessionId);
+        InventoryCount count = loadForCompanyForUpdate(sessionId);
         requireDraft(count);
         Long companyId = count.getCompany().getId();
         Long warehouseId = count.getWarehouse().getId();
@@ -142,7 +142,7 @@ public class InventoryCountService {
     @Transactional
     public void cancelSession(Long sessionId) {
         PermissionGuard.requireManagerOrAdmin("cancelar contagem de inventário");
-        InventoryCount count = loadForCompany(sessionId);
+        InventoryCount count = loadForCompanyForUpdate(sessionId);
         requireDraft(count);
         count.setStatus(InventoryCountStatus.CANCELLED);
         inventoryCountRepository.save(count);
@@ -154,9 +154,20 @@ public class InventoryCountService {
     private InventoryCount loadForCompany(Long sessionId) {
         InventoryCount count = inventoryCountRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessRuleException("Contagem não encontrada."));
+        requireCurrentCompany(count);
+        return count;
+    }
+
+    private InventoryCount loadForCompanyForUpdate(Long sessionId) {
+        InventoryCount count = inventoryCountRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new BusinessRuleException("Contagem não encontrada."));
+        requireCurrentCompany(count);
+        return count;
+    }
+
+    private static void requireCurrentCompany(InventoryCount count) {
         Long companyId = count.getCompany() != null ? count.getCompany().getId() : null;
         CurrentUserContext.requireCompany(companyId);
-        return count;
     }
 
     private static void requireDraft(InventoryCount count) {

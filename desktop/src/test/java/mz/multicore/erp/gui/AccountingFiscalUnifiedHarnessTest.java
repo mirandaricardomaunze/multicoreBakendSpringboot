@@ -24,7 +24,9 @@ class AccountingFiscalUnifiedHarnessTest {
     @Test
     @DisplayName("AF-01: FiscalPanel padronizado com ModernPanel(16), ensureHeadersFit e Quick Peek")
     void af01_fiscalCanonical() throws Exception {
-        String fiscal = source("FiscalPanel.java");
+        String fiscal = source("FiscalPanel.java")
+                + source("FiscalTaxRatesTab.java")
+                + source("FiscalWithholdingsTab.java");
         assertThat(fiscal).doesNotContain("new ModernPanel(14)");
         assertThat(fiscal).contains("UIHelper.ensureHeadersFit(taxRatesTable)");
         assertThat(fiscal).contains("TableQuickPeekController.install(taxRatesTable");

@@ -1,6 +1,8 @@
 package mz.multicore.erp.desktop.client;
 
+import mz.multicore.erp.modules.fleet.dto.CreateFleetManifestRequest;
 import mz.multicore.erp.modules.fleet.dto.CreateVehicleRequest;
+import mz.multicore.erp.modules.fleet.dto.FleetManifestDTO;
 import mz.multicore.erp.modules.fleet.dto.FuelLogDTO;
 import mz.multicore.erp.modules.fleet.dto.RecordFuelLogRequest;
 import mz.multicore.erp.modules.fleet.dto.VehicleDTO;
@@ -45,5 +47,29 @@ public class FleetApiClient {
 
     public VehicleDTO updateStatus(Long vehicleId, VehicleStatus status) {
         return clientFactory.authenticatedClient().patch("/api/fleet/vehicles/" + vehicleId + "/status?status=" + status.name(), null, VehicleDTO.class);
+    }
+
+    public FleetManifestDTO createManifest(CreateFleetManifestRequest request) {
+        return clientFactory.authenticatedClient().post("/api/fleet/manifests", request, FleetManifestDTO.class);
+    }
+
+    public List<FleetManifestDTO> listManifests() {
+        return clientFactory.authenticatedClient().getList("/api/fleet/manifests", FleetManifestDTO.class);
+    }
+
+    public FleetManifestDTO getManifest(Long id) {
+        return clientFactory.authenticatedClient().get("/api/fleet/manifests/" + id, FleetManifestDTO.class);
+    }
+
+    public FleetManifestDTO updateManifestStatus(Long id, String status) {
+        return clientFactory.authenticatedClient().patch("/api/fleet/manifests/" + id + "/status?status=" + status, null, FleetManifestDTO.class);
+    }
+
+    public byte[] printManifest(Long id) {
+        return clientFactory.authenticatedClient().getBytes("/api/fleet/manifests/" + id + "/pdf");
+    }
+
+    public List<mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO> listDeliveryGuides() {
+        return clientFactory.authenticatedClient().getList("/api/comercial/delivery-guides", mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO.class);
     }
 }

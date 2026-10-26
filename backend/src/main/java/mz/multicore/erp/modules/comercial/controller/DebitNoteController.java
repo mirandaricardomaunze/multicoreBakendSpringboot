@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.comercial.controller;
 
 import mz.multicore.erp.modules.comercial.dto.CreateDebitNoteRequest;
 import mz.multicore.erp.modules.comercial.dto.DebitNoteDTO;
+import mz.multicore.erp.modules.comercial.dto.RejectionReasonRequest;
 import mz.multicore.erp.modules.comercial.service.DebitNoteService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -42,8 +43,8 @@ public class DebitNoteController {
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<DebitNoteDTO> reject(@PathVariable Long id,
-                                                @RequestBody(required = false) Map<String, String> body) {
-        String reason = body == null ? null : body.get("rejectionReason");
+                                                @RequestBody(required = false) @Valid RejectionReasonRequest body) {
+        String reason = body == null ? null : body.rejectionReason();
         return ResponseEntity.ok(service.reject(id, reason));
     }
 

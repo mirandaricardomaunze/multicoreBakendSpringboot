@@ -39,7 +39,7 @@ class OperationalPulseWidgetHarnessTest {
         String dashboardSource = Files.readString(ROOT.resolve("desktop/src/main/java/mz/multicore/erp/gui/DashboardPanel.java"));
         assertThat(dashboardSource)
                 .contains("private final OperationalPulseWidget operationalPulseWidget;",
-                        "centerContainer.add(operationalPulseWidget);",
+                        "tab2Center.add(operationalPulseWidget);",
                         "operationalPulseWidget.loadData();",
                         "getOperationalPulseWidget()");
     }

@@ -152,7 +152,7 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(Color.WHITE);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(new Color(203, 213, 225));
+                g2.setColor(UIHelper.BORDER);
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
                 g2.dispose();
             }
@@ -167,13 +167,13 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
         top.setOpaque(false);
         JLabel comp = new JLabel("MULTICORE LOGÍSTICA & CARGA");
         comp.setFont(new Font("Arial", Font.BOLD, 10));
-        comp.setForeground(new Color(71, 85, 105));
+        comp.setForeground(UIHelper.TEXT_MUTED);
 
         JLabel date = new JLabel(transfer.transferDate() != null
                 ? transfer.transferDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 : "");
         date.setFont(new Font("Arial", Font.PLAIN, 10));
-        date.setForeground(new Color(100, 116, 139));
+        date.setForeground(UIHelper.TEXT_MUTED);
         top.add(comp, BorderLayout.WEST);
         top.add(date, BorderLayout.EAST);
         card.add(top, BorderLayout.NORTH);
@@ -185,15 +185,15 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
 
         JLabel guide = new JLabel("GUIA: " + transfer.transferNumber());
         guide.setFont(new Font("Arial", Font.BOLD, 16));
-        guide.setForeground(new Color(15, 23, 42));
+        guide.setForeground(UIHelper.TEXT_LIGHT);
 
         JLabel vol = new JLabel("VOLUME " + volumeIndex + " DE " + totalVolumes);
         vol.setFont(new Font("Arial", Font.BOLD, 19));
-        vol.setForeground(new Color(37, 99, 235));
+        vol.setForeground(UIHelper.ACCENT_BLUE);
 
         JLabel route = new JLabel(transfer.originWarehouseName() + " → " + transfer.destinationWarehouseName());
         route.setFont(new Font("Arial", Font.BOLD, 12));
-        route.setForeground(new Color(51, 65, 85));
+        route.setForeground(UIHelper.TEXT_MUTED);
 
         center.add(guide);
         center.add(Box.createVerticalStrut(4));
@@ -212,12 +212,12 @@ public class StockTransferVolumeLabelsDialog extends JDialog {
 
         JLabel trans = new JLabel("Motorista: " + driver + " | Viatura: " + plate);
         trans.setFont(new Font("Arial", Font.PLAIN, 10));
-        trans.setForeground(new Color(100, 116, 139));
+        trans.setForeground(UIHelper.TEXT_MUTED);
 
         int linesCount = transfer.lines() != null ? transfer.lines().size() : 0;
         JLabel items = new JLabel(linesCount + " itens");
         items.setFont(new Font("Arial", Font.BOLD, 10));
-        items.setForeground(new Color(15, 23, 42));
+        items.setForeground(UIHelper.TEXT_LIGHT);
 
         bottom.add(trans, BorderLayout.WEST);
         bottom.add(items, BorderLayout.EAST);

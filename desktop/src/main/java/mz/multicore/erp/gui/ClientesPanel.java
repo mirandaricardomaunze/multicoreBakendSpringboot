@@ -4,6 +4,7 @@ import mz.multicore.erp.desktop.client.AccountStatementApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.CreditRiskApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
+import mz.multicore.erp.gui.commercial.ClientesOperationsCoordinator;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.ClientDTO;
 
@@ -20,6 +21,7 @@ public class ClientesPanel extends JPanel {
     private final PrintApiClient printApiClient;
     private final CreditRiskPanel creditRiskPanel;
     private final CustomerStatementPanel customerStatementPanel;
+    private final ClientesOperationsCoordinator coordinator;
 
     private JTabbedPane tabs;
     private JTextField searchField;
@@ -45,6 +47,7 @@ public class ClientesPanel extends JPanel {
     ) {
         this.comercialApiClient = comercialApiClient;
         this.printApiClient = printApiClient;
+        this.coordinator = new ClientesOperationsCoordinator(comercialApiClient);
         this.creditRiskPanel = creditRiskApiClient != null ? new CreditRiskPanel(creditRiskApiClient) : null;
         this.customerStatementPanel = statementApiClient != null ? new CustomerStatementPanel(statementApiClient, comercialApiClient) : null;
 
@@ -157,58 +160,43 @@ public class ClientesPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
         TableFilter.install(table, searchField);
 
-        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) -> {
-            if (mr < 0 || mr >= model.getRowCount()) return;
-            String id = String.valueOf(model.getValueAt(mr, 0));
-            String name = String.valueOf(model.getValueAt(mr, 1));
-            String nuit = String.valueOf(model.getValueAt(mr, 2));
-            String email = String.valueOf(model.getValueAt(mr, 3));
-            String address = String.valueOf(model.getValueAt(mr, 4));
-            String term = String.valueOf(model.getValueAt(mr, 5));
-            String limit = String.valueOf(model.getValueAt(mr, 6));
-
-            peek.setTitle(name);
-            peek.setSubtitle("NUIT: " + nuit);
-            peek.setItems(java.util.List.of(
-                    new QuickPeekPanel.PeekItem("ID", id, false),
-                    new QuickPeekPanel.PeekItem("Email", email, false),
-                    new QuickPeekPanel.PeekItem("Endereço", address, false),
-                    new QuickPeekPanel.PeekItem("Prazo de Pagamento", term + " dias", false),
-                    new QuickPeekPanel.PeekItem("Limite de Crédito", limit, true)
-            ));
-            peek.getOpenFullButton().setText("Ver Ficha");
-            peek.setOnOpenFullAction(v -> viewBtn.doClick());
-        });
+        TableQuickPeekController peekController = TableQuickPeekController.install(table, card, (peek, mr) ->
+                ClientesOperationsCoordinator.populatePeek(peek, model, mr, viewBtn::doClick));
         peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         panel.add(card, BorderLayout.CENTER);
 
-        // LISTENERS
-        viewBtn.addActionListener(e -> {
-            ClientDTO selected = selectedClient();
-            if (selected != null) openClientDetailDialog(selected);
-        });
-        newBtn.addActionListener(e -> openClientDialog(null));
+        // Ações
+        viewBtn.addActionListener(e -> openSelectedDetail());
+        newBtn.addActionListener(e -> coordinator.openClientDialog(this, null, this::onPanelSelected));
         editBtn.addActionListener(e -> {
             ClientDTO selected = selectedClient();
-            if (selected != null) openClientDialog(selected);
+            if (selected != null) coordinator.openClientDialog(this, selected, this::onPanelSelected);
         });
-        deleteBtn.addActionListener(e -> deleteSelected());
+        deleteBtn.addActionListener(e -> coordinator.deleteClient(this, selectedClient(), feedback, this::onPanelSelected));
         exportBtn.addActionListener(e ->
                 TableExportAction.export(this, printApiClient, table, "Clientes", "clientes"));
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent ev) {
                 if (ev.getClickCount() == 2) {
-                    ClientDTO selected = selectedClient();
-                    if (selected != null) openClientDetailDialog(selected);
+                    openSelectedDetail();
                 }
             }
         });
 
         return panel;
+    }
+
+    private void openSelectedDetail() {
+        ClientDTO selected = selectedClient();
+        if (selected != null) {
+            coordinator.openDetail(this, selected,
+                    () -> coordinator.openClientDialog(this, selected, this::onPanelSelected),
+                    this::selectStatementTab);
+        }
     }
 
     public void onPanelSelected() {
@@ -233,8 +221,8 @@ public class ClientesPanel extends JPanel {
                     c.taxId(),
                     c.email(),
                     c.address() == null ? "" : c.address(),
-                    c.paymentTermsDays() == 0 ? "Pronto pagamento" : c.paymentTermsDays(),
-                    c.creditLimit() == null ? "Sem limite" : String.format("%,.2f MT", c.creditLimit())
+                    ClientesOperationsCoordinator.formatTerms(c.paymentTermsDays()),
+                    ClientesOperationsCoordinator.formatCreditLimit(c.creditLimit())
             });
         }
     }
@@ -247,88 +235,5 @@ public class ClientesPanel extends JPanel {
             return null;
         }
         return visibleClients.get(row);
-    }
-
-    private void openClientDialog(ClientDTO existing) {
-        JTextField nameField = new JTextField(existing == null ? "" : existing.name());
-        JTextField taxIdField = new JTextField(existing == null ? "" : existing.taxId());
-        JTextField emailField = new JTextField(existing == null ? "" : existing.email());
-        JTextField addressField = new JTextField(existing == null || existing.address() == null ? "" : existing.address());
-        IntegerField termsField = new IntegerField(
-                String.valueOf(existing == null ? 0 : existing.paymentTermsDays()), 0, 365, "O prazo de pagamento");
-        MoneyField creditField = new MoneyField(existing == null || existing.creditLimit() == null
-                ? "" : existing.creditLimit().toPlainString());
-        UIHelper.styleTextField(nameField);
-        UIHelper.styleTextField(taxIdField);
-        UIHelper.styleTextField(emailField);
-        UIHelper.styleTextField(addressField);
-        UIHelper.installDigitsOnlyFilter(taxIdField, 9);
-
-        FormField nameForm = new FormField("Nome", nameField, true, "Nome completo ou denominação social");
-        FormField taxForm = new FormField("NUIT / NIF", taxIdField, true, null);
-        FormField emailForm = new FormField("Email", emailField, true, null);
-        FormField addressForm = new FormField("Endereço", addressField, false, null);
-        FormField termsForm = new FormField("Prazo de pagamento (dias)", termsField, false,
-                "0 = pronto pagamento. Define o vencimento das faturas futuras deste cliente.");
-        FormField creditForm = new FormField("Limite de crédito (MT)", creditField, false,
-                "Em branco = sem limite. Zero = não vende a crédito.");
-        JPanel form = UIHelper.createDialogForm(
-                "", nameForm, "", taxForm, "", emailForm, "", addressForm, "", termsForm, "", creditForm);
-
-        String title = existing == null ? "Novo Cliente" : "Editar Cliente — " + existing.name();
-        ModernFormDialog dialog = new ModernFormDialog(
-                UIHelper.mainWindow, title, null, "Dados de cadastro do cliente", form);
-        dialog.setOnSaveAsync(() -> {
-            boolean valid = nameForm.validateMinLength(3, "Nome")
-                    & taxForm.validateNuit()
-                    & emailForm.validateEmail();
-            if (!valid) throw new IllegalArgumentException("Corrija os campos assinalados com formato inválido.");
-            String name = nameField.getText().trim();
-            String taxId = taxIdField.getText().trim();
-            String email = emailField.getText().trim();
-            String address = addressField.getText().trim();
-            int terms = termsField.value();
-            java.math.BigDecimal creditLimit = creditField.optionalValue();
-            return () -> {
-                if (existing == null) {
-                    comercialApiClient.createClient(name, taxId, email, address, terms, creditLimit);
-                } else {
-                    comercialApiClient.updateClient(existing.id(), name, taxId, email, address, terms, creditLimit);
-                }
-                return null;
-            };
-        });
-        boolean confirmed = dialog.showDialog();
-        if (!confirmed) return;
-        ToastManager.success(this, existing == null ? "Cliente criado." : "Cliente actualizado.");
-        onPanelSelected();
-    }
-
-    private void deleteSelected() {
-        ClientDTO c = selectedClient();
-        if (c == null) return;
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Eliminar o cliente '" + c.name() + "'? Esta ação não pode ser revertida.",
-                "Confirmar Eliminação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
-        try {
-            comercialApiClient.deleteClient(c.id());
-            ToastManager.success(this, "Cliente eliminado.");
-            onPanelSelected();
-        } catch (Exception ex) {
-            feedback.show(FeedbackType.ERROR, "Não foi possível eliminar o cliente", ex.getMessage(), null, null);
-        }
-    }
-
-    private void openClientDetailDialog(ClientDTO client) {
-        new mz.multicore.erp.gui.commercial.CustomerDetailDialog(this, client,
-                () -> openClientDialog(client),
-                this::selectStatementTab).show();
-    }
-    private JLabel filterLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        label.setForeground(UIHelper.TEXT_MUTED);
-        return label;
     }
 }

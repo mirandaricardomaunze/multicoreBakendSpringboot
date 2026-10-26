@@ -3,6 +3,7 @@ package mz.multicore.erp.gui.components;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.ui.FlatLineBorder;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -205,6 +206,20 @@ public class UIHelper {
                 }
             }
         }
+    }
+
+    /**
+     * Confirmação de acção operacional padronizada.
+     */
+    public static boolean confirm(Component parent, String message, String title) {
+        int opt = JOptionPane.showConfirmDialog(
+                parent,
+                message,
+                title,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        return opt == JOptionPane.YES_OPTION;
     }
 
     /**
@@ -666,10 +681,30 @@ public class UIHelper {
             }
 
             // Propriedades modernas do FlatLaf: cantos arredondados, foco, tipografia e HiDPI
-            UIManager.put("Component.arc", 10);
-            UIManager.put("Button.arc", 10);
-            UIManager.put("TextComponent.arc", 8);
+            UIManager.put("Component.arc", CONTROL_ARC);
+            UIManager.put("Button.arc", CONTROL_ARC);
+            UIManager.put("TextComponent.arc", CONTROL_ARC);
+            UIManager.put("ComboBox.arc", CONTROL_ARC);
+            UIManager.put("Spinner.arc", CONTROL_ARC);
             UIManager.put("ProgressBar.arc", 8);
+
+            // Borda e realce de foco corporativo nativo do FlatLaf
+            UIManager.put("Component.borderColor", BORDER);
+            UIManager.put("Component.focusedBorderColor", ACCENT);
+            UIManager.put("Component.focusWidth", 1);
+            UIManager.put("Component.innerFocusWidth", 0);
+
+            UIManager.put("TextComponent.borderColor", BORDER);
+            UIManager.put("TextComponent.focusedBorderColor", ACCENT);
+
+            UIManager.put("ComboBox.borderColor", BORDER);
+            UIManager.put("ComboBox.focusedBorderColor", ACCENT);
+            UIManager.put("ComboBox.buttonStyle", "none");
+            UIManager.put("ComboBox.arrowType", "chevron");
+
+            UIManager.put("Spinner.borderColor", BORDER);
+            UIManager.put("Spinner.focusedBorderColor", ACCENT);
+
             UIManager.put("ScrollBar.showButtons", false);
             UIManager.put("ScrollBar.width", 10);
             UIManager.put("ScrollBar.thumbArc", 10);
@@ -2297,6 +2332,7 @@ public class UIHelper {
         field.setCaretColor(TEXT_LIGHT);
         field.setFont(new Font(FONT, Font.PLAIN, 13));
         field.putClientProperty("JTextField.showClearButton", Boolean.TRUE);
+        field.putClientProperty("Component.arc", CONTROL_ARC);
         installFocusBorder(field);
         applyFormControlHeight(field);
     }
@@ -2324,11 +2360,53 @@ public class UIHelper {
         component.setFocusable(!readOnly);
     }
 
+    /** Raio de cantos arredondados canónico para inputs e selects corporativos. */
+    public static final int CONTROL_ARC = 10;
+
     /** Borda arredondada de campo com a cor de linha indicada + padding interno uniforme. */
-    private static Border fieldBorder(Color line, int thickness) {
-        return BorderFactory.createCompoundBorder(
-                new LineBorder(line, thickness, true),
-                new EmptyBorder(6 - (thickness - 1), 10, 6 - (thickness - 1), 10));
+    public static Border fieldBorder(Color line, int thickness) {
+        Insets insets = new Insets(5 - (thickness - 1), 10, 5 - (thickness - 1), 10);
+        if (UIManager.getLookAndFeel() instanceof FlatLaf) {
+            return new FlatLineBorder(insets, line, (float) thickness, CONTROL_ARC);
+        }
+        return new RoundedFallbackBorder(line, thickness, CONTROL_ARC, insets);
+    }
+
+    private static class RoundedFallbackBorder implements Border {
+        private final Color color;
+        private final int thickness;
+        private final int arc;
+        private final Insets insets;
+
+        RoundedFallbackBorder(Color color, int thickness, int arc, Insets insets) {
+            this.color = color;
+            this.thickness = thickness;
+            this.arc = arc;
+            this.insets = insets != null ? insets : new Insets(5 - (thickness - 1), 10, 5 - (thickness - 1), 10);
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            if (thickness > 1) {
+                g2.setStroke(new BasicStroke(thickness));
+            }
+            int offset = thickness / 2;
+            g2.drawRoundRect(x + offset, y + offset, width - thickness - 1, height - thickness - 1, arc, arc);
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return (Insets) insets.clone();
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 
     /**
@@ -2442,6 +2520,7 @@ public class UIHelper {
         field.setForeground(TEXT_LIGHT);
         field.setCaretColor(TEXT_LIGHT);
         field.setFont(new Font(FONT, Font.PLAIN, 13));
+        field.putClientProperty("Component.arc", CONTROL_ARC);
         installFocusBorder(field);
         applyFormControlHeight(field);
     }
@@ -2451,6 +2530,7 @@ public class UIHelper {
         area.setForeground(TEXT_LIGHT);
         area.setCaretColor(TEXT_LIGHT);
         area.setFont(new Font(FONT, Font.PLAIN, 13));
+        area.putClientProperty("Component.arc", CONTROL_ARC);
         installFocusBorder(area);
     }
 
@@ -2477,6 +2557,7 @@ public class UIHelper {
         combo.setBackground(FIELD_BG);
         combo.setForeground(TEXT_LIGHT);
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
+        combo.putClientProperty("Component.arc", CONTROL_ARC);
         installFocusBorder(combo);
         flattenComboArrow(combo);
         // O fundo da lista do popup segue o tema (SELECTION_BG/FIELD_BG), senão em tema claro
@@ -2495,7 +2576,9 @@ public class UIHelper {
                 rendered.setForeground(TEXT_LIGHT);
                 if (rendered instanceof JComponent component) {
                     component.setBorder(new EmptyBorder(5, 8, 5, 8));
-                    component.setOpaque(true);
+                    // No combo fechado (index == -1), preserva transparência para os cantos arredondados do FlatLaf;
+                    // No popup dropdown (index >= 0), fundo sólido da linha da lista.
+                    component.setOpaque(index >= 0);
                 }
                 return rendered;
             }
@@ -2526,6 +2609,7 @@ public class UIHelper {
         spinner.setBackground(FIELD_BG);
         spinner.setForeground(TEXT_LIGHT);
         spinner.setFont(new Font(FONT, Font.PLAIN, 13));
+        spinner.putClientProperty("Component.arc", CONTROL_ARC);
         installFocusBorder(spinner);
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor de) {
@@ -2535,6 +2619,7 @@ public class UIHelper {
             tf.setCaretColor(TEXT_LIGHT);
             tf.setFont(new Font(FONT, Font.PLAIN, 13));
             tf.setBorder(new EmptyBorder(0, 4, 0, 4));
+            tf.setOpaque(false);
         }
         applyFormControlHeight(spinner);
     }

@@ -18,16 +18,24 @@ import java.util.List;
 public record ReceiveStockTransferRequest(
         @Size(max = 500, message = "As observações da recepção não podem exceder 500 caracteres.")
         String notes,
-        @Valid List<ReceiveLine> lines
+        @Valid List<ReceiveLine> lines,
+        @Size(max = 60, message = "A chave de idempotência não pode exceder 60 caracteres.")
+        String idempotencyKey
 ) {
     public ReceiveStockTransferRequest {
         notes = mz.multicore.erp.architecture.validation.InputSanitizer.sanitizeNotes(notes, 500);
         lines = lines == null ? List.of() : List.copyOf(lines);
+        idempotencyKey = idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim();
     }
 
     /** Construtor retrocompatível: recepção integral, apenas com observações. */
     public ReceiveStockTransferRequest(String notes) {
-        this(notes, null);
+        this(notes, null, null);
+    }
+
+    /** Construtor retrocompatível anterior à protecção de replay. */
+    public ReceiveStockTransferRequest(String notes, List<ReceiveLine> lines) {
+        this(notes, lines, null);
     }
 
     /**

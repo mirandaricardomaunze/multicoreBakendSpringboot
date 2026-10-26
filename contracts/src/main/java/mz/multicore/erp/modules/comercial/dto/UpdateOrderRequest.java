@@ -18,10 +18,17 @@ public record UpdateOrderRequest(
         @NotEmpty(message = "A encomenda deve conter pelo menos uma linha.") @Valid
         List<CreateInvoiceLineRequest> lines,
         @Size(max = 1000, message = "Observações devem ter no máximo 1000 caracteres.")
-        String notes
+        String notes,
+        @Size(max = 200, message = "Condições de pagamento devem ter no máximo 200 caracteres.")
+        String paymentTerms
 ) {
     public UpdateOrderRequest(Long version, Long clientId, String walkInName, Long warehouseId,
                              Long destinationWarehouseId, List<CreateInvoiceLineRequest> lines) {
-        this(version, clientId, walkInName, warehouseId, destinationWarehouseId, lines, null);
+        this(version, clientId, walkInName, warehouseId, destinationWarehouseId, lines, null, null);
+    }
+
+    public UpdateOrderRequest(Long version, Long clientId, String walkInName, Long warehouseId,
+                             Long destinationWarehouseId, List<CreateInvoiceLineRequest> lines, String notes) {
+        this(version, clientId, walkInName, warehouseId, destinationWarehouseId, lines, notes, null);
     }
 }

@@ -94,10 +94,7 @@ public class GlobalSearchDialog extends JDialog {
         // Top Search Bar
         JPanel searchBar = new JPanel(new BorderLayout(10, 0));
         searchBar.setOpaque(false);
-        searchBar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+        searchBar.setBorder(UIHelper.fieldBorder(UIHelper.isLight() ? new Color(226, 232, 240) : new Color(51, 65, 85), 1));
 
         JLabel searchIcon = new JLabel(UIHelper.icon("fas-search", 18, UIHelper.ACCENT_BLUE));
         searchField.setFont(new Font(UIHelper.FONT, Font.PLAIN, 15));

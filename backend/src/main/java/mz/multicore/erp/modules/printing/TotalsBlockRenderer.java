@@ -58,6 +58,83 @@ public final class TotalsBlockRenderer {
         return wrapper;
     }
 
+    /**
+     * Bloco de totais corporativo canónico:
+     * Subtotal (sem IVA) · Desconto comercial · Discriminação de IVA · TOTAL A PAGAR
+     */
+    public static PdfPTable buildModelTotals(BigDecimal subtotal, BigDecimal discount, BigDecimal tax, BigDecimal total, List<TaxBreakdown> breakdowns) {
+        PdfPTable wrapper = new PdfPTable(new float[]{50f, 50f});
+        wrapper.setWidthPercentage(100);
+        wrapper.setSpacingBefore(4f);
+        wrapper.setSpacingAfter(10f);
+
+        PdfPCell empty = new PdfPCell();
+        empty.setBorder(PdfPCell.NO_BORDER);
+        wrapper.addCell(empty);
+
+        PdfPTable inner = new PdfPTable(new float[]{60f, 40f});
+        inner.setWidthPercentage(100);
+
+        addModelLine(inner, "Subtotal (sem IVA)", MoneyFormat.format(subtotal), false, false);
+        addModelLine(inner, "Desconto comercial", MoneyFormat.format(discount != null ? discount : BigDecimal.ZERO), false, false);
+
+        if (breakdowns != null && !breakdowns.isEmpty()) {
+            for (TaxBreakdown b : breakdowns) {
+                String label = (b.taxRateLabel() != null && !b.taxRateLabel().isBlank())
+                        ? b.taxRateLabel()
+                        : String.format(Locale.forLanguageTag("pt-MZ"), "IVA (%.0f%%)", b.ratePercentage().doubleValue());
+                addModelLine(inner, label, MoneyFormat.format(b.taxAmount()), false, false);
+            }
+        } else {
+            addModelLine(inner, "IVA (16%)", MoneyFormat.format(tax), false, false);
+        }
+
+        addModelLine(inner, "TOTAL A PAGAR", MoneyFormat.format(total), true, true);
+
+        PdfPCell innerCell = new PdfPCell(inner);
+        innerCell.setBorder(PdfPCell.NO_BORDER);
+        wrapper.addCell(innerCell);
+        return wrapper;
+    }
+
+    private static void addModelLine(PdfPTable table, String label, String value, boolean isTotal, boolean hasBorder) {
+        com.lowagie.text.Font font = isTotal ? com.lowagie.text.FontFactory.getFont(com.lowagie.text.FontFactory.HELVETICA_BOLD, 10f, PdfTheme.BRAND)
+                : com.lowagie.text.FontFactory.getFont(com.lowagie.text.FontFactory.HELVETICA, 8.5f, PdfTheme.TEXT);
+
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, font));
+        PdfPCell valCell = new PdfPCell(new Phrase(value, font));
+
+        if (hasBorder) {
+            labelCell.setBorder(PdfPCell.TOP | PdfPCell.BOTTOM);
+            valCell.setBorder(PdfPCell.TOP | PdfPCell.BOTTOM);
+            labelCell.setBorderWidthTop(0.75f);
+            valCell.setBorderWidthTop(0.75f);
+            labelCell.setBorderWidthBottom(1.5f);
+            valCell.setBorderWidthBottom(1.5f);
+            labelCell.setBorderColorTop(PdfTheme.BRAND);
+            valCell.setBorderColorTop(PdfTheme.BRAND);
+            labelCell.setBorderColorBottom(PdfTheme.BRAND);
+            valCell.setBorderColorBottom(PdfTheme.BRAND);
+            labelCell.setPaddingTop(5f);
+            valCell.setPaddingTop(5f);
+            labelCell.setPaddingBottom(5f);
+            valCell.setPaddingBottom(5f);
+        } else {
+            labelCell.setBorder(PdfPCell.NO_BORDER);
+            valCell.setBorder(PdfPCell.NO_BORDER);
+            labelCell.setPaddingTop(2f);
+            valCell.setPaddingTop(2f);
+            labelCell.setPaddingBottom(2f);
+            valCell.setPaddingBottom(2f);
+        }
+
+        labelCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        valCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+        table.addCell(labelCell);
+        table.addCell(valCell);
+    }
+
     private static PdfPTable buildTaxBreakdownTable(List<TaxBreakdown> breakdowns) {
         PdfPTable t = new PdfPTable(new float[]{42f, 30f, 28f});
         t.setWidthPercentage(100);

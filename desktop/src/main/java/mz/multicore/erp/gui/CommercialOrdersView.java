@@ -15,10 +15,8 @@ final class CommercialOrdersView {
     private CommercialOrdersView() {}
 
     /** O que muda ao escolher cada via, dito antes de o operador escolher. */
-    private static String kindHint(OrderKind kind) {
-        return kind.isThermal()
-                ? "Reserva stock e imprime talão para o armazém separar. Não passa por aprovação."
-                : "Documento A4 igual à fatura. Passa por aprovação antes de poder ser facturada.";
+    static String kindHint(OrderKind kind) {
+        return CommercialOrderHeaderForm.kindHint(kind);
     }
 
     static JPanel create(ComercialPanel owner) {
@@ -28,120 +26,7 @@ final class CommercialOrdersView {
         panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         // ===== EDITOR ÚNICO: inputs de cabeçalho agrupados em linha horizontal =====
-        ModernPanel formCard = new ModernPanel(16);
-        formCard.setLayout(new GridBagLayout());
-        formCard.setBorder(new EmptyBorder(12, 16, 10, 16));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        // Coluna 0: Cliente
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 1.2;
-        gbc.insets = new Insets(2, 6, 2, 6);
-        JLabel clientLbl = new JLabel("Cliente:");
-        clientLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(clientLbl, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(2, 6, 4, 6);
-        owner.orderClientCombo = new JComboBox<>();
-        UIHelper.styleComboBox(owner.orderClientCombo);
-        formCard.add(owner.orderClientCombo, gbc);
-
-        // Coluna 1: Nome do Comprador (Walk-in se 'Consumidor Final')
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0;
-        gbc.insets = new Insets(2, 6, 2, 6);
-        JLabel walkInLbl = new JLabel("Comprador (se Consumidor Final):");
-        walkInLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(walkInLbl, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(2, 6, 4, 6);
-        owner.orderClientWalkInField = new JTextField();
-        UIHelper.styleTextField(owner.orderClientWalkInField);
-        owner.orderClientWalkInField.putClientProperty("JTextField.placeholderText", "Nome do comprador...");
-        formCard.add(owner.orderClientWalkInField, gbc);
-
-        // Coluna 2: Armazém Origem
-        gbc.gridx = 2; gbc.gridy = 0; gbc.weightx = 0.8;
-        gbc.insets = new Insets(2, 6, 2, 6);
-        JLabel warehouseLbl = new JLabel("Armazém:");
-        warehouseLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(warehouseLbl, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(2, 6, 4, 6);
-        owner.orderWarehouseCombo = new JComboBox<>();
-        UIHelper.styleComboBox(owner.orderWarehouseCombo);
-        formCard.add(owner.orderWarehouseCombo, gbc);
-
-        // Coluna 3: Tipo de Encomenda
-        gbc.gridx = 3; gbc.gridy = 0; gbc.weightx = 0.8;
-        gbc.insets = new Insets(2, 6, 2, 6);
-        JLabel kindLbl = new JLabel("Tipo de encomenda:");
-        kindLbl.setForeground(UIHelper.TEXT_MUTED);
-        formCard.add(kindLbl, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(2, 6, 4, 6);
-        owner.orderKindCombo = new JComboBox<>(OrderKind.values());
-        owner.orderKindCombo.setRenderer(UIHelper.labelRenderer(OrderKind::label));
-        UIHelper.styleComboBox(owner.orderKindCombo);
-        owner.orderKindCombo.setSelectedItem(OrderKind.PICKING_REQUEST);
-        formCard.add(owner.orderKindCombo, gbc);
-
-        // Coluna 4: Armazém Destino (visível apenas para reposição interna)
-        JLabel destLbl = new JLabel("Armazém de destino:");
-        destLbl.setForeground(UIHelper.TEXT_MUTED);
-        owner.orderDestinationCombo = new JComboBox<>();
-        UIHelper.styleComboBox(owner.orderDestinationCombo);
-
-        JPanel destPanel = new JPanel(new BorderLayout(0, 2));
-        destPanel.setOpaque(false);
-        destPanel.add(destLbl, BorderLayout.NORTH);
-        destPanel.add(owner.orderDestinationCombo, BorderLayout.CENTER);
-
-        gbc.gridx = 4; gbc.gridy = 0; gbc.gridheight = 2; gbc.weightx = 0.8;
-        gbc.insets = new Insets(2, 6, 4, 6);
-        formCard.add(destPanel, gbc);
-
-        // Linha 2: Dica contextual da via selecionada
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 5; gbc.gridheight = 1; gbc.weightx = 1.0;
-        gbc.insets = new Insets(3, 6, 2, 6);
-        JLabel kindHint = new JLabel();
-        kindHint.setForeground(UIHelper.TEXT_MUTED);
-        kindHint.setFont(kindHint.getFont().deriveFont(11f));
-        kindHint.setIcon(UIHelper.semanticIcon("fas-info-circle", 12));
-        formCard.add(kindHint, gbc);
-
-        Runnable syncKind = () -> {
-            OrderKind kind = owner.selectedOrderKind();
-            kindHint.setText(" " + kindHint(kind));
-            boolean replenishment = kind.requiresDestinationWarehouse();
-            destPanel.setVisible(replenishment);
-            GridBagLayout layout = (GridBagLayout) formCard.getLayout();
-            GridBagConstraints c = layout.getConstraints(destPanel);
-            c.weightx = replenishment ? 0.8 : 0.0;
-            layout.setConstraints(destPanel, c);
-            formCard.revalidate();
-            formCard.repaint();
-        };
-        owner.orderKindCombo.addActionListener(e -> syncKind.run());
-        syncKind.run();
-
-        // Linha 3: Nota no pé da página / Observações
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 5; gbc.gridheight = 1; gbc.weightx = 1.0;
-        gbc.insets = new Insets(3, 6, 4, 6);
-        JPanel notesPanel = new JPanel(new BorderLayout(0, 2));
-        notesPanel.setOpaque(false);
-        JLabel notesLbl = new JLabel("Nota no pé da página / Observações:");
-        notesLbl.setForeground(UIHelper.TEXT_MUTED);
-        owner.orderNotesField = new JTextField();
-        UIHelper.styleTextField(owner.orderNotesField);
-        owner.orderNotesField.setToolTipText("Instruções de entrega, condições bancárias ou nota institucional impressa no rodapé do documento.");
-        notesPanel.add(notesLbl, BorderLayout.NORTH);
-        notesPanel.add(owner.orderNotesField, BorderLayout.CENTER);
-        formCard.add(notesPanel, gbc);
+        ModernPanel formCard = CommercialOrderHeaderForm.createHeaderCard(owner);
 
         // Editores reutilizados apenas pelas células da grelha
         owner.orderProductCombo = new ProductSearchComboBox();
@@ -419,12 +304,7 @@ final class CommercialOrdersView {
                     || event.getType() != javax.swing.event.TableModelEvent.UPDATE) return;
             CommercialOrderEditorActions.syncLineFromGrid(owner, event.getFirstRow(), event.getColumn());
         });
-        owner.orderClientCombo.addActionListener(e -> owner.markOrderEditorDirty());
-        owner.orderWarehouseCombo.addActionListener(e -> owner.markOrderEditorDirty());
-        owner.orderDestinationCombo.addActionListener(e -> owner.markOrderEditorDirty());
-        owner.orderKindCombo.addActionListener(e -> owner.markOrderEditorDirty());
-        UIHelper.onTextChange(owner.orderClientWalkInField, owner::markOrderEditorDirty);
-        UIHelper.onTextChange(owner.orderNotesField, owner::markOrderEditorDirty);
+        // Listeners de cabeçalho e controlo de dirty state (owner.markOrderEditorDirty()) configurados via CommercialOrderHeaderForm
         /*
          * As acções que não se aplicam à linha seleccionada ficam DESACTIVADAS, não escondidas.
          *
