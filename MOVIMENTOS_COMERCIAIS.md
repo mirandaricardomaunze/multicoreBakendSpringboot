@@ -138,7 +138,7 @@ A Guia de Remessa ao cliente é um documento distinto, descrito em §5.1.
 
 A **Guia de Transferência** documenta a movimentação de stock **entre armazéns**:
 - Entidade `StockTransfer` + linhas, série `TRF` em `DocumentSeries`.
-- Ciclo `PENDING_APPROVAL → APPROVED / REJECTED / CANCELLED`; o stock só sai da origem e entra no
+- Ciclo `DRAFT → PENDING_APPROVAL → APPROVED / REJECTED / CANCELLED`; o stock só sai da origem e entra no
   destino **na aprovação** (FEFO por lote), com permissão MANAGER/ADMIN.
 - Lógica em [StockTransferService](src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java),
   PDF em [StockTransferPrintService](src/main/java/mz/multicore/erp/modules/printing/StockTransferPrintService.java).

@@ -21,7 +21,9 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 - XSD oficial da AT-MZ para validar o SAF-T (`docs/FISCAL_SAFT_VALIDACAO_SPEC.md`).
 - Homologação por jurista da conformidade legal e do contrato de licença.
 - Execução assinada de `docs/GUIA_ACEITACAO_LOJA.md` numa loja piloto.
-- Carga e concorrência em PostgreSQL por validar: não anunciar número de utilizadores suportados.
+- Carga medida só na venda POS e numa máquina de desenvolvimento (`docs/CARGA_POSTGRES_SPEC.md`):
+  repetir no hardware final antes de anunciar capacidade.
+- Deploy real no VPS por validar.
 
 ## Decisões permanentes relevantes
 

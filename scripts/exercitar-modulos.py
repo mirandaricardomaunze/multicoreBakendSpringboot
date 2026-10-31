@@ -114,11 +114,12 @@ origin, destination = stock_of(3, 1), stock_of(3, 2)
 code, transfer = call("/api/inventory/transfers", token, "POST",
                       {"companyId": 1, "originWarehouseId": 1, "destinationWarehouseId": 2,
                        "responsible": "ana", "notes": "Reposição loja",
+                       "vehiclePlate": "AAA-123-MC",
                        "lines": [{"productId": 3, "quantity": 4}]})
 check("transferência criada", 200, code)
 # A mercadoria só se mexe quando se mexe. Criar o documento não pode tirar do armazém de origem —
 # senão o stock ficava errado durante todo o tempo que a transferência esperasse aprovação.
-check("nasce por aprovar", "PENDING_APPROVAL", transfer.get("status"))
+check("nasce em rascunho", "DRAFT", transfer.get("status"))
 check("e o stock de origem NÃO mexeu ainda", origin, stock_of(3, 1))
 check("nem o de destino", destination, stock_of(3, 2))
 
@@ -138,7 +139,8 @@ check("abrir DUAS sessões para o mesmo operador é recusado", 400, code)
 account = call("/api/finance/accounts?companyId=1", token)[1][0]["id"]
 before = stock_of(1)
 code, _ = call("/api/pos/checkout", token, "POST",
-               {"operator": "ana", "companyId": 1, "warehouseId": 1, "treasuryAccountId": account,
+               {"operator": "ana", "companyId": 1, "walkInName": "Cliente Teste", "warehouseId": 1,
+                "treasuryAccountId": account,
                 "lines": [{"productId": 1, "quantity": 2, "discountPercentage": 0}]})
 check("venda ao balcão aceite", 200, code)
 check("venda de 2 unidades baixa o stock em 2", before - 2, stock_of(1))
@@ -197,6 +199,7 @@ else:
 
 # Reapurar em vez de somar recibo a recibo é o que torna isto idempotente: pagar o mesmo recibo
 # duas vezes não pode duplicar a dívida ao Estado.
+call("/api/hr/payroll/liabilities/accrue/2026/7", token, "POST")
 first = len(call("/api/hr/payroll/liabilities", token)[1])
 call("/api/hr/payroll/liabilities/accrue/2026/7", token, "POST")
 check("reapurar NÃO duplica a dívida ao Estado", first,
