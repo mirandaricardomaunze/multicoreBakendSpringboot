@@ -51,8 +51,7 @@ jobs:
           grep -rhE -A3 '<<< (FAILURE|ERROR)!' --include='*.txt' ./*/target/surefire-reports > failures.txt || true
           split -b 3000 failures.txt failure-part-
           for part in $(ls failure-part-* 2>/dev/null | head -n 9); do
-            echo "::error::$(sed ':a;N;$!ba;s/%/%25/g;s/
-/%0A/g' "$part")"
+            echo "::error::$(sed 's/%/%25/g' "$part" | awk '{printf "%s%%0A", $0}')"
           done
 
       - name: Upload test reports
@@ -96,6 +95,5 @@ jobs:
           find data/restore-validation -maxdepth 2 -name '*.log' -exec tail -n 15 {} + >> failures.txt 2>/dev/null || true
           split -b 3000 failures.txt failure-part-
           for part in $(ls failure-part-* 2>/dev/null | head -n 9); do
-            echo "::error::$(sed ':a;N;$!ba;s/%/%25/g;s/
-/%0A/g' "$part")"
+            echo "::error::$(sed 's/%/%25/g' "$part" | awk '{printf "%s%%0A", $0}')"
           done
