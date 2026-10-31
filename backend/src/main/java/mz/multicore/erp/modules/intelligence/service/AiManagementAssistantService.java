@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.intelligence.service;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -92,13 +93,13 @@ public class AiManagementAssistantService {
 
     private String localAnswer(String question, ManagementAiContext c) {
         return switch (topic(question)) {
-            case "stock" -> String.format(Locale.forLanguageTag("pt-MZ"),
+            case "stock" -> String.format(DisplayLocale.NUMBERS,
                     "Existem %d posições esgotadas e %d abaixo do stock mínimo. Priorize os artigos esgotados e confirme as encomendas abertas antes de repor.",
                     c.outOfStockPositions(), c.lowStockPositions());
-            case "compras" -> String.format(Locale.forLanguageTag("pt-MZ"),
+            case "compras" -> String.format(DisplayLocale.NUMBERS,
                     "Há %d encomendas abertas, no valor de %,.2f MT; %d estão atrasadas. Reveja primeiro as atrasadas e confirme a entrega prevista com os fornecedores.",
                     c.openPurchaseOrders(), c.openPurchaseOrderValue(), c.overduePurchaseOrders());
-            default -> String.format(Locale.forLanguageTag("pt-MZ"),
+            default -> String.format(DisplayLocale.NUMBERS,
                     "Nos últimos 30 dias foram registadas %d vendas, totalizando %,.2f MT, com valor médio de %,.2f MT. Compare este período com o anterior no painel antes de ajustar metas.",
                     c.salesCount30Days(), c.salesTotal30Days(), c.averageSale30Days());
         };

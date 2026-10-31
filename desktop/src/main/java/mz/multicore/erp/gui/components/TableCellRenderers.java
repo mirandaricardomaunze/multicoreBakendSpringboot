@@ -64,7 +64,7 @@ public final class TableCellRenderers {
         if (value == null) return "—";
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();
         symbols.setDecimalSeparator(',');
-        symbols.setGroupingSeparator(' ');
+        symbols.setGroupingSeparator('.');
         String decimals = scale == 0 ? "" : "." + "0".repeat(scale);
         DecimalFormat fmt = new DecimalFormat("#,##0" + decimals, symbols);
         fmt.setMinimumFractionDigits(scale);
@@ -93,9 +93,9 @@ public final class TableCellRenderers {
             } else if (value instanceof String s && !s.trim().isEmpty() && !s.equals("—") && !s.equals("-")) {
                 try {
                     String clean = s.trim().replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
-                    clean = clean.replace(" ", "").replace("\u00A0", "");
-                    if (clean.matches("^[+-]?\\d+(?:[.,]\\d+)?$")) {
-                        number = new BigDecimal(clean.replace(',', '.'));
+                    clean = MoneyField.normalize(clean);
+                    if (clean.matches("^[+-]?\\d+(?:\\.\\d+)?$")) {
+                        number = new BigDecimal(clean);
                     }
                 } catch (Exception ignored) {
                 }

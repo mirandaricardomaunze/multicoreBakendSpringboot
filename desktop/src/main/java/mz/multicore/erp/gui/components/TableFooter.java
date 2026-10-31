@@ -8,8 +8,6 @@ import javax.swing.table.TableModel;
 
 import java.awt.Font;
 import java.math.BigDecimal;
-import java.text.NumberFormat;
-import java.text.ParseException;
 import java.util.Set;
 
 /**
@@ -102,9 +100,8 @@ public final class TableFooter {
         String s = raw.trim().replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$)\\s*$", "").trim();
         if (s.isEmpty() || "null".equals(s)) return null;
         try {
-            Number n = NumberFormat.getNumberInstance().parse(s);
-            return new BigDecimal(n.toString());
-        } catch (ParseException e) {
+            return new BigDecimal(MoneyField.normalize(s));
+        } catch (NumberFormatException e) {
             return null;
         }
     }

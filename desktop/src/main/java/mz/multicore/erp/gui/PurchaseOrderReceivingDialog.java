@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
@@ -243,10 +244,10 @@ public class PurchaseOrderReceivingDialog {
         if (val == null) return BigDecimal.ZERO;
         if (val instanceof BigDecimal bd) return bd.max(BigDecimal.ZERO);
         if (val instanceof Number n) return BigDecimal.valueOf(n.doubleValue()).max(BigDecimal.ZERO);
-        String s = val.toString().trim().replace(" ", "").replace(',', '.');
+        String s = val.toString().trim();
         if (s.isEmpty()) return BigDecimal.ZERO;
         try {
-            BigDecimal d = new BigDecimal(s);
+            BigDecimal d = new BigDecimal(MoneyField.normalize(s));
             return d.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : d;
         } catch (NumberFormatException ex) {
             return BigDecimal.ZERO;

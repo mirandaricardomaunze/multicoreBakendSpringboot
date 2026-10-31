@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.tv;
 
+import mz.multicore.erp.gui.components.MoneyField;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -233,8 +234,8 @@ public final class BusinessUnitGoalManager {
                 JCheckBox cb = unitCheckboxes.get(entry.getKey());
                 if (cb != null && cb.isSelected()) {
                     try {
-                        String text = entry.getValue().getText().trim().replace(" ", "").replace(",", ".");
-                        sum = sum.add(new BigDecimal(text));
+                        String text = entry.getValue().getText().trim();
+                        sum = sum.add(new BigDecimal(MoneyField.normalize(text)));
                     } catch (Exception ignored) {}
                 }
             }
@@ -256,7 +257,7 @@ public final class BusinessUnitGoalManager {
         dialog.setOnSave(() -> {
             BigDecimal gGoal;
             try {
-                gGoal = new BigDecimal(globalField.getText().trim().replace(" ", "").replace(",", "."));
+                gGoal = new BigDecimal(MoneyField.normalize(globalField.getText()));
             } catch (Exception ex) {
                 throw new IllegalArgumentException("Por favor insira um valor numérico válido para a meta global.");
             }
@@ -269,8 +270,8 @@ public final class BusinessUnitGoalManager {
                 setUnitIncluded(unitId, included);
 
                 try {
-                    String text = entry.getValue().getText().trim().replace(" ", "").replace(",", ".");
-                    BigDecimal uGoal = new BigDecimal(text);
+                    String text = entry.getValue().getText().trim();
+                    BigDecimal uGoal = new BigDecimal(MoneyField.normalize(text));
                     setGoalForUnit(unitId, uGoal);
                 } catch (Exception ex) {
                     throw new IllegalArgumentException("Valor numérico inválido numa das metas das unidades.");

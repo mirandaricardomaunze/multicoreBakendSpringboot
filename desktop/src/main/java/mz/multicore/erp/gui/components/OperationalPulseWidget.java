@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.components;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.desktop.client.DashboardApiClient;
 import mz.multicore.erp.modules.dashboard.dto.OperationalPulseDTO;
 
@@ -59,7 +60,7 @@ public class OperationalPulseWidget extends ModernPanel {
         this.navigationHandler = navigationHandler;
 
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        symbols.setGroupingSeparator(' ');
+        symbols.setGroupingSeparator('.');
         symbols.setDecimalSeparator(',');
         this.currencyFormatter = new DecimalFormat("#,##0.00 MT", symbols);
 
@@ -264,7 +265,7 @@ public class OperationalPulseWidget extends ModernPanel {
 
         if (pulse.fleet() != null) {
             fleetValLabel.setText(pulse.fleet().activeVehicles() + " Viaturas Activas");
-            fleetSubLabel.setText("30d: " + String.format(Locale.forLanguageTag("pt-MZ"), "%,.1f L", pulse.fleet().monthlyFuelLiters())
+            fleetSubLabel.setText("30d: " + String.format(DisplayLocale.NUMBERS, "%,.1f L", pulse.fleet().monthlyFuelLiters())
                     + " (" + currencyFormatter.format(pulse.fleet().monthlyFuelCost()) + ")");
         }
 

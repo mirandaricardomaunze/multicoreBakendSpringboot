@@ -47,7 +47,7 @@ public class PerformanceReportPrintService {
         };
 
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        symbols.setGroupingSeparator(' ');
+        symbols.setGroupingSeparator('.');
         symbols.setDecimalSeparator(',');
         DecimalFormat df = new DecimalFormat("#,##0.00", symbols);
 

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.desktop.client.AccountStatementApiClient;
 import mz.multicore.erp.gui.components.*;
 
@@ -89,6 +90,6 @@ public final class SupplierStatementOperationsCoordinator {
 
     public static String formatMoney(BigDecimal val) {
         if (val == null) return "0,00 MT";
-        return String.format(java.util.Locale.forLanguageTag("pt-MZ"), "%,.2f MT", val);
+        return String.format(DisplayLocale.NUMBERS, "%,.2f MT", val);
     }
 }

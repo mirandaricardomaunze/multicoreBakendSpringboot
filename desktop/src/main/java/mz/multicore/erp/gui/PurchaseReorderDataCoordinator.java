@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
 
 import javax.swing.*;
@@ -58,8 +59,8 @@ public final class PurchaseReorderDataCoordinator {
                     String.format(Locale.ROOT, "%,.2f", s.minStock()),
                     String.format(Locale.ROOT, "%,.2f /dia", salesRate),
                     daysStr, s.unitsPerBox(),
-                    String.format(Locale.ROOT, "%,.0f", s.suggestedBoxes()),
-                    String.format(Locale.ROOT, "%,.0f", s.suggestedUnits()),
+                    String.format(Locale.ROOT, "%.0f", s.suggestedBoxes()),
+                    String.format(Locale.ROOT, "%.0f", s.suggestedUnits()),
                     supName,
                     s.estimatedUnitPrice() != null ? s.estimatedUnitPrice() : BigDecimal.ZERO,
                     estCost, status, buName
@@ -79,7 +80,7 @@ public final class PurchaseReorderDataCoordinator {
         if (kpiCriticos != null) kpiCriticos.setText(String.valueOf(criticosCount));
         if (kpiTotalRepor != null) kpiTotalRepor.setText(String.valueOf(owner.reorderList.size()));
 
-        NumberFormat fmt = NumberFormat.getNumberInstance(new Locale("pt", "MZ"));
+        NumberFormat fmt = NumberFormat.getNumberInstance(DisplayLocale.NUMBERS);
         fmt.setMinimumFractionDigits(2);
         fmt.setMaximumFractionDigits(2);
         if (kpiCustoTotal != null) kpiCustoTotal.setText(fmt.format(totalCostSum) + " MT");

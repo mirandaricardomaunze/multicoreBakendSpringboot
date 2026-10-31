@@ -158,8 +158,7 @@ public final class TableDataExporter {
         // Tenta detectar valores monetários do tipo "1.250,00 MT"
         if (str.endsWith(" MT") || str.endsWith(" MZN")) {
             try {
-                String clean = str.replaceAll("(?i)\\s*(MT|MZN)\\s*$", "")
-                        .replace(" ", "").replace("\u00A0", "").replace(',', '.');
+                String clean = MoneyField.normalize(str.replaceAll("(?i)\\s*(MT|MZN)\\s*$", ""));
                 new BigDecimal(clean); // valida se é número
                 sb.append("    <Cell ss:StyleID=\"Number\"><Data ss:Type=\"Number\">")
                         .append(clean)

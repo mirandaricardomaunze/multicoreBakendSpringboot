@@ -10,13 +10,14 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Trabalho activo
 
-- **Paridade PostgreSQL e formato numérico:** concluídos, com CI verde; ver
-  `docs/POSTGRES_SCHEMA_PARITY_SPEC.md` e `docs/FORMATO_NUMERICO_SPEC.md`.
-- **Integração:** falta levar o branch para `main` e ligar a protecção de branch aos checks
-  `build` e `postgres-parity`.
+- Sem fase de código em curso. Paridade PostgreSQL e formato numérico concluídos e integrados em
+  `main`; ver `docs/POSTGRES_SCHEMA_PARITY_SPEC.md` e `docs/FORMATO_NUMERICO_SPEC.md`.
+- Em 2026-10-31 o responsável confirmou que não existe base PostgreSQL real, por isso as migrações
+  V66, V76, V89 e V96 puderam ser corrigidas no próprio ficheiro.
 
 ## Bloqueios antes de produção
 
+- Protecção da branch `main` a exigir os checks `build` e `postgres-parity`.
 - XSD oficial da AT-MZ para validar o SAF-T (`docs/FISCAL_SAFT_VALIDACAO_SPEC.md`).
 - Homologação por jurista da conformidade legal e do contrato de licença.
 - Execução assinada de `docs/GUIA_ACEITACAO_LOJA.md` numa loja piloto.

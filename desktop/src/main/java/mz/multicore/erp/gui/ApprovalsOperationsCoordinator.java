@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.desktop.client.ApprovalApiClient;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
@@ -43,7 +44,7 @@ public final class ApprovalsOperationsCoordinator {
                     .map(ApprovalRequestDTO::amount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            kpiPendingAmount.setText(String.format(Locale.forLanguageTag("pt-MZ"), "%,.2f MT", totalPendingAmount));
+            kpiPendingAmount.setText(String.format(DisplayLocale.NUMBERS, "%,.2f MT", totalPendingAmount));
         }
         if (kpiApprovedCount != null && historyList != null) {
             long approvedCount = historyList.stream()

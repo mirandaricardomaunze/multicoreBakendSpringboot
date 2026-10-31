@@ -104,10 +104,11 @@ final class UiTableCellStyler {
             String trimmed = s.trim();
             boolean hasSign = trimmed.startsWith("+");
             String clean = trimmed.replaceAll("^[+]", "").replaceAll("(?i)\\s*(MT|MZN|MTn|€|\\$|%|un|kg)\\s*$", "").trim();
-            clean = clean.replace(" ", "").replace("\u00A0", "");
-            if (clean.matches("^\\d+[.,]\\d+$")) {
+            if (clean.isEmpty()) return s;
+            clean = MoneyField.normalize(clean);
+            if (clean.matches("^\\d+\\.\\d+$")) {
                 try {
-                    BigDecimal parsed = new BigDecimal(clean.replace(',', '.'));
+                    BigDecimal parsed = new BigDecimal(clean);
                     String suffix = trimmed.endsWith(" MT") ? " MT"
                             : trimmed.endsWith(" un") ? " un"
                             : trimmed.endsWith(" kg") ? " kg"

@@ -42,7 +42,8 @@ public class MoneyField extends JTextField {
         return value();
     }
 
-    static String normalize(String text) {
+    /** Converte texto digitado ou mostrado para o formato de {@code BigDecimal}. */
+    public static String normalize(String text) {
         String value = text == null ? "" : text.trim().replace("\u00A0", "").replace(" ", "");
         if (value.isEmpty()) throw new NumberFormatException("empty");
         int comma = value.lastIndexOf(',');
@@ -54,6 +55,8 @@ public class MoneyField extends JTextField {
             if (decimal == ',') value = value.replace(',', '.');
         } else if (comma >= 0) {
             value = value.replace(',', '.');
+        } else if (dot != value.indexOf('.')) {
+            value = value.replace(".", "");
         }
         return value;
     }

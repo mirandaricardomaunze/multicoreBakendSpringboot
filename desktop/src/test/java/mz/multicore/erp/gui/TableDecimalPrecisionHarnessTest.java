@@ -31,7 +31,7 @@ class TableDecimalPrecisionHarnessTest {
 
         JLabel lbl2 = (JLabel) renderer.getTableCellRendererComponent(
                 table, new BigDecimal("1250.789"), false, false, 0, 0);
-        assertEquals("1 250,79", lbl2.getText(), "1250.789 deve arredondar para 1 250,79");
+        assertEquals("1.250,79", lbl2.getText(), "1250.789 deve arredondar para 1.250,79");
 
         JLabel lbl3 = (JLabel) renderer.getTableCellRendererComponent(
                 table, 15.0, false, false, 0, 0);

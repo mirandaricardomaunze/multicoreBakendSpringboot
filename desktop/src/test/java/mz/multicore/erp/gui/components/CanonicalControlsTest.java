@@ -80,7 +80,7 @@ class CanonicalControlsTest {
         TableCellRenderer renderer = TableCellRenderers.money();
         JLabel label = (JLabel) renderer.getTableCellRendererComponent(
                 table, new BigDecimal("1234.5"), false, false, 0, 0);
-        assertEquals("1 234,50 MT", label.getText());
+        assertEquals("1.234,50 MT", label.getText());
         assertEquals(SwingConstants.RIGHT, label.getHorizontalAlignment());
     }
 

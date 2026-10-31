@@ -269,7 +269,7 @@ public final class ClientTablePagination {
                     if (s.isEmpty() || s.equals("—") || s.equals("-")) continue;
                     if (s.endsWith(" MT") || s.endsWith(" MZN")) {
                         try {
-                            String numStr = s.replaceAll("(?i)\\s*(MT|MZN)\\s*$", "").replace(" ", "").replace("\u00A0", "").replace(',', '.');
+                            String numStr = MoneyField.normalize(s.replaceAll("(?i)\\s*(MT|MZN)\\s*$", ""));
                             sumMoney = sumMoney.add(new BigDecimal(numStr));
                             hasMoney = true;
                         } catch (Exception ignored) {}

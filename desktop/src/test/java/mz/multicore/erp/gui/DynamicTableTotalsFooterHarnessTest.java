@@ -44,7 +44,7 @@ class DynamicTableTotalsFooterHarnessTest {
 
         String text = statusLabel.getText();
         assertTrue(text.contains("2 sel."), "Deve indicar 2 seleccionados");
-        assertTrue(text.contains("2 250,00 MT"), "Deve somar e formatar a 2 casas decimais: 2 250,00 MT");
+        assertTrue(text.contains("2.250,00 MT"), "Deve somar e formatar a 2 casas decimais: 2.250,00 MT");
     }
 
     private JLabel findStatusLabel(JPanel panel) {

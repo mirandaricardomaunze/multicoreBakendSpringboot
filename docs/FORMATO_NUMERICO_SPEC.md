@@ -11,9 +11,10 @@ o defeito, que afecta ecrãs, Relatório Z, etiquetas, vales e PDFs de inventár
 ## Decisão
 
 - O formato visível é `1.500,50`, definido por `DisplayLocale.NUMBERS` em `contracts`.
-- `pt-MZ` não é usado como padrão: o JDK escreve-o com espaço (`1 500,50`), o que mudaria todos os
-  valores no ecrã. Adoptá-lo é uma decisão de negócio ainda por tomar. Os poucos pontos que já
-  usam `pt-MZ` explicitamente mantêm-se.
+- **Padrão único, decidido em 2026-10-31:** ecrãs, tabelas e documentos usam ponto no milhar. O
+  `pt-MZ` do JDK não é usado para números porque escreve `1 500,50`. Continua válido para datas.
+- **Leitura do texto mostrado:** passa só por `MoneyField.normalize`. Um ponto isolado sem vírgula
+  continua a ser decimal (`1.5`), como nos campos digitados.
 - **Desktop:** `DesktopApplication.main` fixa `Locale.Category.FORMAT` antes de criar a interface,
   porque há mais de 140 chamadas sem locale.
 - **Backend:** cada chamada indica o locale. O padrão global **não** muda, para que
@@ -26,10 +27,14 @@ o defeito, que afecta ecrãs, Relatório Z, etiquetas, vales e PDFs de inventár
 | FN-01 | `1500.5` com `DisplayLocale.NUMBERS` | `1.500,50 MT` | `DisplayNumberFormatHarnessTest` |
 | FN-02 | `String.format` com `%,` e sem locale no backend | Reprova com ficheiro e linha | `DisplayNumberFormatHarnessTest` |
 | FN-03 | Arranque do desktop | Formato fixado antes da interface | `DesktopNumberLocaleHarnessTest` |
+| FN-04 | Valor formatado e lido de volta | Mesmo número | `DesktopNumberLocaleHarnessTest` |
+| FN-05 | Leitura de `1.500,00`, `1 500,00`, `1500,5`, `1.234.567`, `1.5` | Número correcto | `DesktopNumberLocaleHarnessTest` |
+| FN-06 | Separador de espaço no desktop | Reprova | `DesktopNumberLocaleHarnessTest` |
 
 ## Limites
 
 - No backend, FN-02 só vê chamadas com o formato na mesma linha de `String.format`.
+- Um texto `1.500` sem vírgula é lido como 1,5: valores com milhares têm de ser mostrados com decimais.
 - Formatos sem separador de milhares (`%.2f`) ficam fora: dependem do locale do processo.
 - A suite do desktop corre com `pt-BR` em `argLine`, para ser igual em qualquer máquina.
 - `TabStripFitsTest` é ignorado sem a fonte Segoe UI: a largura só é válida no Windows, onde o

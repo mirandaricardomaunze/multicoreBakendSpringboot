@@ -14,7 +14,7 @@ class UIHelperDecompositionHarnessTest {
 
     @Test
     void delegatesStaticHelpersToExtractedCollaborators() {
-        assertEquals("1 250,00 MT", UIHelper.formatMzn(new BigDecimal("1250")));
+        assertEquals("1.250,00 MT", UIHelper.formatMzn(new BigDecimal("1250")));
         assertEquals("Administrador", UIHelper.humanRole("ADMIN"));
         assertEquals("Paga", UIHelper.humanStatus("PAID"));
         assertTrue(UIHelper.looksNumeric("1.234,56 MT"));

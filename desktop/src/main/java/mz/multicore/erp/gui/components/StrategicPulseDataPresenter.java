@@ -21,7 +21,7 @@ final class StrategicPulseDataPresenter {
 
     StrategicPulseDataPresenter() {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("pt", "MZ"));
-        symbols.setGroupingSeparator(' ');
+        symbols.setGroupingSeparator('.');
         symbols.setDecimalSeparator(',');
         this.currencyFormatter = new DecimalFormat("#,##0.00 MT", symbols);
         this.percentFormatter = new DecimalFormat("0.0'%'", symbols);
