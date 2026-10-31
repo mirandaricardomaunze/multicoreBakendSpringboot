@@ -11,42 +11,62 @@ import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.printing.OrderPickingPrintService;
 import mz.multicore.erp.modules.printing.OrderPickingSheetPrintService;
-import mz.multicore.erp.modules.users.model.AppUser;
-import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.service.AppUserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Orquestrador do circuito de separação e expedição de encomendas de clientes.
+ * Delega a coordenação de impressão e o ciclo de vida para colaboradores dedicados.
+ */
 @Service
 public class CustomerOrderFulfillmentService {
+
     private final ComercialService comercialService;
     private final OrderRepository orderRepository;
     private final OrderLineRepository orderLineRepository;
     private final OrderEventRepository eventRepository;
     private final InventoryService inventoryService;
-    private final OrderPickingPrintService printService;
-    private final OrderPickingSheetPrintService sheetPrintService;
-    private final AppUserService appUserService;
+    private final OrderPickingCoordinator pickingCoordinator;
+    private final OrderFulfillmentLifecycleService lifecycleService;
 
-    @org.springframework.beans.factory.annotation.Autowired
-    public CustomerOrderFulfillmentService(ComercialService comercialService, OrderRepository orderRepository,
-            OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
-            InventoryService inventoryService, OrderPickingPrintService printService,
-            OrderPickingSheetPrintService sheetPrintService, AppUserService appUserService) {
+    @Autowired
+    public CustomerOrderFulfillmentService(
+            ComercialService comercialService,
+            OrderRepository orderRepository,
+            OrderLineRepository orderLineRepository,
+            OrderEventRepository eventRepository,
+            InventoryService inventoryService,
+            OrderPickingCoordinator pickingCoordinator,
+            OrderFulfillmentLifecycleService lifecycleService) {
         this.comercialService = comercialService;
         this.orderRepository = orderRepository;
         this.orderLineRepository = orderLineRepository;
         this.eventRepository = eventRepository;
         this.inventoryService = inventoryService;
-        this.printService = printService;
-        this.sheetPrintService = sheetPrintService;
-        this.appUserService = appUserService;
+        this.pickingCoordinator = pickingCoordinator;
+        this.lifecycleService = lifecycleService;
     }
 
-    public CustomerOrderFulfillmentService(ComercialService comercialService, OrderRepository orderRepository,
+    /** Construtor retrocompatível de 8 dependências. */
+    public CustomerOrderFulfillmentService(
+            ComercialService comercialService, OrderRepository orderRepository,
+            OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
+            InventoryService inventoryService, OrderPickingPrintService printService,
+            OrderPickingSheetPrintService sheetPrintService, AppUserService appUserService) {
+        this(comercialService, orderRepository, orderLineRepository, eventRepository, inventoryService,
+                new OrderPickingCoordinator(orderRepository, eventRepository, printService, sheetPrintService, appUserService),
+                new OrderFulfillmentLifecycleService(comercialService, orderRepository, eventRepository,
+                        new OrderPickingCoordinator(orderRepository, eventRepository, printService, sheetPrintService, appUserService)));
+    }
+
+    /** Construtor retrocompatível de 7 dependências para testes legados. */
+    public CustomerOrderFulfillmentService(
+            ComercialService comercialService, OrderRepository orderRepository,
             OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
             InventoryService inventoryService, OrderPickingPrintService printService, AppUserService appUserService) {
         this(comercialService, orderRepository, orderLineRepository, eventRepository, inventoryService,
@@ -65,11 +85,8 @@ public class CustomerOrderFulfillmentService {
     }
 
     private OrderDTO createAndReserve(CreateFulfillmentOrderRequest request, String key) {
-        // A via é forçada aqui, não lida do pedido HTTP: este circuito é dono da sua via e não a
-        // pode deixar ao critério de quem chama. Como PICKING_REQUEST não cria aprovação nenhuma,
-        // deixou de ser preciso criar uma e cancelá-la a seguir.
         OrderDTO created = comercialService.createOrder(request.order(), OrderKind.PICKING_REQUEST);
-        Order order = requireOrder(created.id());
+        Order order = pickingCoordinator.requireOrder(created.id());
         for (OrderLine line : order.getLines()) {
             BigDecimal physical = inventoryService.lockAndGetPhysicalQuantity(line.getProduct().getId(), order.getWarehouse().getId());
             BigDecimal reserved = orderLineRepository.sumActiveReservations(line.getProduct().getId(), order.getWarehouse().getId());
@@ -83,259 +100,51 @@ public class CustomerOrderFulfillmentService {
         String previous = order.getStatus();
         order.setStatus(OrderFulfillmentStatus.AWAITING_SEPARATION.name());
         orderRepository.save(order);
-        record(order, "ORDER_SUBMITTED_STOCK_RESERVED", previous, order.getStatus(), request.terminalName(),
-                "Pedido enviado para a central; stock reservado.");
+        pickingCoordinator.recordEvent(order, "ORDER_SUBMITTED_STOCK_RESERVED", previous, order.getStatus(),
+                request.terminalName(), "Pedido enviado para a central; stock reservado.");
         return comercialService.toDTO(order);
     }
 
     @Transactional
     public byte[] printForPicking(Long id, String terminal) {
-        PermissionGuard.requireManagerOrAdmin("imprimir guia de separacao");
-        Order order = requireSeparationCircuit(id, "imprimir a lista de separação");
-        transition(order, OrderFulfillmentStatus.AWAITING_SEPARATION, OrderFulfillmentStatus.IN_SEPARATION);
-        byte[] document = printService.render(id, false);
-        registerPrint(order, terminal, "PICKING_PRINTED", "Primeira impressao; separacao iniciada.");
-        return document;
+        return pickingCoordinator.printForPicking(id, terminal);
     }
 
     @Transactional
     public byte[] reprint(Long id, ReprintAuthorizationRequest request) {
-        PermissionGuard.requireManagerOrAdmin("reimprimir guia de separacao");
-        Order order = requireSeparationCircuit(id, "reimprimir a lista de separação");
-        if (!OrderFulfillmentStatus.IN_SEPARATION.name().equals(order.getStatus())) {
-            throw new BusinessRuleException("A guia so pode ser reimpressa durante a separacao.");
-        }
-        if (CurrentUserContext.getUsername().equalsIgnoreCase(request.approverUsername())) {
-            throw new BusinessRuleException("A reimpressao exige autorizacao de outro utilizador.");
-        }
-        AppUser approver = appUserService.authenticate(request.approverUsername(), request.approverPassword());
-        AppUserCompanyAccess access = approver.findCompanyAccess(CurrentUserContext.requireCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("O autorizador nao pertence a empresa activa."));
-        if (!"MANAGER".equalsIgnoreCase(access.getRole()) && !"ADMIN".equalsIgnoreCase(access.getRole())) {
-            throw new BusinessRuleException("O autorizador deve ser gerente ou administrador.");
-        }
-        byte[] document = printService.render(id, true);
-        registerPrint(order, request.terminalName(), "PICKING_REPRINTED",
-                "Autorizado por " + approver.getUsername() + ". Motivo: " + request.reason().trim());
-        return document;
+        return pickingCoordinator.reprint(id, request);
     }
 
     @Transactional(readOnly = true)
     public OrderPickingDetailsDTO getPickingDetails(Long id) {
-        Order order = requireOrder(id);
-        BigDecimal totalBoxes = BigDecimal.ZERO;
-        java.util.List<OrderPickingLineDTO> lines = new java.util.ArrayList<>();
-        for (OrderLine line : order.getLines()) {
-            Product p = line.getProduct();
-            String ref = p != null && p.getReference() != null ? p.getReference() : "—";
-            String barcode = p != null && p.getBarcode() != null ? p.getBarcode() : "—";
-            String name = p != null ? p.getName() : "Artigo";
-            int pkgsPerBox = p != null ? p.getPackagesPerBox() : 1;
-            int unitsPerPkg = p != null ? p.getUnitsPerPackage() : 1;
-            BigDecimal boxes = BigDecimal.ZERO;
-            if (pkgsPerBox > 1 || unitsPerPkg > 1) {
-                long totalUnits = (long) pkgsPerBox * (unitsPerPkg > 0 ? unitsPerPkg : 1);
-                if (totalUnits > 0 && line.getQuantity() != null) {
-                    boxes = line.getQuantity().divide(BigDecimal.valueOf(totalUnits), 2, java.math.RoundingMode.HALF_UP);
-                }
-            }
-            totalBoxes = totalBoxes.add(boxes);
-            lines.add(new OrderPickingLineDTO(
-                    line.getId(),
-                    p != null ? p.getId() : null,
-                    ref,
-                    barcode,
-                    name,
-                    line.getQuantity(),
-                    line.getSeparatedQuantity() != null ? line.getSeparatedQuantity() : BigDecimal.ZERO,
-                    pkgsPerBox,
-                    unitsPerPkg,
-                    boxes,
-                    line.getBatchNumber(),
-                    null,
-                    order.getWarehouse() != null ? order.getWarehouse().getName() : "Armazém"
-            ));
-        }
-        return new OrderPickingDetailsDTO(
-                order.getId(),
-                order.getOrderNumber(),
-                order.getClient() != null ? order.getClient().getName() : "Consumidor Final",
-                order.getWarehouse() != null ? order.getWarehouse().getName() : "Central",
-                order.getStatus(),
-                lines,
-                lines.size(),
-                totalBoxes.setScale(2, java.math.RoundingMode.HALF_UP)
-        );
+        return pickingCoordinator.getPickingDetails(id);
     }
 
     @Transactional
     public byte[] printForPickingA4(Long id, String terminal) {
-        PermissionGuard.requireManagerOrAdmin("imprimir guia de separacao A4");
-        Order order = requireOrder(id);
-        if (OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(order.getStatus())
-                || "PENDING".equalsIgnoreCase(order.getStatus())) {
-            order.setStatus(OrderFulfillmentStatus.IN_SEPARATION.name());
-        }
-        byte[] document = sheetPrintService.renderA4(id, false);
-        registerPrint(order, terminal, "PICKING_A4_PRINTED", "Guia de separação A4 impressa; separação iniciada.");
-        return document;
+        return pickingCoordinator.printForPickingA4(id, terminal);
     }
 
     @Transactional
     public OrderDTO completeSeparationWithConfirmation(CompleteOrderPickingRequest request) {
-        PermissionGuard.requireManagerOrAdmin("concluir separacao com conferencia");
-        Order order = requireOrder(request.orderId());
-        if (!OrderFulfillmentStatus.IN_SEPARATION.name().equals(order.getStatus())
-                && !OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(order.getStatus())
-                && !"PENDING".equalsIgnoreCase(order.getStatus())) {
-            throw new BusinessRuleException("Apenas encomendas pendentes ou em separação podem ser conferidas.");
-        }
-
-        if (request.lines() != null && !request.lines().isEmpty()) {
-            for (OrderPickingConfirmationLineRequest cl : request.lines()) {
-                order.getLines().stream()
-                        .filter(l -> l.getId().equals(cl.lineId()))
-                        .findFirst()
-                        .ifPresent(l -> {
-                            l.setSeparatedQuantity(cl.confirmedQuantity() != null ? cl.confirmedQuantity() : l.getQuantity());
-                            if (cl.batchNumber() != null && !cl.batchNumber().isBlank()) {
-                                l.setBatchNumber(cl.batchNumber().trim());
-                            }
-                        });
-            }
-        } else {
-            order.getLines().forEach(line -> line.setSeparatedQuantity(line.getQuantity()));
-        }
-
-        String previous = order.getStatus();
-        order.setStatus(OrderFulfillmentStatus.SEPARATED.name());
-        orderRepository.save(order);
-        String details = "Conferência óptica de separação concluída."
-                + (request.notes() != null && !request.notes().isBlank() ? " Notas: " + request.notes().trim() : "");
-        record(order, "SEPARATION_VERIFIED", previous, order.getStatus(), request.terminalName(), details);
-        return comercialService.toDTO(order);
+        return lifecycleService.completeSeparationWithConfirmation(request);
     }
 
     @Transactional
     public OrderDTO completeSeparation(Long id, OrderActionRequest request) {
-        PermissionGuard.requireManagerOrAdmin("concluir separacao");
-        Order order = requireSeparationCircuit(id, "marcar como separado");
-        transition(order, OrderFulfillmentStatus.IN_SEPARATION, OrderFulfillmentStatus.SEPARATED);
-        order.getLines().forEach(line -> line.setSeparatedQuantity(line.getQuantity()));
-        orderRepository.save(order);
-        record(order, "SEPARATION_COMPLETED", OrderFulfillmentStatus.IN_SEPARATION.name(), order.getStatus(),
-                request.terminalName(), "Todos os artigos foram separados e conferidos.");
-        return comercialService.toDTO(order);
+        return lifecycleService.completeSeparation(id, request);
     }
 
     @Transactional
     public InvoiceDTO bill(Long id, OrderActionRequest request) {
-        PermissionGuard.requireManagerOrAdmin("facturar pedido separado");
-        Order order = requireOrder(id);
-        if (!OrderFulfillmentStatus.SEPARATED.name().equals(order.getStatus()) || order.getInvoiceId() != null) {
-            throw new BusinessRuleException("Apenas um pedido separado e ainda nao facturado pode ser facturado.");
-        }
-        InvoiceDTO invoice = comercialService.billOrder(id);
-        order = requireOrder(id);
-        order.setReservationActive(false);
-        order.setStatus(OrderFulfillmentStatus.INVOICED.name());
-        orderRepository.save(order);
-        record(order, "ORDER_INVOICED_STOCK_DEDUCTED", OrderFulfillmentStatus.SEPARATED.name(), order.getStatus(),
-                request.terminalName(), "Fatura " + invoice.invoiceNumber() + "; reserva consumida e stock deduzido.");
-        return invoice;
+        return lifecycleService.bill(id, request);
     }
 
     @Transactional(readOnly = true)
     public List<OrderEventDTO> events(Long id) {
-        requireOrder(id);
+        pickingCoordinator.requireOrder(id);
         return eventRepository.findByOrderIdOrderByCreatedAtAsc(id).stream().map(e -> new OrderEventDTO(
                 e.getId(), e.getEventType(), e.getPreviousStatus(), e.getNewStatus(), e.getCreatedBy(),
                 e.getActorRole(), e.getTerminalName(), e.getDetails(), e.getCreatedAt())).toList();
-    }
-
-    private Order requireOrder(Long id) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new BusinessRuleException("Pedido nao encontrado."));
-        CurrentUserContext.requireCompany(order.getCompany().getId());
-        order.getLines().size();
-        return order;
-    }
-
-    /**
-     * Recusa uma encomenda que não é deste circuito, <b>antes</b> de olhar para o estado.
-     *
-     * <p>Uma encomenda A4 nunca esteve em separação, pelo que a recusa por estado ("ainda aguarda
-     * separação") mandaria o operador imprimir uma lista que não existe. A via é a razão certa e
-     * é a que se diz.
-     */
-    private Order requireSeparationCircuit(Long id, String action) {
-        Order order = requireOrder(id);
-        if (!OrderKind.orDefault(order.getKind()).usesSeparationFlow()) {
-            throw new BusinessRuleException("Não é possível " + action + ": a encomenda "
-                    + order.getOrderNumber() + " é do tipo \"" + OrderKind.FORMAL_ORDER.label()
-                    + "\" e não passa pelo armazém — aprova-se e fatura-se directamente.");
-        }
-        return order;
-    }
-
-    /**
-     * Muda o estado do pedido, recusando quando o passo anterior não foi dado.
-     *
-     * <p>A mensagem diz <b>o que fazer</b> e não só o que está errado. "Estado actual invalido:
-     * PENDING" é verdade e não serve de nada a quem está ao balcão — o operador precisa de saber
-     * que lhe falta imprimir a lista de separação, ou que aquela encomenda nem sequer faz parte
-     * deste circuito.
-     */
-    private void transition(Order order, OrderFulfillmentStatus expected, OrderFulfillmentStatus target) {
-        if (!expected.name().equals(order.getStatus())) {
-            throw new BusinessRuleException(explainWrongState(order, expected, target));
-        }
-        expected.requireTransitionTo(target);
-        order.setStatus(target.name());
-    }
-
-    private String explainWrongState(Order order, OrderFulfillmentStatus expected, OrderFulfillmentStatus target) {
-        String current = order.getStatus();
-        String header = "Não é possível marcar como " + label(target) + ": ";
-
-        // Encomenda do fluxo clássico — nunca passou pelo circuito de separação.
-        if (!OrderFulfillmentStatus.isFulfillmentStatus(current)) {
-            return header + "esta encomenda (" + order.getOrderNumber() + ") não foi criada para "
-                    + "separação — está em \"" + current + "\" e fatura-se directamente.";
-        }
-        if (OrderFulfillmentStatus.AWAITING_SEPARATION.name().equals(current)) {
-            return header + "a encomenda " + order.getOrderNumber() + " ainda aguarda separação. "
-                    + "Imprima primeiro a lista de separação — é isso que dá início ao trabalho no armazém.";
-        }
-        return header + "a encomenda " + order.getOrderNumber() + " está em \"" + label(current)
-                + "\" e o passo esperado era \"" + label(expected) + "\".";
-    }
-
-    private String label(OrderFulfillmentStatus status) {
-        return label(status.name());
-    }
-
-    /**
-     * Delega na fonte única. Esta tradução chegou a viver aqui, privada e só com os estados de
-     * separação — o A4 e os restantes ecrãs ficavam a ver códigos internos. Ver
-     * {@link mz.multicore.erp.modules.comercial.model.OrderStatusLabel}.
-     */
-    private String label(String status) {
-        return mz.multicore.erp.modules.comercial.model.OrderStatusLabel.of(status);
-    }
-
-    private void registerPrint(Order order, String terminal, String type, String details) {
-        order.setPrintCount(order.getPrintCount() + 1);
-        order.setPrintedAt(java.time.LocalDateTime.now());
-        order.setLastPrintedBy(CurrentUserContext.getUsername());
-        orderRepository.save(order);
-        record(order, type, order.getStatus(), order.getStatus(), terminal, details);
-    }
-
-    private void record(Order order, String type, String previous, String next, String terminal, String details) {
-        OrderEvent event = new OrderEvent();
-        event.setOrder(order); event.setEventType(type); event.setPreviousStatus(previous); event.setNewStatus(next);
-        event.setActorRole(CurrentUserContext.getRole()); event.setTerminalName(terminal); event.setDetails(details);
-        event.setCreatedBy(CurrentUserContext.getUsername());
-        eventRepository.save(event);
     }
 }

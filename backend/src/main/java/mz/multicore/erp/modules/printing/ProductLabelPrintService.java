@@ -1,58 +1,48 @@
 package mz.multicore.erp.modules.printing;
 
-import com.lowagie.text.Element;
-import com.lowagie.text.Image;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.Barcode128;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.Color;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Folha de <b>etiquetas de produto</b> (código de barras + nome + preço) em A4, grelha de 3 colunas.
- * O código de barras é gerado como <b>imagem AWT</b> (Code128, universal) e embebido — não precisa do
- * {@code PdfWriter}. Uma responsabilidade: produtos → folha de etiquetas. Ver
- * {@code docs/ETIQUETAS_CODIGO_BARRAS_SPEC.md}.
+ * Folha de <b>etiquetas de produto</b> (código de barras + nome + preço) em A4 ou bobina térmica 80mm.
  */
 @Service
 public class ProductLabelPrintService {
 
-    private static final int COLUMNS = 3;
     private static final int MAX_COPIES = 200;
 
     private final ComercialService comercialService;
     private final CompanyService companyService;
+    private final ProductLabelDocumentRenderer documentRenderer;
 
-    public ProductLabelPrintService(ComercialService comercialService, CompanyService companyService) {
+    @Autowired
+    public ProductLabelPrintService(ComercialService comercialService,
+                                    CompanyService companyService,
+                                    ProductLabelDocumentRenderer documentRenderer) {
         this.comercialService = comercialService;
         this.companyService = companyService;
+        this.documentRenderer = documentRenderer;
     }
 
-    /**
-     * @param productIds artigos a etiquetar (da empresa activa)
-     * @param copies     nº de etiquetas por artigo (limitado a 1..200)
-     */
+    public ProductLabelPrintService(ComercialService comercialService, CompanyService companyService) {
+        this(comercialService, companyService, new ProductLabelDocumentRenderer());
+    }
+
     @Transactional(readOnly = true)
     public byte[] render(Long companyId, List<Long> productIds, int copies) {
         return render(companyId, productIds, copies, null, null, "A4");
     }
 
-    /**
-     * Renderiza etiquetas com suporte a número de lote, validade e formatos A4 ou térmicos.
-     */
     @Transactional(readOnly = true)
     public byte[] render(Long companyId, List<Long> productIds, int copies, String lotNumber, String expiryDate, String layoutFormat) {
         Company company = companyService.getCompanyById(companyId);
@@ -71,128 +61,6 @@ public class ProductLabelPrintService {
             throw new BusinessRuleException("Nenhum dos produtos indicados foi encontrado.");
         }
 
-        String stamp = "ETQ-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        boolean isThermal = layoutFormat != null && layoutFormat.toUpperCase().contains("THERMAL");
-
-        if (isThermal) {
-            // Bobina térmica contínua de 80mm
-            return PdfDocumentBuilder.buildReceipt(doc -> {
-                doc.add(CompanyHeaderRenderer.build(company, "Etiquetas de Lote / Produto", stamp));
-                PdfPTable grid = new PdfPTable(1);
-                grid.setWidthPercentage(100);
-                grid.setSpacingBefore(6f);
-                for (ProductDTO p : products) {
-                    for (int c = 0; c < copiesClamped; c++) {
-                        grid.addCell(labelCell(p, lotNumber, expiryDate));
-                    }
-                }
-                doc.add(grid);
-            });
-        }
-
-        return PdfDocumentBuilder.buildA4(doc -> {
-            doc.add(CompanyHeaderRenderer.build(company, "Etiquetas de Produtos e Lotes", stamp));
-            PdfPTable grid = new PdfPTable(COLUMNS);
-            grid.setWidthPercentage(100);
-            grid.setSpacingBefore(8f);
-
-            int cells = 0;
-            for (ProductDTO p : products) {
-                for (int c = 0; c < copiesClamped; c++) {
-                    grid.addCell(labelCell(p, lotNumber, expiryDate));
-                    cells++;
-                }
-            }
-            while (cells % COLUMNS != 0) { // completa a última linha
-                grid.addCell(emptyCell());
-                cells++;
-            }
-            doc.add(grid);
-        });
-    }
-
-    private PdfPCell labelCell(ProductDTO product, String lotNumber, String expiryDate) {
-        String code = codeOf(product);
-
-        PdfPCell cell = new PdfPCell();
-        cell.setBorderColor(PdfTheme.BORDER);
-        cell.setPadding(8f);
-        cell.setMinimumHeight(80f);
-        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-        Paragraph name = new Paragraph(truncate(product.name(), 30), PdfTheme.tableHeaderFont());
-        name.setAlignment(Element.ALIGN_CENTER);
-        name.setSpacingAfter(6f); // afasta o nome do código de barras
-        cell.addElement(name);
-
-        Image barcode = barcodeImage(code);
-        if (barcode != null) {
-            barcode.setAlignment(Element.ALIGN_CENTER);
-            cell.addElement(barcode);
-        }
-
-        Paragraph codeText = new Paragraph(code, PdfTheme.smallFont());
-        codeText.setAlignment(Element.ALIGN_CENTER);
-        codeText.setSpacingBefore(2f);
-        cell.addElement(codeText);
-
-        if (lotNumber != null && !lotNumber.isBlank()) {
-            Paragraph lot = new Paragraph("Lote/OP: " + lotNumber.trim(), PdfTheme.smallFont());
-            lot.setAlignment(Element.ALIGN_CENTER);
-            lot.setSpacingBefore(2f);
-            cell.addElement(lot);
-        }
-
-        if (expiryDate != null && !expiryDate.isBlank()) {
-            Paragraph exp = new Paragraph("Val: " + expiryDate.trim(), PdfTheme.smallFont());
-            exp.setAlignment(Element.ALIGN_CENTER);
-            exp.setSpacingBefore(1f);
-            cell.addElement(exp);
-        }
-
-        Paragraph price = new Paragraph(
-                product.unitPrice() == null ? "" : String.format("%,.2f MT", product.unitPrice()),
-                PdfTheme.subtitleFont());
-        price.setAlignment(Element.ALIGN_CENTER);
-        price.setSpacingBefore(4f);
-        cell.addElement(price);
-        return cell;
-    }
-
-    private PdfPCell emptyCell() {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setMinimumHeight(80f);
-        return cell;
-    }
-
-    /** Código a imprimir: barcode → referência → SKU (sempre existe SKU). */
-    private static String codeOf(ProductDTO p) {
-        if (p.barcode() != null && !p.barcode().isBlank()) return p.barcode().trim();
-        if (p.reference() != null && !p.reference().isBlank()) return p.reference().trim();
-        return p.sku();
-    }
-
-    /** Code128 como imagem embebível; null se o código for inválido para código de barras. */
-    private static Image barcodeImage(String code) {
-        try {
-            Barcode128 barcode = new Barcode128();
-            barcode.setCode(code);
-            barcode.setCodeType(Barcode128.CODE128);
-            barcode.setBarHeight(30f);
-            barcode.setX(0.8f);
-            barcode.setFont(null); // sem o texto do OpenPDF — mostramos o código em separado
-            java.awt.Image awt = barcode.createAwtImage(Color.BLACK, Color.WHITE);
-            Image img = Image.getInstance(awt, Color.WHITE);
-            img.scaleToFit(140f, 44f);
-            return img;
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
-    private static String truncate(String s, int max) {
-        if (s == null) return "";
-        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
+        return documentRenderer.renderLabels(company, products, copiesClamped, lotNumber, expiryDate, layoutFormat);
     }
 }

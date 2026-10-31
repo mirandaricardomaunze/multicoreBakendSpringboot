@@ -31,6 +31,7 @@ public class TimeSheetService {
     private final TimeSheetCalculator calculator;
     private final TimeSheetPeriodCoordinator periodCoordinator;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public TimeSheetService(TimeEntryRegistrationService registrationService,
                             TimeSheetCalculator calculator,
                             TimeSheetPeriodCoordinator periodCoordinator) {

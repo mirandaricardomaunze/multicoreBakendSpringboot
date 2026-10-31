@@ -1,210 +1,85 @@
 package mz.multicore.erp.modules.inventory.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.dto.ProductBatchDTO;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class ProductBatchService {
 
-    private static final LocalDate LEGACY_EXPIRATION = LocalDate.of(9999, 12, 31);
-    private static final String LEGACY_BATCH_PREFIX = "LEGACY-";
+    private final ProductBatchMutationService mutationService;
+    private final ProductBatchQueryService queryService;
 
-    private final ProductBatchRepository batchRepository;
+    @Autowired
+    public ProductBatchService(ProductBatchMutationService mutationService,
+                               ProductBatchQueryService queryService) {
+        this.mutationService = mutationService;
+        this.queryService = queryService;
+    }
 
     public ProductBatchService(ProductBatchRepository batchRepository) {
-        this.batchRepository = batchRepository;
+        this(new ProductBatchMutationService(batchRepository),
+             new ProductBatchQueryService(batchRepository));
     }
 
     @Transactional
     public ProductBatch addToBatch(Product product, Warehouse warehouse, String batchNumber,
-                                    LocalDate expirationDate, BigDecimal quantity) {
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessRuleException("Quantidade de entrada deve ser positiva.");
-        }
-
-        // Bloqueio de entrada de lote já vencido (spec §4 / harness RS-12). Lotes sem validade
-        // (perecível não rastreado) usam LEGACY_EXPIRATION 9999 e nunca caem aqui.
-        if (expirationDate != null && expirationDate.isBefore(LocalDate.now())) {
-            throw new BusinessRuleException(String.format(
-                    "Não é possível dar entrada de stock de '%s' com lote já vencido (validade %s).",
-                    product.getName(), expirationDate));
-        }
-
-        String effectiveBatch = (batchNumber == null || batchNumber.isBlank())
-                ? defaultBatchNumber(expirationDate)
-                : batchNumber;
-        LocalDate effectiveExpiration = expirationDate != null ? expirationDate : LEGACY_EXPIRATION;
-
-        ProductBatch batch = batchRepository
-                .findByProductIdAndWarehouseIdAndBatchNumber(product.getId(), warehouse.getId(), effectiveBatch)
-                .orElseGet(() -> {
-                    ProductBatch nb = new ProductBatch();
-                    nb.setProduct(product);
-                    nb.setWarehouse(warehouse);
-                    nb.setBatchNumber(effectiveBatch);
-                    nb.setExpirationDate(effectiveExpiration);
-                    nb.setEntryDate(LocalDate.now());
-                    nb.setQuantity(BigDecimal.ZERO);
-                    return nb;
-                });
-
-        batch.setQuantity(batch.getQuantity().add(quantity));
-        return batchRepository.save(batch);
+                                   LocalDate expirationDate, BigDecimal quantity) {
+        return mutationService.addToBatch(product, warehouse, batchNumber, expirationDate, quantity);
     }
 
-    /**
-     * Consome quantidade do produto/armazém usando FEFO. Pode atravessar vários lotes.
-     * Retorna a lista de débitos efetuados (um por lote consumido). Atomic: se não houver stock
-     * suficiente, lança exceção sem alterar nada.
-     */
     @Transactional
     public List<BatchConsumption> consumeFEFO(Product product, Warehouse warehouse, BigDecimal quantity) {
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessRuleException("Quantidade de saída deve ser positiva.");
-        }
-
-        List<ProductBatch> available = batchRepository.findAvailableFEFO(product.getId(), warehouse.getId());
-
-        BigDecimal totalAvailable = available.stream()
-                .map(ProductBatch::getQuantity)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        if (totalAvailable.compareTo(quantity) < 0) {
-            throw new BusinessRuleException(String.format(
-                    "Stock insuficiente de '%s' no armazém '%s'. Requerido: %s, Disponível em lotes: %s",
-                    product.getName(), warehouse.getName(), quantity, totalAvailable));
-        }
-
-        List<BatchConsumption> debits = new ArrayList<>();
-        BigDecimal remaining = quantity;
-
-        for (ProductBatch batch : available) {
-            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
-
-            BigDecimal take = batch.getQuantity().min(remaining);
-            batch.setQuantity(batch.getQuantity().subtract(take));
-            batchRepository.save(batch);
-
-            debits.add(new BatchConsumption(batch, take));
-            remaining = remaining.subtract(take);
-        }
-
-        return debits;
+        return mutationService.consumeFEFO(product, warehouse, quantity);
     }
 
-    /**
-     * Garante que existe um lote LEGACY com a quantidade indicada (usado para migração de stocks
-     * antigos que não tinham rastreio de lote).
-     */
     @Transactional
     public ProductBatch ensureLegacyBatch(Product product, Warehouse warehouse, BigDecimal quantity) {
-        String legacyBatch = LEGACY_BATCH_PREFIX + product.getId();
-        ProductBatch batch = batchRepository
-                .findByProductIdAndWarehouseIdAndBatchNumber(product.getId(), warehouse.getId(), legacyBatch)
-                .orElseGet(() -> {
-                    ProductBatch nb = new ProductBatch();
-                    nb.setProduct(product);
-                    nb.setWarehouse(warehouse);
-                    nb.setBatchNumber(legacyBatch);
-                    nb.setExpirationDate(LEGACY_EXPIRATION);
-                    nb.setEntryDate(LocalDate.now());
-                    nb.setQuantity(BigDecimal.ZERO);
-                    return nb;
-                });
-        batch.setQuantity(quantity);
-        return batchRepository.save(batch);
+        return mutationService.ensureLegacyBatch(product, warehouse, quantity);
     }
 
-    /**
-     * Materializa em lote o stock que existe <b>sem lote</b>, para que possa sair por FEFO.
-     *
-     * <p>Os lotes são uma subdivisão do stock, criada preguiçosamente: instalações anteriores ao
-     * rastreio de lote — e a base de demonstração — têm {@code stocks} preenchido e
-     * {@code product_batches} vazio. Quem consome FEFO sem passar por aqui encontra zero em stock
-     * que existe, e recusa a saída com "Disponível em lotes: 0".
-     *
-     * <p><b>Fonte única</b> desta migração: era privada no {@code InventoryService}, pelo que a
-     * transferência entre armazéns — que consome FEFO por conta própria — nunca a fazia e nunca
-     * funcionou sobre stock antigo. Recebe a quantidade em stock em vez de a ir buscar, para não
-     * precisar do {@code StockRepository} (mantém este serviço só sobre lotes).
-     *
-     * @param stockQuantity quantidade agregada em {@code stocks}; {@code null} = não há registo
-     */
     @Transactional
     public void materialiseLegacyIfNeeded(Product product, Warehouse warehouse, BigDecimal stockQuantity) {
-        if (stockQuantity == null) return;
-        BigDecimal batchTotal = sumQuantity(product.getId(), warehouse.getId());
-        if (batchTotal == null) batchTotal = BigDecimal.ZERO;
-        if (stockQuantity.compareTo(batchTotal) > 0) {
-            ensureLegacyBatch(product, warehouse, stockQuantity);
-        }
+        mutationService.materialiseLegacyIfNeeded(product, warehouse, stockQuantity);
     }
 
     @Transactional(readOnly = true)
     public List<ProductBatchDTO> findByCompany(Long companyId) {
-        return batchRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
+        return queryService.findByCompany(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<ProductBatchDTO> findByWarehouse(Long warehouseId) {
-        return batchRepository.findByWarehouseId(warehouseId).stream().map(this::toDTO).toList();
+        return queryService.findByWarehouse(warehouseId);
     }
 
     @Transactional(readOnly = true)
     public List<ProductBatchDTO> findExpiringByCompany(Long companyId, LocalDate cutoff) {
-        return batchRepository.findExpiringByCompanyId(companyId, cutoff).stream().map(this::toDTO).toList();
+        return queryService.findExpiringByCompany(companyId, cutoff);
     }
 
     @Transactional(readOnly = true)
     public BigDecimal sumQuantity(Long productId, Long warehouseId) {
-        return batchRepository.sumQuantityByProductAndWarehouse(productId, warehouseId);
+        return queryService.sumQuantity(productId, warehouseId);
     }
 
-    /**
-     * Devolve o próximo lote a ser consumido (FEFO) — o de validade mais próxima com qty > 0 —
-     * para um par produto/armazém. Útil para o UI mostrar de antemão que lote/validade vai sair.
-     */
     @Transactional(readOnly = true)
     public Optional<ProductBatchDTO> findNextFEFO(Long productId, Long warehouseId) {
-        List<ProductBatch> available = batchRepository.findAvailableFEFO(productId, warehouseId);
-        if (available.isEmpty()) return Optional.empty();
-        return Optional.of(toDTO(available.get(0)));
+        return queryService.findNextFEFO(productId, warehouseId);
     }
 
     public ProductBatchDTO toDTO(ProductBatch b) {
-        return new ProductBatchDTO(
-                b.getId(),
-                b.getProduct().getId(),
-                b.getProduct().getSku(),
-                b.getProduct().getName(),
-                b.getWarehouse().getId(),
-                b.getWarehouse().getName(),
-                b.getBatchNumber(),
-                b.getExpirationDate(),
-                b.getEntryDate(),
-                b.getQuantity(),
-                b.getProduct().getBusinessUnit() != null ? b.getProduct().getBusinessUnit().getId() : null,
-                b.getProduct().getBusinessUnit() != null ? b.getProduct().getBusinessUnit().getName() : null
-        );
-    }
-
-    private String defaultBatchNumber(LocalDate expirationDate) {
-        if (expirationDate == null) {
-            return "AUTO-" + System.currentTimeMillis();
-        }
-        return "EXP-" + expirationDate;
+        return queryService.toDTO(b);
     }
 
     public record BatchConsumption(ProductBatch batch, BigDecimal quantity) {}

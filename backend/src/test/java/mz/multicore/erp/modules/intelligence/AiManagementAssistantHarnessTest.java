@@ -40,7 +40,7 @@ class AiManagementAssistantHarnessTest {
     @Test
     void desktopUsesOnlyHttpsContractAndCanonicalAsyncUi() throws Exception {
         String client = source("desktop/src/main/java/mz/multicore/erp/desktop/client/AiAssistantApiClient.java");
-        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java");
+        String panel = desktopAssistantSources();
         String frame = source("desktop/src/main/java/mz/multicore/erp/gui/MainFrame.java");
         assertThat(client).contains("DesktopClientFactory", "/api/intelligence/management-assistant/ask")
                 .doesNotContain("API_KEY", "MULTICORE_AI", "HttpClient");
@@ -56,7 +56,7 @@ class AiManagementAssistantHarnessTest {
         String controller = source("backend/src/main/java/mz/multicore/erp/modules/intelligence/controller/AiManagementAssistantController.java");
         String report = source("backend/src/main/java/mz/multicore/erp/modules/intelligence/service/AiManagementReportService.java");
         String client = source("desktop/src/main/java/mz/multicore/erp/desktop/client/AiAssistantApiClient.java");
-        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java");
+        String panel = desktopAssistantSources();
         assertThat(controller).contains("/report.pdf", "reportService.render(response)");
         assertThat(report).contains("PermissionGuard.requireManagerOrAdmin", "CurrentUserContext.getCurrentCompanyId()")
                 .contains("CompanyHeaderRenderer", "AI_MANAGEMENT_REPORT_GENERATED")
@@ -69,7 +69,7 @@ class AiManagementAssistantHarnessTest {
     void flexibleDocumentsUseAllowListAndOperationalBoundary() throws Exception {
         String contract = source("contracts/src/main/java/mz/multicore/erp/modules/intelligence/dto/AiProfessionalDocumentRequest.java");
         String report = source("backend/src/main/java/mz/multicore/erp/modules/intelligence/service/AiManagementReportService.java");
-        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java");
+        String panel = desktopAssistantSources();
         assertThat(contract).contains("record AiProfessionalDocumentRequest").doesNotContain("springframework", "persistence");
         assertThat(report).contains("ALLOWED_TYPES", "renderProfessionalDocument", "AI_PROFESSIONAL_DOCUMENT_GENERATED")
                 .contains("módulo operacional correspondente");
@@ -85,5 +85,13 @@ class AiManagementAssistantHarnessTest {
 
     private static String source(String relative) throws Exception {
         return Files.readString(ROOT.resolve(relative));
+    }
+
+    private static String desktopAssistantSources() throws Exception {
+        return source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiAnalysisView.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiDocumentCreationView.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiDocumentHistoryView.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiOperationalDraftsView.java");
     }
 }

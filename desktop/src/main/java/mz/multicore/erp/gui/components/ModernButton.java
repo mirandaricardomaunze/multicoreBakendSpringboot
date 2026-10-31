@@ -1,21 +1,24 @@
 package mz.multicore.erp.gui.components;
 
+import org.kordamp.ikonli.swing.FontIcon;
+
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class ModernButton extends JButton {
 
-    private Color normalColor = new Color(59, 130, 246); // Tailwind Blue-500 (#3B82F6)
-    private Color hoverColor = new Color(37, 99, 235);   // Tailwind Blue-600 (#2563EB)
-    private Color clickColor = new Color(29, 78, 216);   // Tailwind Blue-700 (#1D4ED8)
+    private Color normalColor = new Color(59, 130, 246);
+    private Color hoverColor = new Color(37, 99, 235);
+    private Color clickColor = new Color(29, 78, 216);
     private Color textColor = Color.WHITE;
     private int cornerRadius = UIHelper.RADIUS_MD;
 
     private boolean isGradient = false;
-    private Color gradientStart = new Color(139, 92, 246); // Violet-500
-    private Color gradientEnd = new Color(59, 130, 246);   // Blue-500
+    private Color gradientStart = new Color(139, 92, 246);
+    private Color gradientEnd = new Color(59, 130, 246);
 
     private float hoverProgress = 0.0f;
     private Timer hoverTimer;
@@ -32,22 +35,9 @@ public class ModernButton extends JButton {
         return this;
     }
 
-    public String getShortcut() {
-        return shortcutText;
-    }
+    public String getShortcut() { return shortcutText; }
 
-    public static String stripEllipsis(String text) {
-        if (text == null) return "";
-        String s = text.trim();
-        while (s.endsWith("...") || s.endsWith("…")) {
-            if (s.endsWith("...")) {
-                s = s.substring(0, s.length() - 3).trim();
-            } else if (s.endsWith("…")) {
-                s = s.substring(0, s.length() - 1).trim();
-            }
-        }
-        return s;
-    }
+    public static String stripEllipsis(String text) { return ModernButtonPainter.stripEllipsis(text); }
 
     public ModernButton(String text) {
         super(stripEllipsis(text));
@@ -59,64 +49,15 @@ public class ModernButton extends JButton {
         setForeground(textColor);
         setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         setCursor(new Cursor(Cursor.HAND_CURSOR));
-        setUI(new javax.swing.plaf.basic.BasicButtonUI() {
-            @Override
-            protected void paintText(Graphics g, JComponent c, Rectangle textRect, String text) {
-                AbstractButton b = (AbstractButton) c;
-                FontMetrics fm = g.getFontMetrics();
-                int mnemonicIndex = b.getDisplayedMnemonicIndex();
-                if (b.isEnabled()) {
-                    g.setColor(b.getForeground());
-                } else {
-                    Color disabledFg = UIHelper.isLight()
-                            ? new Color(148, 163, 184)
-                            : new Color(100, 116, 139);
-                    g.setColor(disabledFg);
-                }
-                String drawText = text;
-                if (drawText != null && (drawText.endsWith("...") || drawText.endsWith("…"))) {
-                    String full = b.getText();
-                    drawText = (full != null && !full.isBlank()) ? stripEllipsis(full) : stripEllipsis(drawText);
-                } else if (drawText != null) {
-                    drawText = stripEllipsis(drawText);
-                }
-                javax.swing.plaf.basic.BasicGraphicsUtils.drawStringUnderlineCharAt(g, drawText, mnemonicIndex,
-                        textRect.x + getTextShiftOffset(),
-                        textRect.y + fm.getAscent() + getTextShiftOffset());
-            }
-
-            @Override
-            protected void paintIcon(Graphics g, JComponent c, Rectangle iconRect) {
-                AbstractButton b = (AbstractButton) c;
-                Icon icon = b.getIcon();
-                if (icon != null) {
-                    icon.paintIcon(c, g, iconRect.x + getTextShiftOffset(),
-                            iconRect.y + getTextShiftOffset());
-                }
-            }
-        });
+        setUI(ModernButtonPainter.createButtonUI());
 
         addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (isEnabled()) animateHover(true);
+            @Override public void mouseEntered(MouseEvent e) { if (isEnabled()) animateHover(true); }
+            @Override public void mouseExited(MouseEvent e) { if (isEnabled()) animateHover(false); }
+            @Override public void mousePressed(MouseEvent e) {
+                if (isEnabled()) { setBackground(clickColor); repaint(); }
             }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (isEnabled()) animateHover(false);
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (isEnabled()) {
-                    setBackground(clickColor);
-                    repaint();
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
+            @Override public void mouseReleased(MouseEvent e) {
                 if (isEnabled()) {
                     if (getBounds().contains(e.getPoint())) {
                         setBackground(UIHelper.blendColors(normalColor, hoverColor, hoverProgress));
@@ -130,54 +71,6 @@ public class ModernButton extends JButton {
         setBackground(normalColor);
     }
 
-    @Override
-    public void setEnabled(boolean b) {
-        super.setEnabled(b);
-        setCursor(new Cursor(b ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
-        repaint();
-    }
-
-    public float getHoverProgress() {
-        return hoverProgress;
-    }
-
-    public void setHoverProgress(float progress) {
-        if (hoverTimer != null && hoverTimer.isRunning()) {
-            hoverTimer.stop();
-        }
-        this.hoverProgress = Math.max(0.0f, Math.min(1.0f, progress));
-        updateHoverColor();
-    }
-
-    public void animateHover(boolean entering) {
-        if (!isDisplayable() || GraphicsEnvironment.isHeadless()) {
-            setHoverProgress(entering ? 1.0f : 0.0f);
-            return;
-        }
-        if (hoverTimer != null && hoverTimer.isRunning()) {
-            hoverTimer.stop();
-        }
-        float step = 1.0f / HOVER_ANIM_STEPS;
-        hoverTimer = new Timer(HOVER_STEP_MS, e -> {
-            if (entering) {
-                hoverProgress = Math.min(1.0f, hoverProgress + step);
-            } else {
-                hoverProgress = Math.max(0.0f, hoverProgress - step);
-            }
-            updateHoverColor();
-            if ((entering && hoverProgress >= 1.0f) || (!entering && hoverProgress <= 0.0f)) {
-                ((Timer) e.getSource()).stop();
-            }
-        });
-        hoverTimer.start();
-    }
-
-    private void updateHoverColor() {
-        Color blended = UIHelper.blendColors(normalColor, hoverColor, hoverProgress);
-        super.setBackground(blended);
-        repaint();
-    }
-
     public ModernButton(String text, Color baseColor, Color hover) {
         this(text);
         this.normalColor = baseColor;
@@ -188,7 +81,43 @@ public class ModernButton extends JButton {
         setForeground(this.textColor);
     }
 
-    /** Redefine as cores do botão em runtime (ex.: alternar estado activo/inactivo num segmented control). */
+    @Override
+    public void setEnabled(boolean b) {
+        super.setEnabled(b);
+        setCursor(new Cursor(b ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        repaint();
+    }
+
+    public float getHoverProgress() { return hoverProgress; }
+
+    public void setHoverProgress(float progress) {
+        if (hoverTimer != null && hoverTimer.isRunning()) hoverTimer.stop();
+        this.hoverProgress = Math.max(0.0f, Math.min(1.0f, progress));
+        updateHoverColor();
+    }
+
+    public void animateHover(boolean entering) {
+        if (!isDisplayable() || GraphicsEnvironment.isHeadless()) {
+            setHoverProgress(entering ? 1.0f : 0.0f);
+            return;
+        }
+        if (hoverTimer != null && hoverTimer.isRunning()) hoverTimer.stop();
+        float step = 1.0f / HOVER_ANIM_STEPS;
+        hoverTimer = new Timer(HOVER_STEP_MS, e -> {
+            hoverProgress = entering ? Math.min(1.0f, hoverProgress + step) : Math.max(0.0f, hoverProgress - step);
+            updateHoverColor();
+            if ((entering && hoverProgress >= 1.0f) || (!entering && hoverProgress <= 0.0f)) {
+                ((Timer) e.getSource()).stop();
+            }
+        });
+        hoverTimer.start();
+    }
+
+    private void updateHoverColor() {
+        super.setBackground(UIHelper.blendColors(normalColor, hoverColor, hoverProgress));
+        repaint();
+    }
+
     public void setColors(Color base, Color hover) {
         if (hoverTimer != null && hoverTimer.isRunning()) hoverTimer.stop();
         this.hoverProgress = 0.0f;
@@ -199,17 +128,13 @@ public class ModernButton extends JButton {
         setBackground(base);
         this.textColor = UIHelper.readableTextOn(base);
         setForeground(this.textColor);
-        if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-            fi.setIconColor(this.textColor);
-        }
+        if (getIcon() instanceof FontIcon fi) fi.setIconColor(this.textColor);
         repaint();
     }
 
     @Override
     public void setIcon(Icon icon) {
-        if (icon instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-            fi.setIconColor(this.textColor != null ? this.textColor : Color.WHITE);
-        }
+        if (icon instanceof FontIcon fi) fi.setIconColor(this.textColor != null ? this.textColor : Color.WHITE);
         super.setIcon(icon);
     }
 
@@ -217,27 +142,21 @@ public class ModernButton extends JButton {
     public void setBackground(Color bg) {
         super.setBackground(bg);
         if (bg != null && this.textColor != null && UIHelper.contrastRatio(bg, this.textColor) < 3.0) {
-            Color safeFg = UIHelper.readableTextOn(bg);
-            super.setForeground(safeFg);
-            this.textColor = safeFg;
-            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-                fi.setIconColor(safeFg);
-            }
+            applySafeForeground(UIHelper.readableTextOn(bg));
         }
     }
 
     @Override
     public void setForeground(Color fg) {
-        Color safeFg = fg;
         Color bg = getBackground();
-        if (bg != null && fg != null && UIHelper.contrastRatio(bg, fg) < 3.0) {
-            safeFg = UIHelper.readableTextOn(bg);
-        }
+        Color safeFg = (bg != null && fg != null && UIHelper.contrastRatio(bg, fg) < 3.0) ? UIHelper.readableTextOn(bg) : fg;
+        applySafeForeground(safeFg);
+    }
+
+    void applySafeForeground(Color safeFg) {
         super.setForeground(safeFg);
         this.textColor = safeFg;
-        if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-            fi.setIconColor(safeFg != null ? safeFg : Color.WHITE);
-        }
+        if (getIcon() instanceof FontIcon fi) fi.setIconColor(safeFg != null ? safeFg : Color.WHITE);
     }
 
     public void setGradient(Color start, Color end) {
@@ -247,184 +166,53 @@ public class ModernButton extends JButton {
         repaint();
     }
 
-    public void setCornerRadius(int radius) {
-        this.cornerRadius = radius;
-        repaint();
-    }
+    public void setCornerRadius(int radius) { this.cornerRadius = radius; repaint(); }
 
-    @Override
-    public void setText(String text) {
-        super.setText(stripEllipsis(text));
-    }
+    @Override public void setText(String text) { super.setText(stripEllipsis(text)); }
 
-    public int calculateShortcutBadgeWidth() {
-        if (shortcutText == null || shortcutText.isEmpty()) return 0;
-        Font bf = new Font(Font.MONOSPACED, Font.BOLD, 10);
-        FontMetrics fm = getFontMetrics(bf);
-        return (fm != null ? fm.stringWidth(shortcutText) : 24) + 12;
-    }
+    public int calculateShortcutBadgeWidth() { return ModernButtonPainter.calculateShortcutBadgeWidth(this, shortcutText); }
 
     public int getBaseRightInset() {
-        javax.swing.border.Border b = getBorder();
+        Border b = getBorder();
         return b != null ? b.getBorderInsets(this).right : 14;
     }
 
     @Override
     public Insets getInsets() {
         Insets insets = super.getInsets();
-        if (shortcutText != null && !shortcutText.isEmpty()) {
-            int extra = calculateShortcutBadgeWidth() + 8;
-            return new Insets(insets.top, insets.left, insets.bottom, insets.right + extra);
-        }
-        return insets;
+        return (shortcutText != null && !shortcutText.isEmpty())
+                ? new Insets(insets.top, insets.left, insets.bottom, insets.right + calculateShortcutBadgeWidth() + 8)
+                : insets;
     }
 
     @Override
     public Insets getInsets(Insets insets) {
         Insets ins = super.getInsets(insets);
-        if (shortcutText != null && !shortcutText.isEmpty()) {
-            int extra = calculateShortcutBadgeWidth() + 8;
-            ins.right += extra;
-        }
+        if (shortcutText != null && !shortcutText.isEmpty()) ins.right += calculateShortcutBadgeWidth() + 8;
         return ins;
     }
 
-    /**
-     * Garante que os botões têm pelo menos a altura dos campos de formulário
-     * ({@link UIHelper#FORM_CONTROL_HEIGHT}), para botões e inputs alinharem na mesma linha.
-     * A largura garante margem para nunca truncar texto com reticências (...).
-     */
     @Override
-    public Dimension getPreferredSize() {
-        Dimension d = super.getPreferredSize();
-        Font font = getFont() != null ? getFont() : new Font(UIHelper.FONT, Font.BOLD, 13);
-        FontMetrics fm = getFontMetrics(font);
-        int textW = (getText() != null && fm != null) ? fm.stringWidth(getText()) : 0;
-        int iconW = (getIcon() != null) ? (getIcon().getIconWidth() + Math.max(getIconTextGap(), 8)) : 0;
-        Insets insets = getInsets();
-        int insetsW = insets != null ? (insets.left + insets.right) : 28;
-        int strictMin = textW + iconW + insetsW;
-        int neededW = strictMin + 12;
-
-        if (isPreferredSizeSet() && d != null) {
-            return new Dimension(Math.max(d.width, strictMin), Math.max(d.height, UIHelper.FORM_CONTROL_HEIGHT));
-        }
-        int minW = Math.max(d != null ? d.width + 12 : neededW, Math.max(neededW, 76));
-        return new Dimension(minW, Math.max(d != null ? d.height : 0, UIHelper.FORM_CONTROL_HEIGHT));
-    }
+    public Dimension getPreferredSize() { return ModernButtonPainter.computePreferredSize(this, super.getPreferredSize()); }
 
     @Override
     public Dimension getMinimumSize() {
         Dimension pref = getPreferredSize();
         Dimension d = super.getMinimumSize();
-        if (d == null) return pref;
-        return new Dimension(Math.max(d.width, pref.width), Math.max(d.height, pref.height));
+        return d == null ? pref : new Dimension(Math.max(d.width, pref.width), Math.max(d.height, pref.height));
     }
 
     @Override
     public void removeNotify() {
         super.removeNotify();
-        if (hoverTimer != null && hoverTimer.isRunning()) {
-            hoverTimer.stop();
-        }
+        if (hoverTimer != null && hoverTimer.isRunning()) hoverTimer.stop();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        int width = getWidth();
-        int height = getHeight();
-
-        // Feedback táctil: ligeiro deslocamento de 1px ao premir
-        if (getModel() != null && getModel().isPressed()) {
-            g2.translate(0, 1);
-        }
-
-        Color start = gradientStart != null ? gradientStart : new Color(139, 92, 246);
-        Color end = gradientEnd != null ? gradientEnd : new Color(59, 130, 246);
-        Color bg = getBackground() != null ? getBackground() : new Color(59, 130, 246);
-
-        // Button background
-        // Button background
-        if (!isEnabled()) {
-            Color disabledBg = UIHelper.isLight()
-                    ? new Color(226, 232, 240) // Slate-200
-                    : new Color(51, 65, 85);    // Slate-700
-            g2.setColor(disabledBg);
-            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
-            g2.setColor(UIHelper.BORDER);
-            g2.drawRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
-        } else if (isGradient && hoverProgress > 0.0f) {
-            Color s = UIHelper.blendColors(start, start.brighter(), hoverProgress);
-            Color e = UIHelper.blendColors(end, end.brighter(), hoverProgress);
-            GradientPaint gp = new GradientPaint(0, 0, s, 0, height, e);
-            g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
-        } else if (isGradient) {
-            GradientPaint gp = new GradientPaint(0, 0, start, 0, height, end);
-            g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
-        } else {
-            g2.setColor(bg);
-            g2.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
-        }
-
-        g2.dispose();
-
-        // Salvaguarda visual inegociável: nunca renderizar texto branco sobre fundo claro
-        Color currentFg = getForeground();
-        if (!isEnabled()) {
-            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-                Color disabledIcon = UIHelper.isLight()
-                        ? new Color(148, 163, 184)
-                        : new Color(100, 116, 139);
-                fi.setIconColor(disabledIcon);
-            }
-        } else if (bg != null && (currentFg == null || UIHelper.contrastRatio(bg, currentFg) < 3.0)) {
-            Color safeFg = UIHelper.readableTextOn(bg);
-            super.setForeground(safeFg);
-            this.textColor = safeFg;
-            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-                fi.setIconColor(safeFg);
-            }
-        } else {
-            if (getIcon() instanceof org.kordamp.ikonli.swing.FontIcon fi) {
-                fi.setIconColor(this.textColor != null ? this.textColor : Color.WHITE);
-            }
-        }
-
+        ModernButtonPainter.paintButtonSurface(this, g, cornerRadius, isGradient, gradientStart, gradientEnd, hoverProgress);
+        ModernButtonPainter.syncIconAndForegroundContrast(this, textColor);
         super.paintComponent(g);
-
-        // Badge estilizado de tecla de atalho (ex: [F9], [Enter]) à direita
-        if (shortcutText != null && !shortcutText.isEmpty()) {
-            Graphics2D g3 = (Graphics2D) g.create();
-            try {
-                g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g3.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                Font badgeFont = new Font(Font.MONOSPACED, Font.BOLD, 10);
-                g3.setFont(badgeFont);
-                FontMetrics fm = g3.getFontMetrics();
-                int bw = calculateShortcutBadgeWidth();
-                int bh = fm.getHeight() + 2;
-                int rightPad = getBaseRightInset();
-                int bx = width - rightPad - bw;
-                int by = (height - bh) / 2;
-
-                g3.setColor(new Color(0, 0, 0, 75));
-                g3.fillRoundRect(bx, by, bw, bh, 6, 6);
-                g3.setColor(new Color(255, 255, 255, 70));
-                g3.drawRoundRect(bx, by, bw, bh, 6, 6);
-
-                Color fg = getForeground();
-                g3.setColor(fg != null ? fg : Color.WHITE);
-                int tx = bx + (bw - fm.stringWidth(shortcutText)) / 2;
-                int ty = by + (bh - fm.getHeight()) / 2 + fm.getAscent();
-                g3.drawString(shortcutText, tx, ty);
-            } finally {
-                g3.dispose();
-            }
-        }
+        ModernButtonPainter.paintShortcutBadge(this, g, shortcutText);
     }
 }

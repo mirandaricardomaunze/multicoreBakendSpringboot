@@ -29,6 +29,7 @@ public class QuotationService {
     private final QuotationConversionService conversionService;
     private final QuotationQueryService queryService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public QuotationService(QuotationLifecycleService lifecycleService,
                             QuotationConversionService conversionService,
                             QuotationQueryService queryService) {

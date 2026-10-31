@@ -3,20 +3,14 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.purchases.dto.SupplierStatementDTO;
-import mz.multicore.erp.modules.purchases.dto.SupplierStatementLineDTO;
-import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.model.Supplier;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 
 /**
  * Serviço de geração de extrato de conta corrente de fornecedores (contas a pagar).
@@ -26,13 +20,24 @@ public class SupplierStatementService {
 
     private final SupplierRepository supplierRepository;
     private final PurchaseRepository purchaseRepository;
+    private final SupplierStatementMovementBuilder movementBuilder;
+
+    @Autowired
+    public SupplierStatementService(
+            SupplierRepository supplierRepository,
+            PurchaseRepository purchaseRepository,
+            SupplierStatementMovementBuilder movementBuilder
+    ) {
+        this.supplierRepository = supplierRepository;
+        this.purchaseRepository = purchaseRepository;
+        this.movementBuilder = movementBuilder;
+    }
 
     public SupplierStatementService(
             SupplierRepository supplierRepository,
             PurchaseRepository purchaseRepository
     ) {
-        this.supplierRepository = supplierRepository;
-        this.purchaseRepository = purchaseRepository;
+        this(supplierRepository, purchaseRepository, new SupplierStatementMovementBuilder());
     }
 
     @Transactional(readOnly = true)
@@ -48,130 +53,6 @@ public class SupplierStatementService {
         LocalDate from = startDate != null ? startDate : LocalDate.now().withDayOfYear(1);
         LocalDate to = endDate != null ? endDate : LocalDate.now();
 
-        List<RawSupplierMovement> events = new ArrayList<>();
-
-        List<Purchase> purchases = purchaseRepository.findByCompanyId(companyId);
-        for (Purchase p : purchases) {
-            if (p.getSupplier() == null || !supplierId.equals(p.getSupplier().getId())) {
-                continue;
-            }
-            if ("CANCELLED".equalsIgnoreCase(p.getStatus())) {
-                continue;
-            }
-
-            LocalDate pDate = p.getPurchaseDate() != null ? p.getPurchaseDate().toLocalDate() : (p.getCreatedAt() != null ? p.getCreatedAt().toLocalDate() : LocalDate.now());
-            LocalDateTime ts = p.getCreatedAt() != null ? p.getCreatedAt() : (p.getPurchaseDate() != null ? p.getPurchaseDate() : pDate.atStartOfDay());
-
-            java.util.Set<String> bus = p.getLines() != null ? p.getLines().stream()
-                    .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getName() : null)
-                    .filter(java.util.Objects::nonNull)
-                    .collect(java.util.stream.Collectors.toSet()) : java.util.Collections.emptySet();
-            String buName = bus.isEmpty() ? null : (bus.size() == 1 ? bus.iterator().next() : "Misto");
-            Long buId = bus.size() == 1 && p.getLines() != null ? p.getLines().stream()
-                    .map(l -> l.getProduct() != null && l.getProduct().getBusinessUnit() != null ? l.getProduct().getBusinessUnit().getId() : null)
-                    .filter(java.util.Objects::nonNull).findFirst().orElse(null) : null;
-
-            // 1. Factura de Compra (Crédito = Dívida a pagar)
-            events.add(new RawSupplierMovement(
-                    pDate,
-                    "V/FT",
-                    p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-",
-                    "Factura de Fornecedor / Compra",
-                    p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-",
-                    BigDecimal.ZERO,
-                    p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO,
-                    ts,
-                    1,
-                    buId,
-                    buName
-            ));
-
-            // 2. Pagamento efetuado (Débito = Amortização)
-            if (p.getAmountPaid() != null && p.getAmountPaid().signum() > 0) {
-                events.add(new RawSupplierMovement(
-                        pDate,
-                        "PG",
-                        "PG/" + (p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-"),
-                        "Pagamento / Liquidação de Factura",
-                        p.getPurchaseNumber() != null ? p.getPurchaseNumber() : "-",
-                        p.getAmountPaid(),
-                        BigDecimal.ZERO,
-                        ts.plusSeconds(1),
-                        2,
-                        buId,
-                        buName
-                ));
-            }
-        }
-
-        // Ordenação cronológica estrita null-safe
-        events.sort(Comparator.comparing(RawSupplierMovement::date, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(RawSupplierMovement::timestamp, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparingInt(RawSupplierMovement::orderPriority));
-
-        BigDecimal openingBalance = BigDecimal.ZERO;
-        BigDecimal totalDebits = BigDecimal.ZERO;
-        BigDecimal totalCredits = BigDecimal.ZERO;
-        List<SupplierStatementLineDTO> lines = new ArrayList<>();
-
-        for (RawSupplierMovement mov : events) {
-            if (mov.date().isBefore(from)) {
-                openingBalance = openingBalance.add(mov.credit()).subtract(mov.debit());
-            }
-        }
-
-        BigDecimal running = openingBalance;
-        for (RawSupplierMovement mov : events) {
-            if (!mov.date().isBefore(from) && !mov.date().isAfter(to)) {
-                running = running.add(mov.credit()).subtract(mov.debit());
-                totalDebits = totalDebits.add(mov.debit());
-                totalCredits = totalCredits.add(mov.credit());
-
-                lines.add(new SupplierStatementLineDTO(
-                        mov.date(),
-                        mov.type(),
-                        mov.documentNumber(),
-                        mov.description(),
-                        mov.reference(),
-                        mov.debit(),
-                        mov.credit(),
-                        running,
-                        mov.businessUnitId(),
-                        mov.businessUnitName()
-                ));
-            }
-        }
-
-        BigDecimal closingBalance = openingBalance.add(totalCredits).subtract(totalDebits);
-
-        return new SupplierStatementDTO(
-                supplier.getId(),
-                supplier.getName(),
-                supplier.getTaxId(),
-                supplier.getAddress(),
-                supplier.getEmail(),
-                supplier.getPhone(),
-                from,
-                to,
-                openingBalance,
-                totalDebits,
-                totalCredits,
-                closingBalance,
-                lines
-        );
+        return movementBuilder.buildStatement(supplier, from, to, purchaseRepository.findByCompanyId(companyId));
     }
-
-    private record RawSupplierMovement(
-            LocalDate date,
-            String type,
-            String documentNumber,
-            String description,
-            String reference,
-            BigDecimal debit,
-            BigDecimal credit,
-            LocalDateTime timestamp,
-            int orderPriority,
-            Long businessUnitId,
-            String businessUnitName
-    ) {}
 }

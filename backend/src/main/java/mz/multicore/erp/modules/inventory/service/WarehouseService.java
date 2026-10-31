@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.inventory.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
@@ -11,6 +10,7 @@ import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WarehouseType;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,114 +23,81 @@ import java.util.List;
 @Service
 public class WarehouseService {
 
-    private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
-    private final AuditLogService auditLogService;
+    private final WarehouseLifecycleService lifecycleService;
+    private final WarehouseQueryService queryService;
+
+    @Autowired
+    public WarehouseService(WarehouseLifecycleService lifecycleService,
+                            WarehouseQueryService queryService) {
+        this.lifecycleService = lifecycleService;
+        this.queryService = queryService;
+    }
 
     public WarehouseService(
             WarehouseRepository warehouseRepository,
             CompanyRepository companyRepository,
-            AuditLogService auditLogService
-    ) {
-        this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
-        this.auditLogService = auditLogService;
+            AuditLogService auditLogService) {
+        WarehouseQueryService query = new WarehouseQueryService(warehouseRepository, companyRepository);
+        this.queryService = query;
+        this.lifecycleService = new WarehouseLifecycleService(
+                warehouseRepository, companyRepository, auditLogService, query);
     }
 
     @Transactional(readOnly = true)
     public List<Warehouse> getWarehousesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId).stream()
-                .filter(Warehouse::isActive)
-                .toList();
+        return queryService.getWarehousesByCompany(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<Warehouse> getSalesWarehousesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId).stream()
-                .filter(Warehouse::isActive)
-                .filter(Warehouse::isAllowsSales)
-                .toList();
+        return queryService.getSalesWarehousesByCompany(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<Warehouse> getAllWarehousesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId);
+        return queryService.getAllWarehousesByCompany(companyId);
     }
 
     @Transactional(readOnly = true)
     public List<Warehouse> resolveSalesWarehouses(Long companyId, Long warehouseId) {
-        if (warehouseId == null) {
-            return getSalesWarehousesByCompany(companyId);
-        }
-        Warehouse w = loadWarehouseForActiveCompany(warehouseId);
-        return (w != null && w.isActive() && w.isAllowsSales()) ? List.of(w) : List.of();
+        return queryService.resolveSalesWarehouses(companyId, warehouseId);
     }
 
     public Warehouse loadWarehouseForActiveCompany(Long id) {
-        Warehouse warehouse = warehouseRepository.findById(id)
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        CurrentUserContext.requireCompany(warehouse.getCompany() != null ? warehouse.getCompany().getId() : null);
-        return warehouse;
+        return queryService.loadWarehouseForActiveCompany(id);
     }
 
     public Warehouse requireWarehouseCompany(Long warehouseId) {
-        Warehouse warehouse = warehouseRepository.findById(warehouseId)
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        CurrentUserContext.requireCompany(warehouse.getCompany().getId());
-        return warehouse;
+        return queryService.requireWarehouseCompany(warehouseId);
     }
 
     @Transactional
     public Warehouse updateWarehouse(Long id, String name, String warehouseNumber, BigDecimal capacity,
                                      String location, WarehouseType type,
                                      boolean allowsSales, String manager, String phone) {
-        Warehouse warehouse = loadWarehouseForActiveCompany(id);
-        warehouse.setName(name);
-        warehouse.setWarehouseNumber(warehouseNumber);
-        warehouse.setCapacity(capacity);
-        warehouse.setLocation(location);
-        warehouse.setType(type == null ? WarehouseType.STORE : type);
-        warehouse.setAllowsSales(allowsSales);
-        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
-        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
-        warehouse = warehouseRepository.save(warehouse);
-        auditLogService.logCurrent("WAREHOUSE_UPDATE", "Armazém " + warehouse.getName() + " actualizado.");
-        return warehouse;
+        return lifecycleService.updateWarehouse(id, name, warehouseNumber, capacity, location, type, allowsSales, manager, phone);
     }
 
     @Transactional
     public Warehouse setWarehouseActive(Long id, boolean active) {
         PermissionGuard.requireManagerOrAdmin(active ? "activar armazém" : "desactivar armazém");
-        Warehouse warehouse = loadWarehouseForActiveCompany(id);
-        warehouse.setActive(active);
-        warehouse = warehouseRepository.save(warehouse);
-        auditLogService.logCurrent("WAREHOUSE_STATUS",
-                "Armazém " + warehouse.getName() + (active ? " activado." : " desactivado."));
-        return warehouse;
+        return lifecycleService.setWarehouseActive(id, active);
     }
 
     @Transactional(readOnly = true)
     public boolean isStockCountLocked(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return companyRepository.findById(companyId)
-                .map(Company::isStockCountLocked)
-                .orElse(false);
+        return queryService.isStockCountLocked(companyId);
     }
 
     @Transactional
     public void setStockCountLocked(Long companyId, boolean locked) {
         CurrentUserContext.requireCompany(companyId);
         PermissionGuard.requireAdmin(locked ? "trancar o stock" : "destrancar o stock");
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        company.setStockCountLocked(locked);
-        companyRepository.save(company);
-        auditLogService.logCurrent("STOCK_LOCK",
-                locked ? "Stock trancado (quantidades visíveis só para administradores)."
-                        : "Stock destrancado (quantidades visíveis para todos).");
+        lifecycleService.setStockCountLocked(companyId, locked);
     }
 
     @Transactional
@@ -148,58 +115,21 @@ public class WarehouseService {
     public Warehouse createWarehouse(String name, String warehouseNumber, BigDecimal capacity, String location,
                                      WarehouseType type, boolean allowsSales,
                                      String manager, String phone, Company company) {
-        Warehouse warehouse = new Warehouse();
-        warehouse.setName(name);
-        warehouse.setWarehouseNumber(warehouseNumber);
-        warehouse.setCapacity(capacity);
-        warehouse.setLocation(location);
-        warehouse.setType(type == null ? WarehouseType.STORE : type);
-        warehouse.setAllowsSales(allowsSales);
-        warehouse.setActive(true);
-        warehouse.setManager(manager == null || manager.isBlank() ? null : manager.trim());
-        warehouse.setPhone(phone == null || phone.isBlank() ? null : phone.trim());
-        warehouse.setCompany(company);
-        warehouse.setCreatedBy("SYSTEM");
-        return warehouseRepository.save(warehouse);
+        return lifecycleService.createWarehouse(name, warehouseNumber, capacity, location, type, allowsSales, manager, phone, company);
     }
 
     @Transactional
     public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        Warehouse warehouse = createWarehouse(
-                request.name(),
-                request.warehouseNumber(),
-                request.capacity(),
-                request.location(),
-                request.type(),
-                request.allowsSales(),
-                request.manager(),
-                request.phone(),
-                company
-        );
-        return toDTO(warehouse);
+        return lifecycleService.createWarehouse(request);
     }
 
     @Transactional(readOnly = true)
     public List<WarehouseDTO> findWarehousesByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return warehouseRepository.findByCompanyId(companyId).stream().map(this::toDTO).toList();
+        return queryService.findWarehousesByCompany(companyId);
     }
 
     public WarehouseDTO toDTO(Warehouse w) {
-        return new WarehouseDTO(
-                w.getId(),
-                w.getName(),
-                w.getLocation(),
-                w.getWarehouseNumber(),
-                w.getCapacity(),
-                w.getCompany() != null ? w.getCompany().getId() : null,
-                w.getType(),
-                w.isAllowsSales(),
-                w.getManager(),
-                w.getPhone(),
-                w.isActive()
-        );
+        return queryService.toDTO(w);
     }
 }

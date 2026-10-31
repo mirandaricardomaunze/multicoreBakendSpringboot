@@ -166,7 +166,7 @@ class ProfessionalFeedbackHarnessTest {
                 "PosReturnDialog.java",
                 "StockInventoryCountActions.java",
                 "commercial/BillOrderDialog.java",
-                "components/DocumentEditorHost.java", "components/UIHelper.java",
+                "components/DocumentEditorHost.java", "components/UiThemeAndWindowSupport.java",
                 "PosImportQuotationDialog.java",
                 "PosKeyboardShortcutsHandler.java", "PosQuotationActions.java",
                 "SubscriptionRenewalDialog.java");

@@ -24,7 +24,8 @@ class AiOperationalDraftHarnessTest {
 
     @Test void controllerAndDesktopKeepReviewBoundary() throws Exception {
         String controller = source("backend/src/main/java/mz/multicore/erp/modules/intelligence/controller/AiManagementAssistantController.java");
-        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java");
+        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiOperationalDraftsView.java");
         assertThat(controller).contains("/operational-draft", "draftService.prepare(request)");
         assertThat(panel).contains("Rascunho Operacional Controlado", "Preparar Rascunho", "Abrir no Módulo")
                 .contains("UIHelper.submitAsync", "navigationHandler.accept");

@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import javax.imageio.ImageIO;
+import mz.multicore.erp.gui.components.UIHelper;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -46,20 +47,20 @@ class LoginBackgroundPanel extends JPanel {
             g2.drawImage(BG_IMAGE, x, y, drawW, drawH, null);
 
             // Sobreposição translúcida luminosa clara para tema claro acolhedor
-            g2.setColor(new Color(255, 255, 255, 80));
+            g2.setColor(UIHelper.withAlpha(Color.WHITE, 80));
             g2.fillRect(0, 0, w, h);
 
             // Gradiente vertical subtil para claridade, suavidade e elegância visual
             GradientPaint gp = new GradientPaint(
-                    0, 0, new Color(255, 255, 255, 50),
-                    0, h, new Color(241, 245, 249, 140)
+                    0, 0, UIHelper.withAlpha(Color.WHITE, 50),
+                    0, h, UIHelper.withAlpha(UIHelper.BG_DARK, 140)
             );
             g2.setPaint(gp);
             g2.fillRect(0, 0, w, h);
             g2.dispose();
         } else {
             Graphics2D g2 = (Graphics2D) g.create();
-            GradientPaint gp = new GradientPaint(0, 0, new Color(248, 250, 252), 0, h, new Color(226, 232, 240));
+            GradientPaint gp = new GradientPaint(0, 0, UIHelper.BG_CARD, 0, h, UIHelper.BG_DARK);
             g2.setPaint(gp);
             g2.fillRect(0, 0, w, h);
             g2.dispose();

@@ -186,9 +186,19 @@ class ComercialControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertFalse(products.isEmpty());
         long id = products.get(0).get("id").asLong();
 
-        // 250 KB de imagem simulada (ultrapassa largamente o antigo limite de 255 bytes)
-        byte[] largeImage = new byte[250_000];
-        java.util.Arrays.fill(largeImage, (byte) 0x7F);
+        // Imagem PNG real que ultrapassa largamente o antigo limite de 255 bytes.
+        java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(
+                400, 400, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.util.Random random = new java.util.Random(42L);
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                image.setRGB(x, y, random.nextInt(0x1000000));
+            }
+        }
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", output);
+        byte[] largeImage = output.toByteArray();
+        org.junit.jupiter.api.Assertions.assertTrue(largeImage.length > 250_000);
 
         mockMvc.perform(post("/api/comercial/products/" + id + "/image")
                         .header("Authorization", "Bearer " + token)

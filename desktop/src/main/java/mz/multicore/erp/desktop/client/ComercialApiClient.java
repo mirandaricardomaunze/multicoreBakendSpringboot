@@ -125,6 +125,7 @@ public class ComercialApiClient {
 
     // ─── Encomendas ──────────────────────────────────────────────────────────
     public List<OrderDTO> getOrdersByCompany(Long companyId) { return orderApiClient.getOrdersByCompany(companyId); }
+    // Delega para CommercialOrderApiClient: /api/comercial/orders/page
     public PageResponse<OrderDTO> getOrdersPage(Long companyId, int page, int size) { return orderApiClient.getOrdersPage(companyId, page, size); }
     public List<OrderDTO> getPendingOrdersByCompany(Long companyId) { return orderApiClient.getPendingOrdersByCompany(companyId); }
     public List<OrderDTO> searchPendingOrders(String query) { return orderApiClient.searchPendingOrders(query); }

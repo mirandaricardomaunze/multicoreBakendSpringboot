@@ -35,8 +35,8 @@ class LoginCredentialsCard {
         this.onLogin = onLogin;
         this.onCancel = onCancel;
 
-        card = new ModernPanel(20, new Color(255, 255, 255, 248));
-        card.putClientProperty("card.border", new Color(203, 213, 225, 220));
+        card = new ModernPanel(20, UIHelper.withAlpha(Color.WHITE, 248));
+        card.putClientProperty("card.border", UIHelper.withAlpha(UIHelper.BORDER, 220));
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(28, 32, 26, 32));
         card.setPreferredSize(new Dimension(460, 540));
@@ -51,14 +51,14 @@ class LoginCredentialsCard {
         c.gridy++; c.insets = new Insets(10, 0, 0, 0);
         JLabel brand = new JLabel("MULTICORE");
         brand.setFont(new Font(UIHelper.FONT, Font.BOLD, 24));
-        brand.setForeground(new Color(15, 23, 42));
+        brand.setForeground(UIHelper.TEXT_LIGHT);
         brand.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(brand, c);
 
         c.gridy++; c.insets = new Insets(2, 0, 18, 0);
         JLabel subtitle = new JLabel("Centro de Operações e Gestão Comercial");
         subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        subtitle.setForeground(new Color(100, 116, 139));
+        subtitle.setForeground(UIHelper.TEXT_MUTED);
         subtitle.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(subtitle, c);
 
@@ -154,14 +154,14 @@ class LoginCredentialsCard {
     void togglePasswordVisibility() {
         passwordVisible = !passwordVisible;
         passwordField.setEchoChar(passwordVisible ? (char) 0 : '•');
-        Color eyeColor = passwordVisible ? UIHelper.ACCENT_BLUE : new Color(100, 116, 139);
+        Color eyeColor = passwordVisible ? UIHelper.ACCENT_BLUE : UIHelper.TEXT_MUTED;
         togglePasswordBtn.setIcon(UIHelper.icon(passwordVisible ? "fas-eye-slash" : "fas-eye", 14, eyeColor));
         togglePasswordBtn.setToolTipText(passwordVisible ? "Ocultar senha" : "Mostrar senha");
         togglePasswordBtn.getAccessibleContext().setAccessibleName(passwordVisible ? "Ocultar senha" : "Mostrar senha");
     }
 
     private JButton buildPasswordToggleButton() {
-        JButton btn = new JButton(UIHelper.icon("fas-eye", 14, new Color(100, 116, 139)));
+        JButton btn = new JButton(UIHelper.icon("fas-eye", 14, UIHelper.TEXT_MUTED));
         btn.setPreferredSize(new Dimension(34, 34)); btn.setFocusable(false);
         btn.setBorderPainted(false); btn.setContentAreaFilled(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -205,7 +205,7 @@ class LoginCredentialsCard {
 
         JLabel title = new JLabel("Ambiente de demonstração — clique para entrar:");
         title.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
-        title.setForeground(new Color(100, 116, 139)); title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        title.setForeground(UIHelper.TEXT_MUTED); title.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(title); panel.add(Box.createRigidArea(new Dimension(0, 6)));
 
         JPanel chipsRow1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0)); chipsRow1.setOpaque(false);
@@ -223,9 +223,9 @@ class LoginCredentialsCard {
     }
 
     private ModernButton createDemoChip(String label, String username, String password) {
-        ModernButton btn = new ModernButton(label, new Color(241, 245, 249), new Color(226, 232, 240));
-        btn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11)); btn.setForeground(new Color(30, 41, 59));
-        btn.setBorder(BorderFactory.createCompoundBorder(new LineBorder(new Color(203, 213, 225), 1, true), new EmptyBorder(4, 8, 4, 8)));
+        ModernButton btn = new ModernButton(label, UIHelper.ROW_ALT, UIHelper.BORDER);
+        btn.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11)); btn.setForeground(UIHelper.TEXT_LIGHT);
+        btn.setBorder(BorderFactory.createCompoundBorder(new LineBorder(UIHelper.BORDER, 1, true), new EmptyBorder(4, 8, 4, 8)));
         btn.setToolTipText("Entrar imediatamente como " + username);
         btn.addActionListener(e -> {
             fillCredentials(username, password);
@@ -236,7 +236,7 @@ class LoginCredentialsCard {
 
     private JLabel fieldLabel(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11)); l.setForeground(new Color(51, 65, 85));
+        l.setFont(new Font(UIHelper.FONT, Font.BOLD, 11)); l.setForeground(UIHelper.TEXT_MUTED);
         return l;
     }
 
@@ -251,16 +251,16 @@ class LoginCredentialsCard {
             }
         };
         p.setOpaque(false); p.setBackground(Color.WHITE);
-        p.setBorder(UIHelper.fieldBorder(new Color(203, 213, 225), 1));
-        JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 15, new Color(100, 116, 139)));
+        p.setBorder(UIHelper.fieldBorder(UIHelper.BORDER, 1));
+        JLabel iconLabel = new JLabel(UIHelper.icon(iconCode, 15, UIHelper.TEXT_MUTED));
         iconLabel.setBorder(new EmptyBorder(0, 10, 0, 0));
         field.setBorder(new EmptyBorder(8, 4, 8, trailing != null ? 4 : 10));
         field.setOpaque(false);
         if (field instanceof JTextField tf) {
             tf.setBackground(Color.WHITE);
-            tf.setCaretColor(new Color(15, 23, 42));
+            tf.setCaretColor(UIHelper.TEXT_LIGHT);
         }
-        field.setForeground(new Color(15, 23, 42));
+        field.setForeground(UIHelper.TEXT_LIGHT);
         p.add(iconLabel, BorderLayout.WEST); p.add(field, BorderLayout.CENTER);
         if (trailing != null) p.add(trailing, BorderLayout.EAST);
         p.setPreferredSize(new Dimension(0, 42));

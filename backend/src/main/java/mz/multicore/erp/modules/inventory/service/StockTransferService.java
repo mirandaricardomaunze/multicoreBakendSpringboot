@@ -52,6 +52,7 @@ public class StockTransferService {
     private final StockTransferMovementExecutor movementExecutor;
     private final StockTransferValidator validator;
     private final StockTransferWorkflowCoordinator workflowCoordinator;
+    private final StockTransferDraftService draftService;
 
     public StockTransferService(
             StockTransferRepository transferRepository,
@@ -119,108 +120,18 @@ public class StockTransferService {
         this.movementExecutor = new StockTransferMovementExecutor(stockRepository, stockMovementRepository, productBatchService);
         this.validator = new StockTransferValidator(stockRepository, productBatchService);
         this.workflowCoordinator = new StockTransferWorkflowCoordinator(approvalService, eventPublisher, transferRepository, auditLogService);
+        this.draftService = new StockTransferDraftService(transferRepository, warehouseRepository, companyRepository,
+                productRepository, documentNumberService, auditLogService, validator);
     }
 
     @Transactional
     public StockTransferDTO create(CreateStockTransferRequest request) {
-        CurrentUserContext.requireCompany(request.companyId());
-        if (request.originWarehouseId().equals(request.destinationWarehouseId())) {
-            throw new BusinessRuleException("O armazém de origem e o armazém de destino devem ser diferentes.");
-        }
-
-        String driver = validator.requiredDriver(request.driverName(), request.responsible());
-        String plate = validator.requiredPlate(request.vehiclePlate(), request.vehicle());
-
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        Warehouse origin = warehouseRepository.findById(request.originWarehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém de origem não encontrado."));
-        Warehouse destination = warehouseRepository.findById(request.destinationWarehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
-
-        if (!origin.getCompany().getId().equals(company.getId()) || !destination.getCompany().getId().equals(company.getId())) {
-            throw new BusinessRuleException("Os armazéns devem pertencer à mesma empresa da transferência.");
-        }
-
-        StockTransfer transfer = new StockTransfer();
-        transfer.setTransferNumber(documentNumberService.next(DocumentSeries.STOCK_TRANSFER));
-        transfer.setTransferDate(LocalDateTime.now());
-        transfer.setCompany(company);
-        transfer.setOriginWarehouse(origin);
-        transfer.setDestinationWarehouse(destination);
-        transfer.setStatus(TransferStatus.DRAFT);
-        transfer.setResponsible(request.responsible() != null && !request.responsible().isBlank() ? request.responsible().trim() : driver);
-        transfer.setVehicle(request.vehicle() != null && !request.vehicle().isBlank() ? request.vehicle().trim() : plate);
-        transfer.setDriverName(driver);
-        transfer.setVehiclePlate(plate);
-        transfer.setNotes(request.notes() != null && !request.notes().isBlank() ? request.notes().trim() : null);
-        transfer.setRequiresReceipt(Boolean.TRUE.equals(request.requiresReceipt()));
-        transfer.setCreatedBy(CurrentUserContext.getUsername());
-
-        for (CreateStockTransferLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
-            StockTransferLine line = new StockTransferLine();
-            line.setTransfer(transfer);
-            line.setProduct(product);
-            line.setQuantity(lineReq.quantity());
-            transfer.getLines().add(line);
-        }
-
-        validator.validateAvailability(transfer);
-        transfer = transferRepository.save(transfer);
-        auditLogService.logCurrent("STOCK_TRANSFER_DRAFT_CREATE", "Rascunho da guia " + transfer.getTransferNumber() + " criado.");
-        return StockTransferDtoMapper.toDTO(transfer);
+        return draftService.create(request);
     }
 
     @Transactional
     public StockTransferDTO update(Long id, UpdateStockTransferRequest request) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        StockTransfer transfer = transferRepository.findByIdWithLinesAndCompanyId(id, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Transferência não encontrada."));
-        validator.requireDraft(transfer, "actualizada");
-        if (!Objects.equals(transfer.getVersion(), request.version())) {
-            throw new BusinessRuleException("Esta transferência foi alterada por outro utilizador. Actualize a lista e tente novamente.");
-        }
-        if (request.originWarehouseId().equals(request.destinationWarehouseId())) {
-            throw new BusinessRuleException("O armazém de origem e o armazém de destino devem ser diferentes.");
-        }
-
-        Warehouse origin = warehouseRepository.findById(request.originWarehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém de origem não encontrado."));
-        Warehouse destination = warehouseRepository.findById(request.destinationWarehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
-        if (!origin.getCompany().getId().equals(companyId) || !destination.getCompany().getId().equals(companyId)) {
-            throw new BusinessRuleException("Os armazéns devem pertencer à empresa activa.");
-        }
-
-        String driver = validator.requiredDriver(request.driverName(), request.responsible());
-        String plate = validator.requiredPlate(request.vehiclePlate(), request.vehicle());
-        transfer.setOriginWarehouse(origin);
-        transfer.setDestinationWarehouse(destination);
-        transfer.setResponsible(request.responsible() != null && !request.responsible().isBlank() ? request.responsible().trim() : driver);
-        transfer.setVehicle(request.vehicle() != null && !request.vehicle().isBlank() ? request.vehicle().trim() : plate);
-        transfer.setDriverName(driver);
-        transfer.setVehiclePlate(plate);
-        transfer.setNotes(request.notes() != null && !request.notes().isBlank() ? request.notes().trim() : null);
-        if (request.requiresReceipt() != null) {
-            transfer.setRequiresReceipt(request.requiresReceipt());
-        }
-        transfer.getLines().clear();
-        for (CreateStockTransferLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
-            StockTransferLine line = new StockTransferLine();
-            line.setTransfer(transfer);
-            line.setProduct(product);
-            line.setQuantity(lineReq.quantity());
-            transfer.getLines().add(line);
-        }
-        validator.validateAvailability(transfer);
-
-        StockTransfer saved = transferRepository.saveAndFlush(transfer);
-        auditLogService.logCurrent("STOCK_TRANSFER_DRAFT_UPDATE", "Rascunho da guia " + saved.getTransferNumber() + " actualizado.");
-        return StockTransferDtoMapper.toDTO(saved);
+        return draftService.update(id, request);
     }
 
     @Transactional

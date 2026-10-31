@@ -52,7 +52,8 @@ class OrderEditorHarnessTest {
     @Test
     void oe03_actualizacaoUsaPutEControloDeVersao() throws Exception {
         String controller = root("backend/src/main/java/mz/multicore/erp/modules/comercial/controller/ComercialController.java");
-        String service = root("backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java");
+        String service = root("backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java")
+                + root("backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialOrderLifecycleService.java");
         String client = root("desktop/src/main/java/mz/multicore/erp/desktop/client/ComercialApiClient.java");
         String request = root("contracts/src/main/java/mz/multicore/erp/modules/comercial/dto/UpdateOrderRequest.java");
         String response = root("contracts/src/main/java/mz/multicore/erp/modules/comercial/dto/OrderDTO.java");

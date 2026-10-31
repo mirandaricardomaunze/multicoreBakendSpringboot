@@ -52,7 +52,7 @@ class MultiUserRobustnessHarnessTest {
                 .contains("BigDecimal current = stockRepository.findForReservation");
         assertThat(read("backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferService.java"))
                 .contains("Stock stock = stockRepository.findForReservation");
-        assertThat(read("backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockTransferTransitService.java"))
+        assertThat(read("backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockTransitLedger.java"))
                 .contains("Stock stock = stockRepository.findForReservation");
     }
 

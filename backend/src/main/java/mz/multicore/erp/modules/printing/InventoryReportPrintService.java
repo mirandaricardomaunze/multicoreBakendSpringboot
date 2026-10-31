@@ -1,10 +1,5 @@
 package mz.multicore.erp.modules.printing;
 
-import com.lowagie.text.Element;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.Phrase;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
@@ -12,45 +7,41 @@ import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Professional inventory report (Inventário de Stock). One service, one
- * responsibility: turn stock data for a company / warehouse into a PDF that
- * matches the brand. Reuses CompanyHeaderRenderer + PdfDocumentBuilder so the
- * layout stays consistent with every other printable document.
- */
+/** Fachada para emissão PDF A4 do relatório de Inventário de Stock. */
 @Service
 public class InventoryReportPrintService {
-
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final StockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
     private final CompanyService companyService;
+    private final InventoryReportDocumentRenderer documentRenderer;
 
-    public InventoryReportPrintService(
-            StockRepository stockRepository,
-            WarehouseRepository warehouseRepository,
-            CompanyService companyService
-    ) {
+    @Autowired
+    public InventoryReportPrintService(StockRepository stockRepository,
+                                       WarehouseRepository warehouseRepository,
+                                       CompanyService companyService,
+                                       InventoryReportDocumentRenderer documentRenderer) {
         this.stockRepository = stockRepository;
         this.warehouseRepository = warehouseRepository;
         this.companyService = companyService;
+        this.documentRenderer = documentRenderer;
     }
 
-    /**
-     * @param companyId  required
-     * @param warehouseId optional — when supplied, filters the report to a
-     *                    single warehouse and shows it as a subtitle.
-     */
+    /** Construtor retrocompatível preservado para testes e integrações existentes. */
+    public InventoryReportPrintService(StockRepository stockRepository,
+                                       WarehouseRepository warehouseRepository,
+                                       CompanyService companyService) {
+        this(stockRepository, warehouseRepository, companyService, new InventoryReportDocumentRenderer());
+    }
+
     @Transactional(readOnly = true)
     public byte[] render(Long companyId, Long warehouseId) {
         Company company = companyService.getCompanyById(companyId);
@@ -68,185 +59,13 @@ public class InventoryReportPrintService {
             stocks = stockRepository.findByWarehouseCompanyId(companyId);
         }
 
-        List<Stock> mutableStocks = new java.util.ArrayList<>(stocks != null ? stocks : List.of());
+        List<Stock> mutableStocks = new ArrayList<>(stocks != null ? stocks : List.of());
         mutableStocks.sort(Comparator
                 .comparing((Stock s) -> s.getWarehouse() != null && s.getWarehouse().getName() != null
                         ? s.getWarehouse().getName() : "", String.CASE_INSENSITIVE_ORDER)
                 .thenComparing(s -> s.getProduct() != null && s.getProduct().getName() != null
                         ? s.getProduct().getName() : "", String.CASE_INSENSITIVE_ORDER));
 
-        final Warehouse filterForLambda = warehouseFilter;
-        return PdfDocumentBuilder.buildA4(doc -> {
-            doc.add(CompanyHeaderRenderer.build(
-                    company,
-                    "Inventário de Stock",
-                    "INV-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-            ));
-            doc.add(buildMetaBlock(filterForLambda));
-            doc.add(buildStockTable(mutableStocks));
-            doc.add(PdfDocumentBuilder.spacer(6f));
-            doc.add(buildSummary(mutableStocks));
-            doc.add(PdfDocumentBuilder.spacer(32f));
-            doc.add(buildSignatureBlock());
-        });
-    }
-
-    private PdfPTable buildMetaBlock(Warehouse warehouseFilter) {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{55f, 45f}); } catch (Exception ignored) {}
-        table.setSpacingAfter(10f);
-
-        PdfPCell left = new PdfPCell();
-        left.setBorder(PdfPCell.NO_BORDER);
-        left.addElement(new Paragraph("Âmbito", PdfTheme.subtitleFont()));
-        left.addElement(new Paragraph(
-                warehouseFilter == null
-                        ? "Todos os armazéns da empresa"
-                        : "Armazém: " + warehouseFilter.getName(),
-                PdfTheme.bodyFont()));
-        if (warehouseFilter != null && warehouseFilter.getLocation() != null) {
-            left.addElement(new Paragraph(warehouseFilter.getLocation(), PdfTheme.smallFont()));
-        }
-        table.addCell(left);
-
-        PdfPCell right = new PdfPCell();
-        right.setBorder(PdfPCell.NO_BORDER);
-        right.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        Paragraph stamp = new Paragraph("Gerado em: " + LocalDateTime.now().format(DATE_FMT), PdfTheme.bodyFont());
-        stamp.setAlignment(Element.ALIGN_RIGHT);
-        right.addElement(stamp);
-        table.addCell(right);
-        return table;
-    }
-
-    private PdfPTable buildStockTable(List<Stock> stocks) {
-        // Referência | Código de Barras | Designação | Quantidade | Caixas | Preço
-        PdfPTable table = new PdfPTable(new float[]{15f, 16f, 33f, 12f, 11f, 13f});
-        table.setWidthPercentage(100);
-        table.setSpacingBefore(6f);
-        table.setSpacingAfter(6f);
-
-        header(table, "Referência", Element.ALIGN_LEFT);
-        header(table, "Código de Barras", Element.ALIGN_LEFT);
-        header(table, "Designação", Element.ALIGN_LEFT);
-        header(table, "Quantidade", Element.ALIGN_RIGHT);
-        header(table, "Caixas", Element.ALIGN_RIGHT);
-        header(table, "Preço", Element.ALIGN_RIGHT);
-
-        for (Stock s : stocks) {
-            BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-            int unitsPerBox = s.getProduct().getUnitsPerBox() <= 0 ? 1 : s.getProduct().getUnitsPerBox();
-            BigDecimal boxes = qty.divide(BigDecimal.valueOf(unitsPerBox), 2, java.math.RoundingMode.HALF_UP);
-            BigDecimal price = s.getProduct().getUnitPrice() == null ? BigDecimal.ZERO : s.getProduct().getUnitPrice();
-
-            // Referência com recurso ao SKU quando não há referência (evita coluna vazia).
-            String reference = s.getProduct().getReference();
-            if (reference == null || reference.isBlank()) reference = s.getProduct().getSku();
-            if (reference == null || reference.isBlank()) reference = "—";
-
-            String barcode = s.getProduct().getBarcode();
-            if (barcode == null || barcode.isBlank()) barcode = "—";
-
-            body(table, reference, Element.ALIGN_LEFT);
-            body(table, barcode, Element.ALIGN_LEFT);
-            body(table, s.getProduct().getName(), Element.ALIGN_LEFT);
-            body(table, formatNumber(qty), Element.ALIGN_RIGHT);
-            body(table, formatNumber(boxes), Element.ALIGN_RIGHT);
-            body(table, MoneyFormat.formatPlain(price), Element.ALIGN_RIGHT);
-        }
-        return table;
-    }
-
-    private String formatNumber(BigDecimal value) {
-        if (value == null) return "0";
-        if (value.stripTrailingZeros().scale() <= 0) {
-            return String.format("%,.0f", value);
-        }
-        return String.format("%,.2f", value);
-    }
-
-    private PdfPTable buildSummary(List<Stock> stocks) {
-        long total = stocks.size();
-        BigDecimal totalQty = stocks.stream()
-                .map(s -> s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalValue = stocks.stream()
-                .map(s -> {
-                    BigDecimal qty = s.getQuantity() == null ? BigDecimal.ZERO : s.getQuantity();
-                    BigDecimal price = s.getProduct().getUnitPrice() == null ? BigDecimal.ZERO : s.getProduct().getUnitPrice();
-                    return qty.multiply(price);
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        PdfPTable wrapper = new PdfPTable(new float[]{55f, 45f});
-        wrapper.setWidthPercentage(100);
-
-        PdfPCell empty = new PdfPCell(new Phrase(""));
-        empty.setBorder(PdfPCell.NO_BORDER);
-        wrapper.addCell(empty);
-
-        PdfPTable inner = new PdfPTable(new float[]{60f, 40f});
-        addSummaryLine(inner, "Artigos no inventário", String.valueOf(total), false);
-        addSummaryLine(inner, "Total de Unidades", formatNumber(totalQty), false);
-        addSummaryLine(inner, "VALOR TOTAL DO STOCK", MoneyFormat.format(totalValue), true);
-
-        PdfPCell innerWrap = new PdfPCell(inner);
-        innerWrap.setBorder(PdfPCell.NO_BORDER);
-        wrapper.addCell(innerWrap);
-        return wrapper;
-    }
-
-    private PdfPTable buildSignatureBlock() {
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        try { table.setWidths(new float[]{50f, 50f}); } catch (Exception ignored) {}
-        table.addCell(signatureCell("Responsável pelo Inventário"));
-        table.addCell(signatureCell("Conferido por"));
-        return table;
-    }
-
-    private PdfPCell signatureCell(String label) {
-        PdfPCell cell = new PdfPCell();
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setPaddingTop(20f);
-        cell.setPaddingLeft(12f);
-        cell.setPaddingRight(12f);
-        cell.addElement(new Paragraph("____________________________", PdfTheme.bodyFont()));
-        cell.addElement(new Paragraph(label, PdfTheme.smallFont()));
-        return cell;
-    }
-
-    private void addSummaryLine(PdfPTable t, String label, String value, boolean emphasised) {
-        PdfPCell l = new PdfPCell(new Phrase(label, emphasised ? PdfTheme.boldFont() : PdfTheme.bodyFont()));
-        PdfPCell v = new PdfPCell(new Phrase(value, emphasised ? PdfTheme.boldFont() : PdfTheme.bodyFont()));
-        l.setBorder(PdfPCell.NO_BORDER);
-        v.setBorder(PdfPCell.NO_BORDER);
-        v.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        l.setPadding(3f);
-        v.setPadding(3f);
-        if (emphasised) {
-            l.setBackgroundColor(PdfTheme.TOTAL_ROW_BG);
-            v.setBackgroundColor(PdfTheme.TOTAL_ROW_BG);
-        }
-        t.addCell(l);
-        t.addCell(v);
-    }
-
-    private void header(PdfPTable table, String text, int align) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, PdfTheme.tableHeaderFont()));
-        cell.setBackgroundColor(PdfTheme.TABLE_HEADER_BG);
-        cell.setBorderColor(PdfTheme.BORDER);
-        cell.setHorizontalAlignment(align);
-        cell.setPadding(5f);
-        table.addCell(cell);
-    }
-
-    private void body(PdfPTable table, String text, int align) {
-        PdfPCell cell = new PdfPCell(new Phrase(text == null ? "" : text, PdfTheme.bodyFont()));
-        cell.setBorderColor(PdfTheme.BORDER);
-        cell.setHorizontalAlignment(align);
-        cell.setPadding(4f);
-        table.addCell(cell);
+        return documentRenderer.render(company, warehouseFilter, mutableStocks);
     }
 }

@@ -28,6 +28,7 @@ public class AutomaticPostingService {
     private final ProcurementPostingHandler procurementPostingHandler;
     private final OperationsPostingHandler operationsPostingHandler;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public AutomaticPostingService(CommercialPostingHandler commercialPostingHandler,
                                    ProcurementPostingHandler procurementPostingHandler,
                                    OperationsPostingHandler operationsPostingHandler) {

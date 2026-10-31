@@ -3,43 +3,42 @@ package mz.multicore.erp.modules.comercial.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.dto.CustomerStatementDTO;
-import mz.multicore.erp.modules.comercial.dto.CustomerStatementLineDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
-import mz.multicore.erp.modules.comercial.model.CreditNote;
-import mz.multicore.erp.modules.comercial.model.DebitNote;
-import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.model.NoteStatus;
-import mz.multicore.erp.modules.comercial.model.Receipt;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Serviço de geração de extrato de conta corrente de clientes com saldo progressivo.
+ * Fachada orquestradora que delega na coleta de movimentos e cálculo financeiro.
+ * Ver {@code docs/CUSTOMER_STATEMENT_SERVICE_DECOMPOSITION_SPEC.md}.
  */
 @Service
 public class CustomerStatementService {
 
     private final ClientRepository clientRepository;
-    private final InvoiceRepository invoiceRepository;
-    private final ReceiptRepository receiptRepository;
-    private final CreditNoteRepository creditNoteRepository;
-    private final DebitNoteRepository debitNoteRepository;
+    private final CustomerStatementCollector collector;
+    private final CustomerStatementCalculator calculator;
 
+    @Autowired
+    public CustomerStatementService(
+            ClientRepository clientRepository,
+            CustomerStatementCollector collector,
+            CustomerStatementCalculator calculator
+    ) {
+        this.clientRepository = clientRepository;
+        this.collector = collector;
+        this.calculator = calculator;
+    }
+
+    /** Construtor retrocompatível (compatibilidade com suites de teste unitário via InjectMocks). */
     public CustomerStatementService(
             ClientRepository clientRepository,
             InvoiceRepository invoiceRepository,
@@ -47,11 +46,9 @@ public class CustomerStatementService {
             CreditNoteRepository creditNoteRepository,
             DebitNoteRepository debitNoteRepository
     ) {
-        this.clientRepository = clientRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.receiptRepository = receiptRepository;
-        this.creditNoteRepository = creditNoteRepository;
-        this.debitNoteRepository = debitNoteRepository;
+        this(clientRepository,
+             new CustomerStatementCollector(invoiceRepository, receiptRepository, creditNoteRepository, debitNoteRepository),
+             new CustomerStatementCalculator());
     }
 
     @Transactional(readOnly = true)
@@ -67,237 +64,7 @@ public class CustomerStatementService {
         LocalDate from = startDate != null ? startDate : LocalDate.now().withDayOfYear(1);
         LocalDate to = endDate != null ? endDate : LocalDate.now();
 
-        List<RawMovement> events = new ArrayList<>();
-
-        // 1. Facturas de Venda Efectiva
-        List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId);
-        BigDecimal overdue = BigDecimal.ZERO;
-        List<Invoice> clientInvoices = new ArrayList<>();
-        for (Invoice inv : invoices) {
-            if (inv.getClient() == null || !clientId.equals(inv.getClient().getId())) {
-                continue;
-            }
-            if (inv.getStatus() == null || !inv.getStatus().isRealisedSale()) {
-                continue;
-            }
-            clientInvoices.add(inv);
-            LocalDate invDate = inv.issueDate() != null ? inv.issueDate() : (inv.getCreatedAt() != null ? inv.getCreatedAt().toLocalDate() : LocalDate.now());
-            LocalDateTime ts = inv.getCreatedAt() != null ? inv.getCreatedAt() : invDate.atStartOfDay();
-            BigDecimal amount = inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO;
-            Long buId = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getId() : null;
-            String buName = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getName() : null;
-            events.add(new RawMovement(
-                    invDate,
-                    "FT",
-                    inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "-",
-                    "Factura a Crédito",
-                    inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "-",
-                    amount,
-                    BigDecimal.ZERO,
-                    ts,
-                    buId,
-                    buName
-            ));
-
-            LocalDate due = inv.effectiveDueDate();
-            if (due != null && due.isBefore(to)) {
-                BigDecimal balDue = inv.outstandingAmount();
-                if (balDue.signum() > 0) {
-                    overdue = overdue.add(balDue);
-                }
-            }
-        }
-
-        // 2. Notas de Débito
-        List<DebitNote> debitNotes = debitNoteRepository.findByCompanyId(companyId);
-        for (DebitNote dn : debitNotes) {
-            if (dn.getClient() == null || !clientId.equals(dn.getClient().getId())) {
-                continue;
-            }
-            if (dn.getStatus() != NoteStatus.APPROVED) {
-                continue;
-            }
-            LocalDate dnDate = dn.getIssueDate() != null ? dn.getIssueDate().toLocalDate() : (dn.getCreatedAt() != null ? dn.getCreatedAt().toLocalDate() : LocalDate.now());
-            LocalDateTime ts = dn.getCreatedAt() != null ? dn.getCreatedAt() : (dn.getIssueDate() != null ? dn.getIssueDate() : dnDate.atStartOfDay());
-            BigDecimal amount = dn.getTotalAmount() != null ? dn.getTotalAmount() : BigDecimal.ZERO;
-            String desc = "Nota de Débito" + (dn.getDescription() != null && !dn.getDescription().isBlank() ? " — " + dn.getDescription() : "");
-            String ref = dn.getInvoice() != null && dn.getInvoice().getInvoiceNumber() != null ? dn.getInvoice().getInvoiceNumber() : "-";
-            Long buId = dn.getInvoice() != null && dn.getInvoice().getBusinessUnit() != null ? dn.getInvoice().getBusinessUnit().getId() : null;
-            String buName = dn.getInvoice() != null && dn.getInvoice().getBusinessUnit() != null ? dn.getInvoice().getBusinessUnit().getName() : null;
-            events.add(new RawMovement(
-                    dnDate,
-                    "ND",
-                    dn.getNoteNumber() != null ? dn.getNoteNumber() : "-",
-                    desc,
-                    ref,
-                    amount,
-                    BigDecimal.ZERO,
-                    ts,
-                    buId,
-                    buName
-            ));
-        }
-
-        // 3. Recibos / Pagamentos
-        List<Receipt> receipts = receiptRepository.findByCompanyId(companyId);
-        Map<Long, BigDecimal> receiptsPerInvoice = new HashMap<>();
-        for (Receipt rc : receipts) {
-            if (rc.getInvoice() == null || rc.getInvoice().getClient() == null || !clientId.equals(rc.getInvoice().getClient().getId())) {
-                continue;
-            }
-            if ("CANCELLED".equalsIgnoreCase(rc.getStatus())) {
-                continue;
-            }
-            LocalDate rcDate = rc.getReceiptDate() != null ? rc.getReceiptDate().toLocalDate() : (rc.getCreatedAt() != null ? rc.getCreatedAt().toLocalDate() : LocalDate.now());
-            LocalDateTime ts = rc.getCreatedAt() != null ? rc.getCreatedAt() : (rc.getReceiptDate() != null ? rc.getReceiptDate() : rcDate.atStartOfDay());
-            BigDecimal amount = rc.getAmountPaid() != null ? rc.getAmountPaid() : BigDecimal.ZERO;
-            if (rc.getInvoice().getId() != null) {
-                receiptsPerInvoice.merge(rc.getInvoice().getId(), amount, BigDecimal::add);
-            }
-            String method = rc.getPaymentMethod() != null ? rc.getPaymentMethod() : "Liquidada";
-            String desc = "Recibo (" + method + ")";
-            String ref = rc.getInvoice().getInvoiceNumber() != null ? rc.getInvoice().getInvoiceNumber() : "-";
-            Long buId = rc.getInvoice().getBusinessUnit() != null ? rc.getInvoice().getBusinessUnit().getId() : null;
-            String buName = rc.getInvoice().getBusinessUnit() != null ? rc.getInvoice().getBusinessUnit().getName() : null;
-            events.add(new RawMovement(
-                    rcDate,
-                    "RC",
-                    rc.getReceiptNumber() != null ? rc.getReceiptNumber() : "-",
-                    desc,
-                    ref,
-                    BigDecimal.ZERO,
-                    amount,
-                    ts,
-                    buId,
-                    buName
-            ));
-        }
-
-        // 3.1 Pagamentos a pronto / balcão registados directamente na fatura sem recibo autónomo
-        for (Invoice inv : clientInvoices) {
-            BigDecimal totalPaid = inv.getAmountPaid() != null ? inv.getAmountPaid() : BigDecimal.ZERO;
-            BigDecimal receiptSum = inv.getId() != null ? receiptsPerInvoice.getOrDefault(inv.getId(), BigDecimal.ZERO) : BigDecimal.ZERO;
-            BigDecimal directSettlement = totalPaid.subtract(receiptSum);
-            if (directSettlement.signum() > 0) {
-                LocalDate invDate = inv.issueDate() != null ? inv.issueDate() : (inv.getCreatedAt() != null ? inv.getCreatedAt().toLocalDate() : LocalDate.now());
-                LocalDateTime ts = (inv.getCreatedAt() != null ? inv.getCreatedAt() : invDate.atStartOfDay()).plusSeconds(1);
-                Long buId = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getId() : null;
-                String buName = inv.getBusinessUnit() != null ? inv.getBusinessUnit().getName() : null;
-                String docNum = inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : ("INV-" + inv.getId());
-                events.add(new RawMovement(
-                        invDate,
-                        "RC",
-                        "PG/" + docNum,
-                        "Pagamento no Acto da Factura",
-                        docNum,
-                        BigDecimal.ZERO,
-                        directSettlement,
-                        ts,
-                        buId,
-                        buName
-                ));
-            }
-        }
-
-        // 4. Notas de Crédito
-        List<CreditNote> creditNotes = creditNoteRepository.findByCompanyId(companyId);
-        for (CreditNote cn : creditNotes) {
-            if (cn.getClient() == null || !clientId.equals(cn.getClient().getId())) {
-                continue;
-            }
-            if (cn.getStatus() != NoteStatus.APPROVED) {
-                continue;
-            }
-            LocalDate cnDate = cn.getIssueDate() != null ? cn.getIssueDate().toLocalDate() : (cn.getCreatedAt() != null ? cn.getCreatedAt().toLocalDate() : LocalDate.now());
-            LocalDateTime ts = cn.getCreatedAt() != null ? cn.getCreatedAt() : (cn.getIssueDate() != null ? cn.getIssueDate() : cnDate.atStartOfDay());
-            BigDecimal amount = cn.getTotalAmount() != null ? cn.getTotalAmount() : BigDecimal.ZERO;
-            String reason = cn.getReason() != null ? cn.getReason().name() : "Regularização";
-            String desc = "Nota de Crédito (" + reason + ")";
-            String ref = cn.getInvoice() != null && cn.getInvoice().getInvoiceNumber() != null ? cn.getInvoice().getInvoiceNumber() : "-";
-            Long buId = cn.getInvoice() != null && cn.getInvoice().getBusinessUnit() != null ? cn.getInvoice().getBusinessUnit().getId() : null;
-            String buName = cn.getInvoice() != null && cn.getInvoice().getBusinessUnit() != null ? cn.getInvoice().getBusinessUnit().getName() : null;
-            events.add(new RawMovement(
-                    cnDate,
-                    "NC",
-                    cn.getNoteNumber() != null ? cn.getNoteNumber() : "-",
-                    desc,
-                    ref,
-                    BigDecimal.ZERO,
-                    amount,
-                    ts,
-                    buId,
-                    buName
-            ));
-        }
-
-        // Ordenação cronológica estrita null-safe
-        events.sort(Comparator.comparing(RawMovement::date, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(RawMovement::timestamp, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(RawMovement::documentNumber, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
-
-        BigDecimal openingBalance = BigDecimal.ZERO;
-        BigDecimal totalDebits = BigDecimal.ZERO;
-        BigDecimal totalCredits = BigDecimal.ZERO;
-        List<CustomerStatementLineDTO> lines = new ArrayList<>();
-
-        for (RawMovement mov : events) {
-            if (mov.date().isBefore(from)) {
-                openingBalance = openingBalance.add(mov.debit()).subtract(mov.credit());
-            }
-        }
-
-        BigDecimal running = openingBalance;
-        for (RawMovement mov : events) {
-            if (!mov.date().isBefore(from) && !mov.date().isAfter(to)) {
-                running = running.add(mov.debit()).subtract(mov.credit());
-                totalDebits = totalDebits.add(mov.debit());
-                totalCredits = totalCredits.add(mov.credit());
-
-                lines.add(new CustomerStatementLineDTO(
-                        mov.date(),
-                        mov.type(),
-                        mov.documentNumber(),
-                        mov.description(),
-                        mov.reference(),
-                        mov.debit(),
-                        mov.credit(),
-                        running,
-                        mov.businessUnitId(),
-                        mov.businessUnitName()
-                ));
-            }
-        }
-
-        BigDecimal closingBalance = openingBalance.add(totalDebits).subtract(totalCredits);
-
-        return new CustomerStatementDTO(
-                client.getId(),
-                client.getName(),
-                client.getTaxId(),
-                client.getAddress(),
-                client.getEmail(),
-                null,
-                from,
-                to,
-                openingBalance,
-                totalDebits,
-                totalCredits,
-                closingBalance,
-                overdue,
-                lines
-        );
+        CustomerStatementCollector.CollectedCustomerMovements collected = collector.collect(companyId, clientId, to);
+        return calculator.calculate(client, from, to, collected.movements(), collected.overdueAmount());
     }
-
-    private record RawMovement(
-            LocalDate date,
-            String type,
-            String documentNumber,
-            String description,
-            String reference,
-            BigDecimal debit,
-            BigDecimal credit,
-            LocalDateTime timestamp,
-            Long businessUnitId,
-            String businessUnitName
-    ) {}
 }

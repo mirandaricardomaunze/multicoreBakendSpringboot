@@ -11,7 +11,8 @@ class PosButtonColourHierarchyTest {
 
     @Test
     void posUsesSemanticButtonColours() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/POSPanel.java"));
+        String source = Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/POSPanel.java"))
+                + Files.readString(Path.of("src/main/java/mz/multicore/erp/gui/PosWorkspaceBuilder.java"));
         assertThat(source)
                 .contains("createSuccessButton(\"Abrir Caixa\")")
                 .contains("createDangerButton(\"Fechar Caixa\")")

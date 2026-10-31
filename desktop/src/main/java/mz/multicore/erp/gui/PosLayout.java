@@ -172,7 +172,7 @@ final class PosLayout {
 
         Color labelColor = isLight ? UIHelper.TEXT_MUTED : UIHelper.TEXT_LIGHT;
         Color valueColor = isLight ? UIHelper.TEXT_LIGHT : Color.WHITE;
-        Color totalColor = isLight ? UIHelper.ACCENT_BLUE : Color.WHITE;
+        Color totalColor = UIHelper.ACCENT_BLUE;
 
         JLabel subCap = new JLabel("Subtotal s/ IVA");
         subCap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));

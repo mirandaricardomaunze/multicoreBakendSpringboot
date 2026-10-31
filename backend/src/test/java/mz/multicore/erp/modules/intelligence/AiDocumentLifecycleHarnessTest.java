@@ -49,7 +49,9 @@ class AiDocumentLifecycleHarnessTest {
     @Test
     void desktopUsesHttpAndStandardTableCard() throws Exception {
         String client = source("desktop/src/main/java/mz/multicore/erp/desktop/client/AiAssistantApiClient.java");
-        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java");
+        String panel = source("desktop/src/main/java/mz/multicore/erp/gui/AiManagementAssistantPanel.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiDocumentCreationView.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/intelligence/AiDocumentHistoryView.java");
         assertThat(client).contains("/api/intelligence/documents", "getDocumentPdf", "DesktopClientFactory")
                 .doesNotContain("Repository", "JpaRepository");
         assertThat(panel).contains("Histórico e Aprovação", "ModernPanel(16)", "Fluxo do Documento",

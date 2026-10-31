@@ -35,6 +35,7 @@ public class SalesGoalService {
     private final SalesGoalBonusService bonusService;
     private final SalesGoalQueryService queryService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public SalesGoalService(SalesGoalLifecycleService lifecycleService,
                             SalesGoalProgressCoordinator progressCoordinator,
                             SalesGoalBonusService bonusService,

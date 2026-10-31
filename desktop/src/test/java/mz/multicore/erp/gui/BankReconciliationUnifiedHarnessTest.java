@@ -110,25 +110,27 @@ class BankReconciliationUnifiedHarnessTest {
         });
 
         // Simula pressão da tecla SPACE na tabela
-        boolean spaceConsumed = false;
-        for (KeyListener kl : panel.itemsTable.getKeyListeners()) {
-            KeyEvent spacePress = new KeyEvent(panel.itemsTable, KeyEvent.KEY_PRESSED,
-                    System.currentTimeMillis(), 0, KeyEvent.VK_SPACE, ' ');
-            kl.keyPressed(spacePress);
-            if (spacePress.isConsumed()) {
-                spaceConsumed = true;
+        boolean[] spaceConsumed = {false};
+        SwingUtilities.invokeAndWait(() -> {
+            for (KeyListener kl : panel.itemsTable.getKeyListeners()) {
+                KeyEvent spacePress = new KeyEvent(panel.itemsTable, KeyEvent.KEY_PRESSED,
+                        System.currentTimeMillis(), 0, KeyEvent.VK_SPACE, ' ');
+                kl.keyPressed(spacePress);
+                if (spacePress.isConsumed()) spaceConsumed[0] = true;
             }
-        }
+        });
 
-        assertTrue(spaceConsumed, "itemsTable deve consumir evento da tecla SPACE para abrir o QuickPeek");
+        assertTrue(spaceConsumed[0], "itemsTable deve consumir evento da tecla SPACE para abrir o QuickPeek");
         assertTrue(quickPeek.isVisible(), "QuickPeekPanel deve ficar visível após tecla SPACE");
 
         // Simula SPACE novamente para fechar
-        for (KeyListener kl : panel.itemsTable.getKeyListeners()) {
-            KeyEvent spacePress2 = new KeyEvent(panel.itemsTable, KeyEvent.KEY_PRESSED,
-                    System.currentTimeMillis(), 0, KeyEvent.VK_SPACE, ' ');
-            kl.keyPressed(spacePress2);
-        }
+        SwingUtilities.invokeAndWait(() -> {
+            for (KeyListener kl : panel.itemsTable.getKeyListeners()) {
+                KeyEvent spacePress2 = new KeyEvent(panel.itemsTable, KeyEvent.KEY_PRESSED,
+                        System.currentTimeMillis(), 0, KeyEvent.VK_SPACE, ' ');
+                kl.keyPressed(spacePress2);
+            }
+        });
         assertFalse(quickPeek.isVisible(), "QuickPeekPanel deve fechar após segundo SPACE");
     }
 

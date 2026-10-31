@@ -95,6 +95,7 @@ class AccountStatementHarnessTest {
     @BeforeEach
     void setUp() {
         CurrentUserContext.setCurrentCompanyId(TEST_COMPANY_ID);
+        supplierStatementService = new SupplierStatementService(supplierRepository, purchaseRepository);
 
         testCompany = new Company();
         testCompany.setId(TEST_COMPANY_ID);

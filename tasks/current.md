@@ -6,7 +6,596 @@ Histórico anterior: [arquivo até 2026-10-10](archive/current-history-through-2
 
 Este ficheiro contém apenas o contexto necessário para continuar o trabalho actual. Resultados
 concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
-- **Decomposição Modular de Painéis Monolíticos em Sequência (Fases 1 a 106 Concluídas):**
+- **Decomposição Modular de Painéis e Serviços Monolíticos em Sequência (Fases 1 a 204 Concluídas):**
+  - **Fase 204: Estabilização Final do Reactor:**
+    - Corrigidas as nove falhas residuais do desktop em POS, login, reconciliação e harnesses
+      estruturais desactualizados após decomposição.
+    - Fundo e credenciais de login passaram a consumir exclusivamente a paleta corporativa;
+      total do POS mantém destaque semântico `ACCENT_BLUE` em todos os temas.
+    - Validação final: 1.441 testes do backend e 1.063 testes do desktop, sem falhas.
+  - **Fase 203: Consolidação dos Colaboradores de UIHelper:**
+    - Especificação: docs/UI_HELPER_COLLABORATOR_DECOMPOSITION_SPEC.md.
+    - `UiTabbedAndTableStyler` reduzido para 89 linhas como fachada dos colaboradores de abas,
+      células, interacção e rodapé de tabelas.
+    - `UiFormControlAndFormatSupport` reduzido para 65 linhas; styling/grelha movidos para
+      `UiFormComponentStyler` e prompts/filtros centralizados em `UiTextInputSupport`.
+    - Assinaturas, layout, dimensões, cores, listeners e atalhos de `UIHelper` preservados.
+  - **Fase 202: Diálogo Executivo "Sobre o Multicore ERP" (AboutDialog.java):**
+    - Especificação: docs/ABOUT_DIALOG_DECOMPOSITION_SPEC.md.
+    - Harness: docs/ABOUT_DIALOG_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 378 para 40 linhas, preservando o método `AboutDialog.show(Component)` e os KPIs de autoria.
+    - Construção das 4 abas temáticas (Autoria, Módulos Integrados, Arquitetura e Licenciamento) extraída para `AboutDialogTabBuilder`.
+  - **Fase 201: Diálogo de Activação e Renovação de Plano de Subscrição (SubscriptionRenewalDialog.java):**
+    - Especificação: docs/SUBSCRIPTION_RENEWAL_DIALOG_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SUBSCRIPTION_RENEWAL_DIALOG_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 388 para 180 linhas, preservando os métodos `show(...)` e o fluxo de pagamento móvel USSD e transferência bancária.
+    - Cálculo de tarifas, descontos progressivos e parsing de montantes extraído para `SubscriptionRenewalPricingCalculator`; construção dos cartões visuais extraída para `SubscriptionRenewalViewBuilder`.
+  - **Fase 200: Widget Executivo de Pulso Estratégico 360° (StrategicPulseWidget.java):**
+    - Especificação: docs/STRATEGIC_PULSE_WIDGET_DECOMPOSITION_SPEC.md.
+    - Harness: docs/STRATEGIC_PULSE_WIDGET_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 403 para 155 linhas, preservando `loadData()`, `applyData(...)` e todos os getters de labels e botões de navegação.
+    - Construção do cabeçalho e cartões de pilares extraída para `StrategicPulseCardFactory`; formatação e apresentação dos 4 pilares extraída para `StrategicPulseDataPresenter`.
+  - **Fase 199: Componente de Botão Corporativo (ModernButton.java):**
+    - Especificação: docs/MODERN_BUTTON_DECOMPOSITION_SPEC.md.
+    - Harness: docs/MODERN_BUTTON_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 430 para 222 linhas, preservando construtores, animações de hover, `stripEllipsis`, `setShortcut` e `setColors`.
+    - Pintura Graphics2D, salvaguarda de contraste WCAG, cálculo de dimensões sem reticências e desenho do badge de atalho extraídos para `ModernButtonPainter`.
+  - **Fase 198: Utilitário de Filtragem e Pesquisa Tabular (TableFilter.java):**
+    - Especificação: docs/TABLE_FILTER_DECOMPOSITION_SPEC.md.
+    - Harness: docs/TABLE_FILTER_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 439 para 135 linhas, preservando `ColumnFilter`, `ContainsColumnFilter`, `PeriodFilter`, `DateRangeFilter` e `CLEAR_ACTION_KEY`.
+    - Lógica pura de correspondência textual/temporal extraída para `TableFilterMatcher`; fábricas de barras de filtro e instalação de `TableRowSorter` extraídas para `TableFilterBarFactory`.
+  - **Fase 197: Utilitário Central de Design System e UI Swing (UIHelper.java):**
+    - Especificação: docs/UI_HELPER_DECOMPOSITION_SPEC.md.
+    - Harness: docs/UI_HELPER_DECOMPOSITION_HARNESS.md.
+    - Fachada estática reduzida de 3.031 para 293 linhas, preservando todas as constantes de paleta/tipografia/escala, os slots mutáveis de cor de tema, a classe interna `PaginationSouthComposite` e todos os métodos públicos e package-private.
+    - Gestão de temas, contraste WCAG e contenção de modais extraída para `UiThemeAndWindowSupport`; ícones vetoriais FontAwesome, imagens e cabeçalhos premium extraídos para `UiIconAndImageSupport`; execução assíncrona fora do EDT com propagação de tenant extraída para `UiAsyncTaskSupport`; estilização de abas, grelhas tabulares, calha de selecção e rodapé paginado extraída para `UiTabbedAndTableStyler`; controlos de formulário, botões canónicos e tradutores humanizados em pt-MZ extraídos para `UiFormControlAndFormatSupport`.
+  - **Fase 196: Sementeira Inicial e Dados de Demonstração do Sistema (DataLoader.java):**
+    - Especificação: docs/DATA_LOADER_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DATA_LOADER_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 583 para 79 linhas, preservando o construtor legado de 16 argumentos e o método `seedDemoCompany`.
+    - Sementeira de utilizadores de referência, taxas fiscais e plano de contas extraída para `ReferenceAndAdminDataSeeder`; sementeira da empresa de demonstração completa extraída para `DemoEnterpriseDataSeeder`.
+  - **Fase 195: Controlador HTTP de Impressão e Exportação PDF (PrintController.java):**
+    - Especificação: docs/PRINT_CONTROLLER_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PRINT_CONTROLLER_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 432 para 217 linhas, preservando todos os endpoints `/api/print/**` e os construtores legados de 22 e 25 argumentos.
+    - Despacho de renderização PDF, resolução de tenant e construção de cabeçalhos HTTP `application/pdf` extraídos para `PrintRequestDispatcher`.
+  - **Fase 194: Serviço Central Comercial — Clientes, Catálogo, Faturação e Encomendas (ComercialService.java):**
+    - Especificação: docs/COMERCIAL_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/COMERCIAL_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 2.155 para 402 linhas, preservando os construtores legados (19 e 21 argumentos), os bloqueios pessimistas de recibos (`createReceipt`, `cancelReceipt`) e a paginação tenant-scoped de encomendas (`getOrdersPageByCompany`).
+    - Gestão de clientes e elegibilidade de crédito extraída para ComercialClientAndCreditService; catálogo de artigos, categorias, IVA e embalagens extraído para ComercialProductCatalogService; emissão/anulação/listagem de faturas e resumo POS extraídos para ComercialInvoiceLifecycleService; ciclo de vida completo de encomendas e reposições internas extraído para ComercialOrderLifecycleService.
+  - **Fase 193: Serviço de Ponto de Venda — Sessões de Caixa, Relatório Z, Checkout e Devoluções (POSService.java):**
+    - Especificação: docs/POS_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/POS_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 1.294 para 245 linhas, preservando os construtores legados (17 e 18 argumentos) e os bloqueios pessimistas de abertura/fecho de sessão (`openSession`, `closeSession`).
+    - Gestão de sessões, turnos e movimentos de caixa extraída para PosSessionAndShiftService; cálculo do Relatório Z extraído para PosZReportCalculator; checkout multi-pagamento e pagamentos posteriores extraídos para PosCheckoutAndPaymentService; devoluções, trocas e vales de crédito extraídos para PosReturnAndVoucherService.
+  - **Fase 192: Assistente de Devoluções de Vendas no Backoffice (SalesReturnService.java):**
+    - Especificação: docs/SALES_RETURN_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SALES_RETURN_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 164 para 49 linhas, preservando o construtor legado de 3 argumentos.
+    - Cálculo de saldos devolvíveis e embalagens extraído para ReturnableInvoiceLineCalculator; validação e emissão de Nota de Crédito extraídas para SalesReturnWizardProcessor.
+  - **Fase 191: Emissão de Dossiê de Inventário Físico e Reconciliação (InventoryPhysicalCountingPrintService.java):**
+    - Especificação: docs/INVENTORY_PHYSICAL_COUNTING_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INVENTORY_PHYSICAL_COUNTING_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 164 para 35 linhas, preservando validação da empresa e o construtor legado.
+    - Composição OpenPDF A4 do dossiê de inventário extraída para InventoryPhysicalCountingDocumentRenderer.
+  - **Fase 190: Plano de Contas PGC-NIRF (ChartOfAccountsService.java):**
+    - Especificação: docs/CHART_OF_ACCOUNTS_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/CHART_OF_ACCOUNTS_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 166 para 76 linhas, preservando PermissionGuard, toDTO, defaultNatureFor e o construtor legado.
+    - Sementeira idempotente PGC-NIRF e criação de contas extraídas para ChartOfAccountsMutationService; consultas e validações extraídas para ChartOfAccountsQueryService.
+  - **Fase 189: Serviço de Disparo de Alertas Críticos por E-mail (SystemAlertEmailService.java):**
+    - Especificação: docs/SYSTEM_ALERT_EMAIL_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SYSTEM_ALERT_EMAIL_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 168 para 42 linhas, preservando o construtor legado de 3 argumentos.
+    - Gestão de cooldown de 15 minutos, validação de endereço e envio/simulação SMTP extraídos para SystemAlertMailDispatcher.
+  - **Fase 188: Planos de Prestações e Amortização de Faturas (InvoiceInstallmentService.java):**
+    - Especificação: docs/INVOICE_INSTALLMENT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INVOICE_INSTALLMENT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 168 para 51 linhas, preservando toDTO e o construtor legado.
+    - Geração proporcional/personalizada de prestações extraída para InstallmentPlanGenerator; listagem e amortização de pagamentos extraídas para InstallmentPaymentAmortizer.
+  - **Fase 187: Gestão de Linhas/Unidades de Negócio e Restrição Comercial (BusinessUnitService.java):**
+    - Especificação: docs/BUSINESS_UNIT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/BUSINESS_UNIT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 169 para 78 linhas, preservando CurrentUserContext e o construtor legado de 5 argumentos.
+    - Criação, atualização e alternância de estado extraídas para BusinessUnitMutationService; consultas e validação de restrição de produto extraídas para BusinessUnitQueryAndPolicyService.
+  - **Fase 186: Catálogo de Equipamentos e EPIs de Qualidade (EquipmentCatalogService.java):**
+    - Especificação: docs/EQUIPMENT_CATALOG_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/EQUIPMENT_CATALOG_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 170 para 64 linhas, preservando mapToEquipmentDTO e o construtor legado.
+    - Cadastro, atualização e mapeamento DTO extraídos para EquipmentCatalogMutationService; pesquisa paginada e listagem extraídas para EquipmentCatalogQueryService.
+  - **Fase 185: Emissão de Nota de Débito em 4 Vias Fiscais (DebitNotePrintService.java):**
+    - Especificação: docs/DEBIT_NOTE_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DEBIT_NOTE_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 172 para 41 linhas, preservando DEBIT_NOTE_COPIES e o construtor legado.
+    - Composição OpenPDF A4 das 4 vias fiscais extraída para DebitNoteDocumentRenderer.
+  - **Fase 184: Histórico e Evolução Salarial (SalaryHistoryService.java):**
+    - Especificação: docs/SALARY_HISTORY_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SALARY_HISTORY_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 173 para 62 linhas, preservando PermissionGuard.requireManagerOrAdmin e o construtor legado.
+    - Registo de alterações salariais e reflexo na ficha do colaborador extraídos para SalaryChangeMutationService.
+  - **Fase 183: Emissão de Mapa Fiscal Salarial INSS/IRPS (PayrollFiscalMapPrintService.java):**
+    - Especificação: docs/PAYROLL_FISCAL_MAP_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PAYROLL_FISCAL_MAP_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 174 para 43 linhas, preservando validação da empresa e o construtor legado.
+    - Composição OpenPDF A4 do mapa fiscal salarial extraída para PayrollFiscalMapDocumentRenderer.
+  - **Fase 182: Gestão de Tesouraria e Liquidação de Faturas (FinanceService.java):**
+    - Especificação: docs/FINANCE_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FINANCE_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 176 para 91 linhas, preservando payInvoice com lock pessimista e o construtor legado.
+    - Movimentação manual e automática de contas extraída para TreasuryOperationService; consultas e paginação server-side extraídas para TreasuryQueryService.
+  - **Fase 181: Serviço Nuclear de Recursos Humanos e Processamento Salarial (HRService.java):**
+    - Especificação: docs/HR_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/HR_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 979 para 150 linhas, preservando 100% da API pública e os construtores legados de 21 e 22 argumentos.
+    - Gestão de colaboradores e notas de despesa extraída para HrEmployeeManagementService; emissão individual e processamento mensal da folha salarial extraídos para HrPayslipIssuanceService; aprovação, pagamento, anulação e consulta de recibos extraídos para HrPayslipLifecycleService; registo/justificação de faltas e submissão/decisão de férias extraídos para HrAbsenceAndVacationService.
+  - **Fase 180: Extrato de Conta Corrente de Fornecedor (SupplierStatementService.java):**
+    - Especificação: docs/SUPPLIER_STATEMENT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SUPPLIER_STATEMENT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 177 para 57 linhas, preservando validação do fornecedor/período e o construtor legado.
+    - Geração de movimentos V/FT e PG, ordenação cronológica e cálculo do saldo progressivo extraídos para SupplierStatementMovementBuilder.
+  - **Fase 179: Pulso Operacional 360º do Dashboard (OperationalPulseService.java):**
+    - Especificação: docs/OPERATIONAL_PULSE_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/OPERATIONAL_PULSE_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 184 para 51 linhas, preservando o construtor legado de 5 argumentos.
+    - Pulsos de Produção Industrial e Frota extraídos para IndustrialAndFleetPulseCalculator; pulsos de Contratos Recorrentes (MRR) e Imobilizado extraídos para FinancialContractsAndAssetsPulseCalculator.
+  - **Fase 178: Contas a Receber e Mapa de Antiguidade (ReceivablesService.java):**
+    - Especificação: docs/RECEIVABLES_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/RECEIVABLES_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 187 para 52 linhas, preservando o construtor legado.
+    - Trava e exposição de limite de crédito extraídas para ClientCreditLimitValidator; cálculo do mapa de antiguidade por escalões AgingBucket e por cliente extraído para ReceivablesAgingCalculator.
+  - **Fase 177: Emissão de Folha de Contagem Cega de Inventário (InventoryCountSheetPrintService.java):**
+    - Especificação: docs/INVENTORY_COUNT_SHEET_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INVENTORY_COUNT_SHEET_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 187 para 67 linhas, preservando validação de empresa/armazém e o construtor legado de 3 argumentos.
+    - Composição OpenPDF A4 da folha de contagem cega extraída para InventoryCountSheetDocumentRenderer.
+  - **Fase 176: Pagamentos Móveis Push USSD M-Pesa e e-Mola (MobilePaymentService.java):**
+    - Especificação: docs/MOBILE_PAYMENT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/MOBILE_PAYMENT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 189 para 53 linhas, preservando normalizePhoneNumber, validateProviderPhone e o construtor legado.
+    - Normalização telefónica +258, validação de prefixos Vodacom/Movitel e geração de referências extraídas para MobilePaymentPhoneValidator; iniciação USSD, polling com expiração e simulação extraídos para MobilePaymentTransactionProcessor.
+  - **Fase 175: Subsídios Legais de Folha: 13.º Mês e Subsídio de Férias (PayrollBonusService.java):**
+    - Especificação: docs/PAYROLL_BONUS_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PAYROLL_BONUS_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 194 para 61 linhas, preservando PermissionGuard.requireManagerOrAdmin e o construtor legado de 5 argumentos.
+    - Apuramento proporcional do 13.º mês e subsídio de férias extraídos para PayrollBonusCalculationService; pagamento idempotente e integração financeira extraídos para PayrollBonusPaymentService.
+  - **Fase 174: Reposição Interna de Lojas e Conversão de Encomendas (InternalReplenishmentService.java):**
+    - Especificação: docs/INTERNAL_REPLENISHMENT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INTERNAL_REPLENISHMENT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 196 para 56 linhas, preservando ReplenishmentStatus, @EventListener onTransferResolved e o construtor legado de 3 argumentos.
+    - Conversão de encomendas em transferências, registo retroactivo e resolução de estado extraídos para ReplenishmentOrderConversionService.
+  - **Fase 173: Emissão de Etiquetas de Produto e Lote Code128 (ProductLabelPrintService.java):**
+    - Especificação: docs/PRODUCT_LABEL_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PRODUCT_LABEL_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 198 para 63 linhas, preservando sobrecargas render(...) e o construtor legado.
+    - Geração de códigos de barras Code128 e composição em grelha A4 (3 colunas) e bobina térmica 80mm extraídas para ProductLabelDocumentRenderer.
+  - **Fase 172: Motor Inteligente de Reposição de Stock (ReorderService.java):**
+    - Especificação: docs/REORDER_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/REORDER_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 200 para 53 linhas, preservando CurrentUserContext.requireCompany e o construtor legado de 4 argumentos.
+    - Recolha agregada de saldos, vendas de 30 dias e histórico de compras extraída para ReorderDataCollector; cálculo de défice em caixas, previsão de rutura e ordenação por criticidade extraídos para ReorderSuggestionCalculator.
+  - **Fase 171: Sessões de Contagem de Inventário (InventoryCountService.java):**
+    - Especificação: docs/INVENTORY_COUNT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INVENTORY_COUNT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 200 para 75 linhas, preservando PermissionGuard, CurrentUserContext e o construtor legado de 4 argumentos.
+    - Criação, gravação, aplicação de ajustes e cancelamento extraídos para InventoryCountLifecycleService; consultas e projecção DTO extraídas para InventoryCountQueryService.
+  - **Fase 170: Gestão Global de Utilizadores da Plataforma (PlatformUserService.java):**
+    - Especificação: docs/PLATFORM_USER_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PLATFORM_USER_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 204 para 101 linhas, preservando PermissionGuard.requireSuperAdmin e os construtores legados de 5 e 6 argumentos.
+    - Gestão de contas, protecção de administrador único, reposição de senha e revogação de sessão extraídas para PlatformUserAccountService; concessão e revogação de acessos multi-empresa extraídas para PlatformUserAccessService.
+  - **Fase 169: Gestão de Armazéns e Contagem Cega (WarehouseService.java):**
+    - Especificação: docs/WAREHOUSE_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/WAREHOUSE_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 205 para 135 linhas, preservando PermissionGuard, CurrentUserContext, toDTO e o construtor legado de 3 argumentos.
+    - Criação, edição, activação/desactivação e tranca/destranca de stock extraídas para WarehouseLifecycleService; consultas e resolução de armazéns de venda extraídas para WarehouseQueryService.
+  - **Fase 168: Gestão de Viaturas e Abastecimentos de Frota (FleetService.java):**
+    - Especificação: docs/FLEET_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FLEET_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 206 para 74 linhas, preservando os construtores legados de 3 e 4 argumentos.
+    - Gestão de viaturas extraída para FleetVehicleManagementService; registo de abastecimentos, cálculo de consumo médio Km/L e emissão de FleetFuelLoggedEvent extraídos para FleetFuelLogService.
+  - **Fase 167: Emissão de Contrato de Trabalho em PDF (EmploymentContractPrintService.java):**
+    - Especificação: docs/EMPLOYMENT_CONTRACT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/EMPLOYMENT_CONTRACT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 206 para 38 linhas, preservando validação multi-tenant e o construtor legado.
+    - Composição OpenPDF A4 de identificação das partes, grelha de condições acordadas e geração dinâmica de cláusulas contratuais extraída para EmploymentContractDocumentRenderer.
+  - **Fase 166: Emissão de Mapa Oficial de Amortizações Modelo 22 Anexo D (AssetDepreciationMapPrintService.java):**
+    - Especificação: docs/ASSET_DEPRECIATION_MAP_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/ASSET_DEPRECIATION_MAP_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 210 para 47 linhas, preservando validação de empresa e o construtor legado.
+    - Composição OpenPDF A4 paisagem do Modelo 22 Anexo D (PGC-NIRF) extraída para AssetDepreciationMapDocumentRenderer.
+  - **Fase 165: Rastreio de Lotes, Validades e Consumo FEFO (ProductBatchService.java):**
+    - Especificação: docs/PRODUCT_BATCH_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PRODUCT_BATCH_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 211 para 86 linhas, preservando BatchConsumption, toDTO e o construtor legado.
+    - Entrada de lotes, consumo FEFO multi-lote e materialização de lotes legados extraídos para ProductBatchMutationService; consultas e projecção DTO extraídas para ProductBatchQueryService.
+  - **Fase 164: Gestão de Notas de Débito Comerciais (DebitNoteService.java):**
+    - Especificação: docs/DEBIT_NOTE_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DEBIT_NOTE_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 216 para 88 linhas, preservando PermissionGuard.requireManagerOrAdmin, CurrentUserContext.requireCompany e o construtor legado de 5 argumentos.
+    - Criação fiscal, aprovação com DebitNoteApprovedEvent, rejeição e cancelamento extraídos para DebitNoteLifecycleService; consultas e projecção DTO extraídas para DebitNoteQueryService.
+  - **Fase 163: Assistência Empresa-Plataforma (SupportService.java):**
+    - Especificação: docs/SUPPORT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SUPPORT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 218 para 101 linhas, preservando PermissionGuard, priorityOptions, statusOptions e o construtor legado de 3 argumentos.
+    - Operações do tenant extraídas para CompanySupportTicketService; operações de superadmin da plataforma e mapeamento DTO extraídos para PlatformSupportAdminService.
+  - **Fase 162: Emissão de Manifesto de Carga e Rota de Distribuição (FleetManifestPrintService.java):**
+    - Especificação: docs/FLEET_MANIFEST_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FLEET_MANIFEST_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 218 para 35 linhas, preservando validação multi-tenant e o construtor legado.
+    - Composição OpenPDF A4 de informação de transporte, KPIs de carga, grelha de paradas e assinaturas extraída para FleetManifestDocumentRenderer.
+  - **Fase 161: Emissão de Livro de Inventário Valorizado PGC-NIRF (ValuedInventoryBookPrintService.java):**
+    - Especificação: docs/VALUED_INVENTORY_BOOK_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/VALUED_INVENTORY_BOOK_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 218 para 53 linhas, preservando validação de empresa, filtragem de saldos positivos e o construtor legado.
+    - Composição OpenPDF A4 de cabeçalho do Código Comercial, grelha valorizada ao CUMP e termo de encerramento legal extraída para ValuedInventoryBookDocumentRenderer.
+  - **Fase 160: Emissão de Folha de Obra de Assistência Técnica (WorkSheetPrintService.java):**
+    - Especificação: docs/WORK_SHEET_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/WORK_SHEET_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 219 para 41 linhas, preservando validação multi-tenant e o construtor legado.
+    - Composição OpenPDF A4 de bloco de pedido, intervenção, linhas de mão de obra/peças, resumo sem IVA e nota fiscal extraída para WorkSheetDocumentRenderer.
+  - **Fase 159: Contratos de Avença e Facturação Periódica (RecurringContractService.java):**
+    - Especificação: docs/RECURRING_CONTRACT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/RECURRING_CONTRACT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 221 para menos de 75 linhas, preservando o construtor legado de 4 argumentos.
+    - Gestão de ciclo de vida, cálculo de data inicial e projecção DTO extraídos para RecurringContractLifecycleService; processamento em lote (processBatchBilling), registo de RecurringBillingLog e expiração extraídos para RecurringBatchBillingProcessor.
+  - **Fase 158: Emissão de Termo de Entrega de EPI e Equipamento (QualityEquipmentPrintService.java):**
+    - Especificação: docs/QUALITY_EQUIPMENT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/QUALITY_EQUIPMENT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 223 para menos de 55 linhas, preservando resolução multi-tenant e o construtor legado.
+    - Composição OpenPDF A4 de identificação do trabalhador, especificações de EPI, prazos de validade, termo de compromisso e assinaturas extraída para QualityEquipmentDocumentRenderer.
+  - **Fase 157: Registo de Compras Directas a Fornecedor (DirectPurchaseService.java):**
+    - Especificação: docs/DIRECT_PURCHASE_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DIRECT_PURCHASE_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 224 para menos de 85 linhas, preservando CurrentUserContext.requireCompany, toDTO e o construtor legado de 9 argumentos.
+    - Registo de compra, movimentos de stock PURCHASE, liquidação financeira e emissão de PurchaseRegisteredEvent extraídos para DirectPurchaseRegistrationService; consultas e projecção DTO extraídas para DirectPurchaseQueryService.
+  - **Fase 156: Emissão de Acerto Final e Certificado de Trabalho (TerminationPrintService.java):**
+    - Especificação: docs/TERMINATION_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/TERMINATION_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 226 para menos de 55 linhas, preservando renderSettlement, renderCertificate e o construtor legado.
+    - Composição OpenPDF A4 do Acerto Final de Contas e do Certificado de Trabalho extraída para TerminationDocumentRenderer.
+  - **Fase 155: Relatórios Contabilísticos: Balancete, Razão, DR e Balanço (AccountingReportService.java):**
+    - Especificação: docs/ACCOUNTING_REPORT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/ACCOUNTING_REPORT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 226 para menos de 65 linhas, preservando o construtor legado (JournalService, AccountRepository).
+    - Cálculo de Balancete e Extracto de Razão com saldo de abertura extraídos para LedgerAndTrialBalanceCalculator; Demonstração de Resultados e Balanço Patrimonial extraídos para FinancialStatementBuilder.
+  - **Fase 154: Gestão de Imobilizado e Depreciações Mensais (AssetService.java):**
+    - Especificação: docs/ASSET_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/ASSET_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 229 para menos de 80 linhas, preservando os construtores retrocompatíveis de 4 e 5 argumentos.
+    - Registo, listagem, consulta e mapeamento DTO extraídos para AssetLifecycleService; processamento mensal de depreciações, publicação de AssetDepreciatedEvent e histórico extraídos para AssetDepreciationBatchService.
+  - **Fase 153: Emissão de Recibo Térmico POS 80mm (ReceiptPrintService.java):**
+    - Especificação: docs/RECEIPT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/RECEIPT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 231 para menos de 70 linhas, preservando vatRateLabel, lineDetailsLabel, validação multi-tenant e o construtor legado de 3 argumentos.
+    - Composição térmica 80mm (cabeçalho, artigos, IVA por linha, pagamentos, troco e rodapé) extraída para ReceiptDocumentRenderer.
+  - **Fase 152: Emissão de Mapa de Reconciliação Bancária (BankReconciliationPrintService.java):**
+    - Especificação: docs/BANK_RECONCILIATION_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/BANK_RECONCILIATION_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 232 para menos de 55 linhas, preservando validação de empresa, carregamento do extracto e movimentos e o construtor legado.
+    - Renderização OpenPDF de metadados da conta, cartões KPI de saldos/entradas/saídas, tabela de movimentos e assinaturas extraída para BankReconciliationDocumentRenderer.
+  - **Fase 151: Backup e Restauro Físico PostgreSQL (DatabaseBackupService.java):**
+    - Especificação: docs/DATABASE_BACKUP_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DATABASE_BACKUP_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 232 para menos de 115 linhas, preservando PermissionGuard.requireAdmin, PgConnection, parsePgConnection, buildDumpCommand e buildRestoreCommand.
+    - Parsing de JDBC URL e montagem de comandos pg_dump/pg_restore extraídos para PostgresBackupCommandBuilder; execução de processos nativos com PGPASSWORD e timeout extraída para PostgresBackupProcessRunner.
+  - **Fase 150: Emissão de Guia de Separação / Picking List (OrderPickingSheetPrintService.java):**
+    - Especificação: docs/ORDER_PICKING_SHEET_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/ORDER_PICKING_SHEET_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 232 para menos de 55 linhas, preservando carregamento do pedido, validação multi-tenant e o construtor legado.
+    - Composição OpenPDF A4 com distinção de reimpressão, cálculo de embalagens/caixas e assinaturas extraída para OrderPickingSheetDocumentRenderer.
+  - **Fase 149: Gestão e Integração Salarial de Prémios Comerciais (SalesGoalBonusService.java):**
+    - Especificação: docs/SALES_GOAL_BONUS_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SALES_GOAL_BONUS_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 233 para menos de 90 linhas, preservando PermissionGuard.requireAdmin, toDTO e o construtor legado de 6 argumentos.
+    - Listagem, aprovação, ajuste e projecção DTO extraídos para SalesGoalBonusApprovalService; integração na folha salarial e apuramento automático por meta atingida extraídos para SalesGoalBonusPayrollService.
+  - **Fase 148: Exportação Fiscal SAF-T de Vendas (FiscalSalesExportService.java):**
+    - Especificação: docs/FISCAL_SALES_EXPORT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FISCAL_SALES_EXPORT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 235 para menos de 100 linhas, preservando PermissionGuard.requireManagerOrAdmin, escape(String) e o construtor legado.
+    - Construção de XML SAF-T (<AuditFile>, <Header>, <MasterFiles>, <SourceDocuments>) e formatação fiscal extraídas para FiscalSalesXmlBuilder.
+  - **Fase 147: Emissão de Extrato de Conta Corrente de Fornecedor (SupplierStatementPrintService.java):**
+    - Especificação: docs/SUPPLIER_STATEMENT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/SUPPLIER_STATEMENT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 235 para menos de 55 linhas, preservando validação de empresa, obtenção do extrato (SupplierStatementService) e o construtor legado.
+    - Renderização OpenPDF de cabeçalho, bloco de fornecedor/período, cartões de resumo de saldos, tabela de movimentos com saldo corrido, termo de circularização e assinaturas extraída para SupplierStatementDocumentRenderer.
+  - **Fase 146: Emissão de Declaração Mensal de IVA (IvaDeclarationPrintService.java):**
+    - Especificação: docs/IVA_DECLARATION_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/IVA_DECLARATION_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 236 para menos de 60 linhas, preservando sobrecargas render(companyId, year, month) / render(..., previousCredit) e o construtor legado.
+    - Composição OpenPDF do período de apuramento, operações tributáveis, apuramento de IVA a entregar/reportar, anexos de vendas/compras e assinaturas extraída para IvaDeclarationDocumentRenderer.
+  - **Fase 145: Motor de Promoções e Descontos Comerciais (PromotionService.java):**
+    - Especificação: docs/PROMOTION_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PROMOTION_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 241 para menos de 90 linhas, preservando AppliedPromotion, guardas PermissionGuard / CurrentUserContext e o construtor legado de 5 argumentos.
+    - Gestão de ciclo de vida, validações de escopo/parâmetros e auditoria extraídas para PromotionLifecycleService; motor de cálculo de desconto percentual efectivo (PERCENT e BUY_X_GET_Y) extraído para PromotionDiscountCalculator.
+  - **Fase 144: Emissão de Dossiê de Auditoria Forense (ForensicAuditPrintService.java):**
+    - Especificação: docs/FORENSIC_AUDIT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FORENSIC_AUDIT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 244 para menos de 60 linhas, preservando validação de empresa, consulta ao ForensicAuditService e o construtor legado.
+    - Renderização OpenPDF de metadados, cartões de KPI de risco, banner de conformidade, tabela de anomalias e assinaturas extraída para ForensicAuditDocumentRenderer.
+  - **Fase 143: Emissão de Guias de Remessa ao Cliente (DeliveryGuidePrintService.java):**
+    - Especificação: docs/DELIVERY_GUIDE_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DELIVERY_GUIDE_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 247 para menos de 60 linhas, preservando DELIVERY_GUIDE_COPIES, validação tenant-scoped e o construtor legado de 3 argumentos.
+    - Renderização OpenPDF em quadruplicado A4 paisagem, bloco de entrega, tabela de artigos, resumo de carga e transporte extraída para DeliveryGuideDocumentRenderer.
+  - **Fase 142: Emissão de Carta de Notificação de Cobrança (DebtCollectionNoticePrintService.java):**
+    - Especificação: docs/DEBT_COLLECTION_NOTICE_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/DEBT_COLLECTION_NOTICE_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 251 para menos de 55 linhas, preservando validação de empresa, obtenção do aviso (CreditRiskService) e o construtor legado.
+    - Composição OpenPDF de destinatário, introdução formal, tabela de facturas em mora, contas bancárias e assinaturas extraída para DebtCollectionNoticeDocumentRenderer.
+  - **Fase 141: Emissão de Extrato de Conta Corrente de Cliente (CustomerStatementPrintService.java):**
+    - Especificação: docs/CUSTOMER_STATEMENT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/CUSTOMER_STATEMENT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 251 para menos de 55 linhas, preservando validação de empresa, consulta ao CustomerStatementService e o construtor legado.
+    - Composição OpenPDF de identificação do cliente, cartões de resumo, grelha de movimentos com saldo corrido e termo de reconciliação extraída para CustomerStatementDocumentRenderer.
+  - **Fase 140: Emissão de Relatório de Quebras e Desperdício (WasteReportPrintService.java):**
+    - Especificação: docs/WASTE_REPORT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/WASTE_REPORT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 252 para menos de 65 linhas, preservando validação multi-tenant, filtragem de movimentos WASTE e o construtor legado.
+    - Renderização OpenPDF A4 paisagem com resumo de perdas por motivo, grelha detalhada de quebras e termo de vistoria extraída para WasteReportDocumentRenderer.
+  - **Fase 139: Emissão de Relatório de Inventário e Stock Valorizado (InventoryReportPrintService.java):**
+    - Especificação: docs/INVENTORY_REPORT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INVENTORY_REPORT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 252 para menos de 70 linhas, preservando validação multi-tenant, filtragem por armazém/unidade de negócio e o construtor legado.
+    - Renderização OpenPDF A4 paisagem de sumário executivo, decomposição de caixas/embalagens/unidades e valorização a preço de custo/venda extraída para InventoryReportDocumentRenderer.
+  - **Fase 138: Emissão de Projecção de Fluxo de Caixa (CashFlowForecastPrintService.java):**
+    - Especificação: docs/CASH_FLOW_FORECAST_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/CASH_FLOW_FORECAST_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 254 para menos de 55 linhas, preservando validação de empresa, consulta ao CashFlowForecastService e o construtor legado.
+    - Composição OpenPDF A4 paisagem de cartões KPI de liquidez, matriz de 7 baldes temporais e tabelas Top 10 de recebimentos/pagamentos extraída para CashFlowForecastDocumentRenderer.
+  - **Fase 137: Manifesto de Carga e Distribuição de Frota (FleetManifestService.java):**
+    - Especificação: docs/FLEET_MANIFEST_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FLEET_MANIFEST_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 256 para menos de 75 linhas, mantendo resolução tenant-scoped, 	oDTO e o construtor legado de 5 argumentos.
+    - Montagem do manifesto, cálculo de caixas/embalagens e cobrança no destino extraídos para FleetManifestBuilder; consultas, actualização de estado e projecção DTO extraídas para FleetManifestQueryService.
+  - **Fase 136: Radar Preventivo de Cobranças (CollectionRadarService.java):**
+    - Especificação: docs/COLLECTION_RADAR_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/COLLECTION_RADAR_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 259 para menos de 70 linhas, mantendo resolução de empresa/data de referência e o construtor legado (InvoiceRepository).
+    - Classificação por faixas (CollectionRadarBucket), resumo e carteira ordenada extraídos para CollectionRadarAnalyzer; templates multicanal (SMS, WhatsApp e E-mail) extraídos para CollectionReminderTemplateBuilder.
+  - **Fase 135: Projecção Previsional de Fluxo de Caixa (CashFlowForecastService.java):**
+    - Especificação: docs/CASH_FLOW_FORECAST_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/CASH_FLOW_FORECAST_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 260 para menos de 60 linhas, mantendo guarda PermissionGuard.requireManagerOrAdmin e delegação.
+    - Recolha de saldos de tesouraria, recebíveis e exigíveis extraída para CashFlowDataCollector; consolidação dos 7 baldes temporais, trajectória acumulada, alertas de défice e top 10 extraídos para CashFlowProjectionCalculator.
+    - Construtor legado de três repositórios preservado.
+  - **Fase 134: Auditoria Forense e Controlo de Fraude (ForensicAuditService.java):**
+    - Especificação: docs/FORENSIC_AUDIT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/FORENSIC_AUDIT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 264 para menos de 80 linhas, preservando validação multi-tenant/superadmin e PermissionGuard.
+    - Inspecção de cancelamentos (AFF-01), descontos excessivos (AFF-02), quebras de stock (AFF-03) e eventos sensíveis de auditoria extraída para ForensicAnomalyCollector; filtragem, agregação de risco e índice de conformidade (AFF-05) extraídos para ForensicSummaryEvaluator.
+    - Construtor legado de três repositórios preservado.
+  - **Fase 133: Passivo Salarial e Encargos Laborais (PayrollLiabilityService.java):**
+    - Especificação: docs/PAYROLL_LIABILITY_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/PAYROLL_LIABILITY_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 266 para menos de 85 linhas, preservando DUE_ALERT_DAYS = 7 e o construtor legado de 7 dependências.
+    - Apuramento idempotente por período (ccrueForPeriod), protecção de obrigações já entregues e entrega ao Estado (markDelivered) extraídos para PayrollLiabilityLifecycleService; listagens, radar de prazos (dueAlerts) e custo mensal total do trabalhador (monthlyCost) extraídos para PayrollLiabilityQueryService.
+  - **Fase 132: Contagem Física de Inventário (InventoryPhysicalCountingService.java):**
+    - Especificação: docs/INVENTORY_PHYSICAL_COUNTING_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/INVENTORY_PHYSICAL_COUNTING_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 274 para menos de 90 linhas, mantendo controlo tenant-scoped (CurrentUserContext.requireCompany) e delegação.
+    - Criação de sessões com fotografia de stock, registo de contagens (manual/código de barras incremental), fecho com movimentos ADJUSTMENT e cancelamento extraídos para InventoryCountingLifecycleService; consultas e projecção DTO extraídas para InventoryCountingQueryService.
+    - Construtor legado de seis argumentos preservado.
+  - **Fase 131: Emissão de Guias de Remessa por Factura (GuideRemittancePrintService.java):**
+    - Especificação: docs/GUIDE_REMITTANCE_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/GUIDE_REMITTANCE_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 278 para menos de 60 linhas, mantendo carregamento tenant-scoped, GUIDE_REMITTANCE_COPIES e delegação.
+    - Composição das 4 vias nominais em A4 paisagem, blocos de destinatário, transporte, peso bruto e assinaturas extraída para GuideRemittanceDocumentRenderer.
+    - Construtores legados de 3 e 4 argumentos preservados.
+  - **Fase 130: Emissão do Fecho de Caixa Z (POSZReportPrintService.java):**
+    - Especificação: docs/POS_Z_REPORT_PRINT_SERVICE_DECOMPOSITION_SPEC.md.
+    - Harness: docs/POS_Z_REPORT_PRINT_SERVICE_DECOMPOSITION_HARNESS.md.
+    - Fachada reduzida de 294 para menos de 55 linhas, mantendo carregamento da sessão e empresa activa.
+    - Composição A4 principal extraída para PosZReportDocumentRenderer; tabelas opcionais de passagens de turno, contagem física de notas/moedas (JSON) e observações extraídas para PosZReportSectionBuilder.
+    - Construtor legado (POSService, CompanyService) preservado.
+  - **Fase 129: Relatórios Operacionais da Loja (`ReportService.java`):**
+    - Especificação: `docs/REPORT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/REPORT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Fachada reduzida de 297 para menos de 100 linhas, mantendo tenant, datas e consultas optimizadas.
+    - Cálculos de vendas extraídos para `ReportSalesAnalyzer`; indicadores externos extraídos para
+      `ReportOperationsCollector`.
+    - Construtor legado preservado e regras de vendas, dívida e margem histórica mantidas.
+  - **Fase 128: Emissão A4 de Encomendas Comerciais (`OrderPrintService.java`):**
+    - Especificação: `docs/ORDER_PRINT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/ORDER_PRINT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Fachada reduzida de 298 para menos de 55 linhas, mantendo apenas carregamento tenant-scoped e delegação.
+    - Composição visual extraída para `OrderA4Renderer`, preservando cabeçalho, origem da cotação,
+      linhas, peso bruto, totais, condições, notas, rodapé configurável e assinaturas.
+    - Construtor legado de três argumentos preservado, sem alteração de contrato ou regra comercial.
+  - **Fase 127: `PayrollDeductionService`** — reduzido de 306 para 126 linhas, com aplicação em
+    recibos, consultas/saldos e política de prestações extraídas; regras salariais e construtor legado preservados.
+  - **Fase 126: `QuotationPrintService`** — formatos A4 e térmico extraídos para
+    `QuotationA4Renderer` e `QuotationThermalRenderer`; fachada tenant-scoped, construtor legado,
+    rodapé configurável e comportamento documental preservados.
+  - **Fase 125: Impressão de Facturas — Talão e Rodapé (`InvoicePrintService.java`):**
+    - Extraídos `InvoiceThermalRenderer` e `InvoicePageFooter`, isolando talão térmico e rodapé fiscal.
+    - Extraído também `InvoiceA4Renderer`; a fachada ficou restrita a carregamento tenant-scoped e delegação.
+    - Conteúdo, quatro vias A4, totais e IVA preservados.
+    - SPEC: `docs/INVOICE_PRINT_SERVICE_DECOMPOSITION_SPEC.md`; harness dedicado adicionado.
+  - **Fase 124: Emissão de Recibos de Salário (`PayslipPrintService.java`):**
+    - Especificação: `docs/PAYSLIP_PRINT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/PAYSLIP_PRINT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **302 para 44 linhas** na fachada, que passa apenas a carregar o recibo e delegar a emissão.
+    - `PayslipDocumentRenderer.java` (200 linhas): composição das duas vias e dos blocos visuais do PDF.
+    - `PayslipCompensationTableRenderer.java` (105 linhas): vencimentos, descontos discriminados e totais.
+    - Preservado o construtor retrocompatível `(HRService, PayrollDeductionService)` e todas as regras
+      salariais, fiscais e contributivas, sem alteração de contrato ou conteúdo documental.
+    - Testes dirigidos aprovados: `CommercialNotesAndPayslipPrintServiceTest`,
+      `PayslipPrintServiceDecompositionHarnessTest` e `MultiModuleArchitectureHarnessTest`.
+  - **Fase 123: Orquestrador de Extrato de Clientes e Conta Corrente (`CustomerStatementService.java`):**
+    - Especificação: `docs/CUSTOMER_STATEMENT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/CUSTOMER_STATEMENT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **304 linhas para 70 linhas** na fachada `CustomerStatementService.java` (redução de 234 linhas / 77.0%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.comercial.service`:
+      - `CustomerStatementMovement.java` (20 linhas $\le 30$): Record imutável de movimento financeiro normalizado (data, tipo `FT`/`ND`/`RC`/`NC`, número, descrição, referência, débito, crédito, timestamp, ID e nome de unidade de negócio).
+      - `CustomerStatementCollector.java` (184 linhas $\le 195$): Coleta e normalização de 5 origens de dados: faturas de venda efetiva (`isRealisedSale`), notas de débito, recibos autónomos válidos, pagamentos diretos no ato da fatura (`directSettlement = totalPaid - receiptSum`), notas de crédito e apuração de saldo vencido em mora (`overdue`).
+      - `CustomerStatementCalculator.java` (85 linhas $\le 95$): Ordenação cronológica estrita null-safe (`date` $\rightarrow$ `timestamp` $\rightarrow$ `documentNumber`), apuração de saldo de abertura anterior à data `from`, saldo progressivo linha a linha dentro da janela temporal, consolidação de totais e saldo de fecho (`closingBalance`).
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os novos colaboradores e construtor retrocompatível de 5 repositórios mantido para compatibilidade total com o `@InjectMocks` do `AccountStatementHarnessTest`, controladores REST (`CustomerStatementController`) e emissão de PDFs (`CustomerStatementPrintService`).
+    - Testes e auditorias 100% verdes: `CustomerStatementServiceDecompositionHarnessTest` (4/4), `AccountStatementHarnessTest` (6/6), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 122: Orquestrador de Aprovações Corporativas (`ApprovalService.java`):**
+    - Especificação: `docs/APPROVAL_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/APPROVAL_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **314 linhas para 100 linhas** na fachada `ApprovalService.java` (redução de 214 linhas / 68.2%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.approvals.service`:
+      - `ApprovalEscalationPolicy.java` (35 linhas $\le 50$): Constantes estatutárias de alçada (`BASE_AUTO_APPROVE_LIMIT = 50.000,00 MZN`, `BASE_MANAGER_LIMIT = 250.000,00 MZN`) e avaliação descritiva de regras ("Green Lane", "(Requer ADMIN)", "(Requer MANAGER)").
+      - `ApprovalLifecycleService.java` (204 linhas $\le 215$): Submissão com deduplicação de pedidos pendentes para o mesmo documento (`submitRequest`), auto-aprovação de documentos abaixo do limite, decisão hierárquica autorizada (`approveRequest`, `rejectRequest`), fecho por anulação de documento na origem (`cancelPendingForDocument`), gravação de histórico (`ApprovalHistory`), disparo de callbacks de documento (`ApprovalCallback`) e mapeamento determinístico `toDTO`.
+      - `ApprovalQueryService.java` (84 linhas $\le 100$): Consultas tenant-scoped (`getPendingRequests`, `getAllRequests`) e sincronização sob demanda de transferências de stock e quebras de inventário pendentes ainda não indexadas (`syncUnindexedPendingDocuments`).
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os novos colaboradores e construtores retrocompatíveis de 4 e 6 argumentos mantidos para 100% de compatibilidade com os testes unitários (`ApprovalServiceTest`), mocks de módulos (`ComercialService`, `HRService`, etc.) e controladores REST (`ApprovalController`).
+    - Testes e auditorias 100% verdes: `ApprovalServiceDecompositionHarnessTest` (4/4), `ApprovalServiceTest` (1/1), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 121: Orquestrador de Utilizadores e Acessos (`AppUserService.java`):**
+    - Especificação: `docs/APP_USER_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/APP_USER_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **327 linhas para ~125 linhas** na fachada `AppUserService.java` (redução de 202 linhas / 61.8%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.users.service`:
+      - `UserAdminGuard.java` (23 linhas $\le 35$): Métodos puros de verificação de permissões administrativas (`requireAdmin`) e pertença do utilizador gerido à empresa ativa (`requireManagedUser`), bloqueando alterações espúrias em administradores de plataforma.
+      - `UserAuthenticationService.java` (52 linhas $\le 65$): Autenticação sem enumeração de contas (`authenticate`), validação com BCrypt e migração suave automática de senhas legadas em texto-plano.
+      - `ManagerPinService.java` (97 linhas $\le 110$): Configuração (`setManagerPin`) com validação estrita de 4 dígitos numéricos e verificação com proteção anti-força-bruta via `ManagerPinRateLimiter` (`verifyManagerPin`) reportando minutos restantes de bloqueio por empresa e IP.
+      - `UserAccountAdministrationService.java` (162 linhas $\le 185$): Criação com `PasswordPolicy.validate`, consulta, gestão de perfis (`updateCompanyRole`) com salvaguarda intransponível do último administrador ativo da empresa, reposição de senhas (`resetPassword`), ativação/desativação (`toggleUserStatus`), revogação imediata de sessões ativas (`AuthSessionService.revokeUser`) e registo em auditoria forense (`AuditLogService`).
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os 3 novos serviços e construtores retrocompatíveis de 4, 5, 6 e 7 parâmetros mantidos para 100% de compatibilidade com as suites de testes existentes.
+    - Testes e auditorias 100% verdes: `AppUserServiceDecompositionHarnessTest` (4/4), `UserManagementHarnessTest` (4/4), `RateLimitingAndBruteForceHarnessTest` (7/7), `SecurityAttackSurfaceTest` (6/6), `SecurityEnterpriseHardeningHarnessTest` (10/10), `AuditTrailCriticalEventsHarnessTest` (6/6), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 120: Orquestrador de Stock em Trânsito (`StockTransferTransitService.java`):**
+    - Especificação: `docs/STOCK_TRANSFER_TRANSIT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/STOCK_TRANSFER_TRANSIT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **329 linhas para ~105 linhas** na fachada `StockTransferTransitService.java` (código movido 1:1, sem alteração de comportamento).
+    - Componentes especializados no pacote `mz.multicore.erp.modules.inventory.service`:
+      - `StockTransitLedger.java` ($\le 80$): movimentos `TRANSFER` por perna e `adjustStock` com bloqueio pessimista `findForReservation`.
+      - `StockTransferDispatchService.java` ($\le 85$): despacho FEFO na origem, parcelas por lote, estado `IN_TRANSIT` e auditoria.
+      - `StockTransferReceiptValidator.java` ($\le 105$): funções puras de impressão digital SHA-256, indexação e validação das linhas recebidas.
+      - `StockTransferReceiptService.java` ($\le 155$): recepção conferida com `PermissionGuard`, `lockByIdAndCompanyId`, idempotência, entrada no destino e devolução à origem.
+    - Construtor canónico `@Autowired` de 3 colaboradores e construtor retrocompatível de 5 dependências preservado; `MultiUserRobustnessHarnessTest` passa a verificar o lock no `StockTransitLedger.java`.
+    - Testes 100% verdes: `StockTransferTransitServiceDecompositionHarnessTest` (4/4), `StockTransferInTransitHarnessTest` (9/9), `StockTransferReceiptDiscrepancyHarnessTest` (12/12), `MultiUserRobustnessHarnessTest` (6/6), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6); `mvn clean compile` verde.
+  - **Fase 119: Orquestrador de Observabilidade e Diagnóstico do Sistema (`SystemMonitoringService.java`):**
+    - Especificação: `docs/SYSTEM_MONITORING_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/SYSTEM_MONITORING_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **346 linhas para 110 linhas** no orquestrador `SystemMonitoringService.java` (redução de 236 linhas / 68.2%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.monitoring.service`:
+      - `SystemTelemetryCollector.java` (196 linhas $\le 210$): Inspeção de runtime da JVM (memória heap e non-heap, threads, uptime, SO, Java), ping da base de dados (`SELECT 1`), pooling HikariCP, armazenamento em disco e avaliação analítica dos subsistemas operacionais e estado geral (`HEALTHY`, `WARNING`, `CRITICAL`).
+      - `SystemDiagnosticsReportBuilder.java` (90 linhas $\le 120$): Formatação estruturada em ASCII do relatório completo de diagnóstico, divisão em seções (runtime, persistência, subsistemas, ambiente, auditoria) e formatação legível de uptime.
+    - Saneamento transversal de injeção Spring Boot: anotação canónica `@Autowired` aplicada em todos os serviços com múltiplos construtores no reactor (`AutomaticPostingService`, `QuotationService`, `TimeSheetService`, `SalesGoalService`), garantindo 100% de inicialização livre de `BeanInstantiationException`.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os novos colaboradores e construtor retrocompatível de 5 dependências mantido para 100% de compatibilidade com os testes unitários (`SecurityPermissionGuardCoverageTest`) e controladores REST (`SystemMonitoringController`).
+    - Testes e auditorias 100% verdes: `SystemMonitoringServiceDecompositionHarnessTest` (4/4), `SecurityPermissionGuardCoverageTest` (3/3), `SystemMonitoringHarnessTest` (7/7), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 118: Orquestrador de Contratos de Trabalho (`EmploymentContractService.java`):**
+    - Especificação: `docs/EMPLOYMENT_CONTRACT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/EMPLOYMENT_CONTRACT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **354 linhas para 96 linhas** no orquestrador `EmploymentContractService.java` (redução de 258 linhas / 72.9%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.hr.service`:
+      - `ContractValidationService.java` (67 linhas $\le 110$): Validação semântica e legal de contratos de trabalho (Moçambique), barreira de renovação de contratos por tempo determinado (máximo de 2 renovações), verificação de coerência temporal (`startDate <= endDate`) e período probatório.
+      - `ContractLifecycleService.java` (209 linhas $\le 220$): Execução do ciclo de vida contratual (`createContract`, `renewContract`, `terminateContract`), encerramento de contrato ativo anterior na renovação, ajuste de estado para `EXPIRED` ou `TERMINATED`, numeração e rasto de auditoria formal via `AuditLogService`.
+      - `ContractQueryService.java` (75 linhas $\le 140$): Consultas tenant-scoped (`getContractsByEmployee`, `findActiveContract`, `getContractsExpiringSoon`), contagem de contratos a expirar (`countContractsExpiringSoon`) e projeção DTO determinística.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os 3 colaboradores e construtor retrocompatível de 6 dependências mantido para 100% de compatibilidade com os testes unitários (`EmploymentContractServiceTest`) e controladores REST (`EmploymentContractController`).
+    - Testes e auditorias 100% verdes: `EmploymentContractServiceDecompositionHarnessTest` (4/4), `EmploymentContractServiceTest` (15/15), `EmploymentContractPrintServiceTest` (5/5), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 117: Orquestrador de Cópias de Segurança Lógicas (`BackupService.java`):**
+    - Especificação: `docs/BACKUP_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/BACKUP_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **357 linhas para 78 linhas** no orquestrador `BackupService.java` (redução de 279 linhas / 78.2%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.backup.service`:
+      - `BackupDataCollector.java` (236 linhas $\le 245$): Coleta e mapeamento padronizado de 14 agregados corporativos da empresa ativa (`users`, `companies`, `clients`, `suppliers`, `products`, `warehouses`, `stocks`, `stockMovements`, `invoices`, `receipts`, `purchases`, `tillSessions`, `treasuryAccounts`, `auditLogs`).
+      - `BackupVerificationService.java` (95 linhas $\le 105$): Validação estrutural de ficheiros JSON, conferência estrita de posse da empresa ativa (`readCompanyId`), presença da data de geração e contagem de itens por seção.
+      - `BackupExecutionService.java` (36 linhas $\le 85$): Criação do diretório `backups/`, formatação de timestamp oficial (`yyyyMMdd_HHmmss`), serialização indentada com `ObjectMapper` e gravação física atômica.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os colaboradores e construtor retrocompatível de 15 dependências mantido para 100% de compatibilidade com os testes unitários (`BackupServiceTest`) e controladores REST.
+    - Testes e auditorias 100% verdes: `BackupServiceDecompositionHarnessTest` (4/4), `BackupServiceTest` (2/2), `DatabaseBackupServiceTest` (12/12), `ScheduledBackupServiceTest` (7/7), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 116: Orquestrador de Notas de Crédito Comerciais (`CreditNoteService.java`):**
+    - Especificação: `docs/CREDIT_NOTE_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/CREDIT_NOTE_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **360 linhas para 87 linhas** no orquestrador `CreditNoteService.java` (redução de 273 linhas / 75.8%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.comercial.service`:
+      - `CreditNoteCreationService.java` (136 linhas $\le 175$): Validação transacional de emissão, controle de motivo (`RETURN` exigindo armazém de destino), validação rigorosa de quantidades já devolvidas por linha (`qtySold - alreadyReturned`), precificação e impostos herdados com `LineCalculator.compute` e barreira de teto do valor da fatura.
+      - `CreditNoteLifecycleService.java` (137 linhas $\le 165$): Gestão de aprovação restrita a gestores/administradores (`PermissionGuard`), devolução física em stock (`InventoryService`) com lote e FEFO, publicação do evento contabilístico `CreditNoteApprovedEvent` com `returnedCost`, rejeição e cancelamento com auditoria formal via `AuditLogService`.
+      - `CreditNoteQueryService.java` (116 linhas $\le 145$): Consultas tenant-scoped (`findByCompany`, `findById`), carregamento para impressão documental (`loadForPrint`), apuração de saldos restantes por linha (`getReturnedQuantitiesByInvoiceLine`) e projeção DTO determinística com agregação de unidade de negócio mista.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os 3 colaboradores e construtor retrocompatível de 7 dependências mantido para 100% de compatibilidade com os testes unitários legados (`CreditNoteServiceTest`) e controladores REST.
+    - Testes e auditorias 100% verdes: `CreditNoteServiceDecompositionHarnessTest` (4/4), `CreditNoteServiceTest` (8/8), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 115: Orquestrador de Manufatura e Ordens de Produção (`ProductionService.java`):**
+    - Especificação: `docs/PRODUCTION_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/PRODUCTION_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **370 linhas para 94 linhas** no orquestrador `ProductionService.java` (redução de 276 linhas / 74.6%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.manufacturing.service`:
+      - `BillOfMaterialsService.java` (152 linhas $\le 165$): Gestão transacional de Fichas Técnicas (BOM), validação de código único por empresa (`bomCode`), cadastro de itens de insumo com taxa de quebra/sucata (`scrapPercentage`), estimativa analítica de custo unitário (`totalEstimatedCost`) e consultas ativas.
+      - `ProductionOrderLifecycleService.java` (243 linhas $\le 245$): Execução do ciclo de vida das Ordens de Produção (`PLANNED` -> `IN_PROGRESS` -> `COMPLETED` / `CANCELLED`), escalonamento de insumos por `baseRatio` e perdas, baixa automática de matérias-primas no armazém de origem, entrada do produto acabado no armazém de destino, apuração do Custo Industrial de Produção (CIP) e disparo do evento `ProductionCompletedEvent`.
+      - `ProductionOrderMapper.java` (36 linhas $\le 60$): Mapeador determinístico puro para DTO (`ProductionOrder` -> `ProductionOrderDTO`).
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os colaboradores e construtores retrocompatíveis de 6 e 7 parâmetros mantidos para 100% de compatibilidade com os controladores REST (`ProductionController`) e integrações.
+    - Testes e auditorias 100% verdes: `ProductionServiceDecompositionHarnessTest` (4/4), `ProductionServiceTest` (2/2), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 114: Orquestrador de Movimentos e Ajustes de Stock (`StockMovementService.java`):**
+    - Especificação: `docs/STOCK_MOVEMENT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/STOCK_MOVEMENT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **370 linhas para 129 linhas** no orquestrador `StockMovementService.java` (redução de 241 linhas / 65.1%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.inventory.service`:
+      - `StockMovementRegistrationService.java` (197 linhas $\le 230$): Execução de entradas e saídas físicas com loteamento e rastreabilidade FEFO (`ProductBatchService`), salvaguarda de movimentos, actualização de saldo físico em `StockRepository` (`adjustStock`) e idempotência transacional SHA-256 (`RegisterMovementRequest`).
+      - `StockAdjustmentCoordinator.java` (152 linhas $\le 165$): Ajuste de inventário por contagem física (`CreateStockAdjustmentRequest`), validação de permissão de gestor/administrador (`PermissionGuard`), verificação multi-tenant, apuração de divergência (`delta`), idempotência SHA-256 e auditoria formal via `AuditLogService`.
+      - `StockMovementQueryService.java` (64 linhas $\le 95$): Consultas tenant-scoped (`getMovementsByCompany`, `findMovementsByCompany`), paginação com `PageQuery`/`PageResponseMapper` e mapeamento determinístico de `StockMovement` para `StockMovementDTO`.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo os 3 colaboradores e construtor retrocompatível de 9 parâmetros mantido para 100% de compatibilidade com `InventoryService` e testes unitários existentes.
+    - Testes e auditorias 100% verdes: `StockMovementServiceDecompositionHarnessTest` (4/4), `StockMovementPaginationHarnessTest` (1/1), `InventoryServiceTest` (10/10), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 113: Leitura e Agregação de Movimentos Comerciais (`MovimentosService.java`):**
+    - Especificação: `docs/MOVIMENTOS_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/MOVIMENTOS_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **416 linhas para 63 linhas** no orquestrador `MovimentosService.java` (redução de 353 linhas / 84.8%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.movimentos.service`:
+      - `MovimentoCollector.java` (187 linhas $\le 205$): Ingestão e agregação dos 8 tipos de movimentos comerciais (`Invoice`, `Quotation`, `Order`, `DeliveryGuide`, `CreditNote`, `DebitNote`, `Receipt`, `StockTransfer`) por `companyId`, montagem de `MovimentoDTO`, e filtragem em memória por texto, datas e ordenação cronológica decrescente.
+      - `MovimentoSummarizer.java` (168 linhas $\le 190$): Funções puras de formatação de cliente (`nameOf`), estado (`statusName`), resumo de nomes de artigos distintos por tipo de documento e soma consolidada de quantidades físicas.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` recebendo `MovimentoCollector`, construtor retrocompatível de 6 repositórios e construtor retrocompatível de 8 repositórios mantidos para 100% de compatibilidade com os testes legados (`MovimentosServiceTest`).
+    - Testes e auditorias 100% verdes: `MovimentosServiceDecompositionHarnessTest` (4/4), `MovimentosServiceTest` (8/8), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 112: Orquestrador de Compras e Gestão de Fornecedores (`PurchaseService.java`):**
+    - Especificação: `docs/PURCHASE_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/PURCHASE_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **418 linhas para 160 linhas** no orquestrador `PurchaseService.java` (redução de 258 linhas / 61.7%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.purchases.service`:
+      - `SupplierManagementService.java` (136 linhas $\le 150$): Cadastro e ciclo de vida de fornecedores (`createSupplier`, `updateSupplier`, `setSupplierActive`), validação NUIT (`TaxIdValidator`), pesquisa fonética e consultas tenant-scoped (`findSuppliersByCompany`).
+      - `DirectPurchaseService.java` (224 linhas $\le 240$): Execução de compras diretas com validação de fornecedor e armazém na mesma empresa, cálculo de IVA efetivo com `LineCalculator`, entrada em armazém via `InventoryService` (tipo "PURCHASE" com lote e validade), numeração sequencial oficial (`DocumentSeries.PURCHASE`), liquidação imediata em tesouraria e disparo do evento `PurchaseRegisteredEvent`.
+      - `SupplierPaymentService.java` (114 linhas $\le 130$): Carteira de contas a pagar a fornecedores (`findPayablesByCompany`), liquidação de pagamentos (`registerSupplierPayment`) com saída de tesouraria (`CREDIT`), evento `SupplierPaymentRegisteredEvent` e rasto de auditoria.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` de 3 colaboradores e construtor retrocompatível de 10 dependências garantindo 100% de compatibilidade com os testes unitários (`PurchaseServiceTest`, `MulticoreServicesTest`) e controladores REST (`PurchaseController`).
+    - Testes e auditorias 100% verdes: `PurchaseServiceDecompositionHarnessTest` (4/4), `PurchaseServiceTest` (9/9), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 111: Orquestrador de Guias de Remessa ao Cliente (`DeliveryGuideService.java`):**
+    - Especificação: `docs/DELIVERY_GUIDE_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/DELIVERY_GUIDE_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **402 linhas para 97 linhas** no orquestrador `DeliveryGuideService.java` (redução de 305 linhas / 75.9%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.comercial.service`:
+      - `DeliveryGuideCreationService.java` (186 linhas $\le 190$): Emissão de guias avulsas com validação de transportador, viatura e integridade de linhas sem duplicidade, emissão a partir de encomendas aprovadas com cópia integral de lote/série e trava preventiva de faturação (`GUIDE_PENDING`), bloqueio de reposição interna e gravação em `PENDING_APPROVAL`.
+      - `DeliveryGuideLifecycleService.java` (138 linhas $\le 160$): Aprovação privativa de gestores/administradores com saída física de stock (`SALE`, FEFO) via `InventoryService` e transição da encomenda para `GUIDED`, rejeição com motivo e cancelamento com devolução automática da encomenda a faturável (`PENDING`).
+      - `DeliveryGuideQueryService.java` (124 linhas $\le 145$): Consultas por empresa ativa (`findByCompany`, `findById`), carregamento de entidade para emissão de PDF (`loadForPrint`) e projeção DTO determinística com cálculo de rateio logístico de carga ponderal (`LogisticsLoadCalculator`) e unidade de negócio.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` de 3 colaboradores e construtor retrocompatível de 7 dependências garantindo 100% de compatibilidade com os testes unitários (`DeliveryGuideServiceTest`) e controladores REST (`DeliveryGuideController`).
+    - Testes e auditorias 100% verdes: `DeliveryGuideServiceDecompositionHarnessTest` (4/4), `DeliveryGuideServiceTest` (11/11), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 110: Orquestrador de Cessação de Vínculo e Acerto Final (`TerminationService.java`):**
+    - Especificação: `docs/TERMINATION_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/TERMINATION_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **405 linhas para 110 linhas** no orquestrador `TerminationService.java` (redução de 295 linhas / 72.8%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.hr.service`:
+      - `TerminationSettlementCalculator.java` (179 linhas $\le 210$): Motor de cálculo de acerto financeiro (`compute` e `preview`), proporcionais de salário e 13.º mês, férias não gozadas com direito por antiguidade ou aviso amigável de fallback legal histórico, compensação, aviso prévio e desconto de adiantamentos/empréstimos pendentes (`PayrollDeductionService`).
+      - `TerminationLifecycleService.java` (131 linhas $\le 145$): Execução transacional de rescisão (`terminate`), salvaguarda de contratos, atribuição de número de série oficial (`DocumentSeries.TERMINATION`), alteração de estado para `TERMINATED`, liquidação financeira na tesouraria (`paySettlement`) com barreira contra acerto negativo e registo formal de auditoria (`AuditLogService`).
+      - `TerminationQueryService.java` (75 linhas $\le 100$): Listagens por empresa ativa (`list`), carregamento com linhas para impressão de termo de rescisão (`loadForPrint`) e projeções DTO determinísticas (`toDTO`, `previewDTO`, `lineDTO`).
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` de 3 colaboradores e construtor retrocompatível de 11 dependências garantindo 100% de compatibilidade com os testes unitários (`TerminationServiceTest`), `TerminationController` e `TerminationPrintService`.
+    - Testes e auditorias 100% verdes: `TerminationServiceDecompositionHarnessTest` (4/4), `TerminationServiceTest` (14/14), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 109: Orquestrador de Saúde Ocupacional e Medicina do Trabalho (`OccupationalHealthService.java`):**
+    - Especificação: `docs/OCCUPATIONAL_HEALTH_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/OCCUPATIONAL_HEALTH_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **399 linhas para 101 linhas** no orquestrador `OccupationalHealthService.java` (redução de 298 linhas / 74.7%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.hr.service`:
+      - `OccupationalHealthRegistrationService.java` (150 linhas $\le 160$): Validação formal de aptidão e coerência de prazos, aplicação da barreira legal contra dados de saúde proibidos (HIV/SIDA nos termos das Leis 19/2014 e 13/2023), resolução de prestador, cifra de comprovativos médicos (`attachmentCrypto.protect`), gravação e registo de eventos auditados no `AuditLogService`.
+      - `OccupationalHealthFinanceService.java` (115 linhas $\le 145$): Liquidação transacional de exames médicos na tesouraria via `FinanceService.registerAutoPayout`, cadastro de prestadores credenciados e relatório analítico de custos com agregação por prestador de saúde.
+      - `OccupationalHealthQueryService.java` (129 linhas $\le 160$): Resumo de aptidão com barreira de sigilo médico (gestores de RH ou o próprio colaborador), consulta e histórico clínico com rasto de auditoria, decifra de comprovativos médicos (`attachmentCrypto.reveal`) e radares analíticos de exames a caducar e colaboradores ativos sem exame admissional (`missingExams`).
+      - `OccupationalHealthMapper.java` (43 linhas $\le 60$): Mapeador determinístico e utilitários puros de cálculo de dias de validade, estados e labels de fornecedor.
+    - Preservação estrita de todos os contratos existentes: construtor canónico `@Autowired` de 3 colaboradores e construtor retrocompatível de 7 dependências garantindo 100% de compatibilidade com os testes unitários (`OccupationalHealthServiceTest`).
+    - Testes e auditorias 100% verdes: `OccupationalHealthServiceDecompositionHarnessTest` (5/5), `OccupationalHealthServiceTest` (22/22), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 108: Orquestrador de Equipamentos e Gestão de Qualidade (`QualityEquipmentService.java`):**
+    - Especificação: `docs/QUALITY_EQUIPMENT_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/QUALITY_EQUIPMENT_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **426 linhas para 130 linhas** no orquestrador `QualityEquipmentService.java` (redução de 296 linhas / 69.5%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.quality.service`:
+      - `EquipmentCatalogService.java` (170 linhas $\le 180$): Cadastro e atualização de equipamentos com validação de unicidade de código (`code`) e regras de prazo positivo, consultas ativas, detalhe individual e pesquisa paginada com ordenação.
+      - `WorkerEquipmentAssignmentService.java` (193 linhas $\le 205$): Atribuição de equipamentos a colaboradores com cálculo da data de expiração, renovações periódicas (`renewAssignment`), devoluções (`returnAssignment`) e pesquisas paginadas (`searchAssignments`).
+      - `QualityMonitoringService.java` (104 linhas $\le 120$): Radar de colaboradores com equipamentos expirados (`EXPIRED`) ou iminentes (`EXPIRING_SOON`) e apuração de KPIs de qualidade (`QualityKpiDTO`).
+    - Preservação estrita de todos os contratos existentes: compatibilidade retrocompatível total com construtor de 4 parâmetros para testes legados (`QualityEquipmentServiceTest`) e injeção canónica `@Autowired` de 3 colaboradores.
+    - Testes e auditorias 100% verdes: `QualityEquipmentServiceDecompositionHarnessTest` (4/4), `QualityEquipmentServiceTest` (8/8), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
+  - **Fase 107: Orquestrador de Reconciliação Bancária (`BankReconciliationService.java`):**
+    - Especificação: `docs/BANK_RECONCILIATION_SERVICE_DECOMPOSITION_SPEC.md`.
+    - Harness: `docs/BANK_RECONCILIATION_SERVICE_DECOMPOSITION_HARNESS.md`.
+    - Redução de **460 linhas para 90 linhas** no orquestrador `BankReconciliationService.java` (redução de 370 linhas / 80.4%).
+    - Componentes especializados desacoplados no pacote `mz.multicore.erp.modules.financeira.service`:
+      - `BankStatementImportService.java` (100 linhas $\le 120$): Ingestão e validação de extratos bancários (`importStatement`), criação atómica das linhas `BankStatementItem`, disparo de auto-matching preliminar e encerramento formal de períodos (`closeStatement`).
+      - `BankReconciliationMatcher.java` (230 linhas $\le 240$): Algoritmo de correspondência automática em 2 fases (referência limpa + montante exato, e janela temporal $\pm 3$ dias com verificação de unicidade), conciliação manual (`manualMatch`), desconciliação (`unmatch`), lançamento e conciliação direta de encargos/comissões bancárias (`createAndMatchExpense`) e atualização determinística do estado do extrato.
+      - `BankReconciliationQueryService.java` (162 linhas $\le 175$): Consultas analíticas de extrato e itens (`getStatements`, `getStatement`, `getStatementItems`), resumo executivo de conciliação (`getSummary`) comparando saldo bancário vs saldo contabilístico do razão, e mapeamentos determinísticos DTO.
+    - Preservação estrita de todos os contratos existentes: compatibilidade retrocompatível total com construtor de 6 parâmetros para testes legados (`BankReconciliationHarnessTest`) e `BankReconciliationPrintService`, e injeção canónica `@Autowired` de 3 colaboradores.
+    - Testes e auditorias 100% verdes: `BankReconciliationServiceDecompositionHarnessTest` (4/4), `BankReconciliationHarnessTest` (4/4), `DesktopThinContextTest` (2/2), `MultiModuleArchitectureHarnessTest` (6/6).
   - **Fase 106: Orquestrador de Quebras e Perdas de Inventário (`StockWasteService.java`):**
     - Especificação: `docs/STOCK_WASTE_SERVICE_DECOMPOSITION_SPEC.md`.
     - Harness: `docs/STOCK_WASTE_SERVICE_DECOMPOSITION_HARNESS.md`.

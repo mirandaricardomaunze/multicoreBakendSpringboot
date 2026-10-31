@@ -55,16 +55,18 @@ class EditableDocumentEditorsHarnessTest {
     @Test
     void ede03_putsExigemVersaoEProtegemEstadoNoBackend() throws Exception {
         String quotationController = root("backend/src/main/java/mz/multicore/erp/modules/comercial/controller/QuotationController.java");
-        String quotationService = root("backend/src/main/java/mz/multicore/erp/modules/comercial/service/QuotationService.java");
+        String quotationService = root("backend/src/main/java/mz/multicore/erp/modules/comercial/service/QuotationService.java")
+                + root("backend/src/main/java/mz/multicore/erp/modules/comercial/service/QuotationLifecycleService.java");
         String purchaseController = root("backend/src/main/java/mz/multicore/erp/modules/purchases/controller/PurchaseController.java");
-        String purchaseService = root("backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderService.java");
+        String purchaseService = root("backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderService.java")
+                + root("backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderLifecycleService.java");
 
         assertThat(quotationController).contains("@PutMapping(\"/{id}\")", "quotationService.update(id, request)");
         assertThat(quotationService).contains("QuotationStatus.DRAFT", "request.version() != quotation.getVersion()")
                 .contains("saveAndFlush", "QUOTATION_UPDATE");
         assertThat(purchaseController).contains("@PutMapping(\"/orders/{id}\")", "purchaseOrderService.updateOrder(id, request)");
         assertThat(purchaseService).contains("PurchaseOrder.ORDERED", "request.version() != order.getVersion()")
-                .contains("nz(line.getReceivedQuantity()).signum() > 0", "saveAndFlush", "PURCHASE_ORDER_UPDATE");
+                .contains("line.getReceivedQuantity().signum() > 0", "saveAndFlush", "PURCHASE_ORDER_UPDATE");
     }
 
     @Test
