@@ -233,8 +233,8 @@ public class POSPanel extends JPanel {
             ((CardLayout) viewCards.getLayout()).show(viewCards, history ? "hist" : "venda");
         }
         Color active = UIHelper.ACCENT_BLUE, activeHover = UIHelper.ACCENT_BLUE_HOVER;
-        Color activeHist = UIHelper.ACCENT, activeHistHover = UIHelper.ACCENT_HOVER;
-        Color idle = UIHelper.ACCENT, idleHover = UIHelper.ACCENT_HOVER;
+        Color activeHist = UIHelper.ACCENT_BLUE, activeHistHover = UIHelper.ACCENT_BLUE_HOVER;
+        Color idle = UIHelper.KPI_INFO_DARK, idleHover = UIHelper.SECONDARY_HOVER;
         tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
         tabHistBtn.setColors(history ? activeHist : idle, history ? activeHistHover : idleHover);
         tabVendaBtn.setForeground(Color.WHITE);

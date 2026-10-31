@@ -52,7 +52,7 @@ public class PosScaleLiveWidget extends ModernPanel {
         captureButton.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         captureButton.setPreferredSize(new Dimension(80, UIHelper.FORM_CONTROL_HEIGHT));
 
-        tareButton = new ModernButton("Tara", UIHelper.ACCENT_SKY, UIHelper.ACCENT_SKY.darker());
+        tareButton = new ModernButton("Tara", UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         tareButton.setIcon(UIHelper.icon("fas-sync", 11, Color.WHITE));
         tareButton.setForeground(Color.WHITE);
         tareButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
@@ -61,7 +61,7 @@ public class PosScaleLiveWidget extends ModernPanel {
         tareButton.setToolTipText("Zerar / Aplicar Tara no prato da balança");
         tareButton.setPreferredSize(new Dimension(60, UIHelper.FORM_CONTROL_HEIGHT));
 
-        simulateButton = new ModernButton("Simular", UIHelper.ACCENT_CYAN, UIHelper.ACCENT_CYAN.darker());
+        simulateButton = new ModernButton("Simular", UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         simulateButton.setIcon(UIHelper.icon("fas-edit", 11, Color.WHITE));
         simulateButton.setForeground(Color.WHITE);
         simulateButton.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));

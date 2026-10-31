@@ -6,7 +6,11 @@ Histórico anterior: [arquivo até 2026-10-10](archive/current-history-through-2
 
 Este ficheiro contém apenas o contexto necessário para continuar o trabalho actual. Resultados
 concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
-- **Decomposição Modular de Painéis e Serviços Monolíticos em Sequência (Fases 1 a 204 Concluídas):**
+- **Decomposição Modular de Painéis e Serviços Monolíticos em Sequência (Fases 1 a 205 Concluídas):**
+  - **Fase 205: Hierarquia Cromática Profissional do POS:**
+    - Barra de acções consolidada numa paleta azul e `Slate`, reservando vermelho para acções destrutivas.
+    - Utilitários da balança, actualização e quantidade passaram a superfície neutra; `Finalizar Venda`
+      tornou-se a acção primária azul, sem alterações de layout, atalhos ou comportamento.
   - **Fase 204: Estabilização Final do Reactor:**
     - Corrigidas as nove falhas residuais do desktop em POS, login, reconciliação e harnesses
       estruturais desactualizados após decomposição.

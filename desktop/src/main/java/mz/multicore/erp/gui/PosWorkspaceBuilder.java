@@ -58,6 +58,7 @@ final class PosWorkspaceBuilder {
                 .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> owner.cashSessionActions.showSessionHistory())
                 .addAction("Sangria / Suprimento", UIHelper.icon("fas-exchange-alt", 14, UIHelper.PENDING_YELLOW), () -> owner.cashSessionActions.manageCashMovements())
                 .addAction("Passar Turno", UIHelper.icon("fas-people-arrows", 14, UIHelper.APPROVED_GREEN), () -> owner.cashSessionActions.shiftHandover());
+        owner.operationsMenu.setColors(UIHelper.SECONDARY, UIHelper.SECONDARY_HOVER);
         owner.operationsMenu.setToolTipText("Ações e ferramentas adicionais do ponto de venda");
 
         JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -93,6 +94,7 @@ final class PosWorkspaceBuilder {
         sessionActions.setOpaque(false);
         sessionActions.add(owner.scaleWidget);
         ModernButton refreshPosBtn = UIHelper.createRefreshButton(owner::refreshOperationalData);
+        refreshPosBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         sessionActions.add(refreshPosBtn);
         sessionActions.add(owner.openSessionBtn);
         sessionActions.add(owner.closeSessionBtn);
@@ -338,6 +340,7 @@ final class PosWorkspaceBuilder {
         removeBtn.setIcon(UIHelper.icon("fas-trash", 14, Color.WHITE));
 
         ModernButton decreaseBtn = UIHelper.createPrimaryButton("−");
+        decreaseBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         decreaseBtn.setIcon(null);
         decreaseBtn.setForeground(Color.WHITE);
         decreaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
@@ -345,12 +348,14 @@ final class PosWorkspaceBuilder {
         decreaseBtn.setToolTipText("Diminuir quantidade");
 
         ModernButton editQtyBtn = UIHelper.createPrimaryButton("Quantidade");
+        editQtyBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         editQtyBtn.setShortcut("F6");
         editQtyBtn.setIcon(UIHelper.icon("fas-sort-numeric-up", 12, Color.WHITE));
         editQtyBtn.setForeground(Color.WHITE);
         editQtyBtn.setToolTipText("Alterar quantidade seleccionada (F6)");
 
         ModernButton increaseBtn = UIHelper.createPrimaryButton("+");
+        increaseBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
         increaseBtn.setIcon(null);
         increaseBtn.setForeground(Color.WHITE);
         increaseBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
@@ -366,6 +371,7 @@ final class PosWorkspaceBuilder {
         buttonRow.add(leftActions, BorderLayout.WEST);
 
         owner.checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda");
+        owner.checkoutBtn.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
         owner.checkoutBtn.setShortcut("F10");
         owner.checkoutBtn.setIcon(UIHelper.icon("fas-check-circle", 14, Color.WHITE));
         buttonRow.add(owner.checkoutBtn, BorderLayout.CENTER);
