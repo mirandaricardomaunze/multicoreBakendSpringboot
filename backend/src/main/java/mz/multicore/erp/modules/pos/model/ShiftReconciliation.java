@@ -45,7 +45,7 @@ public class ShiftReconciliation {
     @Column(name = "difference", nullable = false, precision = 14, scale = 2)
     private BigDecimal difference;
 
-    @Column(name = "cash_breakdown_json", columnDefinition = "CLOB")
+    @Column(name = "cash_breakdown_json", columnDefinition = "TEXT")
     private String cashBreakdownJson;
 
     @Column(name = "notes", length = 500)

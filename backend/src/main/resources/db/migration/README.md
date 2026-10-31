@@ -39,6 +39,9 @@ permite aplicar pela primeira vez sobre uma base já existente.
 ## Regras
 
 - **Nunca editar uma migração já aplicada em produção.** Criar uma nova.
+- Escrever sempre para PostgreSQL: a suite corre em H2 sem Flyway e só `scripts/verify-backup-restore.ps1`
+  e o job `postgres-parity` executam estas migrações. Ver `docs/POSTGRES_SCHEMA_PARITY_SPEC.md`.
+- Novo valor de enum exige rever o CHECK da coluna. Nova coluna de entidade exige migração.
 - Não correr `ddl-auto=update` em prod — só Flyway mexe no schema.
 - Cada migração deve ser **idempotente quando possível** (`CREATE TABLE IF NOT EXISTS`)
   para tolerar reaplicação manual em ambientes de teste.

@@ -20,9 +20,9 @@ public class AiDocumentVersion extends BaseEntity {
     private int versionNumber;
     @Lob @Column(nullable = false, columnDefinition = "TEXT")
     private String instructions;
-    @Lob @Column(name = "generated_content", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "generated_content", nullable = false, columnDefinition = "TEXT")
     private String generatedContent;
-    @Lob @Column(name = "pdf_data", nullable = false)
+    @Column(name = "pdf_data", nullable = false)
     private byte[] pdfData;
     @Column(name = "generated_by", nullable = false, length = 120)
     private String generatedBy;

@@ -3,7 +3,7 @@
 -- dentro de uma mesma sessão de caixa.
 
 CREATE TABLE shift_reconciliations (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  BIGSERIAL PRIMARY KEY,
     till_session_id     BIGINT NOT NULL,
     outgoing_operator   VARCHAR(100) NOT NULL,
     incoming_operator   VARCHAR(100) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE shift_reconciliations (
     expected_cash       DECIMAL(14,2) NOT NULL,
     counted_cash        DECIMAL(14,2) NOT NULL,
     difference          DECIMAL(14,2) NOT NULL,
-    cash_breakdown_json CLOB,
+    cash_breakdown_json TEXT,
     notes               VARCHAR(500),
     created_by          VARCHAR(100) NOT NULL,
     company_id          BIGINT NOT NULL,

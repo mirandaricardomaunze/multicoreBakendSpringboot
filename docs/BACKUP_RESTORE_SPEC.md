@@ -4,7 +4,7 @@
 > prova o ciclo completo *backup → restore*. Lê este ficheiro antes de mexer em
 > `modules/backup/`. Harness operacional em [BACKUP_RESTORE_HARNESS.md](BACKUP_RESTORE_HARNESS.md).
 
-**Última actualização:** 2026-06-30
+**Última actualização:** 2026-10-31
 
 ---
 
@@ -85,7 +85,8 @@ intencional e está documentada para não se confundir granularidades.
 
 - O ciclo *backup → restore → diff* tem teste opt-in com PostgreSQL real, através de
   `scripts/verify-backup-restore.ps1`. Exige os binários locais e cria uma instância isolada;
-  não é executado pela CI habitual. A observação do desktop continua no harness manual.
+  fica ignorado em `mvn test` e corre no job `postgres-parity` da CI. A observação do desktop
+  continua no harness manual.
 - Os testes automáticos cobrem o que é determinístico e sem ambiente: **parsing do JDBC URL**,
   **construção dos comandos**, **guardas de permissão** e **validação de ficheiro**. A execução real
   do subprocesso é coberta por `DatabaseBackupRoundTripTest`, além do harness manual.

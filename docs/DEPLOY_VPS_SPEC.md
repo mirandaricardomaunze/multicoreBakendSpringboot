@@ -98,11 +98,11 @@ Config já ligada no compose:
 
 ---
 
-## Track B — Migração para cliente-fino
+## Track B — Migração para cliente-fino (histórico)
 
-O deploy acima corre já, mas o desktop **ainda liga diretamente ao PostgreSQL** para a maioria dos
-ecrãs (só auth + parte do comercial passam por HTTP). Enquanto isso, a BD não pode fechar-se por
-completo. A migração restante:
+> **Concluída.** O desktop comunica só por HTTP/HTTPS e não tem driver de BD nem JPA, o que é
+> protegido por `MultiModuleArchitectureHarnessTest` e `DesktopThinContextTest`. O texto abaixo
+> fica como registo do plano seguido.
 
 **Base já existente (reutilizar):** [DesktopApiClient](../src/main/java/mz/multicore/erp/desktop/client/DesktopApiClient.java)
 (get/post/put/delete com Bearer + `X-Company-Id`, tratamento de erro) e o padrão de

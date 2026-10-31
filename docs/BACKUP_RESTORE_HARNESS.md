@@ -4,7 +4,7 @@
 > [BACKUP_RESTORE_SPEC.md](BACKUP_RESTORE_SPEC.md). Os BR-0x/1x são **automáticos**
 > (`DatabaseBackupServiceTest`); os BR-5x são **manuais** (exigem PostgreSQL + `pg_dump`/`pg_restore`).
 
-**Última actualização:** 2026-09-07
+**Última actualização:** 2026-10-31
 
 ## Verificação repetível em PostgreSQL isolado
 
@@ -31,6 +31,12 @@ Execução de 2026-09-07 em PostgreSQL 18.2: **13 testes aprovados**, 87 tabelas
 Login HTTP na base restaurada: **200**, com token e empresa acessível. Evidência local em
 `data/restore-validation/77a30d84219c409798312d55b25721f7/evidence.txt`. Instância temporária encerrada.
 
+Repetição de 2026-10-31 em PostgreSQL 18: **falhou no V66**, porque migrações posteriores não eram
+compatíveis com PostgreSQL. Após a correcção em [POSTGRES_SCHEMA_PARITY_SPEC.md](POSTGRES_SCHEMA_PARITY_SPEC.md):
+**14 testes aprovados** e login 200. Evidência local em
+`data/restore-validation/23e9d6d644ab4d53bf7fb54f67251fcb/evidence.txt`. O job `postgres-parity` da CI
+repete esta prova.
+
 ---
 
 ## Automáticos (`mvn test`)
@@ -50,8 +56,8 @@ Login HTTP na base restaurada: **200**, com token e empresa acessível. Evidênc
 | BR-11 | `restorePhysicalBackup` com ficheiro inexistente (ADMIN, confirmado) | `BusinessRuleException` (ficheiro não encontrado) |
 | BR-12 | `restorePhysicalBackup` com ficheiro `.txt` (ADMIN, confirmado) | `BusinessRuleException` (não é `.dump`) |
 
-> Nota: a **execução real** do `pg_dump`/`pg_restore` não é testada em CI (precisa de ambiente).
-> Os testes cobrem parsing, construção de comando e guardas — tudo determinístico e sem ambiente.
+> Nota: a **execução real** do `pg_dump`/`pg_restore` não corre em `mvn test`, mas sim no guião e
+> no job `postgres-parity`. Os testes acima cobrem parsing, construção de comando e guardas.
 
 ---
 

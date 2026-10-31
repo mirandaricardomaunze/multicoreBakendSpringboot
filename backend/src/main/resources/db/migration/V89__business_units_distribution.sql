@@ -3,7 +3,7 @@
 -- e filtrar compras, stocks e documentos comerciais.
 
 CREATE TABLE IF NOT EXISTS business_units (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
@@ -24,5 +24,5 @@ ALTER TABLE products ADD CONSTRAINT fk_product_business_unit FOREIGN KEY (busine
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS business_unit_id BIGINT;
 ALTER TABLE invoices ADD CONSTRAINT fk_invoice_business_unit FOREIGN KEY (business_unit_id) REFERENCES business_units(id);
 
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS business_unit_id BIGINT;
-ALTER TABLE orders ADD CONSTRAINT fk_order_business_unit FOREIGN KEY (business_unit_id) REFERENCES business_units(id);
+ALTER TABLE customer_orders ADD COLUMN IF NOT EXISTS business_unit_id BIGINT;
+ALTER TABLE customer_orders ADD CONSTRAINT fk_order_business_unit FOREIGN KEY (business_unit_id) REFERENCES business_units(id);

@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-08-21
+**Última actualização:** 2026-10-31
 
 ---
 
@@ -134,8 +134,7 @@ admin), não passa pela Engine de Aprovações — só o desconto sensível cont
 
 ## 5. Guia de Transferência (entre armazéns) — o "guia" do negócio
 
-**Decisão (2026-06-21): é esta a guia que o negócio usa, e já existe.** A Guia de Remessa/Entrega
-ao cliente **não é requisito** e foi descartada.
+A Guia de Remessa ao cliente é um documento distinto, descrito em §5.1.
 
 A **Guia de Transferência** documenta a movimentação de stock **entre armazéns**:
 - Entidade `StockTransfer` + linhas, série `TRF` em `DocumentSeries`.
@@ -205,8 +204,8 @@ Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
 1. ~~**Guia de Remessa ao cliente**~~ — **implementado (2026-07-23)**, revertendo a decisão de
    2026-06-21. `DeliveryGuide` (série `GR`), gerada da encomenda, stock SALE só na aprovação;
    `DeliveryGuideServiceTest` (9). Spec/harness em
-   [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md). **Falta:** UI Swing +
-   cliente HTTP desktop (harness GR-60+).
+   [docs/GUIA_REMESSA_ENCOMENDA_SPEC.md](docs/GUIA_REMESSA_ENCOMENDA_SPEC.md). UI Swing e cliente
+   HTTP no desktop: `DeliveryGuidesPanel` e `CommercialDeliveryGuideApiClient`.
 2. ~~**Nota de Débito** numera fora de `DocumentSeries`~~ — **resolvido (2026-06-20)**: passou a
    usar `DocumentNumberService.next(DocumentSeries.DEBIT_NOTE)`, série `ND` sequencial e gapless,
    coberto por `DocumentNumberServiceTest`.
@@ -219,8 +218,7 @@ Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
 4. ~~**Sem contabilidade**~~ — **resolvido (2026-08-15)**: módulo `accounting` com plano PGC-NIRF,
    diário de partidas dobradas, razão e balancete. Venda e recebimento lançam automaticamente por
    evento. Ver [docs/CONTABILIDADE_SPEC.md](docs/CONTABILIDADE_SPEC.md).
-5. **Compras e salários ainda não lançam na contabilidade** (v1 declarada). O plano já tem as contas
-   (2201 Fornecedores, 2432 IVA dedutível, 6301 Pessoal, 2601 Remunerações a pagar); falta publicar
-   os eventos em `PurchaseService` e no processamento salarial. Ver CONTABILIDADE_SPEC §7.
-6. **Notas de crédito/débito não geram estorno contabilístico.** Uma devolução repõe stock e caixa
-   mas não desfaz o lançamento da venda.
+5. ~~**Compras e salários não lançam na contabilidade**~~ — **resolvido**: `ProcurementPostingHandler`
+   e `OperationsPostingHandler` lançam compras, pagamentos a fornecedores e salários por evento.
+6. ~~**Notas de crédito/débito não geram estorno contabilístico**~~ — **resolvido**:
+   `CommercialPostingHandler` lança as fontes `CREDIT_NOTE` e `DEBIT_NOTE` na aprovação.
