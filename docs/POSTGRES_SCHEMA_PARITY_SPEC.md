@@ -63,7 +63,6 @@ preenchem sempre (`PosReturnAndVoucherService`, `SubscriptionLifecycleService`,
   ficam fora da comparação.
 - `V105` adiciona `UNIQUE (stock_movement_id)`: numa base com duplicados, a migração falha e os
   duplicados têm de ser analisados antes.
-- O job `postgres-parity` da CI ainda não foi observado a correr no GitHub (ver harness).
 
 ## 6. Mapa de ficheiros
 

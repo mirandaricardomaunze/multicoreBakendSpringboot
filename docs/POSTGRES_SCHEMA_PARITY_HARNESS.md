@@ -36,12 +36,13 @@ ciclo backup/restauro. Na CI, o job `postgres-parity` executa o mesmo guião.
 | Regressão: `V105` sem `updated_at` e sem `MPESA`/`EMOLA` | Reprovado com PG-04 e PG-05, nomeando as colunas e os valores |
 
 Evidência local em `data/restore-validation/23e9d6d644ab4d53bf7fb54f67251fcb/evidence.txt`.
+CI em Linux com PostgreSQL 18: jobs `build` e `postgres-parity` verdes no commit `b2bb036`
+(execução `41226223007`).
 
 ## Por validar
 
 | Item | Porquê |
 |------|--------|
-| Primeira execução do job `postgres-parity` | Só corre no GitHub após push. No Linux, o guião usa pela primeira vez o `pg_config` do runner. |
 | Protecção de branch a exigir o job | É uma definição do repositório, não do workflow. Ver README, "CI e gate de merge". |
 
 ## Critério de aceitação

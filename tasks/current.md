@@ -10,8 +10,10 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Trabalho activo
 
-- **Paridade PostgreSQL:** migrações corrigidas e protegidas por harness; ver
-  `docs/POSTGRES_SCHEMA_PARITY_SPEC.md`. Falta observar o job `postgres-parity` no GitHub.
+- **Paridade PostgreSQL e formato numérico:** concluídos, com CI verde; ver
+  `docs/POSTGRES_SCHEMA_PARITY_SPEC.md` e `docs/FORMATO_NUMERICO_SPEC.md`.
+- **Integração:** falta levar o branch para `main` e ligar a protecção de branch aos checks
+  `build` e `postgres-parity`.
 
 ## Bloqueios antes de produção
 
