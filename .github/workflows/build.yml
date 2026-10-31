@@ -45,6 +45,16 @@ jobs:
       - name: Run tests (suite completa — unit + integração Spring)
         run: xvfb-run -a mvn -B -ntp test
 
+      - name: Publish failing tests as annotations
+        if: failure()
+        run: |
+          grep -rhE -A3 '<<< (FAILURE|ERROR)!' --include='*.txt' ./*/target/surefire-reports > failures.txt || true
+          split -b 3000 failures.txt failure-part-
+          for part in $(ls failure-part-* 2>/dev/null | head -n 9); do
+            echo "::error::$(sed ':a;N;$!ba;s/%/%25/g;s/
+/%0A/g' "$part")"
+          done
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -72,6 +82,20 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install PostgreSQL binaries
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql
+
       - name: Verify migrations, schema parity and backup/restore
         shell: pwsh
-        run: ./scripts/verify-backup-restore.ps1 -PgBinDir "$(pg_config --bindir)"
+        run: ./scripts/verify-backup-restore.ps1 -PgBinDir (Get-ChildItem -Directory /usr/lib/postgresql/*/bin | Sort-Object FullName | Select-Object -Last 1).FullName
+
+      - name: Publish PostgreSQL verification logs as annotations
+        if: failure()
+        run: |
+          grep -rhE -A3 '<<< (FAILURE|ERROR)!' --include='*.txt' ./backend/target/surefire-reports > failures.txt || true
+          find data/restore-validation -maxdepth 2 -name '*.log' -exec tail -n 15 {} + >> failures.txt 2>/dev/null || true
+          split -b 3000 failures.txt failure-part-
+          for part in $(ls failure-part-* 2>/dev/null | head -n 9); do
+            echo "::error::$(sed ':a;N;$!ba;s/%/%25/g;s/
+/%0A/g' "$part")"
+          done
