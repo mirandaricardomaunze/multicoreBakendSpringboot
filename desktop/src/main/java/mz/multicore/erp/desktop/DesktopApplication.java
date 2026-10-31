@@ -1,5 +1,6 @@
 package mz.multicore.erp.desktop;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -7,6 +8,8 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+
+import java.util.Locale;
 
 /**
  * Arranque do desktop como <b>cliente-fino</b>.
@@ -39,6 +42,7 @@ import org.springframework.context.annotation.Profile;
 public class DesktopApplication {
 
     public static void main(String[] args) {
+        Locale.setDefault(Locale.Category.FORMAT, DisplayLocale.NUMBERS);
         // Handler global para excepções silenciosas no EDT (Event Dispatch Thread).
         // Sem isto, erros no invokeLater são engolidos sem aparecer nos logs.
         System.setProperty("sun.awt.exception.handler", java.awt.EventQueue.class.getName());

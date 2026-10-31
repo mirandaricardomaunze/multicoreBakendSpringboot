@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import com.lowagie.text.Element;
 import com.lowagie.text.Image;
 import com.lowagie.text.Paragraph;
@@ -101,7 +102,7 @@ public class ProductLabelDocumentRenderer {
         }
 
         Paragraph price = new Paragraph(
-                product.unitPrice() == null ? "" : String.format("%,.2f MT", product.unitPrice()),
+                product.unitPrice() == null ? "" : String.format(DisplayLocale.NUMBERS, "%,.2f MT", product.unitPrice()),
                 PdfTheme.subtitleFont());
         price.setAlignment(Element.ALIGN_CENTER);
         price.setSpacingBefore(4f);

@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JTabbedPane;
@@ -61,6 +62,7 @@ class TabStripFitsTest {
 
         JTabbedPane pane = new JTabbedPane();
         Font font = new Font("Segoe UI", Font.BOLD, 13);
+        Assumptions.assumeTrue("Segoe UI".equals(font.getFamily()), "larguras validadas só com a fonte do Windows");
         FontMetrics metrics = pane.getFontMetrics(font);
 
         strips.forEach((receiver, titles) -> {

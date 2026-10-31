@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.audit.service;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.modules.audit.dto.ForensicAnomalyDTO;
 import mz.multicore.erp.modules.audit.dto.ForensicCategory;
 import mz.multicore.erp.modules.audit.dto.ForensicSeverity;
@@ -61,7 +62,7 @@ public class ForensicAnomalyCollector {
                 ForensicSeverity sev = (amount.compareTo(new BigDecimal("5000.00")) > 0 || isReasonMissing)
                         ? ForensicSeverity.CRITICAL
                         : ForensicSeverity.SUSPICIOUS;
-                String details = String.format("Fatura fiscal cancelada no valor de %,.2f MT. Motivo registado: %s.",
+                String details = String.format(DisplayLocale.NUMBERS, "Fatura fiscal cancelada no valor de %,.2f MT. Motivo registado: %s.",
                         amount, isReasonMissing ? "[NÃO ESPECIFICADO]" : reason);
                 String rec = isReasonMissing
                         ? "Exigir abertura de inquérito imediato para justificar cancelamento sem motivo e validar caixa físico."
@@ -80,7 +81,7 @@ public class ForensicAnomalyCollector {
                                 ? ForensicSeverity.CRITICAL
                                 : ForensicSeverity.SUSPICIOUS;
                         String prodName = line.getProduct() != null ? line.getProduct().getName() : "Item";
-                        String details = String.format("Desconto manual de %.1f%% concedido no item '%s' (Total desconto: %,.2f MT).",
+                        String details = String.format(DisplayLocale.NUMBERS, "Desconto manual de %.1f%% concedido no item '%s' (Total desconto: %,.2f MT).",
                                 discPct.doubleValue(), prodName, discVal);
 
                         out.add(new ForensicAnomalyDTO(inv.getId(), eventTime, "Comercial",
@@ -106,7 +107,7 @@ public class ForensicAnomalyCollector {
                     : (cost.compareTo(new BigDecimal("3000.00")) > 0 ? ForensicSeverity.SUSPICIOUS : ForensicSeverity.INFO);
             String prodName = waste.getProduct() != null ? waste.getProduct().getName() : "Artigo";
             String reasonDesc = waste.getReason() != null ? waste.getReason().name() : "N/D";
-            String details = String.format("Perda/Quebra de stock no montante de %,.2f MT no artigo '%s' (Motivo: %s).",
+            String details = String.format(DisplayLocale.NUMBERS, "Perda/Quebra de stock no montante de %,.2f MT no artigo '%s' (Motivo: %s).",
                     cost, prodName, reasonDesc);
 
             out.add(new ForensicAnomalyDTO(waste.getId(), eventTime,

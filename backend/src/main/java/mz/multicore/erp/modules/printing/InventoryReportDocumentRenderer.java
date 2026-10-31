@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import com.lowagie.text.Element;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
@@ -104,9 +105,9 @@ public class InventoryReportDocumentRenderer {
     private String formatNumber(BigDecimal value) {
         if (value == null) return "0";
         if (value.stripTrailingZeros().scale() <= 0) {
-            return String.format("%,.0f", value);
+            return String.format(DisplayLocale.NUMBERS, "%,.0f", value);
         }
-        return String.format("%,.2f", value);
+        return String.format(DisplayLocale.NUMBERS, "%,.2f", value);
     }
 
     private PdfPTable buildSummary(List<Stock> stocks) {

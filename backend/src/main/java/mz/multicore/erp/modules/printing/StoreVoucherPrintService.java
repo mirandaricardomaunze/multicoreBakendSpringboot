@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -82,7 +83,7 @@ public class StoreVoucherPrintService {
 
             // Valor do Vale em Grande Destaque
             addCentered(doc, "VALOR DO CRÉDITO", PdfTheme.smallFont());
-            addCentered(doc, String.format("%,.2f MT", voucher.getRemainingAmount()), PdfTheme.titleFont());
+            addCentered(doc, String.format(DisplayLocale.NUMBERS, "%,.2f MT", voucher.getRemainingAmount()), PdfTheme.titleFont());
 
             ThermalReceiptRenderer.dottedLine(doc);
 

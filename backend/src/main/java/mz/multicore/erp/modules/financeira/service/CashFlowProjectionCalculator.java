@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.financeira.service;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.modules.financeira.dto.CashFlowAlertDTO;
 import mz.multicore.erp.modules.financeira.dto.CashFlowBucketDTO;
 import mz.multicore.erp.modules.financeira.dto.CashFlowForecastDTO;
@@ -108,7 +109,7 @@ public class CashFlowProjectionCalculator {
         boolean isImmediate = "Vencido".equals(firstDeficitBucket) || "Hoje".equals(firstDeficitBucket)
                 || "1-7 Dias".equals(firstDeficitBucket) || "8-15 Dias".equals(firstDeficitBucket);
         String status = isImmediate ? "CRITICAL" : "WARNING";
-        String msg = String.format("Atenção: Projeção de défice de caixa de %,.2f MT com início no período '%s'.",
+        String msg = String.format(DisplayLocale.NUMBERS, "Atenção: Projeção de défice de caixa de %,.2f MT com início no período '%s'.",
                 maxDeficit, firstDeficitBucket);
         String rec = isImmediate
                 ? "Acelerar cobrança urgente de faturas vencidas e renegociar pagamentos imediatos a fornecedores."

@@ -11,6 +11,7 @@ $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopba
 $listener.Start()
 $testPort = $listener.LocalEndpoint.Port
 $listener.Stop()
+$socketOption = if ($IsLinux) { ' -k /tmp' } else { '' }
 $started = $false
 $envNames = @('MULTICORE_RESTORE_TEST_PORT', 'MULTICORE_RESTORE_TEST_DIR', 'MULTICORE_RESTORE_TEST_PG_BIN')
 $previous = @{}
@@ -19,7 +20,7 @@ Push-Location $workspace
 try {
     & (Join-Path $PgBinDir 'initdb') -D $clusterDir -U restore_test --auth=trust --encoding=UTF8 --locale=C *> (Join-Path $runDir 'initdb.log')
     if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a instancia temporaria. Consulte $runDir/initdb.log" }
-    & (Join-Path $PgBinDir 'pg_ctl') -D $clusterDir -l (Join-Path $runDir 'postgres.log') -o "-h 127.0.0.1 -p $testPort" -w start
+    & (Join-Path $PgBinDir 'pg_ctl') -D $clusterDir -l (Join-Path $runDir 'postgres.log') -o "-h 127.0.0.1 -p $testPort$socketOption" -w start
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar a instancia temporaria.' }
     $started = $true
     $env:MULTICORE_RESTORE_TEST_PORT = "$testPort"

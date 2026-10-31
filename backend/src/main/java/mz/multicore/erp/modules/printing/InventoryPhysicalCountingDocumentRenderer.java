@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import com.lowagie.text.Element;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
@@ -57,9 +58,9 @@ public class InventoryPhysicalCountingDocumentRenderer {
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
         table.addCell(createCardCell("Total de Itens", String.valueOf(session.totalItems())));
-        table.addCell(createCardCell("Sobras (MT)", String.format("%,.2f", session.totalSurplusValue())));
-        table.addCell(createCardCell("Faltas (MT)", String.format("%,.2f", session.totalDeficitValue())));
-        table.addCell(createCardCell("Impacto Líquido (MT)", String.format("%,.2f", session.netFinancialImpact())));
+        table.addCell(createCardCell("Sobras (MT)", String.format(DisplayLocale.NUMBERS, "%,.2f", session.totalSurplusValue())));
+        table.addCell(createCardCell("Faltas (MT)", String.format(DisplayLocale.NUMBERS, "%,.2f", session.totalDeficitValue())));
+        table.addCell(createCardCell("Impacto Líquido (MT)", String.format(DisplayLocale.NUMBERS, "%,.2f", session.netFinancialImpact())));
         return table;
     }
 
@@ -90,10 +91,10 @@ public class InventoryPhysicalCountingDocumentRenderer {
             java.awt.Color bg = alt ? PdfTheme.TOTAL_ROW_BG : java.awt.Color.WHITE;
             table.addCell(bodyCell(item.productCode(), bg, Element.ALIGN_LEFT));
             table.addCell(bodyCell(item.productName(), bg, Element.ALIGN_LEFT));
-            table.addCell(bodyCell(isBlind ? "***" : String.format("%,.2f", item.expectedQuantity()), bg, Element.ALIGN_RIGHT));
-            table.addCell(bodyCell(String.format("%,.2f", item.countedQuantity()), bg, Element.ALIGN_RIGHT));
+            table.addCell(bodyCell(isBlind ? "***" : String.format(DisplayLocale.NUMBERS, "%,.2f", item.expectedQuantity()), bg, Element.ALIGN_RIGHT));
+            table.addCell(bodyCell(String.format(DisplayLocale.NUMBERS, "%,.2f", item.countedQuantity()), bg, Element.ALIGN_RIGHT));
             table.addCell(bodyCell(isBlind ? "***" : String.format("%+,.2f", item.difference()), bg, Element.ALIGN_RIGHT));
-            table.addCell(bodyCell(String.format("%,.2f", item.unitCost()), bg, Element.ALIGN_RIGHT));
+            table.addCell(bodyCell(String.format(DisplayLocale.NUMBERS, "%,.2f", item.unitCost()), bg, Element.ALIGN_RIGHT));
             table.addCell(bodyCell(isBlind ? "***" : String.format("%+,.2f", item.financialImpact()), bg, Element.ALIGN_RIGHT));
             alt = !alt;
         }

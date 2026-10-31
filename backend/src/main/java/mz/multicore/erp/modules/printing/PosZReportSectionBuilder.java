@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.printing;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lowagie.text.Element;
@@ -110,15 +111,15 @@ public class PosZReportSectionBuilder {
     private String formatDenomination(BigDecimal d) {
         if (d == null) return "—";
         if (d.compareTo(BigDecimal.valueOf(20)) >= 0) {
-            return String.format("Nota de %,.0f MT", d);
+            return String.format(DisplayLocale.NUMBERS, "Nota de %,.0f MT", d);
         } else if (d.compareTo(BigDecimal.ONE) >= 0) {
-            return String.format("Moeda de %,.0f MT", d);
+            return String.format(DisplayLocale.NUMBERS, "Moeda de %,.0f MT", d);
         }
-        return String.format("Moeda de %,.2f MT", d);
+        return String.format(DisplayLocale.NUMBERS, "Moeda de %,.2f MT", d);
     }
 
     static String money(BigDecimal v) {
-        return v == null ? "—" : String.format("%,.2f MT", v);
+        return v == null ? "—" : String.format(DisplayLocale.NUMBERS, "%,.2f MT", v);
     }
 
     static String safe(String s) {
