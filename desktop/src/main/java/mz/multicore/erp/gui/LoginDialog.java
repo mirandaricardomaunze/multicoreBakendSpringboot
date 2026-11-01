@@ -167,7 +167,7 @@ public class LoginDialog extends JFrame {
         new SwingWorker<DesktopSession, Void>() {
             @Override
             protected DesktopSession doInBackground() {
-                return authApiClient.login(username, password);
+                return authApiClient.login(username, password, new LoginSecurityPrompts(LoginDialog.this));
             }
 
             @Override

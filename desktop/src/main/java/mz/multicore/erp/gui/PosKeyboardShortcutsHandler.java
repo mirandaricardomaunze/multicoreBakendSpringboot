@@ -185,8 +185,7 @@ public final class PosKeyboardShortcutsHandler {
                 .setConfirmButton("Aplicar Desconto", "fas-check")
                 .setOnSave(() -> {
                     BigDecimal percent = parseDiscountPercent(discountPercentField.getText());
-                    if (needsManagerPin(percent, CurrentUserContext.getRole())
-                            && !new ManagerPinDialog(panel, panel.userApiClient, "Desconto de " + percent + "%").showDialog()) {
+                    if (needsManagerPin(percent, CurrentUserContext.getRole()) && !authorizeDiscount(panel, percent)) {
                         throw new IllegalArgumentException("Um desconto acima de 10% exige o PIN de um gerente.");
                     }
                     item.discount = percent;
@@ -197,6 +196,18 @@ public final class PosKeyboardShortcutsHandler {
             panel.updateCartTotal(selectedModel);
             ToastManager.success(panel, "Desconto aplicado ao artigo com sucesso.");
         }
+    }
+
+    /** O servidor exige esta autorização na venda: fica a maior, porque vale para todo o carrinho. */
+    private static boolean authorizeDiscount(POSPanel panel, BigDecimal percent) {
+        return new ManagerPinDialog(panel, pin -> {
+            var result = panel.posApiClient.authorizeDiscount(pin, percent);
+            if (result.approved() && percent.compareTo(panel.authorizedDiscount) >= 0) {
+                panel.discountAuthorization = result.token();
+                panel.authorizedDiscount = percent;
+            }
+            return new ManagerPinDialog.PinResult(result.approved(), result.managerName(), result.message());
+        }, "Desconto de " + percent + "%").showDialog();
     }
 
     /** O gerente autoriza com a própria sessão; o caixa precisa do PIN acima de 10%. */

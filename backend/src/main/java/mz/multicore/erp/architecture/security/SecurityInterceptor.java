@@ -1,5 +1,6 @@
 package mz.multicore.erp.architecture.security;
 
+import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -40,8 +41,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
         }
 
         try {
-            String token = authorization.substring(7).trim();
-            String username = authSessionService.requireValid(token).username();
+            String username = usableSessionUser(authorization);
             Long requestedCompanyId = Long.parseLong(companyId);
             var user = tenantAccessService.requireAccess(username, requestedCompanyId);
             String role = user.getRoleForCompany(requestedCompanyId);
@@ -66,6 +66,14 @@ public class SecurityInterceptor implements HandlerInterceptor {
         return false;
     }
 
+    private String usableSessionUser(String authorization) {
+        var session = authSessionService.requireValid(authorization.substring(7).trim());
+        if (session.restricted()) {
+            throw new BusinessRuleException("Conclua primeiro a segurança da conta: senha e dupla autenticação.");
+        }
+        return session.username();
+    }
+
     private boolean handlePlatform(HttpServletRequest request, HttpServletResponse response, String authorization)
             throws Exception {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
@@ -73,8 +81,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
             return false;
         }
         try {
-            String token = authorization.substring(7).trim();
-            String username = authSessionService.requireValid(token).username();
+            String username = usableSessionUser(authorization);
             var user = tenantAccessService.requireSuperAdmin(username);
             CurrentUserContext.setCurrentUser(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
             updateSecurityContextAuthority(user.getUsername(), PermissionGuard.SUPERADMIN_ROLE);
@@ -92,8 +99,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
             return false;
         }
         try {
-            String token = authorization.substring(7).trim();
-            String username = authSessionService.requireValid(token).username();
+            String username = usableSessionUser(authorization);
             String companyHeader = request.getHeader("X-Company-Id");
             if (companyHeader == null || companyHeader.isBlank()) {
                 var user = tenantAccessService.requireSuperAdmin(username);

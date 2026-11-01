@@ -26,6 +26,7 @@ public class DatabaseBackupService {
     private final String backupDir;
     private final PostgresBackupCommandBuilder commandBuilder;
     private final PostgresBackupProcessRunner processRunner;
+    private final BackupEncryption encryption;
 
     @Autowired
     public DatabaseBackupService(
@@ -33,8 +34,10 @@ public class DatabaseBackupService {
             @Value("${spring.datasource.username:}") String dbUser,
             @Value("${backup.dir:backups}") String backupDir,
             PostgresBackupCommandBuilder commandBuilder,
-            PostgresBackupProcessRunner processRunner
+            PostgresBackupProcessRunner processRunner,
+            BackupEncryption encryption
     ) {
+        this.encryption = encryption;
         this.jdbcUrl = jdbcUrl;
         this.dbUser = dbUser;
         this.backupDir = backupDir;
@@ -49,7 +52,7 @@ public class DatabaseBackupService {
             String pgBinDir,
             String backupDir
     ) {
-        this(jdbcUrl, dbUser, backupDir, new PostgresBackupCommandBuilder(pgBinDir), new PostgresBackupProcessRunner(dbPassword));
+        this(jdbcUrl, dbUser, backupDir, new PostgresBackupCommandBuilder(pgBinDir), new PostgresBackupProcessRunner(dbPassword), null);
     }
 
     public PhysicalBackupResultDTO executePhysicalBackup() {
@@ -76,25 +79,20 @@ public class DatabaseBackupService {
         if (!target.exists() || target.length() == 0) {
             throw new BusinessRuleException("O backup físico não produziu um ficheiro válido.");
         }
-        return new PhysicalBackupResultDTO(target.getAbsolutePath(), conn.database(), target.length());
+        File stored = encryption != null ? encryption.seal(target) : target;
+        return new PhysicalBackupResultDTO(stored.getAbsolutePath(), conn.database(), stored.length());
     }
 
     public void restorePhysicalBackup(String path, boolean confirmOverwrite) {
         PermissionGuard.requireAdmin("restaurar backup físico da base de dados");
-        if (!confirmOverwrite) {
-            throw new BusinessRuleException("Restaurar substitui os dados actuais. Confirme a operação para continuar.");
-        }
-        if (path == null || path.isBlank()) {
-            throw new BusinessRuleException("Selecione um ficheiro de backup para restaurar.");
-        }
-        File file = new File(path);
-        if (!file.exists() || !file.isFile()) {
-            throw new BusinessRuleException("Ficheiro de backup não encontrado.");
-        }
-        if (!file.getName().toLowerCase(Locale.ROOT).endsWith(".dump")) {
-            throw new BusinessRuleException("O ficheiro selecionado não é um backup físico (.dump) válido.");
-        }
+        File file = BackupEncryption.requireRestorableFile(path, confirmOverwrite);
+        boolean encrypted = file.getName().toLowerCase(Locale.ROOT).endsWith(BackupFileCipher.ENCRYPTED_SUFFIX);
         PgConnection conn = parsePgConnection(jdbcUrl);
+        if (encrypted) {
+            encryption.withDecrypted(file, plain -> processRunner.runProcess(
+                    buildRestoreCommand(conn, dbUser, plain.getAbsolutePath()), "pg_restore"));
+            return;
+        }
         List<String> command = buildRestoreCommand(conn, dbUser, file.getAbsolutePath());
         processRunner.runProcess(command, "pg_restore");
     }

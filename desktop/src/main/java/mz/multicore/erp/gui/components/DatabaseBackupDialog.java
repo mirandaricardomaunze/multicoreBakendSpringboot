@@ -173,7 +173,7 @@ public class DatabaseBackupDialog extends JDialog {
                 filesTableModel.setRowCount(0);
                 if (files != null) {
                     for (String f : files) {
-                        String type = f.endsWith(".dump") || f.endsWith(".sql") ? "Base de Dados" : "Arquivo";
+                        String type = f.endsWith(".dump") || f.endsWith(".dump.enc") || f.endsWith(".sql") ? "Base de Dados" : "Arquivo";
                         filesTableModel.addRow(new Object[]{f, type, "Disponível"});
                     }
                 }

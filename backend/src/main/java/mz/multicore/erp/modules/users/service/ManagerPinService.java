@@ -48,6 +48,8 @@ public class ManagerPinService {
         AppUser user = appUserRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
         UserAdminGuard.requireManagedUser(user, companyId);
+        SharedAccountGuard.requireControlledAccount(user,
+                appUserRepository.findByUsername(CurrentUserContext.getUsername()).orElse(null), companyId);
         user.setManagerPinHash(passwordEncoder.encode(pin.trim()));
         appUserRepository.save(user);
         if (auditLogService != null) {

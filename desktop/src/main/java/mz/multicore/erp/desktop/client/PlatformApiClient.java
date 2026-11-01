@@ -81,6 +81,10 @@ public class PlatformApiClient {
                 .patch("/api/platform/users/" + username + "/active", Map.of("active", active), PlatformUserDTO.class);
     }
 
+    public void resetTwoFactor(String username) {
+        clientFactory.authenticatedClient().post("/api/platform/users/" + username + "/two-factor/reset", null);
+    }
+
     public void resetPassword(String username, String password) {
         clientFactory.authenticatedClient()
                 .patch("/api/platform/users/" + username + "/password", Map.of("password", password), Void.class);

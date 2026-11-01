@@ -91,7 +91,7 @@ public class POSPanel extends JPanel {
     ModernButton openSessionBtn, closeSessionBtn, cashMoveBtn, shiftHandoverBtn, checkoutBtn, addToCartBtn;
     List<ModernButton> cartLineButtons = List.of();
     private String operatorDisplayName;
-    mz.multicore.erp.desktop.client.UserApiClient userApiClient;
+    String discountAuthorization;
     JCheckBox creditCheck;
     JPanel viewCards;
     ModernButton tabVendaBtn, tabHistBtn, contingencyBtn, quotationBtn, suspendedSalesBtn;
@@ -236,7 +236,7 @@ public class POSPanel extends JPanel {
     }
 
     public void setOperatorDisplayName(String displayName) { operatorDisplayName = displayName; }
-    public void setUserApiClient(mz.multicore.erp.desktop.client.UserApiClient client) { userApiClient = client; }
+    BigDecimal authorizedDiscount = BigDecimal.ZERO;
 
     public void openLoyaltyDialog() {
         loyaltyController.openLoyaltyCardDialog(this, () -> loyaltyController.getSelectedLoyaltyClient()

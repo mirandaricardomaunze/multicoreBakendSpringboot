@@ -146,7 +146,9 @@ public class PosContingencyManager {
                 request.treasuryAccountId(),
                 request.lines(),
                 request.payments(),
-                ref
+                ref,
+                request.quotationId(),
+                request.discountAuthorization()
         );
 
         PosContingencySale sale = new PosContingencySale(

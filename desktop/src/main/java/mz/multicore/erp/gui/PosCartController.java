@@ -111,6 +111,8 @@ public class PosCartController {
     /** Cada atendimento começa limpo: o cliente e o crédito do anterior nunca passam para o seguinte. */
     public void resetCustomerForNextSale() {
         if (owner.creditCheck != null) owner.creditCheck.setSelected(false);
+        owner.discountAuthorization = null;
+        owner.authorizedDiscount = BigDecimal.ZERO;
         if (owner.clientSearchField == null) return;
         owner.clientSearchField.setText("");
         owner.catalogController.filterClients("");

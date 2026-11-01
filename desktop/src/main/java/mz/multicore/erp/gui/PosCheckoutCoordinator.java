@@ -100,7 +100,7 @@ public class PosCheckoutCoordinator {
 
         String idempotencyKey = "POS-" + UUID.randomUUID();
         POSCheckoutRequest request = new POSCheckoutRequest(operator, companyId, client != null ? client.id() : null,
-                walkInName, wh.id(), treasuryAccountId, lines, payments, idempotencyKey, owner.currentQuotationId);
+                walkInName, wh.id(), treasuryAccountId, lines, payments, idempotencyKey, owner.currentQuotationId, owner.discountAuthorization);
 
         UIHelper.runWithProgress(owner, "A finalizar venda",
                 () -> owner.posApiClient.checkout(request),

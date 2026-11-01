@@ -3,6 +3,7 @@ package mz.multicore.erp.modules.platform.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.AuthSessionService;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.architecture.security.PasswordPolicy;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
@@ -105,11 +106,10 @@ public class PlatformUserAccountService {
     }
 
     public void resetPassword(String username, String newPassword) {
-        if (newPassword == null || newPassword.trim().length() < 4) {
-            throw new BusinessRuleException("A nova senha deve ter pelo menos 4 caracteres.");
-        }
+        PasswordPolicy.validate(newPassword, username);
         AppUser user = requireUser(username);
         user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        user.setPasswordChangeRequired(true);
         appUserRepository.save(user);
         if (authSessionService != null) {
             authSessionService.revokeUser(user.getUsername());

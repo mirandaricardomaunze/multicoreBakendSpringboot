@@ -1,13 +1,12 @@
 package mz.multicore.erp.gui.users;
 
-import mz.multicore.erp.desktop.client.UserApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.modules.users.dto.UserSecurityRequestsDTOs;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.function.Function;
 
 /**
  * Diálogo compacto de autorização por PIN de gestor de 4 dígitos.
@@ -16,7 +15,7 @@ import java.awt.*;
 public class ManagerPinDialog {
 
     private final Component parent;
-    private final UserApiClient userApiClient;
+    private final Function<String, PinResult> verifier;
     private final String operationName;
 
     private JPasswordField pinField;
@@ -24,9 +23,11 @@ public class ManagerPinDialog {
     private boolean authorized = false;
     private String managerName = null;
 
-    public ManagerPinDialog(Component parent, UserApiClient userApiClient, String operationName) {
+    public record PinResult(boolean approved, String managerName, String message) {}
+
+    public ManagerPinDialog(Component parent, Function<String, PinResult> verifier, String operationName) {
         this.parent = parent;
-        this.userApiClient = userApiClient;
+        this.verifier = verifier;
         this.operationName = operationName != null && !operationName.isBlank() ? operationName : "Autorização Gerencial";
     }
 
@@ -109,17 +110,13 @@ public class ManagerPinDialog {
                 return;
             }
             try {
-                if (userApiClient != null) {
-                    UserSecurityRequestsDTOs.VerifyManagerPinResponse res = userApiClient.verifyManagerPin(pin);
-                    if (res != null && res.approved()) {
-                        authorized = true;
-                        managerName = res.managerName();
-                        dialog.dispose();
-                    } else {
-                        feedbackLabel.setText(res != null ? res.message() : "PIN incorreto ou sem autorização.");
-                    }
+                PinResult res = verifier.apply(pin);
+                if (res != null && res.approved()) {
+                    authorized = true;
+                    managerName = res.managerName();
+                    dialog.dispose();
                 } else {
-                    feedbackLabel.setText("Sem ligação para validar o PIN.");
+                    feedbackLabel.setText(res != null ? res.message() : "PIN incorreto ou sem autorização.");
                 }
             } catch (Exception ex) {
                 feedbackLabel.setText("Erro ao validar PIN: " + ex.getMessage());

@@ -3,6 +3,7 @@ package mz.multicore.erp.architecture.security;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.subscription.service.SubscriptionService;
 import mz.multicore.erp.modules.users.model.AppUser;
+import mz.multicore.erp.modules.users.service.AccountSecurityService;
 import mz.multicore.erp.modules.users.service.AppUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -24,10 +25,12 @@ public class AuthController {
     private final SubscriptionService subscriptionService;
     private final LoginRateLimiter loginRateLimiter;
     private final ClientIpResolver clientIpResolver;
+    private final AccountSecurityService accountSecurityService;
 
     public AuthController(AppUserService appUserService, AuthSessionService authSessionService,
                           SubscriptionService subscriptionService, LoginRateLimiter loginRateLimiter,
-                          ClientIpResolver clientIpResolver) {
+                          ClientIpResolver clientIpResolver, AccountSecurityService accountSecurityService) {
+        this.accountSecurityService = accountSecurityService;
         this.appUserService = appUserService;
         this.authSessionService = authSessionService;
         this.subscriptionService = subscriptionService;
@@ -46,8 +49,20 @@ public class AuthController {
             loginRateLimiter.recordFailure(request.username(), clientIp); // conta falhas (senha errada, inativo, inexistente)
             throw ex;
         }
+        boolean twoFactor = accountSecurityService.mustUseTwoFactor(user);
+        if (twoFactor && user.getTotpSecret() != null) {
+            if (request.totpCode() == null || request.totpCode().isBlank()) {
+                return LoginResponse.twoFactorChallenge(user.getUsername());
+            }
+            if (!accountSecurityService.verifyCode(user, request.totpCode())) {
+                loginRateLimiter.recordFailure(request.username(), clientIp);
+                throw new BusinessRuleException("Código de autenticação inválido.");
+            }
+        }
         loginRateLimiter.recordSuccess(request.username(), clientIp);
-        AuthSessionService.AuthSession session = authSessionService.create(user);
+        boolean setupRequired = twoFactor && user.getTotpSecret() == null;
+        AuthSessionService.AuthSession session = authSessionService.create(
+                user, user.isPasswordChangeRequired() || setupRequired);
 
         // Só empresas acessíveis entram na sessão: activas (suspensão manual) e com assinatura que
         // permita login (não expirada/suspensa). Empresa sem assinatura continua acessível.
@@ -68,13 +83,34 @@ public class AuthController {
 
         return new LoginResponse(
                 session.token(), session.expiresAt(), user.getUsername(), user.getName(), user.getRole(),
-                user.isPlatformAdmin(), companies
+                user.isPlatformAdmin(), companies, false, user.isPasswordChangeRequired(), setupRequired
         );
+    }
+
+    @PostMapping("/change-password")
+    public void changePassword(@RequestHeader("Authorization") String authorization,
+                               @Valid @RequestBody ChangePasswordRequest request) {
+        accountSecurityService.changePassword(sessionUser(authorization), request.currentPassword(), request.newPassword());
+    }
+
+    @PostMapping("/2fa/setup")
+    public AccountSecurityService.TwoFactorSetup beginTwoFactorSetup(@RequestHeader("Authorization") String authorization) {
+        return accountSecurityService.beginTwoFactorSetup(sessionUser(authorization));
+    }
+
+    @PostMapping("/2fa/confirm")
+    public void confirmTwoFactorSetup(@RequestHeader("Authorization") String authorization,
+                                      @Valid @RequestBody TwoFactorCodeRequest request) {
+        accountSecurityService.confirmTwoFactorSetup(sessionUser(authorization), request.code());
     }
 
     @PostMapping("/logout")
     public void logout(@RequestHeader("Authorization") String authorization) {
         authSessionService.revoke(bearerToken(authorization));
+    }
+
+    private String sessionUser(String authorization) {
+        return authSessionService.requireValid(bearerToken(authorization)).username();
     }
 
     private String bearerToken(String authorization) {
@@ -83,7 +119,15 @@ public class AuthController {
                 : null;
     }
 
-    public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
+    public record LoginRequest(@NotBlank String username, @NotBlank String password, String totpCode) {
+        public LoginRequest(String username, String password) {
+            this(username, password, null);
+        }
+    }
+
+    public record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
+
+    public record TwoFactorCodeRequest(@NotBlank String code) {}
 
     public record LoginResponse(
             String token,
@@ -92,8 +136,15 @@ public class AuthController {
             String displayName,
             String role,
             boolean superAdmin,
-            List<CompanyAccess> companies
-    ) {}
+            List<CompanyAccess> companies,
+            boolean twoFactorRequired,
+            boolean passwordChangeRequired,
+            boolean twoFactorSetupRequired
+    ) {
+        static LoginResponse twoFactorChallenge(String username) {
+            return new LoginResponse(null, null, username, null, null, false, List.of(), true, false, false);
+        }
+    }
 
     public record CompanyAccess(Long id, String name, String role) {}
 }

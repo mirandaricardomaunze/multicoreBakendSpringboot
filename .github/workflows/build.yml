@@ -65,6 +65,25 @@ jobs:
       - name: Package (skip tests — já correram)
         run: mvn -B -ntp -DskipTests package
 
+  # Dependência com vulnerabilidade conhecida reprova o build. Excepções, com motivo, em
+  # scripts/vulnerability-exceptions.txt. Ver docs/SEGURANCA_CONTAS_E_SEGREDOS_SPEC.md.
+  dependency-vulnerabilities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Check dependencies against OSV
+        run: python3 scripts/check-vulnerabilities.py
+
   # A suite acima corre em H2 sem Flyway. Este job aplica as migrações em PostgreSQL real e prova
   # a paridade com as entidades e o ciclo backup/restauro. Ver docs/POSTGRES_SCHEMA_PARITY_SPEC.md.
   postgres-parity:

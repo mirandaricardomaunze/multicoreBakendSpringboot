@@ -55,6 +55,10 @@ public class PostgresBackupCommandBuilder {
         ));
     }
 
+    public List<String> buildListCommand(String sourcePath) {
+        return List.of(binary("pg_restore"), "--list", sourcePath);
+    }
+
     public List<String> buildRestoreCommand(DatabaseBackupService.PgConnection conn, String user, String sourcePath) {
         return new ArrayList<>(List.of(
                 binary("pg_restore"), "-h", conn.host(), "-p", String.valueOf(conn.port()),

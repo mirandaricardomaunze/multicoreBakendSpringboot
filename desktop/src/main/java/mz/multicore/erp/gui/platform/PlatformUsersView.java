@@ -53,6 +53,11 @@ public class PlatformUsersView extends JPanel {
         newBtn.addActionListener(e -> createPlatformUser());
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadUsers);
+        ModernButton resetTwoFactorBtn = UIHelper.createIconButton("Repor dupla autenticação", "fas-mobile-alt");
+        resetTwoFactorBtn.addActionListener(e -> {
+            PlatformUserDTO user = selectedUser();
+            if (user != null) PlatformTwoFactorAction.reset(this, platformApiClient, user.username());
+        });
         mz.multicore.erp.gui.components.ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Mais acções")
                 .addAction("Editar Utilizador", UIHelper.icon("fas-pen", 14), this::editUser)
                 .addAction("Conceder/Alterar Acesso", UIHelper.icon("fas-user-shield", 14, UIHelper.ACCENT_BLUE), this::grantAccess)
@@ -87,7 +92,7 @@ public class PlatformUsersView extends JPanel {
         JPanel uBar = TableFilter.bar(uSearch, TableFilter.label("Estado:"), uEstado);
         uBar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        listCard.add(UIHelper.tableCardTop("Utilizadores de Todas as Empresas", uBar, refreshBtn, moreBtn, newBtn), BorderLayout.NORTH);
+        listCard.add(UIHelper.tableCardTop("Utilizadores de Todas as Empresas", uBar, refreshBtn, resetTwoFactorBtn, moreBtn, newBtn), BorderLayout.NORTH);
         listCard.add(scroll, BorderLayout.CENTER);
 
         add(listCard, BorderLayout.CENTER);

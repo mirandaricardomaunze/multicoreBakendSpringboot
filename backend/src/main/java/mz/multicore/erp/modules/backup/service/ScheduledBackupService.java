@@ -124,7 +124,9 @@ public class ScheduledBackupService {
      */
     static boolean isExpiredBackup(String name, long lastModifiedMs, long nowMs, int retentionDays) {
         if (retentionDays <= 0) return false;
-        if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(".dump")) return false;
+        if (name == null) return false;
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (!lower.endsWith(".dump") && !lower.endsWith(".dump.enc")) return false;
         long ageMs = nowMs - lastModifiedMs;
         return ageMs > retentionDays * DAY_MS;
     }
