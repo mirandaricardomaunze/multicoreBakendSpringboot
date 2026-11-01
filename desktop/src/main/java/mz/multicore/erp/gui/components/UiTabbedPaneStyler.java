@@ -123,5 +123,6 @@ final class UiTabbedPaneStyler {
         // SCROLL_TAB_LAYOUT evita a 2.ª linha de abas inacessível com muitas abas.
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         UiTabScrollSupport.installMouseWheel(tabbedPane);
+        UiTabScrollSupport.keepSelectedTabVisible(tabbedPane);
     }
 }

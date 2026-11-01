@@ -17,7 +17,7 @@ final class SidebarScrollHint extends JLabel {
     SidebarScrollHint(JScrollPane scroll) {
         BoundedRangeModel bar = scroll.getVerticalScrollBar().getModel();
         setHorizontalAlignment(SwingConstants.CENTER);
-        setPreferredSize(new Dimension(0, 16));
+        setPreferredSize(new Dimension(0, 22));
         setToolTipText("Mais módulos abaixo");
         bar.addChangeListener(e -> refresh(bar));
         addMouseListener(new MouseAdapter() {

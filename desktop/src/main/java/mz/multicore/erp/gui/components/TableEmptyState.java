@@ -131,12 +131,12 @@ public final class TableEmptyState {
 
     /**
      * Subtítulo do estado vazio: client-property {@code emptySubtext}, ou dica contextual quando
-     * há um filtro activo ({@code TableRowSorter} instalado), ou string vazia.
+     * um filtro esconde todas as linhas, ou string vazia.
      */
     static String resolveSubtext(JTable table) {
         Object v = table.getClientProperty(EMPTY_SUBTEXT);
         if (v instanceof String s && !s.isBlank()) return s;
-        if (table.getRowSorter() != null) return "Tente alterar ou limpar o filtro de pesquisa.";
+        if (table.getModel().getRowCount() > 0) return "Tente alterar ou limpar o filtro de pesquisa.";
         return "";
     }
 

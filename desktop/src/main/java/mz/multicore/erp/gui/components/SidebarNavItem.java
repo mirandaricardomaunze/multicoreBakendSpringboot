@@ -79,6 +79,7 @@ public class SidebarNavItem extends JComponent {
                 if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
                     showContextMenu(e);
                 } else if (onClick != null && e.getButton() == MouseEvent.BUTTON1) {
+                    requestFocusInWindow();
                     onClick.run();
                 }
             }

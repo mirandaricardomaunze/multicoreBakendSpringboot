@@ -282,6 +282,15 @@ public class ComercialPanel extends JPanel {
         add(tabbedPane, BorderLayout.CENTER);
     }
 
+    public String activeTabTitle() {
+        int index = commercialTabs.getSelectedIndex();
+        return index < 0 ? "" : commercialTabs.getTitleAt(index);
+    }
+
+    public void onTabChanged(Runnable listener) {
+        commercialTabs.addChangeListener(e -> listener.run());
+    }
+
     public void showCustomerOrders() {
         for (int index = 0; index < commercialTabs.getTabCount(); index++) {
             if (!commercialTabs.getTitleAt(index).startsWith("Pedidos")) continue;

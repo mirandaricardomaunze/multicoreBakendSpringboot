@@ -253,6 +253,7 @@ public class MainFrame extends JFrame {
         // A empresa guardada é escolhida primeiro: o nome e o menu da sidebar dependem dela.
         JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
         sidebar = buildSidebar();
+        if (comercialPanel != null) comercialPanel.onTabChanged(() -> syncSidebar("comercial", ""));
         topBar = topBarBuilder.build(superAdmin, this, this::openGlobalSearch, this::openRecentItemsHistory,
                 notificationCoordinator != null ? notificationCoordinator.buildNotificationBell() : null,
                 buildSubscriptionChip(), companyCombo,
@@ -455,10 +456,14 @@ public class MainFrame extends JFrame {
             default           -> cardName;
         };
         if (topBar != null) topBar.setActive(modName);
-        if (sidebar != null) sidebar.setActive(modName);
+        syncSidebar(cardName, modName);
         adjustSidebarForPos("pos".equals(cardName));
         RecentItemsHistoryManager.getInstance().record("Módulo", null, modName, "Acesso rápido", cardName, "fas-folder-open");
         refreshPanel(cardName);
+    }
+
+    private void syncSidebar(String card, String moduleTitle) {
+        if (sidebar != null) sidebar.setActive(SidebarActiveItem.labelFor(card, moduleTitle, CurrentUserContext.getRole(), comercialPanel));
     }
 
     private void refreshPanel(String cardName) {

@@ -124,26 +124,7 @@ final class TableFilterBarFactory {
     }
 
     static JPanel bar(JComponent... comps) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0) {
-            @Override
-            public void layoutContainer(Container target) {
-                synchronized (target.getTreeLock()) {
-                    Insets insets = target.getInsets();
-                    int x = insets.left;
-                    int hgap = getHgap();
-                    int targetHeight = target.getHeight() - (insets.top + insets.bottom);
-                    for (int i = 0; i < target.getComponentCount(); i++) {
-                        Component m = target.getComponent(i);
-                        if (m.isVisible()) {
-                            Dimension d = m.getPreferredSize();
-                            int y = insets.top + Math.max(0, (targetHeight - d.height) / 2);
-                            m.setBounds(x, y, d.width, d.height);
-                            x += d.width + hgap;
-                        }
-                    }
-                }
-            }
-        });
+        JPanel p = new JPanel(new SingleRowFilterLayout());
         p.setOpaque(false);
         for (JComponent c : comps) {
             if (c != null) p.add(c);
@@ -152,7 +133,18 @@ final class TableFilterBarFactory {
     }
 
     static JPanel toolbar(JComponent[] filters, JComponent[] actions) {
-        JPanel p = new JPanel(new BorderLayout(8, 0));
+        JPanel p = new JPanel(new BorderLayout(8, 0) {
+            /** Os filtros ficam à esquerda, mas nunca passam por baixo das acções. */
+            @Override
+            public void layoutContainer(Container target) {
+                super.layoutContainer(target);
+                Component filtersArea = getLayoutComponent(BorderLayout.WEST);
+                if (filtersArea == null) return;
+                Component actionsArea = getLayoutComponent(BorderLayout.EAST);
+                int limit = actionsArea == null ? target.getWidth() : actionsArea.getX() - getHgap();
+                filtersArea.setSize(Math.min(filtersArea.getWidth(), limit - filtersArea.getX()), filtersArea.getHeight());
+            }
+        });
         p.setOpaque(false);
         if (filters != null && filters.length > 0) {
             p.add(bar(filters), BorderLayout.WEST);
