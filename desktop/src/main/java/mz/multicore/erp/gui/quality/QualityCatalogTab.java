@@ -65,7 +65,7 @@ public class QualityCatalogTab extends JPanel {
         ModernButton newEqBtn = UIHelper.createPrimaryButton("+ Novo Equipamento");
         newEqBtn.addActionListener(e -> openEquipmentForm(null));
 
-        ActionMenuButton eqMenu = UIHelper.createActionMenuButton("Acções");
+        ActionMenuButton eqMenu = UIHelper.createActionMenuButton("Gerir Equipamento");
         eqMenu.addAction("Editar Equipamento", UIHelper.icon("fas-edit", 13), this::editSelectedEquipment);
         eqMenu.addAction("Exportar Catálogo (PDF)", UIHelper.icon("fas-file-pdf", 13), this::exportEquipmentsList);
 

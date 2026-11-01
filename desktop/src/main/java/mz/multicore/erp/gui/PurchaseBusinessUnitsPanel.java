@@ -92,7 +92,7 @@ final class PurchaseBusinessUnitsPanel {
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> openBusinessUnitDialog(null));
 
-        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações")
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Gerir Unidade")
                 .addAction("Editar", UIHelper.icon("fas-edit", 14), () -> { BusinessUnitDTO sel = selectedUnit(); if (sel != null) openBusinessUnitDialog(sel); })
                 .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14), this::toggleSelectedUnit);
 

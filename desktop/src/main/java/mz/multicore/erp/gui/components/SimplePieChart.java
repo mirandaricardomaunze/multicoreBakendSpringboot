@@ -22,6 +22,17 @@ import java.math.RoundingMode;
  */
 public class SimplePieChart extends JPanel {
 
+    private String emptyHint;
+
+    /** Segunda linha do estado vazio: diz o que fazer a seguir. */
+    public void setEmptyHint(String emptyHint) {
+        this.emptyHint = emptyHint;
+    }
+
+    public String getEmptyHint() {
+        return emptyHint;
+    }
+
     private final String title;
     private String[] labels = new String[0];
     private BigDecimal[] values = new BigDecimal[0];
@@ -176,7 +187,7 @@ public class SimplePieChart extends JPanel {
         }
 
         if (total.compareTo(BigDecimal.ZERO) <= 0 || values.length == 0) {
-            SimpleBarChart.drawEmptyState(g, SimpleBarChart.EMPTY_MESSAGE, width, height);
+            SimpleBarChart.drawEmptyState(g, SimpleBarChart.EMPTY_MESSAGE, emptyHint, width, height);
             g.dispose();
             return;
         }

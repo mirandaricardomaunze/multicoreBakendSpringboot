@@ -151,7 +151,21 @@ final class UiTableFooterSupport {
             corner.setBackground(UIHelper.TABLE_HEADER_BG);
             corner.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 1, UIHelper.GRID));
             sp.setCorner(JScrollPane.UPPER_LEFT_CORNER, corner);
+            Runnable sync = () -> syncRowSelector(sp, table);
+            table.getModel().addTableModelListener(event -> sync.run());
+            table.addPropertyChangeListener("model", event -> {
+                table.getModel().addTableModelListener(change -> sync.run());
+                sync.run();
+            });
+            sync.run();
         });
+    }
+
+    /** Sem linhas, a coluna de selecção não tem função e parecia um defeito. */
+    private static void syncRowSelector(JScrollPane scroll, JTable table) {
+        boolean hasRows = table.getModel().getRowCount() > 0;
+        scroll.getRowHeader().setVisible(hasRows);
+        scroll.getCorner(JScrollPane.UPPER_LEFT_CORNER).setVisible(hasRows);
     }
 
     private static JComponent buildRowSelectorGutter(JTable table) {

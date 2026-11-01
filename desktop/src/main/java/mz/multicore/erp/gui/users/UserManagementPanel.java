@@ -59,7 +59,7 @@ public class UserManagementPanel extends JPanel {
         createBtn.setIcon(UIHelper.icon("fas-user-plus", 14, Color.WHITE));
         createBtn.addActionListener(e -> new UserEditorDialog(this, userApiClient, null, this::refreshDataAsync).show());
 
-        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Operações")
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Gerir Utilizador")
                 .addAction("Editar", UIHelper.icon("fas-user-edit", 14), () -> UserOperationsCoordinator.openEditDialog(this, userApiClient, getSelectedUser(), this::refreshDataAsync))
                 .addAction("PIN Gestor", UIHelper.icon("fas-key", 14), () -> UserOperationsCoordinator.openSetPinDialog(this, userApiClient, getSelectedUser(), this::refreshDataAsync))
                 .addAction("Redefinir Senha", UIHelper.icon("fas-lock", 14), () -> UserOperationsCoordinator.openResetPassword(this, userApiClient, getSelectedUser(), this::refreshDataAsync))

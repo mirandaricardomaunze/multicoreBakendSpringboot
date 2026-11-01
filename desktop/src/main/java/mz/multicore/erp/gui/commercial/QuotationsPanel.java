@@ -82,14 +82,14 @@ public final class QuotationsPanel extends JPanel {
                 List.of(new TableFilter.ColumnFilter(businessUnitCombo, 9), new TableFilter.ColumnFilter(status, COL_STATUS)),
                 List.of(new TableFilter.PeriodFilter(periodo, 2)));
 
-        ActionMenuButton more = UIHelper.createActionMenuButton("Operações")
+        ActionMenuButton more = UIHelper.createActionMenuButton("Gerir Cotação")
                 .addAction("Imprimir", UIHelper.icon("fas-print", 14), this::print)
                 .addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), this::openSelectedEditor)
                 .addAction("Marcar como enviada", UIHelper.icon("fas-paper-plane", 14), this::send)
                 .addAction("Estender validade", UIHelper.icon("fas-calendar-plus", 14), this::extendValidity)
                 .addAction("Gerar Ordem de Fabrico", UIHelper.icon("fas-industry", 14, UIHelper.ACCENT_CYAN), this::generateProductionOrderFromSelectedQuotation);
 
-        ActionMenuButton decision = UIHelper.createActionMenuButton("Decisão")
+        ActionMenuButton decision = UIHelper.createActionMenuButton("Decisão do Cliente")
                 .addAction("Recusada pelo cliente", UIHelper.icon("fas-times", 14), this::reject)
                 .addAction("Aceite pelo cliente", UIHelper.icon("fas-check", 14), this::accept)
                 .addAction("Cancelar cotação", UIHelper.icon("fas-ban", 14), this::cancel)

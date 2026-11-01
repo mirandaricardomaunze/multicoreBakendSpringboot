@@ -35,7 +35,7 @@ class HrCrmUiErgonomicsHarnessTest {
         assertThat(hr).contains("Editar Colaborador", "Evolução Salarial", "Documentos", "Saúde Ocupacional");
         // Recibos de Salário
         assertThat(hr).contains("UIHelper.tableCardTop(\"Recibos de Salário\", psBar,\n                documentsBtn, actionsBtn, newBtn)");
-        assertThat(hr).contains("Documentos", "Operações");
+        assertThat(hr).contains("Documentos", "Folha Salarial");
         assertThat(hr).contains("Aprovar Recibo", "Marcar Pago", "Imprimir PDF", "Ficheiro de Pagamento");
         // Faltas
         assertThat(hr).contains("UIHelper.tableCardTop(\"Registo de Faltas\", absBar,\n                exportBtn, actionsBtn, newBtn)");

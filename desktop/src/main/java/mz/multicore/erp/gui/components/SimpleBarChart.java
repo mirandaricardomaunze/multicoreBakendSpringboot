@@ -27,6 +27,7 @@ public class SimpleBarChart extends JPanel {
     private Color[] colors = new Color[0];
     private java.awt.Rectangle[] barBounds = new java.awt.Rectangle[0];
     private String emptyMessage = EMPTY_MESSAGE;
+    private String emptyHint;
 
     public SimpleBarChart(String title) {
         this.title = title;
@@ -57,6 +58,15 @@ public class SimpleBarChart extends JPanel {
     }
 
     /** Texto mostrado quando nenhum valor é positivo, para o gráfico não parecer avariado. */
+    /** Segunda linha do estado vazio: diz o que fazer a seguir. */
+    public void setEmptyHint(String emptyHint) {
+        this.emptyHint = emptyHint;
+    }
+
+    public String getEmptyHint() {
+        return emptyHint;
+    }
+
     public void setEmptyMessage(String emptyMessage) {
         this.emptyMessage = emptyMessage;
         repaint();
@@ -74,11 +84,16 @@ public class SimpleBarChart extends JPanel {
         return false;
     }
 
-    static void drawEmptyState(Graphics2D g, String message, int width, int height) {
+    static void drawEmptyState(Graphics2D g, String message, String hint, int width, int height) {
         g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
         g.setColor(UIHelper.TEXT_MUTED);
         java.awt.FontMetrics metrics = g.getFontMetrics();
-        g.drawString(message, (width - metrics.stringWidth(message)) / 2, (height + metrics.getAscent()) / 2);
+        int baseline = (height + metrics.getAscent()) / 2;
+        g.drawString(message, (width - metrics.stringWidth(message)) / 2, baseline);
+        if (hint == null) return;
+        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        java.awt.FontMetrics hintMetrics = g.getFontMetrics();
+        g.drawString(hint, (width - hintMetrics.stringWidth(hint)) / 2, baseline + metrics.getHeight() + 4);
     }
 
     public int getBarIndexAt(java.awt.Point point) {
@@ -121,7 +136,7 @@ public class SimpleBarChart extends JPanel {
         g.drawString(title, 16, 26);
 
         if (!hasData(values)) {
-            drawEmptyState(g, emptyMessage, width, height);
+            drawEmptyState(g, emptyMessage, emptyHint, width, height);
             g.dispose();
             return;
         }

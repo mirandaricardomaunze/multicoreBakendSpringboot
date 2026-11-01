@@ -57,7 +57,7 @@ final class HRTimeSheetPanel {
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
 
-        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Opções")
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Folha de Ponto")
                 .addAction("Configurar Acréscimos", UIHelper.icon("fas-percentage", 14), this::openOvertimeRatesDialog)
                 .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
                         () -> owner.exportTable("folha-ponto", "Folha de Ponto", table));

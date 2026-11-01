@@ -165,7 +165,7 @@ public class BankReconciliationPanel extends JPanel {
         importBtn.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         importBtn.addActionListener(e -> openImportDialog());
 
-        operationsMenu = UIHelper.createActionMenuButton("Operações")
+        operationsMenu = UIHelper.createActionMenuButton("Conciliação")
                 .addAction("Auto-Conciliar", UIHelper.icon("fas-magic", 14, UIHelper.APPROVED_GREEN), this::performAutoMatch)
                 .addAction("Conciliar Manualmente", UIHelper.icon("fas-link", 14, UIHelper.ACCENT_BLUE), this::openManualMatchDialog)
                 .addAction("Lançar Encargo Bancário", UIHelper.icon("fas-receipt", 14, UIHelper.PENDING_YELLOW), this::openExpenseDialog)

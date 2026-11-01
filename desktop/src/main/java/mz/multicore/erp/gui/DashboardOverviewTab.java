@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 /** Aba 1 do Dashboard: Visão Geral, KPIs Comerciais, Gráficos e Widgets. */
 final class DashboardOverviewTab {
 
+    private static final String NEXT_STEP_HINT = "Registe uma venda no POS ou escolha outro período.";
+
     private final Consumer<String> navigationHandler;
 
     private JLabel balanceValLabel;
@@ -87,6 +89,9 @@ final class DashboardOverviewTab {
         operationsChart = new SimpleBarChart("Operações e Pendências");
         operationsChart.setEmptyMessage("Sem pendências");
         financialStructurePieChart = new SimplePieChart("Estrutura Financeira (Receita, Compras, IVA)", false);
+        financialChart.setEmptyHint(NEXT_STEP_HINT);
+        salesChannelPieChart.setEmptyHint(NEXT_STEP_HINT);
+        financialStructurePieChart.setEmptyHint(NEXT_STEP_HINT);
 
         // As pendências vêm primeiro: é o que o gestor pode resolver hoje.
         JPanel priorityRow = new JPanel(new GridLayout(1, 2, 12, 12));

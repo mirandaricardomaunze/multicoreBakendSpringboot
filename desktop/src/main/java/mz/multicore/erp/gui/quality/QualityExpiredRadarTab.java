@@ -74,7 +74,7 @@ public class QualityExpiredRadarTab extends JPanel {
         ModernButton renewBtn = UIHelper.createPrimaryButton("Renovar Seleccionado");
         renewBtn.addActionListener(e -> renewSelectedFromRadar());
 
-        ActionMenuButton radarMenu = UIHelper.createActionMenuButton("Acções");
+        ActionMenuButton radarMenu = UIHelper.createActionMenuButton("Documentos");
         radarMenu.addAction("Imprimir Termo de Entrega", UIHelper.icon("fas-print", 13), this::printSelectedDeliverySheet);
         radarMenu.addAction("Exportar Relatório (PDF)", UIHelper.icon("fas-file-pdf", 13), this::exportRadarList);
 

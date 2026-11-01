@@ -59,7 +59,7 @@ final class PosWorkspaceBuilder {
         owner.suspendedSalesBtn.setToolTipText("Retomar uma venda em espera (Ctrl+R)");
         owner.suspendedSalesBtn.addActionListener(e -> owner.suspendedSaleActions.openResumeDialog());
 
-        owner.operationsMenu = UIHelper.createActionMenuButton("Operações")
+        owner.operationsMenu = UIHelper.createActionMenuButton("Caixa e Turno")
                 .addAction("Importar Cotação (F7)",UIHelper.icon("fas-file-import", 14, UIHelper.ACCENT_CYAN), () -> owner.quotationActions.openImportDialog())
                 .addAction("Programa de Fidelidade", UIHelper.icon("fas-star", 14, UIHelper.ACCENT), owner::openLoyaltyDialog)
                 .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> owner.cashSessionActions.showSessionHistory())

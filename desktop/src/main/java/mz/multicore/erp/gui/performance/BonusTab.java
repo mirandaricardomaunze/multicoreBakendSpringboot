@@ -73,7 +73,7 @@ public class BonusTab extends JPanel {
         btnApprove.setIcon(UIHelper.icon("fas-check", 14));
         btnApprove.addActionListener(e -> approveSelectedBonus());
 
-        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Mais Ações");
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Mais acções");
         actionsMenu.addAction("Ajustar Prémio", UIHelper.icon("fas-edit", 12), this::adjustSelectedBonus);
         actionsMenu.addAction("Integrar na Folha", UIHelper.icon("fas-file-invoice-dollar", 12), this::integrateSelectedBonus);
 
