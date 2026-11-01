@@ -83,7 +83,7 @@ class KpiCardUniformityHarnessTest {
         assertTrue(badge.isPositive());
         assertFalse(badge.isNegative());
         assertFalse(badge.isZero());
-        assertTrue(badge.getText().contains("12.5%"));
+        assertTrue(badge.getText().contains("12,5%"));
 
         JLabel valLbl = new JLabel("50.000,00 MT");
         ModernPanel card = KpiCard.createCard(

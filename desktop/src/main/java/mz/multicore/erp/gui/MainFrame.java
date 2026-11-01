@@ -219,6 +219,7 @@ public class MainFrame extends JFrame {
                     comercialApiClient, printApiClient);
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
+            posPanel.setUserApiClient(userApiClient);
             comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
             configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
             performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
@@ -302,9 +303,6 @@ public class MainFrame extends JFrame {
         topBarBuilder.updateUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (sidebar != null) sidebar.setUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (statusBar != null) {
-            DesktopSession s = desktopSessionStore.requireSession();
-            String company = s.companies().isEmpty() ? "" : s.companies().get(0).name();
-            statusBar.setContext("Painel Inicial", -1, company);
             checkForNewerVersion();
         }
     }
@@ -455,7 +453,6 @@ public class MainFrame extends JFrame {
             case "plataforma" -> "Plataforma";
             default           -> cardName;
         };
-        if (statusBar != null) statusBar.setModule(modName);
         if (topBar != null) topBar.setActive(modName);
         if (sidebar != null) sidebar.setActive(modName);
         adjustSidebarForPos("pos".equals(cardName));

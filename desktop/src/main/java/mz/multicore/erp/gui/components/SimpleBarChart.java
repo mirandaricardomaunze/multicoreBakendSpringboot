@@ -19,11 +19,14 @@ import java.math.RoundingMode;
  */
 public class SimpleBarChart extends JPanel {
 
+    static final String EMPTY_MESSAGE = "Sem dados neste período";
+
     private final String title;
     private String[] labels = new String[0];
     private BigDecimal[] values = new BigDecimal[0];
     private Color[] colors = new Color[0];
     private java.awt.Rectangle[] barBounds = new java.awt.Rectangle[0];
+    private String emptyMessage = EMPTY_MESSAGE;
 
     public SimpleBarChart(String title) {
         this.title = title;
@@ -51,6 +54,31 @@ public class SimpleBarChart extends JPanel {
         this.colors = colors != null ? colors : new Color[0];
         this.barBounds = new java.awt.Rectangle[this.values.length];
         repaint();
+    }
+
+    /** Texto mostrado quando nenhum valor é positivo, para o gráfico não parecer avariado. */
+    public void setEmptyMessage(String emptyMessage) {
+        this.emptyMessage = emptyMessage;
+        repaint();
+    }
+
+    public String getEmptyMessage() {
+        return emptyMessage;
+    }
+
+    public static boolean hasData(BigDecimal[] values) {
+        if (values == null) return false;
+        for (BigDecimal value : values) {
+            if (value != null && value.signum() > 0) return true;
+        }
+        return false;
+    }
+
+    static void drawEmptyState(Graphics2D g, String message, int width, int height) {
+        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        g.setColor(UIHelper.TEXT_MUTED);
+        java.awt.FontMetrics metrics = g.getFontMetrics();
+        g.drawString(message, (width - metrics.stringWidth(message)) / 2, (height + metrics.getAscent()) / 2);
     }
 
     public int getBarIndexAt(java.awt.Point point) {
@@ -91,6 +119,12 @@ public class SimpleBarChart extends JPanel {
         g.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(title, 16, 26);
+
+        if (!hasData(values)) {
+            drawEmptyState(g, emptyMessage, width, height);
+            g.dispose();
+            return;
+        }
 
         // 3 Linhas de benchmark de referência (25%, 50%, 75%)
         java.awt.Stroke origStroke = g.getStroke();

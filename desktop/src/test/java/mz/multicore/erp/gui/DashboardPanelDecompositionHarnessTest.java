@@ -97,8 +97,8 @@ class DashboardPanelDecompositionHarnessTest {
         assertNotNull(tabs, "DashboardPanel deve conter um JTabbedPane");
         assertEquals(3, tabs.getTabCount(), "DashboardPanel deve conter exactamente 3 abas corporativas");
         assertEquals("Visão Geral & Gráficos", tabs.getTitleAt(0));
-        assertEquals("Cockpit Operacional 360°", tabs.getTitleAt(1));
-        assertEquals("Rentabilidade & DRE", tabs.getTitleAt(2));
+        assertEquals("Operações", tabs.getTitleAt(1));
+        assertEquals("Rentabilidade & Resultados", tabs.getTitleAt(2));
 
         assertNotNull(panel.getStrategicPulseWidget(), "StrategicPulseWidget não pode ser nulo");
         assertNotNull(panel.getOperationalPulseWidget(), "OperationalPulseWidget não pode ser nulo");

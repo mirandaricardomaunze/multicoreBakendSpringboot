@@ -33,6 +33,9 @@ import java.util.stream.IntStream;
 @Component
 public class ComercialOrderLifecycleService {
 
+    private static final Set<String> CANCELLABLE_STATUSES = Set.of(
+            "PENDING_APPROVAL", "PENDING", "AWAITING_SEPARATION", "IN_SEPARATION", "SEPARATED");
+
     private final OrderRepository orderRepository;
     private final OrderLineRepository orderLineRepository;
     private final ClientRepository clientRepository;
@@ -100,24 +103,7 @@ public class ComercialOrderLifecycleService {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
         Warehouse destination = resolveDestination(request.companyId(), request.destinationWarehouseId(), kind, warehouse);
-        List<OrderLine> lines = new ArrayList<>();
-        for (CreateInvoiceLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
-            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
-            BigDecimal taxRate = product.effectiveTaxRate();
-            BigDecimal discountPct = lineReq.discountPercentage() == null ? BigDecimal.ZERO : lineReq.discountPercentage();
-            OrderLine line = new OrderLine();
-            line.setProduct(product);
-            line.setQuantity(lineReq.quantity());
-            line.setUnitPrice(unitPrice);
-            line.setTaxRate(taxRate);
-            line.setDiscountPercentage(discountPct);
-            line.setBatchNumber(lineReq.batchNumber());
-            line.setSerialNumber(lineReq.serialNumber());
-            line.setLineTotal(LineCalculator.compute(unitPrice, lineReq.quantity(), discountPct, taxRate).total());
-            lines.add(line);
-        }
+        List<OrderLine> lines = buildOrderLines(request.companyId(), request.lines());
         clientAndCreditService.validatePaymentTermsForClient(client, request.paymentTerms(), request.companyId());
         return placeOrder(company, client, warehouse, destination, request.walkInName(), lines, kind, request.agreedTerms());
     }
@@ -165,11 +151,7 @@ public class ComercialOrderLifecycleService {
             order.setStatus("PENDING_APPROVAL");
         }
         order = orderRepository.saveAndFlush(order);
-        if (kind.requiresApproval()) {
-            OrderRiskAssessment assessment = orderRiskEvaluator.evaluate(
-                    order, order.getCompany() != null ? order.getCompany().getId() : CurrentUserContext.getCurrentCompanyId());
-            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), assessment.description());
-        }
+        if (kind.requiresApproval()) submitForApproval(order);
         auditLogService.logCurrent("ORDER_UPDATE",
                 "Encomenda " + order.getOrderNumber() + " actualizada com " + order.getLines().size() + " linha(s).");
         return toDTO(order);
@@ -278,28 +260,28 @@ public class ComercialOrderLifecycleService {
         order.setStatus(kind.requiresApproval() ? "PENDING_APPROVAL" : "PENDING");
         if (walkInName != null && !walkInName.isBlank()) order.setWalkInName(walkInName.trim());
 
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal totalTax = BigDecimal.ZERO;
-        for (OrderLine line : lines) {
-            LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    line.getUnitPrice(), line.getQuantity(), line.getDiscountPercentage(), line.getTaxRate());
-            subtotal = subtotal.add(amounts.net());
-            totalTax = totalTax.add(amounts.tax());
-            order.addLine(line);
-        }
-        order.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
-        order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
-        order.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+        lines.forEach(order::addLine);
+        recalculateOrderTotals(order);
         order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));
         order.setCreatedBy(CurrentUserContext.getUsername());
         order = orderRepository.save(order);
 
-        if (kind.requiresApproval()) {
-            OrderRiskAssessment assessment = orderRiskEvaluator.evaluate(
-                    order, order.getCompany() != null ? order.getCompany().getId() : CurrentUserContext.getCurrentCompanyId());
+        if (kind.requiresApproval()) submitForApproval(order);
+        return toDTO(order);
+    }
+
+    /** Desconto acima de 10% exige sempre gerente, como na fatura directa, seja qual for o valor. */
+    private void submitForApproval(Order order) {
+        OrderRiskAssessment assessment = orderRiskEvaluator.evaluate(
+                order, order.getCompany() != null ? order.getCompany().getId() : CurrentUserContext.getCurrentCompanyId());
+        boolean highDiscount = order.getLines().stream().anyMatch(line -> line.getDiscountPercentage() != null
+                && line.getDiscountPercentage().compareTo(BigDecimal.TEN) > 0);
+        if (highDiscount) {
+            approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(),
+                    assessment.description() + " (Desconto especial >10%)", "MANAGER", false);
+        } else {
             approvalService.submitRequest("ORDER", order.getId(), order.getTotalAmount(), assessment.description());
         }
-        return toDTO(order);
     }
 
     public InvoiceDTO billOrder(Long orderId) {
@@ -321,7 +303,20 @@ public class ComercialOrderLifecycleService {
         if (!"PENDING".equalsIgnoreCase(order.getStatus()) && !"SEPARATED".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException("Apenas encomendas no estado PENDENTE podem ser faturadas.");
         }
-        receivablesService.assertCreditAvailable(order.getClient(), order.getTotalAmount());
+        List<OrderLine> billableLines = order.getLines().stream().filter(line -> billedQuantity(order, line).signum() > 0).toList();
+        if (billableLines.isEmpty()) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " não tem artigos separados para faturar.");
+        }
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal totalTax = BigDecimal.ZERO;
+        for (OrderLine line : billableLines) {
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(
+                    line.getUnitPrice(), billedQuantity(order, line), line.getDiscountPercentage(), line.getTaxRate());
+            subtotal = subtotal.add(amounts.net());
+            totalTax = totalTax.add(amounts.tax());
+        }
+        BigDecimal billedTotal = subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP);
+        receivablesService.assertCreditAvailable(order.getClient(), billedTotal);
 
         Invoice invoice = new Invoice();
         invoice.setClient(order.getClient());
@@ -334,20 +329,22 @@ public class ComercialOrderLifecycleService {
         invoice.assignDueDate(LocalDate.now(), explicitDueDate);
         invoice.setStatus(InvoiceStatus.APPROVED);
         invoice.setSalesChannel(SalesChannel.ORDER);
-        invoice.setTotalBeforeTax(order.getTotalBeforeTax());
-        invoice.setTaxAmount(order.getTaxAmount());
-        invoice.setTotalAmount(order.getTotalAmount());
-        invoice.setCreatedBy("SYSTEM");
+        invoice.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
+        invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
+        invoice.setTotalAmount(billedTotal);
+        invoice.setCreatedBy(CurrentUserContext.getUsername() != null ? CurrentUserContext.getUsername() : "SYSTEM");
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
 
-        for (OrderLine orderLine : order.getLines()) {
+        for (OrderLine orderLine : billableLines) {
+            BigDecimal quantity = billedQuantity(order, orderLine);
             InvoiceLine invoiceLine = new InvoiceLine();
             invoiceLine.setProduct(orderLine.getProduct());
-            invoiceLine.setQuantity(orderLine.getQuantity());
+            invoiceLine.setQuantity(quantity);
             invoiceLine.setUnitPrice(orderLine.getUnitPrice());
             invoiceLine.setTaxRate(orderLine.getTaxRate());
             invoiceLine.setDiscountPercentage(orderLine.getDiscountPercentage());
-            invoiceLine.setLineTotal(orderLine.getLineTotal());
+            invoiceLine.setLineTotal(LineCalculator.compute(orderLine.getUnitPrice(), quantity,
+                    orderLine.getDiscountPercentage(), orderLine.getTaxRate()).total());
             invoiceLine.setBatchNumber(orderLine.getBatchNumber());
             invoiceLine.setSerialNumber(orderLine.getSerialNumber());
             invoiceLine.setUnitCost(orderLine.getProduct().getPurchasePrice());
@@ -356,15 +353,21 @@ public class ComercialOrderLifecycleService {
             String desc = String.format("Saída Fatura %s (Encomenda %s) - Cliente %s",
                     invoice.getInvoiceNumber(), order.getOrderNumber(), order.getClient().getName());
             inventoryService.registerMovement(orderLine.getProduct(), order.getWarehouse(),
-                    orderLine.getQuantity().negate(), "SALE", orderLine.getBatchNumber(), orderLine.getSerialNumber(), desc);
+                    quantity.negate(), "SALE", orderLine.getBatchNumber(), orderLine.getSerialNumber(), desc);
         }
 
         invoice = invoiceRepository.save(invoice);
         invoiceLifecycleService.publishSale(invoice, BigDecimal.ZERO, false);
         order.setStatus("BILLED");
         order.setInvoiceId(invoice.getId());
+        order.setReservationActive(false);
         orderRepository.save(order);
         return invoiceLifecycleService.toDTO(invoice);
+    }
+
+    /** Depois da conferência, só se fatura o que o armazém separou mesmo. */
+    private static BigDecimal billedQuantity(Order order, OrderLine line) {
+        return "SEPARATED".equalsIgnoreCase(order.getStatus()) ? line.getSeparatedQuantity() : line.getQuantity();
     }
 
     public List<OrderDTO> getOrdersByCompany(Long companyId) {
@@ -375,7 +378,7 @@ public class ComercialOrderLifecycleService {
     public List<OrderDTO> searchCancellableOrders(String query) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         return orderRepository.findByCompanyId(companyId).stream()
-                .filter(o -> !"BILLED".equalsIgnoreCase(o.getStatus()) && !"CANCELLED".equalsIgnoreCase(o.getStatus()))
+                .filter(ComercialOrderLifecycleService::isCancellable)
                 .filter(o -> ComercialInvoiceLifecycleService.matches(o.getOrderNumber(), query)
                         || (o.getClient() != null && ComercialInvoiceLifecycleService.matches(o.getClient().getName(), query)))
                 .map(this::toDTO).collect(Collectors.toList());
@@ -395,6 +398,11 @@ public class ComercialOrderLifecycleService {
         if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
             throw new BusinessRuleException("Esta encomenda já se encontra cancelada.");
         }
+        if (!isCancellable(order)) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " está em \""
+                    + OrderStatusLabel.of(order.getStatus()) + "\" e já não pode ser cancelada: "
+                    + "trate primeiro a guia ou a transferência associada.");
+        }
         approvalService.cancelPendingForDocument("ORDER", order.getId(), reason);
         order.setStatus("CANCELLED");
         if (order.isReservationActive()) {
@@ -403,6 +411,12 @@ public class ComercialOrderLifecycleService {
         }
         orderRepository.save(order);
         auditLogService.logCurrent("ORDER_CANCEL", "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
+    }
+
+    /** Depois de haver guia, transferência ou fatura, cancelar deixaria o documento ligado sem origem. */
+    private static boolean isCancellable(Order order) {
+        String status = order.getStatus() == null ? "" : order.getStatus().toUpperCase(Locale.ROOT);
+        return CANCELLABLE_STATUSES.contains(status);
     }
 
     public OrderDTO approveOrder(Long orderId, String comments) {
@@ -507,8 +521,6 @@ public class ComercialOrderLifecycleService {
         order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));
         order.setCreatedBy(CurrentUserContext.getUsername());
 
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal totalTax = BigDecimal.ZERO;
         for (var transferLine : transfer.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(transferLine.productId(), transfer.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + transferLine.productId()));
@@ -521,15 +533,9 @@ public class ComercialOrderLifecycleService {
             line.setTaxRate(taxRate);
             line.setDiscountPercentage(BigDecimal.ZERO);
             line.setBatchNumber(transferLine.batchNumber());
-            LineCalculator.LineAmounts amounts = LineCalculator.compute(unitPrice, transferLine.quantity(), BigDecimal.ZERO, taxRate);
-            line.setLineTotal(amounts.total());
             order.addLine(line);
-            subtotal = subtotal.add(amounts.net());
-            totalTax = totalTax.add(amounts.tax());
         }
-        order.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
-        order.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
-        order.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
+        recalculateOrderTotals(order);
         return orderRepository.save(order);
     }
 

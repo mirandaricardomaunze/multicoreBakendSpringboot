@@ -66,7 +66,7 @@ class WorkSheetPrintServiceTest {
     void mostraHorasTarifaPecasETotalSemIva() throws Exception {
         String text = renderText(workSheet(new BigDecimal("2.5"), new BigDecimal("100.00"), false));
 
-        assertTrue(text.contains("2.5"), "as horas têm de sair como foram registadas: " + text);
+        assertTrue(text.contains("2,5"), "as horas têm de sair como foram registadas: " + text);
         assertTrue(text.contains("TOTAL (sem IVA)"), text);
         assertTrue(text.contains("212,50") || text.contains("212.50"), "falta o total 212,50: " + text);
         // O papel que o cliente assina não pode dizer-lhe que o serviço não leva imposto.

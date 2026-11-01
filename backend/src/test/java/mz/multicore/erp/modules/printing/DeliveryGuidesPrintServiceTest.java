@@ -61,7 +61,7 @@ class DeliveryGuidesPrintServiceTest {
             reader.close();
         }
 
-        String text = extract(pdf);
+        String text = extract(pdf).replaceAll("\\s+", " ");
         assertTrue(text.contains("GD 2026/050"), "Deve conter número da guia: " + text);
         assertTrue(text.contains("1.ª VIA — ORIGINAL (Destinatário / Cliente)"), "Deve conter 1.ª Via Original: " + text);
         assertTrue(text.contains("2.ª VIA — DUPLICADO (Trânsito e Fiscalização / Viatura)"), "Deve conter 2.ª Via Duplicado: " + text);
@@ -89,7 +89,7 @@ class DeliveryGuidesPrintServiceTest {
             reader.close();
         }
 
-        String text = extract(pdf);
+        String text = extract(pdf).replaceAll("\\s+", " ");
         assertTrue(text.contains("GR-FT 2026/001"), "Deve conter número da guia derivada: " + text);
         assertTrue(text.contains("1.ª VIA — ORIGINAL (Destinatário / Cliente)"), "Deve conter 1.ª Via Original: " + text);
         assertTrue(text.contains("2.ª VIA — DUPLICADO (Trânsito e Fiscalização / Viatura)"), "Deve conter 2.ª Via Duplicado: " + text);

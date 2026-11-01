@@ -193,6 +193,15 @@ class PosPrePilotoHarnessTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    @DisplayName("PP-14: Desconto acima de 10% pede PIN ao caixa, não ao gerente")
+    void pp14_highDiscountNeedsManagerPin() {
+        assertThat(PosKeyboardShortcutsHandler.needsManagerPin(new BigDecimal("10"), "SELLER")).isFalse();
+        assertThat(PosKeyboardShortcutsHandler.needsManagerPin(new BigDecimal("10.5"), "SELLER")).isTrue();
+        assertThat(PosKeyboardShortcutsHandler.needsManagerPin(new BigDecimal("50"), "MANAGER")).isFalse();
+        assertThat(PosKeyboardShortcutsHandler.needsManagerPin(new BigDecimal("50"), "ADMIN")).isFalse();
+    }
+
     private PosSuspendedSaleStore store() {
         return new PosSuspendedSaleStore(dir.resolve("espera.json"));
     }

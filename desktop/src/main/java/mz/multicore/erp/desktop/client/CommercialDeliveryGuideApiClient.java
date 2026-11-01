@@ -4,6 +4,7 @@ import mz.multicore.erp.modules.comercial.dto.ConvertOrderToTransferRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
+import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -55,14 +56,15 @@ public class CommercialDeliveryGuideApiClient {
                 .post("/api/comercial/delivery-guides/" + id + "/approve", null, DeliveryGuideDTO.class);
     }
 
+    public InvoiceDTO billDeliveryGuide(Long id) { return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides/" + id + "/bill", null, InvoiceDTO.class); }
+
     public DeliveryGuideDTO rejectDeliveryGuide(Long id, String reason) {
         return clientFactory.authenticatedClient().post(
                 "/api/comercial/delivery-guides/" + id + "/reject", new RejectGuideRequest(reason), DeliveryGuideDTO.class);
     }
 
     public DeliveryGuideDTO cancelDeliveryGuide(Long id) {
-        return clientFactory.authenticatedClient()
-                .post("/api/comercial/delivery-guides/" + id + "/cancel", null, DeliveryGuideDTO.class);
+        return clientFactory.authenticatedClient().post("/api/comercial/delivery-guides/" + id + "/cancel", null, DeliveryGuideDTO.class);
     }
 
     public byte[] renderDeliveryGuide(Long id) {

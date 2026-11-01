@@ -102,7 +102,7 @@ public class OrderA4Renderer {
         meta(grid, "DATA DE EMISSÃO", issue);
         meta(grid, "PREVISÃO ENTREGA", delivery);
         meta(grid, "COND. PAGAMENTO", payment);
-        meta(grid, "REFERÊNCIA", valueOrDash(order.getOrderNumber()));
+        meta(grid, "MOEDA", "Meticais (MT)");
         PdfPCell metadata = borderless();
         metadata.addElement(grid);
         table.addCell(metadata);

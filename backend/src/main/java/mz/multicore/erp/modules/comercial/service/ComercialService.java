@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
+import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageQuery;
 import mz.multicore.erp.architecture.paging.PageResponse;
@@ -219,7 +220,7 @@ public class ComercialService {
 
         String receiptNum = documentNumberService.next(DocumentSeries.RECEIPT);
         receipt.setReceiptNumber(receiptNum);
-        receipt.setCreatedBy("SYSTEM");
+        receipt.setCreatedBy(CurrentUserContext.getUsername() != null ? CurrentUserContext.getUsername() : "SYSTEM");
         receipt = receiptRepository.save(receipt);
 
         invoice.setAmountPaid(invoice.getAmountPaid().add(amountPaid).setScale(2, RoundingMode.HALF_UP));
@@ -262,6 +263,8 @@ public class ComercialService {
 
         String description = "Estorno Recibo " + receipt.getReceiptNumber() + " - Motivo: " + reason;
         financeService.registerTransaction(receipt.getTreasuryAccount().getId(), "CREDIT", receipt.getAmountPaid(), description);
+        eventPublisher.publishEvent(new ReceiptCancelledEvent(
+                invoice.getCompany().getId(), receipt.getId(), receipt.getReceiptNumber(), LocalDate.now()));
         auditLogService.logCurrent("RECEIPT_CANCEL",
                 "Recibo " + receipt.getReceiptNumber() + " anulado. Motivo: " + reason);
     }

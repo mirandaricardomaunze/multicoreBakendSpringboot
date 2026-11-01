@@ -47,6 +47,13 @@ atender outro cliente a meio de uma venda.
 - O campo é uma percentagem em todo o sistema. F5 gravava o valor em meticais nesse campo: 10% em
   500 MT tornava-se 50, isto é, 50%. Passa a gravar a percentagem.
 
+### Autorização de desconto
+
+- Um caixa precisa do PIN de um gerente para dar mais de 10% com F5. Gerente e administrador não.
+- O PIN de cada gerente define-se na gestão de utilizadores. Sem PIN definido, o desconto é recusado.
+- Saiu o PIN alternativo `1234`, que valia quando não havia ligação ao servidor.
+- A validação é feita no desktop: o servidor não sabe quem autorizou, e as promoções não pedem PIN.
+
 ## Harness
 
 | Id | Cenário | Espera-se |
@@ -64,6 +71,7 @@ atender outro cliente a meio de uma venda.
 | PP-11 | Ficheiro ilegível | Posto de lado como `.corrupt` |
 | PP-12 | Falha ao gravar | Venda continua no carrinho |
 | PP-13 | 10% em 500 MT | Total de 450 MT |
+| PP-14 | Desconto acima de 10% | PIN para o caixa, não para gerente ou administrador |
 
 Testes: `MobilePaymentSimulationOffHarnessTest` (PP-01 a PP-04) e `PosPrePilotoHarnessTest`.
 

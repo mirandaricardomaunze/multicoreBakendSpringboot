@@ -1,5 +1,7 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.events.InvoiceCancelledEvent;
+import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.events.SaleRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageQuery;
@@ -153,6 +155,9 @@ public class ComercialInvoiceLifecycleService {
             line.setUnitPrice(unitPrice);
             line.setTaxRate(taxRate);
             BigDecimal discountPct = lineReq.discountPercentage() == null ? BigDecimal.ZERO : lineReq.discountPercentage();
+            if (discountPct.signum() < 0 || discountPct.compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new BusinessRuleException("O desconto da linha deve estar entre 0 e 100 por cento.");
+            }
             line.setDiscountPercentage(discountPct);
             if (discountPct.compareTo(BigDecimal.valueOf(10)) > 0) hasHighDiscount = true;
             line.setBatchNumber(lineReq.batchNumber());
@@ -210,7 +215,17 @@ public class ComercialInvoiceLifecycleService {
         if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
             throw new BusinessRuleException("Esta fatura já se encontra anulada.");
         }
-        if (invoice.getStatus() == InvoiceStatus.APPROVED || invoice.getStatus() == InvoiceStatus.PAID) {
+        boolean realisedSale = invoice.getStatus().isRealisedSale();
+        if (realisedSale && invoice.getSalesChannel() == SalesChannel.POS) {
+            throw new BusinessRuleException("A venda de balcão " + invoice.getInvoiceNumber()
+                    + " não se anula aqui: faça a devolução no POS (F8), que repõe a caixa e o stock.");
+        }
+        if (invoice.getNoteAdjustment() != null && invoice.getNoteAdjustment().signum() != 0) {
+            throw new BusinessRuleException("A fatura " + invoice.getInvoiceNumber()
+                    + " tem notas de crédito ou de débito aprovadas e não pode ser anulada.");
+        }
+        // Numa fatura de guia, a mercadoria continua entregue: a anulação não repõe stock.
+        if (realisedSale && invoice.getDeliveryGuideId() == null) {
             invoice.getLines().forEach(line -> {
                 String desc = String.format("Estorno Fatura %s - Motivo: %s", invoice.getInvoiceNumber(), reason);
                 inventoryService.registerMovement(line.getProduct(), invoice.getWarehouse(), line.getQuantity(),
@@ -226,10 +241,16 @@ public class ComercialInvoiceLifecycleService {
             receiptRepository.save(r);
             String description = "Estorno automático por Fatura Anulada " + invoice.getInvoiceNumber();
             financeService.registerTransaction(r.getTreasuryAccount().getId(), "CREDIT", r.getAmountPaid(), description);
+            eventPublisher.publishEvent(new ReceiptCancelledEvent(
+                    invoice.getCompany().getId(), r.getId(), r.getReceiptNumber(), LocalDate.now()));
         }
         invoice.setStatus(InvoiceStatus.CANCELLED);
         invoice.setCancellationReason(reason);
         invoiceRepository.save(invoice);
+        if (realisedSale) {
+            eventPublisher.publishEvent(new InvoiceCancelledEvent(
+                    invoice.getCompany().getId(), invoice.getId(), invoice.getInvoiceNumber(), LocalDate.now()));
+        }
         auditLogService.logCurrent("INVOICE_CANCEL", "Fatura " + invoice.getInvoiceNumber() + " anulada. Motivo: " + reason);
     }
 
@@ -378,7 +399,7 @@ public class ComercialInvoiceLifecycleService {
                 invoice.daysOverdue(LocalDate.now()), invoice.agingBucket(LocalDate.now()),
                 invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getId() : null,
                 invoice.getBusinessUnit() != null ? invoice.getBusinessUnit().getName() : null,
-                invoice.getCustomerName());
+                invoice.getCustomerName(), invoice.getNoteAdjustment());
     }
 
     static boolean matches(String haystack, String needle) {

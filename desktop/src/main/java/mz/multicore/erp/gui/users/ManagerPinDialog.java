@@ -119,10 +119,7 @@ public class ManagerPinDialog {
                         feedbackLabel.setText(res != null ? res.message() : "PIN incorreto ou sem autorização.");
                     }
                 } else {
-                    // Fallback local se cliente API for nulo
-                    authorized = "1234".equals(pin);
-                    if (authorized) dialog.dispose();
-                    else feedbackLabel.setText("PIN gerencial incorreto.");
+                    feedbackLabel.setText("Sem ligação para validar o PIN.");
                 }
             } catch (Exception ex) {
                 feedbackLabel.setText("Erro ao validar PIN: " + ex.getMessage());

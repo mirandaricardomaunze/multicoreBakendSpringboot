@@ -73,7 +73,7 @@ public final class DeliveryGuidesPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 6));
         card.setBorder(new EmptyBorder(8, 12, 8, 12));
         model = new DefaultTableModel(new String[]{"ID", "Nº Guia", "Data", "Encomenda", "Cliente", "Armazém",
-                "Responsável", "Viatura", "Total", "Estado", "Negócio"}, 0) {
+                "Responsável", "Viatura", "Total", "Estado", "Negócio", "Fatura"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         table = new JTable(model);
@@ -100,6 +100,7 @@ public final class DeliveryGuidesPanel extends JPanel {
                 .addAction("Cancelar", UIHelper.icon("fas-ban", 14), this::cancel)
                 .addAction("Rejeitar", UIHelper.icon("fas-times", 14), this::reject);
         ModernButton approve = button("Aprovar", "fas-check", UIHelper.createSuccessButton("Aprovar"), this::approve);
+        ModernButton bill = button("Faturar", "fas-file-invoice-dollar", UIHelper.createPrimaryButton("Faturar"), this::bill);
         ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
         peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
         peekToggleBtn.setToolTipText("Espreitar detalhes da guia (Espaço)");
@@ -115,9 +116,9 @@ public final class DeliveryGuidesPanel extends JPanel {
         );
         filters.setBorder(new EmptyBorder(0, 0, 10, 0));
         if (transfersBtn == null) {
-            card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, more, approve), BorderLayout.NORTH);
+            card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, more, bill, approve), BorderLayout.NORTH);
         } else {
-            card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, transfersBtn, more, approve), BorderLayout.NORTH);
+            card.add(UIHelper.tableCardTop("Guias de Remessa", filters, refreshBtn, transfersBtn, more, bill, approve), BorderLayout.NORTH);
         }
 
         UIHelper.ensureHeadersFit(table);
@@ -169,7 +170,7 @@ public final class DeliveryGuidesPanel extends JPanel {
                     guide.guideDate() == null ? "—" : guide.guideDate().format(DATE_TIME),
                     guide.orderNumber() == null ? "Guia avulsa" : guide.orderNumber(),
                     guide.clientName(), guide.warehouseName(), blank(guide.responsible()), blank(guide.vehicle()),
-                    guide.totalAmount(), guide.status(), buName});
+                    guide.totalAmount(), guide.status(), buName, blank(guide.invoiceNumber())});
             }
             if (guideBusinessUnitCombo != null) {
                 Object prev = guideBusinessUnitCombo.getSelectedItem();
@@ -181,36 +182,38 @@ public final class DeliveryGuidesPanel extends JPanel {
         }, error -> showError("carregar guias", error));
     }
 
+    private Long guideId(int row) { return (Long) model.getValueAt(row, 0); }
+    private String guideNumber(int row) { return String.valueOf(model.getValueAt(row, 1)); }
+
     private void approve() {
         int row = selected("aprovar");
         if (row < 0 || !pending(row)) return;
-        DeliveryGuidesOperationsCoordinator.approve(
-                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
-                apiClient, feedback, this::refreshBoth);
+        DeliveryGuidesOperationsCoordinator.approve(this, guideId(row), guideNumber(row), apiClient, feedback, this::refreshBoth);
+    }
+
+    private void bill() {
+        int row = selected("faturar");
+        if (row < 0) return;
+        DeliveryGuideBillingAction.bill(this, guideId(row), guideNumber(row), apiClient, feedback, this::refreshBoth);
     }
 
     private void reject() {
         int row = selected("rejeitar");
         if (row < 0 || !pending(row)) return;
-        DeliveryGuidesOperationsCoordinator.reject(
-                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
-                apiClient, feedback, this::refreshBoth);
+        DeliveryGuidesOperationsCoordinator.reject(this, guideId(row), guideNumber(row), apiClient, feedback, this::refreshBoth);
     }
 
     private void cancel() {
         int row = selected("cancelar");
         if (row < 0 || !pending(row)) return;
-        DeliveryGuidesOperationsCoordinator.cancel(
-                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
-                apiClient, feedback, this::refreshBoth);
+        DeliveryGuidesOperationsCoordinator.cancel(this, guideId(row), guideNumber(row), apiClient, feedback, this::refreshBoth);
     }
 
     private void print() {
         int row = selected("imprimir");
         if (row < 0) return;
         DeliveryGuidesOperationsCoordinator.print(
-                this, (Long) model.getValueAt(row, 0), String.valueOf(model.getValueAt(row, 1)),
-                apiClient, printApiClient, this::refresh, feedback);
+                this, guideId(row), guideNumber(row), apiClient, printApiClient, this::refresh, feedback);
     }
 
     private void showPackages() {

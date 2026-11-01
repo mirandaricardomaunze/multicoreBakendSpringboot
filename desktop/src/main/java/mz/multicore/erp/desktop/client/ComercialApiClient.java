@@ -180,10 +180,9 @@ public class ComercialApiClient {
     public DeliveryGuideDTO createDeliveryGuide(Long orderId, String resp, String veh, String notes) {
         return deliveryGuideApiClient.createDeliveryGuide(orderId, resp, veh, notes);
     }
-    public DeliveryGuideDTO createStandaloneDeliveryGuide(CreateStandaloneDeliveryGuideRequest req) {
-        return deliveryGuideApiClient.createStandaloneDeliveryGuide(req);
-    }
+    public DeliveryGuideDTO createStandaloneDeliveryGuide(CreateStandaloneDeliveryGuideRequest req) { return deliveryGuideApiClient.createStandaloneDeliveryGuide(req); }
     public DeliveryGuideDTO approveDeliveryGuide(Long id) { return deliveryGuideApiClient.approveDeliveryGuide(id); }
+    public InvoiceDTO billDeliveryGuide(Long id) { return deliveryGuideApiClient.billDeliveryGuide(id); }
     public DeliveryGuideDTO rejectDeliveryGuide(Long id, String reason) { return deliveryGuideApiClient.rejectDeliveryGuide(id, reason); }
     public DeliveryGuideDTO cancelDeliveryGuide(Long id) { return deliveryGuideApiClient.cancelDeliveryGuide(id); }
     public byte[] renderDeliveryGuide(Long id) { return deliveryGuideApiClient.renderDeliveryGuide(id); }

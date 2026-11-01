@@ -89,7 +89,6 @@ final class DashboardDataCoordinator {
         BigDecimal posPrevAmount = posPrevSummary != null && posPrevSummary.totalAmount() != null ? posPrevSummary.totalAmount() : BigDecimal.ZERO;
         BigDecimal posTrend = prevRange != null ? DashboardTrendCalculator.calculatePercentageChange(posSales, posPrevAmount) : null;
         BigDecimal posTodayTotal = posToday != null && posToday.totalAmount() != null ? posToday.totalAmount() : BigDecimal.ZERO;
-        long posTodayCount = posToday != null ? posToday.count() : 0L;
         BigDecimal posAvgTicket = DashboardTrendCalculator.calculateAverageTicket(posSales, posSalesCount);
 
         int appCount = approvalApiClient.getPendingRequests().size();
@@ -117,7 +116,7 @@ final class DashboardDataCoordinator {
         List<RecentActivityWidget.ActivityEntry> activities = buildRecentActivities(allInvoices, allPurchases);
         ProfitEngine.ProfitMetrics profitMetrics = ProfitEngine.calculateMetrics(filteredInvoices, posSales, null);
 
-        return new DashboardData(totalBal, totalSales, posSales, posTodayTotal, posTodayCount,
+        return new DashboardData(totalBal, totalSales, posSales, posTodayTotal, posSalesCount, prevSales, posPrevAmount,
                 salesTrend, posTrend, compLabel, salesAvgTicket, posAvgTicket,
                 appCount, ticketCount, ivaLiquidado, ivaDeduzido, ivaLiquido, totalPurchases,
                 lowStocksCount, expiring.size(), expiredCount, soonCount, topRanked, activities, profitMetrics);
@@ -184,7 +183,8 @@ final class DashboardDataCoordinator {
     }
 
     record DashboardData(BigDecimal totalBalance, BigDecimal totalSales,
-                         BigDecimal posSalesAmount, BigDecimal posTodayTotal, long posTodayCount,
+                         BigDecimal posSalesAmount, BigDecimal posTodayTotal, long posSalesCount,
+                         BigDecimal previousSales, BigDecimal previousPosSales,
                          BigDecimal salesTrendPercent, BigDecimal posTrendPercent, String compLabel,
                          BigDecimal salesAvgTicket, BigDecimal posAvgTicket,
                          int approvalCount, long ticketCount, BigDecimal outputVat,

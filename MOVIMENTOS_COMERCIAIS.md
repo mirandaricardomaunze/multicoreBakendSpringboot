@@ -4,7 +4,7 @@
 > e **o que ainda falta**. Lê este ficheiro antes de mexer em faturação, POS, notas ou stock.
 > Detalhe de camadas em [ARCHITECTURE.md](ARCHITECTURE.md); convenções em [CONVENTIONS.md](CONVENTIONS.md).
 
-**Última actualização:** 2026-10-31
+**Última actualização:** 2026-11-01
 
 ---
 
@@ -111,10 +111,11 @@ GUIA DE REMESSA  (DeliveryGuide, série GR)          DeliveryGuideService.create
   └─ Gerada de uma encomenda PENDING → encomenda passa a GUIDE_PENDING (deixa de ser faturável).
   └─ approve() → StockMovement SALE (saída, por linha) → encomenda GUIDED (terminal).
      reject()/cancel() → sem stock → encomenda volta a PENDING (faturável).
-  Caminhos separados: uma encomenda vira guia OU fatura, nunca as duas (billOrder inalterado).
+  Faturar a guia aprovada (DeliveryGuideBillingService) não move stock; a encomenda fica BILLED.
 
 ANULAÇÃO DE FATURA   ComercialService.cancelInvoice()
   └─ StockMovement REVERSAL (reposição de stock)
+  └─ InvoiceCancelledEvent → estorno do lançamento. Venda POS: usar devolução. Com notas aprovadas: recusada.
 
 NOTA DE CRÉDITO (motivo RETURN)   CreditNoteService.approve()
   └─ StockMovement RETURN (entrada, reposição no armazém)
@@ -150,9 +151,9 @@ Documenta a **mercadoria expedida a um cliente** a partir de uma encomenda.
 - Entidade `DeliveryGuide` + linhas, série `GR` em `DocumentSeries` (número único **por empresa**).
 - Ciclo `PENDING_APPROVAL → APPROVED / REJECTED / CANCELLED`; o stock **sai (SALE) só na aprovação**
   (FEFO, via `inventoryService.registerMovement` — o mesmo caminho da faturação), MANAGER/ADMIN.
-- **Caminhos separados:** gerar a guia tira a encomenda de `PENDING` (→ `GUIDE_PENDING` → `GUIDED`),
-  logo `billOrder` deixa de a aceitar. Para faturar mercadoria expedida por guia, cria-se **nova
-  encomenda**. `billOrder` **não** foi alterado.
+- **Faturação:** gerar a guia tira a encomenda de `PENDING` (→ `GUIDE_PENDING` → `GUIDED`), logo
+  `billOrder` deixa de a aceitar. A guia aprovada fatura-se com `DeliveryGuideBillingService`, sem
+  mover stock. Anular essa fatura não repõe stock e devolve a encomenda a `GUIDED`.
 - Lógica em [DeliveryGuideService](src/main/java/mz/multicore/erp/modules/comercial/service/DeliveryGuideService.java),
   PDF em [DeliveryGuidePrintService](src/main/java/mz/multicore/erp/modules/printing/DeliveryGuidePrintService.java),
   migração `V34`. Testada por `DeliveryGuideServiceTest` (9). Spec/harness:

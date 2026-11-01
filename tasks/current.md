@@ -17,6 +17,8 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 - POS antes do piloto em `docs/POS_PRE_PILOTO_SPEC.md`: simulação de pagamento móvel desligada,
   venda suspensa, cliente limpo entre vendas e desconto F5 corrigido. Faltam o operador M-Pesa/e-Mola,
   a balança e a gaveta.
+- Apresentação do Painel Inicial em `docs/DASHBOARD_APRESENTACAO_SPEC.md`.
+- Auditoria de faturas, notas, guias e encomendas em `docs/COMERCIAL_DOCUMENTOS_AUDITORIA_SPEC.md`, com decisões em aberto.
 - Em 2026-10-31 o responsável confirmou que não existe base PostgreSQL real, por isso as migrações
   V66, V76, V89 e V96 puderam ser corrigidas no próprio ficheiro.
 

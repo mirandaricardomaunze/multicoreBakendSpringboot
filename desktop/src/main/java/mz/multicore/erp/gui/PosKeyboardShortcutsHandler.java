@@ -1,9 +1,11 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ToastManager;
 import mz.multicore.erp.gui.components.UIHelper;
+import mz.multicore.erp.gui.users.ManagerPinDialog;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -181,13 +183,25 @@ public final class PosKeyboardShortcutsHandler {
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Aplicar Desconto de Linha (F5)",
                 "fas-percent", "Introduza a percentagem de desconto a aplicar ao artigo", form)
                 .setConfirmButton("Aplicar Desconto", "fas-check")
-                .setOnSave(() -> item.discount = parseDiscountPercent(discountPercentField.getText()))
+                .setOnSave(() -> {
+                    BigDecimal percent = parseDiscountPercent(discountPercentField.getText());
+                    if (needsManagerPin(percent, CurrentUserContext.getRole())
+                            && !new ManagerPinDialog(panel, panel.userApiClient, "Desconto de " + percent + "%").showDialog()) {
+                        throw new IllegalArgumentException("Um desconto acima de 10% exige o PIN de um gerente.");
+                    }
+                    item.discount = percent;
+                })
                 .showDialog();
 
         if (confirmed) {
             panel.updateCartTotal(selectedModel);
             ToastManager.success(panel, "Desconto aplicado ao artigo com sucesso.");
         }
+    }
+
+    /** O gerente autoriza com a própria sessão; o caixa precisa do PIN acima de 10%. */
+    static boolean needsManagerPin(BigDecimal percent, String role) {
+        return percent.compareTo(BigDecimal.TEN) > 0 && !"MANAGER".equals(role) && !"ADMIN".equals(role);
     }
 
     /** O desconto de linha é sempre uma percentagem: é assim que LineCalculator e o backend o lêem. */

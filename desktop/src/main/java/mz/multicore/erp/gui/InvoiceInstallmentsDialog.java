@@ -52,10 +52,7 @@ public class InvoiceInstallmentsDialog {
         headerCard.add(createHeaderItem("Cliente", invoice.clientName() != null ? invoice.clientName() : (invoice.customerName() != null ? invoice.customerName() : "Consumidor Final")));
         headerCard.add(createHeaderItem("Total Faturado", CURRENCY_FMT.format(invoice.totalAmount() != null ? invoice.totalAmount() : BigDecimal.ZERO)));
 
-        BigDecimal outstanding = (invoice.totalAmount() != null ? invoice.totalAmount() : BigDecimal.ZERO)
-                .subtract(invoice.amountPaid() != null ? invoice.amountPaid() : BigDecimal.ZERO);
-        if (outstanding.compareTo(BigDecimal.ZERO) < 0) outstanding = BigDecimal.ZERO;
-        headerCard.add(createHeaderItem("Saldo Devedor", CURRENCY_FMT.format(outstanding)));
+        headerCard.add(createHeaderItem("Saldo Devedor", CURRENCY_FMT.format(invoice.outstandingAmount())));
 
         content.add(headerCard, BorderLayout.NORTH);
 
@@ -122,7 +119,7 @@ public class InvoiceInstallmentsDialog {
                                 due.format(DATE_FMT),
                                 CURRENCY_FMT.format(invoice.totalAmount()),
                                 CURRENCY_FMT.format(invoice.amountPaid()),
-                                CURRENCY_FMT.format(invoice.totalAmount().subtract(invoice.amountPaid())),
+                                CURRENCY_FMT.format(invoice.outstandingAmount()),
                                 UIHelper.humanStatus(invoice.status().name())
                         });
                         return;

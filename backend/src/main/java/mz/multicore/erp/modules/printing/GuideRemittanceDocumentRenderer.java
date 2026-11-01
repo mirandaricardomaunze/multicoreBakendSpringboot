@@ -58,7 +58,7 @@ public class GuideRemittanceDocumentRenderer {
                 rawColumns.tax(), true, rawColumns.footer()
         );
 
-        return PdfDocumentBuilder.build(PageSize.A4.rotate(), doc -> {
+        return PdfDocumentBuilder.build(PageSize.A4, doc -> {
             List<String> copies = GuideRemittancePrintService.GUIDE_REMITTANCE_COPIES;
             for (int i = 0; i < copies.size(); i++) {
                 if (i > 0) {
@@ -74,12 +74,12 @@ public class GuideRemittanceDocumentRenderer {
         doc.add(CompanyHeaderRenderer.build(invoice.getCompany(), "Guia de Remessa",
                 "GR-" + invoice.getInvoiceNumber(), copyLabel, null));
         doc.add(buildDeliveryBlock(invoice));
-        doc.add(LineItemsTableRenderer.build(rows, columns));
+        doc.add(LineItemsTableRenderer.buildCompact(rows, columns));
 
         BigDecimal subtotal = invoice.getTotalBeforeTax() != null ? invoice.getTotalBeforeTax() : BigDecimal.ZERO;
         BigDecimal tax = invoice.getTaxAmount() != null ? invoice.getTaxAmount() : BigDecimal.ZERO;
         BigDecimal total = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : subtotal.add(tax);
-        doc.add(TotalsBlockRenderer.build(subtotal, tax, total));
+        doc.add(TotalsBlockRenderer.build(subtotal, tax, total, "VALOR DECLARADO"));
 
         Paragraph packageSummary = buildPackageSummary(invoice.getLines());
         if (packageSummary != null) {

@@ -151,7 +151,7 @@ public class SellerPerformanceDialog extends JDialog {
         tableTitle.setForeground(textLight);
         centerCard.add(tableTitle, BorderLayout.NORTH);
 
-        String[] cols = {"Posição", "Vendedor / Operador", "Faturamento Realizado", "Atendimentos", "Ticket Médio", "Share de Vendas (%)"};
+        String[] cols = {"Posição", "Vendedor / Operador", "Faturamento Realizado", "Atendimentos", "Valor Médio", "Share de Vendas (%)"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }

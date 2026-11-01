@@ -66,6 +66,15 @@ public class Invoice extends BaseEntity {
     @Column(name = "amount_paid", nullable = false, precision = 14, scale = 2)
     private BigDecimal amountPaid = BigDecimal.ZERO;
 
+    /** Guia que expediu a mercadoria. Com ela, o stock já saiu e a fatura não o volta a mover. */
+    @Column(name = "delivery_guide_id")
+    private Long deliveryGuideId;
+
+    /** Efeito acumulado das notas aprovadas: débitos somam, créditos subtraem. */
+    @Column(name = "note_adjustment", nullable = false, precision = 14, scale = 2,
+            columnDefinition = "numeric(14,2) default 0 not null")
+    private BigDecimal noteAdjustment = BigDecimal.ZERO;
+
     /**
      * Data-limite de pagamento. Sem ela não se sabe o que está <b>em atraso</b> — só o que está
      * por receber. Nula nos documentos anteriores à V35: {@link #effectiveDueDate()} trata disso.
@@ -102,12 +111,24 @@ public class Invoice extends BaseEntity {
     }
 
     /**
-     * Saldo por liquidar (total − recebido), nunca negativo.
+     * Saldo por liquidar (valor a pagar − recebido), nunca negativo.
      * É este o valor que o cliente ainda deve — não o total da fatura.
      */
     public BigDecimal outstandingAmount() {
-        BigDecimal remaining = safeTotal().subtract(safePaid());
+        BigDecimal remaining = payableTotal().subtract(safePaid());
         return remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining : BigDecimal.ZERO;
+    }
+
+    /** Total da fatura corrigido pelas notas de crédito e de débito aprovadas. */
+    public BigDecimal payableTotal() {
+        return safeTotal().add(noteAdjustment == null ? BigDecimal.ZERO : noteAdjustment);
+    }
+
+    /** Regista o efeito de uma nota aprovada e recalcula o estado de uma venda realizada. */
+    public void applyNoteAdjustment(BigDecimal delta) {
+        BigDecimal current = noteAdjustment == null ? BigDecimal.ZERO : noteAdjustment;
+        noteAdjustment = current.add(delta).setScale(2, java.math.RoundingMode.HALF_UP);
+        if (status != null && status.isRealisedSale()) status = deriveStatusFromPayments();
     }
 
     /** Data de emissão do documento (a data civil do {@code createdAt}). */
@@ -172,7 +193,7 @@ public class Invoice extends BaseEntity {
      */
     public InvoiceStatus deriveStatusFromPayments() {
         BigDecimal paid = safePaid();
-        if (paid.compareTo(safeTotal()) >= 0)    return InvoiceStatus.PAID;
+        if (paid.compareTo(payableTotal()) >= 0) return InvoiceStatus.PAID;
         if (paid.compareTo(BigDecimal.ZERO) > 0) return InvoiceStatus.PARTIALLY_PAID;
         return InvoiceStatus.APPROVED; // fiado — emitida e por receber
     }

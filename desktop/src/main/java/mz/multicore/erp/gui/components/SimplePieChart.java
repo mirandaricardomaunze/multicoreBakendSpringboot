@@ -176,9 +176,7 @@ public class SimplePieChart extends JPanel {
         }
 
         if (total.compareTo(BigDecimal.ZERO) <= 0 || values.length == 0) {
-            g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-            g.setColor(UIHelper.TEXT_MUTED);
-            g.drawString("Sem dados disponíveis", 20, 70);
+            SimpleBarChart.drawEmptyState(g, SimpleBarChart.EMPTY_MESSAGE, width, height);
             g.dispose();
             return;
         }

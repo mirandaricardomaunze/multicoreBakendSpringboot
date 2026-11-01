@@ -61,6 +61,13 @@ public class DeliveryGuide extends BaseEntity {
     @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    /** Fatura que cobra esta guia; nula enquanto a mercadoria estiver por faturar. */
+    @Column(name = "invoice_id")
+    private Long invoiceId;
+
+    @Column(name = "invoice_number", length = 50)
+    private String invoiceNumber;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private DeliveryGuideStatus status = DeliveryGuideStatus.PENDING_APPROVAL;

@@ -276,14 +276,13 @@ public class MulticoreServicesTest {
                 .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
         assertEquals(stockBefore.subtract(new BigDecimal("5.000")), stockAfterCheckout);
 
-        // Cancel the invoice with motive
-        assertDoesNotThrow(() -> {
-            comercialService.cancelInvoice(invoice.getId(), "Cliente desistiu");
-        });
+        // A venda de balcão desfaz-se pela devolução no POS, a única que repõe também a caixa.
+        assertThrows(mz.multicore.erp.architecture.exception.BusinessRuleException.class,
+                () -> comercialService.cancelInvoice(invoice.getId(), "Cliente desistiu"));
 
-        BigDecimal stockAfterCancel = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+        BigDecimal stockAfterRefusal = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
                 .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
-        assertEquals(stockBefore, stockAfterCancel); // Stock should be fully restored!
+        assertEquals(stockAfterCheckout, stockAfterRefusal);
     }
 
     @Test

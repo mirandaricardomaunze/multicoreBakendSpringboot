@@ -67,7 +67,8 @@ public class CreditNotePrintService {
         doc.add(TotalsBlockRenderer.build(
                 note.getTotalBeforeTax(),
                 note.getTaxAmount(),
-                note.getTotalAmount()
+                note.getTotalAmount(),
+                "TOTAL CREDITADO"
         ));
         if (note.getDescription() != null && !note.getDescription().isBlank()) {
             doc.add(PdfDocumentBuilder.spacer(10f));
@@ -102,10 +103,10 @@ public class CreditNotePrintService {
         Paragraph date = new Paragraph("Data: " + note.getIssueDate().format(DATE_FMT), PdfTheme.bodyFont());
         date.setAlignment(Element.ALIGN_RIGHT);
         right.addElement(date);
-        Paragraph reason = new Paragraph("Motivo: " + note.getReason().name(), PdfTheme.bodyFont());
+        Paragraph reason = new Paragraph("Motivo: " + DocumentLabels.reason(note.getReason()), PdfTheme.bodyFont());
         reason.setAlignment(Element.ALIGN_RIGHT);
         right.addElement(reason);
-        Paragraph status = new Paragraph("Estado: " + note.getStatus().name(), PdfTheme.boldFont());
+        Paragraph status = new Paragraph("Estado: " + DocumentLabels.status(note.getStatus()), PdfTheme.boldFont());
         status.setAlignment(Element.ALIGN_RIGHT);
         right.addElement(status);
         if (note.getApprovedBy() != null) {
@@ -118,13 +119,13 @@ public class CreditNotePrintService {
     }
 
     private PdfPTable buildLinesTable(List<CreditNoteLine> lines, Long companyId) {
-        return LineItemsTableRenderer.build(lines.stream().map(l -> lineRowMapper.map(
+        return LineItemsTableRenderer.buildCompact(lines.stream().map(l -> lineRowMapper.map(
                 l.getProduct(),
                 l.getBatchNumber(),
                 l.getQuantity() == null ? BigDecimal.ZERO : l.getQuantity(),
                 l.getUnitPrice(),
                 l.getTaxRate(),
-                BigDecimal.ZERO,
+                l.getDiscountPercentage(),
                 l.getLineTotal()
         )).toList(), documentConfigService.getColumns(companyId, mz.multicore.erp.modules.documents.model.DocumentType.COMMERCIAL));
     }

@@ -39,6 +39,11 @@ public class CreditNoteLine {
     @Column(name = "tax_rate", nullable = false, precision = 5, scale = 4)
     private BigDecimal taxRate = BigDecimal.ZERO;
 
+    /** Desconto da linha da fatura: a nota credita o que o cliente pagou, não o preço de tabela. */
+    @Column(name = "discount_percentage", nullable = false, precision = 5, scale = 2,
+            columnDefinition = "numeric(5,2) default 0 not null")
+    private BigDecimal discountPercentage = BigDecimal.ZERO;
+
     @Column(name = "line_total", nullable = false, precision = 14, scale = 2)
     private BigDecimal lineTotal = BigDecimal.ZERO;
 

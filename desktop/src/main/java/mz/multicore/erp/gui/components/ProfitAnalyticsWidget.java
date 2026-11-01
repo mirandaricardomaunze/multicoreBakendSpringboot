@@ -38,7 +38,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         title.setForeground(UIHelper.TEXT_LIGHT);
         title.setIcon(UIHelper.icon("fas-chart-line", 15));
 
-        marginBadge = new JLabel("0.0% Margem");
+        marginBadge = new JLabel("0,0% Margem");
         marginBadge.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         marginBadge.setOpaque(true);
         marginBadge.setBackground(new Color(16, 185, 129, 40));
@@ -63,7 +63,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         kpiGrid.add(KpiCard.createCard("Receita Líquida", revenueVal, "fas-chart-line", UIHelper.ACCENT_BLUE));
         kpiGrid.add(KpiCard.createCard("CMVMC (Custos)", cogsVal, "fas-arrow-circle-up", UIHelper.REJECTED_RED));
         kpiGrid.add(KpiCard.createCard("Lucro Bruto", profitVal, "fas-coins", UIHelper.APPROVED_GREEN));
-        kpiGrid.add(KpiCard.createCard("Ticket Médio", ticketVal, "fas-receipt", UIHelper.PENDING_YELLOW));
+        kpiGrid.add(KpiCard.createCard("Valor Médio por Venda", ticketVal, "fas-receipt", UIHelper.PENDING_YELLOW));
 
         // Secção de Comparativo de Canais
         JPanel channelsPanel = new JPanel(new GridLayout(2, 1, 0, 6));

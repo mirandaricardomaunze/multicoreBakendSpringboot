@@ -43,7 +43,7 @@ public class PerformanceReportPrintService {
                 report.to() != null ? report.to() : "-");
 
         String[] headers = new String[]{
-                "Pos", "Colaborador", "Receita (MZN)", "Margem (MZN)", "Ticket Médio", "Faturas", "% Meta"
+                "Pos", "Colaborador", "Receita (MZN)", "Margem (MZN)", "Valor Médio", "Faturas", "% Meta"
         };
 
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("pt", "MZ"));

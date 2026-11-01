@@ -8,6 +8,8 @@ public enum JournalSource {
 
     /** Emissão de fatura (inclui venda de balcão, que é uma fatura real). */
     INVOICE("Fatura"),
+    INVOICE_CANCELLATION("Anulação de fatura"),
+    RECEIPT_CANCELLATION("Anulação de recibo"),
 
     /** Recebimento de cliente (recibo ou liquidação em tesouraria). */
     RECEIPT("Recibo"),

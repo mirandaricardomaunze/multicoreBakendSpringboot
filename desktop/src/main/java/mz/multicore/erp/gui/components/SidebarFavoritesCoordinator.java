@@ -16,6 +16,7 @@ public class SidebarFavoritesCoordinator {
     private final JPanel container;
     private final Supplier<List<SidebarNavItem>> masterNavSupplier;
     private final List<SidebarNavItem> favoriteNavItems = new ArrayList<>();
+    private SidebarSectionHeader favoriteHeader;
 
     public SidebarFavoritesCoordinator(JPanel container, Supplier<List<SidebarNavItem>> masterNavSupplier) {
         this.container = container;
@@ -25,14 +26,16 @@ public class SidebarFavoritesCoordinator {
     public void rebuildFavorites(boolean collapsed) {
         container.removeAll();
         favoriteNavItems.clear();
+        favoriteHeader = null;
         List<String> favs = SidebarFavoritesManager.getInstance().getFavorites();
         for (SidebarNavItem item : masterNavSupplier.get()) {
             item.setVisible(favs.stream().noneMatch(fav -> fav.equalsIgnoreCase(item.getLabel())));
         }
         if (!favs.isEmpty()) {
-            SidebarSectionHeader favHeader = new SidebarSectionHeader("FAVORITOS", false, UIHelper.icon("fas-star", 10, UIHelper.PENDING_YELLOW));
-            favHeader.setCollapsed(collapsed);
-            container.add(favHeader);
+            favoriteHeader = new SidebarSectionHeader("FAVORITOS", false, UIHelper.icon("fas-star", 10, UIHelper.PENDING_YELLOW));
+            favoriteHeader.setCollapsed(collapsed);
+            favoriteHeader.setVisible(!collapsed);
+            container.add(favoriteHeader);
 
             List<SidebarNavItem> masterItems = masterNavSupplier.get();
             for (String favLabel : favs) {
@@ -72,6 +75,10 @@ public class SidebarFavoritesCoordinator {
     }
 
     public void setCollapsed(boolean collapsed) {
+        if (favoriteHeader != null) {
+            favoriteHeader.setCollapsed(collapsed);
+            favoriteHeader.setVisible(!collapsed);
+        }
         for (SidebarNavItem item : favoriteNavItems) {
             item.setCollapsed(collapsed);
         }

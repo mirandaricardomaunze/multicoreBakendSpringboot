@@ -156,6 +156,9 @@ public class PosCheckoutAndPaymentService {
             line.setUnitPrice(unitPrice);
             BigDecimal taxRate = product.effectiveTaxRate();
             line.setTaxRate(taxRate);
+            if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new BusinessRuleException("O desconto da linha não pode exceder 100 por cento.");
+            }
             if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.ZERO) > 0) {
                 line.setDiscountPercentage(lineReq.discountPercentage());
             }

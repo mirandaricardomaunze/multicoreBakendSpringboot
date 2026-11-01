@@ -72,13 +72,13 @@ class DashboardCommercialKpiHarnessTest {
         BigDecimal growth = DashboardTrendCalculator.calculatePercentageChange(
                 new BigDecimal("1500.00"), new BigDecimal("1000.00"));
         assertThat(growth).isEqualByComparingTo("50.0");
-        assertThat(DashboardTrendCalculator.formatPercentage(growth)).isEqualTo("+50.0%");
+        assertThat(DashboardTrendCalculator.formatPercentage(growth)).isEqualTo("+50,0%");
 
         // Decrescimento de 1.000 MT para 800 MT (-20.0%)
         BigDecimal drop = DashboardTrendCalculator.calculatePercentageChange(
                 new BigDecimal("800.00"), new BigDecimal("1000.00"));
         assertThat(drop).isEqualByComparingTo("-20.0");
-        assertThat(DashboardTrendCalculator.formatPercentage(drop)).isEqualTo("-20.0%");
+        assertThat(DashboardTrendCalculator.formatPercentage(drop)).isEqualTo("-20,0%");
     }
 
     @Test
@@ -146,7 +146,7 @@ class DashboardCommercialKpiHarnessTest {
             badge.updateTrend(new BigDecimal("18.4"), "vs mês anterior");
             assertTrue(badge.isPositive());
             assertFalse(badge.isNegative());
-            assertThat(badge.getText()).contains("+18.4%");
+            assertThat(badge.getText()).contains("+18,4%");
             assertThat(badge.getLabel().getForeground()).isEqualTo(UIHelper.APPROVED_GREEN);
             assertThat(badge.getToolTipText()).contains("vs mês anterior");
 
@@ -154,14 +154,14 @@ class DashboardCommercialKpiHarnessTest {
             badge.updateTrend(new BigDecimal("-6.5"), "vs semana anterior");
             assertTrue(badge.isNegative());
             assertFalse(badge.isPositive());
-            assertThat(badge.getText()).contains("-6.5%");
+            assertThat(badge.getText()).contains("-6,5%");
             assertThat(badge.getLabel().getForeground()).isEqualTo(UIHelper.REJECTED_RED);
             assertThat(badge.getToolTipText()).contains("vs semana anterior");
 
             // 3. Atualizar para neutro / nulo
             badge.updateTrend(null, "histórico");
             assertTrue(badge.isZero());
-            assertThat(badge.getText()).contains("0.0%");
+            assertThat(badge.getText()).contains("0,0%");
             assertThat(badge.getLabel().getForeground()).isEqualTo(UIHelper.TEXT_MUTED);
         });
     }

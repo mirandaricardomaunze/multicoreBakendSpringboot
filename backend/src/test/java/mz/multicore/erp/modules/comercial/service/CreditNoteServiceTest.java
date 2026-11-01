@@ -72,6 +72,7 @@ class CreditNoteServiceTest {
         company = company(1L);
         client = client(5L, "Cliente Fiado");
         warehouse = warehouse(20L, "Loja");
+        warehouse.setCompany(company);
         product = product(100L, "SKU-1", "Arroz 1kg");
 
         CurrentUserContext.setCurrentCompanyId(1L);
@@ -199,6 +200,7 @@ class CreditNoteServiceTest {
 
     private Invoice invoiceWithLine(Long lineId, BigDecimal qty, BigDecimal price, BigDecimal taxRate) {
         Invoice invoice = new Invoice();
+        invoice.setStatus(mz.multicore.erp.modules.comercial.model.InvoiceStatus.APPROVED);
         invoice.setId(1L);
         invoice.setInvoiceNumber("FT-2026/1");
         invoice.setCompany(company);
@@ -225,6 +227,7 @@ class CreditNoteServiceTest {
         note.setStatus(NoteStatus.PENDING_APPROVAL);
 
         Invoice invoice = new Invoice();
+        invoice.setStatus(mz.multicore.erp.modules.comercial.model.InvoiceStatus.APPROVED);
         invoice.setId(1L);
         invoice.setInvoiceNumber("FT-2026/1");
         note.setInvoice(invoice);

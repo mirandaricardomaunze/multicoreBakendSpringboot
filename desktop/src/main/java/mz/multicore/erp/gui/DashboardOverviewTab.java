@@ -27,6 +27,7 @@ final class DashboardOverviewTab {
     private SimpleBarChart operationsChart;
     private SimplePieChart salesChannelPieChart;
     private SimplePieChart financialStructurePieChart;
+    JPanel financialRow;
     private TopProductsWidget topProductsWidget;
     private RecentActivityWidget recentActivityWidget;
 
@@ -41,14 +42,14 @@ final class DashboardOverviewTab {
 
         JPanel commercialKpiGrid = KpiCard.createGrid(4, 10, 10);
 
-        balanceValLabel = KpiCard.valueLabel("0.00 MT", 19);
+        balanceValLabel = KpiCard.valueLabel("0,00 MT", 19);
         commercialKpiGrid.add(buildKpiCard("SALDO DE TESOURARIA", "fas-piggy-bank", UIHelper.KPI_INFO_SOFT,
                 balanceValLabel, null, UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
                 "Clique para abrir módulo Financeiro / Tesouraria", "financeiro"));
 
-        salesValLabel = KpiCard.valueLabel("0.00 MT", 19);
+        salesValLabel = KpiCard.valueLabel("0,00 MT", 19);
         salesTrendBadge = new KpiCard.TrendBadge(null);
-        salesSubLabel = new JLabel("Ticket Médio: 0.00 MT/venda");
+        salesSubLabel = new JLabel("Valor médio: 0,00 MT/venda");
         salesSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         salesSubLabel.setForeground(UIHelper.KPI_PURPLE_SOFT);
         commercialKpiGrid.add(buildKpiCard("FATURAÇÃO TOTAL", "fas-file-invoice-dollar", UIHelper.KPI_PURPLE_SOFT,
@@ -56,7 +57,7 @@ final class DashboardOverviewTab {
                 UIHelper.KPI_PURPLE_DARK, UIHelper.KPI_PURPLE_END,
                 "Clique para abrir módulo Comercial / Faturação", "comercial"));
 
-        posSalesValLabel = KpiCard.valueLabel("0.00 MT", 19);
+        posSalesValLabel = KpiCard.valueLabel("0,00 MT", 19);
         posTrendBadge = new KpiCard.TrendBadge(null);
         posSalesCountSub = new JLabel("0 vendas");
         posSalesCountSub.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
@@ -66,7 +67,7 @@ final class DashboardOverviewTab {
                 UIHelper.KPI_INFO_END, UIHelper.APPROVED_GREEN,
                 "Clique para abrir Ponto de Venda (POS)", "pos"));
 
-        taxSummaryLabel = KpiCard.valueLabel("0.00 MT", 19);
+        taxSummaryLabel = KpiCard.valueLabel("0,00 MT", 19);
         taxDetailLabel = new JLabel("IVA Liquidado / Deduzido");
         taxDetailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         taxDetailLabel.setForeground(UIHelper.KPI_SUCCESS_SOFT);
@@ -81,19 +82,25 @@ final class DashboardOverviewTab {
         tab1Center.setOpaque(false);
         tab1Center.setLayout(new BoxLayout(tab1Center, BoxLayout.Y_AXIS));
 
-        JPanel chartsPanel = new JPanel(new GridLayout(2, 2, 12, 12));
-        chartsPanel.setOpaque(false);
-
         financialChart = new SimpleBarChart("Vendas, Compras e IVA");
         salesChannelPieChart = new SimplePieChart("Vendas por Canal (POS vs Faturas)", false);
         operationsChart = new SimpleBarChart("Operações e Pendências");
+        operationsChart.setEmptyMessage("Sem pendências");
         financialStructurePieChart = new SimplePieChart("Estrutura Financeira (Receita, Compras, IVA)", false);
 
-        chartsPanel.add(createChartCard(financialChart));
-        chartsPanel.add(createChartCard(salesChannelPieChart));
-        chartsPanel.add(createChartCard(operationsChart));
-        chartsPanel.add(createChartCard(financialStructurePieChart));
-        tab1Center.add(chartsPanel);
+        // As pendências vêm primeiro: é o que o gestor pode resolver hoje.
+        JPanel priorityRow = new JPanel(new GridLayout(1, 2, 12, 12));
+        priorityRow.setOpaque(false);
+        priorityRow.add(createChartCard(operationsChart));
+        priorityRow.add(createChartCard(financialChart));
+        tab1Center.add(priorityRow);
+
+        financialRow = new JPanel(new GridLayout(1, 2, 12, 12));
+        financialRow.setOpaque(false);
+        financialRow.setBorder(new EmptyBorder(12, 0, 0, 0));
+        financialRow.add(createChartCard(salesChannelPieChart));
+        financialRow.add(createChartCard(financialStructurePieChart));
+        tab1Center.add(financialRow);
 
         tab1Center.add(Box.createVerticalStrut(12));
 
@@ -139,22 +146,24 @@ final class DashboardOverviewTab {
         return card;
     }
 
-    void applyData(DashboardDataCoordinator.DashboardData data, DashboardPanel.PeriodFilter currentPeriod) {
+    void applyData(DashboardDataCoordinator.DashboardData data) {
         balanceValLabel.setText(String.format("%,.2f MT", data.totalBalance()));
         salesValLabel.setText(String.format("%,.2f MT", data.totalSales()));
         salesTrendBadge.updateTrend(data.salesTrendPercent(), data.compLabel());
-        salesSubLabel.setText("Ticket Médio: " + DashboardTrendCalculator.formatAverageTicket(data.salesAvgTicket()));
+        salesSubLabel.setText(DashboardTrendCalculator.activityHint(data.totalSales(), data.previousSales(), data.compLabel(),
+                "Valor médio: " + DashboardTrendCalculator.formatAverageTicket(data.salesAvgTicket())));
 
         posSalesValLabel.setText(String.format("%,.2f MT", data.posSalesAmount()));
         posTrendBadge.updateTrend(data.posTrendPercent(), data.compLabel());
-        String formatCount = (currentPeriod == DashboardPanel.PeriodFilter.HOJE)
-                ? String.format("%d venda%s hoje · TM: %,.2f MT", data.posTodayCount(), data.posTodayCount() == 1 ? "" : "s", data.posAvgTicket())
-                : String.format("%d venda%s · TM: %,.2f MT", data.posTodayCount(), data.posTodayCount() == 1 ? "" : "s", data.posAvgTicket());
-        posSalesCountSub.setText(formatCount);
+        posSalesCountSub.setText(DashboardTrendCalculator.activityHint(data.posSalesAmount(), data.previousPosSales(), data.compLabel(),
+                String.format("%d venda%s · média: %,.2f MT", data.posSalesCount(), data.posSalesCount() == 1 ? "" : "s", data.posAvgTicket())));
 
         String labelPrefix = data.netVat().compareTo(BigDecimal.ZERO) >= 0 ? "IVA a Pagar: " : "IVA a Recuperar: ";
         taxSummaryLabel.setText(labelPrefix + String.format("%,.2f MT", data.netVat().abs()));
-        taxDetailLabel.setText(String.format("Liq: %,.2f | Ded: %,.2f MT", data.outputVat(), data.inputVat()));
+        taxDetailLabel.setText(String.format("Liquidado: %,.2f | Dedutível: %,.2f MT", data.outputVat(), data.inputVat()));
+
+        financialRow.setVisible(SimpleBarChart.hasData(
+                new BigDecimal[]{data.totalSales(), data.totalPurchases(), data.posSalesAmount()}));
 
         financialChart.setData(
                 new String[]{"Vendas", "Compras", "IVA"},
@@ -172,7 +181,7 @@ final class DashboardOverviewTab {
         );
 
         operationsChart.setData(
-                new String[]{"Aprov.", "Tickets", "Stock"},
+                new String[]{"Aprovações", "Tickets", "Stock baixo"},
                 new BigDecimal[]{
                         BigDecimal.valueOf(data.approvalCount()),
                         BigDecimal.valueOf(data.ticketCount()),

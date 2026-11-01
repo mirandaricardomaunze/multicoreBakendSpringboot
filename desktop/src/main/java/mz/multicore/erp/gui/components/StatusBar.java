@@ -8,24 +8,14 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Barra de estado no rodapé da janela principal — padrão de ERP profissional (Multicore, Primavera, Sage).
- * Mostra: módulo activo · nº registos · empresa · utilizador · hora.
+ * Mostra só o que não está noutro sítio do ecrã: produto, aviso de versão e hora.
  * Actualiza a hora a cada minuto via {@link javax.swing.Timer} interno.
- *
- * <p>Uso:</p>
- * <pre>
- *   StatusBar bar = new StatusBar();
- *   frame.add(bar, BorderLayout.SOUTH);
- *   bar.setContext("Faturação", 42, "Loja Central", "maria");
- * </pre>
  */
 public class StatusBar extends JPanel {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final int BAR_HEIGHT = 24;
 
-    private final JLabel moduleLabel   = slimLabel("");
-    private final JLabel recordsLabel  = slimLabel("");
-    private final JLabel companyLabel  = slimLabel("");
     private final JLabel clockLabel    = slimLabel(LocalTime.now().format(TIME_FMT));
     /** Aviso de versão nova. Fica invisível enquanto não houver nada a dizer. */
     private final JLabel updateLabel   = slimLabel("");
@@ -37,17 +27,7 @@ public class StatusBar extends JPanel {
         setBackground(barBg());
         setBorder(new EmptyBorder(0, 8, 0, 8));
 
-        // Lado esquerdo — módulo e nº registos
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
-        left.add(iconLabel("fas-layer-group", UIHelper.ACCENT));
-        left.add(moduleLabel);
-        left.add(separator());
-        left.add(iconLabel("fas-list", UIHelper.TEXT_MUTED));
-        left.add(recordsLabel);
-        add(left, BorderLayout.WEST);
-
-        // Lado direito — aviso de versão (quando houver), empresa, hora
+        // Lado direito — aviso de versão (quando houver), hora
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
         updateIcon.setVisible(false);
@@ -55,9 +35,6 @@ public class StatusBar extends JPanel {
         updateLabel.setForeground(UIHelper.ACCENT);
         right.add(updateIcon);
         right.add(updateLabel);
-        right.add(iconLabel("fas-building", UIHelper.TEXT_MUTED));
-        right.add(companyLabel);
-        right.add(separator());
         right.add(iconLabel("fas-clock", UIHelper.TEXT_MUTED));
         right.add(clockLabel);
         add(right, BorderLayout.EAST);
@@ -95,32 +72,9 @@ public class StatusBar extends JPanel {
         new javax.swing.Timer(60_000, e -> {
             clockLabel.setText(LocalTime.now().format(TIME_FMT));
             setBackground(barBg());  // acompanha troca de tema em runtime
-            left.setBackground(barBg());
             right.setBackground(barBg());
             center.setBackground(barBg());
         }).start();
-    }
-
-    /**
-     * Actualiza o contexto visível na barra.
-     * @param module   nome do módulo activo (ex.: "Faturação")
-     * @param records  número de registos na tabela activa (-1 = oculta)
-     * @param company  nome da empresa activa
-     */
-    public void setContext(String module, int records, String company) {
-        moduleLabel.setText(module == null ? "" : module);
-        recordsLabel.setText(records < 0 ? "" : records + " registo" + (records == 1 ? "" : "s"));
-        companyLabel.setText(company == null ? "" : company);
-    }
-
-    /** Actualiza apenas o nº de registos (ex.: após filtro ser aplicado). */
-    public void setRecords(int records) {
-        recordsLabel.setText(records < 0 ? "" : records + " registo" + (records == 1 ? "" : "s"));
-    }
-
-    /** Actualiza apenas o módulo activo. */
-    public void setModule(String module) {
-        moduleLabel.setText(module == null ? "" : module);
     }
 
     /**
@@ -162,13 +116,6 @@ public class StatusBar extends JPanel {
         JLabel l = new JLabel(UIHelper.icon(iconCode, 12, color));
         l.setOpaque(false);
         return l;
-    }
-
-    private static JLabel separator() {
-        JLabel sep = new JLabel("·");
-        sep.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        sep.setForeground(UIHelper.TEXT_MUTED);
-        return sep;
     }
 
     @Override

@@ -3,7 +3,9 @@ package mz.multicore.erp.modules.comercial.controller;
 import mz.multicore.erp.modules.comercial.dto.CreateDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateStandaloneDeliveryGuideRequest;
 import mz.multicore.erp.modules.comercial.dto.DeliveryGuideDTO;
+import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.RejectionReasonRequest;
+import mz.multicore.erp.modules.comercial.service.DeliveryGuideBillingService;
 import mz.multicore.erp.modules.comercial.service.DeliveryGuideService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +23,12 @@ import java.util.Map;
 public class DeliveryGuideController {
 
     private final DeliveryGuideService deliveryGuideService;
+    private final DeliveryGuideBillingService billingService;
 
-    public DeliveryGuideController(DeliveryGuideService deliveryGuideService) {
+    public DeliveryGuideController(DeliveryGuideService deliveryGuideService,
+                                   DeliveryGuideBillingService billingService) {
         this.deliveryGuideService = deliveryGuideService;
+        this.billingService = billingService;
     }
 
     @GetMapping
@@ -54,6 +59,11 @@ public class DeliveryGuideController {
     @PostMapping("/{id}/approve")
     public ResponseEntity<DeliveryGuideDTO> approve(@PathVariable Long id) {
         return ResponseEntity.ok(deliveryGuideService.approve(id));
+    }
+
+    @PostMapping("/{id}/bill")
+    public ResponseEntity<InvoiceDTO> bill(@PathVariable Long id) {
+        return ResponseEntity.ok(billingService.bill(id));
     }
 
     @PostMapping("/{id}/reject")
