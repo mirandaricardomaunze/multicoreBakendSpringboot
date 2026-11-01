@@ -74,6 +74,17 @@ public class BackupFileCipher {
         }
     }
 
+    /** Para ficheiros pequenos que se lêem sem nunca passar para o disco em claro. */
+    public byte[] decryptToMemory(Path encrypted) {
+        var out = new java.io.ByteArrayOutputStream();
+        try (DataInputStream in = new DataInputStream(Files.newInputStream(encrypted))) {
+            readAll(in, out);
+            return out.toByteArray();
+        } catch (IOException | GeneralSecurityException ex) {
+            throw invalid();
+        }
+    }
+
     /** Confirma que todos os blocos se lêem com a chave actual, sem escrever o conteúdo em disco. */
     public void verify(Path encrypted) {
         try (DataInputStream in = new DataInputStream(Files.newInputStream(encrypted))) {

@@ -54,9 +54,10 @@ public class AuthController {
             if (request.totpCode() == null || request.totpCode().isBlank()) {
                 return LoginResponse.twoFactorChallenge(user.getUsername());
             }
-            if (!accountSecurityService.verifyCode(user, request.totpCode())) {
+            if (!accountSecurityService.consumeCode(user, request.totpCode())) {
                 loginRateLimiter.recordFailure(request.username(), clientIp);
-                throw new BusinessRuleException("Código de autenticação inválido.");
+                throw new BusinessRuleException(
+                        "Código de autenticação inválido ou já usado. Aguarde o próximo código.");
             }
         }
         loginRateLimiter.recordSuccess(request.username(), clientIp);

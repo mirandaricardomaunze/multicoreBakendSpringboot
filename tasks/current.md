@@ -1,7 +1,7 @@
 # Tarefa actual
 
 Estado: **estabilização para produção**
-Actualizado em: 2026-10-31
+Actualizado em: 2026-11-01
 Histórico: [até 2026-10-31](archive/current-history-through-2026-10-31.md) ·
 [até 2026-10-10](archive/current-history-through-2026-10-10.md)
 
@@ -19,6 +19,9 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
   a balança e a gaveta.
 - Apresentação do Painel Inicial em `docs/DASHBOARD_APRESENTACAO_SPEC.md`.
 - Auditoria de faturas, notas, guias e encomendas em `docs/COMERCIAL_DOCUMENTOS_AUDITORIA_SPEC.md`, com decisões em aberto.
+- Segurança antes de produção em `docs/SEGURANCA_CONTAS_E_SEGREDOS_SPEC.md` (SC-25 a SC-32): código
+  2FA de uso único, senhas de demonstração substituídas, backups antigos e lógicos cifrados. No VPS,
+  correr `scripts/validar-producao.sh` antes de receber dados reais.
 - Em 2026-10-31 o responsável confirmou que não existe base PostgreSQL real, por isso as migrações
   V66, V76, V89 e V96 puderam ser corrigidas no próprio ficheiro.
 

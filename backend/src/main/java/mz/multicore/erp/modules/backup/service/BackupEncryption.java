@@ -25,7 +25,10 @@ public class BackupEncryption {
         this.processRunner = processRunner;
     }
 
-    /** Antes de apagar a versão em claro, prova que o dump é legível e que a cópia cifrada abre. */
+    /**
+     * Antes de apagar a versão em claro, prova que o dump é legível e que a cópia cifrada abre.
+     * Se algo falhar, a versão em claro fica: {@link BackupPlainFileSealer} cifra-a mais tarde.
+     */
     File seal(File plain) {
         if (!cipher.isEnabled()) return plain;
         File encrypted = new File(plain.getPath() + BackupFileCipher.ENCRYPTED_SUFFIX);
@@ -33,12 +36,15 @@ public class BackupEncryption {
             processRunner.runProcess(commandBuilder.buildListCommand(plain.getAbsolutePath()), "pg_restore");
             cipher.encrypt(plain.toPath(), encrypted.toPath());
             cipher.verify(encrypted.toPath());
-            return encrypted;
         } catch (IOException | GeneralSecurityException ex) {
+            encrypted.delete();
             throw new BusinessRuleException("Não foi possível cifrar o backup: " + ex.getMessage());
-        } finally {
-            plain.delete();
+        } catch (RuntimeException ex) {
+            encrypted.delete();
+            throw ex;
         }
+        plain.delete();
+        return encrypted;
     }
 
     static File requireRestorableFile(String path, boolean confirmOverwrite) {

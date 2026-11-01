@@ -9,6 +9,7 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.OptionalLong;
 
 /** Códigos de 6 dígitos (RFC 6238), compatíveis com Google Authenticator e semelhantes. */
 public final class TotpCodec {
@@ -42,14 +43,21 @@ public final class TotpCodec {
 
     /** Aceita o intervalo actual e o vizinho de cada lado, para tolerar relógios ligeiramente diferentes. */
     public static boolean verify(String secret, String code, Instant now) {
-        if (secret == null || code == null || !code.trim().matches("\\d{6}")) return false;
+        return matchingStep(secret, code, now).isPresent();
+    }
+
+    /** Devolve o intervalo do código, para que o servidor nunca aceite o mesmo intervalo duas vezes. */
+    public static OptionalLong matchingStep(String secret, String code, Instant now) {
+        if (secret == null || code == null || !code.trim().matches("\\d{6}")) return OptionalLong.empty();
         long step = now.getEpochSecond() / STEP_SECONDS;
         byte[] given = code.trim().getBytes(StandardCharsets.US_ASCII);
-        boolean valid = false;
+        OptionalLong match = OptionalLong.empty();
         for (long candidate = step - 1; candidate <= step + 1; candidate++) {
-            valid |= MessageDigest.isEqual(code(secret, candidate).getBytes(StandardCharsets.US_ASCII), given);
+            if (MessageDigest.isEqual(code(secret, candidate).getBytes(StandardCharsets.US_ASCII), given)) {
+                match = OptionalLong.of(candidate);
+            }
         }
-        return valid;
+        return match;
     }
 
     static String code(String secret, long step) {

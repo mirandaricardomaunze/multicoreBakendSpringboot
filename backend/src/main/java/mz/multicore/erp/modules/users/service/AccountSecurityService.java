@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** O que o titular faz pela sua conta: trocar a senha e configurar a dupla autenticação. */
@@ -50,8 +51,11 @@ public class AccountSecurityService {
                 .anyMatch(access -> "ADMIN".equalsIgnoreCase(access.getRole())));
     }
 
-    public boolean verifyCode(AppUser user, String code) {
-        return TotpCodec.verify(readSecret(user), code, Instant.now());
+    /** Cada código entra uma só vez: um código visto por alguém não abre uma segunda sessão. */
+    @Transactional
+    public boolean consumeCode(AppUser user, String code) {
+        OptionalLong step = TotpCodec.matchingStep(readSecret(user), code, Instant.now());
+        return step.isPresent() && appUserRepository.claimTotpStep(user.getId(), step.getAsLong()) == 1;
     }
 
     @Transactional
@@ -83,13 +87,15 @@ public class AccountSecurityService {
     @Transactional
     public void confirmTwoFactorSetup(String username, String code) {
         String secret = pendingSecrets.get(username);
-        if (secret == null || !TotpCodec.verify(secret, code, Instant.now())) {
+        OptionalLong step = TotpCodec.matchingStep(secret, code, Instant.now());
+        if (step.isEmpty()) {
             throw new BusinessRuleException("Código inválido. Confirme a hora do telemóvel e tente novamente.");
         }
         AppUser user = requireUser(username);
         byte[] sealed = crypto.protect(secret.getBytes(StandardCharsets.US_ASCII));
         user.setTotpSecret(Base64.getEncoder().encodeToString(sealed));
         appUserRepository.save(user);
+        appUserRepository.claimTotpStep(user.getId(), step.getAsLong());
         pendingSecrets.remove(username);
         authSessionService.revokeUser(username);
         auditLogService.logEvent(username, null, "USER_2FA_ENABLED", "Dupla autenticação configurada.");

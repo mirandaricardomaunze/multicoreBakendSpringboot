@@ -45,7 +45,7 @@ git clone <repo> multicore && cd multicore
 cp .env.example .env
 nano .env          # DOMAIN, DB_PASSWORD forte, e PG_MAJOR/POSTGRES_IMAGE = versão da tua BD
 
-docker compose up -d --build
+GIT_COMMIT=$(git rev-parse HEAD) docker compose up -d --build
 docker compose logs -f backend     # acompanhar o arranque + Flyway
 ```
 
@@ -57,6 +57,13 @@ Verificar (smoke test pós-deploy — health, auth, login):
 ./scripts/deploy-smoke.sh https://$DOMAIN
 ```
 Deve terminar com `== SMOKE OK ==` (health UP, `/api/**` a recusar 401 sem token, login público a responder).
+
+Antes de receber dados reais, correr no próprio VPS, na pasta do projecto:
+```bash
+./scripts/validar-producao.sh https://$DOMAIN <commit-aprovado>
+```
+Confirma o commit instalado, a última migração, os segredos, as portas, o HTTPS, as senhas de
+demonstração e os backups. Só `== PRODUCAO OK ==` autoriza dados reais.
 
 ### Migrar dados de uma BD existente (opcional)
 

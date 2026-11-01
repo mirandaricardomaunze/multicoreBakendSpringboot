@@ -22,6 +22,8 @@ RUN mvn -q -B -e -pl backend -am -DskipTests clean package
 # ---- Runtime ----
 FROM eclipse-temurin:21-jre-jammy AS runtime
 ARG PG_MAJOR=16
+ARG GIT_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$GIT_COMMIT
 
 # postgresql-client-${PG_MAJOR} a partir do repositório oficial PGDG (para pg_dump/pg_restore).
 RUN apt-get update \

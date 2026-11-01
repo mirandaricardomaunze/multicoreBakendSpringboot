@@ -29,6 +29,8 @@ services:
       args:
         # Coincidir com a major do PostgreSQL acima (para o pg_dump do backup).
         PG_MAJOR: ${PG_MAJOR:-16}
+        # Commit gravado na imagem: scripts/validar-producao.sh compara-o com o esperado.
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     restart: unless-stopped
     depends_on:
       db:

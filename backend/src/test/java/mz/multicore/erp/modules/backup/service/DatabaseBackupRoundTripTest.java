@@ -58,6 +58,7 @@ class DatabaseBackupRoundTripTest {
         CurrentUserContext.setCurrentUser("restore-test", "ADMIN");
         try {
             dump = service("multicore_restore_source").executePhysicalBackup().filePath();
+            assertTrue(dump.endsWith(".dump.enc"), "O backup tem de ficar cifrado: " + dump);
             service("multicore_restore_target").restorePhysicalBackup(dump, true);
         } finally {
             CurrentUserContext.clear();
@@ -101,8 +102,11 @@ class DatabaseBackupRoundTripTest {
     }
 
     private DatabaseBackupService service(String database) {
-        return new DatabaseBackupService(baseUrl + database, "restore_test", "",
-                System.getenv("MULTICORE_RESTORE_TEST_PG_BIN"), runDir.toString());
+        var commands = new PostgresBackupCommandBuilder(System.getenv("MULTICORE_RESTORE_TEST_PG_BIN"));
+        var runner = new PostgresBackupProcessRunner("");
+        var cipher = new BackupFileCipher("MDEyMzQ1Njc4OWFiY2RlZmdoaWprbG1ub3BxcnN0dXY=");
+        return new DatabaseBackupService(baseUrl + database, "restore_test", runDir.toString(), commands, runner,
+                new BackupEncryption(cipher, commands, runner));
     }
 
     private ServletWebServerApplicationContext startBackend(String database, boolean seed) {

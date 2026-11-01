@@ -19,6 +19,7 @@ public class AuthSessionService {
     private static final Duration SESSION_LIFETIME = Duration.ofHours(8);
     static final int MAX_SESSIONS_PER_USER = 10;
     private final Map<String, AuthSession> sessions = new ConcurrentHashMap<>();
+    private Instant lastIssuedAt = Instant.EPOCH;
 
     public synchronized AuthSession create(AppUser user) {
         return create(user, false);
@@ -26,7 +27,7 @@ public class AuthSessionService {
 
     /** @param restricted a sessão só serve para concluir a segurança da conta */
     public synchronized AuthSession create(AppUser user, boolean restricted) {
-        Instant now = Instant.now();
+        Instant now = nextIssuedAt();
         purgeExpired(now);
         revokeOldestBeyondLimit(user.getUsername());
         AuthSession session = new AuthSession(
@@ -85,6 +86,13 @@ public class AuthSessionService {
                 .toList();
         owned.stream().limit(Math.max(0, owned.size() - MAX_SESSIONS_PER_USER + 1))
                 .forEach(session -> sessions.remove(session.token()));
+    }
+
+    /** Sem empates: o limite por utilizador tem de saber sempre qual é a sessão mais antiga. */
+    private Instant nextIssuedAt() {
+        Instant now = Instant.now();
+        lastIssuedAt = now.isAfter(lastIssuedAt) ? now : lastIssuedAt.plusNanos(1);
+        return lastIssuedAt;
     }
 
     public record AuthSession(String token, String username, Instant issuedAt, Instant expiresAt, boolean restricted) {

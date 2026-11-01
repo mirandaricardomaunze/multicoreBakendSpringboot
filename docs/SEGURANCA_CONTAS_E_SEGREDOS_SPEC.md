@@ -110,19 +110,35 @@ credenciais previsíveis, anexos clínicos em claro, sessões sem limite e conta
 | SC-22 | Segredos fracos em produção | Arranque recusado |
 | SC-23 | Backup cifrado | Abre igual e sem conteúdo em claro |
 | SC-24 | Backup alterado, cortado ou com outra chave | Recusado |
+| SC-25 | Código 2FA aceite, usado de novo | Recusado, também com pedidos em simultâneo |
+| SC-26 | Código usado na configuração, repetido no login | Recusado |
+| SC-27 | Conta com senha de demonstração em produção | Senha substituída, sessões terminadas |
+| SC-28 | Superadmin com senha de demonstração, sem `SUPERADMIN_PASSWORD` | Arranque recusado |
+| SC-29 | Senha antiga em texto simples | Passa a hash no arranque |
+| SC-30 | Falha ao cifrar um backup | A cópia em claro fica; nada se perde |
+| SC-31 | Backup antigo em claro (`.dump`, `.json`) | Cifrado com a data original; o claro sai depois de verificado |
+| SC-32 | Backup lógico novo | Gravado cifrado e verificável |
 
-Testes: `SharedAccountSecurityHarnessTest`, `SessionAndLoginLimitsHarnessTest` e
-`MandatorySecurityHarnessTest`.
+Testes: `SharedAccountSecurityHarnessTest`, `SessionAndLoginLimitsHarnessTest`,
+`MandatorySecurityHarnessTest`, `PreProductionSecurityHarnessTest` e `BackupAtRestHarnessTest`.
+
+## Verificação do servidor
+
+`scripts/validar-producao.sh` corre no VPS e confirma o que os testes não alcançam: commit
+instalado, última migração, segredos, portas, HTTPS, senhas de demonstração e backups.
 
 ## Limites
 
 - Não há recuperação de senha pelo próprio titular: uma conta partilhada depende da plataforma.
 - Superadmin sem telemóvel e sem outro superadmin: a dupla autenticação só se repõe na base de dados.
-- O mesmo código TOTP pode ser reutilizado durante a sua janela de validade.
 - A venda em contingência com desconto acima de 10% fica para revisão se a autorização expirar.
 - Um desconto retomado de uma venda suspensa precisa de novo PIN.
 - `ATTACHMENT_KEY` protege anexos, segredos TOTP e backups: perdê-la impede restaurar os backups.
 - As sessões vivem em memória: reiniciar o backend termina-as e várias instâncias não as partilham.
-- Backups feitos antes da cifra continuam com anexos em claro e devem ser substituídos.
+- Cifrar um backup antigo não apaga cópias já feitas fora do servidor, e o disco pode reter blocos
+  do ficheiro apagado: essas cópias têm de ser destruídas ou substituídas pelo operador.
+- Backups em claro têm uma hora de espera antes de serem cifrados, para não apanhar um ficheiro em escrita.
 - Perder `ATTACHMENT_KEY` é perder os anexos cifrados.
-- Bases já criadas mantêm as contas e senhas que tinham, incluindo superadmin e demonstração.
+- Só se detectam as senhas de demonstração conhecidas (`admin`, `password`, `superadmin`): outra
+  senha fraca antiga só muda quando o titular a trocar.
+- Depois da substituição, a conta só volta a entrar com uma senha reposta pelo administrador.

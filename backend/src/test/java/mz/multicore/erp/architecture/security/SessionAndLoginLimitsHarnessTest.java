@@ -3,6 +3,7 @@ package mz.multicore.erp.architecture.security;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.users.model.AppUser;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -61,7 +62,7 @@ class SessionAndLoginLimitsHarnessTest {
         assertThat(sessions.activeSessions()).isZero();
     }
 
-    @Test
+    @RepeatedTest(200)
     @DisplayName("SC-10: Cada utilizador tem um número limitado de sessões")
     void sc10_sessionsPerUserAreLimited() {
         AuthSessionService sessions = new AuthSessionService();

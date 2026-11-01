@@ -168,3 +168,5 @@ de segredos, ao lado da password da base de dados.
 - [ ] Configuracoes sensiveis nao estao hardcoded.
 - [ ] Logs nao expoem tokens/passwords.
 - [ ] Fluxos POS, venda, stock e login foram testados.
+- [ ] Cópias de backups feitas fora do servidor antes da cifra foram destruídas ou substituídas.
+- [ ] `scripts/validar-producao.sh` terminou com `== PRODUCAO OK ==` no VPS.
