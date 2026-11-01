@@ -30,6 +30,13 @@ O ficheiro `ComercialPanel.java` possui atualmente 975 linhas (o maior painel op
 
 ---
 
+## Barra de abas
+
+- As abas mantêm scroll horizontal: uma segunda linha roubaria altura às tabelas.
+- As dez abas de Vendas cabem em 1366 px com a sidebar recolhida. O espaço útil é 1270 px, não 1382.
+- Quando não couberem, há setas de 30 px e a roda do rato sobre as abas desliza a barra.
+- Testes: `UiTabScrollSupportTest` mede o componente real; `TabStripFitsTest` guarda os títulos.
+
 ## 2. Arquitetura da Solução
 
 ### 2.1 Componentes a Extrair

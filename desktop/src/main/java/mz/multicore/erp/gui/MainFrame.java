@@ -250,10 +250,12 @@ public class MainFrame extends JFrame {
         }
 
         setLayout(new BorderLayout());
+        // A empresa guardada é escolhida primeiro: o nome e o menu da sidebar dependem dela.
+        JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
         sidebar = buildSidebar();
         topBar = topBarBuilder.build(superAdmin, this, this::openGlobalSearch, this::openRecentItemsHistory,
                 notificationCoordinator != null ? notificationCoordinator.buildNotificationBell() : null,
-                buildSubscriptionChip(), buildCompanyCombo(),
+                buildSubscriptionChip(), companyCombo,
                 desktopSessionStore.requireSession().companies().size() > 1);
         if (notificationCoordinator != null) notificationCoordinator.attachNavComponents(topBar, sidebar);
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
@@ -664,7 +666,7 @@ public class MainFrame extends JFrame {
         items.add(new GlobalSearchDialog.SearchItem("act_labels", "Gerador de Etiquetas de Prateleira", "Ferramentas", null, UIHelper.icon("fas-barcode", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK, () -> { navigate("stock"); if (stockPanel != null) stockPanel.openLabelDialog(); }, List.of("etiquetas", "barcode", "preco", "prateleira", "gondola", "rotulos")));
         items.add(new GlobalSearchDialog.SearchItem("act_waste", "Gestão de Quebras, Perdas & Desperdício", "Stock", null, UIHelper.icon("fas-trash-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> { navigate("stock"); if (stockPanel != null) stockPanel.showWasteManagement(); }, List.of("quebras", "perdas", "desperdicio", "validade", "avarias", "furto", "waste", "radar")));
         items.add(new GlobalSearchDialog.SearchItem("act_reconciliation", "Centro de Reconciliação Bancária", "Financeiro", null, UIHelper.icon("fas-university", 16, UIHelper.MODULE_FINANCEIRO), UIHelper.MODULE_FINANCEIRO, () -> { navigate("financeiro"); if (financeiroPanel != null) financeiroPanel.showReconciliationTab(); }, List.of("reconciliacao", "bancaria", "extracto", "bancos", "bim", "bci", "conciliar", "extrato")));
-        items.add(new GlobalSearchDialog.SearchItem("act_forensic_audit", "Central de Auditoria Forense & Controlo de Fraude", "Fiscal & Auditoria", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"), List.of("auditoria", "forense", "fraude", "desvios", "anomalias", "cancelamentos", "quebras", "risco")));
+        items.add(new GlobalSearchDialog.SearchItem("act_forensic_audit", "Central de Auditoria Forense & Controlo de Fraude", "Finanças & Fiscal", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"), List.of("auditoria", "forense", "fraude", "desvios", "anomalias", "cancelamentos", "quebras", "risco")));
         items.add(new GlobalSearchDialog.SearchItem("act_alerts", "Alertas Inteligentes & Ações Proativas", "Ferramentas", null, UIHelper.icon("fas-bell", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, this::openSmartAlerts, List.of("alertas", "acoes", "proativo", "notificacoes", "urgente")));
         items.add(new GlobalSearchDialog.SearchItem("act_backup", "Cópias de Segurança & Integridade", "Ferramentas", null, UIHelper.icon("fas-database", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openBackupDialog, List.of("backup", "copia", "restauro", "base de dados", "seguranca")));
         items.add(new GlobalSearchDialog.SearchItem("act_theme", "Alternar Tema (Escuro / Claro / Alto Contraste)", "Ferramentas", null, UIHelper.icon("fas-adjust", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> UIHelper.cycleTheme(), List.of("tema", "dark", "light", "alto contraste", "outdoor", "acessibilidade", "cores")));

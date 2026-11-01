@@ -28,7 +28,7 @@ import java.awt.event.MouseEvent;
  */
 public class SidebarNavItem extends JComponent {
 
-    public static final int ITEM_HEIGHT = 42;
+    public static final int ITEM_HEIGHT = 36;
     public static final int ICON_COLUMN = 56;
     private static final int CORNER = 10;
     private static final int LEFT_INSET = 8;

@@ -56,11 +56,10 @@ public class CollapsibleSidebar extends JPanel {
         brandLabel.setForeground(headerText());
         brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        brandSubLabel.setText(subBrand != null && !subBrand.isBlank() ? subBrand : "ERP Profissional");
+        setSubBrand(subBrand);
         brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         brandSubLabel.setForeground(subText());
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        brandSubLabel.setToolTipText("Empresa activa");
 
         brandStack.setOpaque(false);
         brandStack.setLayout(new BoxLayout(brandStack, BoxLayout.Y_AXIS));
@@ -92,7 +91,11 @@ public class CollapsibleSidebar extends JPanel {
         bodyScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         bodyScroll.getVerticalScrollBar().setUnitIncrement(16);
         bodyScroll.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
-        add(bodyScroll, BorderLayout.CENTER);
+        JPanel bodyArea = new JPanel(new BorderLayout());
+        bodyArea.setOpaque(false);
+        bodyArea.add(bodyScroll, BorderLayout.CENTER);
+        bodyArea.add(new SidebarScrollHint(bodyScroll), BorderLayout.SOUTH);
+        add(bodyArea, BorderLayout.CENTER);
 
         footerPanel.setOpaque(false);
         add(footerPanel, BorderLayout.SOUTH);
@@ -101,7 +104,10 @@ public class CollapsibleSidebar extends JPanel {
     }
 
     public void setSubBrand(String text) {
-        brandSubLabel.setText(text == null || text.isBlank() ? "ERP Profissional" : text);
+        String name = text == null || text.isBlank() ? "ERP Profissional" : text;
+        brandSubLabel.setText(SidebarBrandText.wrapped(name));
+        brandSubLabel.setToolTipText("Empresa activa: " + name);
+        brandSubLabel.revalidate();
     }
 
     public void setUserProfile(String displayName, String role) {
