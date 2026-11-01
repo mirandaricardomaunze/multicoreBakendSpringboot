@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.pos.controller;
 
 import jakarta.validation.Valid;
 import mz.multicore.erp.modules.pos.dto.InitiateMobilePaymentRequest;
+import mz.multicore.erp.modules.pos.dto.MobilePaymentAvailabilityDTO;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentResponse;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse;
 import mz.multicore.erp.modules.pos.service.MobilePaymentService;
@@ -16,6 +17,11 @@ public class MobilePaymentController {
 
     public MobilePaymentController(MobilePaymentService mobilePaymentService) {
         this.mobilePaymentService = mobilePaymentService;
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<MobilePaymentAvailabilityDTO> getAvailability() {
+        return ResponseEntity.ok(mobilePaymentService.availability());
     }
 
     @PostMapping("/initiate")

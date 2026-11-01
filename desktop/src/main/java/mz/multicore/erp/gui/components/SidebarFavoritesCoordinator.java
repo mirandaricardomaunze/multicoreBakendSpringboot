@@ -26,6 +26,9 @@ public class SidebarFavoritesCoordinator {
         container.removeAll();
         favoriteNavItems.clear();
         List<String> favs = SidebarFavoritesManager.getInstance().getFavorites();
+        for (SidebarNavItem item : masterNavSupplier.get()) {
+            item.setVisible(favs.stream().noneMatch(fav -> fav.equalsIgnoreCase(item.getLabel())));
+        }
         if (!favs.isEmpty()) {
             SidebarSectionHeader favHeader = new SidebarSectionHeader("FAVORITOS", false, UIHelper.icon("fas-star", 10, UIHelper.PENDING_YELLOW));
             favHeader.setCollapsed(collapsed);

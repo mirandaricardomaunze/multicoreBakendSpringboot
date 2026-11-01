@@ -12,6 +12,11 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 - Sem fase de código em curso. Paridade PostgreSQL e formato numérico concluídos e integrados em
   `main`; ver `docs/POSTGRES_SCHEMA_PARITY_SPEC.md` e `docs/FORMATO_NUMERICO_SPEC.md`.
+- Design do ecrã POS revisto em `docs/POS_DESIGN_ECRA_SPEC.md`. A balança real continua sem driver de
+  porta série: só existe simulação.
+- POS antes do piloto em `docs/POS_PRE_PILOTO_SPEC.md`: simulação de pagamento móvel desligada,
+  venda suspensa, cliente limpo entre vendas e desconto F5 corrigido. Faltam o operador M-Pesa/e-Mola,
+  a balança e a gaveta.
 - Em 2026-10-31 o responsável confirmou que não existe base PostgreSQL real, por isso as migrações
   V66, V76, V89 e V96 puderam ser corrigidas no próprio ficheiro.
 

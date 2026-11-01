@@ -9,7 +9,6 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 /**
  * Gestor e vinculador central de atalhos rápidos de teclado do POS (F1 a F12, ESC, DELETE, +, -).
@@ -44,6 +43,8 @@ public final class PosKeyboardShortcutsHandler {
         // Atalhos de Edição e Cancelamento
         bind(input, actions, "posCancelOrClear", KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), () -> cancelOrClear(panel));
         bind(input, actions, "posNewSale", KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), () -> newSale(panel));
+        bind(input, actions, "posSuspendSale", KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), panel.suspendedSaleActions::suspendCurrentSale);
+        bind(input, actions, "posResumeSale", KeyStroke.getKeyStroke(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK), panel.suspendedSaleActions::openResumeDialog);
 
         // Atalhos restritos ao foco da tabela do carrinho (não interferem com campos de texto)
         if (panel.cartTable != null) {
@@ -180,31 +181,28 @@ public final class PosKeyboardShortcutsHandler {
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Aplicar Desconto de Linha (F5)",
                 "fas-percent", "Introduza a percentagem de desconto a aplicar ao artigo", form)
                 .setConfirmButton("Aplicar Desconto", "fas-check")
-                .setOnSave(() -> {
-                    String text = discountPercentField.getText().trim().replace(',', '.').replace("%", "");
-                    BigDecimal percent;
-                    try {
-                        percent = new BigDecimal(text);
-                    } catch (NumberFormatException ex) {
-                        throw new IllegalArgumentException("Introduza uma percentagem válida (ex: 5 ou 10).");
-                    }
-                    if (percent.signum() < 0 || percent.compareTo(new BigDecimal("100")) > 0) {
-                        throw new IllegalArgumentException("O desconto deve estar entre 0% e 100%.");
-                    }
-
-                    // Calcula o valor monetário do desconto por unidade
-                    BigDecimal discountPerUnit = item.product.unitPrice()
-                            .multiply(percent)
-                            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-
-                    item.discount = discountPerUnit;
-                })
+                .setOnSave(() -> item.discount = parseDiscountPercent(discountPercentField.getText()))
                 .showDialog();
 
         if (confirmed) {
             panel.updateCartTotal(selectedModel);
             ToastManager.success(panel, "Desconto aplicado ao artigo com sucesso.");
         }
+    }
+
+    /** O desconto de linha é sempre uma percentagem: é assim que LineCalculator e o backend o lêem. */
+    static BigDecimal parseDiscountPercent(String rawText) {
+        String text = rawText.trim().replace(',', '.').replace("%", "");
+        BigDecimal percent;
+        try {
+            percent = new BigDecimal(text);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Introduza uma percentagem válida (ex: 5 ou 10).");
+        }
+        if (percent.signum() < 0 || percent.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("O desconto deve estar entre 0% e 100%.");
+        }
+        return percent;
     }
 
     private static JTextField readOnlyField(String text) {

@@ -26,7 +26,6 @@ public class StatusBar extends JPanel {
     private final JLabel moduleLabel   = slimLabel("");
     private final JLabel recordsLabel  = slimLabel("");
     private final JLabel companyLabel  = slimLabel("");
-    private final JLabel userLabel     = slimLabel("");
     private final JLabel clockLabel    = slimLabel(LocalTime.now().format(TIME_FMT));
     /** Aviso de versão nova. Fica invisível enquanto não houver nada a dizer. */
     private final JLabel updateLabel   = slimLabel("");
@@ -48,7 +47,7 @@ public class StatusBar extends JPanel {
         left.add(recordsLabel);
         add(left, BorderLayout.WEST);
 
-        // Lado direito — aviso de versão (quando houver), empresa, utilizador, hora
+        // Lado direito — aviso de versão (quando houver), empresa, hora
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
         updateIcon.setVisible(false);
@@ -58,9 +57,6 @@ public class StatusBar extends JPanel {
         right.add(updateLabel);
         right.add(iconLabel("fas-building", UIHelper.TEXT_MUTED));
         right.add(companyLabel);
-        right.add(separator());
-        right.add(iconLabel("fas-user-circle", UIHelper.TEXT_MUTED));
-        right.add(userLabel);
         right.add(separator());
         right.add(iconLabel("fas-clock", UIHelper.TEXT_MUTED));
         right.add(clockLabel);
@@ -110,13 +106,11 @@ public class StatusBar extends JPanel {
      * @param module   nome do módulo activo (ex.: "Faturação")
      * @param records  número de registos na tabela activa (-1 = oculta)
      * @param company  nome da empresa activa
-     * @param user     nome de utilizador
      */
-    public void setContext(String module, int records, String company, String user) {
+    public void setContext(String module, int records, String company) {
         moduleLabel.setText(module == null ? "" : module);
         recordsLabel.setText(records < 0 ? "" : records + " registo" + (records == 1 ? "" : "s"));
         companyLabel.setText(company == null ? "" : company);
-        userLabel.setText(user == null ? "" : user);
     }
 
     /** Actualiza apenas o nº de registos (ex.: após filtro ser aplicado). */

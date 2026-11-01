@@ -22,11 +22,14 @@ final class PosCatalogController {
     static final int CARD_PADDING = 5;
     static final int CARD_CONTENT_GAP = 2;
     static final int PAGE_SIZE = 36;
+    static final String NEW_CLIENT_HINT = "Novo cliente: usar o nome escrito";
+    private static final String WALK_IN_CLIENT = "Consumidor Final";
     private final POSPanel owner;
     private final Timer searchTimer;
     private ModernButton previousButton;
     private ModernButton nextButton;
     private JLabel pageLabel;
+    private JPanel paginationBar;
     private int requestSequence;
     PosCatalogController(POSPanel owner) { this.owner = owner; }
 
@@ -44,7 +47,19 @@ final class PosCatalogController {
                 .toList();
         owner.clientCombo.removeAllItems();
         for (ClientDTO c : owner.filteredClients) {
-            owner.clientCombo.addItem(c.name() + " (" + c.taxId() + ")");
+            owner.clientCombo.addItem(PosLayout.clientLabel(c.name(), c.taxId()));
+        }
+        // Só informa: o índice fica fora de filteredClients, por isso a venda usa o nome escrito.
+        if (owner.filteredClients.isEmpty() && !q.isEmpty()) owner.clientCombo.addItem(NEW_CLIENT_HINT);
+        if (q.isEmpty()) selectWalkInClient();
+    }
+
+    private void selectWalkInClient() {
+        for (int i = 0; i < owner.filteredClients.size(); i++) {
+            if (WALK_IN_CLIENT.equalsIgnoreCase(owner.filteredClients.get(i).name())) {
+                owner.clientCombo.setSelectedIndex(i);
+                return;
+            }
         }
     }
 
@@ -64,13 +79,14 @@ final class PosCatalogController {
         pageLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         previousButton.addActionListener(e -> loadCatalogPage(currentPage() - 1));
         nextButton.addActionListener(e -> loadCatalogPage(currentPage() + 1));
-        JPanel bar = new JPanel(new BorderLayout(8, 0));
-        bar.setOpaque(false);
-        bar.setBorder(new EmptyBorder(8, 0, 0, 0));
-        bar.add(previousButton, BorderLayout.WEST);
-        bar.add(pageLabel, BorderLayout.CENTER);
-        bar.add(nextButton, BorderLayout.EAST);
-        return bar;
+        paginationBar = new JPanel(new BorderLayout(8, 0));
+        paginationBar.setOpaque(false);
+        paginationBar.setBorder(new EmptyBorder(8, 0, 0, 0));
+        paginationBar.add(previousButton, BorderLayout.WEST);
+        paginationBar.add(pageLabel, BorderLayout.CENTER);
+        paginationBar.add(nextButton, BorderLayout.EAST);
+        paginationBar.setVisible(false);
+        return paginationBar;
     }
 
     void scheduleCatalogReload() { searchTimer.restart(); }
@@ -90,7 +106,7 @@ final class PosCatalogController {
                 }});
     }
 
-    private void applyCatalogPage(PageResponse<POSCatalogItemDTO> page) {
+    void applyCatalogPage(PageResponse<POSCatalogItemDTO> page) {
         owner.productsList = page.items().stream().map(POSCatalogItemDTO::product).toList();
         owner.filteredProducts = owner.productsList;
         owner.sellableProductIds = page.items().stream().filter(POSCatalogItemDTO::sellable)
@@ -101,8 +117,8 @@ final class PosCatalogController {
                 owner.productStockQuantities.put(item.product().id(), item.stockQuantity());
             }
         }
-        if (pageLabel != null) pageLabel.setText(page.totalPages() == 0 ? "Sem resultados"
-                : "Página " + (page.page() + 1) + " de " + page.totalPages() + " · " + page.totalElements() + " produtos");
+        if (pageLabel != null) pageLabel.setText((page.page() + 1) + " de " + page.totalPages() + " · " + page.totalElements() + " produtos");
+        if (paginationBar != null) paginationBar.setVisible(page.totalPages() > 1);
         if (pageLabel != null) pageLabel.putClientProperty("catalogPage", page.page());
         if (previousButton != null) previousButton.setEnabled(page.hasPrevious());
         if (nextButton != null) nextButton.setEnabled(page.hasNext());
@@ -183,8 +199,8 @@ final class PosCatalogController {
         } else if (p.stockTracked()) {
             BigDecimal stock = owner.getProductStock(p.id());
             if (stock != null) {
-                JLabel stockLbl = new JLabel(UIHelper.formatQty(stock) + " disp.");
-                stockLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
+                JLabel stockLbl = new JLabel(stockLabel(stock));
+                stockLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
                 stockLbl.setForeground(UIHelper.APPROVED_GREEN);
                 stockLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
                 footer.add(Box.createRigidArea(new Dimension(0, 2)));
@@ -234,6 +250,15 @@ final class PosCatalogController {
         if (lower.contains("higien") || lower.contains("limpez") || lower.contains("deterg") || lower.contains("sabão")) return UIHelper.APPROVED_GREEN;
         if (lower.contains("padar") || lower.contains("pastel") || lower.contains("pão")) return UIHelper.PENDING_YELLOW;
         return UIHelper.ACCENT_BLUE;
+    }
+
+    static String stockLabel(BigDecimal stock) {
+        boolean whole = stock.stripTrailingZeros().scale() <= 0;
+        return (whole ? String.format("%,.0f", stock) : stripDecimalZeros(UIHelper.formatQty(stock))) + " disp.";
+    }
+
+    private static String stripDecimalZeros(String quantity) {
+        return quantity.replaceAll("0+$", "");
     }
 
     static boolean includeByAvailability(boolean showAll, boolean sellable) {

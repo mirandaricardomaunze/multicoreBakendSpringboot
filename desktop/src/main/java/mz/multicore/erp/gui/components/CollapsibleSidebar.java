@@ -34,7 +34,6 @@ public class CollapsibleSidebar extends JPanel {
     private final SidebarToggleButton toggleButton = new SidebarToggleButton();
     private final JPanel footerPanel = new JPanel();
     private final SidebarUserProfileCard userProfileCard = new SidebarUserProfileCard();
-    private final JLabel footerVersionLabel = createFooterVersionLabel();
 
     private final JPanel favoritesContainer = new JPanel();
     private final SidebarFavoritesCoordinator favoritesCoordinator;
@@ -202,7 +201,6 @@ public class CollapsibleSidebar extends JPanel {
         for (SidebarNavItem item : navItems) item.setCollapsed(collapsed);
         favoritesCoordinator.setCollapsed(collapsed);
         userProfileCard.setCollapsed(collapsed);
-        footerVersionLabel.setVisible(!collapsed);
 
         headerPanel.removeAll();
         footerPanel.removeAll();
@@ -229,10 +227,7 @@ public class CollapsibleSidebar extends JPanel {
             footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
             footerPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
             userProfileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-            footerVersionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             footerPanel.add(userProfileCard);
-            footerPanel.add(Box.createRigidArea(new Dimension(0, 4)));
-            footerPanel.add(footerVersionLabel);
         }
         headerPanel.revalidate(); headerPanel.repaint();
         footerPanel.revalidate(); footerPanel.repaint();

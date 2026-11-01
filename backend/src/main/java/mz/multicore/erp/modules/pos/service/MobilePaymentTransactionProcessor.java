@@ -19,14 +19,18 @@ public class MobilePaymentTransactionProcessor {
 
     private final MobilePaymentRepository repository;
     private final MobilePaymentPhoneValidator phoneValidator;
+    private final MobilePaymentSimulationPolicy simulationPolicy;
 
     public MobilePaymentTransactionProcessor(MobilePaymentRepository repository,
-                                             MobilePaymentPhoneValidator phoneValidator) {
+                                             MobilePaymentPhoneValidator phoneValidator,
+                                             MobilePaymentSimulationPolicy simulationPolicy) {
         this.repository = repository;
         this.phoneValidator = phoneValidator;
+        this.simulationPolicy = simulationPolicy;
     }
 
     public MobilePaymentResponse initiatePayment(InitiateMobilePaymentRequest request) {
+        simulationPolicy.requireEnabled();
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessRuleException("O valor do pagamento móvel deve ser superior a zero.");
         }
@@ -90,7 +94,7 @@ public class MobilePaymentTransactionProcessor {
                 tx.setStatus(MobilePaymentStatus.EXPIRED);
                 tx.setMessage("Tempo limite de 60 segundos excedido sem resposta do cliente.");
                 repository.save(tx);
-            } else if (elapsedSeconds >= 2) {
+            } else if (simulationPolicy.isEnabled() && elapsedSeconds >= 2) {
                 tx.setStatus(MobilePaymentStatus.SUCCESS);
                 tx.setFinancialReference(phoneValidator.generateFinancialReference(tx.getProvider()));
                 tx.setMessage("Pagamento móvel confirmado com sucesso.");
@@ -107,6 +111,7 @@ public class MobilePaymentTransactionProcessor {
     }
 
     public MobilePaymentStatusResponse simulateComplete(String transactionId, Long companyId, boolean approve) {
+        simulationPolicy.requireEnabled();
         MobilePaymentTransaction tx = repository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new BusinessRuleException("Transacção não encontrada: " + transactionId));
 

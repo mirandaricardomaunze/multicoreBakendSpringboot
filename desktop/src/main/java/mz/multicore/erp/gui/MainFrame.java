@@ -109,6 +109,7 @@ public class MainFrame extends JFrame {
     private CollapsibleSidebar sidebar;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
+    private boolean sidebarCollapsedForPos;
 
     /** Antecedência (dias) a partir da qual se avisa o assinante que a assinatura vai expirar. */
     private static final long SUB_ALERT_DAYS = 7;
@@ -295,6 +296,7 @@ public class MainFrame extends JFrame {
     public void applyAuthenticatedUser(String displayName, String role) {
         sessionDisplayName = displayName;
         String activeRole = CurrentUserContext.getRole();
+        if (posPanel != null) posPanel.setOperatorDisplayName(displayName);
         if (dashboardPanel != null) dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sellerDashboardPanel != null) sellerDashboardPanel.updateWelcomeMessage(displayName);
         topBarBuilder.updateUserProfile(displayName, UIHelper.humanRole(activeRole));
@@ -302,7 +304,7 @@ public class MainFrame extends JFrame {
         if (statusBar != null) {
             DesktopSession s = desktopSessionStore.requireSession();
             String company = s.companies().isEmpty() ? "" : s.companies().get(0).name();
-            statusBar.setContext("Painel Inicial", -1, company, displayName);
+            statusBar.setContext("Painel Inicial", -1, company);
             checkForNewerVersion();
         }
     }
@@ -314,6 +316,17 @@ public class MainFrame extends JFrame {
      * não há aviso nenhum e a loja continua a trabalhar. Um problema a verificar a versão nunca
      * pode impedir alguém de vender.
      */
+    private void adjustSidebarForPos(boolean entering) {
+        if (sidebar == null) return;
+        if (entering && !sidebar.isCollapsedState() && PosLayout.shouldCollapseSidebar(getWidth())) {
+            sidebar.setCollapsedState(true);
+            sidebarCollapsedForPos = true;
+        } else if (!entering && sidebarCollapsedForPos) {
+            sidebar.setCollapsedState(false);
+            sidebarCollapsedForPos = false;
+        }
+    }
+
     private void checkForNewerVersion() {
         if (versionApiClient == null) return;
         new javax.swing.SwingWorker<String, Void>() {
@@ -445,6 +458,7 @@ public class MainFrame extends JFrame {
         if (statusBar != null) statusBar.setModule(modName);
         if (topBar != null) topBar.setActive(modName);
         if (sidebar != null) sidebar.setActive(modName);
+        adjustSidebarForPos("pos".equals(cardName));
         RecentItemsHistoryManager.getInstance().record("Módulo", null, modName, "Acesso rápido", cardName, "fas-folder-open");
         refreshPanel(cardName);
     }

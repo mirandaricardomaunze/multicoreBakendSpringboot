@@ -46,7 +46,9 @@ public final class PosShortcutHelpDialog {
                 {"F7", "Importar Cotação / Pró-forma no Carrinho"},
                 {"F11", "Alternar Venda / Histórico"},
                 {"ESC", "Cancelar / Limpar Carrinho"},
-                {"CTRL+N", "Iniciar Nova Venda"}
+                {"CTRL+N", "Iniciar Nova Venda"},
+                {"CTRL+S", "Suspender Venda"},
+                {"CTRL+R", "Retomar Venda em Espera"}
         }));
 
         root.add(cardsPanel);

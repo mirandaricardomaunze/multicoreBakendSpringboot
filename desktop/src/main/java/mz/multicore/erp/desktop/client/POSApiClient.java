@@ -132,6 +132,12 @@ public class POSApiClient {
         return clientFactory.authenticatedClient().get(url, mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse.class);
     }
 
+    /** Indica se o servidor aceita pagamento móvel simulado. */
+    public mz.multicore.erp.modules.pos.dto.MobilePaymentAvailabilityDTO getMobilePaymentAvailability() {
+        return clientFactory.authenticatedClient().get("/api/pos/mobile-payment/availability",
+                mz.multicore.erp.modules.pos.dto.MobilePaymentAvailabilityDTO.class);
+    }
+
     /** Força conclusão para modo de demonstração e testes. */
     public mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse simulateCompleteMobilePayment(
             String transactionId, Long companyId, boolean approve) {

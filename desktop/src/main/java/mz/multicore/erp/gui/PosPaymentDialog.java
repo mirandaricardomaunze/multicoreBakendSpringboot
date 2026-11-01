@@ -58,7 +58,8 @@ final class PosPaymentDialog {
         UIHelper.styleTextField(refField);
         refField.putClientProperty("JTextField.placeholderText", "Nº Comprovativo / ID Transacção");
 
-        ModernButton pushUssdBtn = new ModernButton("Push USSD", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE.darker());
+        boolean[] simulationEnabled = {false};
+        ModernButton pushUssdBtn = new ModernButton("Simular", UIHelper.ACCENT_ORANGE, UIHelper.ACCENT_ORANGE.darker());
         pushUssdBtn.setIcon(UIHelper.icon("fas-mobile-alt", 12, Color.WHITE));
         pushUssdBtn.setForeground(Color.WHITE);
         pushUssdBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
@@ -203,16 +204,16 @@ final class PosPaymentDialog {
             quickCashSection.setVisible(isCash);
             refField.setEnabled(!isCash);
 
-            pushUssdBtn.setVisible(isMobile && apiClient != null);
+            pushUssdBtn.setVisible(isMobile && simulationEnabled[0]);
             if (isMobile) {
-                pushUssdBtn.setText("EMOLA".equals(methodCodes[selectedMethod]) ? "Push e-Mola" : "Push M-Pesa");
+                pushUssdBtn.setText("EMOLA".equals(methodCodes[selectedMethod]) ? "Simular e-Mola" : "Simular M-Pesa");
             }
 
             checkVoucherBtn.setVisible(isVoucher && apiClient != null);
             if (isVoucher) {
                 refField.putClientProperty("JTextField.placeholderText", "Código do Vale (ex.: VALE-XXXX-XXXX)");
             } else if (isMobile) {
-                refField.putClientProperty("JTextField.placeholderText", "Nº Telemóvel ou ID Transacção");
+                refField.putClientProperty("JTextField.placeholderText", "Referência do comprovativo");
             } else {
                 refField.putClientProperty("JTextField.placeholderText", "Nº Comprovativo / ID Transacção");
             }
@@ -255,6 +256,13 @@ final class PosPaymentDialog {
         methodCombo.addActionListener(e -> recompute.run());
         UIHelper.onTextChange(tenderedField, recompute);
         recompute.run();
+        // Assíncrono: sem resposta do servidor, a simulação continua oculta.
+        if (apiClient != null) {
+            UIHelper.loadAsync(pushUssdBtn, apiClient::getMobilePaymentAvailability, availability -> {
+                simulationEnabled[0] = availability != null && availability.simulationEnabled();
+                recompute.run();
+            }, error -> { });
+        }
 
         JPanel form = UIHelper.createDialogForm(
                 "Método de pagamento:", methodChipsPanel,
@@ -314,6 +322,7 @@ final class PosPaymentDialog {
                                 return null;
                             };
                         } else {
+                            requireMobileReference(method, ref);
                             return () -> {
                                 result[0] = new PosPaymentRequest(
                                         method, safeTotal, safeTotal, ref.isEmpty() ? null : ref, accountId);
@@ -337,6 +346,14 @@ final class PosPaymentDialog {
         button.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         button.addActionListener(e -> target.setText(value.stripTrailingZeros().toPlainString()));
         parent.add(button);
+    }
+
+    /** Sem operador ligado, a referência é a única prova do pagamento móvel. */
+    static void requireMobileReference(String method, String reference) {
+        boolean mobile = "MPESA".equals(method) || "EMOLA".equals(method);
+        if (mobile && (reference == null || reference.isBlank())) {
+            throw new IllegalArgumentException("Confira o comprovativo do cliente e indique a referência do pagamento.");
+        }
     }
 
     static StoreVoucherDTO validateVoucher(Optional<StoreVoucherDTO> voucher, BigDecimal total, String code) {

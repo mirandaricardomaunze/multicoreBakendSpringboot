@@ -132,10 +132,10 @@ public class DemoEnterpriseDataSeeder {
         TaxRate ivaNormal = taxRateRepository.findByCode("IVA16").orElse(null);
 
         Product erpLic = createProduct("MER-ARROZ-5KG", "MRC-0001", "5601000000017", "Arroz Agulha 5kg", "550.00", "430.00", "20.000", "Saco de arroz agulha de 5kg", ivaExempt, ptCompany, mzCompany);
-        Product support = createProduct("MER-ACUCAR-1KG", "MRC-0002", "5601000000024", "Acucar Branco 1kg", "95.00", "72.00", "40.000", "Pacote de acucar branco refinado de 1kg", ivaExempt, ptCompany, mzCompany);
-        Product techServ = createProduct("MER-OLEO-1L", "MRC-0003", "5601000000031", "Oleo Alimentar 1L", "165.00", "130.00", "30.000", "Garrafa de oleo alimentar de 1 litro", ivaNormal, ptCompany, mzCompany);
+        Product support = createProduct("MER-ACUCAR-1KG", "MRC-0002", "5601000000024", "Açúcar Branco 1kg", "95.00", "72.00", "40.000", "Pacote de açúcar branco refinado de 1kg", ivaExempt, ptCompany, mzCompany);
+        Product techServ = createProduct("MER-OLEO-1L", "MRC-0003", "5601000000031", "Óleo Alimentar 1L", "165.00", "130.00", "30.000", "Garrafa de óleo alimentar de 1 litro", ivaNormal, ptCompany, mzCompany);
         Product partsProduct = createProduct("MER-FARINHA-1KG", "MRC-0004", "5601000000048", "Farinha de Trigo 1kg", "80.00", "58.00", "35.000", "Pacote de farinha de trigo de 1kg", ivaExempt, ptCompany, mzCompany);
-        Product feijao = createProduct("MER-FEIJAO-1KG", "MRC-0005", "5601000000055", "Feijao Manteiga 1kg", "180.00", "140.00", "25.000", "Pacote de feijao manteiga de 1kg", ivaExempt, ptCompany, mzCompany);
+        Product feijao = createProduct("MER-FEIJAO-1KG", "MRC-0005", "5601000000055", "Feijão Manteiga 1kg", "180.00", "140.00", "25.000", "Pacote de feijão manteiga de 1kg", ivaExempt, ptCompany, mzCompany);
         Product massa = createProduct("MER-MASSA-500G", "MRC-0006", "5601000000062", "Massa Esparguete 500g", "70.00", "48.00", "50.000", "Pacote de massa esparguete de 500g", ivaReduced, ptCompany, mzCompany);
 
         seedWarehouseStocks(whLisboa, erpLic, support, "120.000", techServ, partsProduct, feijao, massa);

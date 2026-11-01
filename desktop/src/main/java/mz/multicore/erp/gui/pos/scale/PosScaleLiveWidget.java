@@ -13,12 +13,15 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
  * Componente visual compacto de estado e peso em direto da balança USB/Serial no POS.
  */
 public class PosScaleLiveWidget extends ModernPanel {
+
+    private static final Set<String> SIMULATION_ROLES = Set.of("ADMIN", "MANAGER");
 
     private final SerialScaleReader scaleReader;
     private final JLabel weightDisplayLabel;
@@ -37,7 +40,7 @@ public class PosScaleLiveWidget extends ModernPanel {
         setBorder(new EmptyBorder(0, 0, 0, 0));
 
         statusDotLabel = new JLabel(UIHelper.icon("fas-circle", 9, UIHelper.APPROVED_GREEN));
-        statusDotLabel.setToolTipText("Balança Serial COM Ligada");
+        statusDotLabel.setToolTipText("Balança em simulação");
 
         weightDisplayLabel = new JLabel("0.000 kg");
         weightDisplayLabel.setIcon(UIHelper.icon("fas-balance-scale", 13, UIHelper.ACCENT_BLUE));
@@ -84,6 +87,16 @@ public class PosScaleLiveWidget extends ModernPanel {
     public Dimension getPreferredSize() {
         Dimension d = super.getPreferredSize();
         return new Dimension(d.width, UIHelper.FORM_CONTROL_HEIGHT);
+    }
+
+    /** A simulação serve para gestão testar sem hardware; não deve chegar ao caixa. */
+    public static boolean canSimulate(boolean simulationMode, String role) {
+        return simulationMode && role != null && SIMULATION_ROLES.contains(role);
+    }
+
+    public void applyAccess(boolean enabled, String role) {
+        setVisible(enabled);
+        simulateButton.setVisible(canSimulate(scaleReader.isSimulationMode(), role));
     }
 
     public void setOnWeightCapturedCallback(Consumer<BigDecimal> callback) {
@@ -135,6 +148,12 @@ public class PosScaleLiveWidget extends ModernPanel {
             }
             weightDisplayLabel.setText(text);
 
+            if (scaleReader.isSimulationMode()) {
+                statusDotLabel.setIcon(UIHelper.icon("fas-circle", 9, UIHelper.TEXT_MUTED));
+                statusDotLabel.setToolTipText("Balança em simulação");
+                weightDisplayLabel.setForeground(UIHelper.TEXT_LIGHT);
+                return;
+            }
             switch (reading.status()) {
                 case STABLE -> {
                     statusDotLabel.setIcon(UIHelper.icon("fas-circle", 9, UIHelper.APPROVED_GREEN));

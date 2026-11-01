@@ -42,7 +42,7 @@ class PosLayoutTest {
     @Test
     void compactHeaderWeightsFillOneRow() {
         double total = java.util.Arrays.stream(PosLayout.HEADER_FIELD_WEIGHTS).sum();
-        assertEquals(5, PosLayout.HEADER_FIELD_WEIGHTS.length);
+        assertEquals(4, PosLayout.HEADER_FIELD_WEIGHTS.length);
         assertEquals(1.0, total, 0.0001);
     }
 }
