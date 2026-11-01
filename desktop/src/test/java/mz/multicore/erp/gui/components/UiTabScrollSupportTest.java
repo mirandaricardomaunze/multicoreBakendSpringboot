@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.components;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,7 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Point;
 import java.awt.event.MouseWheelEvent;
 import java.util.List;
@@ -27,6 +29,8 @@ class UiTabScrollSupportTest {
     @Test
     @DisplayName("As dez abas de Vendas cabem num ecrã de 1366 px, medidas pelo componente real")
     void commercialTabsFit() throws Exception {
+        Assumptions.assumeTrue("Segoe UI".equals(new Font("Segoe UI", Font.BOLD, 13).getFamily()),
+                "larguras validadas só com a fonte do Windows");
         JTabbedPane tabs = tabs(COMMERCIAL, AVAILABLE_AT_1366);
 
         int total = 0;
