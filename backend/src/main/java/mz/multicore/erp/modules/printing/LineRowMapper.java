@@ -66,7 +66,7 @@ public class LineRowMapper {
     public static boolean isDisplayableBatch(String batch) {
         if (batch == null || batch.isBlank()) return false;
         String b = batch.trim().toUpperCase();
-        return !b.startsWith("LEGACY") && !b.startsWith("DEF") && !b.startsWith("PADR")
+        return !b.startsWith("LEGACY") && !b.startsWith("DEF") && !b.startsWith("PADR") && !b.startsWith("AUTO-")
                 && !b.startsWith("SEM-LOTE") && !"-".equals(b) && !"—".equals(b)
                 && !"N/A".equals(b) && !"NONE".equals(b);
     }

@@ -217,7 +217,6 @@ class LoginCredentialsCard {
         panel.add(Box.createRigidArea(new Dimension(0, 6)));
         JPanel chipsRow2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0)); chipsRow2.setOpaque(false);
         chipsRow2.add(createDemoChip("Admin (Total)", "admin", "admin"));
-        chipsRow2.add(createDemoChip("Superadmin (Plataforma)", "superadmin", "superadmin"));
         panel.add(chipsRow2);
         return panel;
     }

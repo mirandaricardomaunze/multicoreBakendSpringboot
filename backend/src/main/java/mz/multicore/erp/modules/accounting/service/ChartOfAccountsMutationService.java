@@ -8,6 +8,7 @@ import mz.multicore.erp.modules.accounting.dto.SaveAccountRequest;
 import mz.multicore.erp.modules.accounting.model.Account;
 import mz.multicore.erp.modules.accounting.model.AccountClass;
 import mz.multicore.erp.modules.accounting.repository.AccountRepository;
+import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import org.springframework.stereotype.Component;
 
@@ -28,9 +29,16 @@ public class ChartOfAccountsMutationService {
     public int seedDefaultChart() {
         PermissionGuard.requireManagerOrAdmin("semear o plano de contas");
         Long companyId = CurrentUserContext.getCurrentCompanyId();
+        return seed(companyId, companyService.getCurrentCompanyReference(companyId));
+    }
+
+    public int seedChartFor(Company company) {
+        return seed(company.getId(), company);
+    }
+
+    private int seed(Long companyId, Company company) {
         var existingCodes = accountRepository.findByCompanyIdOrderByCode(companyId).stream()
                 .map(Account::getCode).collect(Collectors.toSet());
-        var company = companyService.getCurrentCompanyReference(companyId);
         List<Account> accounts = PgcNirfChart.accounts().stream()
                 .filter(seed -> !existingCodes.contains(seed.code()))
                 .map(seed -> {

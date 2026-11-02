@@ -13,6 +13,8 @@ import java.util.List;
 
 /** Coordenador de operações do ciclo de vida de encomendas a fornecedor. */
 final class PurchaseOrderOperationsCoordinator {
+    private static final java.time.format.DateTimeFormatter EXPECTED_DATE =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final ComprasPanel owner;
     private final PurchaseOrdersPanel panel;
@@ -34,7 +36,7 @@ final class PurchaseOrderOperationsCoordinator {
                     o.orderNumber(), o.supplierName(), o.status(),
                     o.totalAmount() == null ? BigDecimal.ZERO : o.totalAmount(),
                     o.orderDate() == null ? "-" : o.orderDate().format(dtf),
-                    o.expectedDate() == null ? "-" : o.expectedDate().toString(),
+                    o.expectedDate() == null ? "-" : o.expectedDate().format(EXPECTED_DATE),
                     buName});
         }
         if (owner.poBusinessUnitCombo != null) {
@@ -106,10 +108,10 @@ final class PurchaseOrderOperationsCoordinator {
         if (sel == null) return;
         if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner), FeedbackType.WARNING,
                 "Confirmar recepção",
-                "Receber a encomenda " + sel.orderNumber() + "? O stock do armazém será actualizado.",
+                "Receber a encomenda " + sel.orderNumber() + "? O stock do armazém será actualizado e a dívida ao fornecedor fica registada.",
                 "Receber encomenda")) return;
         UIHelper.runWithProgress(owner, "A receber encomenda...", () -> owner.purchaseApiClient.receiveOrder(sel.id()), ignored -> {
-            owner.showPurchaseSuccess("Encomenda recebida e stock actualizado.");
+            owner.showPurchaseSuccess("Encomenda recebida · stock e dívida ao fornecedor actualizados.");
             panel.refresh();
             owner.loadPurchasesHistory();
         }, owner::showPurchaseError);
@@ -185,7 +187,7 @@ final class PurchaseOrderOperationsCoordinator {
             items.add(new QuickPeekPanel.PeekItem("Linha de Negócio", order.businessUnitName(), false));
         }
         items.add(new QuickPeekPanel.PeekItem("Data Emissão", order.orderDate() != null ? order.orderDate().format(dtf) : "-", false));
-        items.add(new QuickPeekPanel.PeekItem("Entrega Prevista", order.expectedDate() != null ? order.expectedDate().toString() : "-", false));
+        items.add(new QuickPeekPanel.PeekItem("Entrega Prevista", order.expectedDate() != null ? order.expectedDate().format(EXPECTED_DATE) : "-", false));
         int itemCount = order.lines() != null ? order.lines().size() : 0;
         items.add(new QuickPeekPanel.PeekItem("Itens Encomendados", String.valueOf(itemCount), false));
         BigDecimal total = order.totalAmount() != null ? order.totalAmount() : BigDecimal.ZERO;

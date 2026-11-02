@@ -30,7 +30,7 @@ public class ReferenceAndAdminDataSeeder {
             AppUserRepository appUserRepository,
             TaxRateRepository taxRateRepository,
             ProductCategoryRepository productCategoryRepository,
-            @Value("${app.superadmin.password:superadmin}") String superAdminPassword,
+            @Value("${app.superadmin.password:}") String superAdminPassword,
             PasswordEncoder passwordEncoder) {
         this.companyRepository = companyRepository;
         this.appUserRepository = appUserRepository;

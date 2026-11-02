@@ -95,6 +95,27 @@ public class PosCartController {
         if (owner.cartCenter == null) return;
         CardLayout layout = (CardLayout) owner.cartCenter.getLayout();
         layout.show(owner.cartCenter, owner.cartItems.isEmpty() ? "empty" : "table");
+        refreshCartActions();
+    }
+
+    /** As acções do carrinho só ficam activas quando podem fazer alguma coisa. */
+    public void refreshCartActions() {
+        boolean hasItems = !owner.cartItems.isEmpty();
+        owner.cartLineButtons.forEach(button -> button.setEnabled(hasItems));
+        if (owner.checkoutBtn == null) return;
+        owner.checkoutBtn.setEnabled(hasItems && owner.activeSession != null);
+        owner.checkoutBtn.setToolTipText(owner.activeSession == null ? "Abra a caixa antes de finalizar uma venda."
+                : hasItems ? null : "Adicione um artigo ao carrinho.");
+    }
+
+    /** Cada atendimento começa limpo: o cliente e o crédito do anterior nunca passam para o seguinte. */
+    public void resetCustomerForNextSale() {
+        if (owner.creditCheck != null) owner.creditCheck.setSelected(false);
+        owner.discountAuthorization = null;
+        owner.authorizedDiscount = BigDecimal.ZERO;
+        if (owner.clientSearchField == null) return;
+        owner.clientSearchField.setText("");
+        owner.catalogController.filterClients("");
     }
 
     public static String ivaCellLabel(POSPanel.CartItem item) {

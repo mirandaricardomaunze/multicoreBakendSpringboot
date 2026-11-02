@@ -100,7 +100,7 @@ public class PosCheckoutCoordinator {
 
         String idempotencyKey = "POS-" + UUID.randomUUID();
         POSCheckoutRequest request = new POSCheckoutRequest(operator, companyId, client != null ? client.id() : null,
-                walkInName, wh.id(), treasuryAccountId, lines, payments, idempotencyKey, owner.currentQuotationId);
+                walkInName, wh.id(), treasuryAccountId, lines, payments, idempotencyKey, owner.currentQuotationId, owner.discountAuthorization);
 
         UIHelper.runWithProgress(owner, "A finalizar venda",
                 () -> owner.posApiClient.checkout(request),
@@ -109,25 +109,14 @@ public class PosCheckoutCoordinator {
                     ToastManager.success(owner, "Venda concluída · " + inv.invoiceNumber() + " · "
                             + inv.totalAmount() + " MT · " + paymentLabel + ".");
 
-                    if (fiado && owner.creditCheck != null) owner.creditCheck.setSelected(false);
-
                     PosReceiptPrinter.printReceiptIfConfirmed(owner, inv);
-                    if (owner.quotationActions != null) owner.quotationActions.clearQuotationLink();
-
-                    owner.cartItems.clear();
-                    owner.cartModel.setRowCount(0);
-                    owner.updateCartTotal();
+                    owner.clearCart();
                     owner.refreshSessionState();
                     owner.todaySummaryView.loadTodaySalesSummary(owner);
                     owner.loadMetadata();
                 },
                 ex -> {
-                    if (owner.contingencyManager.handleContingencyCheckout(owner, request, cartTotal, ex, () -> {
-                        if (owner.quotationActions != null) owner.quotationActions.clearQuotationLink();
-                        owner.cartItems.clear();
-                        owner.cartModel.setRowCount(0);
-                        owner.updateCartTotal();
-                    })) return;
+                    if (owner.contingencyManager.handleContingencyCheckout(owner, request, cartTotal, ex, owner::clearCart)) return;
                     owner.showPosNotice(FeedbackType.ERROR, "Não foi possível concluir a venda", ex.getMessage());
                 });
     }

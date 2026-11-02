@@ -66,10 +66,10 @@ class PurchaseOrderServiceDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("Garante construtor de 10 argumentos para retrocompatibilidade com mocks existentes")
+    @DisplayName("Garante construtor de 11 argumentos para retrocompatibilidade com mocks existentes")
     void testBackwardCompatibleConstructor() {
         PurchaseOrderService service = new PurchaseOrderService(
-                null, null, null, null, null, null, null, null, null, null);
-        assertNotNull(service, "Construtor de 10 argumentos deve instanciar");
+                null, null, null, null, null, null, null, null, null, null, null);
+        assertNotNull(service, "Construtor de 11 argumentos deve instanciar");
     }
 }

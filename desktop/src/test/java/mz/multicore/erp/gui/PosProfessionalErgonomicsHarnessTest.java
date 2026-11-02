@@ -140,9 +140,9 @@ public class PosProfessionalErgonomicsHarnessTest {
     }
 
     @Test
-    @DisplayName("POS-PROF-06: Pesos do cabeçalho distribuem 100% da largura em 5 campos")
+    @DisplayName("POS-PROF-06: Pesos do cabeçalho distribuem 100% da largura em 4 campos")
     void testHeaderFieldWeights() {
-        assertEquals(5, PosLayout.HEADER_FIELD_WEIGHTS.length, "Deve haver 5 colunas de cabeçalho");
+        assertEquals(4, PosLayout.HEADER_FIELD_WEIGHTS.length, "Deve haver 4 colunas de cabeçalho");
         double sum = 0.0;
         for (double w : PosLayout.HEADER_FIELD_WEIGHTS) {
             sum += w;

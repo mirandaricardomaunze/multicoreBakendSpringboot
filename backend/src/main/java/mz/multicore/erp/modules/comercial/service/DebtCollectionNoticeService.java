@@ -82,7 +82,7 @@ public class DebtCollectionNoticeService {
                     inv.issueDate(),
                     inv.effectiveDueDate(),
                     days,
-                    inv.getTotalAmount(),
+                    inv.payableTotal(),
                     inv.getAmountPaid(),
                     outstanding
             ));

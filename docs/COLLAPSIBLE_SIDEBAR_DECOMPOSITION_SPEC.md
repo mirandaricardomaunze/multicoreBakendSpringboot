@@ -8,6 +8,15 @@ A classe `CollapsibleSidebar.java` possuía 722 linhas no pacote `mz.multicore.e
 - Card de utilizador no rodapé com avatar circular, iniciais, ponto de status online esmeralda, botão de logout e menu popup contextual (`UserProfileCard`);
 - Orquestração da barra retrátil, animação suave de transição de largura (240px $\leftrightarrow$ 64px), sincronização de temas e gestão de favoritos.
 
+## Empresa activa e densidade
+
+- A empresa guardada é escolhida antes de construir a sidebar: o nome e o menu seguem a empresa activa.
+- Cada item mede 36px, para caberem mais módulos em ecrãs de 720px.
+- O nome da empresa ocupa duas linhas em vez de ser cortado.
+- Uma seta (`SidebarScrollHint`) avisa que há mais módulos abaixo e, ao clicar, desce o menu.
+- A Tesouraria fica no grupo "Finanças & Fiscal", junto da Contabilidade e da Área Fiscal.
+- Teste: `SidebarActiveCompanyHarnessTest`.
+
 ## 2. Princípios de Arquitetura e Limites Físicos
 - **Modularização Estrita no Pacote `mz.multicore.erp.gui.components`:**
   - `SidebarLogoBadge.java`: Emblema 3D da aplicação no topo da sidebar com gradientes e ícone vetorial ($\le 60$ linhas).

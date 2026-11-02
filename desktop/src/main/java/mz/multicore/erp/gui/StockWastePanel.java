@@ -309,7 +309,7 @@ public class StockWastePanel extends JPanel {
 
             wasteTableModel.addRow(new Object[]{
                     w.id(), w.createdAt() != null ? w.createdAt().format(UIHelper.DATETIME_FMT) : "-",
-                    w.productName(), w.warehouseName(), w.batchNumber() != null ? w.batchNumber() : "-",
+                    w.productName(), w.warehouseName(), BatchDisplay.number(w.batchNumber()),
                     w.reason().getDescription(), w.quantity().stripTrailingZeros().toPlainString() + " un",
                     UIHelper.formatMzn(w.unitCost()), UIHelper.formatMzn(w.totalCost()),
                     w.status().getDescription(), w.registeredBy(),

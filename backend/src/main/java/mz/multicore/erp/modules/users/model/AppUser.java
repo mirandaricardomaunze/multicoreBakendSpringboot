@@ -53,6 +53,18 @@ public class AppUser extends BaseEntity {
     @Column(name = "platform_admin", nullable = false)
     private boolean platformAdmin = false;
 
+    /** A senha foi definida por outra pessoa: o titular tem de a trocar antes de usar o sistema. */
+    @Column(name = "password_change_required", nullable = false, columnDefinition = "boolean default false not null")
+    private boolean passwordChangeRequired = false;
+
+    /** Segredo TOTP cifrado; nulo enquanto a dupla autenticação não estiver configurada. */
+    @Column(name = "totp_secret", length = 255)
+    private String totpSecret;
+
+    /** Último intervalo TOTP aceite. Só muda pela actualização atómica do repositório. */
+    @Column(name = "last_totp_step", updatable = false)
+    private Long lastTotpStep;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = jakarta.persistence.CascadeType.ALL,
             orphanRemoval = true)
     private Set<AppUserCompanyAccess> companyAccesses = new LinkedHashSet<>();

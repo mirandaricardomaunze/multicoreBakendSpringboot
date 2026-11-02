@@ -12,6 +12,9 @@ import java.util.Optional;
 
 @Repository
 public interface OccupationalHealthExamRepository extends JpaRepository<OccupationalHealthExam, Long> {
+
+    @Query("select e.id from OccupationalHealthExam e where e.attachmentData is not null")
+    List<Long> findIdsWithAttachment();
     @Query("select e from OccupationalHealthExam e join fetch e.employee left join fetch e.provider "
             + "where e.company.id=:companyId and e.employee.id=:employeeId "
             + "order by e.examDate desc, e.id desc")

@@ -13,7 +13,7 @@ import java.util.function.Consumer;
 
 /**
  * Painel principal do Dashboard Executivo e Operacional.
- * Orquestrador desacoplado das abas de Visão Geral, Cockpit Operacional 360° e Rentabilidade/DRE.
+ * Orquestrador desacoplado das abas de Visão Geral, Operações e Rentabilidade.
  */
 public class DashboardPanel extends JPanel {
 
@@ -87,8 +87,8 @@ public class DashboardPanel extends JPanel {
         JTabbedPane dashboardTabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(dashboardTabs);
         dashboardTabs.addTab("Visão Geral & Gráficos", UIHelper.icon("fas-chart-pie", 13, UIHelper.ACCENT_BLUE), overviewTab.buildTab());
-        dashboardTabs.addTab("Cockpit Operacional 360°", UIHelper.icon("fas-cogs", 13, UIHelper.APPROVED_GREEN), buildOperationsTab());
-        dashboardTabs.addTab("Rentabilidade & DRE", UIHelper.icon("fas-coins", 13, UIHelper.PENDING_YELLOW), buildProfitTab());
+        dashboardTabs.addTab("Operações", UIHelper.icon("fas-cogs", 13, UIHelper.APPROVED_GREEN), buildOperationsTab());
+        dashboardTabs.addTab("Rentabilidade & Resultados", UIHelper.icon("fas-coins", 13, UIHelper.PENDING_YELLOW), buildProfitTab());
         add(dashboardTabs, BorderLayout.CENTER);
         registerKeyboardAction(e -> openExecutiveTvDashboard(),
                 KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F11, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
@@ -121,13 +121,12 @@ public class DashboardPanel extends JPanel {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         bar.setOpaque(false);
 
-        ModernButton tvBtn = UIHelper.createSecondaryButton("Painel TV");
-        tvBtn.setIcon(UIHelper.icon("fas-tv", 12, UIHelper.ACCENT_CYAN));
-        tvBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        tvBtn.setToolTipText("Abrir Painel Executivo em Tela Cheia para Sala de Reuniões (F11)");
-        tvBtn.setPreferredSize(new Dimension(tvBtn.getPreferredSize().width + 12, 28));
+        // Acção, não filtro: fica antes dos períodos, separada e sem cor de selecção.
+        ModernButton tvBtn = UIHelper.createIconButton("Painel TV", "fas-tv");
+        tvBtn.setToolTipText("Abrir Painel TV em ecrã inteiro (F11)");
         tvBtn.addActionListener(e -> openExecutiveTvDashboard());
         bar.add(tvBtn);
+        bar.add(Box.createHorizontalStrut(12));
 
         for (PeriodFilter p : PeriodFilter.values()) {
             ModernButton btn = UIHelper.createSecondaryButton(p.getLabel());
@@ -162,7 +161,8 @@ public class DashboardPanel extends JPanel {
 
     public void openExecutiveTvDashboard() {
         Window ancestor = SwingUtilities.getWindowAncestor(this);
-        ExecutiveTvDashboardDialog dialog = new ExecutiveTvDashboardDialog(ancestor, comercialApiClient, 1L);
+        ExecutiveTvDashboardDialog dialog = new ExecutiveTvDashboardDialog(ancestor, comercialApiClient,
+                mz.multicore.erp.architecture.security.CurrentUserContext.getCurrentCompanyId());
         dialog.setVisible(true);
     }
 
@@ -209,7 +209,7 @@ public class DashboardPanel extends JPanel {
     }
 
     private void applyDashboardData(DashboardDataCoordinator.DashboardData data) {
-        overviewTab.applyData(data, currentPeriod);
+        overviewTab.applyData(data);
         operationsTab.applyData(data);
         profitAnalyticsWidget.updateMetrics(data.profitMetrics());
     }

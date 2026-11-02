@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.components;
 
+import mz.multicore.erp.architecture.format.DisplayLocale;
 import mz.multicore.erp.gui.DashboardPanel;
 
 import java.math.BigDecimal;
@@ -127,12 +128,23 @@ public final class DashboardTrendCalculator {
      */
     public static String formatPercentage(BigDecimal percent) {
         if (percent == null || percent.compareTo(BigDecimal.ZERO) == 0) {
-            return "0.0%";
+            return "0,0%";
         }
         if (percent.compareTo(BigDecimal.ZERO) > 0) {
-            return String.format(java.util.Locale.US, "+%.1f%%", percent.doubleValue());
+            return String.format(DisplayLocale.NUMBERS, "+%.1f%%", percent.doubleValue());
         }
-        return String.format(java.util.Locale.US, "%.1f%%", percent.doubleValue());
+        return String.format(DisplayLocale.NUMBERS, "%.1f%%", percent.doubleValue());
+    }
+
+    /**
+     * Sem movimento no período, o cartão mostra o valor do período anterior em vez de só zeros.
+     */
+    public static String activityHint(BigDecimal current, BigDecimal previous, String comparisonLabel, String activeText) {
+        boolean idle = current == null || current.signum() <= 0;
+        if (!idle || comparisonLabel == null || !comparisonLabel.startsWith("vs ")) return activeText;
+        String period = comparisonLabel.substring(3);
+        return Character.toUpperCase(period.charAt(0)) + period.substring(1) + ": "
+                + String.format("%,.2f MT", previous != null ? previous : BigDecimal.ZERO);
     }
 
     /**

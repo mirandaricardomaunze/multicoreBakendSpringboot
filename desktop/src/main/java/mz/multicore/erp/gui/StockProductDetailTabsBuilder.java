@@ -14,6 +14,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import mz.multicore.erp.gui.components.BatchDisplay;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -104,16 +105,17 @@ public final class StockProductDetailTabsBuilder {
                 LocalDate today = LocalDate.now();
                 for (ProductBatchDTO b : batches) {
                     if (b.productId() != null && b.productId().equals(product.id())) {
-                        String expStr = b.expirationDate() != null ? b.expirationDate().format(DATE_FMT) : "—";
+                        LocalDate expiry = BatchDisplay.expiry(b.expirationDate());
+                        String expStr = expiry != null ? expiry.format(DATE_FMT) : "—";
                         String daysStr = "—";
-                        String state = "Válido";
-                        if (b.expirationDate() != null) {
-                            long days = ChronoUnit.DAYS.between(today, b.expirationDate());
+                        String state = expiry != null ? "Válido" : "Sem validade";
+                        if (expiry != null) {
+                            long days = ChronoUnit.DAYS.between(today, expiry);
                             daysStr = days + " d";
                             if (days < 0) state = "Expirado";
                             else if (days <= 30) state = "Crítico";
                         }
-                        model.addRow(new Object[]{b.batchNumber(), b.warehouseName(), expStr, daysStr, b.quantity(), state});
+                        model.addRow(new Object[]{BatchDisplay.number(b.batchNumber()), b.warehouseName(), expStr, daysStr, b.quantity(), state});
                     }
                 }
             }

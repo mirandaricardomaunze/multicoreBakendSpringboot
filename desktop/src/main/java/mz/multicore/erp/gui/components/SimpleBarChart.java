@@ -19,11 +19,15 @@ import java.math.RoundingMode;
  */
 public class SimpleBarChart extends JPanel {
 
+    static final String EMPTY_MESSAGE = "Sem dados neste período";
+
     private final String title;
     private String[] labels = new String[0];
     private BigDecimal[] values = new BigDecimal[0];
     private Color[] colors = new Color[0];
     private java.awt.Rectangle[] barBounds = new java.awt.Rectangle[0];
+    private String emptyMessage = EMPTY_MESSAGE;
+    private String emptyHint;
 
     public SimpleBarChart(String title) {
         this.title = title;
@@ -51,6 +55,45 @@ public class SimpleBarChart extends JPanel {
         this.colors = colors != null ? colors : new Color[0];
         this.barBounds = new java.awt.Rectangle[this.values.length];
         repaint();
+    }
+
+    /** Texto mostrado quando nenhum valor é positivo, para o gráfico não parecer avariado. */
+    /** Segunda linha do estado vazio: diz o que fazer a seguir. */
+    public void setEmptyHint(String emptyHint) {
+        this.emptyHint = emptyHint;
+    }
+
+    public String getEmptyHint() {
+        return emptyHint;
+    }
+
+    public void setEmptyMessage(String emptyMessage) {
+        this.emptyMessage = emptyMessage;
+        repaint();
+    }
+
+    public String getEmptyMessage() {
+        return emptyMessage;
+    }
+
+    public static boolean hasData(BigDecimal[] values) {
+        if (values == null) return false;
+        for (BigDecimal value : values) {
+            if (value != null && value.signum() > 0) return true;
+        }
+        return false;
+    }
+
+    static void drawEmptyState(Graphics2D g, String message, String hint, int width, int height) {
+        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
+        g.setColor(UIHelper.TEXT_MUTED);
+        java.awt.FontMetrics metrics = g.getFontMetrics();
+        int baseline = (height + metrics.getAscent()) / 2;
+        g.drawString(message, (width - metrics.stringWidth(message)) / 2, baseline);
+        if (hint == null) return;
+        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        java.awt.FontMetrics hintMetrics = g.getFontMetrics();
+        g.drawString(hint, (width - hintMetrics.stringWidth(hint)) / 2, baseline + metrics.getHeight() + 4);
     }
 
     public int getBarIndexAt(java.awt.Point point) {
@@ -91,6 +134,12 @@ public class SimpleBarChart extends JPanel {
         g.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
         g.setColor(UIHelper.TEXT_LIGHT);
         g.drawString(title, 16, 26);
+
+        if (!hasData(values)) {
+            drawEmptyState(g, emptyMessage, emptyHint, width, height);
+            g.dispose();
+            return;
+        }
 
         // 3 Linhas de benchmark de referência (25%, 50%, 75%)
         java.awt.Stroke origStroke = g.getStroke();

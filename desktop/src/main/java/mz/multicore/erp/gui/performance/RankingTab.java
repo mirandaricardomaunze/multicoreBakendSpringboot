@@ -59,7 +59,7 @@ public class RankingTab extends JPanel {
         periodFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
+        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
 
@@ -75,7 +75,7 @@ public class RankingTab extends JPanel {
         card.add(filterBar, BorderLayout.NORTH);
 
         // Table
-        String[] columns = {"Posição", "Colaborador", "Receita Gerada (MZN)", "Margem Bruta (MZN)", "Ticket Médio (MZN)", "Nº Faturas", "% Meta"};
+        String[] columns = {"Posição", "Colaborador", "Receita Gerada (MT)", "Margem Bruta (MT)", "Valor Médio (MT)", "Nº Faturas", "% Meta"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -96,7 +96,7 @@ public class RankingTab extends JPanel {
             java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
             items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Volume Total", String.valueOf(tableModel.getValueAt(row, 2)), true));
             items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Vendas", String.valueOf(tableModel.getValueAt(row, 3)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Ticket Médio", String.valueOf(tableModel.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Médio", String.valueOf(tableModel.getValueAt(row, 4)), false));
             peek.setItems(items);
         });
 

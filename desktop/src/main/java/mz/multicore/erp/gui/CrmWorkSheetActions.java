@@ -218,7 +218,7 @@ final class CrmWorkSheetActions {
     private boolean assertEditable(WorkSheetDTO ws, String action) {
         if (Boolean.TRUE.equals(ws.isBilled())) {
             owner.showNotice(FeedbackType.WARNING, "Folha já faturada",
-                    "A folha não pode ser " + action + ". Emita uma nota de crédito da factura.");
+                    "A folha não pode ser " + action + ". Emita uma nota de crédito da fatura.");
             return false;
         }
         if (ws.voided()) {

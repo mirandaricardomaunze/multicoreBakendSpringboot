@@ -61,6 +61,8 @@ public final class TableHorizontalScrollSupport {
             }
         };
         table.addPropertyChangeListener(propListener);
+        table.getModel().addTableModelListener(e -> SwingUtilities.invokeLater(
+                () -> SwingUtilities.invokeLater(() -> update(table))));
 
         wireScrollPane(table);
     }
@@ -122,8 +124,10 @@ public final class TableHorizontalScrollSupport {
         }
 
         calibrateColumnWidths(table);
+        TableColumnFit.fit(table);
 
-        int totalPreferredWidth = calculateTotalPreferredWidth(table);
+        // O texto livre encolhe até ao mínimo antes de haver barra horizontal.
+        int totalPreferredWidth = calculateTotalMinimumWidth(table);
 
         boolean manyColumns = colCount >= MANY_COLUMNS_THRESHOLD;
         boolean exceedsViewport = viewportWidth > 0 && totalPreferredWidth > viewportWidth;
@@ -191,6 +195,15 @@ public final class TableHorizontalScrollSupport {
                 col.setPreferredWidth(col.getMinWidth());
             }
         }
+    }
+
+    private static int calculateTotalMinimumWidth(JTable table) {
+        TableColumnModel colModel = table.getColumnModel();
+        int total = 0;
+        for (int i = 0; i < colModel.getColumnCount(); i++) {
+            total += colModel.getColumn(i).getMinWidth();
+        }
+        return total;
     }
 
     /**

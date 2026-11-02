@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.company.model.Company;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -23,30 +24,41 @@ import java.util.List;
 public class InvoiceA4Renderer {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final LineRowMapper lineRowMapper;
+    private final CompanyBankDetails companyBankDetails;
+
+    @Autowired
+    public InvoiceA4Renderer(LineRowMapper lineRowMapper, CompanyBankDetails companyBankDetails) {
+        this.lineRowMapper = lineRowMapper;
+        this.companyBankDetails = companyBankDetails;
+    }
 
     public InvoiceA4Renderer(LineRowMapper lineRowMapper) {
-        this.lineRowMapper = lineRowMapper;
+        this(lineRowMapper, null);
     }
 
     byte[] render(Invoice invoice, List<String> copies) {
+        List<String> bankDetails = companyBankDetails == null || invoice.getCompany() == null
+                ? List.of() : companyBankDetails.forCompany(invoice.getCompany().getId());
         List<LineItemsTableRenderer.Row> rows = toRows(invoice.getLines());
-        return PdfDocumentBuilder.buildA4(new InvoicePageFooter(invoice.getCompany(), copies), document -> {
+        InvoicePageFooter footer = new InvoicePageFooter(invoice.getCompany(), copies, invoice.getInvoiceNumber());
+        return PdfDocumentBuilder.buildA4(footer, document -> {
             for (int index = 0; index < copies.size(); index++) {
                 if (index > 0) document.newPage();
-                renderCopy(document, invoice, copies.get(index), rows);
+                footer.startCopy(index);
+                renderCopy(document, invoice, copies.get(index), rows, bankDetails);
             }
         });
     }
 
     private void renderCopy(com.lowagie.text.Document document, Invoice invoice, String copy,
-                            List<LineItemsTableRenderer.Row> rows) {
+                            List<LineItemsTableRenderer.Row> rows, List<String> bankDetails) {
         document.add(header(invoice.getCompany(), invoice, copy));
         document.add(clientAndMetadata(invoice));
         document.add(LineItemsTableRenderer.buildModelTable(rows));
         document.add(TotalsBlockRenderer.buildModelTotals(
                 invoice.getTotalBeforeTax(), totalDiscount(invoice), invoice.getTaxAmount(),
                 invoice.getTotalAmount(), TotalsBlockRenderer.calculateBreakdowns(rows)));
-        document.add(paymentAndNotes(invoice));
+        document.add(paymentAndNotes(invoice, bankDetails));
         document.add(legalDisclaimer());
     }
 
@@ -94,23 +106,21 @@ public class InvoiceA4Renderer {
         meta(grid, "DATA DE EMISSÃO", issue);
         meta(grid, "VENCIMENTO", due == null ? issue : due.format(DATE_FMT));
         meta(grid, "COND. PAGAMENTO", days == 0 ? "Pronto Pagamento" : days + " dias");
-        meta(grid, "REFERÊNCIA", valueOrDash(invoice.getInvoiceNumber()));
+        meta(grid, "MOEDA", "Meticais (MT)");
         PdfPCell metadata = borderless();
         metadata.addElement(grid);
         table.addCell(metadata);
         return table;
     }
 
-    private PdfPTable paymentAndNotes(Invoice invoice) {
+    private PdfPTable paymentAndNotes(Invoice invoice, List<String> bankDetails) {
         PdfPTable table = twoColumns();
         table.setSpacingBefore(6f);
         table.setSpacingAfter(8f);
         PdfPCell payment = borderless();
         payment.setPaddingRight(10f);
         payment.addElement(title("DADOS PARA PAGAMENTO"));
-        payment.addElement(new Paragraph("Banco: Millennium BIM / BCI", PdfTheme.boldFont()));
-        payment.addElement(new Paragraph("Conta / NIB: 0001 0000 0123 4567 8901 2", PdfTheme.bodyFont()));
-        payment.addElement(new Paragraph("BIC/SWIFT: BIMXMZMA", PdfTheme.bodyFont()));
+        bankDetails.forEach(detail -> payment.addElement(new Paragraph(detail, PdfTheme.bodyFont())));
         payment.addElement(new Paragraph("Referência: " + valueOrDash(invoice.getInvoiceNumber()), PdfTheme.bodyFont()));
         table.addCell(payment);
 
@@ -120,7 +130,7 @@ public class InvoiceA4Renderer {
         StringBuilder text = new StringBuilder("Prazo de entrega e garantia conforme condições comerciais contratadas.");
         append(text, "Motivo de Anulação: ", invoice.getCancellationReason());
         append(text, "Emitido em regime de contingência: ", invoice.getContingencyReference());
-        if (invoice.getStatus() != null) text.append("\nEstado: ").append(invoice.getStatus());
+        if (invoice.getStatus() != null) text.append("\nEstado: ").append(DocumentLabels.status(invoice.getStatus()));
         notes.addElement(new Paragraph(text.toString(), PdfTheme.smallFont()));
         table.addCell(notes);
         return table;

@@ -25,7 +25,7 @@ class MobilePaymentHarnessTest {
     @BeforeEach
     void setUp() {
         repository = mock(MobilePaymentRepository.class);
-        service = new MobilePaymentService(repository);
+        service = new MobilePaymentService(repository, true);
     }
 
     @Test

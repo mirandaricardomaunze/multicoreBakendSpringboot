@@ -134,7 +134,7 @@ Quando um ecrã coloca 4 ou 5 botões de largura total lado a lado no cabeçalho
 3. **Limite Rígido de 5 Ações por `ActionMenuButton` (`MAX_ACTIONS = 5`):**
    - **Regra de Ouro:** NUNCA adicionar mais de 5 ações a uma única instância de `ActionMenuButton`. O método `addAction(...)` lança intencionalmente `IllegalStateException: O menu de acções não pode ter mais de cinco opções.` se uma 6.ª opção for registada.
    - **Decomposição quando houver > 5 Ações Secundárias:**
-     - Se uma tela possuir mais de 5 ações secundárias, **dividir em menus temáticos complementares** (ex.: `[Documentos ▾]` para relatórios/impressão com $\le 5$ ações, e `[Operações ▾]` ou `[Gestão ▾]` para aprovação/ciclo de vida com $\le 5$ ações).
+     - Se uma tela possuir mais de 5 ações secundárias, **dividir em menus temáticos complementares** (ex.: `[Documentos ▾]` para relatórios/impressão com $\le 5$ ações, e `[Folha Salarial ▾]` ou `[Gestão ▾]` para aprovação/ciclo de vida com $\le 5$ ações).
      - Manter no máximo 2 a 3 botões totais no cabeçalho (`UIHelper.actionsBar(menu1, menu2, primaryBtn)`).
      - Acções de execução de lote (ex.: `[Processar Mês]`) devem ser posicionadas na barra de ferramentas do cartão da tabela (`TableFilter.toolbar(filtrosEsquerda, botoesDireita)`), logo acima dos dados.
 

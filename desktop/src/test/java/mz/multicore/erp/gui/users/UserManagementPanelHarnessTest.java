@@ -40,8 +40,7 @@ class UserManagementPanelHarnessTest {
     @Test
     @DisplayName("GUP-08: ManagerPinDialog valida entrada de PIN em headless")
     void testManagerPinDialogHeadlessValidation() {
-        UserApiClient userApiClient = Mockito.mock(UserApiClient.class);
-        ManagerPinDialog dialog = new ManagerPinDialog(null, userApiClient, "Anulação de Fatura");
+        ManagerPinDialog dialog = new ManagerPinDialog(null, pin -> null, "Anulação de Fatura");
 
         // Em headless devolve true como bypass seguro
         assertTrue(dialog.showDialog());

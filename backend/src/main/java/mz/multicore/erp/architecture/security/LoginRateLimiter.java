@@ -17,7 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *    bloqueia-o durante {@code lockoutMinutes} (padrão 15).
  * 2. Nível IP de Origem: após {@code maxIpAttempts} (padrão 30) falhas a partir do mesmo IP,
  *    bloqueia o IP durante {@code lockoutMinutes}.
- * Um login com sucesso limpa o contador do utilizador e decrementa/limpa o do IP.
+ * Um login com sucesso limpa só o contador do utilizador: o do IP expira sozinho, para uma conta
+ * válida não servir para apagar as tentativas contra outras contas.
  */
 @Component
 public class LoginRateLimiter {
@@ -125,12 +126,9 @@ public class LoginRateLimiter {
         recordFailure(username, null);
     }
 
-    /** Login com sucesso → limpa o contador do utilizador e do IP. */
+    /** Login com sucesso → limpa o contador do utilizador; o do IP mantém-se. */
     public void recordSuccess(String username, String clientIp) {
         attempts.remove(userKey(username, clientIp));
-        if (clientIp != null && !clientIp.isBlank()) {
-            attempts.remove(ipKey(clientIp));
-        }
     }
 
     /** Retrocompatível: registo de sucesso apenas por username. */

@@ -44,7 +44,7 @@ final class HRLiabilitiesPanel {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> load());
 
-        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações")
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Apuramento")
                 .addAction("Apurar Período", UIHelper.icon("fas-calculator", 14), this::accrue)
                 .addAction("Valores Legais", UIHelper.icon("fas-balance-scale", 14), () -> HrPolicyConfigDialog.show(owner, this::load));
 

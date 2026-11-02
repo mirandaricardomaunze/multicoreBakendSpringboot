@@ -33,8 +33,21 @@ public record InvoiceDTO(
     AgingBucket agingBucket,
     Long businessUnitId,
     String businessUnitName,
-    String customerName
+    String customerName,
+    /** Efeito das notas aprovadas sobre o valor a pagar: débitos somam, créditos subtraem. */
+    BigDecimal noteAdjustment
 ) {
+
+    public InvoiceDTO(
+            Long id, String invoiceNumber, Long clientId, String clientName, String clientTaxId,
+            BigDecimal totalBeforeTax, BigDecimal taxAmount, BigDecimal totalAmount, BigDecimal amountPaid,
+            InvoiceStatus status, String rejectionReason, List<InvoiceLineDTO> lines,
+            LocalDateTime createdAt, String createdBy, LocalDate dueDate, int daysOverdue,
+            AgingBucket agingBucket, Long businessUnitId, String businessUnitName, String customerName) {
+        this(id, invoiceNumber, clientId, clientName, clientTaxId, totalBeforeTax, taxAmount,
+                totalAmount, amountPaid, status, rejectionReason, lines, createdAt, createdBy,
+                dueDate, daysOverdue, agingBucket, businessUnitId, businessUnitName, customerName, BigDecimal.ZERO);
+    }
 
     public InvoiceDTO(
             Long id, String invoiceNumber, Long clientId, String clientName, String clientTaxId,
@@ -61,8 +74,9 @@ public record InvoiceDTO(
     /** Saldo por liquidar — espelha {@code Invoice.outstandingAmount()} para a UI não o recalcular. */
     public BigDecimal outstandingAmount() {
         BigDecimal total = totalAmount == null ? BigDecimal.ZERO : totalAmount;
+        BigDecimal adjustment = noteAdjustment == null ? BigDecimal.ZERO : noteAdjustment;
         BigDecimal paid = amountPaid == null ? BigDecimal.ZERO : amountPaid;
-        BigDecimal remaining = total.subtract(paid);
+        BigDecimal remaining = total.add(adjustment).subtract(paid);
         return remaining.signum() > 0 ? remaining : BigDecimal.ZERO;
     }
 }

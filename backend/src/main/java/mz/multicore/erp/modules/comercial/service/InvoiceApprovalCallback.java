@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +16,13 @@ public class InvoiceApprovalCallback implements ApprovalCallback {
 
     private final InvoiceRepository invoiceRepository;
     private final InventoryService inventoryService;
+    private final ComercialInvoiceLifecycleService invoiceLifecycleService;
 
-    public InvoiceApprovalCallback(InvoiceRepository invoiceRepository, InventoryService inventoryService) {
+    public InvoiceApprovalCallback(InvoiceRepository invoiceRepository, InventoryService inventoryService,
+                                   @Lazy ComercialInvoiceLifecycleService invoiceLifecycleService) {
         this.invoiceRepository = invoiceRepository;
         this.inventoryService = inventoryService;
+        this.invoiceLifecycleService = invoiceLifecycleService;
     }
 
     @Override
@@ -46,6 +50,8 @@ public class InvoiceApprovalCallback implements ApprovalCallback {
                         desc
                 );
             });
+            // Sem isto, a venda com desconto especial nunca chegava à contabilidade.
+            invoiceLifecycleService.publishSale(invoice, BigDecimal.ZERO, false);
         });
     }
 

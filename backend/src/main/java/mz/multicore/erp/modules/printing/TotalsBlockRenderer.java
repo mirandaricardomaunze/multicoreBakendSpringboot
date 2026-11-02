@@ -26,10 +26,20 @@ public final class TotalsBlockRenderer {
     private TotalsBlockRenderer() {}
 
     public static PdfPTable build(BigDecimal subtotal, BigDecimal tax, BigDecimal total) {
-        return build(subtotal, tax, total, null);
+        return build(subtotal, tax, total, (List<TaxBreakdown>) null);
     }
 
     public static PdfPTable build(BigDecimal subtotal, BigDecimal tax, BigDecimal total, List<TaxBreakdown> breakdowns) {
+        return build(subtotal, tax, total, breakdowns, "TOTAL A PAGAR");
+    }
+
+    /** @param totalLabel o que o total significa neste documento: nem tudo é um valor a pagar */
+    public static PdfPTable build(BigDecimal subtotal, BigDecimal tax, BigDecimal total, String totalLabel) {
+        return build(subtotal, tax, total, null, totalLabel);
+    }
+
+    private static PdfPTable build(BigDecimal subtotal, BigDecimal tax, BigDecimal total,
+                                   List<TaxBreakdown> breakdowns, String totalLabel) {
         PdfPTable wrapper = new PdfPTable(new float[]{55f, 45f});
         wrapper.setWidthPercentage(100);
         wrapper.setSpacingBefore(6f);
@@ -48,9 +58,9 @@ public final class TotalsBlockRenderer {
 
         PdfPTable inner = new PdfPTable(new float[]{55f, 45f});
         inner.setWidthPercentage(100);
-        line(inner, "Subtotal Ilíquido", MoneyFormat.format(subtotal), false);
+        line(inner, "Subtotal (sem IVA)", MoneyFormat.format(subtotal), false);
         line(inner, "Total Imposto (IVA)", MoneyFormat.format(tax), false);
-        line(inner, "TOTAL A PAGAR", MoneyFormat.format(total), true);
+        line(inner, totalLabel, MoneyFormat.format(total), true);
 
         PdfPCell innerWrap = new PdfPCell(inner);
         innerWrap.setBorder(PdfPCell.NO_BORDER);
@@ -60,7 +70,9 @@ public final class TotalsBlockRenderer {
 
     /**
      * Bloco de totais corporativo canónico:
-     * Subtotal (sem IVA) · Desconto comercial · Discriminação de IVA · TOTAL A PAGAR
+     * Total ilíquido · Desconto comercial · Subtotal (sem IVA) · IVA por taxa e base · TOTAL A PAGAR
+     *
+     * @param subtotal valor já líquido de desconto
      */
     public static PdfPTable buildModelTotals(BigDecimal subtotal, BigDecimal discount, BigDecimal tax, BigDecimal total, List<TaxBreakdown> breakdowns) {
         PdfPTable wrapper = new PdfPTable(new float[]{50f, 50f});
@@ -72,18 +84,22 @@ public final class TotalsBlockRenderer {
         empty.setBorder(PdfPCell.NO_BORDER);
         wrapper.addCell(empty);
 
-        PdfPTable inner = new PdfPTable(new float[]{60f, 40f});
+        PdfPTable inner = new PdfPTable(new float[]{62f, 38f});
         inner.setWidthPercentage(100);
 
+        if (discount != null && discount.signum() > 0) {
+            addModelLine(inner, "Total ilíquido", MoneyFormat.format(subtotal.add(discount)), false, false);
+            addModelLine(inner, "Desconto comercial", "-" + MoneyFormat.format(discount), false, false);
+        }
         addModelLine(inner, "Subtotal (sem IVA)", MoneyFormat.format(subtotal), false, false);
-        addModelLine(inner, "Desconto comercial", MoneyFormat.format(discount != null ? discount : BigDecimal.ZERO), false, false);
 
         if (breakdowns != null && !breakdowns.isEmpty()) {
             for (TaxBreakdown b : breakdowns) {
                 String label = (b.taxRateLabel() != null && !b.taxRateLabel().isBlank())
                         ? b.taxRateLabel()
                         : String.format(Locale.forLanguageTag("pt-MZ"), "IVA (%.0f%%)", b.ratePercentage().doubleValue());
-                addModelLine(inner, label, MoneyFormat.format(b.taxAmount()), false, false);
+                addModelLine(inner, label + " s/ " + MoneyFormat.formatPlain(b.taxableAmount()),
+                        MoneyFormat.format(b.taxAmount()), false, false);
             }
         } else {
             addModelLine(inner, "IVA (16%)", MoneyFormat.format(tax), false, false);

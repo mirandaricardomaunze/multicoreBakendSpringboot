@@ -57,7 +57,7 @@ public final class CreditRiskOperationsCoordinator {
 
         if (selected.totalOverdue() == null || selected.totalOverdue().signum() <= 0) {
             ToastManager.show(parent, FeedbackType.INFO,
-                    String.format("O cliente %s não possui facturas vencidas em mora.", selected.clientName()));
+                    String.format("O cliente %s não possui faturas vencidas em mora.", selected.clientName()));
             return;
         }
 

@@ -1,6 +1,7 @@
 package mz.multicore.erp.modules.pos.service;
 
 import mz.multicore.erp.modules.pos.dto.InitiateMobilePaymentRequest;
+import mz.multicore.erp.modules.pos.dto.MobilePaymentAvailabilityDTO;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentProvider;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentResponse;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse;
@@ -17,18 +18,26 @@ public class MobilePaymentService {
 
     private final MobilePaymentTransactionProcessor transactionProcessor;
     private final MobilePaymentPhoneValidator phoneValidator;
+    private final MobilePaymentSimulationPolicy simulationPolicy;
 
     @Autowired
     public MobilePaymentService(MobilePaymentTransactionProcessor transactionProcessor,
-                                MobilePaymentPhoneValidator phoneValidator) {
+                                MobilePaymentPhoneValidator phoneValidator,
+                                MobilePaymentSimulationPolicy simulationPolicy) {
         this.transactionProcessor = transactionProcessor;
         this.phoneValidator = phoneValidator;
+        this.simulationPolicy = simulationPolicy;
     }
 
-    public MobilePaymentService(MobilePaymentRepository repository) {
+    public MobilePaymentService(MobilePaymentRepository repository, boolean simulationEnabled) {
         MobilePaymentPhoneValidator validator = new MobilePaymentPhoneValidator();
         this.phoneValidator = validator;
-        this.transactionProcessor = new MobilePaymentTransactionProcessor(repository, validator);
+        this.simulationPolicy = new MobilePaymentSimulationPolicy(simulationEnabled);
+        this.transactionProcessor = new MobilePaymentTransactionProcessor(repository, validator, simulationPolicy);
+    }
+
+    public MobilePaymentAvailabilityDTO availability() {
+        return new MobilePaymentAvailabilityDTO(simulationPolicy.isEnabled());
     }
 
     @Transactional

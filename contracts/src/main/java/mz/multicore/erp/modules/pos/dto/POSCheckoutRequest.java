@@ -26,8 +26,18 @@ public record POSCheckoutRequest(
         @Size(max = 60, message = "Referência de contingência não pode exceder 60 caracteres.")
         String contingencyReference,
         /** Cotação de origem (opcional). Se preenchida, o checkout marca a cotação como convertida. */
-        Long quotationId
+        Long quotationId,
+        /** Autorização de gerente, obtida com PIN, para desconto acima do limite do caixa. */
+        String discountAuthorization
 ) {
+    public POSCheckoutRequest(String operator, Long companyId, Long clientId, String walkInName,
+                              Long warehouseId, Long treasuryAccountId,
+                              List<POSCheckoutLineRequest> lines, List<PosPaymentRequest> payments,
+                              String contingencyReference, Long quotationId) {
+        this(operator, companyId, clientId, walkInName, warehouseId, treasuryAccountId, lines, payments,
+                contingencyReference, quotationId, null);
+    }
+
     /** Construtor retrocompatível com referência de contingência sem cotação. */
     public POSCheckoutRequest(String operator, Long companyId, Long clientId, String walkInName,
                               Long warehouseId, Long treasuryAccountId,

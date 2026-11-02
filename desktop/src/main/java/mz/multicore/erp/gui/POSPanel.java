@@ -1,6 +1,7 @@
 package mz.multicore.erp.gui;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.desktop.config.DesktopLocalSettings;
 import mz.multicore.erp.gui.components.ActionMenuButton;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.ModernPanel;
@@ -68,6 +69,7 @@ public class POSPanel extends JPanel {
     final PosCatalogController catalogController;
     final PosCartController cartController;
     final PosCheckoutCoordinator checkoutCoordinator;
+    final PosSuspendedSaleActions suspendedSaleActions;
     ModernButton loyaltyBtn;
 
     // Active session status
@@ -87,9 +89,12 @@ public class POSPanel extends JPanel {
     final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 
     ModernButton openSessionBtn, closeSessionBtn, cashMoveBtn, shiftHandoverBtn, checkoutBtn, addToCartBtn;
+    List<ModernButton> cartLineButtons = List.of();
+    private String operatorDisplayName;
+    String discountAuthorization;
     JCheckBox creditCheck;
     JPanel viewCards;
-    ModernButton tabVendaBtn, tabHistBtn, contingencyBtn, quotationBtn;
+    ModernButton tabVendaBtn, tabHistBtn, contingencyBtn, quotationBtn, suspendedSalesBtn;
     ActionMenuButton operationsMenu;
     final PosQuotationActions quotationActions;
     Long currentQuotationId;
@@ -168,6 +173,7 @@ public class POSPanel extends JPanel {
         this.catalogController = new PosCatalogController(this);
         this.cartController = new PosCartController(this);
         this.checkoutCoordinator = new PosCheckoutCoordinator(this);
+        this.suspendedSaleActions = new PosSuspendedSaleActions(this);
         this.scaleReader = new mz.multicore.erp.modules.pos.scale.SerialScaleReader(true);
         this.scaleWidget = new mz.multicore.erp.gui.pos.scale.PosScaleLiveWidget(this.scaleReader);
         this.scaleWidget.setOnWeightCapturedCallback(this.catalogController::handleScaleWeightCaptured);
@@ -182,7 +188,7 @@ public class POSPanel extends JPanel {
 
         barcodeField = new JTextField();
         UIHelper.styleTextField(barcodeField);
-        barcodeField.putClientProperty("JTextField.placeholderText", "Código de barras (F3/Enter)");
+        barcodeField.putClientProperty("JTextField.placeholderText", "Leia ou escreva o código (F3)");
         barcodeField.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         barcodeField.addActionListener(e -> handleBarcodeScan());
         JPanel barcodeBox = PosLayout.iconInputBox("fas-barcode", 16, UIHelper.ACCENT, barcodeField);
@@ -194,8 +200,8 @@ public class POSPanel extends JPanel {
 
         clientSearchField = new JTextField();
         UIHelper.styleTextField(clientSearchField);
-        clientSearchField.putClientProperty("JTextField.placeholderText", "Nome do cliente ou NUIT…");
-        clientSearchField.setToolTipText("Nome do cliente (obrigatório) ou pesquisa de cliente cadastrado por nome/NUIT");
+        clientSearchField.putClientProperty("JTextField.placeholderText", "Nome ou NUIT (F4)");
+        clientSearchField.setToolTipText("Pesquise por nome ou NUIT. Sem cliente seleccionado, o nome escrito é obrigatório.");
 
         productSearchField = new JTextField();
         UIHelper.styleTextField(productSearchField);
@@ -220,7 +226,17 @@ public class POSPanel extends JPanel {
         selectView(false);
 
         PosKeyboardShortcutsHandler.install(this);
+        applyScaleAccess();
+        cartController.refreshCartActions();
+        suspendedSaleActions.refreshButton();
     }
+
+    private void applyScaleAccess() {
+        scaleWidget.applyAccess(DesktopLocalSettings.posScaleEnabled(), CurrentUserContext.getRole());
+    }
+
+    public void setOperatorDisplayName(String displayName) { operatorDisplayName = displayName; }
+    BigDecimal authorizedDiscount = BigDecimal.ZERO;
 
     public void openLoyaltyDialog() {
         loyaltyController.openLoyaltyCardDialog(this, () -> loyaltyController.getSelectedLoyaltyClient()
@@ -234,16 +250,17 @@ public class POSPanel extends JPanel {
         }
         Color active = UIHelper.ACCENT_BLUE, activeHover = UIHelper.ACCENT_BLUE_HOVER;
         Color activeHist = UIHelper.ACCENT_BLUE, activeHistHover = UIHelper.ACCENT_BLUE_HOVER;
-        Color idle = UIHelper.KPI_INFO_DARK, idleHover = UIHelper.SECONDARY_HOVER;
+        Color idle = UIHelper.ROW_ALT, idleHover = UIHelper.GRID;
         tabVendaBtn.setColors(history ? idle : active, history ? idleHover : activeHover);
         tabHistBtn.setColors(history ? activeHist : idle, history ? activeHistHover : idleHover);
-        tabVendaBtn.setForeground(Color.WHITE);
-        tabHistBtn.setForeground(Color.WHITE);
         if (history) refreshSalesHistory();
     }
 
     public void onPanelSelected() {
+        applyScaleAccess();
+        suspendedSaleActions.refreshButton();
         refreshOperationalData();
+        SwingUtilities.invokeLater(barcodeField::requestFocusInWindow);
         if (formScroll != null) {
             SwingUtilities.invokeLater(() -> formScroll.getVerticalScrollBar().setValue(0));
         }
@@ -271,7 +288,8 @@ public class POSPanel extends JPanel {
             String effectiveOp = activeSession.currentOperator() != null && !activeSession.currentOperator().isBlank()
                     ? activeSession.currentOperator() : activeSession.operator();
             statusLabel.setText(String.format("Caixa Aberta por %s | Fundo Inicial: %,.2f MT",
-                    effectiveOp, activeSession.openingBalance()));
+                    PosLayout.operatorLabel(effectiveOp, CurrentUserContext.getUsername(), operatorDisplayName),
+                    activeSession.openingBalance()));
             statusLabel.setForeground(UIHelper.APPROVED_GREEN);
             statusLabel.setIcon(UIHelper.icon("fas-lock-open", 14, UIHelper.APPROVED_GREEN));
             statusLabel.setIconTextGap(8);
@@ -280,8 +298,6 @@ public class POSPanel extends JPanel {
             closeSessionBtn.setVisible(true);
             cashMoveBtn.setVisible(true);
             shiftHandoverBtn.setVisible(true);
-            checkoutBtn.setEnabled(true);
-            checkoutBtn.setToolTipText(null);
             if (addToCartBtn != null) { addToCartBtn.setEnabled(true); addToCartBtn.setToolTipText(null); }
         } else {
             activeSession = null;
@@ -294,10 +310,9 @@ public class POSPanel extends JPanel {
             closeSessionBtn.setVisible(false);
             cashMoveBtn.setVisible(false);
             shiftHandoverBtn.setVisible(false);
-            checkoutBtn.setEnabled(false);
-            checkoutBtn.setToolTipText("Abra a caixa antes de finalizar uma venda.");
             if (addToCartBtn != null) { addToCartBtn.setEnabled(false); addToCartBtn.setToolTipText("Abra a caixa antes de adicionar artigos."); }
         }
+        cartController.refreshCartActions();
     }
 
     void loadMetadata() {
@@ -321,7 +336,7 @@ public class POSPanel extends JPanel {
             warehouseCombo.removeAllItems();
             accountCombo.removeAllItems();
             for (WarehouseDTO w : warehousesList) warehouseCombo.addItem(w.name());
-            for (TreasuryAccountDTO acc : accountsList) accountCombo.addItem(acc.name() + " (" + String.format("%.2f", acc.balance()) + " MT)");
+            for (TreasuryAccountDTO acc : accountsList) accountCombo.addItem(acc.name());
         } finally {
             suppressWarehouseEvents = false;
         }
@@ -412,6 +427,7 @@ public class POSPanel extends JPanel {
         if (quotationActions != null) quotationActions.clearQuotationLink();
         cartItems.clear();
         updateCartTotal(-1);
+        cartController.resetCustomerForNextSale();
         if (barcodeField != null) barcodeField.requestFocusInWindow();
     }
     public BigDecimal getProductStock(Long productId) { return productId != null ? productStockQuantities.get(productId) : null; }

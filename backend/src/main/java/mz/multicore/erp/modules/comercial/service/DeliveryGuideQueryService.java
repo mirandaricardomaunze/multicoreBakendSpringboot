@@ -118,7 +118,8 @@ public class DeliveryGuideQueryService {
                 g.getRejectionReason(),
                 lineDTOs,
                 buId,
-                buName
+                buName,
+                g.getInvoiceNumber()
         );
     }
 }

@@ -19,7 +19,7 @@ final class CommercialOrderHeaderForm {
     static String kindHint(OrderKind kind) {
         return kind.isThermal()
                 ? "Reserva stock e imprime talão para o armazém separar. Não passa por aprovação."
-                : "Documento A4 igual à fatura. Passa por aprovação antes de poder ser facturada.";
+                : "Documento A4 igual à fatura. Passa por aprovação antes de poder ser faturada.";
     }
 
     static ModernPanel createHeaderCard(ComercialPanel owner) {

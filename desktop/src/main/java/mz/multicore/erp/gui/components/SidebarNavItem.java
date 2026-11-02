@@ -28,7 +28,7 @@ import java.awt.event.MouseEvent;
  */
 public class SidebarNavItem extends JComponent {
 
-    public static final int ITEM_HEIGHT = 42;
+    public static final int ITEM_HEIGHT = 36;
     public static final int ICON_COLUMN = 56;
     private static final int CORNER = 10;
     private static final int LEFT_INSET = 8;
@@ -79,6 +79,7 @@ public class SidebarNavItem extends JComponent {
                 if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
                     showContextMenu(e);
                 } else if (onClick != null && e.getButton() == MouseEvent.BUTTON1) {
+                    requestFocusInWindow();
                     onClick.run();
                 }
             }

@@ -108,3 +108,17 @@ Profissionalizar a entrada do sistema (`LoginDialog`) e a organização estrutur
 1. `POSPanel.java`, `StockPanel.java`, `ComercialPanel.java`, `ComprasPanel.java`, `HRPanel.java` e `ConfigPanel.java` devem permanecer estritamente abaixo de 1000 linhas (`UiPanelDecompositionTest`).
 2. Nenhum painel do pacote `mz.multicore.erp.gui` pode conter instanciação manual de cores `new Color(...)`, termos em inglês técnico misturados ou posicionamentos absolutos (`FinalUiUniformityHarnessTest`).
 3. O isolamento arquitetural obrigatório `desktop → contracts ← backend` deve ser preservado a 100% (`MultiModuleArchitectureHarnessTest`).
+
+## Uniformidade em todo o sistema
+
+Estas regras vivem em peças partilhadas; nenhum ecrã as repete:
+
+- **Item activo:** `SidebarActiveItem` escolhe o item da sidebar para qualquer ecrã e perfil. Nas
+  abas de Vendas sem item próprio fica activo "Pedidos"; em Movimentos fica "Movimentos".
+- **Aba activa:** `UiTabScrollSupport` desliza a barra até à aba aberta, também depois de redimensionar.
+- **Filtros:** `SingleRowFilterLayout` mantém uma só linha. Sem espaço, tira primeiro as etiquetas dos
+  selectores e depois encolhe pesquisas e selectores até 90px. As datas não encolhem.
+- **Datas:** o `DateField` continua em ISO (`aaaa-mm-dd`) e mostra esse formato por si.
+- **Tabela vazia:** a dica de filtros só aparece quando um filtro esconde linhas.
+
+Testes: `SidebarActiveItemTest`, `UiTabScrollSupportTest` e `UniformUiBehaviourTest`.

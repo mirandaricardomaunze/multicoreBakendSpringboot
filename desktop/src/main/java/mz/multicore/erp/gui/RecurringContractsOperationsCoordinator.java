@@ -21,14 +21,14 @@ public final class RecurringContractsOperationsCoordinator {
         boolean confirm = ModernMessageDialog.confirm(
                 SwingUtilities.getWindowAncestor(parent),
                 FeedbackType.INFO,
-                "Facturação Recorrente em Lote",
-                "Deseja processar o ciclo de facturação de todas as avenças activas vencidas até hoje?\n\n" +
+                "Faturação Recorrente em Lote",
+                "Deseja processar o ciclo de faturação de todas as avenças activas vencidas até hoje?\n\n" +
                         "Serão emitidas faturas comerciais e os contratos serão actualizados automaticamente.",
                 "Processar Ciclo"
         );
         if (!confirm) return;
 
-        if (feedback != null) feedback.show(FeedbackType.INFO, "A processar ciclo de facturação periódica...");
+        if (feedback != null) feedback.show(FeedbackType.INFO, "A processar ciclo de faturação periódica...");
         new SwingWorker<BatchBillingResultDTO, Void>() {
             @Override
             protected BatchBillingResultDTO doInBackground() {
@@ -40,15 +40,15 @@ public final class RecurringContractsOperationsCoordinator {
                 try {
                     BatchBillingResultDTO result = get();
                     String formattedTotal = currencyFmt != null ? currencyFmt.format(result.totalBilledAmount()) : String.valueOf(result.totalBilledAmount());
-                    String msg = String.format("Facturação em lote concluída com sucesso: %d contratos processados, %d faturas geradas (%s MT).",
+                    String msg = String.format("Faturação em lote concluída com sucesso: %d contratos processados, %d faturas geradas (%s MT).",
                             result.contractsProcessed(), result.invoicesGenerated(), formattedTotal);
                     if (feedback != null) feedback.show(FeedbackType.SUCCESS, msg);
                     if (reload != null) reload.run();
                     if (feedback != null && !result.errors().isEmpty()) {
-                        feedback.show(FeedbackType.WARNING, "Avisos de facturação: " + String.join("; ", result.errors()));
+                        feedback.show(FeedbackType.WARNING, "Avisos de faturação: " + String.join("; ", result.errors()));
                     }
                 } catch (Exception ex) {
-                    if (feedback != null) feedback.show(FeedbackType.ERROR, "Falha na facturação em lote: " + ex.getMessage());
+                    if (feedback != null) feedback.show(FeedbackType.ERROR, "Falha na faturação em lote: " + ex.getMessage());
                 }
             }
         }.execute();

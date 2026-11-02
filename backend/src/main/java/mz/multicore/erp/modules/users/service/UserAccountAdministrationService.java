@@ -32,6 +32,7 @@ public class UserAccountAdministrationService {
     private final AppUserCompanyAccessRepository companyAccessRepository;
     private final AuditLogService auditLogService;
     private final AuthSessionService authSessionService;
+    private final UserCompanyAccessOperations companyAccess;
 
     public UserAccountAdministrationService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
                                             CompanyRepository companyRepository,
@@ -44,6 +45,8 @@ public class UserAccountAdministrationService {
         this.companyAccessRepository = companyAccessRepository;
         this.auditLogService = auditLogService;
         this.authSessionService = authSessionService;
+        this.companyAccess = new UserCompanyAccessOperations(appUserRepository, companyRepository,
+                companyAccessRepository, auditLogService, authSessionService);
     }
 
     @Transactional(readOnly = true)
@@ -65,6 +68,7 @@ public class UserAccountAdministrationService {
         user.setUsername(username);
         user.setName(name);
         user.setPassword(passwordEncoder.encode(password));
+        user.setPasswordChangeRequired(true);
         String normalizedRole = UserRole.normalize(role);
         user.setRole(normalizedRole);
         user.setActive(true);
@@ -89,6 +93,7 @@ public class UserAccountAdministrationService {
         if (user.findCompanyAccess(companyId).isEmpty()) {
             throw new BusinessRuleException("O utilizador não pertence à empresa ativa.");
         }
+        SharedAccountGuard.requireControlledAccount(user, currentActor(), companyId);
         user.setName(name.trim());
         return appUserRepository.save(user);
     }
@@ -96,36 +101,13 @@ public class UserAccountAdministrationService {
     @Transactional
     public AppUser grantCompanyAccess(String username, Long companyId, String role) {
         UserAdminGuard.requireAdmin();
-        AppUser user = findUser(username);
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        user.grantCompany(company, role);
-        return appUserRepository.save(user);
+        return companyAccess.grant(currentActor(), findUser(username), companyId, role);
     }
 
     @Transactional
     public AppUser updateCompanyRole(String username, String role) {
         UserAdminGuard.requireAdmin();
-        Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        String normalizedRole = UserRole.normalize(role);
-        AppUser user = findUser(username);
-        AppUserCompanyAccess access = requireAccess(user, companyId);
-
-        boolean removingAdmin = "ADMIN".equalsIgnoreCase(access.getRole())
-                && !"ADMIN".equals(normalizedRole);
-        if (removingAdmin && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {
-            throw new BusinessRuleException("A empresa deve manter pelo menos um administrador.");
-        }
-
-        String oldRole = access.getRole();
-        access.setRole(normalizedRole);
-        AppUser saved = appUserRepository.save(user);
-        if (!normalizedRole.equalsIgnoreCase(oldRole) && authSessionService != null) {
-            authSessionService.revokeUser(user.getUsername());
-        }
-        audit("USER_ROLE_CHANGE", "Perfil do utilizador " + username + " na empresa " + companyId
-                + " alterado de " + oldRole + " para " + normalizedRole);
-        return saved;
+        return companyAccess.updateRole(findUser(username), CurrentUserContext.requireCurrentCompanyId(), role);
     }
 
     @Transactional
@@ -135,7 +117,9 @@ public class UserAccountAdministrationService {
         PasswordPolicy.validate(newPassword, username);
         AppUser user = findUser(username);
         UserAdminGuard.requireManagedUser(user, companyId);
+        SharedAccountGuard.requireControlledAccount(user, currentActor(), companyId);
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordChangeRequired(true);
         appUserRepository.save(user);
         if (authSessionService != null) {
             authSessionService.revokeUser(user.getUsername());
@@ -153,6 +137,9 @@ public class UserAccountAdministrationService {
                 && companyAccessRepository.countActiveByCompanyIdAndRole(companyId, "ADMIN") <= 1) {
             throw new BusinessRuleException("Não é possível desativar o único administrador da empresa.");
         }
+        if (!SharedAccountGuard.controlsAccount(user, currentActor(), companyId)) {
+            return companyAccess.removeFromCompany(user, companyId, active);
+        }
         user.setActive(active);
         AppUser saved = appUserRepository.save(user);
         if (!active && authSessionService != null) {
@@ -161,6 +148,10 @@ public class UserAccountAdministrationService {
         audit("USER_STATUS_CHANGE", "Estado do utilizador " + username + " alterado para "
                 + (active ? "ATIVO" : "INATIVO"));
         return saved;
+    }
+
+    private AppUser currentActor() {
+        return appUserRepository.findByUsername(CurrentUserContext.getUsername()).orElse(null);
     }
 
     private AppUser findUser(String username) {

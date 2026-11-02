@@ -25,7 +25,7 @@ public final class PdfTheme {
     public static final float MARGIN_LEFT = 24f;
     public static final float MARGIN_RIGHT = 24f;
     public static final float MARGIN_TOP = 28f;
-    public static final float MARGIN_BOTTOM = 28f;
+    public static final float MARGIN_BOTTOM = 36f;
 
     public static final String CURRENCY_CODE = "MT";
 

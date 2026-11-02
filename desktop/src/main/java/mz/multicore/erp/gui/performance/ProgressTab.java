@@ -43,7 +43,7 @@ public class ProgressTab extends JPanel {
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         toolbar.setBackground(UIHelper.BG_DARK);
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar Progresso");
+        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar Progresso");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
         toolbar.add(btnRefresh);

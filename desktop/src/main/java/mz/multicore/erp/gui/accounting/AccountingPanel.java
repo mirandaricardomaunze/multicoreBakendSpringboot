@@ -66,6 +66,8 @@ public final class AccountingPanel extends JPanel {
     public void onPanelSelected() {
         chartTab.onPanelSelected();
         journalTab.onPanelSelected();
+        trialBalanceTab.loadTrialBalance();
+        ledgerTab.loadLedger();
     }
 
     /**

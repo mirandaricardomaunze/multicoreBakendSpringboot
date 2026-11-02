@@ -124,14 +124,14 @@ final class PurchaseOrdersPanel {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> { owner.poSearchField.setText(""); refresh(); });
 
-        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações da Encomenda");
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Acções da Encomenda");
         actionsMenu.addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), operations::openSelectedEditor);
         actionsMenu.addAction("Receber Encomenda", UIHelper.icon("fas-dolly", 14, UIHelper.APPROVED_GREEN), operations::receiveSelectedPO);
         actionsMenu.addAction("Receber Parcial", UIHelper.icon("fas-dolly-flatbed", 14, UIHelper.ACCENT_BLUE), this::receivePartialSelectedPO);
         actionsMenu.addAction("Imprimir Etiquetas", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT), operations::printSelectedPOReceiptLabels);
         actionsMenu.addAction("Cancelar Encomenda", UIHelper.icon("fas-ban", 14, UIHelper.REJECTED_RED), operations::cancelSelectedPO);
 
-        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Nova Encomenda");
+        ModernButton newOrderBtn = UIHelper.createSuccessButton("Nova Encomenda");
         newOrderBtn.setIcon(UIHelper.icon("fas-clipboard-check", 14));
         newOrderBtn.addActionListener(e -> openPurchaseOrderFormDialog());
 

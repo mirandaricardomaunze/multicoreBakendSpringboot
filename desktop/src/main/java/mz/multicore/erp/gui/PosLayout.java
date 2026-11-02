@@ -13,7 +13,11 @@ final class PosLayout {
     static final int ROOT_VERTICAL_MARGIN = 14;
     static final int SECTION_VERTICAL_GAP = 6;
     static final int CARD_VERTICAL_GAP = 8;
-    static final double[] HEADER_FIELD_WEIGHTS = {0.18, 0.20, 0.19, 0.19, 0.24};
+    /** Código de barras, cliente, armazém e conta. */
+    static final double[] HEADER_FIELD_WEIGHTS = {0.34, 0.30, 0.18, 0.18};
+    static final int CATALOG_CARD_MIN_WIDTH = 150;
+    static final int CATALOG_GRID_GAP = 8;
+    static final int SIDEBAR_COLLAPSE_BELOW_WIDTH = 1600;
 
     private PosLayout() {}
 
@@ -33,6 +37,47 @@ final class PosLayout {
         for (int i = 0; i < widths.length; i++) {
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
+    }
+
+    static int catalogColumns(int viewportWidth) {
+        return Math.max(2, (viewportWidth + CATALOG_GRID_GAP) / (CATALOG_CARD_MIN_WIDTH + CATALOG_GRID_GAP));
+    }
+
+    /** Grelha que acompanha a largura visível, para o catálogo nunca precisar de deslocação horizontal. */
+    static JPanel catalogGrid() {
+        return new CatalogGrid();
+    }
+
+    static boolean shouldCollapseSidebar(int windowWidth) {
+        return windowWidth < SIDEBAR_COLLAPSE_BELOW_WIDTH;
+    }
+
+    static String clientLabel(String name, String taxId) {
+        boolean noTaxId = taxId == null || taxId.isBlank() || taxId.chars().allMatch(c -> c == '0');
+        return noTaxId ? name : name + " (" + taxId + ")";
+    }
+
+    /** O login só é trocado pelo nome quando a sessão é do próprio utilizador. */
+    static String operatorLabel(String operator, String username, String displayName) {
+        boolean own = operator != null && operator.equals(username);
+        return own && displayName != null && !displayName.isBlank() ? displayName : operator;
+    }
+
+    /** O texto cortado de um selector fica disponível por inteiro na dica. */
+    static void showSelectionInTooltip(JComboBox<String> combo) {
+        combo.addItemListener(e -> combo.setToolTipText((String) combo.getSelectedItem()));
+    }
+
+    private static final class CatalogGrid extends JPanel implements Scrollable {
+        CatalogGrid() {
+            super(new GridLayout(0, 2, CATALOG_GRID_GAP, CATALOG_GRID_GAP));
+        }
+
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle r, int orientation, int direction) { return 16; }
+        @Override public int getScrollableBlockIncrement(Rectangle r, int orientation, int direction) { return r.height; }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 
     static JPanel stackedPicker(JComponent top, JComponent bottom) {

@@ -103,7 +103,7 @@ public class QualityAssignmentsTab extends JPanel {
         ModernButton newAssignBtn = UIHelper.createPrimaryButton("+ Atribuir Equipamento");
         newAssignBtn.addActionListener(e -> openNewAssignmentDialog());
 
-        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Acções");
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Gerir Entrega");
         actionsMenu.addAction("Imprimir Termo de Entrega", UIHelper.icon("fas-print", 13), this::printSelectedDeliverySheet);
         actionsMenu.addAction("Renovar Equipamento", UIHelper.icon("fas-sync", 13), this::renewSelectedAssignment);
         actionsMenu.addAction("Devolver Equipamento", UIHelper.icon("fas-undo", 13), this::returnSelectedAssignment);

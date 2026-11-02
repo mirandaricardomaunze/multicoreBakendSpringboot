@@ -22,7 +22,7 @@ final class HRVacationsPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton newBtn = UIHelper.createPrimaryButton("Novo Pedido");
+        ModernButton newBtn = UIHelper.createSuccessButton("Novo Pedido");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> openCreateVacationDialog());
 

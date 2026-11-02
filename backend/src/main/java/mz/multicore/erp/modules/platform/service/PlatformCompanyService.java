@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.platform.service;
 
+import mz.multicore.erp.architecture.events.CompanyCreatedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -10,6 +11,7 @@ import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,13 +28,16 @@ public class PlatformCompanyService {
     private final CompanyRepository companyRepository;
     private final AppUserCompanyAccessRepository companyAccessRepository;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PlatformCompanyService(CompanyRepository companyRepository,
                                   AppUserCompanyAccessRepository companyAccessRepository,
-                                  AuditLogService auditLogService) {
+                                  AuditLogService auditLogService,
+                                  ApplicationEventPublisher eventPublisher) {
         this.companyRepository = companyRepository;
         this.companyAccessRepository = companyAccessRepository;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -71,6 +76,7 @@ public class PlatformCompanyService {
         company.setActive(true);
         company.setCreatedBy(CurrentUserContext.getUsername());
         company = companyRepository.save(company);
+        eventPublisher.publishEvent(new CompanyCreatedEvent(company.getId()));
         auditLogService.logEvent(CurrentUserContext.getUsername(), company.getId(), "PLATFORM_COMPANY_CREATE",
                 "Empresa criada: " + company.getName());
         return toDto(company);

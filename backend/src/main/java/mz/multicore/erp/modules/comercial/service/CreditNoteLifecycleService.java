@@ -57,6 +57,7 @@ public class CreditNoteLifecycleService {
         if (note.getStatus() != NoteStatus.PENDING_APPROVAL && note.getStatus() != NoteStatus.DRAFT) {
             throw new BusinessRuleException("Apenas notas em rascunho ou pendentes podem ser aprovadas.");
         }
+        CommercialNoteRules.requireValidInvoice(note.getInvoice());
 
         if (note.getReason() == CreditNoteReason.RETURN) {
             returnStockForApprovedNote(note);
@@ -66,6 +67,7 @@ public class CreditNoteLifecycleService {
         note.setApprovedBy(CurrentUserContext.getUsername());
         note.setApprovedAt(LocalDateTime.now());
         CreditNote saved = creditNoteRepository.save(note);
+        if (saved.getInvoice() != null) saved.getInvoice().applyNoteAdjustment(saved.getTotalAmount().negate());
         BigDecimal returnedCost = saved.getReason() == CreditNoteReason.RETURN
                 ? saved.getLines().stream()
                     .map(line -> line.getInvoiceLine() == null || line.getInvoiceLine().getUnitCost() == null
@@ -91,6 +93,7 @@ public class CreditNoteLifecycleService {
         if (note.getStatus() == NoteStatus.APPROVED) {
             throw new BusinessRuleException("Uma nota já aprovada não pode ser rejeitada — emita uma nota de débito para reverter.");
         }
+        CommercialNoteRules.requirePending(note.getStatus());
         note.setStatus(NoteStatus.REJECTED);
         note.setRejectionReason(rejectionReason);
         note.setApprovedBy(CurrentUserContext.getUsername());
@@ -109,6 +112,7 @@ public class CreditNoteLifecycleService {
         if (note.getStatus() == NoteStatus.APPROVED) {
             throw new BusinessRuleException("Notas aprovadas não podem ser canceladas.");
         }
+        CommercialNoteRules.requirePending(note.getStatus());
         note.setStatus(NoteStatus.CANCELLED);
         CreditNote saved = creditNoteRepository.save(note);
         auditLogService.logCurrent("CREDIT_NOTE_CANCEL", "Nota de crédito " + saved.getNoteNumber() + " cancelada.");

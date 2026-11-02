@@ -91,7 +91,7 @@ public class AiAnalysisView extends JPanel {
         chipsRow.add(chipsLabel);
         addQuickChip(chipsRow, "Vendas 30 Dias", "Como estão as vendas nos últimos 30 dias?");
         addQuickChip(chipsRow, "Stock Crítico", "Quais artigos estão esgotados ou com stock crítico?");
-        addQuickChip(chipsRow, "Contas a Receber", "Quais clientes têm facturas vencidas e saldos pendentes?");
+        addQuickChip(chipsRow, "Contas a Receber", "Quais clientes têm faturas vencidas e saldos pendentes?");
         addQuickChip(chipsRow, "Desempenho Geral", "Qual é o resumo executivo das operações da empresa?");
 
         card.add(topRow, BorderLayout.NORTH);

@@ -132,6 +132,19 @@ public class POSApiClient {
         return clientFactory.authenticatedClient().get(url, mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse.class);
     }
 
+    /** Troca o PIN de um gerente por uma autorização de desconto para a venda em curso. */
+    public mz.multicore.erp.modules.pos.dto.DiscountAuthorizationDTOs.Response authorizeDiscount(String pin, BigDecimal percent) {
+        return clientFactory.authenticatedClient().post("/api/pos/discount-authorization",
+                new mz.multicore.erp.modules.pos.dto.DiscountAuthorizationDTOs.Request(pin, percent),
+                mz.multicore.erp.modules.pos.dto.DiscountAuthorizationDTOs.Response.class);
+    }
+
+    /** Indica se o servidor aceita pagamento móvel simulado. */
+    public mz.multicore.erp.modules.pos.dto.MobilePaymentAvailabilityDTO getMobilePaymentAvailability() {
+        return clientFactory.authenticatedClient().get("/api/pos/mobile-payment/availability",
+                mz.multicore.erp.modules.pos.dto.MobilePaymentAvailabilityDTO.class);
+    }
+
     /** Força conclusão para modo de demonstração e testes. */
     public mz.multicore.erp.modules.pos.dto.MobilePaymentStatusResponse simulateCompleteMobilePayment(
             String transactionId, Long companyId, boolean approve) {

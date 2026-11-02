@@ -70,7 +70,7 @@ public class BackupService {
                         invoiceRepository, receiptRepository, purchaseRepository, tillSessionRepository,
                         accountRepository, transactionRepository, auditLogRepository),
                 new BackupExecutionService(),
-                new BackupVerificationService()
+                new BackupVerificationService(new BackupContentReader(new BackupFileCipher("")))
         );
     }
 

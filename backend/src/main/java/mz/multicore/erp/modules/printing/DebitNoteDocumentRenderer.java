@@ -43,7 +43,8 @@ public class DebitNoteDocumentRenderer {
         doc.add(TotalsBlockRenderer.build(
                 note.getTotalBeforeTax(),
                 note.getTaxAmount(),
-                note.getTotalAmount()
+                note.getTotalAmount(),
+                "TOTAL DEBITADO"
         ));
         if (note.getDescription() != null && !note.getDescription().isBlank()) {
             doc.add(PdfDocumentBuilder.spacer(10f));
@@ -75,10 +76,10 @@ public class DebitNoteDocumentRenderer {
         Paragraph date = new Paragraph("Data: " + note.getIssueDate().format(DATE_FMT), PdfTheme.bodyFont());
         date.setAlignment(Element.ALIGN_RIGHT);
         right.addElement(date);
-        Paragraph reason = new Paragraph("Motivo: " + note.getReason().name(), PdfTheme.bodyFont());
+        Paragraph reason = new Paragraph("Motivo: " + DocumentLabels.reason(note.getReason()), PdfTheme.bodyFont());
         reason.setAlignment(Element.ALIGN_RIGHT);
         right.addElement(reason);
-        Paragraph status = new Paragraph("Estado: " + note.getStatus().name(), PdfTheme.boldFont());
+        Paragraph status = new Paragraph("Estado: " + DocumentLabels.status(note.getStatus()), PdfTheme.boldFont());
         status.setAlignment(Element.ALIGN_RIGHT);
         right.addElement(status);
         if (note.getApprovedBy() != null) {
@@ -91,17 +92,19 @@ public class DebitNoteDocumentRenderer {
     }
 
     private PdfPTable buildLinesTable(List<DebitNoteLine> lines) {
-        PdfPTable table = new PdfPTable(new float[]{60f, 15f, 25f});
+        PdfPTable table = new PdfPTable(new float[]{50f, 20f, 10f, 20f});
         table.setWidthPercentage(100);
         table.setSpacingBefore(8f);
         table.setSpacingAfter(8f);
 
         header(table, "Descrição", Element.ALIGN_LEFT);
+        header(table, "Valor (s/ IVA)", Element.ALIGN_RIGHT);
         header(table, "IVA", Element.ALIGN_RIGHT);
         header(table, "Total", Element.ALIGN_RIGHT);
 
         for (DebitNoteLine l : lines) {
             body(table, l.getDescription(), Element.ALIGN_LEFT);
+            body(table, MoneyFormat.formatPlain(l.getAmount()), Element.ALIGN_RIGHT);
             body(table, formatRate(l.getTaxRate()), Element.ALIGN_RIGHT);
             body(table, MoneyFormat.formatPlain(l.getLineTotal()), Element.ALIGN_RIGHT);
         }
@@ -147,8 +150,6 @@ public class DebitNoteDocumentRenderer {
     }
 
     private String formatRate(BigDecimal rate) {
-        if (rate == null) return "0%";
-        BigDecimal percent = rate.multiply(BigDecimal.valueOf(100));
-        return percent.stripTrailingZeros().toPlainString() + "%";
+        return rate == null ? "0%" : rate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString().replace('.', ',') + "%";
     }
 }

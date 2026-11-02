@@ -38,6 +38,11 @@ public class Purchase extends BaseEntity {
     @JoinColumn(name = "warehouse_id", nullable = false)
     private Warehouse warehouse;
 
+    /** Encomenda cuja recepção criou esta compra; vazio na compra directa. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_order_id")
+    private PurchaseOrder purchaseOrder;
+
     @Column(name = "purchase_date", nullable = false)
     private LocalDateTime purchaseDate = LocalDateTime.now();
 

@@ -20,7 +20,7 @@ final class PurchaseSuppliersPanel {
         panel.setBackground(UIHelper.BG_DARK);
         panel.setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Ações")
+        ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Gerir Fornecedor")
                 .addAction("Editar", UIHelper.icon("fas-edit", 14), () -> {
                     SupplierDTO sel = PurchaseSuppliersViewCoordinator.selectedSupplier(owner);
                     if (sel != null) openSupplierDialog(sel);

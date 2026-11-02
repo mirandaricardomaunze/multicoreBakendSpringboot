@@ -30,7 +30,7 @@ public final class RecurringContractsPanel extends JPanel {
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiActiveContracts = new JLabel("0 Contratos");
     private final JLabel kpiMonthlyTotal = new JLabel("0.00 MT");
-    private final JLabel kpiDueContracts = new JLabel("0 A Facturar");
+    private final JLabel kpiDueContracts = new JLabel("0 A Faturar");
     private final JLabel kpiSuspendedContracts = new JLabel("0 Inactivos");
 
     private final DefaultTableModel tableModel;
@@ -54,7 +54,7 @@ public final class RecurringContractsPanel extends JPanel {
 
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
-        titleRow.add(UIHelper.createHeading("Contratos & Facturação Recorrente"), BorderLayout.WEST);
+        titleRow.add(UIHelper.createHeading("Contratos & Faturação Recorrente"), BorderLayout.WEST);
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -65,7 +65,7 @@ public final class RecurringContractsPanel extends JPanel {
         JPanel kpiGrid = KpiCard.createGrid(4);
         kpiGrid.add(KpiCard.createCard("Avenças Activas", kpiActiveContracts, "Contratos em vigor", "fas-file-contract", UIHelper.ACCENT_BLUE));
         kpiGrid.add(KpiCard.createCard("Receita Recorrente Fixa", kpiMonthlyTotal, "Valor periódico acumulado", "fas-coins", UIHelper.APPROVED_GREEN));
-        kpiGrid.add(KpiCard.createCard("A Facturar Este Mês", kpiDueContracts, "Contratos prontos para emissão", "fas-clock", UIHelper.MODULE_COMERCIAL));
+        kpiGrid.add(KpiCard.createCard("A Faturar Este Mês", kpiDueContracts, "Contratos prontos para emissão", "fas-clock", UIHelper.MODULE_COMERCIAL));
         kpiGrid.add(KpiCard.createCard("Suspensos / Expirados", kpiSuspendedContracts, "Necessitam de renovação", "fas-exclamation-circle", UIHelper.PENDING_YELLOW));
 
         JPanel northStack = new JPanel(new BorderLayout(0, 12));
@@ -80,7 +80,7 @@ public final class RecurringContractsPanel extends JPanel {
 
         String[] cols = {
                 "Nº Contrato", "Cliente", "NUIT", "Serviço / Descrição", "Frequência",
-                "Dia Emissão", "Valor Fixo", "Início", "Próx. Facturação", "Última Emissão", "Renovação", "Estado"
+                "Dia Emissão", "Valor Fixo", "Início", "Próx. Faturação", "Última Emissão", "Renovação", "Estado"
         };
 
         tableModel = new DefaultTableModel(cols, 0) {
@@ -116,9 +116,9 @@ public final class RecurringContractsPanel extends JPanel {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
         refreshBtn.addActionListener(e -> loadContracts());
 
-        ModernButton batchBillingBtn = UIHelper.createPrimaryButton("Facturar Avenças");
+        ModernButton batchBillingBtn = UIHelper.createPrimaryButton("Faturar Avenças");
         batchBillingBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
-        batchBillingBtn.setToolTipText("Executar ciclo de facturação periódica em lote");
+        batchBillingBtn.setToolTipText("Executar ciclo de faturação periódica em lote");
         batchBillingBtn.addActionListener(e -> openBatchBillingDialog());
 
         ModernButton newContractBtn = UIHelper.createSuccessButton("Novo Contrato");
@@ -126,7 +126,7 @@ public final class RecurringContractsPanel extends JPanel {
         newContractBtn.setToolTipText("Registar novo contrato recorrente");
         newContractBtn.addActionListener(e -> openNewContractDialog());
 
-        card.add(UIHelper.tableCardTop("Gestão de Avenças e Facturação Periódica", filterBar,
+        card.add(UIHelper.tableCardTop("Gestão de Avenças e Faturação Periódica", filterBar,
                 refreshBtn, batchBillingBtn, newContractBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
@@ -196,7 +196,7 @@ public final class RecurringContractsPanel extends JPanel {
 
         kpiActiveContracts.setText(active + " Contratos");
         kpiMonthlyTotal.setText(CURRENCY_FMT.format(totalFixed));
-        kpiDueContracts.setText(due + " A Facturar");
+        kpiDueContracts.setText(due + " A Faturar");
         kpiSuspendedContracts.setText(inactive + " Inactivos");
     }
 

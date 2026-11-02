@@ -36,13 +36,13 @@ public class QuotationConversionUiHarnessTest {
     }
 
     @Test
-    @DisplayName("UI-CONV-01: QuotationsPanel possui ação 'Converter em Factura' com ícone FontAwesome e sem emojis")
+    @DisplayName("UI-CONV-01: QuotationsPanel possui ação 'Converter em Fatura' com ícone FontAwesome e sem emojis")
     void testQuotationsPanelConversionAction() throws IOException {
         Path path = resolveSourcePath("src/main/java/mz/multicore/erp/gui/commercial/QuotationsPanel.java");
         assertTrue(Files.exists(path), "QuotationsPanel.java deve existir em " + path);
 
         String content = Files.readString(path);
-        assertTrue(content.contains("Converter em Factura"), "QuotationsPanel deve conter a ação 'Converter em Factura'");
+        assertTrue(content.contains("Converter em Fatura"), "QuotationsPanel deve conter a ação 'Converter em Fatura'");
         assertTrue(content.contains("fas-file-invoice-dollar"), "Deve usar ícone vetorial FontAwesome fas-file-invoice-dollar");
         assertTrue(content.contains("convertToInvoice"), "Deve conter método handler convertToInvoice()");
 

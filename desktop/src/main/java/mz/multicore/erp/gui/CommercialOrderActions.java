@@ -51,7 +51,7 @@ final class CommercialOrderActions {
         OrderKind kind = kindObj instanceof OrderKind k ? k : OrderKind.FORMAL_ORDER;
 
         if ("BILLED".equalsIgnoreCase(statusStr) || "INVOICED".equalsIgnoreCase(statusStr)
-                || "Facturado".equalsIgnoreCase(statusStr) || "Faturado".equalsIgnoreCase(statusStr)) {
+                || "Faturado".equalsIgnoreCase(statusStr) || "Faturado".equalsIgnoreCase(statusStr)) {
             panel.showCommercialNotice(FeedbackType.WARNING, "Encomenda já faturada",
                     "A encomenda " + orderNum + " já foi faturada anteriormente. Não é permitido faturar a mesma encomenda novamente.");
             return;

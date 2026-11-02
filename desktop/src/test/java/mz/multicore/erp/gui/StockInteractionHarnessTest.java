@@ -37,12 +37,12 @@ class StockInteractionHarnessTest {
         assertThat(content)
                 .as("StockPanel deve ter botão Atualizar no separador de níveis de stock")
                 .contains("refreshLevelsBtn")
-                .contains("Recarregar saldos de stock e armazéns");
+                .contains("Actualizar saldos de stock e armazéns");
 
         assertThat(content)
                 .as("StockPanel deve ter botão Atualizar na barra superior")
                 .contains("refreshAllBtn")
-                .contains("Recarregar dados de stock e armazéns");
+                .contains("Actualizar dados de stock e armazéns");
     }
 
     @Test

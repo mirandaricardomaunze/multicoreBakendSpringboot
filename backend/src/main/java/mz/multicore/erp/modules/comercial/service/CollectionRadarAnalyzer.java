@@ -95,7 +95,7 @@ public class CollectionRadarAnalyzer {
                     client != null ? client.getEmail() : "-",
                     invoice.issueDate(),
                     due,
-                    invoice.getTotalAmount(),
+                    invoice.payableTotal(),
                     invoice.getAmountPaid(),
                     invoice.outstandingAmount(),
                     daysUntilDue,

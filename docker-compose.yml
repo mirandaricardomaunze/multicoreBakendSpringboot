@@ -29,6 +29,8 @@ services:
       args:
         # Coincidir com a major do PostgreSQL acima (para o pg_dump do backup).
         PG_MAJOR: ${PG_MAJOR:-16}
+        # Commit gravado na imagem: scripts/validar-producao.sh compara-o com o esperado.
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     restart: unless-stopped
     depends_on:
       db:
@@ -42,6 +44,9 @@ services:
       BACKUP_PG_BIN_DIR: /usr/bin
       BACKUP_DIR: /app/backups
       TRUSTED_PROXY_HOST: caddy
+      # Sem esta chave o backend não arranca: os anexos clínicos ficam sempre cifrados.
+      ATTACHMENT_KEY: ${ATTACHMENT_KEY:?defina ATTACHMENT_KEY no .env (openssl rand -base64 32)}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-}
       DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-20}
       DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-5}
       HTTP_MAX_THREADS: ${HTTP_MAX_THREADS:-200}

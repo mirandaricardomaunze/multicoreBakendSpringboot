@@ -106,7 +106,7 @@ public final class AccountingJournalTab extends JPanel {
 
     private void openEntryDialog() {
         DateField date = new DateField();
-        date.setText(LocalDate.now().format(AccountingUiHelper.DATE_FMT));
+        date.setText(LocalDate.now().toString());
         JTextField description = new JTextField();
         UIHelper.styleTextField(description);
 

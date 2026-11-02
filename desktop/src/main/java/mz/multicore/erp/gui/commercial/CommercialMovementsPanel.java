@@ -85,8 +85,6 @@ public final class CommercialMovementsPanel extends JPanel {
         typeFilter.setPreferredSize(new Dimension(115, UIHelper.FORM_CONTROL_HEIGHT));
         fromField.setPreferredSize(new Dimension(95, UIHelper.FORM_CONTROL_HEIGHT));
         toField.setPreferredSize(new Dimension(95, UIHelper.FORM_CONTROL_HEIGHT));
-        fromField.putClientProperty("JTextField.placeholderText", "aaaa-mm-dd");
-        toField.putClientProperty("JTextField.placeholderText", "aaaa-mm-dd");
 
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(typeFilter, 0)),

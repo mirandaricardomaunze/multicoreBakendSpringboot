@@ -31,7 +31,7 @@ public class DataLoader implements CommandLineRunner {
 
     @Autowired
     public DataLoader(
-            @Value("${app.seed-demo-data:true}") boolean seedDemoData,
+            @Value("${app.seed-demo-data:false}") boolean seedDemoData,
             ReferenceAndAdminDataSeeder referenceSeeder,
             DemoEnterpriseDataSeeder demoSeeder) {
         this.seedDemoData = seedDemoData;

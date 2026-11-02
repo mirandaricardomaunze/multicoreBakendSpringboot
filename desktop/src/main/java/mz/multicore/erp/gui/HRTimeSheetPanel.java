@@ -47,7 +47,7 @@ final class HRTimeSheetPanel {
         periodFilters.add(monthSpinner);
         periodFilters.add(statusLabel);
 
-        ModernButton entryBtn = UIHelper.createPrimaryButton("Registar Marcação");
+        ModernButton entryBtn = UIHelper.createSuccessButton("Registar Marcação");
         entryBtn.setIcon(UIHelper.icon("fas-clock", 14));
         entryBtn.addActionListener(e -> HrTimeEntryDialog.show(owner, this::load));
 
@@ -57,7 +57,7 @@ final class HRTimeSheetPanel {
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
 
-        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Opções")
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Folha de Ponto")
                 .addAction("Configurar Acréscimos", UIHelper.icon("fas-percentage", 14), this::openOvertimeRatesDialog)
                 .addAction("Exportar PDF", UIHelper.icon("fas-file-pdf", 14),
                         () -> owner.exportTable("folha-ponto", "Folha de Ponto", table));

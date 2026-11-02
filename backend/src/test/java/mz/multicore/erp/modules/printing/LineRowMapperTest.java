@@ -42,7 +42,7 @@ class LineRowMapperTest {
                 new BigDecimal("0.16"), BigDecimal.ZERO, new BigDecimal("450"));
 
         assertEquals("3", LineItemsTableRenderer.formatModelPackages(row));
-        assertEquals("0.75", LineItemsTableRenderer.formatModelBoxes(row));
+        assertEquals("0,75", LineItemsTableRenderer.formatModelBoxes(row));
     }
 
     @Test
@@ -74,6 +74,6 @@ class LineRowMapperTest {
                 new BigDecimal("0.16"), BigDecimal.ZERO, new BigDecimal("5000"));
 
         assertEquals("0", LineItemsTableRenderer.formatModelPackages(row));
-        assertEquals("0.00", LineItemsTableRenderer.formatModelBoxes(row));
+        assertEquals("0,00", LineItemsTableRenderer.formatModelBoxes(row));
     }
 }

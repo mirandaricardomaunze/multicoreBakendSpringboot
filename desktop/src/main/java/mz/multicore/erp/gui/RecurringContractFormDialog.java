@@ -55,7 +55,7 @@ public final class RecurringContractFormDialog {
                 owner,
                 "Registar Novo Contrato Recorrente",
                 "fas-file-contract",
-                "Adicionar contrato de avença com facturação periódica",
+                "Adicionar contrato de avença com faturação periódica",
                 form
         );
 

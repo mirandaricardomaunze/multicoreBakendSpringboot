@@ -63,7 +63,7 @@ final class StockTransferEditorForm {
     private final DefaultTableModel linesModel;
     private final JTable linesTable;
     private final JLabel totalLinesLabel = new JLabel("Itens: 0 | Qtd Total: 0");
-    private final JLabel totalValueLabel = new JLabel("Total da Transferência: 0.00 MT");
+    private final JLabel totalValueLabel = new JLabel("Total da Transferência: 0,00 MT");
 
     private StockTransferDTO loaded;
     private boolean loading;

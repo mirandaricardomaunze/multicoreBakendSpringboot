@@ -47,8 +47,9 @@ final class StockBatchesViewCoordinator {
         long expired = 0;
         long soon = 0;
         for (var b : owner.batchesList) {
-            if (b.expirationDate() == null || b.quantity() == null || b.quantity().compareTo(BigDecimal.ZERO) <= 0) continue;
-            long days = ChronoUnit.DAYS.between(today, b.expirationDate());
+            LocalDate expiry = BatchDisplay.expiry(b.expirationDate());
+            if (expiry == null || b.quantity() == null || b.quantity().compareTo(BigDecimal.ZERO) <= 0) continue;
+            long days = ChronoUnit.DAYS.between(today, expiry);
             if (days < 0) expired++;
             else if (days <= owner.EXPIRY_SOON_DAYS) soon++;
         }
@@ -85,7 +86,8 @@ final class StockBatchesViewCoordinator {
                 String s = (b.sku() == null ? "" : b.sku()) + " " + (b.productName() == null ? "" : b.productName()) + " " + (b.batchNumber() == null ? "" : b.batchNumber());
                 if (!s.toLowerCase().contains(query)) continue;
             }
-            long d = b.expirationDate() == null ? Long.MAX_VALUE : ChronoUnit.DAYS.between(today, b.expirationDate());
+            LocalDate expiry = BatchDisplay.expiry(b.expirationDate());
+            long d = expiry == null ? Long.MAX_VALUE : ChronoUnit.DAYS.between(today, expiry);
             boolean match = switch (expIdx) {
                 case 1 -> d < 0;
                 case 2 -> d >= 0 && d <= 30;
@@ -94,10 +96,10 @@ final class StockBatchesViewCoordinator {
                 default -> true;
             };
             if (!match) continue;
-            String status = d == Long.MAX_VALUE ? "—" : d < 0 ? "VENCIDO" : d <= 30 ? "VENCE EM BREVE" : "VÁLIDO";
+            String status = d == Long.MAX_VALUE ? "Sem validade" : d < 0 ? "VENCIDO" : d <= 30 ? "VENCE EM BREVE" : "VÁLIDO";
             owner.batchesModel.addRow(new Object[]{
-                    b.sku(), b.productName(), b.warehouseName(), b.batchNumber(),
-                    b.expirationDate() == null ? "—" : b.expirationDate().format(FMT),
+                    b.sku(), b.productName(), b.warehouseName(), BatchDisplay.number(b.batchNumber()),
+                    expiry == null ? "—" : expiry.format(FMT),
                     d == Long.MAX_VALUE ? "—" : String.valueOf(d),
                     hide ? MASK : String.format("%,.2f", b.quantity()), status, bBu
             });

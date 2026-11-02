@@ -49,7 +49,7 @@ public class StockPanel extends JPanel {
     StockTransferEditorForm transferEditorForm;
     final JLabel kpiTransfersSeparation = new JLabel("0"), kpiTransfersPending = new JLabel("0");
     final JLabel kpiTransfersInTransit = new JLabel("0"), kpiTransfersCompleted = new JLabel("0");
-    final JLabel kpiTransfersTotalValue = new JLabel("0.00 MT");
+    final JLabel kpiTransfersTotalValue = new JLabel("0,00 MT");
     JComboBox<String> warehouseFilterCombo, stockStatusCombo, stockBusinessUnitCombo, stockCategoryCombo;
     JTextField stockSearchField;
     List<WarehouseDTO> warehousesList = new ArrayList<>();
@@ -126,7 +126,7 @@ public class StockPanel extends JPanel {
 
         ModernButton refreshAllBtn = UIHelper.createSecondaryButton("Actualizar");
         refreshAllBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshAllBtn.setToolTipText("Recarregar dados de stock e armazéns");
+        refreshAllBtn.setToolTipText("Actualizar dados de stock e armazéns");
         refreshAllBtn.addActionListener(e -> onPanelSelected());
         topBar.add(UIHelper.actionsBar(refreshAllBtn, moreBtn, newProductBtn), BorderLayout.EAST);
         topBar.setVisible(false);
@@ -184,7 +184,7 @@ public class StockPanel extends JPanel {
         cardNewProductBtn.addActionListener(e -> createProductDialog());
 
         ModernButton refreshLevelsBtn = UIHelper.createRefreshButton(this::onPanelSelected);
-        refreshLevelsBtn.setToolTipText("Recarregar saldos de stock e armazéns");
+        refreshLevelsBtn.setToolTipText("Actualizar saldos de stock e armazéns");
 
         warehouseFilterCombo = TableFilter.combo("Todos os armazéns");
         warehouseFilterCombo.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
@@ -324,7 +324,7 @@ public class StockPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(4, 0, 0, 0));
 
-        ModernButton transferBtn = UIHelper.createPrimaryButton("Nova Transferência");
+        ModernButton transferBtn = UIHelper.createSuccessButton("Nova Transferência");
         transferBtn.setIcon(UIHelper.icon("fas-truck", 14));
         transferBtn.addActionListener(e -> transferActions.openCreateEditor());
 

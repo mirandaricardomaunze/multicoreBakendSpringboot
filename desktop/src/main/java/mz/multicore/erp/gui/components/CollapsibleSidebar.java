@@ -34,7 +34,6 @@ public class CollapsibleSidebar extends JPanel {
     private final SidebarToggleButton toggleButton = new SidebarToggleButton();
     private final JPanel footerPanel = new JPanel();
     private final SidebarUserProfileCard userProfileCard = new SidebarUserProfileCard();
-    private final JLabel footerVersionLabel = createFooterVersionLabel();
 
     private final JPanel favoritesContainer = new JPanel();
     private final SidebarFavoritesCoordinator favoritesCoordinator;
@@ -57,11 +56,10 @@ public class CollapsibleSidebar extends JPanel {
         brandLabel.setForeground(headerText());
         brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        brandSubLabel.setText(subBrand != null && !subBrand.isBlank() ? subBrand : "ERP Profissional");
+        setSubBrand(subBrand);
         brandSubLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
         brandSubLabel.setForeground(subText());
         brandSubLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        brandSubLabel.setToolTipText("Empresa activa");
 
         brandStack.setOpaque(false);
         brandStack.setLayout(new BoxLayout(brandStack, BoxLayout.Y_AXIS));
@@ -93,7 +91,11 @@ public class CollapsibleSidebar extends JPanel {
         bodyScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         bodyScroll.getVerticalScrollBar().setUnitIncrement(16);
         bodyScroll.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
-        add(bodyScroll, BorderLayout.CENTER);
+        JPanel bodyArea = new JPanel(new BorderLayout());
+        bodyArea.setOpaque(false);
+        bodyArea.add(bodyScroll, BorderLayout.CENTER);
+        bodyArea.add(new SidebarScrollHint(bodyScroll), BorderLayout.SOUTH);
+        add(bodyArea, BorderLayout.CENTER);
 
         footerPanel.setOpaque(false);
         add(footerPanel, BorderLayout.SOUTH);
@@ -102,7 +104,10 @@ public class CollapsibleSidebar extends JPanel {
     }
 
     public void setSubBrand(String text) {
-        brandSubLabel.setText(text == null || text.isBlank() ? "ERP Profissional" : text);
+        String name = text == null || text.isBlank() ? "ERP Profissional" : text;
+        brandSubLabel.setText(SidebarBrandText.wrapped(name));
+        brandSubLabel.setToolTipText("Empresa activa: " + name);
+        brandSubLabel.revalidate();
     }
 
     public void setUserProfile(String displayName, String role) {
@@ -202,7 +207,6 @@ public class CollapsibleSidebar extends JPanel {
         for (SidebarNavItem item : navItems) item.setCollapsed(collapsed);
         favoritesCoordinator.setCollapsed(collapsed);
         userProfileCard.setCollapsed(collapsed);
-        footerVersionLabel.setVisible(!collapsed);
 
         headerPanel.removeAll();
         footerPanel.removeAll();
@@ -229,10 +233,7 @@ public class CollapsibleSidebar extends JPanel {
             footerPanel.setLayout(new BoxLayout(footerPanel, BoxLayout.Y_AXIS));
             footerPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
             userProfileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-            footerVersionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             footerPanel.add(userProfileCard);
-            footerPanel.add(Box.createRigidArea(new Dimension(0, 4)));
-            footerPanel.add(footerVersionLabel);
         }
         headerPanel.revalidate(); headerPanel.repaint();
         footerPanel.revalidate(); footerPanel.repaint();

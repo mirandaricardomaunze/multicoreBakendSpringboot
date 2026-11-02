@@ -31,6 +31,7 @@ public class DateField extends JTextField {
         setColumns(10);
         UIHelper.styleTextField(this);
         setToolTipText("Formato: yyyy-MM-dd (F4 para abrir calendário)");
+        putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "aaaa-mm-dd");
         getAccessibleContext().setAccessibleDescription("Data no formato ano-mês-dia");
 
         calendarButton = new JButton(UIHelper.icon("fas-calendar-alt", 13, UIHelper.ACCENT_BLUE));

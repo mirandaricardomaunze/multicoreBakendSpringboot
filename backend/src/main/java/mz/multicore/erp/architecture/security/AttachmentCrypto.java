@@ -1,6 +1,7 @@
 package mz.multicore.erp.architecture.security;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,9 +28,9 @@ import java.util.Base64;
  *   <li><b>Os dados dizem o que são.</b> O que é cifrado leva o prefixo {@code MCE1}. Ler um blob
  *       sem esse prefixo devolve-o tal e qual: os anexos gravados antes desta alteração continuam a
  *       abrir, sem migração e sem janela em que ninguém consegue ler nada.
- *   <li><b>Sem chave configurada, não cifra.</b> Uma instalação sem {@code security.attachment-key}
- *       comporta-se como antes. Falhar o arranque por falta de chave transformaria uma melhoria de
- *       segurança numa paragem de serviço.
+ *   <li><b>Sem chave, não cifra — excepto em produção.</b> Com
+ *       {@code security.attachment-key.required=true}, o servidor recusa arrancar sem chave, para um
+ *       documento clínico nunca ficar em claro por esquecimento.
  *   <li><b>Mas nunca falha em silêncio.</b> Se o blob está cifrado e a chave falta ou está errada, a
  *       leitura é <b>recusada com a razão</b>. Devolver bytes ilegíveis a fingir que são o ficheiro
  *       é como um anexo se perde sem ninguém dar por isso.
@@ -50,8 +51,18 @@ public class AttachmentCrypto {
     private final SecretKey key;
     private final SecureRandom random = new SecureRandom();
 
-    public AttachmentCrypto(@Value("${security.attachment-key:}") String base64Key) {
+    public AttachmentCrypto(String base64Key) {
+        this(base64Key, false);
+    }
+
+    @Autowired
+    public AttachmentCrypto(@Value("${security.attachment-key:}") String base64Key,
+                            @Value("${security.attachment-key.required:false}") boolean required) {
         this.key = parseKey(base64Key);
+        if (required && key == null) {
+            throw new IllegalStateException("Falta a chave de cifra dos anexos (ATTACHMENT_KEY). "
+                    + "Gere-a com: openssl rand -base64 32");
+        }
     }
 
     public boolean isEnabled() {
@@ -102,7 +113,7 @@ public class AttachmentCrypto {
         }
     }
 
-    static boolean isEncrypted(byte[] stored) {
+    public static boolean isEncrypted(byte[] stored) {
         if (stored == null || stored.length < MAGIC.length + IV_BYTES) {
             return false;
         }

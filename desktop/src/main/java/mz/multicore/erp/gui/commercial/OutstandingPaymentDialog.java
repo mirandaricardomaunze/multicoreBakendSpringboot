@@ -29,7 +29,7 @@ public final class OutstandingPaymentDialog {
                             BiConsumer<String, String> onErrorNotice,
                             Consumer<Throwable> onErrorAction) {
         BigDecimal paid = invoice.amountPaid() == null ? BigDecimal.ZERO : invoice.amountPaid();
-        BigDecimal outstanding = invoice.totalAmount().subtract(paid);
+        BigDecimal outstanding = invoice.outstandingAmount();
         JComboBox<String> method = new JComboBox<>(new String[]{"CASH", "CARD", "BANK_TRANSFER"});
         UIHelper.styleComboBox(method);
         JComboBox<String> account = new JComboBox<>();

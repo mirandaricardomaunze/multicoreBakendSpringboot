@@ -6,6 +6,7 @@ import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
+import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuideLine;
@@ -42,7 +43,7 @@ public class DeliveryGuideDocumentRenderer {
                 true, raw.tax(), true, raw.footer()
         );
 
-        return PdfDocumentBuilder.build(PageSize.A4.rotate(), doc -> {
+        return PdfDocumentBuilder.build(PageSize.A4, doc -> {
             for (int i = 0; i < copies.size(); i++) {
                 if (i > 0) doc.newPage();
                 renderDeliveryGuideCopy(doc, guide, copies.get(i), rows, columns);
@@ -54,7 +55,7 @@ public class DeliveryGuideDocumentRenderer {
                                          List<LineItemsTableRenderer.Row> rows, DocumentColumnsDTO columns) {
         doc.add(CompanyHeaderRenderer.build(guide.getCompany(), "Guia de Remessa", guide.getGuideNumber(), copyLabel, null));
         doc.add(buildDeliveryBlock(guide));
-        doc.add(LineItemsTableRenderer.build(rows, columns));
+        doc.add(LineItemsTableRenderer.buildCompact(rows, columns));
 
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal tax = BigDecimal.ZERO;
@@ -62,15 +63,13 @@ public class DeliveryGuideDocumentRenderer {
             for (DeliveryGuideLine l : guide.getLines()) {
                 BigDecimal price = l.getUnitPrice() != null ? l.getUnitPrice() : BigDecimal.ZERO;
                 BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
-                BigDecimal lineNet = price.multiply(qty);
-                subtotal = subtotal.add(lineNet);
-                if (l.getTaxRate() != null) tax = tax.add(lineNet.multiply(l.getTaxRate()));
+                var amounts = LineCalculator.compute(price, qty, l.getDiscountPercentage(), l.getTaxRate());
+                subtotal = subtotal.add(amounts.net());
+                tax = tax.add(amounts.tax());
             }
         }
-        BigDecimal total = guide.getTotalAmount() != null && guide.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
-                ? guide.getTotalAmount()
-                : subtotal.add(tax).setScale(2, RoundingMode.HALF_UP);
-        doc.add(TotalsBlockRenderer.build(subtotal.setScale(2, RoundingMode.HALF_UP), tax.setScale(2, RoundingMode.HALF_UP), total));
+        BigDecimal total = subtotal.add(tax).setScale(2, RoundingMode.HALF_UP);
+        doc.add(TotalsBlockRenderer.build(subtotal.setScale(2, RoundingMode.HALF_UP), tax.setScale(2, RoundingMode.HALF_UP), total, "VALOR DECLARADO"));
 
         Paragraph packageSummary = buildPackageSummary(guide.getLines());
         if (packageSummary != null) doc.add(packageSummary);
@@ -104,6 +103,7 @@ public class DeliveryGuideDocumentRenderer {
         PdfPCell meta = new PdfPCell();
         meta.setBorder(PdfPCell.NO_BORDER);
         if (guide.getOrderNumber() != null) addRight(meta, "Encomenda de origem: " + guide.getOrderNumber());
+        if (guide.getInvoiceNumber() != null) addRight(meta, "Fatura: " + guide.getInvoiceNumber());
         if (guide.getGuideDate() != null) addRight(meta, "Data: " + guide.getGuideDate().format(DATE_FMT));
         if (guide.getWarehouse() != null) addRight(meta, "Origem (armazém): " + guide.getWarehouse().getName());
         table.addCell(meta);

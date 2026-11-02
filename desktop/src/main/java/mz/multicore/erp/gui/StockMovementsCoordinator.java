@@ -96,7 +96,7 @@ public class StockMovementsCoordinator {
                     m.warehouseName(),
                     formattedQty,
                     UIHelper.humanStatus(m.movementType()),
-                    m.batchNumber() != null ? m.batchNumber() : "-",
+                    BatchDisplay.number(m.batchNumber()),
                     m.serialNumber() != null ? m.serialNumber() : "-",
                     m.description(),
                     buName

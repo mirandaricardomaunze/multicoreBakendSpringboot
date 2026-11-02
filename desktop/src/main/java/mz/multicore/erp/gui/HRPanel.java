@@ -286,7 +286,7 @@ public class HRPanel extends JPanel {
                 .addAction("Ficheiro de Pagamento", UIHelper.icon("fas-university", 14), payrollActions::bankPaymentFile)
                 .addAction("Processar Mês", UIHelper.icon("fas-calculator", 14, UIHelper.ACCENT_BLUE), () -> HRPayslipFormDialog.processMonthlyPayroll(this));
 
-        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Operações")
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Folha Salarial")
                 .addAction("Aprovar Recibo", UIHelper.icon("fas-clipboard-check", 14), payrollActions::approveSelected)
                 .addAction("Marcar Pago", UIHelper.icon("fas-check", 14), this::markSelectedPayslipPaid)
                 .addAction("13.º Mês", UIHelper.icon("fas-gift", 14), bonusActions::openThirteenthMonth)
@@ -398,7 +398,7 @@ public class HRPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton newBtn = UIHelper.createPrimaryButton("Registar Falta");
+        ModernButton newBtn = UIHelper.createSuccessButton("Registar Falta");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> HRAbsenceFormDialog.openCreateDialog(this, ABSENCE_TYPES));
 
@@ -408,7 +408,7 @@ public class HRPanel extends JPanel {
 
         ModernButton refreshAbsencesBtn = UIHelper.createRefreshButton(this::loadAbsences);
 
-        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações da Falta")
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Acções da Falta")
                 .addAction("Justificar", UIHelper.icon("fas-user-check", 14), employeeActions::justifyAbsence)
                 .addAction("Eliminar", UIHelper.icon("fas-trash", 14), this::deleteSelectedAbsence);
 

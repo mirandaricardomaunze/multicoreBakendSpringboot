@@ -48,7 +48,7 @@ public final class ConfigBackupOperations {
         UIHelper.loadAsync(owner, owner.backupApiClient::files, files -> {
             filesModel.setRowCount(0);
             for (String name : files) {
-                if (name.startsWith(prefix) && name.toLowerCase().endsWith(".json")) {
+                if (name.startsWith(prefix) && name.toLowerCase().matches(".*[.]json([.]enc)?")) {
                     filesModel.addRow(new Object[]{name, "—"});
                 }
             }

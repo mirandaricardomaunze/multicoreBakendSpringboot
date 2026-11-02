@@ -109,6 +109,7 @@ public class MainFrame extends JFrame {
     private CollapsibleSidebar sidebar;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
+    private boolean sidebarCollapsedForPos;
 
     /** Antecedência (dias) a partir da qual se avisa o assinante que a assinatura vai expirar. */
     private static final long SUB_ALERT_DAYS = 7;
@@ -249,10 +250,13 @@ public class MainFrame extends JFrame {
         }
 
         setLayout(new BorderLayout());
+        // A empresa guardada é escolhida primeiro: o nome e o menu da sidebar dependem dela.
+        JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
         sidebar = buildSidebar();
+        if (comercialPanel != null) comercialPanel.onTabChanged(() -> syncSidebar("comercial", ""));
         topBar = topBarBuilder.build(superAdmin, this, this::openGlobalSearch, this::openRecentItemsHistory,
                 notificationCoordinator != null ? notificationCoordinator.buildNotificationBell() : null,
-                buildSubscriptionChip(), buildCompanyCombo(),
+                buildSubscriptionChip(), companyCombo,
                 desktopSessionStore.requireSession().companies().size() > 1);
         if (notificationCoordinator != null) notificationCoordinator.attachNavComponents(topBar, sidebar);
         statusBar = new mz.multicore.erp.gui.components.StatusBar();
@@ -295,14 +299,12 @@ public class MainFrame extends JFrame {
     public void applyAuthenticatedUser(String displayName, String role) {
         sessionDisplayName = displayName;
         String activeRole = CurrentUserContext.getRole();
+        if (posPanel != null) posPanel.setOperatorDisplayName(displayName);
         if (dashboardPanel != null) dashboardPanel.updateWelcomeMessage(displayName, activeRole);
         if (sellerDashboardPanel != null) sellerDashboardPanel.updateWelcomeMessage(displayName);
         topBarBuilder.updateUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (sidebar != null) sidebar.setUserProfile(displayName, UIHelper.humanRole(activeRole));
         if (statusBar != null) {
-            DesktopSession s = desktopSessionStore.requireSession();
-            String company = s.companies().isEmpty() ? "" : s.companies().get(0).name();
-            statusBar.setContext("Painel Inicial", -1, company, displayName);
             checkForNewerVersion();
         }
     }
@@ -314,6 +316,17 @@ public class MainFrame extends JFrame {
      * não há aviso nenhum e a loja continua a trabalhar. Um problema a verificar a versão nunca
      * pode impedir alguém de vender.
      */
+    private void adjustSidebarForPos(boolean entering) {
+        if (sidebar == null) return;
+        if (entering && !sidebar.isCollapsedState() && PosLayout.shouldCollapseSidebar(getWidth())) {
+            sidebar.setCollapsedState(true);
+            sidebarCollapsedForPos = true;
+        } else if (!entering && sidebarCollapsedForPos) {
+            sidebar.setCollapsedState(false);
+            sidebarCollapsedForPos = false;
+        }
+    }
+
     private void checkForNewerVersion() {
         if (versionApiClient == null) return;
         new javax.swing.SwingWorker<String, Void>() {
@@ -442,11 +455,15 @@ public class MainFrame extends JFrame {
             case "plataforma" -> "Plataforma";
             default           -> cardName;
         };
-        if (statusBar != null) statusBar.setModule(modName);
         if (topBar != null) topBar.setActive(modName);
-        if (sidebar != null) sidebar.setActive(modName);
+        syncSidebar(cardName, modName);
+        adjustSidebarForPos("pos".equals(cardName));
         RecentItemsHistoryManager.getInstance().record("Módulo", null, modName, "Acesso rápido", cardName, "fas-folder-open");
         refreshPanel(cardName);
+    }
+
+    private void syncSidebar(String card, String moduleTitle) {
+        if (sidebar != null) sidebar.setActive(SidebarActiveItem.labelFor(card, moduleTitle, CurrentUserContext.getRole(), comercialPanel));
     }
 
     private void refreshPanel(String cardName) {
@@ -654,8 +671,8 @@ public class MainFrame extends JFrame {
         items.add(new GlobalSearchDialog.SearchItem("act_labels", "Gerador de Etiquetas de Prateleira", "Ferramentas", null, UIHelper.icon("fas-barcode", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK, () -> { navigate("stock"); if (stockPanel != null) stockPanel.openLabelDialog(); }, List.of("etiquetas", "barcode", "preco", "prateleira", "gondola", "rotulos")));
         items.add(new GlobalSearchDialog.SearchItem("act_waste", "Gestão de Quebras, Perdas & Desperdício", "Stock", null, UIHelper.icon("fas-trash-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> { navigate("stock"); if (stockPanel != null) stockPanel.showWasteManagement(); }, List.of("quebras", "perdas", "desperdicio", "validade", "avarias", "furto", "waste", "radar")));
         items.add(new GlobalSearchDialog.SearchItem("act_reconciliation", "Centro de Reconciliação Bancária", "Financeiro", null, UIHelper.icon("fas-university", 16, UIHelper.MODULE_FINANCEIRO), UIHelper.MODULE_FINANCEIRO, () -> { navigate("financeiro"); if (financeiroPanel != null) financeiroPanel.showReconciliationTab(); }, List.of("reconciliacao", "bancaria", "extracto", "bancos", "bim", "bci", "conciliar", "extrato")));
-        items.add(new GlobalSearchDialog.SearchItem("act_forensic_audit", "Central de Auditoria Forense & Controlo de Fraude", "Fiscal & Auditoria", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"), List.of("auditoria", "forense", "fraude", "desvios", "anomalias", "cancelamentos", "quebras", "risco")));
-        items.add(new GlobalSearchDialog.SearchItem("act_alerts", "Alertas Inteligentes & Ações Proativas", "Ferramentas", null, UIHelper.icon("fas-bell", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, this::openSmartAlerts, List.of("alertas", "acoes", "proativo", "notificacoes", "urgente")));
+        items.add(new GlobalSearchDialog.SearchItem("act_forensic_audit", "Central de Auditoria Forense & Controlo de Fraude", "Finanças & Fiscal", null, UIHelper.icon("fas-shield-alt", 16, UIHelper.REJECTED_RED), UIHelper.REJECTED_RED, () -> navigate("auditoria_forense"), List.of("auditoria", "forense", "fraude", "desvios", "anomalias", "cancelamentos", "quebras", "risco")));
+        items.add(new GlobalSearchDialog.SearchItem("act_alerts", "Alertas Inteligentes & Acções Proativas", "Ferramentas", null, UIHelper.icon("fas-bell", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, this::openSmartAlerts, List.of("alertas", "acoes", "proativo", "notificacoes", "urgente")));
         items.add(new GlobalSearchDialog.SearchItem("act_backup", "Cópias de Segurança & Integridade", "Ferramentas", null, UIHelper.icon("fas-database", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, this::openBackupDialog, List.of("backup", "copia", "restauro", "base de dados", "seguranca")));
         items.add(new GlobalSearchDialog.SearchItem("act_theme", "Alternar Tema (Escuro / Claro / Alto Contraste)", "Ferramentas", null, UIHelper.icon("fas-adjust", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> UIHelper.cycleTheme(), List.of("tema", "dark", "light", "alto contraste", "outdoor", "acessibilidade", "cores")));
         items.add(new GlobalSearchDialog.SearchItem("act_theme_hc", "Modo Alto Contraste / Operação Exterior", "Acessibilidade", null, UIHelper.icon("fas-low-vision", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> UIHelper.setTheme(Theme.HIGH_CONTRAST), List.of("alto contraste", "outdoor", "acessibilidade", "sol", "leitura", "visibilidade")));
@@ -663,7 +680,7 @@ public class MainFrame extends JFrame {
         items.add(new GlobalSearchDialog.SearchItem("act_density", "Alternar Densidade da Interface (Compacto / Padrão / Confortável)", "Ferramentas", null, UIHelper.icon("fas-text-height", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> mz.multicore.erp.gui.components.UiDensityManager.getInstance().cycleDensity(), List.of("densidade", "zoom", "escala", "compacto", "amplo", "confortavel", "linhas")));
 
         // 3. Ações Operacionais de Documentos
-        items.add(new GlobalSearchDialog.SearchItem("act_new_invoice", "Emitir Nova Factura Comercial", "Operações Comerciais", null, UIHelper.icon("fas-file-invoice", 16, UIHelper.APPROVED_GREEN), UIHelper.APPROVED_GREEN, () -> navigate("comercial"), List.of("nova fatura", "faturar", "venda", "ft", "emitir", "comercial")));
+        items.add(new GlobalSearchDialog.SearchItem("act_new_invoice", "Emitir Nova Fatura Comercial", "Operações Comerciais", null, UIHelper.icon("fas-file-invoice", 16, UIHelper.APPROVED_GREEN), UIHelper.APPROVED_GREEN, () -> navigate("comercial"), List.of("nova fatura", "faturar", "venda", "ft", "emitir", "comercial")));
         items.add(new GlobalSearchDialog.SearchItem("act_new_order", "Criar Nova Encomenda de Cliente", "Operações Comerciais", null, UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), UIHelper.ACCENT_BLUE, () -> navigate("comercial"), List.of("nova encomenda", "pedido", "encomendar", "separacao")));
         items.add(new GlobalSearchDialog.SearchItem("act_new_quotation", "Elaborar Nova Cotação", "Operações Comerciais", null, UIHelper.icon("fas-file-alt", 16, UIHelper.PENDING_YELLOW), UIHelper.PENDING_YELLOW, () -> navigate("comercial"), List.of("nova cotacao", "proposta", "orcamento", "cotar")));
         items.add(new GlobalSearchDialog.SearchItem("act_new_po", "Criar Encomenda a Fornecedor", "Compras", null, UIHelper.icon("fas-cart-plus", 16, UIHelper.MODULE_COMPRAS), UIHelper.MODULE_COMPRAS, () -> navigate("compras"), List.of("comprar", "encomenda fornecedor", "compras", "nova compra")));

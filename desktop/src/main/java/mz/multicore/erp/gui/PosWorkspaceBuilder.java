@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -52,20 +54,26 @@ final class PosWorkspaceBuilder {
             owner.contingencyBtn.setText("Contingência (" + owner.contingencyManager.getPendingCount() + ")");
         }
 
-        owner.operationsMenu = UIHelper.createActionMenuButton("Operações")
-                .addAction("Importar Cotação (F7)", UIHelper.icon("fas-file-import", 14, UIHelper.ACCENT_CYAN), () -> owner.quotationActions.openImportDialog())
+        owner.suspendedSalesBtn = new ModernButton("Em espera", UIHelper.SECONDARY, UIHelper.SECONDARY_HOVER);
+        owner.suspendedSalesBtn.setIcon(UIHelper.icon("fas-pause-circle", 14));
+        owner.suspendedSalesBtn.setToolTipText("Retomar uma venda em espera (Ctrl+R)");
+        owner.suspendedSalesBtn.addActionListener(e -> owner.suspendedSaleActions.openResumeDialog());
+
+        owner.operationsMenu = UIHelper.createActionMenuButton("Caixa e Turno")
+                .addAction("Importar Cotação (F7)",UIHelper.icon("fas-file-import", 14, UIHelper.ACCENT_CYAN), () -> owner.quotationActions.openImportDialog())
                 .addAction("Programa de Fidelidade", UIHelper.icon("fas-star", 14, UIHelper.ACCENT), owner::openLoyaltyDialog)
                 .addAction("Histórico de Fechos (Z)", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT_BLUE), () -> owner.cashSessionActions.showSessionHistory())
                 .addAction("Sangria / Suprimento", UIHelper.icon("fas-exchange-alt", 14, UIHelper.PENDING_YELLOW), () -> owner.cashSessionActions.manageCashMovements())
                 .addAction("Passar Turno", UIHelper.icon("fas-people-arrows", 14, UIHelper.APPROVED_GREEN), () -> owner.cashSessionActions.shiftHandover());
         owner.operationsMenu.setColors(UIHelper.SECONDARY, UIHelper.SECONDARY_HOVER);
-        owner.operationsMenu.setToolTipText("Ações e ferramentas adicionais do ponto de venda");
+        owner.operationsMenu.setToolTipText("Acções e ferramentas adicionais do ponto de venda");
 
         JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         segmented.setOpaque(false);
         segmented.add(owner.tabVendaBtn);
         segmented.add(owner.tabHistBtn);
         segmented.add(owner.operationsMenu);
+        segmented.add(owner.suspendedSalesBtn);
         segmented.add(owner.contingencyBtn);
 
         owner.openSessionBtn = UIHelper.createSuccessButton("Abrir Caixa");
@@ -73,8 +81,10 @@ final class PosWorkspaceBuilder {
         owner.openSessionBtn.addActionListener(e -> owner.cashSessionActions.openSession());
 
         owner.closeSessionBtn = UIHelper.createDangerButton("Fechar Caixa");
-        owner.closeSessionBtn.setShortcut("Z");
-        owner.closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14));
+        owner.closeSessionBtn.setShortcut("F12");
+        owner.closeSessionBtn.setColors(UIHelper.ROW_ALT, UIHelper.GRID);
+        owner.closeSessionBtn.setForeground(UIHelper.REJECTED_RED);
+        owner.closeSessionBtn.setIcon(UIHelper.icon("fas-lock", 14, UIHelper.REJECTED_RED));
         owner.closeSessionBtn.addActionListener(e -> owner.cashSessionActions.closeSession());
         owner.closeSessionBtn.setVisible(false);
 
@@ -93,9 +103,10 @@ final class PosWorkspaceBuilder {
         JPanel sessionActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         sessionActions.setOpaque(false);
         sessionActions.add(owner.scaleWidget);
-        ModernButton refreshPosBtn = UIHelper.createRefreshButton(owner::refreshOperationalData);
-        refreshPosBtn.setColors(UIHelper.KPI_NEUTRAL_END, UIHelper.KPI_NEUTRAL_DARK);
+        ModernButton refreshPosBtn = UIHelper.createIconButton("Actualizar dados", "fas-sync-alt");
+        refreshPosBtn.addActionListener(e -> owner.refreshOperationalData());
         sessionActions.add(refreshPosBtn);
+        sessionActions.add(Box.createHorizontalStrut(16));
         sessionActions.add(owner.openSessionBtn);
         sessionActions.add(owner.closeSessionBtn);
 
@@ -151,20 +162,24 @@ final class PosWorkspaceBuilder {
         tg.gridx = 0;
         tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[0];
         tg.insets = new Insets(0, 0, 0, 6);
-        owner.topSelectsBar.add(labeledField("Nome do cliente *", PosLayout.searchRow(owner.clientSearchField)), tg);
+        owner.topSelectsBar.add(labeledField("Código de barras", barcodeBox), tg);
+        JPanel clientPicker = new JPanel(new GridLayout(1, 2, 6, 0));
+        clientPicker.setOpaque(false);
+        clientPicker.add(PosLayout.searchRow(owner.clientSearchField));
+        clientPicker.add(owner.clientCombo);
         tg.gridx = 1;
         tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[1];
-        owner.topSelectsBar.add(labeledField("Cliente", owner.clientCombo), tg);
+        owner.topSelectsBar.add(labeledField("Cliente", clientPicker), tg);
         tg.gridx = 2;
         tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[2];
         owner.topSelectsBar.add(labeledField("Armazém", owner.warehouseCombo), tg);
         tg.gridx = 3;
         tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[3];
-        owner.topSelectsBar.add(labeledField("Conta", owner.accountCombo), tg);
-        tg.gridx = 4;
-        tg.weightx = PosLayout.HEADER_FIELD_WEIGHTS[4];
         tg.insets = new Insets(0, 0, 0, 0);
-        owner.topSelectsBar.add(labeledField("Código de barras", barcodeBox), tg);
+        owner.topSelectsBar.add(labeledField("Conta", owner.accountCombo), tg);
+        PosLayout.showSelectionInTooltip(owner.clientCombo);
+        PosLayout.showSelectionInTooltip(owner.warehouseCombo);
+        PosLayout.showSelectionInTooltip(owner.accountCombo);
         return owner.topSelectsBar;
     }
 
@@ -205,7 +220,7 @@ final class PosWorkspaceBuilder {
         catalogHeader.add(catalogFilters, BorderLayout.SOUTH);
         leftPanel.add(catalogHeader, BorderLayout.NORTH);
 
-        owner.productGrid = new JPanel(new GridLayout(0, 2, 8, 8));
+        owner.productGrid = PosLayout.catalogGrid();
         owner.productGrid.setOpaque(false);
         owner.productGridScroll = new JScrollPane(owner.productGrid);
         owner.productGridScroll.setBorder(BorderFactory.createEmptyBorder());
@@ -215,6 +230,12 @@ final class PosWorkspaceBuilder {
         owner.productGridScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         owner.productGridScroll.getVerticalScrollBar().setUnitIncrement(16);
         UIHelper.styleScrollPane(owner.productGridScroll);
+        owner.productGridScroll.getViewport().addComponentListener(new ComponentAdapter() {
+            @Override public void componentResized(ComponentEvent e) {
+                ((GridLayout) owner.productGrid.getLayout()).setColumns(PosLayout.catalogColumns(e.getComponent().getWidth()));
+                owner.productGrid.revalidate();
+            }
+        });
         owner.formScroll = owner.productGridScroll;
 
         ModernPanel catalogCard = new ModernPanel(16);
@@ -368,8 +389,12 @@ final class PosWorkspaceBuilder {
         leftActions.add(decreaseBtn);
         leftActions.add(editQtyBtn);
         leftActions.add(increaseBtn);
+        ModernButton suspendBtn = UIHelper.createIconButton("Suspender venda (Ctrl+S)", "fas-pause-circle");
+        suspendBtn.addActionListener(e -> owner.suspendedSaleActions.suspendCurrentSale());
+        leftActions.add(suspendBtn);
         buttonRow.add(leftActions, BorderLayout.WEST);
 
+        owner.cartLineButtons = java.util.List.of(removeBtn, decreaseBtn, editQtyBtn, increaseBtn, suspendBtn);
         owner.checkoutBtn = UIHelper.createSuccessButton("Finalizar Venda");
         owner.checkoutBtn.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
         owner.checkoutBtn.setShortcut("F10");
@@ -402,9 +427,11 @@ final class PosWorkspaceBuilder {
         p.setOpaque(false);
         JLabel l = new JLabel(label);
         l.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        l.setForeground(UIHelper.ACCENT);
+        l.setForeground(UIHelper.TEXT_MUTED);
         p.add(l, BorderLayout.NORTH);
         p.add(field, BorderLayout.CENTER);
+        // Largura mínima: quem reparte o espaço são os pesos, não o texto mais longo de cada selector.
+        p.setPreferredSize(new Dimension(1, p.getPreferredSize().height));
         return p;
     }
 }

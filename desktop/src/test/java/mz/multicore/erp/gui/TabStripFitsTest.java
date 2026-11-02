@@ -36,13 +36,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class TabStripFitsTest {
 
-    /** Largura validada em 2026-08-15 ("Comercial, RH e Stock sem cortes/sobreposições"). */
-    private static final int VALIDATED_WIDTH = 1382;
+    /** Espaço real num ecrã de 1366 px: a janela menos a sidebar recolhida e as margens. */
+    private static final int VALIDATED_WIDTH = 1270;
 
     /** Cromo de cada separador: ícone de 16 px, espaço para o texto e margens laterais. */
     private static final int ICON = 16;
-    private static final int GAP = 6;
-    private static final int PADDING = 30;
+    private static final int GAP = 4;
+    private static final int PADDING = 23;
 
     @Test
     void commercialTabsFitTheValidatedWindowWidth() throws IOException {

@@ -50,14 +50,15 @@ public class PurchaseOrderService {
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             GoodsReceiptDiscrepancyRepository discrepancyRepository,
-            PurchaseOrderReceiptRepository receiptRepository
+            PurchaseOrderReceiptRepository receiptRepository,
+            PurchaseOrderPayableRegistrar payableRegistrar
     ) {
         this(
                 orderRepository,
                 new PurchaseOrderLifecycleService(orderRepository, supplierRepository, productRepository,
                         warehouseRepository, companyRepository, documentNumberService, auditLogService),
                 new PurchaseOrderReceiptExecutor(orderRepository, inventoryService, auditLogService,
-                        discrepancyRepository, receiptRepository)
+                        discrepancyRepository, receiptRepository, payableRegistrar)
         );
     }
 

@@ -33,6 +33,7 @@ public final class TablePdfExporter {
         PdfPTable t = new PdfPTable(headers.length);
         t.setWidthPercentage(100);
         t.setSpacingBefore(6f);
+        t.setHeaderRows(1);
 
         for (String header : headers) {
             PdfPCell cell = new PdfPCell(new Phrase(header, PdfTheme.tableHeaderFont()));

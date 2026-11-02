@@ -2,7 +2,9 @@ package mz.multicore.erp.modules.accounting.service;
 
 import mz.multicore.erp.architecture.events.CreditNoteApprovedEvent;
 import mz.multicore.erp.architecture.events.DebitNoteApprovedEvent;
+import mz.multicore.erp.architecture.events.InvoiceCancelledEvent;
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
+import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.events.SaleRegisteredEvent;
 import mz.multicore.erp.modules.accounting.model.JournalEntry;
 import mz.multicore.erp.modules.accounting.model.JournalLine;
@@ -10,6 +12,7 @@ import mz.multicore.erp.modules.accounting.model.JournalSource;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static mz.multicore.erp.modules.accounting.service.PostingHelper.safe;
 
@@ -91,6 +94,37 @@ public class CommercialPostingHandler {
                 amount, "Liquidação de conta corrente"));
 
         journalService.save(entry, event.companyId());
+    }
+
+    public void postInvoiceCancellation(InvoiceCancelledEvent event) {
+        postReversal(event.companyId(), JournalSource.INVOICE, JournalSource.INVOICE_CANCELLATION,
+                event.invoiceId(), event.invoiceNumber(), event.date(), "Anulação da venda ");
+    }
+
+    public void postReceiptCancellation(ReceiptCancelledEvent event) {
+        postReversal(event.companyId(), JournalSource.RECEIPT, JournalSource.RECEIPT_CANCELLATION,
+                event.receiptId(), event.receiptNumber(), event.date(), "Anulação do recebimento ");
+    }
+
+    /** Estorna um lançamento trocando débitos e créditos; o original fica no diário. */
+    private void postReversal(Long companyId, JournalSource original, JournalSource reversal,
+                              Long documentId, String documentNumber, LocalDate date, String description) {
+        if (!postingHelper.canPost(companyId)) return;
+        if (postingHelper.alreadyPosted(companyId, reversal, documentId)) return;
+        journalService.findByDocument(companyId, original, documentId).ifPresent(posted -> {
+            JournalEntry entry = new JournalEntry();
+            entry.setEntryDate(date);
+            entry.setDescription(description + documentNumber);
+            entry.setSource(reversal);
+            entry.setSourceDocumentId(documentId);
+            entry.setSourceDocumentNumber(documentNumber);
+            for (JournalLine line : posted.getLines()) {
+                entry.addLine(safe(line.getDebit()).signum() > 0
+                        ? JournalLine.credit(line.getAccount(), line.getDebit(), "Estorno: " + line.getDescription())
+                        : JournalLine.debit(line.getAccount(), line.getCredit(), "Estorno: " + line.getDescription()));
+            }
+            journalService.save(entry, companyId);
+        });
     }
 
     public void postCreditNote(CreditNoteApprovedEvent event) {

@@ -120,11 +120,11 @@ class PlatformUserServiceTest {
         String token = sessions.create(target).token();
         when(appUserRepository.findByUsername("ana")).thenReturn(Optional.of(target));
         PasswordEncoder encoder = mock(PasswordEncoder.class);
-        when(encoder.encode("nova-senha")).thenReturn("hash-novo");
+        when(encoder.encode("nova-senha-2026")).thenReturn("hash-novo");
         PlatformUserService withSessions = new PlatformUserService(appUserRepository, companyAccessRepository,
                 companyRepository, encoder, mock(AuditLogService.class), sessions);
 
-        withSessions.resetPassword("ana", "nova-senha");
+        withSessions.resetPassword("ana", "nova-senha-2026");
 
         assertEquals("hash-novo", target.getPassword());
         assertThrows(BusinessRuleException.class, () -> sessions.requireValid(token));

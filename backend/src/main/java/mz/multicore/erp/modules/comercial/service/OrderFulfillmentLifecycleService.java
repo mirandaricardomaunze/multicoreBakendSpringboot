@@ -46,6 +46,10 @@ public class OrderFulfillmentLifecycleService {
                         .filter(l -> l.getId().equals(cl.lineId()))
                         .findFirst()
                         .ifPresent(l -> {
+                            if (cl.confirmedQuantity() != null && cl.confirmedQuantity().compareTo(l.getQuantity()) > 0) {
+                                throw new BusinessRuleException("A quantidade separada de " + l.getProduct().getName()
+                                        + " não pode exceder a encomendada.");
+                            }
                             l.setSeparatedQuantity(cl.confirmedQuantity() != null ? cl.confirmedQuantity() : l.getQuantity());
                             if (cl.batchNumber() != null && !cl.batchNumber().isBlank()) {
                                 l.setBatchNumber(cl.batchNumber().trim());

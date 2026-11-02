@@ -4,7 +4,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,7 +100,33 @@ class SidebarFavoritesHarnessTest {
     }
 
     @Test
-    @DisplayName("SFAV-06: SidebarNavItem suporta evento de clique com botão direito")
+    @DisplayName("SFAV-06: Cabeçalho FAVORITOS desaparece quando a sidebar é recolhida")
+    void testFavoritesHeaderHiddenWhenCollapsed() throws Exception {
+        SidebarFavoritesManager manager = SidebarFavoritesManager.getInstance();
+        List<String> original = manager.getFavorites();
+
+        try {
+            manager.setFavorites(List.of("Painel Inicial"));
+            SwingUtilities.invokeAndWait(() -> {
+                CollapsibleSidebar sidebar = new CollapsibleSidebar("MULTICORE", "Empresa Teste");
+                sidebar.addItem("fas-home", "Painel Inicial", Color.BLUE, () -> {});
+
+                JLabel favoritesLabel = findLabel(sidebar, "FAVORITOS");
+                assertNotNull(favoritesLabel);
+                assertTrue(favoritesLabel.isVisible());
+
+                sidebar.setCollapsedState(true);
+
+                assertFalse(favoritesLabel.isVisible());
+                assertFalse(favoritesLabel.getParent().isVisible());
+            });
+        } finally {
+            manager.setFavorites(original);
+        }
+    }
+
+    @Test
+    @DisplayName("SFAV-07: SidebarNavItem suporta evento de clique com botão direito")
     void testSidebarNavItemRightClick() {
         assertDoesNotThrow(() -> {
             SidebarNavItem item = new SidebarNavItem("fas-box", "Stock & Armazéns", Color.ORANGE, () -> {});
@@ -109,12 +139,27 @@ class SidebarFavoritesHarnessTest {
     }
 
     @Test
-    @DisplayName("SFAV-07: Tolerância e resiliência a nulos em favs")
+    @DisplayName("SFAV-08: Tolerância e resiliência a nulos em favs")
     void testNullResilience() {
         SidebarFavoritesManager manager = SidebarFavoritesManager.getInstance();
         assertFalse(manager.isFavorite(null));
         assertDoesNotThrow(() -> manager.addFavorite(null));
         assertDoesNotThrow(() -> manager.removeFavorite(null));
         assertDoesNotThrow(() -> manager.toggleFavorite(null));
+    }
+
+    private static JLabel findLabel(Container root, String text) {
+        for (Component component : root.getComponents()) {
+            if (component instanceof JLabel label && text.equals(label.getText())) {
+                return label;
+            }
+            if (component instanceof Container child) {
+                JLabel match = findLabel(child, text);
+                if (match != null) {
+                    return match;
+                }
+            }
+        }
+        return null;
     }
 }

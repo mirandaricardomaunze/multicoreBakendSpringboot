@@ -81,7 +81,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.add(lastRunLabel);
         quickCard.add(statusBox, BorderLayout.CENTER);
 
-        generateBtn = UIHelper.createPrimaryButton("Criar Backup Agora");
+        generateBtn = UIHelper.createSuccessButton("Criar Backup Agora");
         generateBtn.setIcon(UIHelper.icon("fas-download", 14));
         generateBtn.addActionListener(e -> generateBackup());
         quickCard.add(generateBtn, BorderLayout.EAST);
@@ -173,7 +173,7 @@ public class DatabaseBackupDialog extends JDialog {
                 filesTableModel.setRowCount(0);
                 if (files != null) {
                     for (String f : files) {
-                        String type = f.endsWith(".dump") || f.endsWith(".sql") ? "Base de Dados" : "Arquivo";
+                        String type = f.endsWith(".dump") || f.endsWith(".dump.enc") || f.endsWith(".sql") ? "Base de Dados" : "Arquivo";
                         filesTableModel.addRow(new Object[]{f, type, "Disponível"});
                     }
                 }

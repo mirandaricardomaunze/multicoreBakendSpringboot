@@ -10,6 +10,7 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
+import mz.multicore.erp.modules.comercial.model.SalesChannel;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.pos.model.PaymentEntry;
 import mz.multicore.erp.modules.pos.model.PaymentMethod;
@@ -21,6 +22,9 @@ import java.util.List;
 
 @Component
 public class ReceiptDocumentRenderer {
+
+    /** O total precisa de espaço para valores de nove dígitos sem partir a meio. */
+    static final float[] LINE_COLUMNS = {55f, 45f};
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -36,7 +40,7 @@ public class ReceiptDocumentRenderer {
 
     private void renderHeader(Document doc, Invoice invoice) {
         ThermalReceiptRenderer.companyHeader(doc, invoice.getCompany());
-        addCentered(doc, "RECIBO POS", PdfTheme.boldFont());
+        addCentered(doc, title(invoice), PdfTheme.boldFont());
         addCentered(doc, "1.ª VIA — ORIGINAL (CLIENTE)", PdfTheme.smallFont());
         addCentered(doc, invoice.getInvoiceNumber(), PdfTheme.bodyFont());
         addCentered(doc, invoice.getCreatedAt() != null ? invoice.getCreatedAt().format(DATE_FMT) : "", PdfTheme.smallFont());
@@ -45,8 +49,13 @@ public class ReceiptDocumentRenderer {
         doc.add(PdfDocumentBuilder.spacer(4f));
     }
 
+    /** Uma fatura a crédito fora do POS ainda não é um recibo. */
+    static String title(Invoice invoice) {
+        return invoice.getSalesChannel() == SalesChannel.POS ? "RECIBO POS" : "FATURA";
+    }
+
     private void renderLines(Document doc, Invoice invoice, DocumentColumnsDTO cols) {
-        PdfPTable table = new PdfPTable(new float[]{65f, 35f});
+        PdfPTable table = new PdfPTable(LINE_COLUMNS);
         table.setWidthPercentage(100);
         table.setSpacingBefore(2f);
         addCell(table, "Artigo", PdfTheme.tableHeaderFont(), Element.ALIGN_LEFT, true);

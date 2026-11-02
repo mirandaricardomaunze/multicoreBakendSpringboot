@@ -468,6 +468,36 @@ class ComercialServiceTest {
                 any(), any(), any());
     }
 
+    @Test
+    void billOrder_separada_fatura_e_baixa_so_o_que_foi_separado() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        order.setStatus("SEPARATED");
+        order.getLines().get(0).setSeparatedQuantity(new BigDecimal("2"));
+        BigDecimal fullTotal = order.getTotalAmount();
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        InvoiceDTO dto = service.billOrder(1L);
+
+        assertTrue(dto.totalAmount().compareTo(fullTotal) < 0, "a fatura tem de ser menor do que a encomenda");
+        assertEquals(0, dto.lines().get(0).quantity().compareTo(new BigDecimal("2")));
+        verify(inventoryService).registerMovement(
+                eq(product), eq(warehouse), eq(new BigDecimal("2").negate()), eq("SALE"),
+                any(), any(), any());
+    }
+
+    @Test
+    void billOrder_separada_sem_artigos_recusa_e_nao_move_stock() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        order.setStatus("SEPARATED");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
+
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
     @Test // RI-09 💰 — a trava que impede o stock de sair duas vezes
     void billOrder_reposicaoInterna_recusa_eNaoMoveStock() {
         // Uma reposição interna termina em transferência entre armazéns. Se também pudesse ser

@@ -56,8 +56,10 @@ public final class LineItemsTableRenderer {
      * (fallback defensivo). A matemática (subtotal = {@code LineCalculator.net}) fica intacta.
      */
     public static PdfPTable build(List<Row> rows, DocumentColumnsDTO cols) {
-        List<Column> columns = activeColumns(cols);
+        return table(rows, activeColumns(cols));
+    }
 
+    private static PdfPTable table(List<Row> rows, List<Column> columns) {
         float[] widths = new float[columns.size()];
         for (int i = 0; i < columns.size(); i++) {
             widths[i] = columns.get(i).width();
@@ -71,6 +73,7 @@ public final class LineItemsTableRenderer {
         for (Column column : columns) {
             header(table, column.header(), column.align());
         }
+        table.setHeaderRows(1);
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             Row row = rows.get(rowIndex);
             boolean alternate = (rowIndex % 2 == 1);
@@ -83,54 +86,88 @@ public final class LineItemsTableRenderer {
 
     /**
      * Tabela de linhas do modelo corporativo canónico:
-     * Referência · Código de Barras · Designação · Qtd. · Emb. · Cx. · Valor unit. · IVA · Total (s/ IVA)
+     * Referência · Código de Barras · Designação · Qtd. · Emb. · Cx. · Valor unit. · Desc. · IVA · Total (s/ IVA)
+     * Emb., Cx. e Desc. só aparecem quando alguma linha os usa.
      */
     public static PdfPTable buildModelTable(List<Row> rows) {
-        float[] widths = new float[]{11f, 14f, 27f, 7f, 6.5f, 6.5f, 11f, 5f, 12f};
+        List<Column> columns = new ArrayList<>(List.of(
+                new Column(11f, "Referência", Element.ALIGN_LEFT, r -> orDash(r.reference())),
+                new Column(14f, "Código de Barras", Element.ALIGN_LEFT, r -> orDash(r.barcode())),
+                new Column(27f, "Designação", Element.ALIGN_LEFT, r -> safe(r.description()).trim()),
+                new Column(7f, "Qtd.", Element.ALIGN_RIGHT, r -> formatQuantity(r.quantity()))));
+        if (rows.stream().anyMatch(LineItemsTableRenderer::hasMultiLevelPackaging)) {
+            columns.add(new Column(6.5f, "Emb.", Element.ALIGN_RIGHT, LineItemsTableRenderer::formatModelPackages));
+            columns.add(new Column(6.5f, "Cx.", Element.ALIGN_RIGHT, LineItemsTableRenderer::formatModelBoxes));
+        }
+        columns.add(new Column(11f, "Valor unit.", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(r.unitPrice()) + " MT"));
+        if (hasDiscount(rows)) {
+            columns.add(new Column(6f, "Desc.", Element.ALIGN_RIGHT, r -> formatDiscount(r.discountPercentage())));
+        }
+        columns.add(new Column(5f, "IVA", Element.ALIGN_RIGHT, r -> formatRate(r.taxRate())));
+        columns.add(new Column(12f, "Total (s/ IVA)", Element.ALIGN_RIGHT, r -> MoneyFormat.formatPlain(subtotal(r)) + " MT"));
+
+        float[] widths = new float[columns.size()];
+        for (int i = 0; i < widths.length; i++) widths[i] = columns.get(i).width();
         PdfPTable table = new PdfPTable(widths);
         table.setWidthPercentage(100);
         table.setSpacingBefore(6f);
         table.setSpacingAfter(4f);
 
-        // Cabeçalhos
-        addModelHeaderCell(table, "Referência", Element.ALIGN_LEFT);
-        addModelHeaderCell(table, "Código de Barras", Element.ALIGN_LEFT);
-        addModelHeaderCell(table, "Designação", Element.ALIGN_LEFT);
-        addModelHeaderCell(table, "Qtd.", Element.ALIGN_RIGHT);
-        addModelHeaderCell(table, "Emb.", Element.ALIGN_RIGHT);
-        addModelHeaderCell(table, "Cx.", Element.ALIGN_RIGHT);
-        addModelHeaderCell(table, "Valor unit.", Element.ALIGN_RIGHT);
-        addModelHeaderCell(table, "IVA", Element.ALIGN_RIGHT);
-        addModelHeaderCell(table, "Total (s/ IVA)", Element.ALIGN_RIGHT);
-
-        // Linhas de Artigos
+        columns.forEach(column -> addModelHeaderCell(table, column.header(), column.align()));
+        table.setHeaderRows(1);
         for (int i = 0; i < rows.size(); i++) {
             Row row = rows.get(i);
             boolean isLast = (i == rows.size() - 1);
-
-            BigDecimal subtotal = LineItemsTableRenderer.subtotal(row);
-            String ref = row.reference() != null && !row.reference().isBlank() ? row.reference().trim() : "—";
-            String barcode = row.barcode() != null && !row.barcode().isBlank() ? row.barcode().trim() : "—";
-            String desc = row.description() != null ? row.description().trim() : "";
-            String qty = row.quantity() != null ? row.quantity().stripTrailingZeros().toPlainString() : "0";
-            String emb = formatModelPackages(row);
-            String cx = formatModelBoxes(row);
-            String unitPrice = row.unitPrice() != null ? MoneyFormat.formatPlain(row.unitPrice()) + " MT" : "0,00 MT";
-            String vat = formatRate(row.taxRate());
-            String total = MoneyFormat.formatPlain(subtotal) + " MT";
-
-            addModelDataCell(table, ref, Element.ALIGN_LEFT, isLast);
-            addModelDataCell(table, barcode, Element.ALIGN_LEFT, isLast);
-            addModelDataCell(table, desc, Element.ALIGN_LEFT, isLast);
-            addModelDataCell(table, qty, Element.ALIGN_RIGHT, isLast);
-            addModelDataCell(table, emb, Element.ALIGN_RIGHT, isLast);
-            addModelDataCell(table, cx, Element.ALIGN_RIGHT, isLast);
-            addModelDataCell(table, unitPrice, Element.ALIGN_RIGHT, isLast);
-            addModelDataCell(table, vat, Element.ALIGN_RIGHT, isLast);
-            addModelDataCell(table, total, Element.ALIGN_RIGHT, isLast);
+            columns.forEach(column -> addModelDataCell(table, column.cell().apply(row), column.align(), isLast));
         }
-
         return table;
+    }
+
+    /**
+     * Tabela dos documentos operacionais: respeita a configuração da empresa, mas esconde as colunas
+     * que nenhuma linha usa e mostra o desconto, para cada linha bater certo com o seu subtotal.
+     */
+    public static PdfPTable buildCompact(List<Row> rows, DocumentColumnsDTO cols) {
+        boolean packaging = rows.stream().anyMatch(LineItemsTableRenderer::hasMultiLevelPackaging);
+        boolean expiry = rows.stream().anyMatch(row -> !"—".equals(formatExpiry(row.expiryDate())));
+        DocumentColumnsDTO visible = new DocumentColumnsDTO(cols.barcode(), cols.reference(), cols.description(),
+                cols.expiry() && expiry, cols.quantity(), cols.packages() && packaging, cols.boxes() && packaging,
+                cols.boxPercentage() && packaging, cols.unitPrice(), cols.tax(), cols.subtotal(), cols.footer());
+        List<Column> columns = new ArrayList<>();
+        for (Column column : activeColumns(visible)) {
+            columns.add(switch (column.header()) {
+                case "Cód." -> new Column(15f, column.header(), column.align(), column.cell());
+                case "Ref." -> new Column(10.5f, column.header(), column.align(), column.cell());
+                case "Desc." -> new Column(30f, "Designação", column.align(), column.cell());
+                case "Qtd." -> new Column(6f, column.header(), column.align(), column.cell());
+                case "P. Unit." -> new Column(10.5f, column.header(), column.align(), column.cell());
+                case "IVA" -> new Column(5.5f, column.header(), column.align(), column.cell());
+                case "Subt." -> new Column(11.5f, column.header(), column.align(), column.cell());
+                default -> column;
+            });
+        }
+        if (hasDiscount(rows)) {
+            columns.add(Math.max(0, columns.size() - 2), new Column(8f, "Desc. %", Element.ALIGN_RIGHT,
+                    r -> formatDiscount(r.discountPercentage())));
+        }
+        return table(rows, columns);
+    }
+
+    private static boolean hasDiscount(List<Row> rows) {
+        return rows.stream().anyMatch(row -> row.discountPercentage() != null && row.discountPercentage().signum() > 0);
+    }
+
+    private static String orDash(String value) {
+        return value == null || value.isBlank() ? "—" : value.trim();
+    }
+
+    private static String formatDiscount(BigDecimal discount) {
+        if (discount == null || discount.signum() == 0) return "—";
+        return decimal(discount) + "%";
+    }
+
+    private static String decimal(BigDecimal value) {
+        return value.stripTrailingZeros().toPlainString().replace('.', ',');
     }
 
     /** Quantidade em embalagens comerciais equivalentes para o modelo corporativo. */
@@ -140,7 +177,7 @@ public final class LineItemsTableRenderer {
         BigDecimal packages = safeQuantity(row.quantity())
                 .divide(BigDecimal.valueOf(unitsPerPkg), 2, RoundingMode.HALF_UP);
         if (packages.signum() == 0) return "0";
-        return packages.stripTrailingZeros().toPlainString();
+        return decimal(packages);
     }
 
     /**
@@ -148,15 +185,15 @@ public final class LineItemsTableRenderer {
      * Se não tiver caixa configurada, exibe "0.00" em vez de travessão.
      */
     static String formatModelBoxes(Row row) {
-        if (!hasMultiLevelPackaging(row)) return "0.00";
+        if (!hasMultiLevelPackaging(row)) return "0,00";
         int pkgsPerBox = (row.packagesPerBox() != null && row.packagesPerBox() > 0) ? row.packagesPerBox() : 1;
         int unitsPerPkg = (row.unitsPerPackage() != null && row.unitsPerPackage() > 0) ? row.unitsPerPackage() : 1;
         long unitsPerBox = (long) pkgsPerBox * unitsPerPkg;
-        if (unitsPerBox <= 0) return "0.00";
+        if (unitsPerBox <= 0) return "0,00";
         BigDecimal boxes = safeQuantity(row.quantity())
                 .divide(BigDecimal.valueOf(unitsPerBox), 2, RoundingMode.HALF_UP);
-        if (boxes.signum() == 0) return "0.00";
-        return boxes.stripTrailingZeros().toPlainString();
+        if (boxes.signum() == 0) return "0,00";
+        return decimal(boxes);
     }
 
     private static boolean hasMultiLevelPackaging(Row row) {
@@ -305,12 +342,12 @@ public final class LineItemsTableRenderer {
     private static String formatRate(BigDecimal rate) {
         if (rate == null) return "0%";
         BigDecimal percent = rate.multiply(BigDecimal.valueOf(100));
-        return percent.stripTrailingZeros().toPlainString() + "%";
+        return decimal(percent) + "%";
     }
 
     private static String formatQuantity(BigDecimal quantity) {
         if (quantity == null) return "0";
-        return quantity.stripTrailingZeros().toPlainString();
+        return decimal(quantity);
     }
 
     /** Quantidade da linha expressa em embalagens equivalentes, incluindo fracções de embalagem. */

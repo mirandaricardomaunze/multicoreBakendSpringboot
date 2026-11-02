@@ -4,11 +4,13 @@ import mz.multicore.erp.architecture.events.AssetDepreciatedEvent;
 import mz.multicore.erp.architecture.events.CreditNoteApprovedEvent;
 import mz.multicore.erp.architecture.events.DebitNoteApprovedEvent;
 import mz.multicore.erp.architecture.events.FleetFuelLoggedEvent;
+import mz.multicore.erp.architecture.events.InvoiceCancelledEvent;
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
 import mz.multicore.erp.architecture.events.PayrollLiabilityDeliveredEvent;
 import mz.multicore.erp.architecture.events.PayslipPaidEvent;
 import mz.multicore.erp.architecture.events.ProductionCompletedEvent;
 import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
+import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.events.SaleRegisteredEvent;
 import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
@@ -59,6 +61,18 @@ public class AutomaticPostingService {
     @Transactional
     public void onPaymentReceived(PaymentReceivedEvent event) {
         commercialPostingHandler.postPayment(event);
+    }
+
+    @EventListener
+    @Transactional
+    public void onInvoiceCancelled(InvoiceCancelledEvent event) {
+        commercialPostingHandler.postInvoiceCancellation(event);
+    }
+
+    @EventListener
+    @Transactional
+    public void onReceiptCancelled(ReceiptCancelledEvent event) {
+        commercialPostingHandler.postReceiptCancellation(event);
     }
 
     @EventListener

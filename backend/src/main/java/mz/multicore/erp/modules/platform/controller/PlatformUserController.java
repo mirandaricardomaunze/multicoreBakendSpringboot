@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.platform.dto.GrantAccessRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
 import mz.multicore.erp.modules.platform.dto.UpdatePlatformUserRequest;
 import mz.multicore.erp.modules.platform.service.PlatformUserService;
+import mz.multicore.erp.modules.users.service.AccountSecurityService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,9 +26,16 @@ import java.util.List;
 public class PlatformUserController {
 
     private final PlatformUserService platformUserService;
+    private final AccountSecurityService accountSecurityService;
 
-    public PlatformUserController(PlatformUserService platformUserService) {
+    public PlatformUserController(PlatformUserService platformUserService, AccountSecurityService accountSecurityService) {
         this.platformUserService = platformUserService;
+        this.accountSecurityService = accountSecurityService;
+    }
+
+    @PostMapping("/{username}/two-factor/reset")
+    public void resetTwoFactor(@PathVariable String username) {
+        accountSecurityService.resetTwoFactor(username);
     }
 
     @GetMapping

@@ -52,6 +52,7 @@ public class PosCheckoutAndPaymentService {
     private final QuotationRepository quotationRepository;
     private final PosSessionAndShiftService sessionAndShiftService;
     private final PosReturnAndVoucherService returnAndVoucherService;
+    private final PosPriceGuard priceGuard;
 
     public PosCheckoutAndPaymentService(
             InvoiceRepository invoiceRepository, ClientRepository clientRepository,
@@ -62,7 +63,8 @@ public class PosCheckoutAndPaymentService {
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             ReceivablesService receivablesService, ApplicationEventPublisher eventPublisher,
             QuotationRepository quotationRepository, PosSessionAndShiftService sessionAndShiftService,
-            PosReturnAndVoucherService returnAndVoucherService) {
+            PosReturnAndVoucherService returnAndVoucherService, PosPriceGuard priceGuard) {
+        this.priceGuard = priceGuard;
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -100,6 +102,7 @@ public class PosCheckoutAndPaymentService {
             }
         }
 
+        if (priceGuard != null) priceGuard.requireAuthorized(request);
         TillSession session = sessionAndShiftService.getActiveSession(request.operator(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Deverá abrir uma sessão de caixa antes de efetuar vendas no POS."));
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
@@ -156,6 +159,9 @@ public class PosCheckoutAndPaymentService {
             line.setUnitPrice(unitPrice);
             BigDecimal taxRate = product.effectiveTaxRate();
             line.setTaxRate(taxRate);
+            if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new BusinessRuleException("O desconto da linha não pode exceder 100 por cento.");
+            }
             if (lineReq.discountPercentage() != null && lineReq.discountPercentage().compareTo(BigDecimal.ZERO) > 0) {
                 line.setDiscountPercentage(lineReq.discountPercentage());
             }

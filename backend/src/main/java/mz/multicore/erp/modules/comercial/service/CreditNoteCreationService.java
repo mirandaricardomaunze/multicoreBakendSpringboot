@@ -18,7 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Gestor transacional de emissão e cálculo financeiro de notas de crédito.
@@ -60,6 +63,7 @@ public class CreditNoteCreationService {
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
 
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
+        CommercialNoteRules.requireValidInvoice(invoice);
         Warehouse warehouse = null;
         if (reason == CreditNoteReason.RETURN) {
             if (request.warehouseId() == null) {
@@ -70,6 +74,9 @@ public class CreditNoteCreationService {
             }
             if (warehouse == null) {
                 throw new BusinessRuleException("Notas de crédito de devolução requerem um armazém de destino.");
+            }
+            if (!invoice.getCompany().getId().equals(warehouse.getCompany().getId())) {
+                throw new BusinessRuleException("O armazém de devolução não pertence à empresa da fatura.");
             }
         }
 
@@ -87,6 +94,7 @@ public class CreditNoteCreationService {
 
         BigDecimal totalBefore = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
+        Map<Long, BigDecimal> requestedByLine = new HashMap<>();
 
         for (CreateCreditNoteLineRequest lineReq : request.lines()) {
             InvoiceLine sourceLine = invoice.getLines().stream()
@@ -97,21 +105,24 @@ public class CreditNoteCreationService {
                                     + "). A nota de crédito tem de devolver linhas da fatura indicada."));
 
             BigDecimal qtyToReturn = lineReq.quantity();
+            BigDecimal requested = requestedByLine.merge(sourceLine.getId(), qtyToReturn, BigDecimal::add);
             BigDecimal qtySold = sourceLine.getQuantity();
             BigDecimal alreadyReturned = creditNoteRepository.sumNonVoidedReturnedByInvoiceLineId(sourceLine.getId());
             if (alreadyReturned == null) alreadyReturned = BigDecimal.ZERO;
             BigDecimal remaining = qtySold.subtract(alreadyReturned);
-            if (qtyToReturn.compareTo(remaining) > 0) {
+            if (requested.compareTo(remaining) > 0) {
                 throw new BusinessRuleException(String.format(
                         "Quantidade a devolver (%s) excede o disponível para a linha do produto '%s' "
                                 + "(vendido: %s, já devolvido: %s, restante: %s).",
-                        qtyToReturn, sourceLine.getProduct().getName(), qtySold, alreadyReturned, remaining));
+                        requested, sourceLine.getProduct().getName(), qtySold, alreadyReturned, remaining));
             }
 
             BigDecimal price = sourceLine.getUnitPrice();
             BigDecimal taxRate = sourceLine.getTaxRate() == null ? BigDecimal.ZERO : sourceLine.getTaxRate();
 
-            LineCalculator.LineAmounts amounts = LineCalculator.compute(price, qtyToReturn, BigDecimal.ZERO, taxRate);
+            BigDecimal discount = sourceLine.getDiscountPercentage() == null ? BigDecimal.ZERO : sourceLine.getDiscountPercentage();
+
+            LineCalculator.LineAmounts amounts = LineCalculator.compute(price, qtyToReturn, discount, taxRate);
 
             CreditNoteLine line = new CreditNoteLine();
             line.setInvoiceLine(sourceLine);
@@ -119,6 +130,7 @@ public class CreditNoteCreationService {
             line.setQuantity(qtyToReturn);
             line.setUnitPrice(price);
             line.setTaxRate(taxRate);
+            line.setDiscountPercentage(discount);
             line.setLineTotal(amounts.total());
             line.setBatchNumber(sourceLine.getBatchNumber());
             note.addLine(line);
@@ -127,9 +139,9 @@ public class CreditNoteCreationService {
             totalTax = totalTax.add(amounts.tax());
         }
 
-        note.setTotalBeforeTax(totalBefore);
-        note.setTaxAmount(totalTax);
-        note.setTotalAmount(totalBefore.add(totalTax));
+        note.setTotalBeforeTax(totalBefore.setScale(2, RoundingMode.HALF_UP));
+        note.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
+        note.setTotalAmount(totalBefore.add(totalTax).setScale(2, RoundingMode.HALF_UP));
 
         validateNotExceedsInvoiceValue(invoice, note);
 

@@ -168,7 +168,7 @@ public final class QuotationEditorDialog {
         discountField = new DecimalField("0", 2, false);
         UIHelper.styleTextField(discountField);
 
-        ModernButton addBtn = UIHelper.createPrimaryButton("Adicionar Linha");
+        ModernButton addBtn = UIHelper.createSuccessButton("Adicionar Linha");
         addBtn.setIcon(UIHelper.icon("fas-plus", 14));
         addBtn.addActionListener(e -> addLine());
 

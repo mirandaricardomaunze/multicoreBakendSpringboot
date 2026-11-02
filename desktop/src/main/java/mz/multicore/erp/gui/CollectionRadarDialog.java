@@ -165,7 +165,7 @@ public class CollectionRadarDialog {
         refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 13));
         refreshBtn.addActionListener(e -> loadData.run());
 
-        ModernButton reminderBtn = UIHelper.createPrimaryButton("Gerar Lembrete");
+        ModernButton reminderBtn = UIHelper.createSuccessButton("Gerar Lembrete");
         reminderBtn.setIcon(UIHelper.icon("fas-paper-plane", 13));
         reminderBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
