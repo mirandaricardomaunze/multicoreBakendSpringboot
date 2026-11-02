@@ -126,6 +126,10 @@ retencoes nao duplica a divida ao Estado.
 **Escreve na base de dados** (facturas, ajustes, vendas). So em desenvolvimento. Sai com codigo 1
 se alguma conta nao bater, pelo que serve para CI com uma base descartavel.
 
+## Rever com dados de exemplo
+
+`scripts/empresa-exemplo.py 18099 --volume` enche a empresa de exemplo e percorre o ciclo comercial, o POS e a contabilidade, conferindo as contas. `scripts/run_gui_revisao.bat` abre o desktop nessa base. So numa base descartavel.
+
 ## Segredos de producao
 
 | Variavel | Para que serve | Se faltar |

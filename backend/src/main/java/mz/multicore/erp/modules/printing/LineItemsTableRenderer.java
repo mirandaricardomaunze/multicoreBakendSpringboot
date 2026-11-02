@@ -73,6 +73,7 @@ public final class LineItemsTableRenderer {
         for (Column column : columns) {
             header(table, column.header(), column.align());
         }
+        table.setHeaderRows(1);
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             Row row = rows.get(rowIndex);
             boolean alternate = (rowIndex % 2 == 1);
@@ -113,6 +114,7 @@ public final class LineItemsTableRenderer {
         table.setSpacingAfter(4f);
 
         columns.forEach(column -> addModelHeaderCell(table, column.header(), column.align()));
+        table.setHeaderRows(1);
         for (int i = 0; i < rows.size(); i++) {
             Row row = rows.get(i);
             boolean isLast = (i == rows.size() - 1);

@@ -16,21 +16,35 @@ import java.util.List;
 public class InvoicePageFooter extends PdfPageEventHelper {
     private final Company company;
     private final List<String> copies;
+    private final String documentNumber;
+    private int copyIndex;
+    private int copyFirstPage;
 
-    public InvoicePageFooter(Company company, List<String> copies) {
+    public InvoicePageFooter(Company company, List<String> copies, String documentNumber) {
         this.company = company;
         this.copies = copies;
+        this.documentNumber = documentNumber;
+    }
+
+    /** Chamar depois de abrir a primeira página da via: uma via pode ocupar várias páginas. */
+    void startCopy(int index) {
+        copyIndex = index;
+        copyFirstPage = 0;
     }
 
     @Override
     public void onEndPage(PdfWriter writer, Document document) {
-        int page = writer.getPageNumber();
-        String label = page <= copies.size() ? copies.get(page - 1) : "Página " + page;
-        String simple = simpleCopy(label);
+        if (copyFirstPage == 0) copyFirstPage = writer.getPageNumber();
+        int page = writer.getPageNumber() - copyFirstPage + 1;
+        String simple = simpleCopy(copies.get(copyIndex));
         PdfContentByte canvas = writer.getDirectContent();
         float left = document.left();
         float right = document.right();
-        float bottom = document.bottom() - 12f;
+        float bottom = document.bottom() - 17f;
+        if (page > 1) {
+            show(canvas, Element.ALIGN_RIGHT, "Fatura " + documentNumber + " · " + simple,
+                    right, document.top() + 8f, 8f);
+        }
         canvas.setColorStroke(PdfTheme.BORDER);
         canvas.setLineWidth(0.5f);
         canvas.moveTo(left, bottom + 16f);

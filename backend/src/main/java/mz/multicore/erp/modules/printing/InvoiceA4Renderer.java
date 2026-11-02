@@ -40,9 +40,11 @@ public class InvoiceA4Renderer {
         List<String> bankDetails = companyBankDetails == null || invoice.getCompany() == null
                 ? List.of() : companyBankDetails.forCompany(invoice.getCompany().getId());
         List<LineItemsTableRenderer.Row> rows = toRows(invoice.getLines());
-        return PdfDocumentBuilder.buildA4(new InvoicePageFooter(invoice.getCompany(), copies), document -> {
+        InvoicePageFooter footer = new InvoicePageFooter(invoice.getCompany(), copies, invoice.getInvoiceNumber());
+        return PdfDocumentBuilder.buildA4(footer, document -> {
             for (int index = 0; index < copies.size(); index++) {
                 if (index > 0) document.newPage();
+                footer.startCopy(index);
                 renderCopy(document, invoice, copies.get(index), rows, bankDetails);
             }
         });
