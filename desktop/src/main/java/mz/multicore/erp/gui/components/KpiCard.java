@@ -47,18 +47,15 @@ public final class KpiCard {
     }
 
     public static final class KpiPalette {
-        public final Color bg;
-        public final Color border;
-        public final Color title;
-        public final Color value;
-        public final Color subtitle;
+        public final Color bg, border, title, value, subtitle, accent;
 
-        public KpiPalette(Color bg, Color border, Color title, Color value, Color subtitle) {
+        public KpiPalette(Color bg, Color border, Color title, Color value, Color subtitle, Color accent) {
             this.bg = bg;
             this.border = border;
             this.title = title;
             this.value = value;
             this.subtitle = subtitle;
+            this.accent = accent;
         }
     }
 
@@ -127,6 +124,7 @@ public final class KpiCard {
             subLabel.setForeground(pal.subtitle);
             card.add(subLabel, BorderLayout.SOUTH);
         }
+        KpiAccent.install(card, valueLabel, iconCode, pal);
         return KpiTextFit.wire(card, null, valueLabel, trendBadge, subLabel, false);
     }
 
@@ -180,6 +178,7 @@ public final class KpiCard {
         }
 
         card.add(textPanel, BorderLayout.CENTER);
+        KpiAccent.install(card, valueLabel, iconName, pal);
         return KpiTextFit.wire(card, titleLbl, valueLabel, trendBadge, subLabel, iconName != null && !iconName.isBlank());
     }
 

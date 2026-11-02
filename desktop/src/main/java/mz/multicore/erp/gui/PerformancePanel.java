@@ -40,11 +40,8 @@ public class PerformancePanel extends JPanel {
         north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
 
-        JComponent heading = UIHelper.createHeading("Centro de Desempenho Comercial");
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        north.add(heading);
         north.add(feedback);
         add(north, BorderLayout.NORTH);
 

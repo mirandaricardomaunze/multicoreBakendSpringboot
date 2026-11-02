@@ -75,7 +75,7 @@ public final class PhysicalInventoryViewCoordinator {
             JTextField barcodeField, JTextField manualQty, ModernButton recordBtn
     ) {
         if (session == null) {
-            total.setText("0"); counted.setText("0"); surplus.setText("0.00 MT"); deficit.setText("0.00 MT");
+            total.setText("0"); counted.setText("0"); surplus.setText("0,00 MT"); deficit.setText("0,00 MT");
             status.setText(" [Sem Sessão] "); countMode.setText("");
             enableControls(false, barcodeField, manualQty, recordBtn);
             return;

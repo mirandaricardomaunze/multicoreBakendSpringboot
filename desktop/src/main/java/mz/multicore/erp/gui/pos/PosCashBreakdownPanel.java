@@ -124,7 +124,7 @@ final class PosCashBreakdownPanel {
         buttonsPanel.add(createMiniButton("+1", () -> increment(denom, 1)));
         buttonsPanel.add(createMiniButton("+5", () -> increment(denom, 5)));
 
-        JLabel lblSubtotal = new JLabel("0.00 MT"); lblSubtotal.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        JLabel lblSubtotal = new JLabel("0,00 MT"); lblSubtotal.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         lblSubtotal.setForeground(UIHelper.TEXT_MUTED); lblSubtotal.setHorizontalAlignment(SwingConstants.RIGHT);
         lblSubtotal.setPreferredSize(new Dimension(75, 26));
         subtotalLabels.put(denom, lblSubtotal);
@@ -178,13 +178,13 @@ final class PosCashBreakdownPanel {
         JLabel title = new JLabel("TOTAL FÍSICO CONTADO NA GAVETA");
         title.setFont(new Font(UIHelper.FONT, Font.BOLD, 11)); title.setForeground(UIHelper.TEXT_MUTED);
 
-        lblTotalCounted = new JLabel("0.00 MT");
+        lblTotalCounted = new JLabel("0,00 MT");
         lblTotalCounted.setFont(new Font(UIHelper.FONT, Font.BOLD, 22)); lblTotalCounted.setForeground(UIHelper.ACCENT_CYAN);
         left.add(title); left.add(lblTotalCounted);
 
         JPanel right = new JPanel(new GridLayout(2, 1, 2, 2)); right.setOpaque(false);
-        lblTotalNotes = new JLabel("Notas: 0.00 MT"); lblTotalNotes.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); lblTotalNotes.setForeground(UIHelper.TEXT_LIGHT);
-        lblTotalCoins = new JLabel("Moedas: 0.00 MT"); lblTotalCoins.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); lblTotalCoins.setForeground(UIHelper.TEXT_LIGHT);
+        lblTotalNotes = new JLabel("Notas: 0,00 MT"); lblTotalNotes.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); lblTotalNotes.setForeground(UIHelper.TEXT_LIGHT);
+        lblTotalCoins = new JLabel("Moedas: 0,00 MT"); lblTotalCoins.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12)); lblTotalCoins.setForeground(UIHelper.TEXT_LIGHT);
         right.add(lblTotalNotes); right.add(lblTotalCoins);
 
         card.add(left, BorderLayout.WEST); card.add(right, BorderLayout.EAST);

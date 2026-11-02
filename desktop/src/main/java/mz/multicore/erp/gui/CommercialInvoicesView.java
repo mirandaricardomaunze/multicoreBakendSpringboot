@@ -97,7 +97,7 @@ final class CommercialInvoicesView {
         // Draft table is placed in its own card below the input form.
 
         // Row 7: Total summary (a emissão é feita pelo botão Gravar do modal)
-        owner.totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
+        owner.totalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
         owner.totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         owner.totalLabel.setForeground(Color.WHITE);
 
@@ -195,7 +195,7 @@ final class CommercialInvoicesView {
         ActionMenuButton issueBtn = UIHelper.createActionMenuButton("Emitir")
                 .addAction("Nova Fatura", UIHelper.icon("fas-file-invoice", 14, UIHelper.ACCENT_BLUE), owner::openInvoiceEditor)
                 .addAction("Faturar Encomenda", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.ACCENT), owner::openBillFromOrderDialog);
-        issueBtn.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
+        issueBtn.setColors(UIHelper.APPROVED_GREEN, UIHelper.APPROVED_GREEN_HOVER);
         issueBtn.setToolTipText("Emitir uma nova fatura ou faturar uma encomenda pendente.");
 
         JPanel cardHeader = new JPanel(new BorderLayout(8, 0));

@@ -292,7 +292,7 @@ final class CommercialInvoiceDraftActions {
         panel.setDraftTotal(BigDecimal.ZERO);
         if (panel.invoiceCustomerNameField != null) panel.invoiceCustomerNameField.setText("");
         if (panel.linesTableModel != null) panel.linesTableModel.setRowCount(0);
-        if (panel.totalLabel != null) panel.totalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
+        if (panel.totalLabel != null) panel.totalLabel.setText("Total Rascunho: 0,00 MT (incl. IVA)");
     }
 
     static void openInvoiceProductLookup(ComercialPanel panel) {

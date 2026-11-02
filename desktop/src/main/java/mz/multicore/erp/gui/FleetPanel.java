@@ -57,7 +57,6 @@ public final class FleetPanel extends JPanel {
 
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
-        titleRow.add(UIHelper.createHeading("Gestão de Frotas & Viaturas"), BorderLayout.WEST);
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -138,7 +137,7 @@ public final class FleetPanel extends JPanel {
         newVehicleBtn.setToolTipText("Registar nova viatura na frota da empresa");
         newVehicleBtn.addActionListener(e -> VehicleFormDialog.show(SwingUtilities.getWindowAncestor(this), fleetApiClient, feedback, this::loadVehicles));
 
-        card.add(UIHelper.tableCardTop("Inventário e Monitorização Operacional de Viaturas", filterBar,
+        card.add(UIHelper.tableCardTop("Inventário de Viaturas", filterBar,
                 refreshBtn, manifestBtn, fuelBtn, newVehicleBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 

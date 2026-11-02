@@ -17,11 +17,15 @@ final class TableColumnFit {
     private static final Pattern RIGID = Pattern.compile(
             "[-+]?[\\d.,\\s]+(MT|%|un|d)?|\\d{2}/\\d{2}/\\d{4}( \\d{2}:\\d{2}(:\\d{2})?)?");
 
+    private static final String BUSINESS_UNIT = "Negócio";
+    private static final Pattern NO_BUSINESS_UNIT = Pattern.compile("|-|—|Geral|Misto");
+
     private TableColumnFit() {}
 
     static void fit(JTable table) {
         for (int column = 0; column < table.getColumnCount(); column++) {
             TableColumn tableColumn = table.getColumnModel().getColumn(column);
+            if (hideUnusedBusinessUnit(table, tableColumn, column)) continue;
             if (tableColumn.getMaxWidth() < 4) continue;
             int widest = 0;
             boolean rigid = isStatus(table.getColumnName(column));
@@ -37,6 +41,26 @@ final class TableColumnFit {
             int preferred = Math.min(needed, Math.max(MAX_TEXT_WIDTH, rigid ? needed : 0));
             if (tableColumn.getPreferredWidth() < preferred) tableColumn.setPreferredWidth(preferred);
         }
+    }
+
+    /** Numa empresa sem unidades de negócio, a coluna só repetiria "—" em todas as linhas. */
+    private static boolean hideUnusedBusinessUnit(JTable table, TableColumn tableColumn, int column) {
+        if (!BUSINESS_UNIT.equals(table.getColumnName(column))) return false;
+        boolean unused = table.getRowCount() > 0;
+        for (int row = 0; row < table.getRowCount() && unused; row++) {
+            Object value = table.getValueAt(row, column);
+            unused = value == null || NO_BUSINESS_UNIT.matcher(value.toString().trim()).matches();
+        }
+        if (unused) {
+            tableColumn.setMinWidth(0);
+            tableColumn.setPreferredWidth(0);
+            tableColumn.setMaxWidth(0);
+        } else if (tableColumn.getMaxWidth() == 0) {
+            tableColumn.setMaxWidth(Integer.MAX_VALUE);
+            tableColumn.setMinWidth(75);
+            tableColumn.setPreferredWidth(100);
+        }
+        return unused;
     }
 
     private static boolean isStatus(String header) {

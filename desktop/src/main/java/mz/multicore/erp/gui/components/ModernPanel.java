@@ -59,6 +59,13 @@ public class ModernPanel extends JPanel {
 
         g2.fillRoundRect(0, 0, width - 1, height - 1, cornerRadius, cornerRadius);
 
+        if (getClientProperty("kpi.accent") instanceof Color accent) {
+            g2.setClip(new java.awt.geom.RoundRectangle2D.Float(0, 0, width - 1, height - 1, cornerRadius, cornerRadius));
+            g2.setColor(accent);
+            g2.fillRect(0, 0, 4, height);
+            g2.setClip(null);
+        }
+
         // Border — adapta ao tema ou propriedade personalizada do card
         Color customBorder = (Color) getClientProperty("card.border");
         Color borderColor = customBorder != null

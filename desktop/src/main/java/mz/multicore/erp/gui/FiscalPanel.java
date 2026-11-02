@@ -34,8 +34,6 @@ public class FiscalPanel extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        add(UIHelper.createHeading("Área Fiscal — Moçambique"), BorderLayout.NORTH);
-
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);
         tabs.addTab("Apuramento IVA", UIHelper.icon("fas-percent", 16, UIHelper.MODULE_FISCAL), ivaTab.buildTab());

@@ -51,8 +51,8 @@ final class FiscalPayrollTab {
         controls.add(refresh);
         controls.add(printBtn);
 
-        payrollIrpsLabel = new JLabel("IRPS: 0.00 MT");
-        payrollInssLabel = new JLabel("INSS total: 0.00 MT");
+        payrollIrpsLabel = new JLabel("IRPS: 0,00 MT");
+        payrollInssLabel = new JLabel("INSS total: 0,00 MT");
         payrollIrpsLabel.setForeground(UIHelper.TEXT_LIGHT);
         payrollInssLabel.setForeground(UIHelper.TEXT_LIGHT);
         controls.add(Box.createRigidArea(new Dimension(20, 0)));

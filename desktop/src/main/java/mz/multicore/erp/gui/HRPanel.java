@@ -102,9 +102,8 @@ public class HRPanel extends JPanel {
 
         JPanel north = new JPanel(); north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        JComponent heading = UIHelper.createHeading("Recursos Humanos");
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT); feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(heading); north.add(feedback); add(north, BorderLayout.NORTH);
+        feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
+        north.add(feedback); add(north, BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
         UIHelper.styleTabbedPaneMulticore(tabs);

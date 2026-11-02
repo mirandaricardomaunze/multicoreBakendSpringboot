@@ -71,7 +71,7 @@ public class PhysicalInventoryPanel extends JPanel {
 
         JPanel kpiGrid = KpiCard.createGrid(4);
         kpiTotalItems = new JLabel("0"); kpiCountedItems = new JLabel("0");
-        kpiSurplusVal = new JLabel("0.00 MT"); kpiDeficitVal = new JLabel("0.00 MT");
+        kpiSurplusVal = new JLabel("0,00 MT"); kpiDeficitVal = new JLabel("0,00 MT");
 
         kpiGrid.add(KpiCard.createInteractiveMetricCard("Total de Produtos", kpiTotalItems, "Itens no inventário", "fas-boxes", UIHelper.ACCENT_BLUE,
                 "Clique para limpar filtros e ver todos os itens", () -> { if (searchField != null) searchField.setText(""); }));

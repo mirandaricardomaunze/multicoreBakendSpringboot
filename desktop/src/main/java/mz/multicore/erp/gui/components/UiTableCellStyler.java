@@ -66,7 +66,8 @@ final class UiTableCellStyler {
                 } else {
                     Color base = row % 2 == 0 ? UIHelper.BG_CARD : UIHelper.ROW_ALT;
                     Color status = rowStatusColor(t, row);
-                    setBackground(status == null ? base : blend(base, status, 0.18f));
+                    // Só o que precisa de atenção pinta a linha: o estado normal fica na etiqueta.
+                    setBackground(status == null || status.equals(UIHelper.APPROVED_GREEN) ? base : blend(base, status, 0.10f));
                 }
 
                 if (value == null) {

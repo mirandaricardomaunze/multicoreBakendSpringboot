@@ -29,7 +29,7 @@ public final class RecurringContractsPanel extends JPanel {
 
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JLabel kpiActiveContracts = new JLabel("0 Contratos");
-    private final JLabel kpiMonthlyTotal = new JLabel("0.00 MT");
+    private final JLabel kpiMonthlyTotal = new JLabel("0,00 MT");
     private final JLabel kpiDueContracts = new JLabel("0 A Faturar");
     private final JLabel kpiSuspendedContracts = new JLabel("0 Inactivos");
 
@@ -54,7 +54,6 @@ public final class RecurringContractsPanel extends JPanel {
 
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
-        titleRow.add(UIHelper.createHeading("Contratos & Faturação Recorrente"), BorderLayout.WEST);
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);

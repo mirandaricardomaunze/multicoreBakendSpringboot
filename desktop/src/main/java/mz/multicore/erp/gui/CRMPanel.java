@@ -41,10 +41,7 @@ public class CRMPanel extends JPanel {
         JPanel north = new JPanel();
         north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        JComponent heading = UIHelper.createHeading("CRM & Assistência");
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
-        north.add(heading);
         north.add(feedback);
         add(north, BorderLayout.NORTH);
 

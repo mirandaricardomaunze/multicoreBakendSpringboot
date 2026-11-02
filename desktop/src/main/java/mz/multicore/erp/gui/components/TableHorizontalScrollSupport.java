@@ -177,6 +177,7 @@ public final class TableHorizontalScrollSupport {
 
             int minSafe = Math.max(neededHeader, 65);
 
+            if (col.getMaxWidth() == 0) continue;
             if (col.getMinWidth() < minSafe) {
                 col.setMinWidth(minSafe);
             }

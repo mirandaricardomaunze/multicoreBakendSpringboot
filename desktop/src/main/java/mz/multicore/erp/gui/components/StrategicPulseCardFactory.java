@@ -62,6 +62,7 @@ final class StrategicPulseCardFactory {
 
         ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
         card.putClientProperty("card.border", pal.border);
+        card.putClientProperty("kpi.accent", pal.accent);
         card.setLayout(new BorderLayout(0, 8));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
@@ -73,7 +74,7 @@ final class StrategicPulseCardFactory {
         titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
         titleLbl.setForeground(pal.title);
 
-        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.title));
+        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.accent));
         cardHeader.add(iconLbl, BorderLayout.WEST);
         cardHeader.add(titleLbl, BorderLayout.CENTER);
         card.add(cardHeader, BorderLayout.NORTH);

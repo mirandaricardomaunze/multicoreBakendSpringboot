@@ -21,7 +21,6 @@ final class KpiTextFit {
     static ModernPanel wire(ModernPanel card, JLabel title, JLabel value, mz.multicore.erp.gui.components.TrendBadge trend,
                             JLabel note, boolean hasIcon) {
         int reserved = CARD_PADDING + (hasIcon ? ICON_WIDTH : 0);
-        if (trend != null) trend.useOnSolidCard();
         if (title != null) install(title, card, () -> reserved, MIN_NOTE_SIZE - 1);
         if (note != null) install(note, card, () -> reserved, MIN_NOTE_SIZE);
         if (value != null) {

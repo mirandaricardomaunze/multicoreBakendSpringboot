@@ -108,7 +108,7 @@ final class CommercialOrderOperations {
         owner.draftOrderTax = BigDecimal.ZERO;
         owner.draftOrderTotal = BigDecimal.ZERO;
         if (owner.orderLinesTableModel != null) owner.orderLinesTableModel.setRowCount(0);
-        if (owner.orderTotalLabel != null) owner.orderTotalLabel.setText("Total Rascunho: 0.00 MT (incl. IVA)");
+        if (owner.orderTotalLabel != null) owner.orderTotalLabel.setText("Total Rascunho: 0,00 MT (incl. IVA)");
         if (owner.orderLoadLabel != null) owner.orderLoadLabel.setText("Carga: 0.000 kg");
         if (owner.orderClientWalkInField != null) owner.orderClientWalkInField.setText("");
         if (owner.orderNotesField != null) owner.orderNotesField.setText("");

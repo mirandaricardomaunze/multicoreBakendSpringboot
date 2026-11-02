@@ -39,23 +39,23 @@ public class CollectionRadarDialog {
         root.setPreferredSize(new Dimension(980, 580));
 
         // 1. Grid de 5 KPIs corporativos canónicos (STANDARD_CARD_HEIGHT = 96px)
-        JLabel critVal = new JLabel("0.00 MT");
+        JLabel critVal = new JLabel("0,00 MT");
         JLabel critSub = new JLabel("0 faturas");
         ModernPanel critCard = KpiCard.createCard("Crítico (>15d)", critVal, null, critSub, "fas-exclamation-triangle", UIHelper.REJECTED_RED);
 
-        JLabel recVal = new JLabel("0.00 MT");
+        JLabel recVal = new JLabel("0,00 MT");
         JLabel recSub = new JLabel("0 faturas");
         ModernPanel recCard = KpiCard.createCard("Recente (1–15d)", recVal, null, recSub, "fas-clock", UIHelper.ACCENT_ORANGE);
 
-        JLabel todayVal = new JLabel("0.00 MT");
+        JLabel todayVal = new JLabel("0,00 MT");
         JLabel todaySub = new JLabel("0 faturas");
         ModernPanel todayCard = KpiCard.createCard("Vencem Hoje", todayVal, null, todaySub, "fas-calendar-day", UIHelper.PENDING_YELLOW);
 
-        JLabel in7Val = new JLabel("0.00 MT");
+        JLabel in7Val = new JLabel("0,00 MT");
         JLabel in7Sub = new JLabel("0 faturas");
         ModernPanel in7Card = KpiCard.createCard("A Vencer (7d)", in7Val, null, in7Sub, "fas-bell", UIHelper.ACCENT_BLUE);
 
-        JLabel totalVal = new JLabel("0.00 MT");
+        JLabel totalVal = new JLabel("0,00 MT");
         JLabel totalSub = new JLabel("0 faturas");
         ModernPanel totalCard = KpiCard.createCard("Total em Aberto", totalVal, null, totalSub, "fas-money-bill-wave", UIHelper.APPROVED_GREEN);
 

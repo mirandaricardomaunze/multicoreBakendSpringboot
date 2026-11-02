@@ -103,7 +103,7 @@ final class PurchaseOrdersPanel {
         JScrollPane linesScroll = new JScrollPane(poLinesTable);
         UIHelper.styleScrollPane(linesScroll);
 
-        owner.poTotalLabel = new JLabel("Total da Encomenda: 0.00 MT");
+        owner.poTotalLabel = new JLabel("Total da Encomenda: 0,00 MT");
         owner.poTotalLabel.setForeground(Color.WHITE);
         owner.poTotalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         JPanel poFooter = new JPanel(new BorderLayout()); poFooter.setOpaque(false);

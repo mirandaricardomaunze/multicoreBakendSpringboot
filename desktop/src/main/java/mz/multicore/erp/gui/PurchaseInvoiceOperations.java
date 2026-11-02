@@ -89,7 +89,7 @@ final class PurchaseInvoiceOperations {
         owner.draftLines.clear();
         if (owner.draftLinesModel != null) owner.draftLinesModel.setRowCount(0);
         owner.draftTotal = BigDecimal.ZERO;
-        if (owner.totalLabel != null) owner.totalLabel.setText("Total Compra: 0.00 MT (excl. IVA)");
+        if (owner.totalLabel != null) owner.totalLabel.setText("Total Compra: 0,00 MT (excl. IVA)");
     }
 
     static void loadPurchasesHistory(ComprasPanel owner) {

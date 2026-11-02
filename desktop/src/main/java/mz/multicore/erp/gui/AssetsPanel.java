@@ -64,7 +64,6 @@ public final class AssetsPanel extends JPanel {
 
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
-        titleRow.add(UIHelper.createHeading("Activos Fixos & Património"), BorderLayout.WEST);
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);

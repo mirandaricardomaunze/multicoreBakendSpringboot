@@ -184,7 +184,7 @@ final class QuotationEditorForm {
         ModernButton lookupButton = UIHelper.createProductLookupButton(this::openProductCatalogLookup);
         tableArea.add(UIHelper.tableCardTop("Itens da Cotação", instruction, barcodeScanField, lookupButton, addButton, removeButton), BorderLayout.NORTH);
         tableArea.add(scroll, BorderLayout.CENTER);
-        totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
+        totalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
         JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0)); totalRow.setOpaque(false); totalRow.add(totalLabel);
         tableArea.add(totalRow, BorderLayout.SOUTH);
 

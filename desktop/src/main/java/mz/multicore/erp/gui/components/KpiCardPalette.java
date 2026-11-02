@@ -9,44 +9,48 @@ public final class KpiCardPalette {
 
     private KpiCardPalette() {}
 
+    /** Fundo do tema e texto normal: a cor da métrica fica só na faixa e no ícone. */
+    private static KpiPalette card(Color accent) {
+        return new KpiPalette(UIHelper.BG_CARD, UIHelper.BORDER, UIHelper.TEXT_MUTED,
+                UIHelper.TEXT_LIGHT, UIHelper.TEXT_MUTED, accent);
+    }
+
+    static boolean isAlert(KpiPalette palette) {
+        boolean light = UIHelper.isLight();
+        return palette.accent.equals(redPalette(light).accent) || palette.accent.equals(amberPalette(light).accent)
+                || palette.accent.equals(orangePalette(light).accent);
+    }
+
     public static KpiPalette bluePalette(boolean isLight) {
-        Color bg = isLight ? new Color(28, 68, 165) : new Color(22, 54, 138);
-        return new KpiPalette(bg, new Color(96, 165, 250, 180), new Color(219, 234, 254), Color.WHITE, new Color(191, 219, 254));
+        return card(isLight ? new Color(37, 99, 235) : new Color(96, 165, 250));
     }
 
     public static KpiPalette emeraldPalette(boolean isLight) {
-        Color bg = isLight ? new Color(5, 112, 82) : new Color(6, 92, 68);
-        return new KpiPalette(bg, new Color(52, 211, 153, 180), new Color(209, 250, 229), Color.WHITE, new Color(167, 243, 208));
+        return card(isLight ? new Color(5, 150, 105) : new Color(52, 211, 153));
     }
 
     public static KpiPalette purplePalette(boolean isLight) {
-        Color bg = isLight ? new Color(102, 38, 185) : new Color(82, 30, 155);
-        return new KpiPalette(bg, new Color(192, 132, 252, 180), new Color(243, 232, 255), Color.WHITE, new Color(233, 213, 255));
+        return card(isLight ? new Color(124, 58, 237) : new Color(192, 132, 252));
     }
 
     public static KpiPalette cyanPalette(boolean isLight) {
-        Color bg = isLight ? new Color(12, 122, 136) : new Color(11, 102, 115);
-        return new KpiPalette(bg, new Color(34, 211, 238, 180), new Color(207, 250, 254), Color.WHITE, new Color(165, 243, 252));
+        return card(isLight ? new Color(8, 145, 178) : new Color(34, 211, 238));
     }
 
     public static KpiPalette amberPalette(boolean isLight) {
-        Color bg = isLight ? new Color(162, 82, 10) : new Color(138, 68, 8);
-        return new KpiPalette(bg, new Color(251, 191, 36, 180), new Color(254, 243, 199), Color.WHITE, new Color(253, 230, 138));
+        return card(isLight ? new Color(217, 119, 6) : new Color(251, 191, 36));
     }
 
     public static KpiPalette orangePalette(boolean isLight) {
-        Color bg = isLight ? new Color(176, 62, 15) : new Color(152, 52, 12);
-        return new KpiPalette(bg, new Color(251, 146, 60, 180), new Color(255, 237, 213), Color.WHITE, new Color(254, 215, 170));
+        return card(isLight ? new Color(234, 88, 12) : new Color(251, 146, 60));
     }
 
     public static KpiPalette redPalette(boolean isLight) {
-        Color bg = isLight ? new Color(172, 26, 36) : new Color(148, 20, 28);
-        return new KpiPalette(bg, new Color(248, 113, 113, 180), new Color(254, 226, 226), Color.WHITE, new Color(254, 202, 202));
+        return card(isLight ? new Color(220, 38, 38) : new Color(248, 113, 113));
     }
 
     public static KpiPalette slatePalette(boolean isLight) {
-        Color bg = isLight ? new Color(51, 65, 85) : new Color(36, 48, 66);
-        return new KpiPalette(bg, new Color(148, 163, 184, 180), new Color(241, 245, 249), Color.WHITE, new Color(203, 213, 225));
+        return card(isLight ? new Color(100, 116, 139) : new Color(148, 163, 184));
     }
 
     public static KpiPalette resolvePalette(Color accent) {

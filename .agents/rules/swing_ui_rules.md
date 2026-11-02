@@ -54,18 +54,18 @@ Todo o ambiente de trabalho principal (`MainFrame`) deve manter pontos de saída
 
 ## 5. Padrões Canónicos para Cartões de KPI e Métricas (`KpiCard`)
 
-### Regras de Fundo e Cor ("Fundo Denso", "Sem Gradiente", "Paleta Coordenada")
+### Regras de Fundo e Cor ("Fundo do Tema", "Sem Gradiente", "Faixa de Cor")
 1. **Sem Gradientes:** Proibido utilizar fundos com gradientes lineares (`GradientPaint`) em cartões de KPI.
-2. **Fundo Denso e Sólido Obrigatório:**
-   - O fundo de cada cartão de métrica deve ter cor sólida, densa, saturada e opaca (tonalidades 700/800 de Tailwind/Material, ex.: Azul `#16368A`, Verde Esmeralda `#065C44`, Roxo `#521E9B`, Ciano `#0B6673`, Âmbar `#8A4408`, Laranja `#98340C`, Vermelho `#94141C`, Ardósia `#243042`).
-   - Proibido usar fundos pastéis claros, brancos lavados ou cores translúcidas que se misturem com o fundo escuro/claro da página ou tornem o cartão desbotado.
+2. **Fundo do Tema Obrigatório:**
+   - O fundo de cada cartão de métrica é o fundo de cartão do tema (`UIHelper.BG_CARD`). A cor da métrica fica só na faixa esquerda e no ícone (`KpiCard`, `KpiAccent`).
+   - Proibido voltar a pintar o cartão inteiro com cor saturada: vários cartões fortes competem entre si e escondem o que importa.
 3. **Paleta Cromática Temática:**
-   - Cada métrica deve possuir a sua própria identidade de cor através de `KpiCard.resolvePalette(...)`, variando harmonicamente na mesma grelha (ex.: Vendas em Azul/Esmeralda, Faturação em Roxo, Alertas em Vermelho/Laranja, Pendências em Âmbar).
+   - Cada métrica escolhe a cor da faixa através de `KpiCard.resolvePalette(...)`. Vermelho, âmbar e laranja significam alerta: com valor zero, a faixa e o ícone ficam neutros.
 4. **Hierarquia de Contraste e Tipografia:**
-   - **Valor em Destaque:** Sempre em branco puro (`Color.WHITE`), `Font.BOLD`, tamanho 19-20.
-   - **Título e Ícone:** Em tom pastel claro correspondente à família da cor (tons 100), tamanho 10-11 bold.
-   - **Legenda Contextual:** Em tom pastel correspondente (tons 200), tamanho 10-11 plain.
-   - **Bordas:** Linha sutil coordenada com transparência na mesma família de cor (`card.border`).
+   - **Valor em Destaque:** Na cor de texto do tema (`UIHelper.TEXT_LIGHT`), `Font.BOLD`, tamanho 19-20; reduz até caber.
+   - **Título:** Em `UIHelper.TEXT_MUTED`, tamanho 10-11 bold. O ícone usa a cor da métrica.
+   - **Legenda Contextual:** Em `UIHelper.TEXT_MUTED`, tamanho 10-11 plain.
+   - **Bordas:** Linha sutil do tema (`UIHelper.BORDER`).
 
 ### Altura Padrão e Espaçamento ("Altura Boa para se Ver Dados")
 1. **Altura Canónica de 96px:** Todos os cartões de KPI devem definir e respeitar `STANDARD_CARD_HEIGHT = 96` (e largura mínima de 140px).

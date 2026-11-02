@@ -204,7 +204,7 @@ public final class QuotationEditorDialog {
         scroll.setPreferredSize(new Dimension(900, 220));
         section.add(scroll, BorderLayout.CENTER);
 
-        totalLabel = new JLabel("Total Rascunho: 0.00 MT (incl. IVA)");
+        totalLabel = new JLabel("Total Rascunho: 0,00 MT (incl. IVA)");
         totalLabel.setBorder(new EmptyBorder(6, 0, 0, 0));
         JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         totalRow.setOpaque(false);

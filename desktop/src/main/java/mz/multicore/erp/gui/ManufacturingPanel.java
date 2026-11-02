@@ -38,7 +38,7 @@ public final class ManufacturingPanel extends JPanel {
     private final JLabel kpiInProgress = new JLabel("0 OPs");
     private final JLabel kpiCompleted = new JLabel("0 OPs");
     private final JLabel kpiBoms = new JLabel("0 Fichas");
-    private final JLabel kpiTotalCost = new JLabel("0.00 MT");
+    private final JLabel kpiTotalCost = new JLabel("0,00 MT");
 
     private final DefaultTableModel ordersModel;
     final JTable ordersTable;
@@ -68,7 +68,6 @@ public final class ManufacturingPanel extends JPanel {
 
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
-        titleRow.add(UIHelper.createHeading("Produção & Transformação Industrial"), BorderLayout.WEST);
 
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);

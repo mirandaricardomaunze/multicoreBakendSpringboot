@@ -12,6 +12,7 @@ import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Harness UP-01..UP-09: valores legíveis, rodapé certo e dados internos fora do ecrã. */
+/** Harness UP-01..UP-13: valores legíveis, rodapé certo e dados internos fora do ecrã. */
 class UiPrecisionHarnessTest {
 
     private static final Path GUI = Path.of("src/main/java/mz/multicore/erp/gui");
@@ -122,6 +123,37 @@ class UiPrecisionHarnessTest {
     void validadeSemValorRealNaoAparece() {
         assertNull(BatchDisplay.expiry(LocalDate.of(9999, 12, 31)));
         assertEquals(LocalDate.of(2027, 1, 31), BatchDisplay.expiry(LocalDate.of(2027, 1, 31)));
+    }
+
+    @Test // UP-10
+    void cartaoUsaFundoDoTemaEFaixaDaMetrica() {
+        ModernPanel card = KpiCard.createCard("Vendas", "12.500,00 MT", "Hoje", "fas-coins", UIHelper.ACCENT_BLUE);
+        assertEquals(UIHelper.BG_CARD, card.getBackground());
+        assertEquals(KpiCard.resolvePalette(UIHelper.ACCENT_BLUE).accent, card.getClientProperty("kpi.accent"));
+    }
+
+    @Test // UP-11, UP-12
+    void alertaSoTemCorQuandoHaValor() {
+        JLabel value = new JLabel("0 Artigos");
+        ModernPanel card = KpiCard.createCard("Alertas", value, "Stock baixo", "fas-exclamation-triangle", UIHelper.REJECTED_RED);
+        Color neutral = KpiCard.slatePalette(UIHelper.isLight()).accent;
+        assertEquals(neutral, card.getClientProperty("kpi.accent"));
+        value.setText("3 Artigos");
+        assertEquals(KpiCard.redPalette(UIHelper.isLight()).accent, card.getClientProperty("kpi.accent"));
+    }
+
+    @Test // UP-13
+    void colunaDeNegocioSemUsoEscondeEVolta() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            DefaultTableModel model = new DefaultTableModel(new String[]{"Nº", "Negócio"}, 0);
+            model.addRow(new Object[]{"FT-1", "—"});
+            JTable table = new JTable(model);
+            TableColumnFit.fit(table);
+            assertEquals(0, table.getColumnModel().getColumn(1).getMaxWidth());
+            model.setValueAt("Mercearia", 0, 1);
+            TableColumnFit.fit(table);
+            assertTrue(table.getColumnModel().getColumn(1).getMaxWidth() > 0);
+        });
     }
 
     @Test // UP-09

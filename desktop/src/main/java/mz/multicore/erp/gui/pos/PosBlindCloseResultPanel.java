@@ -71,7 +71,7 @@ final class PosBlindCloseResultPanel {
 
         BigDecimal diff = z != null && z.difference() != null ? z.difference() : BigDecimal.ZERO;
         if (diff.compareTo(BigDecimal.ZERO) == 0) {
-            lblDiff.setText("Diferença: 0.00 MT (Caixa Bate Certo)");
+            lblDiff.setText("Diferença: 0,00 MT (Caixa Bate Certo)");
             lblDiff.setForeground(UIHelper.APPROVED_GREEN);
         } else if (diff.compareTo(BigDecimal.ZERO) < 0) {
             lblDiff.setText(String.format("Diferença: %,.2f MT (Falta / Quebra na Gaveta)", diff));

@@ -173,7 +173,7 @@ public class PosSessionHistoryDialog extends JDialog {
 
     private static String fmtDiff(BigDecimal d) {
         if (d == null) return "—";
-        if (d.compareTo(BigDecimal.ZERO) == 0) return "0.00 MT";
+        if (d.compareTo(BigDecimal.ZERO) == 0) return "0,00 MT";
         return (d.compareTo(BigDecimal.ZERO) > 0 ? "+" : "") + String.format("%,.2f MT", d);
     }
 }

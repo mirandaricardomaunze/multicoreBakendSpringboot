@@ -165,6 +165,7 @@ public class OperationalPulseWidget extends ModernPanel {
 
         ModernPanel card = new ModernPanel(UIHelper.RADIUS_MD, pal.bg);
         card.putClientProperty("card.border", pal.border);
+        card.putClientProperty("kpi.accent", pal.accent);
         card.setLayout(new BorderLayout(0, 8));
         card.setBorder(new EmptyBorder(12, 14, 12, 14));
         card.setPreferredSize(new Dimension(card.getPreferredSize().width, KpiCard.STANDARD_CARD_HEIGHT));
@@ -176,7 +177,7 @@ public class OperationalPulseWidget extends ModernPanel {
         titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
         titleLbl.setForeground(pal.title);
 
-        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.title));
+        JLabel iconLbl = new JLabel(UIHelper.icon(iconCode, 14, pal.accent));
         cardHeader.add(iconLbl, BorderLayout.WEST);
         cardHeader.add(titleLbl, BorderLayout.CENTER);
         card.add(cardHeader, BorderLayout.NORTH);
@@ -288,8 +289,8 @@ public class OperationalPulseWidget extends ModernPanel {
         fleetValLabel.setText("0 Viaturas");
         fleetSubLabel.setText("Sem viaturas");
         recurringValLabel.setText("0 Contratos");
-        recurringSubLabel.setText("MRR: 0.00 MT");
+        recurringSubLabel.setText("MRR: 0,00 MT");
         assetsValLabel.setText("0 Activos");
-        assetsSubLabel.setText("VLC: 0.00 MT");
+        assetsSubLabel.setText("VLC: 0,00 MT");
     }
 }

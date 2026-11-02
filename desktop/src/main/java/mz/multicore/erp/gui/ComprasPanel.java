@@ -204,7 +204,7 @@ public class ComprasPanel extends JPanel {
         bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
         bottomPanel.setOpaque(false);
 
-        totalLabel = new JLabel("Total Compra: 0.00 MT (excl. IVA)");
+        totalLabel = new JLabel("Total Compra: 0,00 MT (excl. IVA)");
         totalLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
         totalLabel.setForeground(Color.WHITE);
 

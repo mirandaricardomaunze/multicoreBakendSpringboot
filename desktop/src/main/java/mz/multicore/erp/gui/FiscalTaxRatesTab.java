@@ -102,7 +102,7 @@ final class FiscalTaxRatesTab {
                     t.code(), t.name(), UIHelper.humanStatus(t.type()),
                     pct.stripTrailingZeros().toPlainString() + " %",
                     t.legalBasis() == null ? "" : t.legalBasis(),
-                    t.active() ? "ATIVA" : "INATIVA"
+                    t.active() ? "Activa" : "Inactiva"
             });
         }
     }

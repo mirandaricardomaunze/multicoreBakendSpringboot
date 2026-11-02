@@ -88,7 +88,7 @@ final class ConfigBackupsPanel {
         verifyBackupBtn.addActionListener(e -> ConfigBackupOperations.verifySelectedBackup(owner, backupLogArea, backupFilesTable, backupFilesModel));
 
         ModernButton refreshArchiveBtn = UIHelper.createRefreshButton(this::loadBackupFilesList);
-        archiveCard.add(UIHelper.tableCardTop("Ficheiros de Cópia de Segurança (.json)", null,
+        archiveCard.add(UIHelper.tableCardTop("Cópias Disponíveis", null,
                 refreshArchiveBtn, verifyBackupBtn), BorderLayout.NORTH);
         archiveCard.add(archiveScroll, BorderLayout.CENTER);
 

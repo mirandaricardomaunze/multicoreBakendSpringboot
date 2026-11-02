@@ -84,7 +84,7 @@ public class SalesReturnDialog {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
 
-        JLabel totalCreditLbl = new JLabel("Total a Creditar: 0.00 MT (incl. IVA)");
+        JLabel totalCreditLbl = new JLabel("Total a Creditar: 0,00 MT (incl. IVA)");
         totalCreditLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
         totalCreditLbl.setForeground(UIHelper.APPROVED_GREEN);
 

@@ -35,7 +35,6 @@ public final class AccountingPanel extends JPanel {
 
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
-        top.add(UIHelper.createHeading("Contabilidade"), BorderLayout.WEST);
 
         JPanel north = new JPanel();
         north.setOpaque(false);

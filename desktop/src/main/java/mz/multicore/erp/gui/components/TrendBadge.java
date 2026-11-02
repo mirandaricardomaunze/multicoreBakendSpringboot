@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 public class TrendBadge extends JPanel {
     private BigDecimal percent;
     private final JLabel label;
-    private boolean onSolidCard;
 
     public TrendBadge() { this(null, null); }
 
@@ -51,7 +50,6 @@ public class TrendBadge extends JPanel {
             bg = new Color(239, 68, 68, 35);
         }
 
-        if (onSolidCard) { fg = Color.WHITE; bg = new Color(255, 255, 255, 45); }
         label.setText(text);
         label.setForeground(fg);
 
@@ -66,9 +64,6 @@ public class TrendBadge extends JPanel {
         revalidate();
         repaint();
     }
-
-    /** Sobre um cartão de cor sólida, verde ou vermelho deixam de se ler: passa a branco. */
-    void useOnSolidCard() { onSolidCard = true; updateTrend(percent); }
 
     public boolean isPositive() {
         return percent != null && percent.compareTo(BigDecimal.ZERO) > 0;

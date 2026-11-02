@@ -120,7 +120,7 @@ public class CurrencyExchangeDialog extends JDialog {
 
         // Equivalente recebido em MZN
         gbc.gridy = 7;
-        receivedMznLabel = new JLabel("Equivalente: 0.00 MT");
+        receivedMznLabel = new JLabel("Equivalente: 0,00 MT");
         receivedMznLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         receivedMznLabel.setForeground(UIHelper.TEXT_MUTED);
         card.add(receivedMznLabel, gbc);
@@ -131,7 +131,7 @@ public class CurrencyExchangeDialog extends JDialog {
         card.add(createFieldTitle("Troco a Devolver em Meticais (MT):"), gbc);
 
         gbc.gridy = 9;
-        changeMznLabel = new JLabel("0.00 MT");
+        changeMznLabel = new JLabel("0,00 MT");
         changeMznLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 20));
         changeMznLabel.setForeground(UIHelper.APPROVED_GREEN);
         card.add(changeMznLabel, gbc);
