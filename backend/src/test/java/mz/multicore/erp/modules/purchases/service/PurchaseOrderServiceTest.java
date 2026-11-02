@@ -65,7 +65,8 @@ class PurchaseOrderServiceTest {
         when(discrepancyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         service = new PurchaseOrderService(orderRepository, supplierRepository, productRepository,
                 warehouseRepository, companyRepository, inventoryService, documentNumberService,
-                mock(AuditLogService.class), discrepancyRepository, receiptRepository);
+                mock(AuditLogService.class), discrepancyRepository, receiptRepository,
+                mock(PurchaseOrderPayableRegistrar.class));
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");

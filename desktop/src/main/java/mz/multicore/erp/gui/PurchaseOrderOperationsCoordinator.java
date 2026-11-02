@@ -106,10 +106,10 @@ final class PurchaseOrderOperationsCoordinator {
         if (sel == null) return;
         if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner), FeedbackType.WARNING,
                 "Confirmar recepção",
-                "Receber a encomenda " + sel.orderNumber() + "? O stock do armazém será actualizado.",
+                "Receber a encomenda " + sel.orderNumber() + "? O stock do armazém será actualizado e a dívida ao fornecedor fica registada.",
                 "Receber encomenda")) return;
         UIHelper.runWithProgress(owner, "A receber encomenda...", () -> owner.purchaseApiClient.receiveOrder(sel.id()), ignored -> {
-            owner.showPurchaseSuccess("Encomenda recebida e stock actualizado.");
+            owner.showPurchaseSuccess("Encomenda recebida · stock e dívida ao fornecedor actualizados.");
             panel.refresh();
             owner.loadPurchasesHistory();
         }, owner::showPurchaseError);

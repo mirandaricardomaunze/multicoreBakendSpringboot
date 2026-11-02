@@ -67,7 +67,7 @@ class InvoiceInstallmentServiceTest {
     @Test
     @DisplayName("Cria plano de 3 parcelas iguais com absorção exacta de centavos na última parcela")
     void createInstallmentPlan_equalPartsWithRounding() {
-        LocalDate start = LocalDate.of(2026, 11, 1);
+        LocalDate start = LocalDate.now().plusDays(1);
         CreateInstallmentPlanRequest request = new CreateInstallmentPlanRequest(
                 10L, 3, 30, start, List.of()
         );

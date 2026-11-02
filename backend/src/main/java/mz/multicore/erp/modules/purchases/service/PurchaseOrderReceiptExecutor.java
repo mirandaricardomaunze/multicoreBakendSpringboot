@@ -16,11 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * Executor transacional de recepções de encomendas a fornecedor com idempotência SHA-256,
- * separação analítica de divergências (danificados vs em falta) e entrada em stock.
+ * separação analítica de divergências (danificados vs em falta), entrada em stock e dívida ao fornecedor.
  */
 @Service
 public class PurchaseOrderReceiptExecutor {
@@ -30,19 +32,22 @@ public class PurchaseOrderReceiptExecutor {
     private final AuditLogService auditLogService;
     private final GoodsReceiptDiscrepancyRepository discrepancyRepository;
     private final PurchaseOrderReceiptRepository receiptRepository;
+    private final PurchaseOrderPayableRegistrar payableRegistrar;
 
     public PurchaseOrderReceiptExecutor(
             PurchaseOrderRepository orderRepository,
             InventoryService inventoryService,
             AuditLogService auditLogService,
             GoodsReceiptDiscrepancyRepository discrepancyRepository,
-            PurchaseOrderReceiptRepository receiptRepository
+            PurchaseOrderReceiptRepository receiptRepository,
+            PurchaseOrderPayableRegistrar payableRegistrar
     ) {
         this.orderRepository = orderRepository;
         this.inventoryService = inventoryService;
         this.auditLogService = auditLogService;
         this.discrepancyRepository = discrepancyRepository;
         this.receiptRepository = receiptRepository;
+        this.payableRegistrar = payableRegistrar;
     }
 
     @Transactional
@@ -50,15 +55,17 @@ public class PurchaseOrderReceiptExecutor {
         PermissionGuard.requireManagerOrAdmin("receber encomenda a fornecedor");
         requireReceivable(order);
 
+        Map<PurchaseOrderLine, BigDecimal> accepted = new LinkedHashMap<>();
         for (PurchaseOrderLine line : order.getLines()) {
             BigDecimal outstanding = outstanding(line);
             if (outstanding.signum() > 0) {
-                receiveLine(order, line, outstanding);
+                receiveLine(order, line, outstanding, accepted);
             }
         }
 
         recomputeStatus(order);
         order = orderRepository.save(order);
+        payableRegistrar.register(order, accepted);
         auditLogService.logCurrent("PURCHASE_ORDER_RECEIVE",
                 "Encomenda " + order.getOrderNumber() + " recebida (" + order.getLines().size() + " linhas)");
         return order;
@@ -85,6 +92,7 @@ public class PurchaseOrderReceiptExecutor {
         }
         requireReceivable(order);
 
+        Map<PurchaseOrderLine, BigDecimal> accepted = new LinkedHashMap<>();
         for (ReceivePurchaseOrderRequest.ReceiveLine item : request.lines()) {
             PurchaseOrderLine line = order.getLines().stream()
                     .filter(l -> l.getId() != null && l.getId().equals(item.lineId()))
@@ -104,12 +112,13 @@ public class PurchaseOrderReceiptExecutor {
                         item.safeDamaged().toPlainString(), item.safeMissing().toPlainString(),
                         outstanding.toPlainString()));
             }
-            receiveLine(order, line, qty);
+            receiveLine(order, line, qty, accepted);
             recordDiscrepancies(order, line, item);
         }
 
         recomputeStatus(order);
         order = orderRepository.save(order);
+        payableRegistrar.register(order, accepted);
         if (key != null) {
             PurchaseOrderReceipt receipt = new PurchaseOrderReceipt();
             receipt.setPurchaseOrder(order);
@@ -167,7 +176,8 @@ public class PurchaseOrderReceiptExecutor {
         return discrepancy;
     }
 
-    private void receiveLine(PurchaseOrder order, PurchaseOrderLine line, BigDecimal qty) {
+    private void receiveLine(PurchaseOrder order, PurchaseOrderLine line, BigDecimal qty,
+                             Map<PurchaseOrderLine, BigDecimal> accepted) {
         String desc = String.format("Recepção Encomenda %s - Fornecedor %s",
                 order.getOrderNumber(), order.getSupplier().getName());
         inventoryService.registerMovement(
@@ -180,6 +190,7 @@ public class PurchaseOrderReceiptExecutor {
                 desc,
                 line.getExpirationDate());
         line.setReceivedQuantity(nz(line.getReceivedQuantity()).add(qty));
+        accepted.merge(line, qty, BigDecimal::add);
     }
 
     private void recomputeStatus(PurchaseOrder order) {

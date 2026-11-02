@@ -28,6 +28,7 @@ class PlatformCompanyServiceTest {
     private CompanyRepository companyRepository;
     private AppUserCompanyAccessRepository companyAccessRepository;
     private AuditLogService auditLogService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private PlatformCompanyService service;
 
     @BeforeEach
@@ -35,7 +36,8 @@ class PlatformCompanyServiceTest {
         companyRepository = mock(CompanyRepository.class);
         companyAccessRepository = mock(AppUserCompanyAccessRepository.class);
         auditLogService = mock(AuditLogService.class);
-        service = new PlatformCompanyService(companyRepository, companyAccessRepository, auditLogService);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        service = new PlatformCompanyService(companyRepository, companyAccessRepository, auditLogService, eventPublisher);
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
 
@@ -99,5 +101,20 @@ class PlatformCompanyServiceTest {
         assertThrows(BusinessRuleException.class, () -> service.createCompany(
                 new CreateCompanyRequest("Nova", "400123456", "n@n.mz", "Maputo", "+258 84 000 0000")));
         verify(companyRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void createCompany_publicaFactoParaOPlanoDeContas() { // CD-08
+        when(companyRepository.findByTaxId("400123457")).thenReturn(Optional.empty());
+        when(companyRepository.save(any(Company.class))).thenAnswer(inv -> {
+            Company saved = inv.getArgument(0);
+            saved.setId(12L);
+            return saved;
+        });
+
+        service.createCompany(new CreateCompanyRequest("Nova", "400123457", "n@n.mz", "Maputo", "+258 84 000 0000"));
+
+        verify(eventPublisher).publishEvent(new mz.multicore.erp.architecture.events.CompanyCreatedEvent(12L));
     }
 }
