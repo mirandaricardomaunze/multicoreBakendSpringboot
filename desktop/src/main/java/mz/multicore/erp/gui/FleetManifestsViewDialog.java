@@ -135,7 +135,7 @@ public class FleetManifestsViewDialog {
             );
         });
 
-        ModernButton newManifestBtn = UIHelper.createPrimaryButton("Novo Manifesto");
+        ModernButton newManifestBtn = UIHelper.createSuccessButton("Novo Manifesto");
         newManifestBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newManifestBtn.addActionListener(e -> {
             UIHelper.runWithProgress(dialog.getDialog(), "A carregar guias de remessa disponíveis…", fleetApi::listDeliveryGuides, guides -> {

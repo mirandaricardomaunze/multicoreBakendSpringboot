@@ -114,8 +114,8 @@ class QuotationsPanelDecompositionHarnessTest {
                 "Deve calibrar colunas com ensureHeadersFit");
         assertTrue(content.contains("PrintPreviewDialog.show("),
                 "Deve manter PrintPreviewDialog.show no fluxo de impressão");
-        assertTrue(content.contains("Converter em Factura"),
-                "Deve conter acção de conversão em Factura");
+        assertTrue(content.contains("Converter em Fatura"),
+                "Deve conter acção de conversão em Fatura");
         assertTrue(content.contains("Converter em Encomenda"),
                 "Deve conter acção de conversão em Encomenda");
     }

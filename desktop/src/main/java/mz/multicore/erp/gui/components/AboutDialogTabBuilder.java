@@ -130,7 +130,7 @@ final class AboutDialogTabBuilder {
         JPanel grid = new JPanel(new GridLayout(3, 3, 12, 12));
         grid.setOpaque(false);
 
-        grid.add(createModuleCard("Facturação & Vendas", "Facturas, cotações, guias de transporte e comunicação AT.", "fas-file-invoice", UIHelper.APPROVED_GREEN));
+        grid.add(createModuleCard("Faturação & Vendas", "Faturas, cotações, guias de transporte e comunicação AT.", "fas-file-invoice", UIHelper.APPROVED_GREEN));
         grid.add(createModuleCard("POS & Frente de Caixa", "Vendas balcão, caixa cego, sangria, talhões e múltiplos meios.", "fas-cash-register", UIHelper.ACCENT_BLUE));
         grid.add(createModuleCard("Gestão de Stock", "Estrutura Caixa → Embalagem → Unidade, lotes e armazéns.", "fas-boxes", UIHelper.MODULE_STOCK));
         grid.add(createModuleCard("Financeiro & Bancos", "Contas a pagar/receber, conciliação bancária e extratos.", "fas-university", UIHelper.MODULE_FINANCEIRO));

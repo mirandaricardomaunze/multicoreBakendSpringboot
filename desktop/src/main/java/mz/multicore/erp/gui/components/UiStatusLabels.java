@@ -114,4 +114,18 @@ final class UiStatusLabels {
             default -> status.trim().replace('_', ' ');
         };
     }
+
+    /** Tipo de imposto em linguagem corrente; {@code null} quando não é um tipo fiscal. */
+    static String taxType(String type) {
+        return switch (type == null ? "" : type) {
+            case "IVA_STANDARD" -> "IVA normal";
+            case "IVA_REDUCED" -> "IVA reduzido";
+            case "IVA_ZERO" -> "IVA zero";
+            case "IVA_EXEMPT" -> "IVA isento";
+            case "WITHHOLDING" -> "Retenção na fonte";
+            case "CORPORATE_INCOME" -> "IRPC";
+            case "EXCISE" -> "Consumo específico";
+            default -> null;
+        };
+    }
 }

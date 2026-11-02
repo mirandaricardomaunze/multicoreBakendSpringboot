@@ -107,7 +107,7 @@ public final class RecordDetailsPropertyExtractor {
             String name = table.getColumnName(i);
             if (name == null) continue;
             String lower = name.toLowerCase();
-            if (lower.contains("factura") || lower.contains("fatura")) return new HeaderTheme("fas-file-invoice-dollar", UIHelper.ACCENT_CYAN);
+            if (lower.contains("fatura") || lower.contains("fatura")) return new HeaderTheme("fas-file-invoice-dollar", UIHelper.ACCENT_CYAN);
             if (lower.contains("encomenda") || lower.contains("pedido")) return new HeaderTheme("fas-shopping-cart", UIHelper.ACCENT_BLUE);
             if (lower.contains("cliente")) return new HeaderTheme("fas-user-tie", UIHelper.ACCENT_BLUE);
             if (lower.contains("fornecedor")) return new HeaderTheme("fas-truck", UIHelper.ACCENT_ORANGE);

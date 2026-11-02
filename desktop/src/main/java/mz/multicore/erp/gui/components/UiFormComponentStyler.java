@@ -102,7 +102,7 @@ final class UiFormComponentStyler {
     }
 
     static ModernButton createAddLineButton() {
-        ModernButton button = UIHelper.createPrimaryButton("Adicionar Linha");
+        ModernButton button = UIHelper.createSuccessButton("Adicionar Linha");
         button.setIcon(UIHelper.icon("fas-plus", 14));
         Dimension d = new Dimension(180, UIHelper.FORM_CONTROL_HEIGHT);
         button.setPreferredSize(d);
@@ -356,6 +356,8 @@ final class UiFormComponentStyler {
     }
 
     static String humanStatus(String status) {
+        String taxType = UiStatusLabels.taxType(status);
+        if (taxType != null) return taxType;
         if (status == null || status.isBlank()) return "—";
         String s = status.trim().toUpperCase(Locale.ROOT);
         return switch (s) {

@@ -152,7 +152,7 @@ public class ConfigPanel extends JPanel {
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::loadAuditLogs);
         JPanel auditToolbar = TableFilter.bar(auditSearch, TableFilter.label("Data:", "fas-calendar-alt"), auditPeriodo);
         auditToolbar.setBorder(new EmptyBorder(0, 0, 10, 0));
-        card.add(UIHelper.tableCardTop("Registo de Auditoria de Ações Críticas", auditToolbar, refreshBtn), BorderLayout.NORTH);
+        card.add(UIHelper.tableCardTop("Registo de Auditoria de Acções Críticas", auditToolbar, refreshBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         TableQuickPeekController.install(auditTable, card, (peek, row) -> {
             String data = String.valueOf(auditTableModel.getValueAt(row, 0));
@@ -201,7 +201,7 @@ public class ConfigPanel extends JPanel {
             auditTableModel.addRow(new Object[]{
                     l.eventTime().format(dtf),
                     l.username(),
-                    l.action(),
+                    AuditActionLabels.label(l.action()),
                     l.details()
             });
         }

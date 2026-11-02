@@ -127,7 +127,7 @@ public final class KpiCard {
             subLabel.setForeground(pal.subtitle);
             card.add(subLabel, BorderLayout.SOUTH);
         }
-        return card;
+        return KpiTextFit.wire(card, null, valueLabel, trendBadge, subLabel, false);
     }
 
     public static ModernPanel createCard(String title, JLabel valueLabel, TrendBadge trendBadge, JLabel subLabel,
@@ -180,7 +180,7 @@ public final class KpiCard {
         }
 
         card.add(textPanel, BorderLayout.CENTER);
-        return card;
+        return KpiTextFit.wire(card, titleLbl, valueLabel, trendBadge, subLabel, iconName != null && !iconName.isBlank());
     }
 
     public static ModernPanel createCard(String title, JLabel valueLabel, String subtitle, String iconName, Color iconColor) {

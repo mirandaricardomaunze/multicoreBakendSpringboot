@@ -23,9 +23,9 @@ public final class AccountingChartTab extends JPanel {
     );
 
     private final JLabel emptyChartWarning = UIHelper.createWarningBanner(
-            "Esta empresa não tem plano de contas. Enquanto assim for, as facturas, os recibos e os "
+            "Esta empresa não tem plano de contas. Enquanto assim for, as faturas, os recibos e os "
                     + "salários pagos NÃO são escriturados — e não fica registo de que foram "
-                    + "saltados. Use \"Semear PGC-NIRF\" para criar o plano.");
+                    + "saltados. Use \"Repor Contas em Falta\" para criar o plano.");
 
     public AccountingChartTab(AccountingApiClient accountingApiClient, InlineFeedbackPanel feedback) {
         this.accountingApiClient = accountingApiClient;
@@ -36,7 +36,7 @@ public final class AccountingChartTab extends JPanel {
         JTable table = AccountingUiHelper.styledTable(accountsModel, false);
         ModernPanel card = AccountingUiHelper.createTableCard(table);
 
-        ModernButton seed = UIHelper.createPrimaryButton("Semear PGC-NIRF");
+        ModernButton seed = UIHelper.createSecondaryButton("Repor Contas em Falta");
         seed.setIcon(UIHelper.icon("fas-seedling", 14));
         seed.addActionListener(e -> seedChart());
 

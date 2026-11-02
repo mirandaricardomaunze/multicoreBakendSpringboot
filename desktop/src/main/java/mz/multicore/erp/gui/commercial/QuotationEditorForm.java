@@ -144,7 +144,7 @@ final class QuotationEditorForm {
         quantityField = new QuantityField("1", true);
         discountField = new DecimalField("0", 2, false);
         barcodeScanField = new BarcodeScanField("Bipar código / SKU (F2)...", this::handleBarcodeScanned);
-        addButton = UIHelper.createPrimaryButton("Adicionar linha"); addButton.setIcon(UIHelper.icon("fas-plus", 14)); addButton.addActionListener(e -> addBlankLine());
+        addButton = UIHelper.createSuccessButton("Adicionar linha"); addButton.setIcon(UIHelper.icon("fas-plus", 14)); addButton.addActionListener(e -> addBlankLine());
         removeButton = UIHelper.createDangerButton("Remover item"); removeButton.setIcon(UIHelper.icon("fas-trash", 14)); removeButton.addActionListener(e -> removeSelectedLine());
 
         linesModel = new DefaultTableModel(

@@ -132,7 +132,7 @@ final class CommercialOrdersView {
         owner.orderFormContent = formContent;
 
         // ===== ABA: acções, filtros e lista dentro do mesmo card =====
-        ModernButton newOrderBtn = UIHelper.createPrimaryButton("Novo Pedido de Cliente");
+        ModernButton newOrderBtn = UIHelper.createSuccessButton("Novo Pedido de Cliente");
         newOrderBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newOrderBtn.addActionListener(e -> owner.openOrderEditor());
 

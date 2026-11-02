@@ -90,8 +90,8 @@ public final class GoalCreateDialog {
         targetsRow.setOpaque(false);
         MoneyField txtRevenue = PerformanceControls.createMoneyField("", 0);
         MoneyField txtMargin = PerformanceControls.createMoneyField("", 0);
-        targetsRow.add(new FormField("Alvo Receita (MZN)", txtRevenue, false, null));
-        targetsRow.add(new FormField("Alvo Margem Bruta (MZN)", txtMargin, false, null));
+        targetsRow.add(new FormField("Alvo Receita (MT)", txtRevenue, false, null));
+        targetsRow.add(new FormField("Alvo Margem Bruta (MT)", txtMargin, false, null));
         form.add(targetsRow, gc);
 
         gc.gridy++;
@@ -111,7 +111,7 @@ public final class GoalCreateDialog {
         MoneyField txtBonusValue = PerformanceControls.createMoneyField("", 0);
         MoneyField txtBonusCap = PerformanceControls.createMoneyField("", 0);
         bonusRow.add(new FormField("Valor do Bónus (MZN ou %)", txtBonusValue, false, null));
-        bonusRow.add(new FormField("Teto Máximo Bónus (MZN)", txtBonusCap, false, null));
+        bonusRow.add(new FormField("Teto Máximo Bónus (MT)", txtBonusCap, false, null));
         form.add(bonusRow, gc);
 
         gc.gridy++;
@@ -140,7 +140,7 @@ public final class GoalCreateDialog {
         btnCancel.addActionListener(e -> dialog.dispose());
         footer.add(btnCancel);
 
-        ModernButton btnSave = UIHelper.createPrimaryButton("Criar Meta");
+        ModernButton btnSave = UIHelper.createSuccessButton("Criar Meta");
         btnSave.setIcon(UIHelper.icon("fas-check", 14));
         btnSave.addActionListener(e -> saveGoal(dialog, apiClient, session, onSaved, txtName, cbPeriod, txtStart, txtEnd,
                 cbScope, cbBusinessUnit, txtSeller, txtSupervisor, txtRevenue, txtMargin, chkBonusOptional, cbBonusType,

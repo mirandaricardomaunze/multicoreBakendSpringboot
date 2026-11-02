@@ -398,7 +398,7 @@ public class HRPanel extends JPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton newBtn = UIHelper.createPrimaryButton("Registar Falta");
+        ModernButton newBtn = UIHelper.createSuccessButton("Registar Falta");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> HRAbsenceFormDialog.openCreateDialog(this, ABSENCE_TYPES));
 
@@ -408,7 +408,7 @@ public class HRPanel extends JPanel {
 
         ModernButton refreshAbsencesBtn = UIHelper.createRefreshButton(this::loadAbsences);
 
-        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Ações da Falta")
+        ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Acções da Falta")
                 .addAction("Justificar", UIHelper.icon("fas-user-check", 14), employeeActions::justifyAbsence)
                 .addAction("Eliminar", UIHelper.icon("fas-trash", 14), this::deleteSelectedAbsence);
 

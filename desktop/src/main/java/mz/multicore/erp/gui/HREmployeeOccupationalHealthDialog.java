@@ -135,12 +135,12 @@ final class HREmployeeOccupationalHealthDialog {
     static void payOccupationalHealthExam(HRPanel owner, EmployeeDTO employee,
                                          List<OccupationalHealthExamDTO> history, int row) {
         if (row < 0 || row >= history.size()) {
-            owner.showNotice(FeedbackType.WARNING, "Seleccione um exame", "Escolha na lista o exame cuja factura vai pagar.");
+            owner.showNotice(FeedbackType.WARNING, "Seleccione um exame", "Escolha na lista o exame cuja fatura vai pagar.");
             return;
         }
         OccupationalHealthExamDTO exam = history.get(row);
         if (exam.cost() == null) {
-            owner.showNotice(FeedbackType.WARNING, "Sem custo registado", "Registe a factura da clínica antes de pagar este exame.");
+            owner.showNotice(FeedbackType.WARNING, "Sem custo registado", "Registe a fatura da clínica antes de pagar este exame.");
             return;
         }
         if (exam.paid()) {
@@ -262,7 +262,7 @@ final class HREmployeeOccupationalHealthDialog {
                 "Restrições laborais:", restrictionsField,
                 "Observações:", notesField,
                 "Custo do exame:", costField,
-                "Nº da factura:", invoiceField,
+                "Nº da fatura:", invoiceField,
                 "Comprovativo (máx. 5 MB):", attachmentPanel);
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow,
                 "Exame de Saúde — " + employee.name(), "fas-heartbeat",

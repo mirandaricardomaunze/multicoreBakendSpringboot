@@ -53,7 +53,7 @@ public class CustomerStatementPanel extends JPanel {
     private JPanel buildSummaryCards() {
         JPanel grid = KpiCard.createGrid(5);
         grid.add(KpiCard.createMetricCard("Saldo Anterior", openingBalanceLabel, "Posição inicial", "fas-history", UIHelper.ACCENT));
-        grid.add(KpiCard.createMetricCard("Total Facturado (+)", totalDebitsLabel, "Débitos do período", "fas-file-invoice", UIHelper.ACCENT_BLUE));
+        grid.add(KpiCard.createMetricCard("Total Faturado (+)", totalDebitsLabel, "Débitos do período", "fas-file-invoice", UIHelper.ACCENT_BLUE));
         grid.add(KpiCard.createMetricCard("Total Liquidado (-)", totalCreditsLabel, "Créditos/Recibos", "fas-money-bill-wave", UIHelper.APPROVED_GREEN));
         grid.add(KpiCard.createMetricCard("Saldo em Aberto", closingBalanceLabel, "Posição actual", "fas-balance-scale", UIHelper.PENDING_YELLOW));
         grid.add(KpiCard.createMetricCard("Total Vencido em Mora", overdueAmountLabel, "Valores em atraso", "fas-exclamation-triangle", UIHelper.REJECTED_RED));

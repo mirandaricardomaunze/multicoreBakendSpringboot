@@ -55,7 +55,7 @@ public class UserManagementPanel extends JPanel {
         searchField = TableFilter.searchField("Pesquisar utilizador, nome ou perfil…");
         JComboBox<String> estadoCombo = TableFilter.combo("Todos os estados", "Activo", "Suspenso");
 
-        ModernButton createBtn = UIHelper.createPrimaryButton("Novo Utilizador");
+        ModernButton createBtn = UIHelper.createSuccessButton("Novo Utilizador");
         createBtn.setIcon(UIHelper.icon("fas-user-plus", 14, Color.WHITE));
         createBtn.addActionListener(e -> new UserEditorDialog(this, userApiClient, null, this::refreshDataAsync).show());
 

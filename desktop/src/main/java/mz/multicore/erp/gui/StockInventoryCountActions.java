@@ -56,7 +56,7 @@ final class StockInventoryCountActions {
                 "fas-clipboard-list", "Sessões de contagem — crie, retome e aplique", content)
                 .asReadOnly("Fechar");
 
-        ModernButton newBtn = UIHelper.createPrimaryButton("Nova Contagem");
+        ModernButton newBtn = UIHelper.createSuccessButton("Nova Contagem");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> startNewCountSession(reload));
 

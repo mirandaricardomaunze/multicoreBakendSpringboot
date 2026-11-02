@@ -50,7 +50,7 @@ public final class TreasuryOperationsCoordinator {
         peek.setHeaderIcon("fas-exchange-alt", UIHelper.ACCENT_BLUE);
         peek.setTitle(desc);
         peek.setSubtitle("Conta: " + conta);
-        peek.setStatus(tipo, "CREDIT".equalsIgnoreCase(tipo) ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
+        peek.setStatus(tipo, "Entrada".equals(tipo) ? UIHelper.APPROVED_GREEN : UIHelper.REJECTED_RED);
         peek.setItems(List.of(
                 new QuickPeekPanel.PeekItem("Data Operação", data, false),
                 new QuickPeekPanel.PeekItem("Tipo Movimento", tipo, false),
@@ -79,7 +79,7 @@ public final class TreasuryOperationsCoordinator {
                     tx.transactionDate().format(DATE_TIME),
                     tx.accountName(),
                     tx.description(),
-                    tx.transactionType(),
+                    "DEBIT".equalsIgnoreCase(tx.transactionType()) ? "Entrada" : "Saída",
                     tx.transactionType().equalsIgnoreCase("DEBIT") ? tx.amount() : tx.amount().negate()
             });
         }

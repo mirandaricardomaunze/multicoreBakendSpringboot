@@ -128,7 +128,7 @@ public final class FleetPanel extends JPanel {
         manifestBtn.setToolTipText("Consultar e emitir manifestos de carga e rotas de distribuição");
         manifestBtn.addActionListener(e -> FleetManifestsViewDialog.show(SwingUtilities.getWindowAncestor(this), fleetApiClient));
 
-        ModernButton fuelBtn = UIHelper.createPrimaryButton("Registar Abastecimento");
+        ModernButton fuelBtn = UIHelper.createSuccessButton("Registar Abastecimento");
         fuelBtn.setIcon(UIHelper.icon("fas-gas-pump", 14));
         fuelBtn.setToolTipText("Registar entrada de combustível e actualizar odómetro");
         fuelBtn.addActionListener(e -> fuelCoordinator.openFuelDialog(SwingUtilities.getWindowAncestor(this), currentVehicles, feedback, this::loadVehicles));

@@ -92,9 +92,9 @@ public final class AccountingUiHelper {
 
     public static LocalDate parseDate(String text) {
         try {
-            return LocalDate.parse(text.trim(), DATE_FMT);
+            return LocalDate.parse(text.trim());
         } catch (RuntimeException ex) {
-            throw new IllegalArgumentException("Data inválida — use dd/MM/aaaa.");
+            throw new IllegalArgumentException("Data inválida — use aaaa-mm-dd.");
         }
     }
 }

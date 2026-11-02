@@ -44,7 +44,7 @@ class CRMPanelDecompositionHarnessTest {
                 "Falta UIHelper.tableCardTop com título Pedidos dos Clientes");
         assertTrue(content.contains("UIHelper.tableCardTop(\"Folhas de Obra Registadas\", wsBar,\n                moreBtn, billBtn, newWsBtn)"),
                 "Falta UIHelper.tableCardTop com formato exato para Folhas de Obra Registadas");
-        assertTrue(content.contains("Ações da Folha"), "Falta ActionMenuButton Ações da Folha");
+        assertTrue(content.contains("Acções da Folha"), "Falta ActionMenuButton Acções da Folha");
         assertTrue(content.contains("TableQuickPeekController.install(ticketsTable"), "Falta TableQuickPeekController.install(ticketsTable");
         assertTrue(content.contains("UIHelper.ensureHeadersFit(ticketsTable)"), "Falta UIHelper.ensureHeadersFit(ticketsTable)");
     }

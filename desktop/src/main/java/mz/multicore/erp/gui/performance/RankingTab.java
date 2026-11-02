@@ -59,7 +59,7 @@ public class RankingTab extends JPanel {
         periodFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
+        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
 
@@ -75,7 +75,7 @@ public class RankingTab extends JPanel {
         card.add(filterBar, BorderLayout.NORTH);
 
         // Table
-        String[] columns = {"Posição", "Colaborador", "Receita Gerada (MZN)", "Margem Bruta (MZN)", "Valor Médio (MZN)", "Nº Faturas", "% Meta"};
+        String[] columns = {"Posição", "Colaborador", "Receita Gerada (MT)", "Margem Bruta (MT)", "Valor Médio (MT)", "Nº Faturas", "% Meta"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {

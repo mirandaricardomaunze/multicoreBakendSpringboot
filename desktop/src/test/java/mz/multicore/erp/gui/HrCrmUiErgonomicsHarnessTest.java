@@ -21,7 +21,7 @@ class HrCrmUiErgonomicsHarnessTest {
     void crmWorkSheetsToolbarAdheresToMaxThreeButtons() throws IOException {
         String crm = source("CRMPanel.java");
         assertThat(crm).contains("UIHelper.tableCardTop(\"Folhas de Obra Registadas\", wsBar,\n                moreBtn, billBtn, newWsBtn)");
-        assertThat(crm).contains("Ações da Folha");
+        assertThat(crm).contains("Acções da Folha");
         assertThat(crm).contains("Imprimir PDF", "Corrigir", "Anular", "Tarifa/hora");
     }
 
@@ -39,7 +39,7 @@ class HrCrmUiErgonomicsHarnessTest {
         assertThat(hr).contains("Aprovar Recibo", "Marcar Pago", "Imprimir PDF", "Ficheiro de Pagamento");
         // Faltas
         assertThat(hr).contains("UIHelper.tableCardTop(\"Registo de Faltas\", absBar,\n                exportBtn, actionsBtn, newBtn)");
-        assertThat(hr).contains("Ações da Falta");
+        assertThat(hr).contains("Acções da Falta");
         assertThat(hr).contains("Justificar", "Eliminar");
     }
 

@@ -8,6 +8,7 @@ import mz.multicore.erp.modules.inventory.dto.StockAlertDTO;
 import javax.swing.*;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import mz.multicore.erp.gui.components.BatchDisplay;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public final class StockAlertsViewCoordinator {
             if (isExpired) expired++; else soon++;
             if (b.businessUnitName() != null && !b.businessUnitName().isBlank()) expBus.add(b.businessUnitName());
             owner.alertsExpModel.addRow(new Object[]{
-                    b.sku(), b.productName(), b.batchNumber(), b.warehouseName(),
+                    b.sku(), b.productName(), BatchDisplay.number(b.batchNumber()), b.warehouseName(),
                     b.expirationDate() == null ? "—" : b.expirationDate().toString(),
                     days, hide ? MASK : (b.quantity() == null ? "" : b.quantity().toPlainString()),
                     isExpired ? "Expirado" : "A expirar"});

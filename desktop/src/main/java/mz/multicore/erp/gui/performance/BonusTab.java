@@ -65,7 +65,7 @@ public class BonusTab extends JPanel {
         statusFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
+        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
 
@@ -85,7 +85,7 @@ public class BonusTab extends JPanel {
         card.add(filterBar, BorderLayout.NORTH);
 
         // Table
-        String[] columns = {"ID", "Meta Comercial", "Colaborador", "Calculado (MZN)", "Aprovado (MZN)", "Justificação", "Estado", "Aprovador", "Recibo ID"};
+        String[] columns = {"ID", "Meta Comercial", "Colaborador", "Calculado (MT)", "Aprovado (MT)", "Justificação", "Estado", "Aprovador", "Recibo ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -214,7 +214,7 @@ public class BonusTab extends JPanel {
         gc.weightx = 1.0;
 
         MoneyField txtAmount = PerformanceControls.createMoneyField(selected.approvedAmount() != null ? selected.approvedAmount().toString() : "", 0);
-        form.add(new FormField("Novo Valor Aprovado (MZN)", txtAmount, true, null), gc);
+        form.add(new FormField("Novo Valor Aprovado (MT)", txtAmount, true, null), gc);
 
         gc.gridy++;
         JTextField txtJustification = PerformanceControls.createTextInput("", "Justificação do ajuste", 0);

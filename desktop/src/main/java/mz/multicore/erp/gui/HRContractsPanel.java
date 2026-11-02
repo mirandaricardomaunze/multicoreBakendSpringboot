@@ -42,7 +42,7 @@ final class HRContractsPanel {
 
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::load);
 
-        ModernButton newBtn = UIHelper.createPrimaryButton("Novo Contrato");
+        ModernButton newBtn = UIHelper.createSuccessButton("Novo Contrato");
         newBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newBtn.addActionListener(e -> HrContractFormDialog.showCreateDialog(owner, this::load));
 

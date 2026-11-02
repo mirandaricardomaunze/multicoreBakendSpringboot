@@ -132,7 +132,7 @@ public class CRMPanel extends JPanel {
         billBtn.addActionListener(e -> workSheetActions.billWorkSheet());
         ModernButton refreshWsBtn = UIHelper.createRefreshButton(this::refreshData);
 
-        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Ações da Folha")
+        ActionMenuButton moreBtn = UIHelper.createActionMenuButton("Acções da Folha")
                 .addAction("Imprimir PDF", UIHelper.icon("fas-print", 14), workSheetActions::printWorkSheet)
                 .addAction("Corrigir", UIHelper.icon("fas-edit", 14), workSheetActions::editWorkSheet)
                 .addAction("Anular", UIHelper.icon("fas-ban", 14), workSheetActions::voidWorkSheet)

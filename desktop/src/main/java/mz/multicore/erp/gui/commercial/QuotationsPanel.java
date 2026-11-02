@@ -57,7 +57,7 @@ public final class QuotationsPanel extends JPanel {
         listPage.setOpaque(false);
         listPage.add(feedback, BorderLayout.NORTH);
 
-        ModernButton newBtn = UIHelper.createPrimaryButton("Nova Cotação");
+        ModernButton newBtn = UIHelper.createSuccessButton("Nova Cotação");
         newBtn.setIcon(UIHelper.icon("fas-file-signature", 14));
         newBtn.addActionListener(e -> openEditor());
 
@@ -94,7 +94,7 @@ public final class QuotationsPanel extends JPanel {
                 .addAction("Aceite pelo cliente", UIHelper.icon("fas-check", 14), this::accept)
                 .addAction("Cancelar cotação", UIHelper.icon("fas-ban", 14), this::cancel)
                 .addAction("Converter em Encomenda", UIHelper.icon("fas-exchange-alt", 14, UIHelper.ACCENT_BLUE), this::convert)
-                .addAction("Converter em Factura", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.APPROVED_GREEN), this::convertToInvoice);
+                .addAction("Converter em Fatura", UIHelper.icon("fas-file-invoice-dollar", 14, UIHelper.APPROVED_GREEN), this::convertToInvoice);
 
         ModernButton peekToggleBtn = UIHelper.createSecondaryButton("");
         peekToggleBtn.setIcon(UIHelper.icon("fas-columns", 12));
@@ -229,7 +229,7 @@ public final class QuotationsPanel extends JPanel {
     }
 
     void convertToInvoice() {
-        int r = selected("converter em factura");
+        int r = selected("converter em fatura");
         if (r >= 0) QuotationOperationsCoordinator.convertToInvoice(this, apiClient, (Long) model.getValueAt(r, COL_ID), String.valueOf(model.getValueAt(r, COL_NUMBER)), ordersRefresh);
     }
 

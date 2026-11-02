@@ -84,10 +84,10 @@ final class FiscalIvaTab {
         ivaPrevCreditSubLbl = new JLabel("Reporte anterior", SwingConstants.LEFT);
         ivaNetLbl = new JLabel("0,00 MT", SwingConstants.LEFT);
         ivaStatusSubLbl = new JLabel("A calcular...", SwingConstants.LEFT);
-        kpis.add(KpiCard.createMetricCard("IVA LIQUIDADO (VENDAS)", ivaOutputLbl, ivaSalesSubLbl, "fas-arrow-trend-up", UIHelper.KPI_PURPLE_DARK));
-        kpis.add(KpiCard.createMetricCard("IVA DEDUZIDO (COMPRAS)", ivaInputLbl, ivaPurchasesSubLbl, "fas-arrow-trend-down", UIHelper.KPI_INFO_DARK));
+        kpis.add(KpiCard.createMetricCard("IVA LIQUIDADO (VENDAS)", ivaOutputLbl, ivaSalesSubLbl, "fas-arrow-up", UIHelper.KPI_PURPLE_DARK));
+        kpis.add(KpiCard.createMetricCard("IVA DEDUZIDO (COMPRAS)", ivaInputLbl, ivaPurchasesSubLbl, "fas-arrow-down", UIHelper.KPI_INFO_DARK));
         kpis.add(KpiCard.createMetricCard("CRÉDITO ANTERIOR", ivaPreviousCreditLbl, ivaPrevCreditSubLbl, "fas-history", UIHelper.ACCENT_BLUE));
-        kpis.add(KpiCard.createMetricCard("SALDO FISCAL LÍQUIDO", ivaNetLbl, ivaStatusSubLbl, "fas-scale-balanced", UIHelper.APPROVED_GREEN));
+        kpis.add(KpiCard.createMetricCard("SALDO FISCAL LÍQUIDO", ivaNetLbl, ivaStatusSubLbl, "fas-balance-scale", UIHelper.APPROVED_GREEN));
         center.add(kpis, BorderLayout.NORTH);
 
         JPanel split = new JPanel(new GridLayout(1, 2, 12, 0));
@@ -209,7 +209,7 @@ final class FiscalIvaTab {
                 java.nio.file.Files.writeString(target.toPath(), export.xml());
                 return target;
             }, file -> ToastManager.success(owner,
-                    "Exportação SAF-T gravada (" + export.numberOfInvoices() + " facturas), total "
+                    "Exportação SAF-T gravada (" + export.numberOfInvoices() + " faturas), total "
                             + String.format("%,.2f MT", export.totalGross()) + ": " + file.getAbsolutePath()),
                     owner::showActionError);
         }, owner::showActionError);

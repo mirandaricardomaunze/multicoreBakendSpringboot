@@ -81,7 +81,7 @@ public class DatabaseBackupDialog extends JDialog {
         statusBox.add(lastRunLabel);
         quickCard.add(statusBox, BorderLayout.CENTER);
 
-        generateBtn = UIHelper.createPrimaryButton("Criar Backup Agora");
+        generateBtn = UIHelper.createSuccessButton("Criar Backup Agora");
         generateBtn.setIcon(UIHelper.icon("fas-download", 14));
         generateBtn.addActionListener(e -> generateBackup());
         quickCard.add(generateBtn, BorderLayout.EAST);

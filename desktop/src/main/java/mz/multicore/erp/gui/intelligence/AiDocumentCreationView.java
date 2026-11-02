@@ -23,7 +23,7 @@ public class AiDocumentCreationView extends JPanel {
             "Relatório", "Memorando", "Proposta", "Carta", "Acta", "Plano de Acção"});
     private final JTextField documentTitle = new JTextField();
     private final JTextArea documentInstructions = new JTextArea(3, 60);
-    private final ModernButton documentButton = UIHelper.createPrimaryButton("Gerar Documento");
+    private final ModernButton documentButton = UIHelper.createSuccessButton("Gerar Documento");
     private final ModernButton saveDocumentButton = UIHelper.createSecondaryButton("Guardar no Histórico");
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
 

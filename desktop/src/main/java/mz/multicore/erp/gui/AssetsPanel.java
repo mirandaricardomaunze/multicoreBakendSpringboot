@@ -32,9 +32,9 @@ public final class AssetsPanel extends JPanel {
 
     // Componentes de Feedback e KPIs
     final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
-    private final JLabel kpiTotalCost = new JLabel("0.00 MT");
-    private final JLabel kpiAccumulated = new JLabel("0.00 MT");
-    private final JLabel kpiNetBookValue = new JLabel("0.00 MT");
+    private final JLabel kpiTotalCost = new JLabel("0,00 MT");
+    private final JLabel kpiAccumulated = new JLabel("0,00 MT");
+    private final JLabel kpiNetBookValue = new JLabel("0,00 MT");
     private final JLabel kpiActiveCount = new JLabel("0 Activos");
 
     // Tabela e Modelo

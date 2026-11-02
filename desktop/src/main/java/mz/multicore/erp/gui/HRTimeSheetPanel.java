@@ -47,7 +47,7 @@ final class HRTimeSheetPanel {
         periodFilters.add(monthSpinner);
         periodFilters.add(statusLabel);
 
-        ModernButton entryBtn = UIHelper.createPrimaryButton("Registar Marcação");
+        ModernButton entryBtn = UIHelper.createSuccessButton("Registar Marcação");
         entryBtn.setIcon(UIHelper.icon("fas-clock", 14));
         entryBtn.addActionListener(e -> HrTimeEntryDialog.show(owner, this::load));
 

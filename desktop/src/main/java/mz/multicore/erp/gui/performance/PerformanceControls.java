@@ -130,7 +130,7 @@ public final class PerformanceControls {
     public static String humanBonusType(BonusType type) {
         if (type == null) return "-";
         return switch (type) {
-            case FIXED -> "Valor Fixo (MZN)";
+            case FIXED -> "Valor Fixo (MT)";
             case PERCENTAGE_OF_REVENUE -> "Percentual da Receita (%)";
             case PERCENTAGE_OF_MARGIN -> "Percentual da Margem Bruta (%)";
         };

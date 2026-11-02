@@ -133,15 +133,15 @@ public final class ClientTablePagination {
     public static JPanel install(JTable table) {
         Object existing = table.getClientProperty(INSTANCE);
         if (existing instanceof ClientTablePagination pagination) return pagination.component;
-        TableRowSorter<TableModel> sorter;
-        if (table.getRowSorter() instanceof TableRowSorter<?> raw) {
-            sorter = (TableRowSorter<TableModel>) raw;
-        } else {
-            sorter = new TableRowSorter<>(table.getModel());
-            table.setRowSorter(sorter);
-        }
+        boolean hasSorter = table.getRowSorter() instanceof TableRowSorter<?>;
+        TableRowSorter<TableModel> sorter = hasSorter
+                ? (TableRowSorter<TableModel>) table.getRowSorter()
+                : new TableRowSorter<>(table.getModel());
         ClientTablePagination pagination = new ClientTablePagination(table, sorter);
         table.putClientProperty(INSTANCE, pagination);
+        // Só depois de registar: trocar o ordenador volta a pedir o rodapé, e sem o registo nasciam
+        // duas paginações, ficando à vista a que nunca viu linhas.
+        if (!hasSorter) table.setRowSorter(sorter);
         return pagination.component;
     }
 

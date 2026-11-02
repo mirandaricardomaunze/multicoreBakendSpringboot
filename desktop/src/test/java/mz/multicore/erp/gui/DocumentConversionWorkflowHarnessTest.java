@@ -31,7 +31,7 @@ class DocumentConversionWorkflowHarnessTest {
         assertTrue(Files.exists(path), "QuotationsPanel.java deve existir");
         String content = Files.readString(path);
 
-        assertTrue(content.contains("Converter em Factura"), "Deve conter opção de conversão em fatura");
+        assertTrue(content.contains("Converter em Fatura"), "Deve conter opção de conversão em fatura");
         assertTrue(content.contains("convertToInvoice"), "Deve conter método convertToInvoice");
         assertFalse(content.contains("⭐") || content.contains("✅") || content.contains("❌"), "Sem emojis");
     }

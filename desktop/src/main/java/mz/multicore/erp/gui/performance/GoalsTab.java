@@ -62,7 +62,7 @@ public class GoalsTab extends JPanel {
         periodFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Recarregar");
+        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
         btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
         btnRefresh.addActionListener(e -> reload());
 
@@ -70,7 +70,7 @@ public class GoalsTab extends JPanel {
         btnCancel.setIcon(UIHelper.icon("fas-ban", 14));
         btnCancel.addActionListener(e -> cancelSelectedGoal());
 
-        ModernButton btnNew = UIHelper.createPrimaryButton("Nova Meta");
+        ModernButton btnNew = UIHelper.createSuccessButton("Nova Meta");
         btnNew.setIcon(UIHelper.icon("fas-plus", 14));
         btnNew.addActionListener(e -> GoalCreateDialog.show(SwingUtilities.getWindowAncestor(this), apiClient, session, () -> {
             reload();
@@ -81,7 +81,7 @@ public class GoalsTab extends JPanel {
         filterBar.add(UIHelper.actionsBar(btnRefresh, btnCancel, btnNew), BorderLayout.EAST);
         card.add(filterBar, BorderLayout.NORTH);
 
-        String[] columns = {"ID", "Nome da Meta", "Período", "Início", "Fim", "Escopo", "Alvo Receita (MZN)", "Alvo Margem (MZN)", "Prémio", "Estado"};
+        String[] columns = {"ID", "Nome da Meta", "Período", "Início", "Fim", "Escopo", "Alvo Receita (MT)", "Alvo Margem (MT)", "Prémio", "Estado"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };

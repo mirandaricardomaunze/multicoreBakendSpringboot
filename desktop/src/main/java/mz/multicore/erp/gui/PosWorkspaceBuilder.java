@@ -66,7 +66,7 @@ final class PosWorkspaceBuilder {
                 .addAction("Sangria / Suprimento", UIHelper.icon("fas-exchange-alt", 14, UIHelper.PENDING_YELLOW), () -> owner.cashSessionActions.manageCashMovements())
                 .addAction("Passar Turno", UIHelper.icon("fas-people-arrows", 14, UIHelper.APPROVED_GREEN), () -> owner.cashSessionActions.shiftHandover());
         owner.operationsMenu.setColors(UIHelper.SECONDARY, UIHelper.SECONDARY_HOVER);
-        owner.operationsMenu.setToolTipText("Ações e ferramentas adicionais do ponto de venda");
+        owner.operationsMenu.setToolTipText("Acções e ferramentas adicionais do ponto de venda");
 
         JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         segmented.setOpaque(false);

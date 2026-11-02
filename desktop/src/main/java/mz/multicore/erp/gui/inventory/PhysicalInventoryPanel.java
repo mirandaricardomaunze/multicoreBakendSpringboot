@@ -46,7 +46,7 @@ public class PhysicalInventoryPanel extends JPanel {
     }
 
     private void initActions() {
-        newSessionBtn = UIHelper.createPrimaryButton("Nova Sessão");
+        newSessionBtn = UIHelper.createSuccessButton("Nova Sessão");
         newSessionBtn.setIcon(UIHelper.icon("fas-plus", 13, Color.WHITE));
         newSessionBtn.addActionListener(e -> coordinator.openNewSessionDialog(this, newSessionBtn, this::refreshSessions));
 
@@ -137,7 +137,7 @@ public class PhysicalInventoryPanel extends JPanel {
         manualQtyField.setPreferredSize(new Dimension(45, UIHelper.FORM_CONTROL_HEIGHT));
         manualQtyField.setHorizontalAlignment(JTextField.RIGHT);
 
-        recordCountBtn = UIHelper.createPrimaryButton("Registar");
+        recordCountBtn = UIHelper.createSuccessButton("Registar");
         recordCountBtn.setIcon(UIHelper.icon("fas-barcode", 13, Color.WHITE));
         recordCountBtn.addActionListener(e -> handleBarcodeScan());
 

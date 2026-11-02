@@ -91,18 +91,18 @@ final class QuotationOperationsCoordinator {
 
     static void convertToInvoice(QuotationsPanel owner, ComercialApiClient apiClient, Long id, String number, Runnable ordersRefresh) {
         if (!ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner), FeedbackType.INFO,
-                "Confirmar Emissão de Factura",
-                "Converter a cotação " + number + " directamente numa Factura comercial (FT)?\n\n"
-                        + "A factura mantém exactamente os preços cotados, efectua a baixa de stock e cria a conta a receber.\n"
-                        + "A cotação não poderá ser convertida outra vez.", "Emitir Factura")) return;
+                "Confirmar Emissão de Fatura",
+                "Converter a cotação " + number + " directamente numa Fatura comercial (FT)?\n\n"
+                        + "A fatura mantém exactamente os preços cotados, efectua a baixa de stock e cria a conta a receber.\n"
+                        + "A cotação não poderá ser convertida outra vez.", "Emitir Fatura")) return;
 
-        UIHelper.runWithProgress(owner, "A converter em factura…", () -> apiClient.convertQuotationToInvoice(id),
+        UIHelper.runWithProgress(owner, "A converter em fatura…", () -> apiClient.convertQuotationToInvoice(id),
                 invoice -> {
-                    owner.showSuccess("Cotação " + number + " convertida na factura " + invoice.invoiceNumber()
+                    owner.showSuccess("Cotação " + number + " convertida na fatura " + invoice.invoiceNumber()
                             + "; total " + invoice.totalAmount() + " MT.");
                     owner.refresh();
                     if (ordersRefresh != null) ordersRefresh.run();
-                }, error -> owner.showError("converter a cotação em factura", error));
+                }, error -> owner.showError("converter a cotação em fatura", error));
     }
 
     static void print(QuotationsPanel owner, ComercialApiClient apiClient, Long id, String number) {

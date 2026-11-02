@@ -71,7 +71,7 @@ public class SmartAlertsDialog extends JDialog {
     private Urgency currentFilter = null; // null = todos
 
     public SmartAlertsDialog(Window owner, List<SmartAlert> alerts, Consumer<String> onNavigate) {
-        super(owner, "Centro de Alertas Inteligentes & Ações Proativas", ModalityType.APPLICATION_MODAL);
+        super(owner, "Centro de Alertas Inteligentes & Acções Proativas", ModalityType.APPLICATION_MODAL);
         this.allAlerts = alerts != null ? alerts : List.of();
         this.onNavigate = onNavigate;
 
@@ -89,7 +89,7 @@ public class SmartAlertsDialog extends JDialog {
         // Topo
         JPanel header = new JPanel(new BorderLayout(0, 8));
         header.setOpaque(false);
-        JLabel title = UIHelper.createHeading("Alertas Inteligentes & Ações Proativas");
+        JLabel title = UIHelper.createHeading("Alertas Inteligentes & Acções Proativas");
         title.setIcon(UIHelper.icon("fas-bell", 18));
         JLabel subtitle = new JLabel("Situações operacionais que exigem atenção com ações diretas.");
         subtitle.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));

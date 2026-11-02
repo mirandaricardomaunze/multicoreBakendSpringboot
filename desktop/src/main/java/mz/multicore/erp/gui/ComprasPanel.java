@@ -171,13 +171,13 @@ public class ComprasPanel extends JPanel {
         serialField = new JTextField(); UIHelper.styleTextField(serialField);
         expirationField = new DateField();
         purchaseVatField = new JTextField(); UIHelper.styleTextField(purchaseVatField);
-        purchaseVatField.setToolTipText("Como vem na factura do fornecedor (ex.: 16). Vazio = taxa do artigo.");
+        purchaseVatField.setToolTipText("Como vem na fatura do fornecedor (ex.: 16). Vazio = taxa do artigo.");
 
         addFormRow(formCard, gbc, 0, "Fornecedor:", supplierCombo, "Armazém de Destino:", warehouseCombo);
         addFormRow(formCard, gbc, 1, "Conta de Pagamento:", accountCombo, "Artigo / Produto:", productCombo);
         addFormRow(formCard, gbc, 2, "Quantidade:", purchasePackageEditor, "Preço Unit. Custo (MT):", priceField);
         addFormRow(formCard, gbc, 3, "Nº Lote (Opcional):", batchField, "Nº Série (Opcional):", serialField);
-        addFormRow(formCard, gbc, 4, "Validade do Lote (yyyy-MM-dd):", expirationField, "IVA da factura (%):", purchaseVatField);
+        addFormRow(formCard, gbc, 4, "Validade do Lote (yyyy-MM-dd):", expirationField, "IVA da fatura (%):", purchaseVatField);
 
         gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 2; gbc.weightx = 1.0;
         gbc.insets = new Insets(16, 8, 12, 8);

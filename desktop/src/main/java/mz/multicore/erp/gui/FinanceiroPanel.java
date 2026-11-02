@@ -56,7 +56,7 @@ public class FinanceiroPanel extends JPanel {
         JPanel north = new JPanel();
         north.setOpaque(false);
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        JComponent heading = UIHelper.createHeading("Tesouraria & Conciliação Bancária");
+        JComponent heading = UIHelper.createHeading("Tesouraria & Reconciliação Bancária");
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
         feedback.setAlignmentX(Component.LEFT_ALIGNMENT);
         north.add(heading);
@@ -140,7 +140,7 @@ public class FinanceiroPanel extends JPanel {
         UIHelper.styleScrollPane(movScroll);
 
         JTextField mSearch = TableFilter.searchField("Conta ou descrição…");
-        JComboBox<String> mTipo = TableFilter.combo("Todos os tipos", "Débito", "Crédito");
+        JComboBox<String> mTipo = TableFilter.combo("Todos os tipos", "Entrada", "Saída");
         JComboBox<String> mPeriodo = TableFilter.periodCombo();
         TableFilter.install(movementsTable, mSearch,
                 List.of(new TableFilter.ColumnFilter(mTipo, 3)),

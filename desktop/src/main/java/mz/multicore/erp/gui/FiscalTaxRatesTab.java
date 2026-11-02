@@ -99,7 +99,7 @@ final class FiscalTaxRatesTab {
         for (var t : taxRatesList) {
             BigDecimal pct = t.rate().multiply(BigDecimal.valueOf(100));
             taxRatesModel.addRow(new Object[]{
-                    t.code(), t.name(), t.type(),
+                    t.code(), t.name(), UIHelper.humanStatus(t.type()),
                     pct.stripTrailingZeros().toPlainString() + " %",
                     t.legalBasis() == null ? "" : t.legalBasis(),
                     t.active() ? "ATIVA" : "INATIVA"
