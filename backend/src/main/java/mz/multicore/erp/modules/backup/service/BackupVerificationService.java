@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.backup.dto.BackupVerificationDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -33,9 +34,16 @@ public class BackupVerificationService {
     );
 
     private final BackupContentReader reader;
+    private final PhysicalBackupVerifier physicalVerifier;
 
     public BackupVerificationService(BackupContentReader reader) {
+        this(reader, null);
+    }
+
+    @Autowired
+    public BackupVerificationService(BackupContentReader reader, PhysicalBackupVerifier physicalVerifier) {
         this.reader = reader;
+        this.physicalVerifier = physicalVerifier;
     }
 
     public BackupVerificationDTO verifyBackup(String path) {
@@ -47,6 +55,9 @@ public class BackupVerificationService {
         File backupFile = new File(path);
         if (!backupFile.exists() || !backupFile.isFile()) {
             throw new BusinessRuleException("Ficheiro de backup não encontrado.");
+        }
+        if (physicalVerifier != null && PhysicalBackupVerifier.supports(backupFile)) {
+            return physicalVerifier.verify(backupFile);
         }
         Map<String, Object> data = reader.read(backupFile);
         Long currentCompanyId = CurrentUserContext.getCurrentCompanyId();

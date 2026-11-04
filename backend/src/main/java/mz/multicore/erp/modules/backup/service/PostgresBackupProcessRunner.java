@@ -21,6 +21,11 @@ public class PostgresBackupProcessRunner {
     }
 
     public void runProcess(List<String> command, String tool) {
+        runForOutput(command, tool);
+    }
+
+    /** Corre o comando e devolve o que escreveu; falha com a saída quando o código não é zero. */
+    public String runForOutput(List<String> command, String tool) {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
         if (dbPassword != null && !dbPassword.isBlank()) {
@@ -37,6 +42,7 @@ public class PostgresBackupProcessRunner {
             if (process.exitValue() != 0) {
                 throw new BusinessRuleException(tool + " falhou: " + output.trim());
             }
+            return output;
         } catch (IOException e) {
             throw new BusinessRuleException(
                     "Não foi possível executar " + tool + ". Verifique se está instalado e no PATH "

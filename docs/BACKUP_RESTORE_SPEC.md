@@ -57,6 +57,15 @@ nota já existente em `tasks/current.md`: *"restore é ao nível de BD em ambien
 - Valida que o ficheiro existe, é ficheiro e termina em `.dump`.
 - Corre `pg_restore --clean --if-exists --no-owner -d <db> <file>`.
 
+### 3.2.1 Verificar um backup físico (`POST /api/backup/verify`)
+- O botão "Verificar Backup" aceita `.dump` e `.dump.enc`, além do JSON lógico.
+- `PhysicalBackupVerifier` corre `pg_restore --list`, que só funciona com um dump legível. Um
+  `.dump.enc` é decifrado para um ficheiro temporário, que é apagado no fim, como no restauro.
+- O resultado não tem empresa (`companyId == null`), porque o dump é da base inteira. Mostra a data
+  de criação do dump e quantas tabelas com dados, índices e sequências ele contém.
+- Não substitui o teste de restauro: confirma que o ficheiro abre e tem conteúdo, não que os
+  dados estão certos. Testes: `PhysicalBackupVerifierTest` (PV-01..PV-04).
+
 ### 3.3 Configuração
 - `backup.pg-bin-dir` (default vazio) — pasta dos binários `pg_dump`/`pg_restore` quando não estão
   no `PATH` (ex.: `C:\Program Files\PostgreSQL\16\bin`).

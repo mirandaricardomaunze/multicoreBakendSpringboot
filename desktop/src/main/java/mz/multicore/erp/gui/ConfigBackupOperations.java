@@ -98,7 +98,7 @@ public final class ConfigBackupOperations {
         String fileName = String.valueOf(model.getValueAt(row, 0));
         appendLog(logArea, ">> A verificar backup: " + fileName);
         UIHelper.runWithProgress(owner, "A verificar cópia de segurança…", () -> owner.backupApiClient.verify(fileName), verification -> {
-            appendLog(logArea, ">> Backup válido (" + verification.companyId() + ") gerado em: " + verification.generatedAt());
+            appendLog(logArea, ">> " + BackupFileLabels.verificationSummary(verification));
             ToastManager.success(owner, "Backup verificado com sucesso. Ficheiro: " + verification.fileName());
             owner.loadAuditLogs();
         }, error -> {
@@ -114,7 +114,7 @@ public final class ConfigBackupOperations {
         peek.setHeaderIcon("fas-file-archive", UIHelper.APPROVED_GREEN);
         peek.setTitle(nome);
         peek.setSubtitle("Tamanho: " + tam + " KB");
-        peek.setStatus("BACKUP LÓGICO", UIHelper.ACCENT_BLUE);
+        peek.setStatus(BackupFileLabels.status(nome), BackupFileLabels.statusColor(nome));
         peek.setItems(java.util.List.of(
                 new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Nome Ficheiro", nome, false),
                 new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Tamanho", tam + " KB", true)
