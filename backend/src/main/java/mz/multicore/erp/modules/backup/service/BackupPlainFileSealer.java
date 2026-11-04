@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.util.Locale;
 
@@ -59,21 +59,14 @@ public class BackupPlainFileSealer {
     /** A cópia cifrada guarda a data original, para a retenção não lhe dar um novo prazo. */
     private void seal(File plain) throws IOException, GeneralSecurityException {
         File encrypted = new File(plain.getPath() + BackupFileCipher.ENCRYPTED_SUFFIX);
-        if (!opens(encrypted.toPath())) {
+        if (!Files.exists(encrypted.toPath())) {
             cipher.encrypt(plain.toPath(), encrypted.toPath());
-            cipher.verify(encrypted.toPath());
+        }
+        if (!cipher.matchesPlain(encrypted.toPath(), plain.toPath())) {
+            throw new IOException("a cópia cifrada contém dados diferentes; ambos os ficheiros foram preservados");
         }
         encrypted.setLastModified(plain.lastModified());
         if (!plain.delete()) throw new IOException("a cópia em claro não pôde ser apagada");
-    }
-
-    private boolean opens(Path encrypted) {
-        try {
-            cipher.verify(encrypted);
-            return true;
-        } catch (RuntimeException ex) {
-            return false;
-        }
     }
 
     private static boolean isPlainBackup(String name) {

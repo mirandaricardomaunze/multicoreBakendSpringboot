@@ -77,6 +77,9 @@ credenciais previsíveis, anexos clínicos em claro, sessões sem limite e conta
 
 ### Backups
 
+- A cifra de backups antigos só apaga o original após autenticar o `.enc` e comparar SHA-256 do
+  conteúdo decifrado com o original, por streaming. Conteúdo diferente ou falha de leitura preserva
+  ambos os ficheiros e regista erro; uma cópia cifrada existente nunca é sobrescrita por este processo.
 - Com chave, cada backup físico é cifrado com AES-256-GCM, por blocos, para `.dump.enc`.
 - Antes de apagar a versão em claro, o sistema confirma com `pg_restore --list` que o dump é legível e
   que a cópia cifrada abre. O restauro decifra para um ficheiro temporário, apagado no fim.

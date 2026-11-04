@@ -22,6 +22,8 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 - Segurança antes de produção em `docs/SEGURANCA_CONTAS_E_SEGREDOS_SPEC.md` (SC-25 a SC-32): código
   2FA de uso único, senhas de demonstração substituídas, backups antigos e lógicos cifrados. No VPS,
   correr `scripts/validar-producao.sh` antes de receber dados reais.
+  Comparação de conteúdo e restauro PostgreSQL isolado validados; ver
+  `tasks/archive/2026-11-01-backup-content-verification.md`.
 - Em 2026-10-31 o responsável confirmou que não existe base PostgreSQL real, por isso as migrações
   V66, V76, V89 e V96 puderam ser corrigidas no próprio ficheiro.
 

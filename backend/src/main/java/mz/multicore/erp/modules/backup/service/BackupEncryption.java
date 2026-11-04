@@ -35,7 +35,9 @@ public class BackupEncryption {
         try {
             processRunner.runProcess(commandBuilder.buildListCommand(plain.getAbsolutePath()), "pg_restore");
             cipher.encrypt(plain.toPath(), encrypted.toPath());
-            cipher.verify(encrypted.toPath());
+            if (!cipher.matchesPlain(encrypted.toPath(), plain.toPath())) {
+                throw new IOException("a cópia cifrada não corresponde ao backup original");
+            }
         } catch (IOException | GeneralSecurityException ex) {
             encrypted.delete();
             throw new BusinessRuleException("Não foi possível cifrar o backup: " + ex.getMessage());

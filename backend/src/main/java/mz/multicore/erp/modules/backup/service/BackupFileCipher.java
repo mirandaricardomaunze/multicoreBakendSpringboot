@@ -16,6 +16,8 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
@@ -92,6 +94,21 @@ public class BackupFileCipher {
         } catch (IOException | GeneralSecurityException ex) {
             throw invalid();
         }
+    }
+
+    /** Compara por SHA-256 sem gravar o conteúdo decifrado nem carregar o ficheiro inteiro. */
+    public boolean matchesPlain(Path encrypted, Path plain) throws IOException, GeneralSecurityException {
+        MessageDigest expected = MessageDigest.getInstance("SHA-256");
+        MessageDigest actual = MessageDigest.getInstance("SHA-256");
+        try (InputStream source = Files.newInputStream(plain);
+             DigestOutputStream sink = new DigestOutputStream(java.io.OutputStream.nullOutputStream(), expected)) {
+            source.transferTo(sink);
+        }
+        try (DataInputStream source = new DataInputStream(Files.newInputStream(encrypted));
+             DigestOutputStream sink = new DigestOutputStream(java.io.OutputStream.nullOutputStream(), actual)) {
+            readAll(source, sink);
+        }
+        return MessageDigest.isEqual(expected.digest(), actual.digest());
     }
 
     private void readAll(DataInputStream in, java.io.OutputStream out) throws IOException, GeneralSecurityException {
