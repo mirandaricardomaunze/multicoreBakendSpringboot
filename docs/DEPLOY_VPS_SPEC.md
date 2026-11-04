@@ -90,6 +90,29 @@ Config já ligada no compose:
 
 ---
 
+## Actualizar os postos (programa desktop)
+
+O servidor actualiza-se com `git pull` + `docker compose up -d --build`; todos os postos usam-no logo.
+O programa desktop é instalado em cada posto e actualiza-se assim:
+
+1. **Subir a versão** no computador de desenvolvimento: `mvn versions:set -DnewVersion=1.1.0` e commit.
+   É a versão que o programa envia ao servidor (`X-Client-Version`); sem subir, não se distingue
+   um posto antigo de um novo.
+2. **Gerar o instalador:** `scripts/build-windows-installer.ps1` (lê a versão do `pom.xml` e recusa
+   outra). Sai `dist/Multicore-instalador.exe`.
+3. **Publicar no VPS:** copiar o `.exe` para o servidor e correr
+   `./scripts/publicar-instalador.sh Multicore-instalador.exe`. Fica em
+   `https://<DOMAIN>/downloads/Multicore-instalador.exe` (o Caddy só serve ficheiros, sem listar a pasta).
+4. **Obrigar a actualizar (opcional):** no `.env`, `APP_CLIENT_MIN_VERSION=1.1.0` e
+   `docker compose up -d backend`. Um posto mais antigo é recusado no login com a mensagem de
+   actualização e o botão **Descarregar actualização**, que abre o endereço acima.
+   Publicar sempre o instalador **antes** de subir a versão mínima.
+
+O painel **Plataforma** mostra que versão cada empresa usa. `validar-producao.sh` confirma que o
+instalador está publicado.
+
+---
+
 ## Checklist de HARDENING (obrigatório antes de abrir os 443 ao público)
 
 | # | Item | Estado |

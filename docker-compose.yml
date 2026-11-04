@@ -47,6 +47,8 @@ services:
       # Sem esta chave o backend não arranca: os anexos clínicos ficam sempre cifrados.
       ATTACHMENT_KEY: ${ATTACHMENT_KEY:?defina ATTACHMENT_KEY no .env (openssl rand -base64 32)}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-}
+      # Programas desktop mais antigos do que esta versão recebem 426 e o botão de descarga.
+      APP_CLIENT_MIN_VERSION: ${APP_CLIENT_MIN_VERSION:-0.0.0}
       DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-20}
       DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-5}
       HTTP_MAX_THREADS: ${HTTP_MAX_THREADS:-200}
@@ -69,6 +71,8 @@ services:
       DOMAIN: ${DOMAIN:?defina DOMAIN no .env (ex. erp.exemplo.co.mz)}
     volumes:
       - ./deployment/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Instalador do desktop: scripts/publicar-instalador.sh copia-o para aqui.
+      - ./data/downloads:/srv/downloads:ro
       - caddy-data:/data
       - caddy-config:/config
     networks: [internal]

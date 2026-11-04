@@ -60,6 +60,7 @@ same "versão responde" "$(http "$BASE/api/version")" "200"
 same "API recusa sem sessão" "$(http "$BASE/api/platform/companies")" "401"
 same "actuator fechado ao exterior" "$(http "$BASE/actuator/health")" "404"
 if curl -sI -m 15 "$BASE/api/version" | grep -qi '^strict-transport-security:'; then ok "HSTS activo"; else falha "HSTS em falta"; fi
+same "instalador do desktop publicado" "$(http -I "$BASE/downloads/Multicore-instalador.exe")" "200"
 
 echo "== Senhas de demonstração =="
 for account in admin superadmin; do

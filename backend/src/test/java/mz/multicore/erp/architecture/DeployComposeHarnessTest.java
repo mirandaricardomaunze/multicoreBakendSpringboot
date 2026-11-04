@@ -25,4 +25,18 @@ class DeployComposeHarnessTest {
         assertThat(services.get("backend")).doesNotContainKey("ports");
         assertThat(services.get("caddy")).containsKey("ports");
     }
+
+    @Test
+    @DisplayName("DC-02: versão mínima do desktop chega ao backend e o instalador é servido em /downloads")
+    @SuppressWarnings("unchecked")
+    void clientUpdatesAreWired() throws Exception {
+        Map<String, Object> compose = new Yaml().load(Files.readString(Path.of("../docker-compose.yml")));
+        Map<String, Map<String, Object>> services = (Map<String, Map<String, Object>>) compose.get("services");
+
+        assertThat((Map<String, Object>) services.get("backend").get("environment")).containsKey("APP_CLIENT_MIN_VERSION");
+        assertThat((java.util.List<String>) services.get("caddy").get("volumes"))
+                .contains("./data/downloads:/srv/downloads:ro");
+        assertThat(Files.readString(Path.of("../deployment/Caddyfile"))).contains("handle /downloads/*", "file_server");
+        assertThat(Files.readString(Path.of("../scripts/publicar-instalador.sh"))).contains("Multicore-instalador.exe");
+    }
 }

@@ -15,6 +15,10 @@ public class AuthApiClient {
     }
 
     /** O que só a pessoa pode responder durante o login. Devolver null cancela. */
+    public String installerUrl() {
+        return config.installerUrl();
+    }
+
     public interface SecurityPrompts {
         String twoFactorCode();
         String newPassword();

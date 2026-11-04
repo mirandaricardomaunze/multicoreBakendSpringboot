@@ -10,6 +10,14 @@ public record DesktopApiConfig(String baseUrl) {
         baseUrl = normalize(baseUrl);
     }
 
+    /** Nome fixo com que o instalador é publicado em {@code <servidor>/downloads/}. */
+    public static final String INSTALLER_FILE = "Multicore-instalador.exe";
+
+    /** Onde os postos descarregam a versão nova: o próprio servidor, a pasta servida pelo Caddy. */
+    public String installerUrl() {
+        return baseUrl + "/downloads/" + INSTALLER_FILE;
+    }
+
     public static DesktopApiConfig from(Environment environment) {
         String configured = environment.getProperty("desktop.api.base-url", "http://localhost:8080");
         String persisted = DesktopLocalSettings.readBaseUrl(DesktopLocalSettings.settingsFile());

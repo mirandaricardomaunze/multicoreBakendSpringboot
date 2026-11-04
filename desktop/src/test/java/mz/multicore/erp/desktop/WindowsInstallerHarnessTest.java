@@ -20,6 +20,14 @@ class WindowsInstallerHarnessTest {
     }
 
     @Test
+    void installer_usesPomVersionAndPublishableName() throws Exception {
+        String script = Files.readString(ROOT.resolve("scripts/build-windows-installer.ps1"));
+        assertThat(script).contains("multicore-parent</artifactId><version>", "$Version -ne $pomVersion",
+                mz.multicore.erp.desktop.config.DesktopApiConfig.INSTALLER_FILE);
+        assertThat(script).doesNotContain("$Version = \"1.0.0\"");
+    }
+
+    @Test
     void apiConfiguration_livesOutsideInstallationDirectory() throws Exception {
         String settings = Files.readString(ROOT.resolve(
                 "desktop/src/main/java/mz/multicore/erp/desktop/config/DesktopLocalSettings.java"));

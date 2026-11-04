@@ -1,10 +1,18 @@
 param(
-    [string]$Version = "1.0.0",
+    # Vazio = a versão do pom.xml, a mesma que o programa envia ao servidor (X-Client-Version).
+    [string]$Version = "",
     [string]$OutputDirectory = "dist"
 )
 
 $ErrorActionPreference = "Stop"
 $workspace = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$pomVersion = [regex]::Match((Get-Content -Raw (Join-Path $workspace "pom.xml")),
+    '<artifactId>multicore-parent</artifactId><version>([^<]+)</version>').Groups[1].Value
+if (-not $pomVersion) { throw "Versão do pom.xml não encontrada." }
+if (-not $Version) { $Version = $pomVersion }
+if ($Version -ne $pomVersion) {
+    throw "A versão $Version difere do pom.xml ($pomVersion): o servidor veria outra versão. Use mvn versions:set."
+}
 $output = Join-Path $workspace $OutputDirectory
 $desktopTarget = Join-Path $workspace "desktop\target"
 $license = Join-Path $workspace "installer\LICENSE.txt"
@@ -48,6 +56,10 @@ try {
         --win-shortcut `
         --win-dir-chooser
     if ($LASTEXITCODE -ne 0) { throw "A criação do instalador falhou." }
+    # Nome fixo para publicar em <servidor>/downloads/ (scripts/publicar-instalador.sh).
+    $built = Join-Path $output "Multicore-$Version.exe"
+    Copy-Item -LiteralPath $built -Destination (Join-Path $output "Multicore-instalador.exe") -Force
+    Write-Host "Instalador $Version pronto: $output\Multicore-instalador.exe"
 } finally {
     Pop-Location
 }
