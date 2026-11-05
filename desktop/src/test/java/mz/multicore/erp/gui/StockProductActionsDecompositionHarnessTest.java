@@ -100,8 +100,10 @@ class StockProductActionsDecompositionHarnessTest {
                 .contains(".setConfirmButton(\"Actualizar\", \"fas-save\")")
                 .contains("dialog.setOnSaveAsync");
 
+        // Lote vencido é recusado logo no diálogo (como no servidor); validade só obrigatória em perecíveis.
         assertThat(batchDialog)
-                .contains("ModernMessageDialog.confirm(")
+                .contains("\"Validade expirada\"")
+                .contains("selectedDTO.tracksExpiry()")
                 .contains("ModernFormDialog");
     }
 }

@@ -92,16 +92,16 @@ public class ComercialApiClient {
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
         return createProduct(sku, reference, barcode, name, unitPrice, purchasePrice, minStock, unitsPerBox,
                 packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId, description,
-                wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+                wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null, null);
     }
     public ProductDTO createProduct(String sku, String reference, String barcode, String name, BigDecimal unitPrice,
             BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
             Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
-            Long businessUnitId) {
+            Long businessUnitId, Boolean tracksExpiry) {
         return productApiClient.createProduct(new CreateProductRequest(sku, reference, barcode, name, unitPrice, purchasePrice,
                 minStock, unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId,
-                description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId));
+                description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId, tracksExpiry));
     }
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
             BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
@@ -109,17 +109,17 @@ public class ComercialApiClient {
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg) {
         return updateProduct(id, reference, barcode, name, unitPrice, purchasePrice, minStock, unitsPerBox,
                 packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId, description,
-                wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null);
+                wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, null, null);
     }
     public ProductDTO updateProduct(Long id, String reference, String barcode, String name, BigDecimal unitPrice,
             BigDecimal purchasePrice, BigDecimal minStock, int unitsPerBox, int packagesPerBox, int unitsPerPackage,
             Long categoryId, String saleType, boolean stockTracked, Long taxRateId, String description,
             BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg,
-            Long businessUnitId) {
+            Long businessUnitId, Boolean tracksExpiry) {
         return productApiClient.updateProduct(id, new CreateProductRequest(null, reference, barcode, name, unitPrice,
                 purchasePrice, minStock, unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType,
                 stockTracked, taxRateId, description, wholesalePrice, wholesaleMinQty, netUnitWeightKg,
-                grossUnitWeightKg, businessUnitId));
+                grossUnitWeightKg, businessUnitId, tracksExpiry));
     }
     public void updateProductImage(Long productId, byte[] imageData) { productApiClient.updateProductImage(productId, imageData); }
 

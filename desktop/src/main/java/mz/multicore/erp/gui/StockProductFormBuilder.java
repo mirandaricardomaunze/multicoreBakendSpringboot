@@ -18,6 +18,15 @@ final class StockProductFormBuilder {
 
     private StockProductFormBuilder() {}
 
+    /** Perecível: compras e entradas de stock passam a exigir data de validade do lote. */
+    static JCheckBox perishableCheckBox() {
+        JCheckBox box = new JCheckBox("Produto perecível (exige validade nas entradas)");
+        box.setOpaque(false);
+        box.setForeground(UIHelper.TEXT_LIGHT);
+        box.setToolTipText("Desligue para loiça, mobília e outros artigos sem prazo de validade.");
+        return box;
+    }
+
     static JPanel createImageChooserPanel(StockPanel owner, byte[][] imageHolder) {
         JLabel imagePreview = new JLabel("Sem imagem", SwingConstants.CENTER);
         imagePreview.setPreferredSize(new Dimension(96, 96));

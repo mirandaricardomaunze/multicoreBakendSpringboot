@@ -87,11 +87,27 @@ public class StockMovementRegistrationService {
     private StockMovement registerEntry(Product product, Warehouse warehouse, BigDecimal quantity,
                                         StockMovementType movementType, String batchNumber, String serialNumber,
                                         String description, LocalDate expirationDate) {
+        requireExpiryForPerishableIntake(product, movementType, expirationDate);
         ProductBatch batch = productBatchService.addToBatch(product, warehouse, batchNumber, expirationDate, quantity);
         StockMovement movement = saveMovement(product, warehouse, quantity, movementType,
                 batch.getBatchNumber(), batch, serialNumber, description);
         adjustStock(product, warehouse, quantity);
         return movement;
+    }
+
+    /**
+     * Stock novo que chega de fora (compra ou entrada manual) de um produto perecível tem de trazer
+     * validade. Devoluções, estornos, transferências e acertos repõem stock já existente e ficam de fora.
+     */
+    static void requireExpiryForPerishableIntake(Product product, StockMovementType movementType,
+                                                 LocalDate expirationDate) {
+        boolean intake = movementType == StockMovementType.PURCHASE || movementType == StockMovementType.ENTRY;
+        if (intake && expirationDate == null && product != null && product.isTracksExpiry()) {
+            throw new BusinessRuleException(String.format(
+                    "O produto '%s' é perecível: indique a data de validade do lote. "
+                            + "Numa encomenda, edite a linha e preencha a validade antes de receber.",
+                    product.getName()));
+        }
     }
 
     private StockMovement registerExit(Product product, Warehouse warehouse, BigDecimal absQty,

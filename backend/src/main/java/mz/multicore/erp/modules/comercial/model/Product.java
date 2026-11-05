@@ -79,6 +79,10 @@ public class Product extends BaseEntity {
     @Column(name = "stock_tracked", nullable = false)
     private boolean stockTracked = true;
 
+    /** Perecível: compras e entradas manuais de stock exigem data de validade do lote. */
+    @Column(name = "tracks_expiry", nullable = false, columnDefinition = "boolean default false not null")
+    private boolean tracksExpiry = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private ProductCategory category;

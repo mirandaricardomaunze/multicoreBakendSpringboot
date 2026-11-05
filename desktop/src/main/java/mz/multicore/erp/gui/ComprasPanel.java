@@ -170,6 +170,7 @@ public class ComprasPanel extends JPanel {
         batchField = new JTextField(); UIHelper.styleTextField(batchField);
         serialField = new JTextField(); UIHelper.styleTextField(serialField);
         expirationField = new DateField();
+        expirationField.putClientProperty("JTextField.placeholderText", "Só obrigatória para perecíveis");
         purchaseVatField = new JTextField(); UIHelper.styleTextField(purchaseVatField);
         purchaseVatField.setToolTipText("Como vem na fatura do fornecedor (ex.: 16). Vazio = taxa do artigo.");
 
@@ -343,10 +344,21 @@ public class ComprasPanel extends JPanel {
         String serial = serialField.getText().trim();
         if (serial.isEmpty()) serial = null;
 
-        LocalDate expirationDate;
-        try {
-            expirationDate = expirationField.value();
-        } catch (IllegalArgumentException e) { return; }
+        // Validade só obrigatória em produtos perecíveis; loiça, mobília e afins entram sem validade.
+        LocalDate expirationDate = null;
+        if (!expirationField.getText().isBlank() || product.tracksExpiry()) {
+            try {
+                expirationDate = expirationField.value();
+            } catch (IllegalArgumentException e) {
+                if (expirationField.getText().isBlank()) {
+                    UIHelper.markFieldInvalid(expirationField,
+                            "'" + product.name() + "' é perecível: indique a validade (yyyy-MM-dd).");
+                }
+                return;
+            }
+        } else {
+            UIHelper.clearFieldInvalid(expirationField);
+        }
 
         BigDecimal invoiceTaxRate;
         try {
@@ -365,7 +377,7 @@ public class ComprasPanel extends JPanel {
 
         String lotSer = "";
         if (batch != null) lotSer += "L: " + batch + " ";
-        lotSer += "V: " + expirationDate + " ";
+        if (expirationDate != null) lotSer += "V: " + expirationDate + " ";
         if (serial != null) lotSer += "S: " + serial;
 
         BigDecimal shownRate = invoiceTaxRate != null ? invoiceTaxRate : product.effectiveTaxRate();

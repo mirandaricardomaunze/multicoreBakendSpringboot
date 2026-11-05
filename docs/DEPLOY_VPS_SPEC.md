@@ -49,8 +49,9 @@ GIT_COMMIT=$(git rev-parse HEAD) docker compose up -d --build
 docker compose logs -f backend     # acompanhar o arranque + Flyway
 ```
 
-No primeiro arranque o **Flyway** aplica `V1..V30` numa BD vazia (perfil `prod`: `validate` +
-`baseline-on-migrate`). Confirmar no log `Successfully applied N migrations`.
+No primeiro arranque o **Flyway** aplica todas as migrações de `backend/src/main/resources/db/migration`
+numa BD vazia (perfil `prod`: `validate` + `baseline-on-migrate`). Confirmar no log
+`Successfully applied N migrations`; `validar-producao.sh` compara a última aplicada com a do repositório.
 
 Verificar (smoke test pós-deploy — health, auth, login):
 ```bash

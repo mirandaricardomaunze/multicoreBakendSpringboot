@@ -98,22 +98,12 @@ public class ComercialController {
 
     @PostMapping("/products")
     public ResponseEntity<ProductDTO> createProduct(@RequestBody @Valid CreateProductRequest r) {
-        return ResponseEntity.ok(comercialService.createProduct(
-                r.sku(), r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
-                r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
-                r.stockTracked(), r.taxRateId(), r.description(),
-                r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg(),
-                r.businessUnitId()));
+        return ResponseEntity.ok(comercialService.createProduct(r));
     }
 
     @PutMapping("/products/{id}")
     public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id, @RequestBody @Valid CreateProductRequest r) {
-        return ResponseEntity.ok(comercialService.updateProduct(
-                id, r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
-                r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
-                r.stockTracked(), r.taxRateId(), r.description(),
-                r.wholesalePrice(), r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg(),
-                r.businessUnitId()));
+        return ResponseEntity.ok(comercialService.updateProduct(id, r));
     }
 
     @PostMapping(value = "/products/{id}/image", consumes = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE)

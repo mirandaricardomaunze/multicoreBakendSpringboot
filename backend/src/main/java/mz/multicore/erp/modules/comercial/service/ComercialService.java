@@ -471,6 +471,11 @@ public class ComercialService {
                 description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId);
     }
 
+    @Transactional
+    public ProductDTO createProduct(CreateProductRequest r) { return productCatalogService.createProduct(r); }
+    @Transactional
+    public ProductDTO updateProduct(Long id, CreateProductRequest r) { return productCatalogService.updateProduct(id, r); }
+
     @Transactional(readOnly = true)
     public ProductDTO findProductByBarcode(String barcode) { return productCatalogService.findProductByBarcode(barcode); }
 

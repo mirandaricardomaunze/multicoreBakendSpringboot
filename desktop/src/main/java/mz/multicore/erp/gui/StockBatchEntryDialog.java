@@ -123,9 +123,14 @@ final class StockBatchEntryDialog {
             return;
         }
 
-        // Validade opcional: produtos não perecíveis (loiça, mobília, ferragens) entram sem validade.
+        // Validade só obrigatória em produtos perecíveis; loiça, mobília e afins entram sem validade.
         String expRaw = expirationField.getText().trim();
         LocalDate expirationDate = null;
+        if (expRaw.isEmpty() && selectedDTO.tracksExpiry()) {
+            owner.showStockNotice(FeedbackType.ERROR, "Validade obrigatória",
+                    "'" + selectedDTO.name() + "' é perecível. Introduza a validade no formato yyyy-MM-dd.");
+            return;
+        }
         if (!expRaw.isEmpty()) {
             try {
                 expirationDate = LocalDate.parse(expRaw);
