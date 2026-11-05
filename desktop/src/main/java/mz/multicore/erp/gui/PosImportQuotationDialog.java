@@ -113,9 +113,7 @@ public class PosImportQuotationDialog extends JDialog {
         filterBar.setOpaque(false);
         filterBar.add(searchField, BorderLayout.CENTER);
 
-        ModernButton refreshBtn = UIHelper.createPrimaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 12, Color.WHITE));
-        refreshBtn.addActionListener(e -> loadOpenQuotations());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadOpenQuotations());
         filterBar.add(refreshBtn, BorderLayout.EAST);
 
         card.add(filterBar, BorderLayout.NORTH);

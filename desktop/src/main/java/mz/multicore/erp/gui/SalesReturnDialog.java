@@ -43,7 +43,7 @@ public class SalesReturnDialog {
         ));
 
         headerCard.add(createHeaderItem("Fatura Original:", invoice.invoiceNumber()));
-        headerCard.add(createHeaderItem("Cliente:", invoice.clientName() != null ? invoice.clientName() : "Consumidor Final"));
+        headerCard.add(createHeaderItem("Cliente:", invoice.buyerName() != null ? invoice.buyerName() : "Consumidor Final"));
         headerCard.add(createHeaderItem("Total Fatura:", CURRENCY_FMT.format(invoice.totalAmount())));
         BigDecimal paid = invoice.amountPaid() != null ? invoice.amountPaid() : BigDecimal.ZERO;
         BigDecimal balance = invoice.totalAmount().subtract(paid);

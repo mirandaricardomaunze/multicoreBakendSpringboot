@@ -48,26 +48,14 @@ public final class PhysicalInventoryViewCoordinator {
 
     public static JPanel buildToolbar(
             JComboBox<String> sessionCombo, JLabel statusLabel, JLabel countModeLabel,
-            JTextField searchField, ModernButton refreshBtn, JTextField barcodeField,
+            JTextField searchField, JTextField barcodeField,
             JTextField manualQty, ModernButton recordBtn, ModernButton peekBtn
     ) {
-        // Duas linhas: lado a lado os grupos não cabem em 1366 px e o BorderLayout sobrepunha-os.
-        JPanel bar = new JPanel(new GridLayout(2, 1, 0, 6));
-        bar.setOpaque(false);
-        JPanel sessionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        sessionRow.setOpaque(false);
-        sessionRow.add(TableFilter.label("Sessão:", "fas-clipboard-list"));
-        sessionRow.add(sessionCombo); sessionRow.add(statusLabel); sessionRow.add(countModeLabel);
-        sessionRow.add(searchField); sessionRow.add(refreshBtn);
-        bar.add(sessionRow);
-
-        JPanel scanRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        scanRow.setOpaque(false);
-        scanRow.add(TableFilter.label("Bipar código / SKU:", "fas-barcode"));
-        scanRow.add(barcodeField); scanRow.add(TableFilter.label("Qtd:"));
-        scanRow.add(manualQty); scanRow.add(recordBtn); scanRow.add(peekBtn);
-        bar.add(scanRow);
-        return bar;
+        // Uma só linha, como nos outros ecrãs: sem espaço, a pesquisa e o selector encolhem em vez de sair da janela.
+        return TableFilter.bar(
+                TableFilter.label("Sessão:", "fas-clipboard-list"), sessionCombo, statusLabel, countModeLabel,
+                searchField, TableFilter.label("Bipar:", "fas-barcode"), barcodeField,
+                TableFilter.label("Qtd:"), manualQty, recordBtn, peekBtn);
     }
 
     public static void updateKpiAndButtons(
@@ -86,7 +74,8 @@ public final class PhysicalInventoryViewCoordinator {
         surplus.setText(String.format("%,.2f MT", session.totalSurplusValue()));
         deficit.setText(String.format("%,.2f MT", session.totalDeficitValue()));
         status.setText(" [" + session.status().getDescription() + "] ");
-        countMode.setText(session.blindCounting() ? "(Contagem Cega)" : "(Contagem Aberta)");
+        countMode.setText(session.blindCounting() ? "(Cega)" : "(Aberta)");
+        countMode.setToolTipText(session.blindCounting() ? "Contagem cega: quantidades esperadas ocultas" : "Contagem aberta");
 
         boolean isDraft = session.status() == InventoryStatus.DRAFT;
         boolean inProgress = session.status() == InventoryStatus.IN_PROGRESS;

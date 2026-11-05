@@ -89,6 +89,26 @@ class TableExportFilterTest {
         assertThat(request.rows().get(0).get(3)).as("célula vazia é vazia, não nula").isEmpty();
     }
 
+    @Test // CE-07
+    void valoresEQuantidadesSaemComoNoEcraENaoCrus() {
+        String[] columns = {"Nº", "Qtd", "Total", "Nota"};
+        DefaultTableModel model = new DefaultTableModel(new Object[][]{
+                {"FT-2026/1", new java.math.BigDecimal("4.000"), new java.math.BigDecimal("1460.00"), "<html><b>Paga</b></html>"}
+        }, columns);
+        JTable table = new JTable(model);
+        table.getColumnModel().getColumn(1).setCellRenderer(TableCellRenderers.quantity());
+        table.getColumnModel().getColumn(2).setCellRenderer(TableCellRenderers.money());
+
+        List<String> row = TableExportAction.snapshot("Movimentos Globais", table, List.of(0)).rows().get(0);
+
+        javax.swing.table.TableCellRenderer money = TableCellRenderers.money();
+        String onScreen = ((javax.swing.JLabel) money.getTableCellRendererComponent(
+                table, new java.math.BigDecimal("1460.00"), false, false, 0, 2)).getText();
+        assertThat(row.get(2)).as("o PDF repete o ecrã").isEqualTo(onScreen.trim()).doesNotContain("1460.00");
+        assertThat(row.get(1)).as("quantidade formatada").doesNotContain("4.000");
+        assertThat(row.get(3)).as("HTML de célula vira texto").isEqualTo("Paga");
+    }
+
     @Test // CE-05
     void oEcraDeClientesExportaOQueEstaFiltrado() throws Exception {
         Path panel = Path.of("src", "main", "java", "mz", "multicore", "erp", "gui",

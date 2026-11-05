@@ -65,9 +65,7 @@ public class BonusTab extends JPanel {
         statusFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
-        btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        btnRefresh.addActionListener(e -> reload());
+        ModernButton btnRefresh = UIHelper.createRefreshButton(() -> reload());
 
         ModernButton btnApprove = UIHelper.createSuccessButton("Aprovar Prémio");
         btnApprove.setIcon(UIHelper.icon("fas-check", 14));

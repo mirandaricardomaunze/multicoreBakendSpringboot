@@ -82,9 +82,7 @@ public class NotificationsPanel extends JPanel {
         openButton.setIcon(UIHelper.icon("fas-external-link-alt", 14));
         openButton.addActionListener(e -> openSelectedModule());
 
-        refreshButton = UIHelper.createSecondaryButton("Actualizar");
-        refreshButton.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshButton.addActionListener(e -> refreshData());
+        refreshButton = UIHelper.createRefreshButton(() -> refreshData());
 
         readingMenu = UIHelper.createActionMenuButton("Leitura")
                 .addAction("Marcar como lida", UIHelper.icon("fas-check", 14), this::markSelectedRead)

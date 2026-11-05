@@ -43,7 +43,7 @@ public final class TreasuryReceiptDialog {
         JComboBox<String> invoiceCombo = new JComboBox<>();
         UIHelper.styleComboBox(invoiceCombo);
         for (InvoiceDTO inv : approvedInvoices) {
-            invoiceCombo.addItem(inv.invoiceNumber() + " - " + inv.clientName() + " (" + String.format("%,.2f MT", inv.totalAmount()) + ")");
+            invoiceCombo.addItem(inv.invoiceNumber() + " - " + inv.buyerName() + " (" + String.format("%,.2f MT", inv.totalAmount()) + ")");
         }
 
         JComboBox<String> accountCombo = new JComboBox<>();

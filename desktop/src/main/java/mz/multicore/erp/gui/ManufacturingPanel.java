@@ -130,9 +130,7 @@ public final class ManufacturingPanel extends JPanel {
                 TableFilter.label("Estado:"), statusFilterCombo
         );
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> loadData());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadData());
 
         ActionMenuButton mfgActionsMenu = UIHelper.createActionMenuButton("Produção")
                 .addAction("Modo Coletor (Scanner)", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT_BLUE),

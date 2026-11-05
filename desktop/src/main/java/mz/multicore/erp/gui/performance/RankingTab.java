@@ -59,9 +59,7 @@ public class RankingTab extends JPanel {
         periodFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
-        btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        btnRefresh.addActionListener(e -> reload());
+        ModernButton btnRefresh = UIHelper.createRefreshButton(() -> reload());
 
         ModernButton btnPrint = UIHelper.createPrimaryButton("Imprimir Relatório PDF");
         btnPrint.setIcon(UIHelper.icon("fas-print", 14));

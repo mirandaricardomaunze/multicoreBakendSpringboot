@@ -24,7 +24,7 @@ public final class DebitNoteFormDialog {
     public static void show(JComponent parent, DebitNoteApiClient debitApiClient, List<InvoiceDTO> invoices,
                             Runnable onCreated, Consumer<Throwable> onError) {
         JComboBox<String> invoice = new JComboBox<>();
-        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.clientName());
+        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.buyerName());
         UIHelper.styleComboBox(invoice);
 
         JComboBox<String> reason = new JComboBox<>(DEBIT_REASONS);

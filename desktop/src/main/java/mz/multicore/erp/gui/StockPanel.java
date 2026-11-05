@@ -125,10 +125,8 @@ public class StockPanel extends JPanel {
                 .addAction("Editar Produto", UIHelper.icon("fas-edit", 14, UIHelper.PENDING_YELLOW), () -> editProductDialog(selectedStockProductId()))
                 .addAction("Etiquetas", UIHelper.icon("fas-barcode", 14, UIHelper.ACCENT), this::openLabelDialog);
 
-        ModernButton refreshAllBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshAllBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
+        ModernButton refreshAllBtn = UIHelper.createRefreshButton(() -> onPanelSelected());
         refreshAllBtn.setToolTipText("Actualizar dados de stock e armazéns");
-        refreshAllBtn.addActionListener(e -> onPanelSelected());
         topBar.add(UIHelper.actionsBar(refreshAllBtn, moreBtn, newProductBtn), BorderLayout.EAST);
         topBar.setVisible(false);
 

@@ -128,9 +128,7 @@ public class StockWastePanel extends JPanel {
         wasteSearchField.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.onTextChange(wasteSearchField, this::applyWasteFilters);
 
-        ModernButton reloadBtn = UIHelper.createSecondaryButton("Actualizar");
-        reloadBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        reloadBtn.addActionListener(e -> reloadData());
+        ModernButton reloadBtn = UIHelper.createRefreshButton(() -> reloadData());
 
         ModernButton registerBtn = UIHelper.createDangerButton("Registar Quebra");
         registerBtn.setIcon(UIHelper.icon("fas-plus", 14));

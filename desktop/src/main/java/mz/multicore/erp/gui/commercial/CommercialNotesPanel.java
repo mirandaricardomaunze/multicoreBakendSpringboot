@@ -286,7 +286,7 @@ public final class CommercialNotesPanel {
 
     private void showCreditDialog(List<InvoiceDTO> invoices) {
         JComboBox<String> invoice = new JComboBox<>();
-        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.clientName());
+        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.buyerName());
         UIHelper.styleComboBox(invoice);
         JComboBox<String> reason = new JComboBox<>(CREDIT_REASONS);
         UIHelper.styleComboBox(reason);

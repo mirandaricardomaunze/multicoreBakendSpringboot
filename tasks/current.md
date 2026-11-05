@@ -39,6 +39,17 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Decisões permanentes relevantes
 
+31. **Histórico POS com Entregue, Troco e Cliente Não Cadastrado:**
+    - A venda já gravava tudo; o histórico mostrava "Consumidor Final" e não tinha o pagamento.
+    - Comprador via `InvoiceDTO.buyerName()`; entregue e troco via `GET /api/pos/sales/payments`.
+    - SPEC e harness em `docs/POS_HISTORICO_PAGAMENTO_CLIENTE_SPEC.md`, `PosSalePaymentQueryServiceTest`
+      e `PosSalesHistoryPaymentHarnessTest`.
+
+30. **Botão Actualizar Unificado:**
+    - Todo o "Actualizar" vem de `UIHelper.createRefreshButton(...)`: mesma cor, ícone, dica e nome acessível.
+    - Nos cards com `tableCardTop`, fica no cabeçalho como primeira acção, como em Pedidos.
+    - SPEC e harness em `docs/BOTAO_ACTUALIZAR_UNIFICADO_SPEC.md` e `RefreshButtonUnificationHarnessTest`.
+
 29. **Cobertura Integral da Política de Permissões HTTP:**
     - Todos os mappings `/api/**` passam a ser inventariados automaticamente pelo contexto Spring.
     - Endpoint sem área explicitamente classificada reprova o build.

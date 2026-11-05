@@ -151,7 +151,7 @@ final class DashboardDataCoordinator {
         for (InvoiceDTO inv : invoices.stream().limit(4).toList()) {
             list.add(new RecentActivityWidget.ActivityEntry(
                     "inv_" + (idx++), "Fatura " + inv.invoiceNumber() + " (" + inv.status() + ")",
-                    "Total: " + String.format("%,.2f MT", inv.totalAmount()) + " · " + (inv.clientName() != null ? inv.clientName() : "Consumidor"),
+                    "Total: " + String.format("%,.2f MT", inv.totalAmount()) + " · " + (inv.buyerName() != null ? inv.buyerName() : "Consumidor"),
                     inv.createdAt() != null ? inv.createdAt().format(fmt) : "Hoje", "fas-file-invoice-dollar", UIHelper.ACCENT_BLUE));
         }
         for (PurchaseDTO pur : purchases.stream().limit(3).toList()) {

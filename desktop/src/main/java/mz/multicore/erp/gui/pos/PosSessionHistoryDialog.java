@@ -107,10 +107,7 @@ public class PosSessionHistoryDialog extends JDialog {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
         footer.setBackground(UIHelper.ROW_ALT);
 
-        ModernButton btnReload = UIHelper.createPrimaryButton("Actualizar");
-        btnReload.setIcon(UIHelper.icon("fas-sync-alt", 13, Color.WHITE));
-        btnReload.setForeground(Color.WHITE);
-        btnReload.addActionListener(e -> loadData());
+        ModernButton btnReload = UIHelper.createRefreshButton(() -> loadData());
 
         ModernButton btnPrintZ = UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)");
         btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));

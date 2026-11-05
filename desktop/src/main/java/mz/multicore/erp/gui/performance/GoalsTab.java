@@ -62,9 +62,7 @@ public class GoalsTab extends JPanel {
         periodFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Período:", periodFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
-        btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        btnRefresh.addActionListener(e -> reload());
+        ModernButton btnRefresh = UIHelper.createRefreshButton(() -> reload());
 
         ModernButton btnCancel = UIHelper.createDangerButton("Cancelar Meta");
         btnCancel.setIcon(UIHelper.icon("fas-ban", 14));

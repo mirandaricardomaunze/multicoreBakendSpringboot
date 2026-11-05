@@ -40,9 +40,7 @@ final class HRLiabilitiesPanel {
         tab.setOpaque(false);
         tab.setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> load());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> load());
 
         ActionMenuButton actionsBtn = UIHelper.createActionMenuButton("Apuramento")
                 .addAction("Apurar Período", UIHelper.icon("fas-calculator", 14), this::accrue)

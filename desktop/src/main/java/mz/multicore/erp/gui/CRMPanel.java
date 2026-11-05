@@ -65,9 +65,7 @@ public class CRMPanel extends JPanel {
         detailBtn.setIcon(UIHelper.icon("fas-folder-open", 14));
         detailBtn.setToolTipText("Ver o pedido, atribuir técnico, resolver, anular ou reabrir");
         detailBtn.addActionListener(e -> ticketActions.openSelectedTicket());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> refreshData());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> refreshData());
 
         ModernPanel ticketsCard = new ModernPanel(16);
         ticketsCard.setLayout(new BorderLayout());

@@ -26,9 +26,7 @@ final class ConfigSupportPanel {
         ModernButton viewBtn = UIHelper.createPrimaryButton("Ver / Responder");
         viewBtn.setIcon(UIHelper.icon("fas-comments", 14));
         viewBtn.addActionListener(e -> viewSupportTicket());
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> refresh());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> refresh());
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());

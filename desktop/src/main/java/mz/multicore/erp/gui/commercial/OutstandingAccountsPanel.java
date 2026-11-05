@@ -53,9 +53,7 @@ public final class OutstandingAccountsPanel extends JPanel {
                         () -> OutstandingAccountsOperationsCoordinator.openInstallments(this, comercialApiClient, selected(), this::refresh))
                 .addAction("Devolver Fatura", UIHelper.icon("fas-undo-alt", 14, UIHelper.REJECTED_RED),
                         () -> OutstandingAccountsOperationsCoordinator.openSalesReturn(this, comercialApiClient, selected(), this::refresh));
-        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> refresh());
+        ModernButton refresh = UIHelper.createRefreshButton(() -> refresh());
         add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);
@@ -158,7 +156,7 @@ public final class OutstandingAccountsPanel extends JPanel {
             if (!"-".equals(bu)) bus.add(bu);
             model.addRow(new Object[]{invoice.invoiceNumber(),
                     invoice.createdAt() == null ? "-" : invoice.createdAt().format(DATE),
-                    bu, invoice.clientName(), invoice.clientTaxId(), invoice.totalAmount(), paid,
+                    bu, invoice.buyerName(), invoice.clientTaxId(), invoice.totalAmount(), paid,
                     invoice.outstandingAmount(),
                     invoice.dueDate() == null ? "-" : invoice.dueDate().format(DATE),
                     invoice.daysOverdue() == 0 ? "—" : invoice.daysOverdue(),

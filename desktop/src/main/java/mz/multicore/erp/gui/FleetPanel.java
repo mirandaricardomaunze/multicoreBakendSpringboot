@@ -118,9 +118,7 @@ public final class FleetPanel extends JPanel {
                 TableFilter.label("Estado:"), statusFilterCombo
         );
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> loadVehicles());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadVehicles());
 
         ModernButton manifestBtn = UIHelper.createSecondaryButton("Manifestos de Carga");
         manifestBtn.setIcon(UIHelper.icon("fas-route", 14));
