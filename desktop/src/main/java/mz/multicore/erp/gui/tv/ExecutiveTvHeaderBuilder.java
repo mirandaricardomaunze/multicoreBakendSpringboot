@@ -38,7 +38,7 @@ public class ExecutiveTvHeaderBuilder {
 
     private final HeaderActions actions;
     private JPanel container;
-    private JLabel clockLabel;
+    private JLabel clockLabel, meetingBadgeLabel;
     private ModernButton themeToggleBtn;
     private ModernButton fullScreenBtn;
     private ModernButton autoSlideBtn;
@@ -78,16 +78,16 @@ public class ExecutiveTvHeaderBuilder {
         brandLbl.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
         brandBox.add(brandLbl);
 
-        JLabel badgeLbl = new JLabel("  SALA DE REUNIÕES  ");
-        badgeLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
-        badgeLbl.setForeground(UIHelper.PENDING_YELLOW);
-        badgeLbl.setOpaque(true);
-        badgeLbl.setBackground(new Color(245, 158, 11, 25));
-        badgeLbl.setBorder(BorderFactory.createCompoundBorder(
+        meetingBadgeLabel = new JLabel("  SALA DE REUNIÕES  ");
+        meetingBadgeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
+        meetingBadgeLabel.setForeground(lightMode ? new Color(146, 64, 14) : new Color(252, 211, 77));
+        meetingBadgeLabel.setOpaque(true);
+        meetingBadgeLabel.setBackground(lightMode ? new Color(255, 251, 235) : new Color(69, 26, 3));
+        meetingBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(245, 158, 11, 80), 1, true),
                 BorderFactory.createEmptyBorder(2, 6, 2, 6)
         ));
-        brandBox.add(badgeLbl);
+        brandBox.add(meetingBadgeLabel);
         row1.add(brandBox, BorderLayout.WEST);
 
         clockLabel = new JLabel("—");
@@ -195,6 +195,8 @@ public class ExecutiveTvHeaderBuilder {
             themeToggleBtn.setIcon(UIHelper.icon(lightMode ? "fas-moon" : "fas-sun", 12, UIHelper.PENDING_YELLOW));
         }
         if (clockLabel != null) clockLabel.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
+        if (meetingBadgeLabel != null) meetingBadgeLabel.setForeground(lightMode ? new Color(146, 64, 14) : new Color(252, 211, 77));
+        if (meetingBadgeLabel != null) meetingBadgeLabel.setBackground(lightMode ? new Color(255, 251, 235) : new Color(69, 26, 3));
     }
 
     public void setClockText(String text) { if (clockLabel != null) clockLabel.setText(text); }

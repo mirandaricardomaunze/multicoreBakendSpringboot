@@ -67,7 +67,7 @@ public final class ExecutiveTvUnitViewBuilder {
         titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
         titleLbl.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
         titleRow.add(titleLbl, BorderLayout.WEST);
-        titleRow.add(ExecutiveTvTheme.buildStatusBadge(pct), BorderLayout.EAST);
+        titleRow.add(ExecutiveTvTheme.buildStatusBadge(pct, lightMode), BorderLayout.EAST);
         focusCard.add(titleRow, BorderLayout.NORTH);
 
         GoalProgressBar bar = new GoalProgressBar(34);

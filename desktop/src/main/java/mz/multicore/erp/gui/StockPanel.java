@@ -189,7 +189,7 @@ public class StockPanel extends JPanel {
         warehouseFilterCombo = TableFilter.combo("Todos os armazéns");
         warehouseFilterCombo.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
         warehouseFilterCombo.addActionListener(e -> StockLevelsFilter.filterStocks(this));
-        stockStatusCombo = TableFilter.combo("Todos os estados", "Em stock", "Stock baixo (< 5)", "Sem stock");
+        stockStatusCombo = TableFilter.combo("Todos os estados", "Disponível", "Stock baixo (< 5)", "Sem stock");
         stockStatusCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         stockStatusCombo.addActionListener(e -> StockLevelsFilter.filterStocks(this));
         stockBusinessUnitCombo = TableFilter.combo("Todos os negócios");

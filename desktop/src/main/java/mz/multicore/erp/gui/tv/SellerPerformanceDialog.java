@@ -108,9 +108,9 @@ public class SellerPerformanceDialog extends JDialog {
 
         JLabel periodBadge = new JLabel("  PERÍODO: " + (periodLabel != null ? periodLabel.toUpperCase() : "MÊS ATUAL") + "  ");
         periodBadge.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        periodBadge.setForeground(UIHelper.PENDING_YELLOW);
+        periodBadge.setForeground(lightMode ? new Color(146, 64, 14) : new Color(252, 211, 77));
         periodBadge.setOpaque(true);
-        periodBadge.setBackground(new Color(245, 158, 11, 25));
+        periodBadge.setBackground(lightMode ? new Color(255, 251, 235) : new Color(69, 26, 3));
         periodBadge.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(245, 158, 11, 80), 1, true),
                 BorderFactory.createEmptyBorder(3, 8, 3, 8)

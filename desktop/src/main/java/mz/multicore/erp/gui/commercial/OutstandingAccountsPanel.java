@@ -28,7 +28,7 @@ public final class OutstandingAccountsPanel extends JPanel {
     private final POSApiClient posApiClient;
     private final DefaultTableModel model;
     private final JTable table;
-    private final JLabel agingSummary;
+    private final OutstandingAccountsAgingSummaryView agingSummary;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
     private final JComboBox<String> businessUnit;
     private List<InvoiceDTO> invoices = new ArrayList<>();
@@ -77,22 +77,22 @@ public final class OutstandingAccountsPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
 
         JTextField search = TableFilter.searchField("Nº fatura, cliente ou NUIT…");
-        search.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
+        search.setPreferredSize(new Dimension(200, UIHelper.FORM_CONTROL_HEIGHT));
         businessUnit = TableFilter.combo("Todos os negócios");
         UIHelper.styleComboBox(businessUnit);
-        businessUnit.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
+        businessUnit.setPreferredSize(new Dimension(165, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> status = TableFilter.combo("Todos os estados", "Aprovado", "Parcialmente paga");
         UIHelper.styleComboBox(status);
-        status.setPreferredSize(new Dimension(130, UIHelper.FORM_CONTROL_HEIGHT));
+        status.setPreferredSize(new Dimension(165, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> aging = TableFilter.combo(agingLabels());
         UIHelper.styleComboBox(aging);
-        aging.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
+        aging.setPreferredSize(new Dimension(175, UIHelper.FORM_CONTROL_HEIGHT));
 
         JComboBox<String> period = TableFilter.periodCombo();
         UIHelper.styleComboBox(period);
-        period.setPreferredSize(new Dimension(120, UIHelper.FORM_CONTROL_HEIGHT));
+        period.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
 
         TableFilter.install(table, search,
                 List.of(new TableFilter.ColumnFilter(businessUnit, 2),
@@ -110,14 +110,12 @@ public final class OutstandingAccountsPanel extends JPanel {
                 search,
                 TableFilter.label("Negócio:"), businessUnit,
                 TableFilter.label("Estado:"), status,
-                TableFilter.label("Antiguidade:"), aging,
-                TableFilter.label("Período:"), period,
+                TableFilter.label("Idade:"), aging,
+                TableFilter.label("Data:"), period,
                 peekToggleBtn
         );
         filters.setBorder(new EmptyBorder(0, 0, 8, 0));
-        agingSummary = new JLabel(" ");
-        agingSummary.setForeground(UIHelper.TEXT_LIGHT);
-        agingSummary.setBorder(new EmptyBorder(4, 2, 0, 2));
+        agingSummary = new OutstandingAccountsAgingSummaryView();
         JPanel filterHeader = new JPanel(new BorderLayout(0, 4));
         filterHeader.setOpaque(false);
         filterHeader.add(filters, BorderLayout.NORTH);
@@ -147,8 +145,7 @@ public final class OutstandingAccountsPanel extends JPanel {
         UIHelper.loadAsync(this, () -> comercialApiClient.getOutstandingInvoicesByCompany(companyId), this::apply,
                 error -> showError("carregar contas correntes", error));
         UIHelper.loadAsync(this, comercialApiClient::getReceivablesAging,
-                summary -> agingSummary.setText(OutstandingAccountsOperationsCoordinator.formatAgingSummary(summary)),
-                error -> agingSummary.setText(" "));
+                agingSummary::showSummary, error -> agingSummary.clear());
     }
 
     private void apply(List<InvoiceDTO> loaded) {

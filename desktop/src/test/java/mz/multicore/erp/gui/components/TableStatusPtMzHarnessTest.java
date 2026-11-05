@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.JLabel;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.Component;
@@ -166,6 +169,23 @@ class TableStatusPtMzHarnessTest {
         javax.swing.JLabel label4 = (javax.swing.JLabel) comp4;
         assertEquals("Encomendado", label4.getText());
         assertEquals(UIHelper.PENDING_YELLOW, label4.getForeground());
+    }
+
+    @Test
+    void statusRenderer_showsPlainTableTextInsteadOfButtonLikeBadge() {
+        JTable table = new JTable(new DefaultTableModel(new Object[][]{{"Em stock"}}, new Object[]{"Estado"}));
+        TableCellRenderer renderer = TableCellRenderers.status();
+
+        JLabel normal = (JLabel) renderer.getTableCellRendererComponent(table, "Em stock", false, false, 0, 0);
+        assertEquals("Disponível", normal.getText());
+        assertEquals(UIHelper.APPROVED_GREEN, normal.getForeground());
+        assertEquals(SwingConstants.LEFT, normal.getHorizontalAlignment());
+        assertEquals(table.getBackground(), normal.getBackground());
+        assertThat(normal.getBorder()).isInstanceOf(EmptyBorder.class);
+
+        JLabel selected = (JLabel) renderer.getTableCellRendererComponent(table, "Em stock", true, false, 0, 0);
+        assertEquals(table.getSelectionBackground(), selected.getBackground());
+        assertEquals(table.getSelectionForeground(), selected.getForeground());
     }
 
     @Test

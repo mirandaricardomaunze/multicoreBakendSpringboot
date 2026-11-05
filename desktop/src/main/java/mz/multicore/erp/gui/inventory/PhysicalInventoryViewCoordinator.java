@@ -51,21 +51,22 @@ public final class PhysicalInventoryViewCoordinator {
             JTextField searchField, ModernButton refreshBtn, JTextField barcodeField,
             JTextField manualQty, ModernButton recordBtn, ModernButton peekBtn
     ) {
-        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        // Duas linhas: lado a lado os grupos não cabem em 1366 px e o BorderLayout sobrepunha-os.
+        JPanel bar = new JPanel(new GridLayout(2, 1, 0, 6));
         bar.setOpaque(false);
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
-        left.add(TableFilter.label("Sessão:", "fas-clipboard-list"));
-        left.add(sessionCombo); left.add(statusLabel); left.add(countModeLabel);
-        left.add(searchField); left.add(refreshBtn);
-        bar.add(left, BorderLayout.WEST);
+        JPanel sessionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        sessionRow.setOpaque(false);
+        sessionRow.add(TableFilter.label("Sessão:", "fas-clipboard-list"));
+        sessionRow.add(sessionCombo); sessionRow.add(statusLabel); sessionRow.add(countModeLabel);
+        sessionRow.add(searchField); sessionRow.add(refreshBtn);
+        bar.add(sessionRow);
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        right.setOpaque(false);
-        right.add(TableFilter.label("Bipar Barcode / SKU:", "fas-barcode"));
-        right.add(barcodeField); right.add(TableFilter.label("Qtd:"));
-        right.add(manualQty); right.add(recordBtn); right.add(peekBtn);
-        bar.add(right, BorderLayout.EAST);
+        JPanel scanRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        scanRow.setOpaque(false);
+        scanRow.add(TableFilter.label("Bipar código / SKU:", "fas-barcode"));
+        scanRow.add(barcodeField); scanRow.add(TableFilter.label("Qtd:"));
+        scanRow.add(manualQty); scanRow.add(recordBtn); scanRow.add(peekBtn);
+        bar.add(scanRow);
         return bar;
     }
 

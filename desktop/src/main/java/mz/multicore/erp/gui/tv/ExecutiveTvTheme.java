@@ -39,7 +39,7 @@ public final class ExecutiveTvTheme {
     }
 
     public static Color getHeaderBgColor(boolean lightMode) {
-        return lightMode ? new Color(255, 255, 255, 245) : new Color(15, 23, 42, 245);
+        return lightMode ? Color.WHITE : new Color(15, 23, 42);
     }
 
     public static JPanel buildTvKpi(String title, String value, String subtitle, Color accentColor, boolean lightMode) {
@@ -72,6 +72,10 @@ public final class ExecutiveTvTheme {
     }
 
     public static JLabel buildStatusBadge(double pct) {
+        return buildStatusBadge(pct, UIHelper.isLight());
+    }
+
+    public static JLabel buildStatusBadge(double pct, boolean lightMode) {
         JLabel badge = new JLabel();
         badge.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         badge.setOpaque(true);
@@ -82,19 +86,19 @@ public final class ExecutiveTvTheme {
         if (pct >= 100.0) {
             text = "  META SUPERADA  ";
             fg = new Color(16, 185, 129);
-            bg = new Color(16, 185, 129, 30);
+            bg = lightMode ? new Color(236, 253, 245) : new Color(6, 78, 59);
         } else if (pct >= 80.0) {
             text = "  NO RITMO  ";
             fg = new Color(59, 130, 246);
-            bg = new Color(59, 130, 246, 30);
+            bg = lightMode ? new Color(239, 246, 255) : new Color(30, 58, 95);
         } else if (pct >= 50.0) {
             text = "  ATENÇÃO  ";
             fg = new Color(245, 158, 11);
-            bg = new Color(245, 158, 11, 30);
+            bg = lightMode ? new Color(255, 251, 235) : new Color(69, 26, 3);
         } else {
             text = "  ALERTA  ";
             fg = new Color(239, 68, 68);
-            bg = new Color(239, 68, 68, 30);
+            bg = lightMode ? new Color(254, 242, 242) : new Color(69, 10, 10);
         }
 
         badge.setText(text);
