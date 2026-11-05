@@ -187,7 +187,8 @@ public class StockQueryService {
                 product.getUnitPrice() != null ? product.getUnitPrice() : BigDecimal.ZERO,
                 product.getUnitsPerBox(),
                 product.getBusinessUnit() != null ? product.getBusinessUnit().getId() : null,
-                product.getBusinessUnit() != null ? product.getBusinessUnit().getName() : null
+                product.getBusinessUnit() != null ? product.getBusinessUnit().getName() : null,
+                product.isTracksExpiry()
         );
     }
 }

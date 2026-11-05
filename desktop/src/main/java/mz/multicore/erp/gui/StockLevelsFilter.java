@@ -100,6 +100,8 @@ final class StockLevelsFilter {
                 case 2 -> qty.compareTo(BigDecimal.ZERO) > 0
                         && qty.compareTo(lowThreshold) < 0 ? 1 : 0;                    // Stock baixo
                 case 3 -> qty.compareTo(BigDecimal.ZERO) <= 0 ? 1 : 0;       // Sem stock
+                case 4 -> s.tracksExpiry() ? 1 : 0;                           // Perecíveis
+                case 5 -> s.tracksExpiry() ? 0 : 1;                           // Sem validade
                 default -> 1;
             };
             if (statusOk == 0) continue;
@@ -126,7 +128,8 @@ final class StockLevelsFilter {
                     hide ? MASK : String.format("%,.2f", qty),
                     hide ? MASK : String.format("%,.2f", qtyBoxes),
                     price,
-                    hide ? MASK : estado
+                    hide ? MASK : estado,
+                    s.tracksExpiry() ? "Perecível" : "Sem validade"
             });
             panel.stockRowProductIds.add(s.productId());
         }

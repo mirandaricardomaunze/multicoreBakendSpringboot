@@ -190,7 +190,7 @@ public class StockPanel extends JPanel {
         warehouseFilterCombo = TableFilter.combo("Todos os armazéns");
         warehouseFilterCombo.setPreferredSize(new Dimension(145, UIHelper.FORM_CONTROL_HEIGHT));
         warehouseFilterCombo.addActionListener(e -> StockLevelsFilter.filterStocks(this));
-        stockStatusCombo = TableFilter.combo("Todos os estados", "Disponível", "Stock baixo (< 5)", "Sem stock");
+        stockStatusCombo = TableFilter.combo("Todos os estados", "Disponível", "Stock baixo (< 5)", "Sem stock", "Perecíveis", "Sem validade");
         stockStatusCombo.setPreferredSize(new Dimension(135, UIHelper.FORM_CONTROL_HEIGHT));
         stockStatusCombo.addActionListener(e -> StockLevelsFilter.filterStocks(this));
         stockBusinessUnitCombo = TableFilter.combo("Todos os negócios");
@@ -222,7 +222,7 @@ public class StockPanel extends JPanel {
         card.setBorder(new EmptyBorder(8, 12, 8, 12));
         card.add(UIHelper.tableCardTop("Níveis de Stock", filtersRow, refreshLevelsBtn, printMenu, levelsMoreBtn, cardNewProductBtn), BorderLayout.NORTH);
 
-        String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Negócio", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado"};
+        String[] stockCols = {"Código de Barras", "Referência", "Nome do Produto", "Negócio", "Qtd Unidades", "Qtd Caixas", "Preço", "Estado", "Validade"};
         stockModel = new DefaultTableModel(stockCols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };

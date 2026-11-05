@@ -25,14 +25,20 @@ a encomenda só bloqueia a edição depois da primeira recepção.
 A V111 marca como perecíveis os produtos que já tinham pelo menos um lote com validade real
 (`expiration_date < 9999-01-01`). Os restantes ficam não perecíveis.
 
+**Rever a marcação:** em Stock › Níveis de Stock, a coluna **Validade** mostra "Perecível" ou
+"Sem validade" (`StockDTO.tracksExpiry`), e o filtro de estado tem as opções **Perecíveis** e
+**Sem validade**. Um produto mal marcado corrige-se em Editar Produto.
+
 ## Compatibilidade HTTP
 
-- `ProductDTO.tracksExpiry` (boolean) foi acrescentado no fim do record, com um construtor compatível.
+- `ProductDTO.tracksExpiry` e `StockDTO.tracksExpiry` (boolean) foram acrescentados no fim do record,
+  cada um com um construtor compatível.
 - `CreateProductRequest.tracksExpiry` é `Boolean`: `null` (cliente anterior) mantém o valor actual na
   edição e vale `false` na criação.
 
 ## Testes
 
 - `PerishableIntakeRuleTest`: tipos de movimento abrangidos e excluídos.
+- `StockPerishableFilterTest`: coluna Validade e filtros Perecíveis / Sem validade.
 - `StockProductActionsDecompositionHarnessTest` (SPAD-04): o diálogo de lote recusa lotes vencidos e
   respeita `tracksExpiry`.

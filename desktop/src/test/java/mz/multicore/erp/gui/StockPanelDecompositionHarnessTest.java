@@ -79,7 +79,7 @@ public class StockPanelDecompositionHarnessTest {
                 assertNotNull(panel.kpiTransfersCompleted);
                 assertNotNull(panel.kpiTransfersTotalValue);
 
-                assertEquals(8, panel.stockTable.getColumnCount(), "A tabela de stock deve possuir 8 colunas");
+                assertEquals(9, panel.stockTable.getColumnCount(), "A tabela de stock deve possuir 9 colunas (inclui Validade)");
                 assertEquals(9, panel.movementsTable.getColumnCount(), "A tabela de movimentos deve possuir 9 colunas");
                 assertEquals(9, panel.transferTable.getColumnCount(), "A tabela de transferências deve possuir 9 colunas");
             } finally {

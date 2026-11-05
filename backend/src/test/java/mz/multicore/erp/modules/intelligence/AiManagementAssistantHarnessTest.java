@@ -41,7 +41,8 @@ class AiManagementAssistantHarnessTest {
     void desktopUsesOnlyHttpsContractAndCanonicalAsyncUi() throws Exception {
         String client = source("desktop/src/main/java/mz/multicore/erp/desktop/client/AiAssistantApiClient.java");
         String panel = desktopAssistantSources();
-        String frame = source("desktop/src/main/java/mz/multicore/erp/gui/MainFrame.java");
+        String frame = source("desktop/src/main/java/mz/multicore/erp/gui/MainFrame.java")
+                + source("desktop/src/main/java/mz/multicore/erp/gui/MainFrameModuleTitles.java");
         assertThat(client).contains("DesktopClientFactory", "/api/intelligence/management-assistant/ask")
                 .doesNotContain("API_KEY", "MULTICORE_AI", "HttpClient");
         assertThat(panel).contains("ModernPanel(16)", "UIHelper.submitAsync", "InlineFeedbackPanel")
