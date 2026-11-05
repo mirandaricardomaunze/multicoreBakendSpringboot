@@ -31,6 +31,7 @@ public class StockPanel extends JPanel {
     private final StockInventoryCountActions inventoryCountActions;
     final StockWarehousesPanel warehousesPanel;
     private final StockCategoriesPanel categoriesPanel;
+    private StockSideScreen warehousesScreen, categoriesScreen; // cadastros com ecrã próprio no menu lateral
     private final StockAlertsPanel alertsPanel;
     private final StockBatchesPanel batchesPanel;
     private final StockWastePanel wastePanel;
@@ -111,7 +112,7 @@ public class StockPanel extends JPanel {
 
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setOpaque(false);
-        topBar.add(UIHelper.createHeading("Controle de Stock & Armazéns"), BorderLayout.WEST);
+        topBar.add(UIHelper.createHeading("Controle de Stock"), BorderLayout.WEST);
 
         ModernButton newProductBtn = UIHelper.createSuccessButton("Registar Produto");
         newProductBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -152,8 +153,8 @@ public class StockPanel extends JPanel {
         stockTabs.addTab("Lotes & Validades", UIHelper.icon("fas-calendar-times", 16, UIHelper.ACCENT_ORANGE), batchesPanel.buildPanel());
         stockTabs.addTab("Movimentos & Rastreabilidade", UIHelper.icon("fas-clipboard-list", 16, UIHelper.ACCENT_BLUE), buildMovementsTab());
         stockTabs.addTab("Transferências entre Armazéns", UIHelper.icon("fas-truck", 16, UIHelper.ACCENT), buildTransfersTab());
-        stockTabs.addTab("Gestão de Armazéns", UIHelper.icon("fas-warehouse", 16, UIHelper.ACCENT_CYAN), warehousesPanel.buildPanel());
-        stockTabs.addTab("Categorias", UIHelper.icon("fas-tags", 16, UIHelper.ACCENT_PINK), categoriesPanel.buildPanel());
+        warehousesScreen = new StockSideScreen(warehousesPanel.buildPanel(), () -> { warehouseCoordinator.loadWarehouses(); warehouseCoordinator.loadStocks(); warehousesPanel.refresh(); });
+        categoriesScreen = new StockSideScreen(categoriesPanel.buildPanel(), categoriesPanel::refresh);
         stockTabs.addTab("Quebras & Desperdício", UIHelper.icon("fas-trash-alt", 16, UIHelper.REJECTED_RED), wastePanel);
         if (physicalInventoryPanel != null) {
             stockTabs.addTab("Inventário Físico", UIHelper.icon("fas-clipboard-check", 16, UIHelper.APPROVED_GREEN), physicalInventoryPanel);
@@ -306,7 +307,7 @@ public class StockPanel extends JPanel {
                 TableFilter.label("Artigo:"), movementProductFilter, TableFilter.label("Tipo:"), mvTipo, TableFilter.label("De:"), movementFrom, TableFilter.label("Até:"), movementTo);
         mvFilters.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        ModernButton refreshMovBtn = UIHelper.createRefreshButton(this::loadMovements);
+        ModernButton refreshMovBtn = UIHelper.createRefreshButton(movementsCoordinator::loadMovements);
         ModernButton printMovBtn = UIHelper.createSecondaryButton("Imprimir movimentos");
         printMovBtn.setIcon(UIHelper.icon("fas-print", 14, UIHelper.ACCENT_BLUE));
         printMovBtn.addActionListener(e -> movementsCoordinator.printFilteredMovements(movementProductFilter, movementFrom, movementTo));
@@ -424,7 +425,6 @@ public class StockPanel extends JPanel {
         UIHelper.loadAsync(this, () -> stockTransferApiClient.findByCompany(companyId), transferActions::applyTransfers,
                 error -> showStockLoadError("transferências", error));
     }
-    private void loadMovements() { movementsCoordinator.loadMovements(); }
     void loadStocks() { warehouseCoordinator.loadStocks(); }
     Long selectedStockProductId() { return warehouseCoordinator.selectedStockProductId(); }
     void openLabelDialog() { warehouseCoordinator.openLabelDialog(); }
@@ -441,8 +441,10 @@ public class StockPanel extends JPanel {
     void editProductDialog(Long productId) { productActions.editProductDialog(productId); }
     void showProductDetailDialog(Long productId) { StockProductDetailDialog.showFor(this, productId); }
     void exportMovementsTable(String title, String baseName) { TableExportAction.export(this, printApiClient, movementsTable, title, baseName); }
-    void showStockLoadError(String area, Throwable error) { feedback.show(FeedbackType.ERROR, "Não foi possível carregar " + area, error.getMessage(), "Tentar novamente", this::onPanelSelected); }
+    public StockSideScreen warehousesScreen() { return warehousesScreen; }  public StockSideScreen categoriesScreen() { return categoriesScreen; }
+    private InlineFeedbackPanel activeFeedback() { return StockSideScreen.visibleFeedback(feedback, warehousesScreen, categoriesScreen); }
+    void showStockLoadError(String area, Throwable error) { activeFeedback().show(FeedbackType.ERROR, "Não foi possível carregar " + area, error.getMessage(), "Tentar novamente", this::onPanelSelected); }
     void showStockError(Throwable error) { showStockNotice(FeedbackType.ERROR, "Não foi possível concluir a operação", error.getMessage()); }
-    void showStockNotice(FeedbackType type, String title, String message) { feedback.show(type, title, message, null, null); }
+    void showStockNotice(FeedbackType type, String title, String message) { activeFeedback().show(type, title, message, null, null); }
     void showStockSuccess(String message) { ToastManager.success(this, message); }
 }

@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 public class SidebarFavoritesManager {
 
     private static final Logger LOGGER = Logger.getLogger(SidebarFavoritesManager.class.getName());
-    private static final List<String> DEFAULT_FAVORITES = List.of("Painel Inicial", "POS — Caixa", "Stock & Armazéns");
+    private static final List<String> DEFAULT_FAVORITES = List.of("Painel Inicial", "POS — Caixa", "Stock");
     private static final SidebarFavoritesManager INSTANCE = new SidebarFavoritesManager();
 
     private final List<String> favorites = new CopyOnWriteArrayList<>();
@@ -133,8 +133,8 @@ public class SidebarFavoritesManager {
                 String inner = content.substring(1, content.length() - 1);
                 String[] parts = inner.split(",");
                 for (String p : parts) {
-                    String clean = p.trim().replace("\"", "");
-                    if (!clean.isBlank()) {
+                    String clean = renamedLabel(p.trim().replace("\"", ""));
+                    if (!clean.isBlank() && !isFavorite(clean)) {
                         favorites.add(clean);
                     }
                 }
@@ -148,6 +148,11 @@ public class SidebarFavoritesManager {
         if (favorites.isEmpty()) {
             favorites.addAll(DEFAULT_FAVORITES);
         }
+    }
+
+    /** Itens do menu que mudaram de nome: o favorito guardado continua a apontar para o mesmo ecrã. */
+    static String renamedLabel(String label) {
+        return "Stock & Armazéns".equalsIgnoreCase(label) ? "Stock" : label;
     }
 
     private synchronized void saveFavorites() {

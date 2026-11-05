@@ -61,7 +61,9 @@ final class MainFrameSidebarBuilder {
             if (comercialPanel != null) comercialPanel.showCustomerOrders();
         });
         sb.addItem(UIHelper.icon("fas-shopping-cart", 16, UIHelper.MODULE_COMPRAS), "Compras", UIHelper.MODULE_COMPRAS, () -> navigate.accept("compras"));
-        sb.addItem(UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), "Stock & Armazéns", UIHelper.MODULE_STOCK, () -> navigate.accept("stock"));
+        sb.addItem(UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), "Stock", UIHelper.MODULE_STOCK, () -> navigate.accept("stock"));
+        sb.addItem(UIHelper.icon("fas-warehouse", 16, UIHelper.ACCENT_CYAN), "Armazéns", UIHelper.ACCENT_CYAN, () -> navigate.accept("armazens"));
+        sb.addItem(UIHelper.icon("fas-tags", 16, UIHelper.ACCENT_PINK), "Categorias", UIHelper.ACCENT_PINK, () -> navigate.accept("categorias"));
         sb.addItem(UIHelper.icon("fas-exchange-alt", 16, UIHelper.ACCENT_BLUE), "Movimentos", UIHelper.ACCENT_BLUE, () -> {
             navigate.accept("comercial");
             if (comercialPanel != null) comercialPanel.showMovements();

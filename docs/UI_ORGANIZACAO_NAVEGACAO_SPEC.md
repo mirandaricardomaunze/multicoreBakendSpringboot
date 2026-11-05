@@ -21,7 +21,9 @@ Profissionalizar a entrada do sistema (`LoginDialog`) e a organização estrutur
      - POS — Caixa (`pos`)
      - Vendas & Pedidos (`comercial`)
      - Compras & Fornecedores (`compras`)
-     - Stock & Armazéns (`stock`)
+     - Stock (`stock`): níveis, alertas, lotes, movimentos, transferências, quebras, inventário físico
+     - Armazéns (`armazens`) e Categorias (`categorias`): cadastros com ecrã próprio (`StockSideScreen`),
+       antes abas escondidas dentro de Stock. O favorito antigo "Stock & Armazéns" passa a "Stock".
    - **GESTÃO & CRM**:
      - Tesouraria (`financeiro`)
      - Recursos Humanos (`hr`)
