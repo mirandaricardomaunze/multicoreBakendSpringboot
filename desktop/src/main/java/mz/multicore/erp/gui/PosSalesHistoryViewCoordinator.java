@@ -3,6 +3,7 @@ package mz.multicore.erp.gui;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.POSSalesSummaryDTO;
+import mz.multicore.erp.modules.pos.dto.PosSalePaymentSummaryDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -54,10 +56,24 @@ final class PosSalesHistoryViewCoordinator {
         JLabel cap = new JLabel(caption);
         cap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         cap.setForeground(UIHelper.TEXT_MUTED);
-        chip.add(icon);
-        chip.add(cap);
-        chip.add(value);
+        chip.add(icon); chip.add(cap); chip.add(value);
         return chip;
+    }
+
+    /** Linha do histórico: comprador real (cliente não cadastrado incluído), valor entregue e troco gravados. */
+    static Object[] historyRow(InvoiceDTO inv, PosSalePaymentSummaryDTO payment) {
+        String buyer = inv.buyerName();
+        String buName = inv.businessUnitName() != null && !inv.businessUnitName().isBlank() ? inv.businessUnitName() : "—";
+        return new Object[]{
+                inv.id(), inv.invoiceNumber(),
+                inv.createdAt() != null ? inv.createdAt().format(DTF) : "—",
+                inv.createdBy() != null ? inv.createdBy() : "—",
+                buyer != null && !buyer.isBlank() ? buyer : "—",
+                inv.totalAmount(),
+                payment != null ? payment.tenderedAmount() : "—",
+                payment != null ? payment.changeGiven() : "—",
+                inv.status() != null ? inv.status().name() : "—", buName
+        };
     }
 
     DateRange selectedDateRange(JComboBox<String> periodCombo) {
@@ -74,18 +90,12 @@ final class PosSalesHistoryViewCoordinator {
     }
 
     void applySalesHistory(POSPanel owner, List<InvoiceDTO> loaded, long totalOnServer,
-                           POSSalesSummaryDTO summary, JComboBox<String> businessUnitCombo) {
+                           POSSalesSummaryDTO summary, JComboBox<String> businessUnitCombo,
+                           Map<Long, PosSalePaymentSummaryDTO> payments) {
         owner.salesHistoryList = loaded;
         owner.salesHistoryModel.setRowCount(0);
         for (var inv : owner.salesHistoryList) {
-            String buName = inv.businessUnitName() != null && !inv.businessUnitName().isBlank() ? inv.businessUnitName() : "—";
-            owner.salesHistoryModel.addRow(new Object[]{
-                    inv.id(), inv.invoiceNumber(),
-                    inv.createdAt() != null ? inv.createdAt().format(DTF) : "—",
-                    inv.createdBy() != null ? inv.createdBy() : "—",
-                    inv.clientName() != null ? inv.clientName() : "—",
-                    inv.totalAmount(), inv.status() != null ? inv.status().name() : "—", buName
-            });
+            owner.salesHistoryModel.addRow(historyRow(inv, payments == null ? null : payments.get(inv.id())));
         }
         BigDecimal total = owner.salesHistoryList.stream()
                 .map(InvoiceDTO::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);

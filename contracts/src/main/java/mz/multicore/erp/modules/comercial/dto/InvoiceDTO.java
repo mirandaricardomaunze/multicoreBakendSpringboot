@@ -71,6 +71,15 @@ public record InvoiceDTO(
                 dueDate, daysOverdue, agingBucket, null, null, null);
     }
 
+    /**
+     * Nome a mostrar como comprador. Numa venda a cliente não cadastrado, {@code clientName} é o registo
+     * genérico ("Consumidor Final") e o nome real está em {@code customerName}.
+     */
+    public String buyerName() {
+        if (customerName != null && !customerName.isBlank()) return customerName;
+        return clientName;
+    }
+
     /** Saldo por liquidar — espelha {@code Invoice.outstandingAmount()} para a UI não o recalcular. */
     public BigDecimal outstandingAmount() {
         BigDecimal total = totalAmount == null ? BigDecimal.ZERO : totalAmount;

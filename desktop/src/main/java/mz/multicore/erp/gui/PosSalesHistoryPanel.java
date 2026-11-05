@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.POSSalesSummaryDTO;
+import mz.multicore.erp.modules.pos.dto.PosSalePaymentSummaryDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -23,31 +24,26 @@ final class PosSalesHistoryPanel {
     }
 
     public JPanel buildPanel() {
-        String[] cols = {"ID", "Nº Venda", "Data", "Operador", "Cliente", "Total", "Estado", "Negócio"};
+        String[] cols = {"ID", "Nº Venda", "Data", "Operador", "Cliente", "Total", "Entregue", "Troco", "Estado", "Negócio"};
         owner.salesHistoryModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         owner.salesHistoryTable = new JTable(owner.salesHistoryModel);
         owner.salesHistoryTable.putClientProperty(ClientTablePagination.DISABLED, Boolean.TRUE);
         UIHelper.styleTable(owner.salesHistoryTable);
-        owner.salesHistoryTable.getColumnModel().getColumn(5)
-                .setCellRenderer(mz.multicore.erp.gui.components.TableCellRenderers.money());
-        owner.salesHistoryTable.getColumnModel().getColumn(6)
+        for (int moneyCol : new int[]{5, 6, 7}) {
+            owner.salesHistoryTable.getColumnModel().getColumn(moneyCol)
+                    .setCellRenderer(mz.multicore.erp.gui.components.TableCellRenderers.money());
+        }
+        owner.salesHistoryTable.getColumnModel().getColumn(8)
                 .setCellRenderer(mz.multicore.erp.gui.components.TableCellRenderers.status());
         owner.salesHistoryTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         owner.salesHistoryTable.setFillsViewportHeight(true);
-        // Esconder coluna ID
-        owner.salesHistoryTable.getColumnModel().getColumn(0).setMinWidth(0);
+        owner.salesHistoryTable.getColumnModel().getColumn(0).setMinWidth(0); // coluna ID escondida
         owner.salesHistoryTable.getColumnModel().getColumn(0).setMaxWidth(0);
         owner.salesHistoryTable.getColumnModel().getColumn(0).setWidth(0);
-        // Larguras proporcionais
-        owner.salesHistoryTable.getColumnModel().getColumn(1).setPreferredWidth(140);
-        owner.salesHistoryTable.getColumnModel().getColumn(2).setPreferredWidth(120);
-        owner.salesHistoryTable.getColumnModel().getColumn(3).setPreferredWidth(100);
-        owner.salesHistoryTable.getColumnModel().getColumn(4).setPreferredWidth(160);
-        owner.salesHistoryTable.getColumnModel().getColumn(5).setPreferredWidth(100);
-        owner.salesHistoryTable.getColumnModel().getColumn(6).setPreferredWidth(80);
-        owner.salesHistoryTable.getColumnModel().getColumn(7).setPreferredWidth(110);
+        int[] widths = {0, 140, 120, 100, 160, 100, 100, 90, 80, 110};
+        for (int c = 1; c < widths.length; c++) owner.salesHistoryTable.getColumnModel().getColumn(c).setPreferredWidth(widths[c]);
 
         JScrollPane scroll = new JScrollPane(owner.salesHistoryTable);
         UIHelper.styleScrollPane(scroll);
@@ -73,12 +69,7 @@ final class PosSalesHistoryPanel {
         returnBtn.setForeground(Color.WHITE);
         returnBtn.addActionListener(e -> owner.showReturnDialog());
 
-        ModernButton refreshBtn = UIHelper.createPrimaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14, Color.WHITE));
-        refreshBtn.setForeground(Color.WHITE);
-        refreshBtn.addActionListener(e -> refresh());
-
-        JPanel buttons = UIHelper.actionsBar(refreshBtn, returnBtn, reprintBtn);
+        JPanel buttons = UIHelper.actionsBar(UIHelper.createRefreshButton(this::refresh), returnBtn, reprintBtn);
 
         JTextField shSearch = TableFilter.searchField("Nº venda, operador ou cliente");
         JComboBox<String> shEstado = TableFilter.combo("Todos os estados",
@@ -93,20 +84,14 @@ final class PosSalesHistoryPanel {
 
         TableFilter.install(owner.salesHistoryTable, shSearch,
                 java.util.List.of(
-                        new TableFilter.ColumnFilter(shEstado, 6),
-                        new TableFilter.ColumnFilter(shBusinessUnitCombo, 7)),
+                        new TableFilter.ColumnFilter(shEstado, 8),
+                        new TableFilter.ColumnFilter(shBusinessUnitCombo, 9)),
                 java.util.List.of());
-        periodCombo.addActionListener(e -> {
-            if (pager != null) pager.reload();
-        });
+        periodCombo.addActionListener(e -> { if (pager != null) pager.reload(); });
 
         UIHelper.ensureHeadersFit(owner.salesHistoryTable);
-        JPanel shBar = TableFilter.bar(
-                shSearch,
-                TableFilter.label("Negócio:"), shBusinessUnitCombo,
-                TableFilter.label("Estado:"), shEstado,
-                TableFilter.label("Período:"), periodCombo
-        );
+        JPanel shBar = TableFilter.bar(shSearch, TableFilter.label("Negócio:"), shBusinessUnitCombo,
+                TableFilter.label("Estado:"), shEstado, TableFilter.label("Período:"), periodCombo);
         shBar.setBorder(new EmptyBorder(0, 0, 8, 0));
 
         pager = new TablePager(this::loadPage);
@@ -146,18 +131,33 @@ final class PosSalesHistoryPanel {
     private void loadPage(int page, int size) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
         var range = viewCoordinator.selectedDateRange(periodCombo);
-        UIHelper.loadAsync(owner, () -> new SalesHistoryData(
-                        owner.comercialApiClient.getPOSSalesPage(companyId, page, size, range.from(), range.to()),
-                        owner.comercialApiClient.getPOSSalesSummary(companyId, range.from(), range.to())),
+        UIHelper.loadAsync(owner, () -> {
+                    var salesPage = owner.comercialApiClient.getPOSSalesPage(companyId, page, size, range.from(), range.to());
+                    return new SalesHistoryData(salesPage,
+                            owner.comercialApiClient.getPOSSalesSummary(companyId, range.from(), range.to()),
+                            loadPayments(salesPage.items()));
+                },
                 data -> {
                     pager.apply(data.page());
                     viewCoordinator.applySalesHistory(owner, data.page().items(), data.page().totalElements(),
-                            data.summary(), shBusinessUnitCombo);
+                            data.summary(), shBusinessUnitCombo, data.payments());
                 },
                 error -> owner.showPosLoadError("histórico de vendas", error));
     }
 
+    /** Sem esta informação o histórico continua utilizável: as colunas Entregue e Troco ficam com "—". */
+    private java.util.Map<Long, PosSalePaymentSummaryDTO> loadPayments(java.util.List<InvoiceDTO> sales) {
+        if (owner.posApiClient == null || sales == null || sales.isEmpty()) return java.util.Map.of();
+        try {
+            return owner.posApiClient.getSalePaymentSummaries(sales.stream().map(InvoiceDTO::id).toList()).stream()
+                    .collect(java.util.stream.Collectors.toMap(PosSalePaymentSummaryDTO::invoiceId, p -> p, (a, b) -> a));
+        } catch (RuntimeException ex) {
+            return java.util.Map.of();
+        }
+    }
+
     private record SalesHistoryData(
             mz.multicore.erp.architecture.paging.PageResponse<InvoiceDTO> page,
-            POSSalesSummaryDTO summary) {}
+            POSSalesSummaryDTO summary,
+            java.util.Map<Long, PosSalePaymentSummaryDTO> payments) {}
 }
