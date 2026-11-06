@@ -61,7 +61,7 @@ final class StockInventoryCountActions {
         newBtn.addActionListener(e -> startNewCountSession(reload));
 
         Runnable openSelected = () -> {
-            int r = table.getSelectedRow();
+            int r = TableFilter.selectedModelRow(table);
             if (r < 0) { owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma contagem", "Escolha uma contagem na tabela para continuar."); return; }
             openCountSession(rows.get(r).id());
             reload.run();
@@ -73,7 +73,7 @@ final class StockInventoryCountActions {
         ModernButton cancelBtn = UIHelper.createDangerButton("Cancelar Sessão");
         cancelBtn.setIcon(UIHelper.icon("fas-ban", 14));
         cancelBtn.addActionListener(e -> {
-            int r = table.getSelectedRow();
+            int r = TableFilter.selectedModelRow(table);
             if (r < 0) { owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma contagem", "Escolha uma contagem na tabela para continuar."); return; }
             var s = rows.get(r);
             if (!"DRAFT".equals(s.status())) { owner.showStockNotice(FeedbackType.WARNING, "Contagem encerrada", "Só é possível cancelar contagens em curso."); return; }

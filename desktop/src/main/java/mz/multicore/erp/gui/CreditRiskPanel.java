@@ -151,7 +151,7 @@ public class CreditRiskPanel extends JPanel {
     void applyFilters() { CreditRiskViewCoordinator.applyFilters(this); }
 
     private ClientCreditRiskDTO getSelectedClientRisk() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         return (row >= 0 && row < visibleClientsRisk.size()) ? visibleClientsRisk.get(row) : null;
     }
 

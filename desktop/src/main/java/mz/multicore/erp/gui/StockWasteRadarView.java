@@ -159,7 +159,7 @@ public class StockWasteRadarView extends JPanel {
     }
 
     public ExpiringBatchAlertDTO getSelectedAlert() {
-        int row = radarTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(radarTable);
         if (row < 0) return null;
         String batchNum = (String) radarTableModel.getValueAt(row, 0);
         return currentRadarList.stream().filter(b -> b.batchNumber().equals(batchNum)).findFirst().orElse(null);

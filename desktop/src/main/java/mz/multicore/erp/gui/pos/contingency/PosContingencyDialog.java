@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos.contingency;
 
+import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.ModernButton;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.gui.components.FeedbackType;
@@ -154,7 +155,7 @@ public class PosContingencyDialog extends JDialog {
     }
 
     private void reprintSelected() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0) {
             ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma venda para reimprimir o talão.");
             return;

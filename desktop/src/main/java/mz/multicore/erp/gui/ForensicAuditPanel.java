@@ -136,7 +136,7 @@ public class ForensicAuditPanel extends JPanel {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
-                    showAnomalyDetails(table.getSelectedRow());
+                    showAnomalyDetails(TableFilter.selectedModelRow(table));
                 }
             }
         });

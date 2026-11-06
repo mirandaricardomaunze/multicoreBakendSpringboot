@@ -39,6 +39,11 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Decisões permanentes relevantes
 
+33. **Acções Sobre a Linha Seleccionada:**
+    - Acções de tabela usam `TableFilter.selectedModelRow(table)`. Com filtro ou da 2.ª página em
+      diante, 16 acções agiam sobre outro registo (utilizadores, contratos, contagens, POS, backups).
+    - SPEC e harness em `docs/SELECCAO_LINHA_MODELO_SPEC.md` e `SelectedRowModelIndexHarnessTest`.
+
 32. **Números Iguais ao Ecrã Fora da Tabela:**
     - Export PDF e painel de espreitar usam `CellText` (texto do renderer); PDFs e mensagens do
       backend usam `DisplayNumbers` em `contracts`. Nunca `toPlainString()` para pessoas.

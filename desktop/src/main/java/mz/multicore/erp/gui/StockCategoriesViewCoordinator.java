@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.QuickPeekPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
@@ -52,7 +53,7 @@ public final class StockCategoriesViewCoordinator {
     }
 
     public static ProductCategoryDTO selectedCategory(StockPanel owner) {
-        int row = owner.categoriesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(owner.categoriesTable);
         if (row < 0 || row >= owner.categoriesFiltered.size()) {
             owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma categoria", "Escolha uma categoria na tabela para continuar.");
             return null;

@@ -43,7 +43,7 @@ public final class DebitNoteFormDialog {
         ModernButton remove = UIHelper.createDangerButton("Remover");
         remove.setIcon(UIHelper.icon("fas-minus", 14));
         remove.addActionListener(e -> {
-            int sel = lineTable.getSelectedRow();
+            int sel = TableFilter.selectedModelRow(lineTable);
             if (sel >= 0) {
                 lines.removeRow(sel);
             } else {

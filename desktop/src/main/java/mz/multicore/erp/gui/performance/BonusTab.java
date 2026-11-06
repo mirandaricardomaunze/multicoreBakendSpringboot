@@ -309,7 +309,7 @@ public class BonusTab extends JPanel {
     }
 
     private SalesGoalBonusDTO getSelected() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= loadedBonuses.size()) {
             feedbackPanel.show(FeedbackType.WARNING, "Selecione um prémio na tabela.");
             return null;

@@ -145,7 +145,7 @@ public class GoalsTab extends JPanel {
     }
 
     private void cancelSelectedGoal() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= loadedGoals.size()) {
             feedbackPanel.show(FeedbackType.WARNING, "Selecione uma meta na tabela para cancelar.");
             return;

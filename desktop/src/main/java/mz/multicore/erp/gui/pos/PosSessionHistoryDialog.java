@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -150,7 +151,7 @@ public class PosSessionHistoryDialog extends JDialog {
     }
 
     private void printSelectedZ() {
-        int selectedRow = table.getSelectedRow();
+        int selectedRow = TableFilter.selectedModelRow(table);
         if (selectedRow < 0 || currentList == null || selectedRow >= currentList.size()) {
             ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma sessão na tabela para reimprimir o Relatório Z.");
             return;

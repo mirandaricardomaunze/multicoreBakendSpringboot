@@ -209,7 +209,7 @@ public final class RecurringContractsPanel extends JPanel {
     }
 
     private void showContractActionsDialog() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= currentContracts.size()) return;
         RecurringContractDTO selected = currentContracts.get(row);
         RecurringContractsOperationsCoordinator.manageContractStatus(this, contractApiClient, selected, feedback, this::loadContracts);
