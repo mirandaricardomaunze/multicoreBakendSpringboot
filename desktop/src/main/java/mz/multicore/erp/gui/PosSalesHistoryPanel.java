@@ -69,7 +69,6 @@ final class PosSalesHistoryPanel {
         returnBtn.setForeground(Color.WHITE);
         returnBtn.addActionListener(e -> owner.showReturnDialog());
 
-        JPanel buttons = UIHelper.actionsBar(UIHelper.createRefreshButton(this::refresh), returnBtn, reprintBtn);
 
         JTextField shSearch = TableFilter.searchField("Nº venda, operador ou cliente");
         JComboBox<String> shEstado = TableFilter.combo("Todos os estados",
@@ -92,33 +91,23 @@ final class PosSalesHistoryPanel {
         UIHelper.ensureHeadersFit(owner.salesHistoryTable);
         JPanel shBar = TableFilter.bar(shSearch, TableFilter.label("Negócio:"), shBusinessUnitCombo,
                 TableFilter.label("Estado:"), shEstado, TableFilter.label("Período:"), periodCombo);
-        shBar.setBorder(new EmptyBorder(0, 0, 8, 0));
 
         pager = new TablePager(this::loadPage);
 
+        // Como em Pedidos: título e acções no cabeçalho do card, filtros numa linha por baixo.
         ModernPanel tableCard = new ModernPanel(16);
-        tableCard.setLayout(new BorderLayout(0, 10));
-        tableCard.setBorder(new EmptyBorder(15, 15, 15, 15));
-        tableCard.add(shBar, BorderLayout.NORTH);
+        tableCard.setLayout(new BorderLayout(0, 6));
+        tableCard.setBorder(new EmptyBorder(8, 12, 8, 12));
+        tableCard.add(UIHelper.tableCardTop("Vendas Registadas", shBar,
+                UIHelper.createRefreshButton(this::refresh), returnBtn, reprintBtn), BorderLayout.NORTH);
         tableCard.add(scroll, BorderLayout.CENTER);
         tableCard.add(pager, BorderLayout.SOUTH);
         UIHelper.installQuickPeek(owner.salesHistoryTable, tableCard);
 
-        JPanel summaryPanel = new JPanel(new BorderLayout(0, 4));
-        summaryPanel.setOpaque(false);
-        summaryPanel.add(viewCoordinator.buildKpiBar(), BorderLayout.NORTH);
-        summaryPanel.add(viewCoordinator.summaryLabel(), BorderLayout.SOUTH);
-
-        JPanel topHeader = new JPanel(new BorderLayout(12, 8));
-        topHeader.setOpaque(false);
-        topHeader.setBorder(new EmptyBorder(0, 0, 10, 0));
-        topHeader.add(summaryPanel, BorderLayout.CENTER);
-        topHeader.add(buttons, BorderLayout.EAST);
-
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(15, 15, 15, 15));
-        content.add(topHeader, BorderLayout.NORTH);
+        content.add(viewCoordinator.buildKpiBar(), BorderLayout.NORTH);
         content.add(tableCard, BorderLayout.CENTER);
         return content;
     }

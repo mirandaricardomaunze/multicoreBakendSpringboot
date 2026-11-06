@@ -49,6 +49,18 @@ class PosSalesHistoryPanelDecompositionHarnessTest {
     }
 
     @Test
+    @DisplayName("POS-HIST-07: Resumo em cartões KpiCard e acções no cabeçalho do card (padrão do sistema)")
+    void testSystemStandardHeader() throws IOException {
+        String panel = Files.readString(ROOT.resolve("PosSalesHistoryPanel.java"));
+        String view = Files.readString(ROOT.resolve("PosSalesHistoryViewCoordinator.java"));
+        assertTrue(panel.contains("UIHelper.tableCardTop(\"Vendas Registadas\", shBar,"),
+                "Título, Actualizar e acções devem estar no cabeçalho do card, como em Pedidos");
+        assertTrue(view.contains("KpiCard.createGrid(4)"), "O resumo deve usar a grelha padrão de KpiCard");
+        assertFalse(view.contains("createSummaryChip") || view.contains("<html>"),
+                "Sem chips nem texto HTML solto por cima da tabela");
+    }
+
+    @Test
     @DisplayName("POS-HIST-04: Conformidade com BrightButtonsHarnessTest")
     void testBrightButtonsCompliance() throws IOException {
         for (String file : List.of("PosSalesHistoryPanel.java", "PosSalesHistoryViewCoordinator.java")) {
