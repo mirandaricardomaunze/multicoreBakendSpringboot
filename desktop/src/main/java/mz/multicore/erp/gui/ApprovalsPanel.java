@@ -137,15 +137,15 @@ public class ApprovalsPanel extends JPanel {
         UIHelper.styleScrollPane(pendingScroll);
 
         TableQuickPeekController.install(pendingTable, pendingCard, (peek, mr) -> {
-            int row = pendingTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-gavel", UIHelper.PENDING_YELLOW);
             peek.setTitle(String.valueOf(pendingModel.getValueAt(row, 1)));
             peek.setSubtitle("ID #" + pendingModel.getValueAt(row, 0) + " • Submetido por " + pendingModel.getValueAt(row, 2));
             peek.setStatus("PENDENTE", UIHelper.PENDING_YELLOW);
             List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-            items.add(new QuickPeekPanel.PeekItem("Submissor", String.valueOf(pendingModel.getValueAt(row, 2)), false));
-            items.add(new QuickPeekPanel.PeekItem("Valor Envolvido", String.valueOf(pendingModel.getValueAt(row, 3)), true));
-            items.add(new QuickPeekPanel.PeekItem("Perfil Requerido", String.valueOf(pendingModel.getValueAt(row, 4)), false));
+            items.add(new QuickPeekPanel.PeekItem("Submissor", peek.cell(pendingModel.getValueAt(row, 2), 2), false));
+            items.add(new QuickPeekPanel.PeekItem("Valor Envolvido", peek.cell(pendingModel.getValueAt(row, 3), 3), true));
+            items.add(new QuickPeekPanel.PeekItem("Perfil Requerido", peek.cell(pendingModel.getValueAt(row, 4), 4), false));
             peek.setItems(items);
             peek.getOpenFullButton().setText("Decidir Pedido");
             peek.setOnOpenFullAction(v -> openDecisionForSelected());

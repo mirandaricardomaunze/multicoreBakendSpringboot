@@ -89,18 +89,18 @@ final class CreditRiskViewCoordinator {
     }
 
     static void populateQuickPeek(QuickPeekPanel peek, int mr, CreditRiskPanel panel, Runnable onOpenFull) {
-        int row = panel.table.convertRowIndexToModel(mr);
+        int row = mr; // o controlador já entrega a linha do modelo
         var m = panel.tableModel;
         peek.setHeaderIcon("fas-wallet", UIHelper.ACCENT_BLUE);
         peek.setTitle(String.valueOf(m.getValueAt(row, 1)));
         peek.setSubtitle("NUIT: " + m.getValueAt(row, 2) + " • " + m.getValueAt(row, 13));
         peek.setStatus(String.valueOf(m.getValueAt(row, 14)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Limite Autorizado", String.valueOf(m.getValueAt(row, 3)), false),
-                new QuickPeekPanel.PeekItem("Dívida Total", String.valueOf(m.getValueAt(row, 4)), true),
-                new QuickPeekPanel.PeekItem("Crédito Disponível", String.valueOf(m.getValueAt(row, 5)), false),
-                new QuickPeekPanel.PeekItem("Total em Mora", String.valueOf(m.getValueAt(row, 11)), true),
-                new QuickPeekPanel.PeekItem("Maior Atraso", String.valueOf(m.getValueAt(row, 12)), false)
+                new QuickPeekPanel.PeekItem("Limite Autorizado", peek.cell(m.getValueAt(row, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Dívida Total", peek.cell(m.getValueAt(row, 4), 4), true),
+                new QuickPeekPanel.PeekItem("Crédito Disponível", peek.cell(m.getValueAt(row, 5), 5), false),
+                new QuickPeekPanel.PeekItem("Total em Mora", peek.cell(m.getValueAt(row, 11), 11), true),
+                new QuickPeekPanel.PeekItem("Maior Atraso", peek.cell(m.getValueAt(row, 12), 12), false)
         ));
         peek.getOpenFullButton().setText("Ficha de Cobrança");
         peek.setOnOpenFullAction(v -> onOpenFull.run());

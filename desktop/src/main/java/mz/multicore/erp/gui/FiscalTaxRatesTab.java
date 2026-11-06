@@ -63,14 +63,14 @@ final class FiscalTaxRatesTab {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(taxRatesTable, card, (peek, mr) -> {
-            int row = taxRatesTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-balance-scale", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(taxRatesModel.getValueAt(row, 1)));
             peek.setSubtitle("Código: " + taxRatesModel.getValueAt(row, 0) + " • " + taxRatesModel.getValueAt(row, 2));
             peek.setStatus(String.valueOf(taxRatesModel.getValueAt(row, 5)), UIHelper.ACCENT_BLUE);
             List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-            items.add(new QuickPeekPanel.PeekItem("Taxa Aplicável", String.valueOf(taxRatesModel.getValueAt(row, 3)), true));
-            items.add(new QuickPeekPanel.PeekItem("Base Legal", String.valueOf(taxRatesModel.getValueAt(row, 4)), false));
+            items.add(new QuickPeekPanel.PeekItem("Taxa Aplicável", peek.cell(taxRatesModel.getValueAt(row, 3), 3), true));
+            items.add(new QuickPeekPanel.PeekItem("Base Legal", peek.cell(taxRatesModel.getValueAt(row, 4), 4), false));
             peek.setItems(items);
         });
 

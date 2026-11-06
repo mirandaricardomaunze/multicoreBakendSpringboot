@@ -44,6 +44,7 @@ public class TableQuickPeekController {
         this.customPopulator = populator;
 
         this.peekPanel = new QuickPeekPanel();
+        this.peekPanel.bindTable(table);
         this.peekPanel.setVisible(false);
 
         // Encaixa no lado direito do contentor (BorderLayout.EAST)
@@ -159,9 +160,8 @@ public class TableQuickPeekController {
 
         for (int c = 0; c < cols; c++) {
             String colName = table.getColumnName(c);
-            Object rawVal = table.getValueAt(viewRow, c);
-            if (rawVal == null) continue;
-            String valStr = RecordDetailsDialog.valueText(rawVal).trim();
+            if (table.getValueAt(viewRow, c) == null) continue;
+            String valStr = CellText.displayed(table, modelRow, c);
             if (valStr.isEmpty()) continue;
 
             String lower = colName.toLowerCase();

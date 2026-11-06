@@ -45,13 +45,13 @@ public final class ReceiptsViewCoordinator {
         peek.setTitle("Recibo " + model.getValueAt(mr, 1));
         peek.setSubtitle(String.valueOf(model.getValueAt(mr, 4)));
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Linha de Negócio", String.valueOf(model.getValueAt(mr, 2)), false),
-                new QuickPeekPanel.PeekItem("Fatura Liquidada", String.valueOf(model.getValueAt(mr, 3)), false),
-                new QuickPeekPanel.PeekItem("Cliente", String.valueOf(model.getValueAt(mr, 4)), false),
-                new QuickPeekPanel.PeekItem("Data", String.valueOf(model.getValueAt(mr, 8)), false),
-                new QuickPeekPanel.PeekItem("Método", String.valueOf(model.getValueAt(mr, 6)), false),
-                new QuickPeekPanel.PeekItem("Montante Pago", String.valueOf(model.getValueAt(mr, 5)), true),
-                new QuickPeekPanel.PeekItem("Estado", String.valueOf(model.getValueAt(mr, 7)), false)
+                new QuickPeekPanel.PeekItem("Linha de Negócio", peek.cell(model.getValueAt(mr, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Fatura Liquidada", peek.cell(model.getValueAt(mr, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Cliente", peek.cell(model.getValueAt(mr, 4), 4), false),
+                new QuickPeekPanel.PeekItem("Data", peek.cell(model.getValueAt(mr, 8), 8), false),
+                new QuickPeekPanel.PeekItem("Método", peek.cell(model.getValueAt(mr, 6), 6), false),
+                new QuickPeekPanel.PeekItem("Montante Pago", peek.cell(model.getValueAt(mr, 5), 5), true),
+                new QuickPeekPanel.PeekItem("Estado", peek.cell(model.getValueAt(mr, 7), 7), false)
         ));
         peek.getOpenFullButton().setText("Anular Recibo");
         peek.setOnOpenFullAction(v -> onCancel.run());

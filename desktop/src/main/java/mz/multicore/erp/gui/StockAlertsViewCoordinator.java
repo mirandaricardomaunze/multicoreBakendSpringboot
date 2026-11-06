@@ -46,8 +46,8 @@ public final class StockAlertsViewCoordinator {
         peek.setSubtitle("SKU: " + owner.alertsOutModel.getValueAt(modelRow, 0));
         peek.setStatus("ESGOTADO", UIHelper.REJECTED_RED);
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Artigo", String.valueOf(owner.alertsOutModel.getValueAt(modelRow, 1)), false));
-        items.add(new QuickPeekPanel.PeekItem("Stock Actual", String.valueOf(owner.alertsOutModel.getValueAt(modelRow, 2)), true));
+        items.add(new QuickPeekPanel.PeekItem("Artigo", peek.cell(owner.alertsOutModel.getValueAt(modelRow, 1), 1), false));
+        items.add(new QuickPeekPanel.PeekItem("Stock Actual", peek.cell(owner.alertsOutModel.getValueAt(modelRow, 2), 2), true));
         peek.setItems(items);
     }
 

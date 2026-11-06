@@ -39,6 +39,13 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Decisões permanentes relevantes
 
+32. **Números Iguais ao Ecrã Fora da Tabela:**
+    - Export PDF e painel de espreitar usam `CellText` (texto do renderer); PDFs e mensagens do
+      backend usam `DisplayNumbers` em `contracts`. Nunca `toPlainString()` para pessoas.
+    - O painel de espreitar recebe a linha do modelo: 26 ecrãs convertiam-na outra vez e, com filtro,
+      mostravam outra linha.
+    - SPEC e harness em `docs/FORMATO_NUMERICO_SPEC.md` (FN-07 a FN-11).
+
 31. **Histórico POS com Entregue, Troco e Cliente Não Cadastrado:**
     - A venda já gravava tudo; o histórico mostrava "Consumidor Final" e não tinha o pagamento.
     - Comprador via `InvoiceDTO.buyerName()`; entregue e troco via `GET /api/pos/sales/payments`.

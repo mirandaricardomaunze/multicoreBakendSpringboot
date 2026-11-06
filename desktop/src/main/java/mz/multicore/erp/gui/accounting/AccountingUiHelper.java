@@ -55,7 +55,7 @@ public final class AccountingUiHelper {
         card.add(scroll, BorderLayout.CENTER);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-book", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(table.getModel().getValueAt(row, 0)));
             if (table.getModel().getColumnCount() > 1) {

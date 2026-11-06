@@ -25,6 +25,7 @@ public class QuickPeekPanel extends JPanel {
     private final JButton closeBtn;
     private final JLabel hintLabel;
 
+    private JTable boundTable;
     private Consumer<Void> onOpenFullAction;
     private Runnable onCloseAction;
 
@@ -157,6 +158,19 @@ public class QuickPeekPanel extends JPanel {
         }
         badgeContainer.revalidate();
         badgeContainer.repaint();
+    }
+
+    /** A tabela que este painel espreita: dá-lhe o formato de cada coluna. */
+    void bindTable(JTable table) {
+        this.boundTable = table;
+    }
+
+    /**
+     * Um valor do modelo como a coluna o mostra no ecrã ("1.460,00 MT"), nunca cru ("1460.00").
+     * Ver {@link CellText}.
+     */
+    public String cell(Object value, int modelColumn) {
+        return CellText.of(boundTable, value, modelColumn);
     }
 
     public void setItems(List<PeekItem> items) {

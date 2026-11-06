@@ -42,4 +42,54 @@ class DisplayNumberFormatHarnessTest {
         }
         assertThat(violations).isEmpty();
     }
+
+    /** Documentos impressos não escrevem "1460.00" nem "0.25": passam por MoneyFormat. */
+    @Test
+    void fn07_documentosImpressosNaoEscrevemDecimaisComPonto() throws IOException {
+        Path printing = sources().resolve("mz/multicore/erp/modules/printing");
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(printing)) {
+            for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {
+                List<String> lines = Files.readAllLines(file);
+                for (int i = 0; i < lines.size(); i++) {
+                    String line = lines.get(i);
+                    if (line.contains(".toPlainString()") && !line.contains(".toPlainString().replace('.', ',')")) {
+                        violations.add(file.getFileName() + ":" + (i + 1));
+                    }
+                }
+            }
+        }
+        assertThat(violations).as("usar MoneyFormat.formatPlain / formatQty").isEmpty();
+    }
+
+    /** Mensagens de regra de negócio falam com pessoas: "1.460,00 MT", não "1460.00". */
+    @Test
+    void fn11_mensagensDeNegocioNaoEscrevemDecimaisComPonto() throws IOException {
+        Pattern exception = Pattern.compile("new BusinessRuleException\\((.*?)\\);", Pattern.DOTALL);
+        Pattern raw = Pattern.compile("\\.toPlainString\\(\\)|%\\.\\d+f");
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(sources())) {
+            for (Path file : files.filter(f -> f.toString().endsWith(".java")).toList()) {
+                String source = Files.readString(file);
+                var matcher = exception.matcher(source);
+                while (matcher.find()) {
+                    if (raw.matcher(matcher.group(1)).find()) {
+                        int line = source.substring(0, matcher.start()).split("\n", -1).length;
+                        violations.add(file.getFileName() + ":" + line);
+                    }
+                }
+            }
+        }
+        assertThat(violations).as("usar DisplayNumbers.money / qty").isEmpty();
+    }
+
+    @Test
+    void fn11_formatadorPartilhado() {
+        assertThat(mz.multicore.erp.architecture.format.DisplayNumbers.money(new java.math.BigDecimal("1460")))
+                .isEqualTo("1.460,00");
+        assertThat(mz.multicore.erp.architecture.format.DisplayNumbers.qty(new java.math.BigDecimal("2.500")))
+                .isEqualTo("2,5");
+        assertThat(mz.multicore.erp.architecture.format.DisplayNumbers.qty(new java.math.BigDecimal("1000")))
+                .isEqualTo("1.000");
+    }
 }

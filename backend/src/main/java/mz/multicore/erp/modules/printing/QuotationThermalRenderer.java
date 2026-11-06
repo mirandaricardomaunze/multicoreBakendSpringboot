@@ -56,7 +56,7 @@ public class QuotationThermalRenderer {
             Phrase phrase = new Phrase();
             phrase.add(new Chunk(line.getProduct().getName(), PdfTheme.bodyFont()));
             String detail = line.getQuantity() + " un. × " + MoneyFormat.formatPlain(line.getUnitPrice());
-            if (line.getDiscountPercentage() != null && line.getDiscountPercentage().signum() > 0) detail += " (-" + line.getDiscountPercentage().stripTrailingZeros().toPlainString() + "%)";
+            if (line.getDiscountPercentage() != null && line.getDiscountPercentage().signum() > 0) detail += " (-" + MoneyFormat.formatQty(line.getDiscountPercentage()) + "%)";
             phrase.add(new Chunk("\n" + detail, PdfTheme.smallFont()));
             PdfPCell cell = new PdfPCell(phrase);
             cell.setBorder(Rectangle.NO_BORDER);

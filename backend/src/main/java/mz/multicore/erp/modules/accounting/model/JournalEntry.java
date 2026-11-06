@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.accounting.model;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.BaseEntity;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
@@ -99,8 +100,8 @@ public class JournalEntry extends BaseEntity {
         if (!isBalanced()) {
             throw new BusinessRuleException(String.format(
                     "Lançamento desequilibrado: débito %s ≠ crédito %s.",
-                    totalDebit().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
-                    totalCredit().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()));
+                    DisplayNumbers.money(totalDebit()),
+                    DisplayNumbers.money(totalCredit())));
         }
     }
 }

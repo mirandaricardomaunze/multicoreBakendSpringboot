@@ -96,7 +96,7 @@ public class PhysicalInventoryPanel extends JPanel {
 
         UIHelper.ensureHeadersFit(itemsTable);
         TableQuickPeekController peekController = TableQuickPeekController.install(itemsTable, card,
-                (peek, mr) -> PhysicalInventoryViewCoordinator.populatePeek(peek, tableModel, itemsTable.convertRowIndexToModel(mr)));
+                (peek, mr) -> PhysicalInventoryViewCoordinator.populatePeek(peek, tableModel, mr));
         if (peekToggleBtn != null) peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         JScrollPane scroll = new JScrollPane(itemsTable);

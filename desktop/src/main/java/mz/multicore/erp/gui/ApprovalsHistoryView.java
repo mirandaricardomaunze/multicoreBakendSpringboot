@@ -42,16 +42,16 @@ public class ApprovalsHistoryView extends JPanel {
         UIHelper.styleScrollPane(historyScroll);
 
         TableQuickPeekController.install(historyTable, historyCard, (peek, mr) -> {
-            int row = historyTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-history", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(historyModel.getValueAt(row, 1)));
             peek.setSubtitle("Data: " + historyModel.getValueAt(row, 0));
             peek.setStatus(String.valueOf(historyModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
             List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-            items.add(new QuickPeekPanel.PeekItem("Submissor", String.valueOf(historyModel.getValueAt(row, 2)), false));
-            items.add(new QuickPeekPanel.PeekItem("Valor", String.valueOf(historyModel.getValueAt(row, 3)), true));
-            items.add(new QuickPeekPanel.PeekItem("Decisão Final", String.valueOf(historyModel.getValueAt(row, 4)), false));
-            items.add(new QuickPeekPanel.PeekItem("Motivo / Parecer", String.valueOf(historyModel.getValueAt(row, 5)), false));
+            items.add(new QuickPeekPanel.PeekItem("Submissor", peek.cell(historyModel.getValueAt(row, 2), 2), false));
+            items.add(new QuickPeekPanel.PeekItem("Valor", peek.cell(historyModel.getValueAt(row, 3), 3), true));
+            items.add(new QuickPeekPanel.PeekItem("Decisão Final", peek.cell(historyModel.getValueAt(row, 4), 4), false));
+            items.add(new QuickPeekPanel.PeekItem("Motivo / Parecer", peek.cell(historyModel.getValueAt(row, 5), 5), false));
             peek.setItems(items);
         });
 

@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.inventory.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
@@ -72,7 +73,7 @@ public class ProductBatchMutationService {
         if (totalAvailable.compareTo(quantity) < 0) {
             throw new BusinessRuleException(String.format(
                     "Stock insuficiente de '%s' no armazém '%s'. Requerido: %s, Disponível em lotes: %s",
-                    product.getName(), warehouse.getName(), quantity, totalAvailable));
+                    product.getName(), warehouse.getName(), DisplayNumbers.qty(quantity), DisplayNumbers.qty(totalAvailable)));
         }
 
         List<BatchConsumption> debits = new ArrayList<>();

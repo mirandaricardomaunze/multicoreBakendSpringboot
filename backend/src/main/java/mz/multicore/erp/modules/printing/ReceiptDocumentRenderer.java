@@ -100,13 +100,13 @@ public class ReceiptDocumentRenderer {
     public static String vatRateLabel(BigDecimal rate) {
         BigDecimal effective = rate == null ? BigDecimal.ZERO : rate;
         if (effective.signum() == 0) return "IVA: Isento";
-        String percent = effective.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString();
+        String percent = MoneyFormat.formatQty(effective.multiply(BigDecimal.valueOf(100)));
         return "IVA: " + percent + "%";
     }
 
     public static String lineDetailsLabel(InvoiceLine line, DocumentColumnsDTO cols) {
         if (!cols.quantity() && !cols.unitPrice()) return "";
-        String quantity = line.getQuantity() == null ? "0" : line.getQuantity().stripTrailingZeros().toPlainString();
+        String quantity = MoneyFormat.formatQty(line.getQuantity());
         if (cols.quantity() && cols.unitPrice()) {
             return quantity + " x " + MoneyFormat.formatPlain(line.getUnitPrice()) + " MT";
         }

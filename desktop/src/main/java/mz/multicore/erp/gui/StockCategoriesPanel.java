@@ -65,7 +65,7 @@ final class StockCategoriesPanel {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(owner.categoriesTable, card, (peek, mr) -> {
-            int row = owner.categoriesTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             StockCategoriesViewCoordinator.populateQuickPeek(peek, owner, row);
         });
 

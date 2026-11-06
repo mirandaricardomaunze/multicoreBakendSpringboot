@@ -54,8 +54,8 @@ class JournalEntryTest {
         BusinessRuleException error = assertThrows(BusinessRuleException.class, entry::validateForPosting);
 
         assertTrue(error.getMessage().contains("desequilibrado"));
-        assertTrue(error.getMessage().contains("100.00"));
-        assertTrue(error.getMessage().contains("90.00"));
+        assertTrue(error.getMessage().contains("100,00"));
+        assertTrue(error.getMessage().contains("90,00"));
     }
 
     @Test // CT-03

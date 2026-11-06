@@ -25,12 +25,12 @@ public final class HRTerminationsOperationsCoordinator {
         peek.setStatus(String.valueOf(model.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Data de Saída", String.valueOf(model.getValueAt(row, 3)), false));
-        items.add(new QuickPeekPanel.PeekItem("Motivo", String.valueOf(model.getValueAt(row, 4)), false));
-        items.add(new QuickPeekPanel.PeekItem("Aviso Prévio", String.valueOf(model.getValueAt(row, 5)), false));
-        items.add(new QuickPeekPanel.PeekItem("Total de Ganhos", String.valueOf(model.getValueAt(row, 6)), false));
-        items.add(new QuickPeekPanel.PeekItem("Total de Descontos", String.valueOf(model.getValueAt(row, 7)), false));
-        items.add(new QuickPeekPanel.PeekItem("Valor Líquido", String.valueOf(model.getValueAt(row, 8)), true));
+        items.add(new QuickPeekPanel.PeekItem("Data de Saída", peek.cell(model.getValueAt(row, 3), 3), false));
+        items.add(new QuickPeekPanel.PeekItem("Motivo", peek.cell(model.getValueAt(row, 4), 4), false));
+        items.add(new QuickPeekPanel.PeekItem("Aviso Prévio", peek.cell(model.getValueAt(row, 5), 5), false));
+        items.add(new QuickPeekPanel.PeekItem("Total de Ganhos", peek.cell(model.getValueAt(row, 6), 6), false));
+        items.add(new QuickPeekPanel.PeekItem("Total de Descontos", peek.cell(model.getValueAt(row, 7), 7), false));
+        items.add(new QuickPeekPanel.PeekItem("Valor Líquido", peek.cell(model.getValueAt(row, 8), 8), true));
         peek.setItems(items);
     }
 

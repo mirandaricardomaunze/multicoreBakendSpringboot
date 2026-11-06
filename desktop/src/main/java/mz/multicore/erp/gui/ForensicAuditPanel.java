@@ -142,7 +142,7 @@ public class ForensicAuditPanel extends JPanel {
         });
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             ForensicAuditOperationsCoordinator.populatePeek(peek, tableModel, row, this::showAnomalyDetails);
         });
 

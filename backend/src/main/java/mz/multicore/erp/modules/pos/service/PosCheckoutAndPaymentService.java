@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.pos.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.events.SaleRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
@@ -187,7 +188,7 @@ public class PosCheckoutAndPaymentService {
             for (PosPaymentRequest p : payments) totalPaid = totalPaid.add(p.amount());
             totalPaid = totalPaid.setScale(2, RoundingMode.HALF_UP);
             if (totalPaid.compareTo(totalAmount) > 0) {
-                throw new BusinessRuleException("Soma dos pagamentos (" + totalPaid + ") excede o total da venda (" + totalAmount + ").");
+                throw new BusinessRuleException("Soma dos pagamentos (" + DisplayNumbers.money(totalPaid) + " MT) excede o total da venda (" + DisplayNumbers.money(totalAmount) + " MT).");
             }
         } else if (request.treasuryAccountId() != null) {
             totalPaid = totalAmount;
@@ -257,7 +258,7 @@ public class PosCheckoutAndPaymentService {
             throw new BusinessRuleException("Esta fatura já está totalmente paga.");
         }
         if (req.amount().compareTo(outstanding) > 0) {
-            throw new BusinessRuleException("Pagamento (" + req.amount() + ") excede o saldo em dívida (" + outstanding + ").");
+            throw new BusinessRuleException("Pagamento (" + DisplayNumbers.money(req.amount()) + " MT) excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
         applyPayment(invoice, req, null, invoice.getClient());
         BigDecimal newPaid = (invoice.getAmountPaid() == null ? BigDecimal.ZERO : invoice.getAmountPaid())

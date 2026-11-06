@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
@@ -114,7 +115,8 @@ public class CreditNoteCreationService {
                 throw new BusinessRuleException(String.format(
                         "Quantidade a devolver (%s) excede o disponível para a linha do produto '%s' "
                                 + "(vendido: %s, já devolvido: %s, restante: %s).",
-                        requested, sourceLine.getProduct().getName(), qtySold, alreadyReturned, remaining));
+                        DisplayNumbers.qty(requested), sourceLine.getProduct().getName(), DisplayNumbers.qty(qtySold),
+                        DisplayNumbers.qty(alreadyReturned), DisplayNumbers.qty(remaining)));
             }
 
             BigDecimal price = sourceLine.getUnitPrice();
@@ -153,8 +155,8 @@ public class CreditNoteCreationService {
         BigDecimal cap = invoice.getTotalAmount();
         if (candidate.getTotalAmount().compareTo(cap) > 0) {
             throw new BusinessRuleException(String.format(
-                    "O valor da nota de crédito (%.2f) excede o valor da fatura (%.2f).",
-                    candidate.getTotalAmount(), cap));
+                    "O valor da nota de crédito (%s MT) excede o valor da fatura (%s MT).",
+                    DisplayNumbers.money(candidate.getTotalAmount()), DisplayNumbers.money(cap)));
         }
     }
 }

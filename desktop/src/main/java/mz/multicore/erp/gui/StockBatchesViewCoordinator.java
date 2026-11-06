@@ -112,13 +112,13 @@ final class StockBatchesViewCoordinator {
         peek.setTitle("Lote " + m.getValueAt(mr, 3));
         peek.setSubtitle(m.getValueAt(mr, 1) + " (" + m.getValueAt(mr, 0) + ")");
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Armazém", String.valueOf(m.getValueAt(mr, 2)), false),
-                new QuickPeekPanel.PeekItem("Nº Lote", String.valueOf(m.getValueAt(mr, 3)), false),
-                new QuickPeekPanel.PeekItem("Linha de Negócio", String.valueOf(m.getValueAt(mr, 8)), false),
-                new QuickPeekPanel.PeekItem("Validade", String.valueOf(m.getValueAt(mr, 4)), false),
-                new QuickPeekPanel.PeekItem("Dias Restantes", String.valueOf(m.getValueAt(mr, 5)), false),
-                new QuickPeekPanel.PeekItem("Quantidade", String.valueOf(m.getValueAt(mr, 6)), true),
-                new QuickPeekPanel.PeekItem("Estado", String.valueOf(m.getValueAt(mr, 7)), false)
+                new QuickPeekPanel.PeekItem("Armazém", peek.cell(m.getValueAt(mr, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Nº Lote", peek.cell(m.getValueAt(mr, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Linha de Negócio", peek.cell(m.getValueAt(mr, 8), 8), false),
+                new QuickPeekPanel.PeekItem("Validade", peek.cell(m.getValueAt(mr, 4), 4), false),
+                new QuickPeekPanel.PeekItem("Dias Restantes", peek.cell(m.getValueAt(mr, 5), 5), false),
+                new QuickPeekPanel.PeekItem("Quantidade", peek.cell(m.getValueAt(mr, 6), 6), true),
+                new QuickPeekPanel.PeekItem("Estado", peek.cell(m.getValueAt(mr, 7), 7), false)
         ));
         peek.getOpenFullButton().setText("Ficha do Artigo");
         peek.setOnOpenFullAction(v -> {

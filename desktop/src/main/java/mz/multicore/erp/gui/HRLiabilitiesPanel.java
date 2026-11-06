@@ -67,7 +67,7 @@ final class HRLiabilitiesPanel {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             HRLiabilitiesOperationsCoordinator.populatePeek(peek, model, row);
         });
 

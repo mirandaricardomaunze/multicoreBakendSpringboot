@@ -67,7 +67,7 @@ public class NotificationsPanel extends JPanel {
         for (int i = 0; i < widths.length; i++) table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             NotificationsViewCoordinator.populateQuickPeek(peek, tableModel, row, this::openSelectedModule);
         });
 

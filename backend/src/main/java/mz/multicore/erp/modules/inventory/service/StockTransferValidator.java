@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.inventory.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.comercial.model.Product;
@@ -41,7 +42,7 @@ public class StockTransferValidator {
             if (available.compareTo(entry.getValue()) < 0) {
                 throw new BusinessRuleException(String.format(
                         "Stock insuficiente de '%s' no armazém de origem '%s'. Requerido: %s, Disponível: %s",
-                        product.getName(), transfer.getOriginWarehouse().getName(), entry.getValue(), available));
+                        product.getName(), transfer.getOriginWarehouse().getName(), DisplayNumbers.qty(entry.getValue()), DisplayNumbers.qty(available)));
             }
         }
     }

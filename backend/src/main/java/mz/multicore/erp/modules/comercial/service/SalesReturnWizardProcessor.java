@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.dto.CreateCreditNoteLineRequest;
@@ -66,8 +67,8 @@ public class SalesReturnWizardProcessor {
 
             if (item.quantity().compareTo(available.returnableQuantity()) > 0) {
                 throw new BusinessRuleException(String.format(
-                        "Quantidade a devolver (%.2f) excede o saldo devolvível (%.2f) do produto %s.",
-                        item.quantity(), available.returnableQuantity(), available.productName()));
+                        "Quantidade a devolver (%s) excede o saldo devolvível (%s) do produto %s.",
+                        DisplayNumbers.qty(item.quantity()), DisplayNumbers.qty(available.returnableQuantity()), available.productName()));
             }
 
             creditLines.add(new CreateCreditNoteLineRequest(item.invoiceLineId(), item.quantity()));

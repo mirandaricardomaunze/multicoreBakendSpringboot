@@ -89,15 +89,15 @@ public class GoalsTab extends JPanel {
         UIHelper.ensureHeadersFit(table);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-bullseye", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
             peek.setSubtitle("Colaborador: " + tableModel.getValueAt(row, 2));
             peek.setStatus(String.valueOf(tableModel.getValueAt(row, 8)), UIHelper.ACCENT_BLUE);
             List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-            items.add(new QuickPeekPanel.PeekItem("Alvo", String.valueOf(tableModel.getValueAt(row, 3)), false));
-            items.add(new QuickPeekPanel.PeekItem("Atingido", String.valueOf(tableModel.getValueAt(row, 4)), false));
-            items.add(new QuickPeekPanel.PeekItem("Progresso", String.valueOf(tableModel.getValueAt(row, 5)), true));
+            items.add(new QuickPeekPanel.PeekItem("Alvo", peek.cell(tableModel.getValueAt(row, 3), 3), false));
+            items.add(new QuickPeekPanel.PeekItem("Atingido", peek.cell(tableModel.getValueAt(row, 4), 4), false));
+            items.add(new QuickPeekPanel.PeekItem("Progresso", peek.cell(tableModel.getValueAt(row, 5), 5), true));
             peek.setItems(items);
         });
 

@@ -242,10 +242,10 @@ public class StockPanel extends JPanel {
             peek.setTitle(String.valueOf(stockModel.getValueAt(mr, 2)));
             peek.setSubtitle("SKU/Ref: " + stockModel.getValueAt(mr, 1));
             peek.setItems(List.of(
-                    new QuickPeekPanel.PeekItem("Código de Barras", String.valueOf(stockModel.getValueAt(mr, 0)), false), new QuickPeekPanel.PeekItem("Referência", String.valueOf(stockModel.getValueAt(mr, 1)), false),
-                    new QuickPeekPanel.PeekItem("Linha de Negócio", String.valueOf(stockModel.getValueAt(mr, 3)), true), new QuickPeekPanel.PeekItem("Qtd Unidades", String.valueOf(stockModel.getValueAt(mr, 4)), true),
-                    new QuickPeekPanel.PeekItem("Qtd Embalagens", String.valueOf(stockModel.getValueAt(mr, 5)), false), new QuickPeekPanel.PeekItem("Preço de Venda", String.valueOf(stockModel.getValueAt(mr, 6)), false),
-                    new QuickPeekPanel.PeekItem("Estado", String.valueOf(stockModel.getValueAt(mr, 7)), false)));
+                    new QuickPeekPanel.PeekItem("Código de Barras", peek.cell(stockModel.getValueAt(mr, 0), 0), false), new QuickPeekPanel.PeekItem("Referência", peek.cell(stockModel.getValueAt(mr, 1), 1), false),
+                    new QuickPeekPanel.PeekItem("Linha de Negócio", peek.cell(stockModel.getValueAt(mr, 3), 3), true), new QuickPeekPanel.PeekItem("Qtd Unidades", peek.cell(stockModel.getValueAt(mr, 4), 4), true),
+                    new QuickPeekPanel.PeekItem("Qtd Embalagens", peek.cell(stockModel.getValueAt(mr, 5), 5), false), new QuickPeekPanel.PeekItem("Preço de Venda", peek.cell(stockModel.getValueAt(mr, 6), 6), false),
+                    new QuickPeekPanel.PeekItem("Estado", peek.cell(stockModel.getValueAt(mr, 7), 7), false)));
             peek.getOpenFullButton().setText("Ficha Executiva");
             peek.setOnOpenFullAction(v -> { Long id = selectedStockProductId(); if (id != null) showProductDetailDialog(id); });
         });

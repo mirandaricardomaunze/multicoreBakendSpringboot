@@ -86,15 +86,15 @@ public class RankingTab extends JPanel {
         UIHelper.ensureHeadersFit(table);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-trophy", UIHelper.PENDING_YELLOW);
             peek.setTitle(String.valueOf(tableModel.getValueAt(row, 1)));
             peek.setSubtitle("Posição #" + tableModel.getValueAt(row, 0));
             peek.setStatus(String.valueOf(tableModel.getValueAt(row, 5)), UIHelper.APPROVED_GREEN);
             java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Volume Total", String.valueOf(tableModel.getValueAt(row, 2)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Vendas", String.valueOf(tableModel.getValueAt(row, 3)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Médio", String.valueOf(tableModel.getValueAt(row, 4)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Volume Total", peek.cell(tableModel.getValueAt(row, 2), 2), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Total de Vendas", peek.cell(tableModel.getValueAt(row, 3), 3), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Valor Médio", peek.cell(tableModel.getValueAt(row, 4), 4), false));
             peek.setItems(items);
         });
 

@@ -47,10 +47,10 @@ public final class HRContractsOperationsCoordinator {
         peek.setStatus(String.valueOf(model.getValueAt(row, 7)), UIHelper.ACCENT_BLUE);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Tipo", String.valueOf(model.getValueAt(row, 2)), false));
-        items.add(new QuickPeekPanel.PeekItem("Início", String.valueOf(model.getValueAt(row, 4)), false));
-        items.add(new QuickPeekPanel.PeekItem("Fim", String.valueOf(model.getValueAt(row, 5)), false));
-        items.add(new QuickPeekPanel.PeekItem("Salário Acordado", String.valueOf(model.getValueAt(row, 6)), true));
+        items.add(new QuickPeekPanel.PeekItem("Tipo", peek.cell(model.getValueAt(row, 2), 2), false));
+        items.add(new QuickPeekPanel.PeekItem("Início", peek.cell(model.getValueAt(row, 4), 4), false));
+        items.add(new QuickPeekPanel.PeekItem("Fim", peek.cell(model.getValueAt(row, 5), 5), false));
+        items.add(new QuickPeekPanel.PeekItem("Salário Acordado", peek.cell(model.getValueAt(row, 6), 6), true));
         peek.setItems(items);
     }
 }

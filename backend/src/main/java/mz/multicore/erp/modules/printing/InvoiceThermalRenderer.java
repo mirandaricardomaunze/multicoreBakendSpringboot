@@ -55,7 +55,7 @@ public class InvoiceThermalRenderer {
             description.add(new Chunk(line.getProduct().getName(), PdfTheme.bodyFont()));
             String detail = line.getQuantity() + " un. × " + MoneyFormat.formatPlain(line.getUnitPrice());
             if (line.getDiscountPercentage() != null && line.getDiscountPercentage().signum() > 0) {
-                detail += " (-" + line.getDiscountPercentage().stripTrailingZeros().toPlainString() + "%)";
+                detail += " (-" + MoneyFormat.formatQty(line.getDiscountPercentage()) + "%)";
             }
             description.add(new Chunk("\n" + detail, PdfTheme.smallFont()));
             PdfPCell cell = new PdfPCell(description);

@@ -39,10 +39,10 @@ public final class PhysicalInventoryViewCoordinator {
         peek.setSubtitle("SKU: " + tableModel.getValueAt(row, 0));
         peek.setStatus(String.valueOf(tableModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Qtd Sistema", String.valueOf(tableModel.getValueAt(row, 2)), false),
-                new QuickPeekPanel.PeekItem("Qtd Contada", String.valueOf(tableModel.getValueAt(row, 3)), false),
-                new QuickPeekPanel.PeekItem("Divergência", String.valueOf(tableModel.getValueAt(row, 4)), true),
-                new QuickPeekPanel.PeekItem("Impacto Financeiro", String.valueOf(tableModel.getValueAt(row, 5)), true)
+                new QuickPeekPanel.PeekItem("Qtd Sistema", peek.cell(tableModel.getValueAt(row, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Qtd Contada", peek.cell(tableModel.getValueAt(row, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Divergência", peek.cell(tableModel.getValueAt(row, 4), 4), true),
+                new QuickPeekPanel.PeekItem("Impacto Financeiro", peek.cell(tableModel.getValueAt(row, 5), 5), true)
         ));
     }
 

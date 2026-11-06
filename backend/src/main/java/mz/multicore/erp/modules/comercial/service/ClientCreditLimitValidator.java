@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
@@ -42,6 +43,6 @@ public class ClientCreditLimitValidator {
 
     private static String money(BigDecimal value) {
         BigDecimal safe = value == null ? BigDecimal.ZERO : value;
-        return safe.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        return DisplayNumbers.money(safe);
     }
 }

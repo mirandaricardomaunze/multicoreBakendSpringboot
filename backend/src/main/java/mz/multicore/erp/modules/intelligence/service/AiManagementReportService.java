@@ -143,7 +143,7 @@ public class AiManagementReportService {
         }
         for (AiEvidenceDTO item : response.evidence()) {
             addCell(table, item.label(), Element.ALIGN_LEFT);
-            addCell(table, item.value() == null ? "0" : item.value().stripTrailingZeros().toPlainString(), Element.ALIGN_RIGHT);
+            addCell(table, mz.multicore.erp.modules.printing.MoneyFormat.formatQty(item.value()), Element.ALIGN_RIGHT);
             addCell(table, item.period(), Element.ALIGN_LEFT);
         }
         return table;

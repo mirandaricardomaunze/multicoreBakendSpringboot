@@ -80,7 +80,7 @@ class LineItemsTableRendererTest {
                 BigDecimal.ZERO, new BigDecimal("2088.00"));
 
         assertEquals("3", LineItemsTableRenderer.formatPackages(row));
-        assertEquals("0.25", LineItemsTableRenderer.formatBoxes(row));
+        assertEquals("0,25", LineItemsTableRenderer.formatBoxes(row));
         assertEquals("25%", LineItemsTableRenderer.formatBoxPercentage(row));
         assertEquals(0, new BigDecimal("1800.00").compareTo(LineItemsTableRenderer.subtotal(row)));
 
@@ -89,7 +89,7 @@ class LineItemsTableRendererTest {
                 new BigDecimal("90"), 12, 6, new BigDecimal("100"), new BigDecimal("0.16"),
                 BigDecimal.ZERO, new BigDecimal("10440.00"));
         assertEquals("15", LineItemsTableRenderer.formatPackages(moreThanOneBox));
-        assertEquals("1.25", LineItemsTableRenderer.formatBoxes(moreThanOneBox));
+        assertEquals("1,25", LineItemsTableRenderer.formatBoxes(moreThanOneBox));
         assertEquals("125%", LineItemsTableRenderer.formatBoxPercentage(moreThanOneBox));
     }
 }

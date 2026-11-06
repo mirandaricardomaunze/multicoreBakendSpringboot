@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.pos.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -90,7 +91,7 @@ public class PosSessionAndShiftService {
             PermissionGuard.requireManagerOrAdmin("realizar sangria de caixa");
             BigDecimal expected = computeExpectedCash(sessionId, session.getOpeningBalance());
             if (expected.compareTo(amount) < 0) {
-                throw new BusinessRuleException("Saldo de caixa insuficiente para realizar a sangria. Disponível: " + expected + " MT");
+                throw new BusinessRuleException("Saldo de caixa insuficiente para realizar a sangria. Disponível: " + DisplayNumbers.money(expected) + " MT");
             }
         }
 

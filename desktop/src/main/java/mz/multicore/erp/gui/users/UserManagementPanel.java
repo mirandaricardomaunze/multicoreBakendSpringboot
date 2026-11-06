@@ -88,7 +88,7 @@ public class UserManagementPanel extends JPanel {
         TableFilter.install(usersTable, searchField, new TableFilter.ColumnFilter(estadoCombo, 4));
 
         TableQuickPeekController.install(usersTable, card, (peek, mr) -> {
-            int row = usersTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             UserOperationsCoordinator.populateQuickPeek(peek, tableModel, row);
         });
 

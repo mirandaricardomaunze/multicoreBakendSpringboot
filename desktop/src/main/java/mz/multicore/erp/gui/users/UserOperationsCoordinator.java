@@ -56,10 +56,10 @@ public final class UserOperationsCoordinator {
         peek.setSubtitle("Utilizador: " + tableModel.getValueAt(row, 1) + " • ID " + tableModel.getValueAt(row, 0));
         peek.setStatus(String.valueOf(tableModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Nome de Utilizador", String.valueOf(tableModel.getValueAt(row, 1)), false));
-        items.add(new QuickPeekPanel.PeekItem("Perfil / Role", String.valueOf(tableModel.getValueAt(row, 3)), true));
-        items.add(new QuickPeekPanel.PeekItem("Estado", String.valueOf(tableModel.getValueAt(row, 4)), false));
-        items.add(new QuickPeekPanel.PeekItem("PIN de Gestor", String.valueOf(tableModel.getValueAt(row, 5)), false));
+        items.add(new QuickPeekPanel.PeekItem("Nome de Utilizador", peek.cell(tableModel.getValueAt(row, 1), 1), false));
+        items.add(new QuickPeekPanel.PeekItem("Perfil / Role", peek.cell(tableModel.getValueAt(row, 3), 3), true));
+        items.add(new QuickPeekPanel.PeekItem("Estado", peek.cell(tableModel.getValueAt(row, 4), 4), false));
+        items.add(new QuickPeekPanel.PeekItem("PIN de Gestor", peek.cell(tableModel.getValueAt(row, 5), 5), false));
         peek.setItems(items);
     }
 

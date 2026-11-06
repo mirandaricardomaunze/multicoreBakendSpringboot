@@ -100,7 +100,7 @@ final class StockAlertsPanel {
         JScrollPane outScroll = new JScrollPane(owner.alertsOutTable);
         UIHelper.styleScrollPane(outScroll);
         TableQuickPeekController.install(owner.alertsOutTable, outCard, (peek, mr) -> {
-            int row = owner.alertsOutTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             StockAlertsViewCoordinator.populateOutOfStockPeek(peek, owner, row);
         });
 

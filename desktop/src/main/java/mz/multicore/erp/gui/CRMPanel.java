@@ -87,7 +87,7 @@ public class CRMPanel extends JPanel {
         });
 
         TableQuickPeekController.install(ticketsTable, ticketsCard, (peek, mr) -> {
-            int row = ticketsTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             CrmViewCoordinator.populateTicketPeek(peek, ticketsModel, row, ticketActions::openSelectedTicket);
         });
 

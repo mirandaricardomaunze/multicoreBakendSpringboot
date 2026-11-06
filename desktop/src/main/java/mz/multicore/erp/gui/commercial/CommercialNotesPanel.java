@@ -147,19 +147,19 @@ public final class CommercialNotesPanel {
         JScrollPane scroll = new JScrollPane(table);
         UIHelper.styleScrollPane(scroll);
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-file-invoice", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(table.getModel().getValueAt(row, 0)));
             peek.setSubtitle("Cliente: " + table.getModel().getValueAt(row, 2) + " • Data: " + table.getModel().getValueAt(row, 1));
             peek.setStatus(String.valueOf(table.getModel().getValueAt(row, statusColumn)), UIHelper.ACCENT_BLUE);
             List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-            items.add(new QuickPeekPanel.PeekItem("Fatura Associada", String.valueOf(table.getModel().getValueAt(row, 2)), false));
-            items.add(new QuickPeekPanel.PeekItem("Motivo", String.valueOf(table.getModel().getValueAt(row, reasonColumn)), false));
+            items.add(new QuickPeekPanel.PeekItem("Fatura Associada", peek.cell(table.getModel().getValueAt(row, 2), 2), false));
+            items.add(new QuickPeekPanel.PeekItem("Motivo", peek.cell(table.getModel().getValueAt(row, reasonColumn), reasonColumn), false));
             int moneyCol = table == creditTable ? 6 : 5;
-            items.add(new QuickPeekPanel.PeekItem("Valor Total", String.valueOf(table.getModel().getValueAt(row, moneyCol)), true));
+            items.add(new QuickPeekPanel.PeekItem("Valor Total", peek.cell(table.getModel().getValueAt(row, moneyCol), moneyCol), true));
             int printCol = table == creditTable ? 8 : 7;
             if (printCol < table.getModel().getColumnCount()) {
-                items.add(new QuickPeekPanel.PeekItem("Vias Impressas", String.valueOf(table.getModel().getValueAt(row, printCol)), false));
+                items.add(new QuickPeekPanel.PeekItem("Vias Impressas", peek.cell(table.getModel().getValueAt(row, printCol), printCol), false));
             }
             peek.setItems(items);
         });

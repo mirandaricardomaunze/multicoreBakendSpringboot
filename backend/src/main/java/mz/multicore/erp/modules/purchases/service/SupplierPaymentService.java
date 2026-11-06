@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.events.SupplierPaymentRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
@@ -91,7 +92,7 @@ public class SupplierPaymentService {
             throw new BusinessRuleException("Esta compra já está totalmente paga.");
         }
         if (amount.compareTo(outstanding) > 0) {
-            throw new BusinessRuleException("Valor excede o saldo em dívida (" + outstanding.toPlainString() + " MT).");
+            throw new BusinessRuleException("Valor excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
 
         purchase.setAmountPaid(purchase.getAmountPaid().add(amount));

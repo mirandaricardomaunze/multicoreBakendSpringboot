@@ -27,10 +27,10 @@ public final class CrmViewCoordinator {
         peek.setStatus(String.valueOf(model.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Data de Abertura", String.valueOf(model.getValueAt(row, 1)), false));
-        items.add(new QuickPeekPanel.PeekItem("Cliente", String.valueOf(model.getValueAt(row, 2)), false));
-        items.add(new QuickPeekPanel.PeekItem("Prioridade", String.valueOf(model.getValueAt(row, 4)), true));
-        items.add(new QuickPeekPanel.PeekItem("Técnico Responsável", String.valueOf(model.getValueAt(row, 5)), false));
+        items.add(new QuickPeekPanel.PeekItem("Data de Abertura", peek.cell(model.getValueAt(row, 1), 1), false));
+        items.add(new QuickPeekPanel.PeekItem("Cliente", peek.cell(model.getValueAt(row, 2), 2), false));
+        items.add(new QuickPeekPanel.PeekItem("Prioridade", peek.cell(model.getValueAt(row, 4), 4), true));
+        items.add(new QuickPeekPanel.PeekItem("Técnico Responsável", peek.cell(model.getValueAt(row, 5), 5), false));
         peek.setItems(items);
         peek.getOpenFullButton().setText("Abrir Pedido");
         peek.setOnOpenFullAction(v -> { if (onOpen != null) onOpen.run(); });

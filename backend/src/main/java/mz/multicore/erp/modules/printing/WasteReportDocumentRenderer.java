@@ -76,8 +76,8 @@ public class WasteReportDocumentRenderer {
         table.setSpacingAfter(6f);
 
         addKpiCard(table, "Perda Financeira", MoneyFormat.format(summary.totalWasteCost()));
-        addKpiCard(table, "Qtd Total Quebrada", summary.totalWasteQuantity().stripTrailingZeros().toPlainString() + " un");
-        addKpiCard(table, "Taxa Desperdício", summary.wasteRatePercentage().toPlainString() + "% s/ vendas");
+        addKpiCard(table, "Qtd Total Quebrada", MoneyFormat.formatQty(summary.totalWasteQuantity()) + " un");
+        addKpiCard(table, "Taxa Desperdício", MoneyFormat.formatQty(summary.wasteRatePercentage()) + "% s/ vendas");
         addKpiCard(table, "Total Ocorrências", String.valueOf(summary.totalRecordsCount()));
         return table;
     }
@@ -115,7 +115,7 @@ public class WasteReportDocumentRenderer {
             addDataCell(table, w.getProduct() != null ? w.getProduct().getName() : "-", Element.ALIGN_LEFT, alt);
             addDataCell(table, w.getWarehouse() != null ? w.getWarehouse().getName() : "-", Element.ALIGN_LEFT, alt);
             addDataCell(table, w.getReason() != null ? w.getReason().getDescription() : "-", Element.ALIGN_LEFT, alt);
-            addDataCell(table, w.getQuantity() != null ? w.getQuantity().stripTrailingZeros().toPlainString() : "0", Element.ALIGN_RIGHT, alt);
+            addDataCell(table, MoneyFormat.formatQty(w.getQuantity()), Element.ALIGN_RIGHT, alt);
             addDataCell(table, w.getTotalCost() != null ? MoneyFormat.format(w.getTotalCost()) : "0,00 MT", Element.ALIGN_RIGHT, alt);
             addDataCell(table, w.getStatus() != null ? w.getStatus().getDescription() : "-", Element.ALIGN_CENTER, alt);
             alt = !alt;

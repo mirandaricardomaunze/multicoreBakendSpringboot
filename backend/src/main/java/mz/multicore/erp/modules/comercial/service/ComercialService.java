@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
 import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
@@ -201,8 +202,8 @@ public class ComercialService {
         }
         BigDecimal outstanding = invoice.outstandingAmount();
         if (amountPaid.compareTo(outstanding) > 0) {
-            throw new BusinessRuleException("Valor do recibo (" + amountPaid
-                    + ") excede o saldo em dívida (" + outstanding + ").");
+            throw new BusinessRuleException("Valor do recibo (" + DisplayNumbers.money(amountPaid)
+                    + " MT) excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
 
         TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(

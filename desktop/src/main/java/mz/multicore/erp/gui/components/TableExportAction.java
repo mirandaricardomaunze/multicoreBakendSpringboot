@@ -4,7 +4,6 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.modules.printing.dto.TableExportRequest;
 
-import javax.swing.JLabel;
 import javax.swing.JTable;
 import java.awt.Component;
 import java.util.ArrayList;
@@ -78,28 +77,8 @@ public final class TableExportAction {
         return new TableExportRequest(title, headers, rows);
     }
 
-    /**
-     * O texto que o renderer da coluna mostra: "1.460,00 MT" e não "1460.00". Sem isto o PDF divergia
-     * do ecrã em todos os valores e quantidades. Se o renderer não for um rótulo, vai o valor cru.
-     */
+    /** O texto que a coluna mostra: "1.460,00 MT" e não "1460.00". Ver {@link CellText}. */
     static String displayedText(JTable table, int modelRow, int viewColumn) {
-        Object value = table.getModel().getValueAt(modelRow, table.convertColumnIndexToModel(viewColumn));
-        if (value == null) return "";
-        try {
-            int viewRow = Math.max(0, table.convertRowIndexToView(modelRow));
-            Component cell = table.getCellRenderer(viewRow, viewColumn)
-                    .getTableCellRendererComponent(table, value, false, false, viewRow, viewColumn);
-            if (cell instanceof JLabel label && label.getText() != null) return plainText(label.getText());
-        } catch (RuntimeException ignored) {
-            // Um renderer que dependa do estado da vista não pode impedir a exportação.
-        }
-        return String.valueOf(value);
-    }
-
-    private static String plainText(String text) {
-        if (!text.regionMatches(true, 0, "<html>", 0, 6)) return text.trim();
-        return text.replaceAll("(?i)<br\\s*/?>", " ").replaceAll("<[^>]*>", "")
-                .replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
-                .replaceAll("\\s+", " ").trim();
+        return CellText.displayed(table, modelRow, viewColumn);
     }
 }
