@@ -109,9 +109,8 @@ public class PurchaseOrderReceiptExecutor {
             if (accounted.compareTo(outstanding) > 0) {
                 throw new BusinessRuleException(String.format(
                         "Linha %s: %s recebidas + %s danificadas + %s em falta excedem as %s por receber.",
-                        line.getProduct().getName(), DisplayNumbers.qty(qty),
-                        DisplayNumbers.qty(item.safeDamaged()), DisplayNumbers.qty(item.safeMissing()),
-                        DisplayNumbers.qty(outstanding)));
+                        line.getProduct().getName(), DisplayNumbers.qty(qty), DisplayNumbers.qty(item.safeDamaged()),
+                        DisplayNumbers.qty(item.safeMissing()), DisplayNumbers.qty(outstanding)));
             }
             receiveLine(order, line, qty, accepted);
             recordDiscrepancies(order, line, item);

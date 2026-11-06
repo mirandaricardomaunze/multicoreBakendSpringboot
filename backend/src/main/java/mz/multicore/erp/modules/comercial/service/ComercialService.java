@@ -206,8 +206,7 @@ public class ComercialService {
                     + " MT) excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
 
-        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(
-                        treasuryAccountId, CurrentUserContext.getCurrentCompanyId())
+        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(treasuryAccountId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."));
 
         Receipt receipt = new Receipt();
