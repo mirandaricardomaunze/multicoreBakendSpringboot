@@ -58,6 +58,34 @@ incorrectos. As decisões de negócio ainda abertas estão no fim.
 - A quantidade separada não pode exceder a encomendada.
 - O que ficou por separar não gera nova encomenda.
 
+### Circuito da encomenda (revisão de 2026-11-07)
+
+- **Faturação:** `POST /orders/{id}/bill` valida o perfil também no serviço, e não só na
+  `ApiRolePolicy`. Um pedido de separação só se fatura no fim do circuito (`/fulfillment-bill`),
+  com estado `INVOICED` e evento gravado.
+- **Conferência:**
+  - Só para pedidos de separação que aguardam ou estão em separação.
+  - Tem de indicar todas as linhas, aceitando zero. Linhas em falta, repetidas ou de outra
+    encomenda são recusadas.
+  - A reserva passa a ser a quantidade separada.
+- **Folha A4 de separação:** é `POST`, porque inicia a separação. Recusa encomendas A4.
+- **Reservas (RS-01 a RS-07):** faturar uma encomenda e aprovar uma guia não levam stock reservado
+  para outro pedido. A reserva da própria encomenda conta a seu favor. A verificação soma as linhas
+  do mesmo artigo. A guia é bloqueada antes de ser lida.
+- **Estados (EN-01 a EN-07):**
+  - Os estados estão no enum `OrderStatus` em `contracts`; a coluna continua a ser texto.
+  - `BILLED` e `INVOICED` contam ambos como faturada, e `INVOICED` deixou de aparecer "em atraso".
+  - As pesquisas de encomendas abertas são feitas na base.
+- **Aprovações:** quem submete um pedido não o aprova. O ADMIN fica de fora, para lojas com um só
+  responsável. O pedido pendente é procurado por documento, não na fila inteira.
+- **Armazém:** um armazém inactivo não recebe encomendas.
+- **Crédito (CR-01 a CR-04):** a última aprovação de uma encomenda A4 feita por um gerente ou ADMIN
+  decide o excesso de crédito, dentro das alçadas do `OrderRiskEvaluator`, e a fatura não o desfaz.
+  A Green Lane (perfil `NONE`) e os pedidos de separação continuam presos ao limite. Decidido pelo
+  responsável em 2026-11-07.
+- **Venda sem encomenda (RS-08, RS-09):** o POS, a fatura directa, a cotação convertida e a fatura
+  aprovada após desconto especial também não levam stock reservado (`SaleStockIssuer`).
+
 ### Desconto
 
 - Numa encomenda formal, um desconto acima de 10% exige gerente, seja qual for o valor.

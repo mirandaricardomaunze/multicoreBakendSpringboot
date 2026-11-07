@@ -91,4 +91,16 @@ class GlobalExceptionHandlerTest {
                 "o detalhe da avaria fica no log do servidor, não na resposta");
     }
 
+    /** Método errado é 405 e diz ao operador que actualize o programa (desktop antigo, servidor novo). */
+    @Test
+    void wrongHttpMethodIsMethodNotAllowedAndAsksToUpdate() {
+        var ex = new org.springframework.web.HttpRequestMethodNotSupportedException("GET", java.util.List.of("POST"));
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMethodNotSupported(ex);
+
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
+        assertTrue(response.getBody().message().contains("actualize"), response.getBody().message());
+        assertTrue(response.getHeaders().getAllow().contains(HttpMethod.POST));
+    }
+
 }

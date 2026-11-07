@@ -4,7 +4,6 @@ import mz.multicore.erp.modules.approvals.service.ApprovalCallback;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.inventory.service.InventoryService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,13 +14,11 @@ import java.math.BigDecimal;
 public class InvoiceApprovalCallback implements ApprovalCallback {
 
     private final InvoiceRepository invoiceRepository;
-    private final InventoryService inventoryService;
     private final ComercialInvoiceLifecycleService invoiceLifecycleService;
 
-    public InvoiceApprovalCallback(InvoiceRepository invoiceRepository, InventoryService inventoryService,
+    public InvoiceApprovalCallback(InvoiceRepository invoiceRepository,
                                    @Lazy ComercialInvoiceLifecycleService invoiceLifecycleService) {
         this.invoiceRepository = invoiceRepository;
-        this.inventoryService = inventoryService;
         this.invoiceLifecycleService = invoiceLifecycleService;
     }
 
@@ -37,19 +34,8 @@ public class InvoiceApprovalCallback implements ApprovalCallback {
             invoice.setStatus(InvoiceStatus.APPROVED);
             invoiceRepository.save(invoice);
 
-            // Deduct stock for each invoice line in the warehouse
-            invoice.getLines().forEach(line -> {
-                String desc = String.format("Saída Fatura %s - Cliente %s", invoice.getInvoiceNumber(), invoice.getClient().getName());
-                inventoryService.registerMovement(
-                        line.getProduct(),
-                        invoice.getWarehouse(),
-                        line.getQuantity().negate(),
-                        "SALE",
-                        line.getBatchNumber(),
-                        line.getSerialNumber(),
-                        desc
-                );
-            });
+            // Mesma saída da fatura directa, incluindo a verificação de stock reservado.
+            invoiceLifecycleService.deductStockForInvoice(invoice);
             // Sem isto, a venda com desconto especial nunca chegava à contabilidade.
             invoiceLifecycleService.publishSale(invoice, BigDecimal.ZERO, false);
         });

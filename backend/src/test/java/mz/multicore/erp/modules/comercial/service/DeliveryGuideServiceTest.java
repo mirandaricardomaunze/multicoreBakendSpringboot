@@ -89,7 +89,7 @@ class DeliveryGuideServiceTest {
     @Test
     void create_ficaPendente_travaEncomenda_eNaoMoveStock() { // GR-01, GR-10
         Order order = pendingOrder(new BigDecimal("5"));
-        when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+        when(orderRepository.findForUpdate(eq(500L), anyLong())).thenReturn(Optional.of(order));
         when(documentNumberService.next(any())).thenReturn("GR-2026/1");
         when(guideRepository.save(any(DeliveryGuide.class))).thenAnswer(inv -> {
             DeliveryGuide g = inv.getArgument(0);

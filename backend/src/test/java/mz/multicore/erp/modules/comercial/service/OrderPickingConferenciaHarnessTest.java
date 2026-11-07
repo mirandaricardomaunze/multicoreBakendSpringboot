@@ -140,6 +140,7 @@ class OrderPickingConferenciaHarnessTest {
         order.setId(1L);
         order.setOrderNumber("ENC-001");
         order.setStatus("IN_SEPARATION");
+        order.setKind(OrderKind.PICKING_REQUEST);
         order.setCompany(company);
         order.setWarehouse(warehouse);
         order.setClient(client);
@@ -179,6 +180,7 @@ class OrderPickingConferenciaHarnessTest {
         Order order = new Order();
         order.setId(1L);
         order.setStatus("IN_SEPARATION");
+        order.setKind(OrderKind.PICKING_REQUEST);
         order.setCompany(company);
         order.setLines(new ArrayList<>(List.of(line)));
 
@@ -199,11 +201,119 @@ class OrderPickingConferenciaHarnessTest {
         Order order = new Order();
         order.setId(1L);
         order.setStatus("INVOICED");
+        order.setKind(OrderKind.PICKING_REQUEST);
         order.setCompany(company);
 
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
         CompleteOrderPickingRequest request = new CompleteOrderPickingRequest(1L, "TERM-01");
         assertThrows(BusinessRuleException.class, () -> service.completeSeparationWithConfirmation(request));
+    }
+
+    // ─── Circuito fechado à encomenda A4 e conferência completa ─────────────
+
+    private Order pickingOrder(OrderKind kind, String status, OrderLine... lines) {
+        Order order = new Order();
+        order.setId(1L);
+        order.setOrderNumber("ENC-009");
+        order.setKind(kind);
+        order.setStatus(status);
+        order.setCompany(company);
+        order.setWarehouse(warehouse);
+        order.setClient(client);
+        order.setLines(new ArrayList<>(List.of(lines)));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(comercialService.toDTO(any(Order.class))).thenReturn(mock(OrderDTO.class));
+        return order;
+    }
+
+    private OrderLine line(long id, String name, String quantity) {
+        Product p = new Product();
+        p.setId(id);
+        p.setName(name);
+        OrderLine line = new OrderLine();
+        line.setId(id);
+        line.setProduct(p);
+        line.setQuantity(new BigDecimal(quantity));
+        return line;
+    }
+
+    @Test
+    @DisplayName("conferência recusa encomenda A4 aprovada — não passa pelo armazém")
+    void conferencia_encomendaA4Pendente_recusaENaoMudaEstado() {
+        Order order = pickingOrder(OrderKind.FORMAL_ORDER, "PENDING", line(101L, "Arroz", "10"));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparationWithConfirmation(new CompleteOrderPickingRequest(1L, "TERM-01")));
+
+        assertTrue(error.getMessage().contains("não passa pelo armazém"), error.getMessage());
+        assertEquals("PENDING", order.getStatus());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("conferência aceita zero numa linha esgotada")
+    void conferencia_linhaComZero_ficaSeparadaComZero() {
+        OrderLine arroz = line(101L, "Arroz", "10");
+        OrderLine oleo = line(102L, "Óleo", "5");
+        Order order = pickingOrder(OrderKind.PICKING_REQUEST, "IN_SEPARATION", arroz, oleo);
+
+        service.completeSeparationWithConfirmation(new CompleteOrderPickingRequest(1L, "TERM-01", null, List.of(
+                new OrderPickingConfirmationLineRequest(101L, new BigDecimal("10"), null),
+                new OrderPickingConfirmationLineRequest(102L, BigDecimal.ZERO, null))));
+
+        assertEquals("SEPARATED", order.getStatus());
+        assertEquals(0, BigDecimal.ZERO.compareTo(oleo.getSeparatedQuantity()));
+    }
+
+    @Test
+    @DisplayName("conferência parcial liberta a reserva do que não saiu")
+    void conferenciaParcial_reservaPassaAQuantidadeSeparada() {
+        OrderLine arroz = line(101L, "Arroz", "10");
+        arroz.setReservedQuantity(new BigDecimal("10"));
+        Order order = pickingOrder(OrderKind.PICKING_REQUEST, "IN_SEPARATION", arroz);
+        order.setReservationActive(true);
+
+        service.completeSeparationWithConfirmation(new CompleteOrderPickingRequest(1L, "TERM-01", null,
+                List.of(new OrderPickingConfirmationLineRequest(101L, new BigDecimal("6"), null))));
+
+        // As 4 que ficaram na prateleira voltam a estar livres para outras vendas.
+        assertEquals(0, new BigDecimal("6").compareTo(arroz.getReservedQuantity()));
+    }
+
+    @Test
+    @DisplayName("conferência recusa linha esquecida em vez de a dar como separado zero")
+    void conferencia_linhaEmFalta_recusa() {
+        Order order = pickingOrder(OrderKind.PICKING_REQUEST, "IN_SEPARATION",
+                line(101L, "Arroz", "10"), line(102L, "Óleo", "5"));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparationWithConfirmation(new CompleteOrderPickingRequest(1L, "TERM-01", null,
+                        List.of(new OrderPickingConfirmationLineRequest(101L, new BigDecimal("10"), null)))));
+
+        assertTrue(error.getMessage().contains("Óleo"), error.getMessage());
+        assertEquals("IN_SEPARATION", order.getStatus());
+    }
+
+    @Test
+    @DisplayName("conferência recusa linha que não pertence à encomenda")
+    void conferencia_linhaDeOutraEncomenda_recusa() {
+        pickingOrder(OrderKind.PICKING_REQUEST, "IN_SEPARATION", line(101L, "Arroz", "10"));
+
+        assertThrows(BusinessRuleException.class,
+                () -> service.completeSeparationWithConfirmation(new CompleteOrderPickingRequest(1L, "TERM-01", null, List.of(
+                        new OrderPickingConfirmationLineRequest(101L, new BigDecimal("10"), null),
+                        new OrderPickingConfirmationLineRequest(999L, BigDecimal.ONE, null)))));
+    }
+
+    @Test
+    @DisplayName("folha A4 de separação recusa encomenda A4 e não a põe em separação")
+    void folhaA4_encomendaFormal_recusaENaoMudaEstado() {
+        Order order = pickingOrder(OrderKind.FORMAL_ORDER, "PENDING", line(101L, "Arroz", "10"));
+
+        assertThrows(BusinessRuleException.class, () -> service.printForPickingA4(1L, "TERM-01"));
+
+        assertEquals("PENDING", order.getStatus());
+        verify(sheetPrintService, never()).renderA4(anyLong(), anyBoolean());
     }
 }

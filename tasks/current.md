@@ -39,6 +39,19 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Decisões permanentes relevantes
 
+34. **Circuito da Encomenda Validado no Backend:**
+    - A faturação directa não aceita pedidos de separação. A conferência exige todas as linhas.
+      A folha A4 é `POST`.
+    - Faturar e aprovar uma guia respeitam as reservas de outros pedidos. Os estados estão no enum
+      `OrderStatus`. Quem pede uma aprovação não a aprova (excepto ADMIN).
+    - SPEC em `docs/COMERCIAL_DOCUMENTOS_AUDITORIA_SPEC.md`, "Circuito da encomenda". Harness em
+      `OrderStatusTest`, `OrderStockAvailabilityTest`, `DeliveryGuideApprovalReservationTest`,
+      `OrderSearchQueryHarnessTest` e `OrderPickingConferenciaHarnessTest`.
+    - POS, fatura directa e cotação convertida também respeitam reservas (`SaleStockIssuer`).
+    - Crédito: uma encomenda A4 aprovada por gerente ou ADMIN fatura mesmo acima do limite; a Green Lane não.
+    - Carga POS repetida em 2026-11-07 (`docs/CARGA_POSTGRES_SPEC.md`): 12.252 vendas, 0 erros. Encontrou e
+      corrigiu as corridas do "Consumidor Final" e da série FT na primeira venda do ano (CG-06, CG-07).
+
 33. **Acções Sobre a Linha Seleccionada:**
     - Acções de tabela usam `TableFilter.selectedModelRow(table)`. Com filtro ou da 2.ª página em
       diante, 16 acções agiam sobre outro registo (utilizadores, contratos, contagens, POS, backups).

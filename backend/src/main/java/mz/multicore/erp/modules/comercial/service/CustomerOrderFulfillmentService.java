@@ -87,14 +87,11 @@ public class CustomerOrderFulfillmentService {
     private OrderDTO createAndReserve(CreateFulfillmentOrderRequest request, String key) {
         OrderDTO created = comercialService.createOrder(request.order(), OrderKind.PICKING_REQUEST);
         Order order = pickingCoordinator.requireOrder(created.id());
-        for (OrderLine line : order.getLines()) {
-            BigDecimal physical = inventoryService.lockAndGetPhysicalQuantity(line.getProduct().getId(), order.getWarehouse().getId());
-            BigDecimal reserved = orderLineRepository.sumActiveReservations(line.getProduct().getId(), order.getWarehouse().getId());
-            if (physical.subtract(reserved).compareTo(line.getQuantity()) < 0) {
-                throw new BusinessRuleException("Stock disponivel insuficiente para " + line.getProduct().getName() + ".");
-            }
-            line.setReservedQuantity(line.getQuantity());
-        }
+        // Somado por artigo: duas linhas do mesmo produto não podem, cada uma, caber no stock livre.
+        OrderStockAvailability.require(order, order.getWarehouse(), order.getLines().stream()
+                .map(l -> new OrderStockAvailability.Outgoing(l.getProduct(), l.getQuantity())).toList(),
+                inventoryService, orderLineRepository);
+        order.getLines().forEach(line -> line.setReservedQuantity(line.getQuantity()));
         order.setIdempotencyKey(key);
         order.setReservationActive(true);
         String previous = order.getStatus();

@@ -63,8 +63,11 @@ class OrderEditorHarnessTest {
                 .contains(".put(\"/api/comercial/orders/\" + id");
         assertThat(request).contains("Long version", "List<CreateInvoiceLineRequest> lines");
         assertThat(response).contains("long version");
+        // Os estados editáveis vivem no enum OrderStatus; o serviço pergunta-lhe.
+        String statuses = root("contracts/src/main/java/mz/multicore/erp/modules/comercial/model/OrderStatus.java");
+        assertThat(statuses).contains("EDITABLE_STATES = EnumSet.of(PENDING_APPROVAL, PENDING, AWAITING_SEPARATION)");
         assertThat(service).contains("request.version() != order.getVersion()")
-                .contains("PENDING_APPROVAL", "AWAITING_SEPARATION")
+                .contains("OrderStatus.isEditable(order.getStatus())")
                 .contains("revalidateReservation(order, warehouse, replacement)")
                 .contains("auditLogService.logCurrent(\"ORDER_UPDATE\"");
     }

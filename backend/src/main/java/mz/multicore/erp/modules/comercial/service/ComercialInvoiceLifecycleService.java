@@ -58,6 +58,7 @@ public class ComercialInvoiceLifecycleService {
     private final ReceivablesService receivablesService;
     private final ApplicationEventPublisher eventPublisher;
     private final BusinessUnitRepository businessUnitRepository;
+    private final SaleStockIssuer saleStockIssuer;
 
     public ComercialInvoiceLifecycleService(
             InvoiceRepository invoiceRepository,
@@ -74,7 +75,7 @@ public class ComercialInvoiceLifecycleService {
             AuditLogService auditLogService,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
-            @Autowired(required = false) BusinessUnitRepository businessUnitRepository) {
+            @Autowired(required = false) BusinessUnitRepository businessUnitRepository, SaleStockIssuer saleStockIssuer) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -90,6 +91,7 @@ public class ComercialInvoiceLifecycleService {
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
         this.businessUnitRepository = businessUnitRepository;
+        this.saleStockIssuer = saleStockIssuer;
     }
 
     public void publishSale(Invoice invoice, BigDecimal amountPaidNow, boolean cashPayment) {
@@ -196,12 +198,10 @@ public class ComercialInvoiceLifecycleService {
         return toDTO(invoice);
     }
 
-    private void deductStockForInvoice(Invoice invoice) {
-        invoice.getLines().forEach(line -> {
-            String desc = String.format("Saída Fatura %s - Cliente %s", invoice.getInvoiceNumber(), invoice.getClient().getName());
-            inventoryService.registerMovement(line.getProduct(), invoice.getWarehouse(), line.getQuantity().negate(),
-                    "SALE", line.getBatchNumber(), line.getSerialNumber(), desc);
-        });
+    /** Também usado pela aprovação de desconto especial: a mesma saída, com a mesma verificação de reservas. */
+    void deductStockForInvoice(Invoice invoice) {
+        saleStockIssuer.issue(invoice, invoice.getWarehouse(),
+                String.format("Saída Fatura %s - Cliente %s", invoice.getInvoiceNumber(), invoice.getClient().getName()));
     }
 
     public void cancelInvoice(Long invoiceId, String reason) {
@@ -283,12 +283,9 @@ public class ComercialInvoiceLifecycleService {
             invoiceLine.setLineTotal(quotedLine.getLineTotal());
             invoiceLine.setUnitCost(quotedLine.getProduct().getPurchasePrice());
             invoice.addLine(invoiceLine);
-
-            String desc = String.format("Saída Fatura %s (Cotação %s) - Cliente %s",
-                    invoice.getInvoiceNumber(), quotation.getQuotationNumber(), quotation.clientLabel());
-            inventoryService.registerMovement(quotedLine.getProduct(), quotation.getWarehouse(),
-                    quotedLine.getQuantity().negate(), "SALE", null, null, desc);
         }
+        saleStockIssuer.issue(invoice, quotation.getWarehouse(), String.format("Saída Fatura %s (Cotação %s) - Cliente %s",
+                invoice.getInvoiceNumber(), quotation.getQuotationNumber(), quotation.clientLabel()));
         invoice = invoiceRepository.save(invoice);
         publishSale(invoice, BigDecimal.ZERO, false);
         return toDTO(invoice);

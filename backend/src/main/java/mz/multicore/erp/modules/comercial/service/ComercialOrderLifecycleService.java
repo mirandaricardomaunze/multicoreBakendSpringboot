@@ -33,9 +33,6 @@ import java.util.stream.IntStream;
 @Component
 public class ComercialOrderLifecycleService {
 
-    private static final Set<String> CANCELLABLE_STATUSES = Set.of(
-            "PENDING_APPROVAL", "PENDING", "AWAITING_SEPARATION", "IN_SEPARATION", "SEPARATED");
-
     private final OrderRepository orderRepository;
     private final OrderLineRepository orderLineRepository;
     private final ClientRepository clientRepository;
@@ -97,11 +94,7 @@ public class ComercialOrderLifecycleService {
                 : walkInClientProvider.getOrCreate();
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        if (!request.companyId().equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
-        }
+        Warehouse warehouse = requireActiveWarehouse(request.warehouseId(), request.companyId(), "Armazém");
         Warehouse destination = resolveDestination(request.companyId(), request.destinationWarehouseId(), kind, warehouse);
         List<OrderLine> lines = buildOrderLines(request.companyId(), request.lines());
         clientAndCreditService.validatePaymentTermsForClient(client, request.paymentTerms(), request.companyId());
@@ -122,11 +115,7 @@ public class ComercialOrderLifecycleService {
                 ? walkInClientProvider.getOrCreate()
                 : clientRepository.findByIdAndCompaniesId(request.clientId(), companyId)
                         .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
-        if (!companyId.equals(warehouse.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
-        }
+        Warehouse warehouse = requireActiveWarehouse(request.warehouseId(), companyId, "Armazém");
         OrderKind kind = OrderKind.orDefault(order.getKind());
         Warehouse destination = resolveDestination(companyId, request.destinationWarehouseId(), kind, warehouse);
         List<OrderLine> replacement = buildOrderLines(companyId, request.lines());
@@ -148,7 +137,7 @@ public class ComercialOrderLifecycleService {
 
         if (kind.requiresApproval()) {
             approvalService.cancelPendingForDocument("ORDER", order.getId(), "Substituído por uma nova versão da encomenda.");
-            order.setStatus("PENDING_APPROVAL");
+            order.setStatus(OrderStatus.PENDING_APPROVAL.name());
         }
         order = orderRepository.saveAndFlush(order);
         if (kind.requiresApproval()) submitForApproval(order);
@@ -158,8 +147,7 @@ public class ComercialOrderLifecycleService {
     }
 
     private void requireEditableOrder(Order order) {
-        String status = order.getStatus() == null ? "" : order.getStatus().toUpperCase(Locale.ROOT);
-        if (!Set.of("PENDING_APPROVAL", "PENDING", "AWAITING_SEPARATION").contains(status)) {
+        if (!OrderStatus.isEditable(order.getStatus())) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " está em \""
                     + OrderStatusLabel.of(order.getStatus()) + "\" e já não pode ser alterada.");
         }
@@ -257,7 +245,7 @@ public class ComercialOrderLifecycleService {
         order.setDeliveryTerms(agreed.deliveryTerms());
         order.setNotes(agreed.notes());
         order.assignExpectedDelivery(LocalDate.now(), agreed.deliveryDays());
-        order.setStatus(kind.requiresApproval() ? "PENDING_APPROVAL" : "PENDING");
+        order.setStatus((kind.requiresApproval() ? OrderStatus.PENDING_APPROVAL : OrderStatus.PENDING).name());
         if (walkInName != null && !walkInName.isBlank()) order.setWalkInName(walkInName.trim());
 
         lines.forEach(order::addLine);
@@ -284,13 +272,36 @@ public class ComercialOrderLifecycleService {
         }
     }
 
+    /**
+     * Faturação directa ({@code POST /orders/{id}/bill}). Um pedido de separação não passa por aqui:
+     * fatura-se no fim do circuito, com perfil de gerente, estado {@code INVOICED} e evento gravado.
+     */
     public InvoiceDTO billOrder(Long orderId) {
-        Long currentCompanyId = CurrentUserContext.requireCurrentCompanyId();
-        Order order = orderRepository.findForUpdate(orderId, currentCompanyId)
+        PermissionGuard.requireSeller("faturar encomenda");
+        Order order = lockOrder(orderId);
+        OrderKind kind = OrderKind.orDefault(order.getKind());
+        if (kind.usesSeparationFlow() && kind.isBillable()) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " é um pedido de separação: "
+                    + "fatura-se no circuito de separação, depois da conferência no armazém.");
+        }
+        return bill(order);
+    }
+
+    /** Faturação no fim do circuito de separação. Quem chama já validou perfil e estado. */
+    public InvoiceDTO billSeparatedOrder(Long orderId) {
+        PermissionGuard.requireManagerOrAdmin("faturar pedido separado");
+        return bill(lockOrder(orderId));
+    }
+
+    private Order lockOrder(Long orderId) {
+        Order order = orderRepository.findForUpdate(orderId, CurrentUserContext.requireCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
+        return order;
+    }
 
-        if (order.getInvoiceId() != null || "BILLED".equalsIgnoreCase(order.getStatus()) || "INVOICED".equalsIgnoreCase(order.getStatus())) {
+    private InvoiceDTO bill(Order order) {
+        if (order.getInvoiceId() != null || OrderStatus.isBilled(order.getStatus())) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " já foi faturada anteriormente"
                     + (order.getInvoiceId() != null ? " (Fatura ID: " + order.getInvoiceId() + ")" : "")
                     + ". Não é permitido faturar a mesma encomenda novamente.");
@@ -300,74 +311,50 @@ public class ComercialOrderLifecycleService {
                     + ": é uma reposição interna, mercadoria que muda de armazém dentro da empresa. "
                     + "Não há cliente a quem cobrar — o que a cumpre é a transferência entre armazéns.");
         }
-        if (!"PENDING".equalsIgnoreCase(order.getStatus()) && !"SEPARATED".equalsIgnoreCase(order.getStatus())) {
-            throw new BusinessRuleException("Apenas encomendas no estado PENDENTE podem ser faturadas.");
+        if (!OrderStatus.is(order.getStatus(), OrderStatus.PENDING, OrderStatus.SEPARATED)) {
+            throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " está em \""
+                    + OrderStatusLabel.of(order.getStatus()) + "\": só se fatura o que está por faturar ou separado.");
         }
         List<OrderLine> billableLines = order.getLines().stream().filter(line -> billedQuantity(order, line).signum() > 0).toList();
         if (billableLines.isEmpty()) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " não tem artigos separados para faturar.");
         }
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal totalTax = BigDecimal.ZERO;
-        for (OrderLine line : billableLines) {
-            LineCalculator.LineAmounts amounts = LineCalculator.compute(
-                    line.getUnitPrice(), billedQuantity(order, line), line.getDiscountPercentage(), line.getTaxRate());
-            subtotal = subtotal.add(amounts.net());
-            totalTax = totalTax.add(amounts.tax());
-        }
-        BigDecimal billedTotal = subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP);
-        receivablesService.assertCreditAvailable(order.getClient(), billedTotal);
-
-        Invoice invoice = new Invoice();
-        invoice.setClient(order.getClient());
-        if (order.getWalkInName() != null && !order.getWalkInName().isBlank()) {
-            invoice.setCustomerName(order.getWalkInName().trim());
-        }
-        invoice.setCompany(order.getCompany());
-        invoice.setWarehouse(order.getWarehouse());
+        Invoice invoice = OrderInvoiceDraft.of(order, billableLines, line -> billedQuantity(order, line));
+        if (!creditDecidedOnApproval(order)) receivablesService.assertCreditAvailable(order.getClient(), invoice.getTotalAmount());
         LocalDate explicitDueDate = clientAndCreditService.resolveDueDateFromTerms(order.getPaymentTerms(), LocalDate.now(), order.getClient());
         invoice.assignDueDate(LocalDate.now(), explicitDueDate);
-        invoice.setStatus(InvoiceStatus.APPROVED);
-        invoice.setSalesChannel(SalesChannel.ORDER);
-        invoice.setTotalBeforeTax(subtotal.setScale(2, RoundingMode.HALF_UP));
-        invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
-        invoice.setTotalAmount(billedTotal);
         invoice.setCreatedBy(CurrentUserContext.getUsername() != null ? CurrentUserContext.getUsername() : "SYSTEM");
+        OrderStockAvailability.require(order, order.getWarehouse(), invoice.getLines().stream()
+                .map(l -> new OrderStockAvailability.Outgoing(l.getProduct(), l.getQuantity())).toList(), inventoryService, orderLineRepository);
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
-
-        for (OrderLine orderLine : billableLines) {
-            BigDecimal quantity = billedQuantity(order, orderLine);
-            InvoiceLine invoiceLine = new InvoiceLine();
-            invoiceLine.setProduct(orderLine.getProduct());
-            invoiceLine.setQuantity(quantity);
-            invoiceLine.setUnitPrice(orderLine.getUnitPrice());
-            invoiceLine.setTaxRate(orderLine.getTaxRate());
-            invoiceLine.setDiscountPercentage(orderLine.getDiscountPercentage());
-            invoiceLine.setLineTotal(LineCalculator.compute(orderLine.getUnitPrice(), quantity,
-                    orderLine.getDiscountPercentage(), orderLine.getTaxRate()).total());
-            invoiceLine.setBatchNumber(orderLine.getBatchNumber());
-            invoiceLine.setSerialNumber(orderLine.getSerialNumber());
-            invoiceLine.setUnitCost(orderLine.getProduct().getPurchasePrice());
-            invoice.addLine(invoiceLine);
-
+        for (InvoiceLine line : invoice.getLines()) {
             String desc = String.format("Saída Fatura %s (Encomenda %s) - Cliente %s",
                     invoice.getInvoiceNumber(), order.getOrderNumber(), order.getClient().getName());
-            inventoryService.registerMovement(orderLine.getProduct(), order.getWarehouse(),
-                    quantity.negate(), "SALE", orderLine.getBatchNumber(), orderLine.getSerialNumber(), desc);
+            inventoryService.registerMovement(line.getProduct(), order.getWarehouse(),
+                    line.getQuantity().negate(), "SALE", line.getBatchNumber(), line.getSerialNumber(), desc);
         }
 
         invoice = invoiceRepository.save(invoice);
         invoiceLifecycleService.publishSale(invoice, BigDecimal.ZERO, false);
-        order.setStatus("BILLED");
+        order.setStatus(OrderStatus.BILLED.name());
         order.setInvoiceId(invoice.getId());
         order.setReservationActive(false);
         orderRepository.save(order);
         return invoiceLifecycleService.toDTO(invoice);
     }
 
+    /**
+     * Encomenda A4 cuja última aprovação foi de um gerente ou ADMIN: o excesso de crédito já foi
+     * decidido aí, dentro das alçadas do {@link OrderRiskEvaluator}, e a fatura não o desfaz. A Green
+     * Lane (aprovação automática) e os pedidos de separação continuam presos ao limite.
+     */
+    private boolean creditDecidedOnApproval(Order order) {
+        return OrderKind.orDefault(order.getKind()).requiresApproval() && approvalService.wasApprovedByPerson("ORDER", order.getId());
+    }
+
     /** Depois da conferência, só se fatura o que o armazém separou mesmo. */
     private static BigDecimal billedQuantity(Order order, OrderLine line) {
-        return "SEPARATED".equalsIgnoreCase(order.getStatus()) ? line.getSeparatedQuantity() : line.getQuantity();
+        return OrderStatus.is(order.getStatus(), OrderStatus.SEPARATED) ? line.getSeparatedQuantity() : line.getQuantity();
     }
 
     public List<OrderDTO> getOrdersByCompany(Long companyId) {
@@ -376,12 +363,8 @@ public class ComercialOrderLifecycleService {
     }
 
     public List<OrderDTO> searchCancellableOrders(String query) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        return orderRepository.findByCompanyId(companyId).stream()
-                .filter(ComercialOrderLifecycleService::isCancellable)
-                .filter(o -> ComercialInvoiceLifecycleService.matches(o.getOrderNumber(), query)
-                        || (o.getClient() != null && ComercialInvoiceLifecycleService.matches(o.getClient().getName(), query)))
-                .map(this::toDTO).collect(Collectors.toList());
+        return search(Arrays.stream(OrderStatus.values())
+                .filter(status -> OrderStatus.isCancellable(status.name())).map(Enum::name).toList(), query);
     }
 
     public void cancelOrder(Long orderId, String reason) {
@@ -392,19 +375,19 @@ public class ComercialOrderLifecycleService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
-        if ("BILLED".equalsIgnoreCase(order.getStatus())) {
+        if (OrderStatus.isBilled(order.getStatus())) {
             throw new BusinessRuleException("Encomenda já faturada — anule a fatura associada.");
         }
-        if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
+        if (OrderStatus.is(order.getStatus(), OrderStatus.CANCELLED)) {
             throw new BusinessRuleException("Esta encomenda já se encontra cancelada.");
         }
-        if (!isCancellable(order)) {
+        if (!OrderStatus.isCancellable(order.getStatus())) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " está em \""
                     + OrderStatusLabel.of(order.getStatus()) + "\" e já não pode ser cancelada: "
                     + "trate primeiro a guia ou a transferência associada.");
         }
         approvalService.cancelPendingForDocument("ORDER", order.getId(), reason);
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED.name());
         if (order.isReservationActive()) {
             order.setReservationActive(false);
             order.getLines().forEach(line -> line.setReservedQuantity(BigDecimal.ZERO));
@@ -413,29 +396,20 @@ public class ComercialOrderLifecycleService {
         auditLogService.logCurrent("ORDER_CANCEL", "Encomenda " + order.getOrderNumber() + " cancelada. Motivo: " + reason);
     }
 
-    /** Depois de haver guia, transferência ou fatura, cancelar deixaria o documento ligado sem origem. */
-    private static boolean isCancellable(Order order) {
-        String status = order.getStatus() == null ? "" : order.getStatus().toUpperCase(Locale.ROOT);
-        return CANCELLABLE_STATUSES.contains(status);
-    }
-
     public OrderDTO approveOrder(Long orderId, String comments) {
         PermissionGuard.requireManagerOrAdmin("aprovar encomenda");
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
-        if (!"PENDING_APPROVAL".equalsIgnoreCase(order.getStatus())) {
+        if (!OrderStatus.is(order.getStatus(), OrderStatus.PENDING_APPROVAL)) {
             throw new BusinessRuleException("Apenas encomendas no estado \"Pendente de Aprovação\" podem ser aprovadas. Estado actual: "
                     + OrderStatusLabel.of(order.getStatus()) + ".");
         }
-        List<ApprovalRequestDTO> pendings = approvalService.getPendingRequests();
-        Long reqId = pendings.stream()
-                .filter(r -> "ORDER".equalsIgnoreCase(r.documentType()) && orderId.equals(r.documentId()))
-                .map(ApprovalRequestDTO::id).findFirst().orElse(null);
+        Long reqId = approvalService.findPendingRequestId("ORDER", orderId).orElse(null);
         if (reqId != null) {
             approvalService.approveRequest(reqId, comments != null && !comments.isBlank() ? comments : "Aprovado via Central Comercial.");
         } else {
-            order.setStatus("PENDING");
+            order.setStatus(OrderStatus.PENDING.name());
             order = orderRepository.save(order);
         }
         auditLogService.logCurrent("ORDER_APPROVE",
@@ -451,18 +425,15 @@ public class ComercialOrderLifecycleService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
-        if (!"PENDING_APPROVAL".equalsIgnoreCase(order.getStatus())) {
+        if (!OrderStatus.is(order.getStatus(), OrderStatus.PENDING_APPROVAL)) {
             throw new BusinessRuleException("Apenas encomendas no estado \"Pendente de Aprovação\" podem ser rejeitadas. Estado actual: "
                     + OrderStatusLabel.of(order.getStatus()) + ".");
         }
-        List<ApprovalRequestDTO> pendings = approvalService.getPendingRequests();
-        Long reqId = pendings.stream()
-                .filter(r -> "ORDER".equalsIgnoreCase(r.documentType()) && orderId.equals(r.documentId()))
-                .map(ApprovalRequestDTO::id).findFirst().orElse(null);
+        Long reqId = approvalService.findPendingRequestId("ORDER", orderId).orElse(null);
         if (reqId != null) {
             approvalService.rejectRequest(reqId, reason);
         } else {
-            order.setStatus("CANCELLED");
+            order.setStatus(OrderStatus.CANCELLED.name());
             order = orderRepository.save(order);
         }
         auditLogService.logCurrent("ORDER_REJECT",
@@ -472,16 +443,19 @@ public class ComercialOrderLifecycleService {
 
     public List<OrderDTO> getPendingOrdersByCompany(Long companyId) {
         CurrentUserContext.requireCompany(companyId);
-        return orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING")
+        return orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, OrderStatus.PENDING.name())
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     public List<OrderDTO> searchPendingOrders(String query) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        return orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(companyId, "PENDING").stream()
-                .filter(o -> ComercialInvoiceLifecycleService.matches(o.getOrderNumber(), query)
-                        || (o.getClient() != null && ComercialInvoiceLifecycleService.matches(o.getClient().getName(), query)))
-                .map(this::toDTO).collect(Collectors.toList());
+        return search(List.of(OrderStatus.PENDING.name()), query);
+    }
+
+    /** Pesquisa na base, não em memória: uma empresa com anos de encomendas não carrega tudo. */
+    private List<OrderDTO> search(List<String> statuses, String query) {
+        String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        return orderRepository.searchOpen(CurrentUserContext.requireCurrentCompanyId(), statuses, term)
+                .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     private Warehouse resolveDestination(Long companyId, Long destinationWarehouseId, OrderKind kind, Warehouse origin) {
@@ -492,12 +466,20 @@ public class ComercialOrderLifecycleService {
         if (destinationWarehouseId.equals(origin.getId())) {
             throw new BusinessRuleException("O armazém de destino tem de ser diferente do de origem.");
         }
-        Warehouse destination = warehouseRepository.findById(destinationWarehouseId)
-                .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
-        if (!companyId.equals(destination.getCompany().getId())) {
-            throw new BusinessRuleException("O armazém de destino não pertence à empresa ativa.");
+        return requireActiveWarehouse(destinationWarehouseId, companyId, "Armazém de destino");
+    }
+
+    private Warehouse requireActiveWarehouse(Long warehouseId, Long companyId, String label) {
+        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new BusinessRuleException(label + " não encontrado."));
+        String lower = label.toLowerCase(Locale.ROOT);
+        if (!companyId.equals(warehouse.getCompany().getId())) {
+            throw new BusinessRuleException("O " + lower + " não pertence à empresa ativa.");
         }
-        return destination;
+        if (!warehouse.isActive()) {
+            throw new BusinessRuleException("O " + lower + " " + warehouse.getName() + " está inactivo e não recebe encomendas.");
+        }
+        return warehouse;
     }
 
     public Order createReplenishmentRecord(StockTransferDTO transfer) {
@@ -515,7 +497,7 @@ public class ComercialOrderLifecycleService {
         order.setWarehouse(origin);
         order.setDestinationWarehouse(destination);
         order.setKind(OrderKind.INTERNAL_REPLENISHMENT);
-        order.setStatus("TRANSFERRED");
+        order.setStatus(OrderStatus.TRANSFERRED.name());
         order.setStockTransferId(transfer.id());
         order.setTransferNumber(transfer.transferNumber());
         order.setOrderNumber(documentNumberService.next(DocumentSeries.ORDER));

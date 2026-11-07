@@ -88,6 +88,18 @@ public class ApprovalService {
         lifecycleService.cancelPendingForDocument(documentType, documentId, reason);
     }
 
+    /** Pedido pendente de um documento, procurado na base (sem carregar a fila inteira). */
+    @Transactional(readOnly = true)
+    public java.util.Optional<Long> findPendingRequestId(String documentType, Long documentId) {
+        return lifecycleService.findPendingRequestId(documentType, documentId);
+    }
+
+    /** O documento foi aprovado por um gerente ou administrador (não automaticamente). */
+    @Transactional(readOnly = true)
+    public boolean wasApprovedByPerson(String documentType, Long documentId) {
+        return lifecycleService.wasApprovedByPerson(documentType, documentId);
+    }
+
     @Transactional
     public List<ApprovalRequestDTO> getPendingRequests() {
         return queryService.getPendingRequests();

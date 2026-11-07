@@ -99,21 +99,12 @@ public class ApprovalLifecycleService {
 
     @Transactional
     public ApprovalRequestDTO approveRequest(Long requestId, String comments) {
-        ApprovalRequest request = requestRepository.findByIdAndCompanyId(requestId, CurrentUserContext.getCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Pedido de aprovação não encontrado."));
-
-        if (request.getStatus() != ApprovalStatus.PENDING) {
-            throw new BusinessRuleException("Este pedido já foi finalizado com estado: " + request.getStatus());
-        }
-
+        ApprovalRequest request = pendingForDecision(requestId, "");
         String userRole = CurrentUserContext.getRole();
-
-        // Admin can approve anything, manager can approve manager-level requests
-        boolean isAuthorized = "ADMIN".equalsIgnoreCase(userRole)
-                || ("MANAGER".equalsIgnoreCase(userRole) && "MANAGER".equalsIgnoreCase(request.getRequiredRole()));
-
-        if (!isAuthorized) {
-            throw new BusinessRuleException("Utilizador não autorizado. Perfil requerido: " + request.getRequiredRole() + ", Perfil atual: " + userRole);
+        // Segregação de funções: quem pediu não aprova. O ADMIN fica de fora para uma loja com um só responsável.
+        if (!"ADMIN".equalsIgnoreCase(userRole) && request.getSubmitter() != null
+                && request.getSubmitter().equalsIgnoreCase(CurrentUserContext.getUsername())) {
+            throw new BusinessRuleException("Não pode aprovar um pedido que submeteu. Peça a outro gerente ou a um administrador.");
         }
 
         request.setStatus(ApprovalStatus.APPROVED);
@@ -128,22 +119,7 @@ public class ApprovalLifecycleService {
 
     @Transactional
     public ApprovalRequestDTO rejectRequest(Long requestId, String reason) {
-        ApprovalRequest request = requestRepository.findByIdAndCompanyId(requestId, CurrentUserContext.getCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Pedido de aprovação não encontrado."));
-
-        if (request.getStatus() != ApprovalStatus.PENDING) {
-            throw new BusinessRuleException("Este pedido já foi finalizado com estado: " + request.getStatus());
-        }
-
-        String userRole = CurrentUserContext.getRole();
-
-        boolean isAuthorized = "ADMIN".equalsIgnoreCase(userRole)
-                || ("MANAGER".equalsIgnoreCase(userRole) && "MANAGER".equalsIgnoreCase(request.getRequiredRole()));
-
-        if (!isAuthorized) {
-            throw new BusinessRuleException("Utilizador não autorizado para rejeitar. Perfil requerido: " + request.getRequiredRole());
-        }
-
+        ApprovalRequest request = pendingForDecision(requestId, " para rejeitar");
         if (reason == null || reason.isBlank()) {
             throw new BusinessRuleException("É obrigatório indicar um motivo para a rejeição.");
         }
@@ -161,16 +137,45 @@ public class ApprovalLifecycleService {
 
     @Transactional
     public void cancelPendingForDocument(String documentType, Long documentId, String reason) {
-        Long companyId = CurrentUserContext.getCurrentCompanyId();
-        for (ApprovalRequest req : requestRepository.findByCompanyIdAndStatus(companyId, ApprovalStatus.PENDING)) {
-            if (documentType.equalsIgnoreCase(req.getDocumentType()) && documentId.equals(req.getDocumentId())) {
-                req.setStatus(ApprovalStatus.REJECTED);
-                req.setRejectionReason(reason);
-                req.setUpdatedAt(LocalDateTime.now());
-                requestRepository.save(req);
-                logHistory(req, "CANCEL", "Pedido fechado por cancelamento do documento. Motivo: " + reason);
-            }
+        for (ApprovalRequest req : pendingFor(documentType, documentId)) {
+            req.setStatus(ApprovalStatus.REJECTED);
+            req.setRejectionReason(reason);
+            req.setUpdatedAt(LocalDateTime.now());
+            requestRepository.save(req);
+            logHistory(req, "CANCEL", "Pedido fechado por cancelamento do documento. Motivo: " + reason);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<Long> findPendingRequestId(String documentType, Long documentId) {
+        return pendingFor(documentType, documentId).stream().map(ApprovalRequest::getId).findFirst();
+    }
+
+    /** A aprovação mais recente foi de uma pessoa, e não da Green Lane (que grava o perfil "NONE"). */
+    @Transactional(readOnly = true)
+    public boolean wasApprovedByPerson(String documentType, Long documentId) {
+        return requestRepository.findFirstByCompanyIdAndDocumentTypeAndDocumentIdAndStatusOrderByIdDesc(CurrentUserContext
+                .getCurrentCompanyId(), documentType, documentId, ApprovalStatus.APPROVED).map(r -> !"NONE".equalsIgnoreCase(r.getRequiredRole())).orElse(false);
+    }
+
+    /** Pedido ainda pendente desta empresa, que o perfil actual pode decidir: ADMIN tudo, gerente o que pede gerente. */
+    private ApprovalRequest pendingForDecision(Long requestId, String action) {
+        ApprovalRequest request = requestRepository.findByIdAndCompanyId(requestId, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Pedido de aprovação não encontrado."));
+        if (request.getStatus() != ApprovalStatus.PENDING) {
+            throw new BusinessRuleException("Este pedido já foi finalizado com estado: " + request.getStatus());
+        }
+        String role = CurrentUserContext.getRole();
+        if (!"ADMIN".equalsIgnoreCase(role) && !("MANAGER".equalsIgnoreCase(role) && "MANAGER".equalsIgnoreCase(request.getRequiredRole()))) {
+            throw new BusinessRuleException("Utilizador não autorizado" + action + ". Perfil requerido: "
+                    + request.getRequiredRole() + ", Perfil atual: " + role);
+        }
+        return request;
+    }
+
+    private List<ApprovalRequest> pendingFor(String documentType, Long documentId) {
+        return requestRepository.findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
+                CurrentUserContext.getCurrentCompanyId(), documentType, documentId, ApprovalStatus.PENDING);
     }
 
     public ApprovalRequestDTO toDTO(ApprovalRequest request) {
