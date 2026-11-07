@@ -54,7 +54,7 @@ final class HRVacationsPanel {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             HrVacationsViewCoordinator.populateQuickPeek(peek, row, owner);
         });
 

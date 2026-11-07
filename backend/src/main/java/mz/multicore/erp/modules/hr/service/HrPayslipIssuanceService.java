@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.hr.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.hr.dto.CreatePayslipRequest;
@@ -208,9 +209,9 @@ public class HrPayslipIssuanceService {
         if (manual.signum() > 0 && manual.compareTo(fromTimeSheet) != 0) {
             if (request.overtimeOverrideReason() == null || request.overtimeOverrideReason().isBlank()) {
                 throw new BusinessRuleException(String.format(
-                        "A folha de ponto de %d/%d está fechada e apura %s de horas extra. "
+                        "A folha de ponto de %d/%d está fechada e apura %s MT de horas extra. "
                                 + "Para usar outro valor indique a justificação da excepção.",
-                        request.month(), request.year(), fromTimeSheet));
+                        request.month(), request.year(), DisplayNumbers.money(fromTimeSheet)));
             }
             auditLogService.logCurrent("PAYSLIP_OVERTIME_OVERRIDE", String.format(
                     "Recibo de %s (%d/%d): horas extra manuais %s em vez das %s apuradas no ponto. Justificação: %s",

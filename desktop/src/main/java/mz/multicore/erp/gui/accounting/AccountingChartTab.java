@@ -44,9 +44,7 @@ public final class AccountingChartTab extends JPanel {
         create.setIcon(UIHelper.icon("fas-plus", 14));
         create.addActionListener(e -> openAccountDialog());
 
-        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> loadAccounts());
+        ModernButton refresh = UIHelper.createRefreshButton(() -> loadAccounts());
 
         JPanel chartToolbar = UIHelper.filterBar(null, new JComponent[]{refresh, create, seed});
         JPanel chartNorth = new JPanel(new BorderLayout(0, 8));

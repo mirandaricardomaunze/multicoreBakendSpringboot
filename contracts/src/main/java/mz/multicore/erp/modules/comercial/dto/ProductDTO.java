@@ -32,7 +32,8 @@ public record ProductDTO(
     Long version,
     Long businessUnitId,
     String businessUnitName,
-    String businessUnitCode
+    String businessUnitCode,
+    boolean tracksExpiry
 ) {
     public ProductDTO {
         unitsPerBox = Math.max(1, unitsPerBox);
@@ -40,6 +41,23 @@ public record ProductDTO(
             packagesPerBox = unitsPerBox;
             unitsPerPackage = 1;
         }
+    }
+
+    /** Construtor compatível anterior à opção de produto perecível ({@code tracksExpiry = false}). */
+    public ProductDTO(
+            Long id, String sku, String reference, String barcode, String name,
+            BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+            BigDecimal wholesalePrice, BigDecimal wholesaleMinQty, int unitsPerBox,
+            int packagesPerBox, int unitsPerPackage, String saleType, boolean stockTracked,
+            Long categoryId, String categoryName, Long taxRateId, BigDecimal taxRate,
+            String taxRateLabel, String description, byte[] image, BigDecimal netUnitWeightKg,
+            BigDecimal grossUnitWeightKg, Long version,
+            Long businessUnitId, String businessUnitName, String businessUnitCode) {
+        this(id, sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                wholesalePrice, wholesaleMinQty, unitsPerBox, packagesPerBox, unitsPerPackage,
+                saleType, stockTracked, categoryId, categoryName, taxRateId, taxRate,
+                taxRateLabel, description, image, netUnitWeightKg, grossUnitWeightKg, version,
+                businessUnitId, businessUnitName, businessUnitCode, false);
     }
 
     public ProductDTO(

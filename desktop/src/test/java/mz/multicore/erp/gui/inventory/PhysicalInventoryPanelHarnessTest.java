@@ -76,10 +76,12 @@ public class PhysicalInventoryPanelHarnessTest {
         collectButtons(actions, buttons);
         boolean hasActionMenu = buttons.stream()
                 .anyMatch(mz.multicore.erp.gui.components.ActionMenuButton.class::isInstance);
-        long buttonCount = buttons.stream().filter(button -> button.isShowing() || button.isVisible()).count();
+        // O Actualizar padrão (BAU-03) fica sempre no cabeçalho e não conta para o limite de acções.
+        long buttonCount = buttons.stream().filter(button -> button.isShowing() || button.isVisible())
+                .filter(button -> !"Actualizar".equals(button.getText())).count();
 
         assertTrue(buttonCount <= 3,
-                "A barra de ações do cabeçalho deve ter no máximo 3 botões visíveis, mas tem: " + buttonCount);
+                "A barra de ações do cabeçalho deve ter no máximo 3 botões visíveis além do Actualizar, mas tem: " + buttonCount);
         assertTrue(hasActionMenu, "As ações do ciclo da sessão devem estar agrupadas em ActionMenuButton");
     }
 

@@ -92,11 +92,11 @@ public class PhysicalInventoryPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 6));
         card.setBorder(new EmptyBorder(8, 12, 8, 12));
         card.add(UIHelper.tableCardTop("Inventário Físico & Reconciliação", buildCardToolbar(),
-                printPdfBtn, sessionActionsMenu, newSessionBtn), BorderLayout.NORTH);
+                refreshBtn, printPdfBtn, sessionActionsMenu, newSessionBtn), BorderLayout.NORTH);
 
         UIHelper.ensureHeadersFit(itemsTable);
         TableQuickPeekController peekController = TableQuickPeekController.install(itemsTable, card,
-                (peek, mr) -> PhysicalInventoryViewCoordinator.populatePeek(peek, tableModel, itemsTable.convertRowIndexToModel(mr)));
+                (peek, mr) -> PhysicalInventoryViewCoordinator.populatePeek(peek, tableModel, mr));
         if (peekToggleBtn != null) peekToggleBtn.addActionListener(e -> peekController.toggle());
 
         JScrollPane scroll = new JScrollPane(itemsTable);
@@ -148,7 +148,7 @@ public class PhysicalInventoryPanel extends JPanel {
         peekToggleBtn.setPreferredSize(new Dimension(30, UIHelper.FORM_CONTROL_HEIGHT));
 
         return PhysicalInventoryViewCoordinator.buildToolbar(
-                sessionCombo, statusLabel, countModeLabel, searchField, refreshBtn,
+                sessionCombo, statusLabel, countModeLabel, searchField,
                 barcodeScanField, manualQtyField, recordCountBtn, peekToggleBtn
         );
     }

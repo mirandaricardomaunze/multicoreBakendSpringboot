@@ -78,20 +78,20 @@ final class HRTimeSheetPanel {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-clock", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(model.getValueAt(row, 0)));
             peek.setSubtitle("Assiduidade do Mês");
             peek.setStatus(String.valueOf(model.getValueAt(row, 2)) + " dias", UIHelper.APPROVED_GREEN);
             peek.setItems(List.of(
-                    new QuickPeekPanel.PeekItem("Dias Previstos", String.valueOf(model.getValueAt(row, 1)), false),
-                    new QuickPeekPanel.PeekItem("Dias Trabalhados", String.valueOf(model.getValueAt(row, 2)), false),
-                    new QuickPeekPanel.PeekItem("Sem Marcação", String.valueOf(model.getValueAt(row, 3)), false),
-                    new QuickPeekPanel.PeekItem("Horas Normais", String.valueOf(model.getValueAt(row, 4)), false),
-                    new QuickPeekPanel.PeekItem("Horas Extras Dia", String.valueOf(model.getValueAt(row, 5)), false),
-                    new QuickPeekPanel.PeekItem("Horas Extras Noite", String.valueOf(model.getValueAt(row, 6)), false),
-                    new QuickPeekPanel.PeekItem("Descanso / Feriado", String.valueOf(model.getValueAt(row, 7)), false),
-                    new QuickPeekPanel.PeekItem("Atrasos", String.valueOf(model.getValueAt(row, 8)), true)));
+                    new QuickPeekPanel.PeekItem("Dias Previstos", peek.cell(model.getValueAt(row, 1), 1), false),
+                    new QuickPeekPanel.PeekItem("Dias Trabalhados", peek.cell(model.getValueAt(row, 2), 2), false),
+                    new QuickPeekPanel.PeekItem("Sem Marcação", peek.cell(model.getValueAt(row, 3), 3), false),
+                    new QuickPeekPanel.PeekItem("Horas Normais", peek.cell(model.getValueAt(row, 4), 4), false),
+                    new QuickPeekPanel.PeekItem("Horas Extras Dia", peek.cell(model.getValueAt(row, 5), 5), false),
+                    new QuickPeekPanel.PeekItem("Horas Extras Noite", peek.cell(model.getValueAt(row, 6), 6), false),
+                    new QuickPeekPanel.PeekItem("Descanso / Feriado", peek.cell(model.getValueAt(row, 7), 7), false),
+                    new QuickPeekPanel.PeekItem("Atrasos", peek.cell(model.getValueAt(row, 8), 8), true)));
         });
 
         JTextField search = TableFilter.searchField("Colaborador…");

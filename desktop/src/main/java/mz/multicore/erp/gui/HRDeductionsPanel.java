@@ -72,17 +72,17 @@ final class HRDeductionsPanel {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-hand-holding-usd", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(model.getValueAt(row, 1)));
             peek.setSubtitle(String.valueOf(model.getValueAt(row, 2)) + " • " + model.getValueAt(row, 3));
             peek.setStatus(String.valueOf(model.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
             List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-            items.add(new QuickPeekPanel.PeekItem("Capital Inicial", String.valueOf(model.getValueAt(row, 4)), false));
-            items.add(new QuickPeekPanel.PeekItem("Prestação Mensal", String.valueOf(model.getValueAt(row, 5)), false));
-            items.add(new QuickPeekPanel.PeekItem("Total Descontado", String.valueOf(model.getValueAt(row, 6)), false));
-            items.add(new QuickPeekPanel.PeekItem("Dívida Restante", String.valueOf(model.getValueAt(row, 7)), true));
-            items.add(new QuickPeekPanel.PeekItem("Data Início", String.valueOf(model.getValueAt(row, 8)), false));
+            items.add(new QuickPeekPanel.PeekItem("Capital Inicial", peek.cell(model.getValueAt(row, 4), 4), false));
+            items.add(new QuickPeekPanel.PeekItem("Prestação Mensal", peek.cell(model.getValueAt(row, 5), 5), false));
+            items.add(new QuickPeekPanel.PeekItem("Total Descontado", peek.cell(model.getValueAt(row, 6), 6), false));
+            items.add(new QuickPeekPanel.PeekItem("Dívida Restante", peek.cell(model.getValueAt(row, 7), 7), true));
+            items.add(new QuickPeekPanel.PeekItem("Data Início", peek.cell(model.getValueAt(row, 8), 8), false));
             peek.setItems(items);
         });
 

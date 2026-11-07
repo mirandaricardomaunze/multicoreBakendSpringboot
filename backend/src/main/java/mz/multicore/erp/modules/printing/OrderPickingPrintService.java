@@ -60,7 +60,7 @@ public class OrderPickingPrintService {
             String reference = line.getProduct().getReference();
             addCell(table, line.getProduct().getName() + (reference == null ? "" : "\nRef: " + reference),
                     Element.ALIGN_LEFT, false);
-            addCell(table, line.getQuantity().stripTrailingZeros().toPlainString(), Element.ALIGN_RIGHT, false);
+            addCell(table, MoneyFormat.formatQty(line.getQuantity()), Element.ALIGN_RIGHT, false);
             java.math.BigDecimal weight = line.getProduct().getGrossUnitWeightKg() == null
                     ? java.math.BigDecimal.ZERO
                     : line.getQuantity().multiply(line.getProduct().getGrossUnitWeightKg());

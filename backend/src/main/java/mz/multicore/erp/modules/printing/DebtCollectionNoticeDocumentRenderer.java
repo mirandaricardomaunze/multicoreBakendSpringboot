@@ -188,6 +188,6 @@ public class DebtCollectionNoticeDocumentRenderer {
 
     private static String formatMoney(BigDecimal val) {
         BigDecimal safe = val == null ? BigDecimal.ZERO : val;
-        return safe.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        return MoneyFormat.formatPlain(safe);
     }
 }

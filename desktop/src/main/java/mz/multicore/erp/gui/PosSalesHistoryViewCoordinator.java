@@ -1,8 +1,10 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.KpiCard;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.POSSalesSummaryDTO;
+import mz.multicore.erp.modules.pos.dto.PosSalePaymentSummaryDTO;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,53 +13,46 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-/** Coordenador de apresentação, KPIs, chips de resumo e mapeamento de dados do histórico POS. */
+/** Coordenador de apresentação, cartões KPI e mapeamento de dados do histórico POS. */
 final class PosSalesHistoryViewCoordinator {
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private final JLabel salesCountValue = new JLabel("0 vendas");
+    private final JLabel salesCountValue = new JLabel("0");
     private final JLabel salesTotalValue = new JLabel("0,00 MT");
     private final JLabel salesVariationValue = new JLabel("—");
-    private final JLabel salesHistorySummary = new JLabel(" ");
+    private final JLabel pageTotalValue = new JLabel("0,00 MT");
+    private final JLabel pageSubtitle = new JLabel("Nenhuma venda nesta página");
 
     record DateRange(LocalDate from, LocalDate to) {}
 
-    PosSalesHistoryViewCoordinator() {
-        salesCountValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
-        salesCountValue.setForeground(UIHelper.TEXT_LIGHT);
-        salesTotalValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
-        salesTotalValue.setForeground(UIHelper.APPROVED_GREEN);
-        salesVariationValue.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
-        salesVariationValue.setForeground(UIHelper.ACCENT_BLUE);
-        salesHistorySummary.setForeground(UIHelper.TEXT_LIGHT);
-        salesHistorySummary.setBorder(new EmptyBorder(8, 8, 8, 8));
-    }
-
-    JLabel summaryLabel() { return salesHistorySummary; }
-
+    /** Cartões de resumo no padrão dos outros ecrãs (KpiCard), em vez de texto solto. */
     JPanel buildKpiBar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 2));
-        bar.setOpaque(false);
-        bar.setBorder(new EmptyBorder(0, 0, 4, 0));
-        bar.add(createSummaryChip("fas-receipt", "Vendas:", salesCountValue));
-        bar.add(createSummaryChip("fas-cash-register", "Total POS:", salesTotalValue));
-        bar.add(createSummaryChip("fas-chart-line", "Variação:", salesVariationValue));
-        return bar;
+        JPanel grid = KpiCard.createGrid(4);
+        grid.add(KpiCard.createMetricCard("Vendas no Período", salesCountValue, "Vendas POS registadas", "fas-receipt", UIHelper.ACCENT_BLUE));
+        grid.add(KpiCard.createMetricCard("Total POS", salesTotalValue, "Facturado no período", "fas-cash-register", UIHelper.APPROVED_GREEN));
+        grid.add(KpiCard.createMetricCard("Variação", salesVariationValue, "Face ao período anterior", "fas-chart-line", UIHelper.ACCENT_CYAN));
+        grid.add(KpiCard.createMetricCard("Total da Página", pageTotalValue, pageSubtitle, "fas-file-invoice-dollar", UIHelper.PENDING_YELLOW));
+        grid.setBorder(new EmptyBorder(0, 0, 10, 0));
+        return grid;
     }
 
-    private JPanel createSummaryChip(String iconCode, String caption, JLabel value) {
-        JPanel chip = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        chip.setOpaque(false);
-        JLabel icon = new JLabel(UIHelper.icon(iconCode, 13, UIHelper.TEXT_MUTED));
-        JLabel cap = new JLabel(caption);
-        cap.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        cap.setForeground(UIHelper.TEXT_MUTED);
-        chip.add(icon);
-        chip.add(cap);
-        chip.add(value);
-        return chip;
+    /** Linha do histórico: comprador real (cliente não cadastrado incluído), valor entregue e troco gravados. */
+    static Object[] historyRow(InvoiceDTO inv, PosSalePaymentSummaryDTO payment) {
+        String buyer = inv.buyerName();
+        String buName = inv.businessUnitName() != null && !inv.businessUnitName().isBlank() ? inv.businessUnitName() : "—";
+        return new Object[]{
+                inv.id(), inv.invoiceNumber(),
+                inv.createdAt() != null ? inv.createdAt().format(DTF) : "—",
+                inv.createdBy() != null ? inv.createdBy() : "—",
+                buyer != null && !buyer.isBlank() ? buyer : "—",
+                inv.totalAmount(),
+                payment != null ? payment.tenderedAmount() : "—",
+                payment != null ? payment.changeGiven() : "—",
+                inv.status() != null ? inv.status().name() : "—", buName
+        };
     }
 
     DateRange selectedDateRange(JComboBox<String> periodCombo) {
@@ -74,24 +69,18 @@ final class PosSalesHistoryViewCoordinator {
     }
 
     void applySalesHistory(POSPanel owner, List<InvoiceDTO> loaded, long totalOnServer,
-                           POSSalesSummaryDTO summary, JComboBox<String> businessUnitCombo) {
+                           POSSalesSummaryDTO summary, JComboBox<String> businessUnitCombo,
+                           Map<Long, PosSalePaymentSummaryDTO> payments) {
         owner.salesHistoryList = loaded;
         owner.salesHistoryModel.setRowCount(0);
         for (var inv : owner.salesHistoryList) {
-            String buName = inv.businessUnitName() != null && !inv.businessUnitName().isBlank() ? inv.businessUnitName() : "—";
-            owner.salesHistoryModel.addRow(new Object[]{
-                    inv.id(), inv.invoiceNumber(),
-                    inv.createdAt() != null ? inv.createdAt().format(DTF) : "—",
-                    inv.createdBy() != null ? inv.createdBy() : "—",
-                    inv.clientName() != null ? inv.clientName() : "—",
-                    inv.totalAmount(), inv.status() != null ? inv.status().name() : "—", buName
-            });
+            owner.salesHistoryModel.addRow(historyRow(inv, payments == null ? null : payments.get(inv.id())));
         }
         BigDecimal total = owner.salesHistoryList.stream()
                 .map(InvoiceDTO::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        salesHistorySummary.setText(String.format(
-                "<html><b>%d</b> vendas POS nesta página (de %d) — total da página <b>%,.2f MT</b></html>",
-                owner.salesHistoryList.size(), totalOnServer, total));
+        pageTotalValue.setText(String.format("%,.2f MT", total));
+        pageSubtitle.setText(owner.salesHistoryList.size() + " de " + totalOnServer
+                + (totalOnServer == 1 ? " venda" : " vendas"));
         applySummary(summary);
         if (businessUnitCombo != null) {
             Object prev = businessUnitCombo.getSelectedItem();
@@ -110,11 +99,13 @@ final class PosSalesHistoryViewCoordinator {
 
     private void applySummary(POSSalesSummaryDTO summary) {
         if (summary == null) return;
-        salesCountValue.setText(summary.count() + (summary.count() == 1 ? " venda" : " vendas"));
+        salesCountValue.setText(String.valueOf(summary.count()));
         BigDecimal safeTotal = summary.totalAmount() == null ? BigDecimal.ZERO : summary.totalAmount();
         salesTotalValue.setText(String.format("%,.2f MT", safeTotal));
         salesVariationValue.setText(summary.totalVariationPercent() == null
                 ? "Sem comparativo" : signedPercent(summary.totalVariationPercent()));
+        BigDecimal variation = summary.totalVariationPercent();
+        if (variation != null) salesVariationValue.setForeground(variation.signum() < 0 ? UIHelper.REJECTED_RED : UIHelper.APPROVED_GREEN);
     }
 
     private String signedPercent(BigDecimal value) {

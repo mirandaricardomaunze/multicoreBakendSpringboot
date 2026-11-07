@@ -67,7 +67,7 @@ public final class ExecutiveTvUnitViewBuilder {
         titleLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 16));
         titleLbl.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
         titleRow.add(titleLbl, BorderLayout.WEST);
-        titleRow.add(ExecutiveTvTheme.buildStatusBadge(pct), BorderLayout.EAST);
+        titleRow.add(ExecutiveTvTheme.buildStatusBadge(pct, lightMode), BorderLayout.EAST);
         focusCard.add(titleRow, BorderLayout.NORTH);
 
         GoalProgressBar bar = new GoalProgressBar(34);
@@ -189,7 +189,7 @@ public final class ExecutiveTvUnitViewBuilder {
             row.setOpaque(false);
             row.setBorder(new EmptyBorder(4, 0, 4, 0));
 
-            String client = inv.clientName() != null ? inv.clientName() : "Cliente Diversos";
+            String client = inv.buyerName() != null ? inv.buyerName() : "Cliente Diversos";
             JLabel invLbl = new JLabel(inv.invoiceNumber() + " • " + client);
             invLbl.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
             invLbl.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));

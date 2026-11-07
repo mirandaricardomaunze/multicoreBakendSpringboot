@@ -93,6 +93,15 @@ public class POSApiClient {
         clientFactory.authenticatedClient().post("/api/pos/invoices/" + invoiceId + "/late-payment", request);
     }
 
+    /** Valor entregue e troco gravados em cada venda indicada. */
+    public java.util.List<mz.multicore.erp.modules.pos.dto.PosSalePaymentSummaryDTO> getSalePaymentSummaries(
+            java.util.List<Long> invoiceIds) {
+        if (invoiceIds == null || invoiceIds.isEmpty()) return java.util.List.of();
+        String ids = invoiceIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        return clientFactory.authenticatedClient().getList("/api/pos/sales/payments?invoiceIds=" + ids,
+                mz.multicore.erp.modules.pos.dto.PosSalePaymentSummaryDTO.class);
+    }
+
     /** Recibo da venda em PDF ({@code /api/print/receipt/{invoiceId}}). */
     public byte[] renderReceipt(Long invoiceId) {
         return clientFactory.authenticatedClient().getBytes("/api/print/receipt/" + invoiceId);

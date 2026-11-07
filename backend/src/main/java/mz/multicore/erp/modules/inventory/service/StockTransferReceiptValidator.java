@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.inventory.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
@@ -85,8 +86,8 @@ public final class StockTransferReceiptValidator {
         }
         if (received.compareTo(sent) > 0) {
             throw new BusinessRuleException("A quantidade recebida de '" + product + "' ("
-                    + received.stripTrailingZeros().toPlainString() + ") excede a enviada ("
-                    + sent.stripTrailingZeros().toPlainString() + "). Excedentes registam-se por entrada de stock.");
+                    + DisplayNumbers.qty(received) + ") excede a enviada ("
+                    + DisplayNumbers.qty(sent) + "). Excedentes registam-se por entrada de stock.");
         }
         if (received.compareTo(sent) < 0
                 && (req == null || req.discrepancyReason() == null || req.discrepancyReason().isBlank())) {

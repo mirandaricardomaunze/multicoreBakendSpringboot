@@ -108,7 +108,7 @@ class StockTransferPrintServiceTest {
         assertTrue(text.contains("Produto Teste"), "Devia conter o nome do produto: " + text);
         assertTrue(text.contains("18"), "Devia conter a quantidade: " + text);
         assertTrue(text.contains("3"), "Devia conter as embalagens (18 / 6 = 3): " + text);
-        assertTrue(text.contains("0.25"), "Devia conter as caixas (18 / 72 = 0.25): " + text);
+        assertTrue(text.contains("0,25"), "Devia conter as caixas (18 / 72 = 0,25): " + text);
         assertTrue(text.contains("Quantidade total"), "Devia conter a quantidade total: " + text);
         assertTrue(text.contains("PESO TOTAL (kg)"), "Devia conter o resumo de peso: " + text);
         assertTrue(text.contains("100,00"), "Devia conter o preço unitário: " + text);

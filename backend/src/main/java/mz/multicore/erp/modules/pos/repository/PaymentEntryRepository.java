@@ -16,4 +16,6 @@ public interface PaymentEntryRepository extends JpaRepository<PaymentEntry, Long
             Long companyId, LocalDateTime from, LocalDateTime to);
 
     Optional<PaymentEntry> findByInvoiceIdAndIdempotencyKey(Long invoiceId, String idempotencyKey);
+
+    List<PaymentEntry> findByInvoiceCompanyIdAndInvoiceIdIn(Long companyId, java.util.Collection<Long> invoiceIds);
 }

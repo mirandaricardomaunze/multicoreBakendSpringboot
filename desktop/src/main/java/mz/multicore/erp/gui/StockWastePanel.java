@@ -128,9 +128,7 @@ public class StockWastePanel extends JPanel {
         wasteSearchField.setPreferredSize(new Dimension(160, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.onTextChange(wasteSearchField, this::applyWasteFilters);
 
-        ModernButton reloadBtn = UIHelper.createSecondaryButton("Actualizar");
-        reloadBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        reloadBtn.addActionListener(e -> reloadData());
+        ModernButton reloadBtn = UIHelper.createRefreshButton(() -> reloadData());
 
         ModernButton registerBtn = UIHelper.createDangerButton("Registar Quebra");
         registerBtn.setIcon(UIHelper.icon("fas-plus", 14));
@@ -204,14 +202,14 @@ public class StockWastePanel extends JPanel {
             if (mr < 0 || mr >= wasteTableModel.getRowCount()) return;
             peek.setTitle("Quebra #" + wasteTableModel.getValueAt(mr, 0));
             peek.setSubtitle(String.valueOf(wasteTableModel.getValueAt(mr, 2)));
-            peek.setItems(List.of(new QuickPeekPanel.PeekItem("Data", String.valueOf(wasteTableModel.getValueAt(mr, 1)), false),
-                    new QuickPeekPanel.PeekItem("Armazém", String.valueOf(wasteTableModel.getValueAt(mr, 3)), false),
-                    new QuickPeekPanel.PeekItem("Lote", String.valueOf(wasteTableModel.getValueAt(mr, 4)), false),
-                    new QuickPeekPanel.PeekItem("Motivo", String.valueOf(wasteTableModel.getValueAt(mr, 5)), false),
-                    new QuickPeekPanel.PeekItem("Quantidade", String.valueOf(wasteTableModel.getValueAt(mr, 6)), false),
-                    new QuickPeekPanel.PeekItem("Custo Unit.", String.valueOf(wasteTableModel.getValueAt(mr, 7)), false),
-                    new QuickPeekPanel.PeekItem("Perda Total", String.valueOf(wasteTableModel.getValueAt(mr, 8)), true),
-                    new QuickPeekPanel.PeekItem("Estado", String.valueOf(wasteTableModel.getValueAt(mr, 9)), false)));
+            peek.setItems(List.of(new QuickPeekPanel.PeekItem("Data", peek.cell(wasteTableModel.getValueAt(mr, 1), 1), false),
+                    new QuickPeekPanel.PeekItem("Armazém", peek.cell(wasteTableModel.getValueAt(mr, 3), 3), false),
+                    new QuickPeekPanel.PeekItem("Lote", peek.cell(wasteTableModel.getValueAt(mr, 4), 4), false),
+                    new QuickPeekPanel.PeekItem("Motivo", peek.cell(wasteTableModel.getValueAt(mr, 5), 5), false),
+                    new QuickPeekPanel.PeekItem("Quantidade", peek.cell(wasteTableModel.getValueAt(mr, 6), 6), false),
+                    new QuickPeekPanel.PeekItem("Custo Unit.", peek.cell(wasteTableModel.getValueAt(mr, 7), 7), false),
+                    new QuickPeekPanel.PeekItem("Perda Total", peek.cell(wasteTableModel.getValueAt(mr, 8), 8), true),
+                    new QuickPeekPanel.PeekItem("Estado", peek.cell(wasteTableModel.getValueAt(mr, 9), 9), false)));
             peek.getOpenFullButton().setText("Ficha de Quebra");
         });
         peekToggleBtn.addActionListener(e -> peekController.toggle());

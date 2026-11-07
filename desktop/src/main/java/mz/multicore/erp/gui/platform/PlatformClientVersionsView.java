@@ -34,9 +34,7 @@ public class PlatformClientVersionsView extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> loadClientVersions());
+        ModernButton refresh = UIHelper.createRefreshButton(() -> loadClientVersions());
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());

@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.hr.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -111,9 +112,9 @@ public class TerminationLifecycleService {
         }
         if (termination.getNetAmount().signum() <= 0) {
             throw new BusinessRuleException(String.format(
-                    "O acerto %s não tem valor a pagar (líquido %s). %s continua a dever este valor "
+                    "O acerto %s não tem valor a pagar (líquido %s MT). %s continua a dever este valor "
                             + "à empresa — cobre-o fora da folha.",
-                    termination.getSettlementNumber(), termination.getNetAmount(),
+                    termination.getSettlementNumber(), DisplayNumbers.money(termination.getNetAmount()),
                     termination.getEmployee().getName()));
         }
 

@@ -20,8 +20,15 @@ Push-Location $workspace
 try {
     & (Join-Path $PgBinDir 'initdb') -D $clusterDir -U restore_test --auth=trust --encoding=UTF8 --locale=C *> (Join-Path $runDir 'initdb.log')
     if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a instancia temporaria. Consulte $runDir/initdb.log" }
-    & (Join-Path $PgBinDir 'pg_ctl') -D $clusterDir -l (Join-Path $runDir 'postgres.log') -o "-h 127.0.0.1 -p $testPort$socketOption" -w start
-    if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar a instancia temporaria.' }
+    # O postgres fica a correr com os handles de saida herdados do pg_ctl. Se fossem os do chamador
+    # (ex.: script.ps1 *> ficheiro), o PowerShell esperaria por eles para sempre e os testes nunca
+    # arrancavam. Por isso o pg_ctl escreve em ficheiros proprios e espera-se so pelo pg_ctl.
+    $startArgs = "-D `"$clusterDir`" -l `"$(Join-Path $runDir 'postgres.log')`" -o `"-h 127.0.0.1 -p $testPort$socketOption`" -w start"
+    $pgCtlStart = Start-Process -FilePath (Join-Path $PgBinDir 'pg_ctl') -ArgumentList $startArgs -NoNewWindow -PassThru `
+        -RedirectStandardOutput (Join-Path $runDir 'pg_ctl-start.log') -RedirectStandardError (Join-Path $runDir 'pg_ctl-start.err')
+    $null = $pgCtlStart.Handle  # sem isto o ExitCode pode vir vazio no Windows PowerShell
+    $pgCtlStart.WaitForExit()
+    if ($pgCtlStart.ExitCode -ne 0) { throw "Falha ao iniciar a instancia temporaria. Consulte $runDir/pg_ctl-start.err" }
     $started = $true
     $env:MULTICORE_RESTORE_TEST_PORT = "$testPort"
     $env:MULTICORE_RESTORE_TEST_DIR = $runDir

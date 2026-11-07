@@ -189,6 +189,7 @@ Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
 | Cotação / conversão em encomenda        | [QuotationService](src/main/java/mz/multicore/erp/modules/comercial/service/QuotationService.java) |
 | Reposição interna (loja ⇄ armazém)      | [InternalReplenishmentService](src/main/java/mz/multicore/erp/modules/comercial/service/InternalReplenishmentService.java) |
 | **Disponibilidade para sair** de um armazém | `ProductBatchService.materialiseLegacyIfNeeded` — lotes são subdivisão do stock, materializada na 1.ª saída |
+| **Validade obrigatória** (perecíveis)   | `StockMovementRegistrationService.requireExpiryForPerishableIntake` — ver [docs/PRODUTO_PERECIVEL_VALIDADE_SPEC.md](docs/PRODUTO_PERECIVEL_VALIDADE_SPEC.md) |
 | **Criar uma encomenda** (porta única)   | `ComercialService.placeOrder` — numera `EC` e submete a aprovação |
 | Baixa de stock da fatura manual         | [InvoiceApprovalCallback](src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceApprovalCallback.java) |
 | Nota de crédito / devolução de stock    | [CreditNoteService](src/main/java/mz/multicore/erp/modules/comercial/service/CreditNoteService.java) |

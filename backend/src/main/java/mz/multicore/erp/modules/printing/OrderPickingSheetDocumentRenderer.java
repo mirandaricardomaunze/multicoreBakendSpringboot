@@ -87,7 +87,7 @@ public class OrderPickingSheetDocumentRenderer {
             String ref = product != null && product.getReference() != null ? product.getReference() : "—";
             String barcode = product != null && product.getBarcode() != null ? product.getBarcode() : "—";
             String name = product != null ? product.getName() : "Artigo";
-            String qty = line.getQuantity() != null ? line.getQuantity().stripTrailingZeros().toPlainString() : "0";
+            String qty = MoneyFormat.formatQty(line.getQuantity());
             String emb = calculatePackages(line);
             String cx = calculateBoxes(line);
             String batch = line.getBatchNumber() != null ? line.getBatchNumber() : "Lote padrão / FEFO";
@@ -108,9 +108,9 @@ public class OrderPickingSheetDocumentRenderer {
 
         addSummaryCell(table, "", Element.ALIGN_CENTER, 3);
         addSummaryCell(table, "TOTAL DE EXPEDIÇÃO:", Element.ALIGN_RIGHT, 1);
-        addSummaryCell(table, totalQty.stripTrailingZeros().toPlainString(), Element.ALIGN_RIGHT, 1);
+        addSummaryCell(table, MoneyFormat.formatQty(totalQty), Element.ALIGN_RIGHT, 1);
         addSummaryCell(table, "—", Element.ALIGN_RIGHT, 1);
-        addSummaryCell(table, totalBoxes.setScale(2, RoundingMode.HALF_UP).toPlainString(), Element.ALIGN_RIGHT, 1);
+        addSummaryCell(table, MoneyFormat.formatPlain(totalBoxes), Element.ALIGN_RIGHT, 1);
         addSummaryCell(table, order.getLines().size() + " artigos", Element.ALIGN_LEFT, 1);
         return table;
     }
@@ -123,7 +123,7 @@ public class OrderPickingSheetDocumentRenderer {
         int divisor = unitsPerPkg > 0 ? unitsPerPkg : 1;
         BigDecimal packages = (line.getQuantity() == null ? BigDecimal.ZERO : line.getQuantity())
                 .divide(BigDecimal.valueOf(divisor), 2, RoundingMode.HALF_UP);
-        return packages.signum() == 0 ? "0" : packages.stripTrailingZeros().toPlainString();
+        return MoneyFormat.formatQty(packages);
     }
 
     private String calculateBoxes(OrderLine line) {
@@ -135,7 +135,7 @@ public class OrderPickingSheetDocumentRenderer {
         if (unitsPerBox <= 0) return "0.00";
         BigDecimal boxes = (line.getQuantity() == null ? BigDecimal.ZERO : line.getQuantity())
                 .divide(BigDecimal.valueOf(unitsPerBox), 2, RoundingMode.HALF_UP);
-        return boxes.signum() == 0 ? "0.00" : boxes.stripTrailingZeros().toPlainString();
+        return boxes.signum() == 0 ? "0,00" : MoneyFormat.formatQty(boxes);
     }
 
     private void addHeader(PdfPTable table, String text, int align) {

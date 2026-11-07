@@ -59,10 +59,10 @@ public final class ForensicAuditOperationsCoordinator {
         peek.setStatus(String.valueOf(tableModel.getValueAt(row, 1)), UIHelper.REJECTED_RED);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Operador", String.valueOf(tableModel.getValueAt(row, 4)), false));
-        items.add(new QuickPeekPanel.PeekItem("Impacto Financeiro", String.valueOf(tableModel.getValueAt(row, 5)), true));
-        items.add(new QuickPeekPanel.PeekItem("Detalhes da Ocorrência", String.valueOf(tableModel.getValueAt(row, 6)), false));
-        items.add(new QuickPeekPanel.PeekItem("Recomendação Preventiva", String.valueOf(tableModel.getValueAt(row, 7)), false));
+        items.add(new QuickPeekPanel.PeekItem("Operador", peek.cell(tableModel.getValueAt(row, 4), 4), false));
+        items.add(new QuickPeekPanel.PeekItem("Impacto Financeiro", peek.cell(tableModel.getValueAt(row, 5), 5), true));
+        items.add(new QuickPeekPanel.PeekItem("Detalhes da Ocorrência", peek.cell(tableModel.getValueAt(row, 6), 6), false));
+        items.add(new QuickPeekPanel.PeekItem("Recomendação Preventiva", peek.cell(tableModel.getValueAt(row, 7), 7), false));
         peek.setItems(items);
         peek.getOpenFullButton().setText("Ver Ficha Completa");
         peek.setOnOpenFullAction(v -> {

@@ -67,7 +67,7 @@ public class NotificationsPanel extends JPanel {
         for (int i = 0; i < widths.length; i++) table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             NotificationsViewCoordinator.populateQuickPeek(peek, tableModel, row, this::openSelectedModule);
         });
 
@@ -82,9 +82,7 @@ public class NotificationsPanel extends JPanel {
         openButton.setIcon(UIHelper.icon("fas-external-link-alt", 14));
         openButton.addActionListener(e -> openSelectedModule());
 
-        refreshButton = UIHelper.createSecondaryButton("Actualizar");
-        refreshButton.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshButton.addActionListener(e -> refreshData());
+        refreshButton = UIHelper.createRefreshButton(() -> refreshData());
 
         readingMenu = UIHelper.createActionMenuButton("Leitura")
                 .addAction("Marcar como lida", UIHelper.icon("fas-check", 14), this::markSelectedRead)

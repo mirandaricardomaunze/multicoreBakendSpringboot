@@ -90,16 +90,43 @@ class BackupAtRestHarnessTest {
     }
 
     @Test
-    @DisplayName("SC-31: Cifra interrompida é refeita; a cópia em claro não se perde")
-    void sc31_brokenEncryptedCopyRedone() throws Exception {
+    @DisplayName("SC-31: Cópia cifrada inválida preserva os dois ficheiros")
+    void sc31_brokenEncryptedCopyPreserved() throws Exception {
         Path dump = old("meio.dump", "conteudo");
         Files.writeString(dir.resolve("meio.dump.enc"), "cortado");
+
+        assertThat(sealer().sealPlainFiles(System.currentTimeMillis())).isZero();
+
+        assertThat(Files.readString(dump)).isEqualTo("conteudo");
+        assertThat(Files.readString(dir.resolve("meio.dump.enc"))).isEqualTo("cortado");
+    }
+
+    @Test
+    void sealPlainFiles_existingDifferentContent_preservesBothVersions() throws Exception {
+        Path dump = old("versao.dump", "versao antiga");
+        Path encrypted = dir.resolve("versao.dump.enc");
+        cipher.encrypt(dump, encrypted);
+        byte[] before = Files.readAllBytes(encrypted);
+        Files.writeString(dump, "versao recente");
+        dump.toFile().setLastModified(System.currentTimeMillis() - 3 * HOUR);
+
+        assertThat(sealer().sealPlainFiles(System.currentTimeMillis())).isZero();
+
+        assertThat(Files.readString(dump)).isEqualTo("versao recente");
+        assertThat(Files.readAllBytes(encrypted)).isEqualTo(before);
+    }
+
+    @Test
+    void sealPlainFiles_existingIdenticalContent_removesOnlyPlain() throws Exception {
+        Path dump = old("igual.dump", "conteudo igual");
+        Path encrypted = dir.resolve("igual.dump.enc");
+        cipher.encrypt(dump, encrypted);
+        byte[] before = Files.readAllBytes(encrypted);
 
         assertThat(sealer().sealPlainFiles(System.currentTimeMillis())).isEqualTo(1);
 
         assertThat(dump).doesNotExist();
-        assertThat(new String(cipher.decryptToMemory(dir.resolve("meio.dump.enc")), StandardCharsets.UTF_8))
-                .isEqualTo("conteudo");
+        assertThat(Files.readAllBytes(encrypted)).isEqualTo(before);
     }
 
     @Test

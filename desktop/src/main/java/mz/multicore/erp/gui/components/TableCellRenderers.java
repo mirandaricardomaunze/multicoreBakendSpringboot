@@ -5,13 +5,8 @@ import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
-import java.awt.BasicStroke;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -29,10 +24,7 @@ public final class TableCellRenderers {
         return new NumericRenderer(2, "");
     }
 
-    /**
-     * Renderer de estado moderno com badge pill.
-     * Pinta fundo arredondado semitransparente via Graphics2D — compatível com temas claro e escuro.
-     */
+    /** Estado como texto semântico, sem aparência de botão dentro da tabela. */
     public static TableCellRenderer status() {
         return new StatusRenderer();
     }
@@ -104,31 +96,13 @@ public final class TableCellRenderers {
         }
     }
 
-    // ── Renderer de estado: badge pill moderno ───────────────────────────────────────────────
+    // ── Renderer de estado: texto semântico ──────────────────────────────────────────────────
 
     private static final class StatusRenderer extends DefaultTableCellRenderer {
 
-        // Cores de fundo do badge (alpha ~30% — semitransparente sobre qualquer linha zebra)
-        private static final Color BG_GREEN  = new Color(16,  185, 129, 45);
-        private static final Color BG_YELLOW = new Color(245, 158,  11, 45);
-        private static final Color BG_RED    = new Color(239,  68,  68, 45);
-        private static final Color BG_BLUE   = new Color( 59, 130, 246, 45);
-        private static final Color BG_GRAY   = new Color(107, 114, 128, 35);
-
-        // Cor do contorno do badge (alpha ~60%)
-        private static final Color BORDER_GREEN  = new Color(16,  185, 129, 90);
-        private static final Color BORDER_YELLOW = new Color(245, 158,  11, 90);
-        private static final Color BORDER_RED    = new Color(239,  68,  68, 90);
-        private static final Color BORDER_BLUE   = new Color( 59, 130, 246, 90);
-        private static final Color BORDER_GRAY   = new Color(107, 114, 128, 60);
-
-        private Color badgeBg     = BG_GRAY;
-        private Color badgeBorder = BORDER_GRAY;
-
         private StatusRenderer() {
-            setHorizontalAlignment(SwingConstants.CENTER);
-            setOpaque(false); // pintamos o fundo manualmente via paintComponent
-            setBorder(new EmptyBorder(3, 10, 3, 10));
+            setHorizontalAlignment(SwingConstants.LEFT);
+            setBorder(new EmptyBorder(0, 8, 0, 8));
             setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
         }
 
@@ -137,63 +111,34 @@ public final class TableCellRenderers {
                                                        boolean selected, boolean focus,
                                                        int row, int column) {
             super.getTableCellRendererComponent(table, null, selected, focus, row, column);
-            setText(UIHelper.humanStatus(value == null ? null : value.toString()));
+            String raw = value == null ? "" : value.toString().trim().toUpperCase(java.util.Locale.ROOT);
+            String human = UIHelper.humanStatus(raw);
+            String label = "EM STOCK".equals(raw) ? "Disponível" : human;
+            setText(label.isEmpty() ? label : label.substring(0, 1).toUpperCase(java.util.Locale.forLanguageTag("pt-MZ"))
+                    + label.substring(1).toLowerCase(java.util.Locale.forLanguageTag("pt-MZ")));
 
             if (selected) {
-                badgeBg     = new Color(255, 255, 255, 30);
-                badgeBorder = new Color(255, 255, 255, 70);
-                setForeground(UIHelper.TEXT_LIGHT);
-                setBackground(table.getSelectionBackground());
-                setOpaque(true);
+                setForeground(table.getSelectionForeground());
             } else {
-                setOpaque(false);
-                String raw = value == null ? "" : value.toString().trim().toUpperCase(java.util.Locale.ROOT);
-                String human = UIHelper.humanStatus(raw).toUpperCase(java.util.Locale.ROOT);
-                if (isGreen(raw) || isGreen(human)) {
-                    badgeBg = BG_GREEN; badgeBorder = BORDER_GREEN;
+                String normalizedHuman = human.toUpperCase(java.util.Locale.ROOT);
+                if (isGreen(raw) || isGreen(normalizedHuman)) {
                     setForeground(UIHelper.APPROVED_GREEN);
-                } else if (isRed(raw) || isRed(human)) {
-                    badgeBg = BG_RED; badgeBorder = BORDER_RED;
+                } else if (isRed(raw) || isRed(normalizedHuman)) {
                     setForeground(UIHelper.REJECTED_RED);
-                } else if (isYellow(raw) || isYellow(human)) {
-                    badgeBg = BG_YELLOW; badgeBorder = BORDER_YELLOW;
+                } else if (isYellow(raw) || isYellow(normalizedHuman)) {
                     setForeground(UIHelper.PENDING_YELLOW);
-                } else if (isBlue(raw) || isBlue(human)) {
-                    badgeBg = BG_BLUE; badgeBorder = BORDER_BLUE;
+                } else if (isBlue(raw) || isBlue(normalizedHuman)) {
                     setForeground(UIHelper.ACCENT_BLUE);
                 } else {
-                    badgeBg = BG_GRAY; badgeBorder = BORDER_GRAY;
                     setForeground(UIHelper.TEXT_MUTED);
                 }
             }
             return this;
         }
 
-        @Override
-        protected void paintComponent(Graphics g) {
-            if (!isOpaque()) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth();
-                int h = getHeight();
-                int hPad = 4;  // margem horizontal da célula ao badge
-                int vPad = 4;  // margem vertical
-                int bw = w - hPad * 2;
-                int bh = h - vPad * 2;
-                int arc = Math.min(bh, 20); // pill: arco = altura total
-                g2.setColor(badgeBg);
-                g2.fillRoundRect(hPad, vPad, bw, bh, arc, arc);
-                g2.setColor(badgeBorder);
-                g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(hPad, vPad, bw - 1, bh - 1, arc, arc);
-                g2.dispose();
-            }
-            super.paintComponent(g);
-        }
-
         private static boolean isGreen(String s) {
             return switch (s) {
-                case "ACTIVE", "ACTIVA", "APPROVED", "PAID", "OPEN",
+                case "ACTIVE", "ACTIVA", "APPROVED", "PAID", "OPEN", "EM STOCK",
                      "ACTIVO", "APROVADO", "APROVADA", "PAGA", "PAGO", "ABERTO", "RESOLVED",
                      "RESOLVIDO", "FATURADA", "FATURADO", "FACTURADO", "FACTURADA", "BILLED", "INVOICED",
                      "MATCHED", "CONCILIADO", "COMPLETED", "CONCLUÍDO", "CONCLUIDO",

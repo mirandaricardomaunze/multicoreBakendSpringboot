@@ -12,6 +12,7 @@ do projeto). Cobertura = compilação + testes tocados verdes + verificação **
 | DE-02 | Suite tocada (Platform/Comercial/POS) | verde |
 | DE-03 | `V33` aplica em PostgreSQL real | Flyway success; `companies` tem `phone` + `logo` |
 | DE-04 | `TableExportPrintServiceTest` — listagem exportada do desktop | O texto do PDF traz nome, NUIT, morada, telefone e email da empresa (TE-01..TE-06) |
+| DE-05 | `TableExportFilterTest` CE-07 — células da listagem exportada | Cada célula sobe com o texto do renderer da coluna ("1.460,00 MT", "4,00"), não com o valor cru do modelo ("1460.00", "4.000"); HTML de célula vira texto |
 
 ## Manuais (ao vivo)
 | ID | Passos | Esperado |

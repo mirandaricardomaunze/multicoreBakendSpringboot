@@ -180,17 +180,17 @@ public class HRPanel extends JPanel {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController peekController = TableQuickPeekController.install(employeesTable, card, (peek, mr) -> {
-            int row = employeesTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-user-tie", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(employeesModel.getValueAt(row, 1)));
             peek.setSubtitle("Nº " + employeesModel.getValueAt(row, 0) + " • " + employeesModel.getValueAt(row, 5));
             peek.setStatus(String.valueOf(employeesModel.getValueAt(row, 7)), UIHelper.ACCENT_BLUE);
             java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Email", String.valueOf(employeesModel.getValueAt(row, 2)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Telefone", String.valueOf(employeesModel.getValueAt(row, 3)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Departamento", String.valueOf(employeesModel.getValueAt(row, 4)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Admissão", String.valueOf(employeesModel.getValueAt(row, 6)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Salário Base", String.valueOf(employeesModel.getValueAt(row, 8)), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Email", peek.cell(employeesModel.getValueAt(row, 2), 2), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Telefone", peek.cell(employeesModel.getValueAt(row, 3), 3), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Departamento", peek.cell(employeesModel.getValueAt(row, 4), 4), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Admissão", peek.cell(employeesModel.getValueAt(row, 6), 6), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Salário Base", peek.cell(employeesModel.getValueAt(row, 8), 8), true));
             peek.setItems(items);
             peek.getOpenFullButton().setText("Ver Perfil Completo");
             peek.setOnOpenFullAction(v -> openSelectedEmployeeProfile());

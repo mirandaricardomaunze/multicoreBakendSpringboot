@@ -65,9 +65,7 @@ public class BonusTab extends JPanel {
         statusFilter.addActionListener(e -> reload());
         filtersLeft.add(PerformanceControls.createFilterGroup("Estado:", statusFilter));
 
-        ModernButton btnRefresh = UIHelper.createSecondaryButton("Actualizar");
-        btnRefresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        btnRefresh.addActionListener(e -> reload());
+        ModernButton btnRefresh = UIHelper.createRefreshButton(() -> reload());
 
         ModernButton btnApprove = UIHelper.createSuccessButton("Aprovar Prémio");
         btnApprove.setIcon(UIHelper.icon("fas-check", 14));
@@ -98,15 +96,15 @@ public class BonusTab extends JPanel {
         UIHelper.ensureHeadersFit(table);
 
         TableQuickPeekController.install(table, card, (peek, mr) -> {
-            int row = table.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-award", UIHelper.APPROVED_GREEN);
             peek.setTitle(String.valueOf(tableModel.getValueAt(row, 2)));
             peek.setSubtitle("Meta: " + tableModel.getValueAt(row, 1));
             peek.setStatus(String.valueOf(tableModel.getValueAt(row, 6)), UIHelper.APPROVED_GREEN);
             java.util.List<mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem> items = new java.util.ArrayList<>();
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Calculado", String.valueOf(tableModel.getValueAt(row, 3)), false));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Aprovado", String.valueOf(tableModel.getValueAt(row, 4)), true));
-            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Justificação", String.valueOf(tableModel.getValueAt(row, 5)), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Calculado", peek.cell(tableModel.getValueAt(row, 3), 3), false));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Aprovado", peek.cell(tableModel.getValueAt(row, 4), 4), true));
+            items.add(new mz.multicore.erp.gui.components.QuickPeekPanel.PeekItem("Justificação", peek.cell(tableModel.getValueAt(row, 5), 5), false));
             peek.setItems(items);
         });
 
@@ -311,7 +309,7 @@ public class BonusTab extends JPanel {
     }
 
     private SalesGoalBonusDTO getSelected() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= loadedBonuses.size()) {
             feedbackPanel.show(FeedbackType.WARNING, "Selecione um prémio na tabela.");
             return null;

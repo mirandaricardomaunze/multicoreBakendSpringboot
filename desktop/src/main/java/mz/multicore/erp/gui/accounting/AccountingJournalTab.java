@@ -37,9 +37,7 @@ public final class AccountingJournalTab extends JPanel {
         ModernPanel card = AccountingUiHelper.createTableCard(table);
 
         TableQuickFilterBar filterBar = UIHelper.attachQuickFilter(table);
-        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> {
+        ModernButton refresh = UIHelper.createRefreshButton(() -> {
             if (journalPager != null) journalPager.reload();
         });
         ModernButton create = UIHelper.createSuccessButton("Novo Lançamento");

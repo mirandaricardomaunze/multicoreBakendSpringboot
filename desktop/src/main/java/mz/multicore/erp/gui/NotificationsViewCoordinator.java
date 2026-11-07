@@ -39,9 +39,9 @@ public final class NotificationsViewCoordinator {
         peek.setSubtitle("Tipo: " + tableModel.getValueAt(row, 0) + " • " + tableModel.getValueAt(row, 3));
         peek.setStatus(String.valueOf(tableModel.getValueAt(row, 4)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Tipo", String.valueOf(tableModel.getValueAt(row, 0)), false),
-                new QuickPeekPanel.PeekItem("Data / Estado", String.valueOf(tableModel.getValueAt(row, 3)), false),
-                new QuickPeekPanel.PeekItem("Detalhes Completos", String.valueOf(tableModel.getValueAt(row, 2)), true)));
+                new QuickPeekPanel.PeekItem("Tipo", peek.cell(tableModel.getValueAt(row, 0), 0), false),
+                new QuickPeekPanel.PeekItem("Data / Estado", peek.cell(tableModel.getValueAt(row, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Detalhes Completos", peek.cell(tableModel.getValueAt(row, 2), 2), true)));
         peek.getOpenFullButton().setText("Abrir Módulo");
         peek.setOnOpenFullAction(v -> onOpenModule.run());
     }

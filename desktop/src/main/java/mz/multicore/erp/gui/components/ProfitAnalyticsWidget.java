@@ -41,12 +41,8 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         marginBadge = new JLabel("0,0% Margem");
         marginBadge.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
         marginBadge.setOpaque(true);
-        marginBadge.setBackground(new Color(16, 185, 129, 40));
-        marginBadge.setForeground(UIHelper.APPROVED_GREEN);
-        marginBadge.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIHelper.APPROVED_GREEN, 1, true),
-                BorderFactory.createEmptyBorder(3, 8, 3, 8)
-        ));
+        marginBadge.setToolTipText("Percentagem de margem bruta no período seleccionado");
+        styleMarginBadge(true);
 
         top.add(title, BorderLayout.WEST);
         top.add(marginBadge, BorderLayout.EAST);
@@ -121,19 +117,7 @@ public class ProfitAnalyticsWidget extends ModernPanel {
         ticketVal.setText(String.format("%,.2f MT", metrics.averageTicket()));
 
         marginBadge.setText(String.format("%.1f%% Margem", metrics.profitMarginPercent()));
-        if (metrics.profitMarginPercent().compareTo(new BigDecimal("30.0")) >= 0) {
-            marginBadge.setForeground(UIHelper.APPROVED_GREEN);
-            marginBadge.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(UIHelper.APPROVED_GREEN, 1, true),
-                    BorderFactory.createEmptyBorder(3, 8, 3, 8)
-            ));
-        } else {
-            marginBadge.setForeground(UIHelper.PENDING_YELLOW);
-            marginBadge.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(UIHelper.PENDING_YELLOW, 1, true),
-                    BorderFactory.createEmptyBorder(3, 8, 3, 8)
-            ));
-        }
+        styleMarginBadge(metrics.profitMarginPercent().compareTo(new BigDecimal("30.0")) >= 0);
 
         BigDecimal total = metrics.totalRevenue();
         int posPct = 0;
@@ -148,5 +132,20 @@ public class ProfitAnalyticsWidget extends ModernPanel {
 
         invoiceBar.setValue(invPct);
         invoiceLabel.setText(String.format("Faturação Direta: %,.2f MT (%d%%)", metrics.invoiceRevenue(), invPct));
+    }
+
+    private void styleMarginBadge(boolean healthy) {
+        Color foreground = UIHelper.isLight()
+                ? (healthy ? new Color(4, 120, 87) : new Color(146, 64, 14))
+                : (healthy ? new Color(110, 231, 183) : new Color(252, 211, 77));
+        Color background = UIHelper.isLight()
+                ? (healthy ? new Color(236, 253, 245) : new Color(255, 251, 235))
+                : (healthy ? new Color(6, 78, 59) : new Color(69, 26, 3));
+        marginBadge.setForeground(foreground);
+        marginBadge.setBackground(background);
+        marginBadge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(foreground, 1, true),
+                BorderFactory.createEmptyBorder(3, 8, 3, 8)
+        ));
     }
 }

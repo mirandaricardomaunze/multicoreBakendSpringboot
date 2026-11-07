@@ -93,7 +93,7 @@ public final class ConfigBackupOperations {
 
     public static void verifySelectedBackup(ConfigPanel owner, JTextArea logArea, JTable table, DefaultTableModel model) {
         if (!SignedInUser.isAdmin()) { ToastManager.show(owner, FeedbackType.ERROR, "Apenas administradores podem verificar cópias."); return; }
-        int row = table != null ? table.getSelectedRow() : -1;
+        int row = table != null ? mz.multicore.erp.gui.components.TableFilter.selectedModelRow(table) : -1;
         if (row < 0) { ToastManager.show(owner, FeedbackType.WARNING, "Seleccione um ficheiro de backup no arquivo."); return; }
         String fileName = String.valueOf(model.getValueAt(row, 0));
         appendLog(logArea, ">> A verificar backup: " + fileName);

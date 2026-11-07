@@ -22,6 +22,8 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 - Segurança antes de produção em `docs/SEGURANCA_CONTAS_E_SEGREDOS_SPEC.md` (SC-25 a SC-32): código
   2FA de uso único, senhas de demonstração substituídas, backups antigos e lógicos cifrados. No VPS,
   correr `scripts/validar-producao.sh` antes de receber dados reais.
+  Comparação de conteúdo e restauro PostgreSQL isolado validados; ver
+  `tasks/archive/2026-11-01-backup-content-verification.md`.
 - Em 2026-10-31 o responsável confirmou que não existe base PostgreSQL real, por isso as migrações
   V66, V76, V89 e V96 puderam ser corrigidas no próprio ficheiro.
 
@@ -36,6 +38,29 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 - Deploy real no VPS por validar.
 
 ## Decisões permanentes relevantes
+
+33. **Acções Sobre a Linha Seleccionada:**
+    - Acções de tabela usam `TableFilter.selectedModelRow(table)`. Com filtro ou da 2.ª página em
+      diante, 16 acções agiam sobre outro registo (utilizadores, contratos, contagens, POS, backups).
+    - SPEC e harness em `docs/SELECCAO_LINHA_MODELO_SPEC.md` e `SelectedRowModelIndexHarnessTest`.
+
+32. **Números Iguais ao Ecrã Fora da Tabela:**
+    - Export PDF e painel de espreitar usam `CellText` (texto do renderer); PDFs e mensagens do
+      backend usam `DisplayNumbers` em `contracts`. Nunca `toPlainString()` para pessoas.
+    - O painel de espreitar recebe a linha do modelo: 26 ecrãs convertiam-na outra vez e, com filtro,
+      mostravam outra linha.
+    - SPEC e harness em `docs/FORMATO_NUMERICO_SPEC.md` (FN-07 a FN-11).
+
+31. **Histórico POS com Entregue, Troco e Cliente Não Cadastrado:**
+    - A venda já gravava tudo; o histórico mostrava "Consumidor Final" e não tinha o pagamento.
+    - Comprador via `InvoiceDTO.buyerName()`; entregue e troco via `GET /api/pos/sales/payments`.
+    - SPEC e harness em `docs/POS_HISTORICO_PAGAMENTO_CLIENTE_SPEC.md`, `PosSalePaymentQueryServiceTest`
+      e `PosSalesHistoryPaymentHarnessTest`.
+
+30. **Botão Actualizar Unificado:**
+    - Todo o "Actualizar" vem de `UIHelper.createRefreshButton(...)`: mesma cor, ícone, dica e nome acessível.
+    - Nos cards com `tableCardTop`, fica no cabeçalho como primeira acção, como em Pedidos.
+    - SPEC e harness em `docs/BOTAO_ACTUALIZAR_UNIFICADO_SPEC.md` e `RefreshButtonUnificationHarnessTest`.
 
 29. **Cobertura Integral da Política de Permissões HTTP:**
     - Todos os mappings `/api/**` passam a ser inventariados automaticamente pelo contexto Spring.

@@ -48,7 +48,7 @@ final class StockProductFormDialog {
         if (taxCombo.getItemCount() > 0) taxCombo.setSelectedIndex(defaultTaxIdx);
 
         final byte[][] imageHolder = {null};
-        JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder);
+        JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder); JCheckBox perishableBox = StockProductFormBuilder.perishableCheckBox(); // validade obrigatória se ligado
 
         JPanel dialogPanel = UIHelper.createDialogForm(
                 "SKU / Código (Único):", skuField, "Referência:", referenceField, "Código de Barras:", barcodeField,
@@ -57,7 +57,7 @@ final class StockProductFormDialog {
                 "Embalagens por Caixa:", packagesPerBoxField, "Unidades por Embalagem:", unitsPerPackageField,
                 "Total de Unidades por Caixa:", unitsPerBoxField, "Peso líquido/unidade (kg):", netWeightField,
                 "Peso bruto/unidade (kg):", grossWeightField, "Preço Grosso (MT):", wholesalePriceField,
-                "Qtd mín. grosso:", wholesaleMinQtyField, "Descrição:", descField, "Imagem (opcional):", imagePanel
+                "Qtd mín. grosso:", wholesaleMinQtyField, "Validade:", perishableBox, "Descrição:", descField, "Imagem (opcional):", imagePanel
         );
 
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Registar Novo Produto", "fas-boxes",
@@ -69,14 +69,14 @@ final class StockProductFormDialog {
                     skuField, referenceField, barcodeField, nameField, salesPriceField, purchasePriceField,
                     minStockField, packagesPerBoxField, unitsPerPackageField, descField, wholesalePriceField,
                     wholesaleMinQtyField, netWeightField, grossWeightField, categoryCombo, taxCombo, categories, vatRates);
-            byte[] selectedImage = imageHolder[0];
+            byte[] selectedImage = imageHolder[0]; boolean perishable = perishableBox.isSelected();
 
             return () -> {
                 ProductDTO created = owner.comercialApiClient.createProduct(
                         data.sku(), data.reference(), data.barcode(), data.name(), data.salesPrice(), data.purchasePrice(),
                         data.minStock(), data.packaging().unitsPerBox(), data.packaging().packagesPerBox(), data.packaging().unitsPerPackage(),
                         data.categoryId(), "UNIT", true, data.taxRateId(), data.description(),
-                        data.wholesalePrice(), data.wholesaleMinQty(), data.netWeightKg(), data.grossWeightKg());
+                        data.wholesalePrice(), data.wholesaleMinQty(), data.netWeightKg(), data.grossWeightKg(), null, perishable);
                 if (selectedImage != null) owner.comercialApiClient.updateProductImage(created.id(), selectedImage);
                 createdHolder[0] = created;
                 return created;
@@ -87,7 +87,7 @@ final class StockProductFormDialog {
             owner.onPanelSelected();
             ProductDTO created = createdHolder[0];
             if (created != null && ModernMessageDialog.confirm(SwingUtilities.getWindowAncestor(owner), FeedbackType.INFO,
-                    "Adicionar Stock Inicial", "Produto '" + created.name() + "' cadastrado com sucesso.\nDeseja adicionar stock inicial com validade agora?", "Adicionar Stock")) {
+                    "Adicionar Stock Inicial", "Produto '" + created.name() + "' cadastrado com sucesso.\nDeseja adicionar stock inicial agora?", "Adicionar Stock")) {
                 StockBatchEntryDialog.show(owner, created);
             }
         }
@@ -124,7 +124,7 @@ final class StockProductFormDialog {
         for (var r : vatRates) taxCombo.addItem(r.name());
 
         final byte[][] imageHolder = {null};
-        JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder);
+        JPanel imagePanel = StockProductFormBuilder.createImageChooserPanel(owner, imageHolder); JCheckBox perishableBox = StockProductFormBuilder.perishableCheckBox(); // validade obrigatória se ligado
 
         Runnable prefill = () -> {
             ProductDTO p = productCombo.selectedProduct();
@@ -135,7 +135,7 @@ final class StockProductFormDialog {
             packagesPerBoxField.setText(String.valueOf(p.packagesPerBox())); unitsPerPackageField.setText(String.valueOf(p.unitsPerPackage())); unitsPerBoxField.setText(String.valueOf(p.unitsPerBox()));
             netWeightField.setText(p.netUnitWeightKg() == null ? "" : p.netUnitWeightKg().toPlainString()); grossWeightField.setText(p.grossUnitWeightKg() == null ? "" : p.grossUnitWeightKg().toPlainString());
             wholesalePriceField.setText(p.wholesalePrice() == null ? "" : p.wholesalePrice().toPlainString()); wholesaleMinQtyField.setText(p.wholesaleMinQty() == null ? "" : p.wholesaleMinQty().toPlainString());
-            descField.setText(p.description() == null ? "" : p.description());
+            descField.setText(p.description() == null ? "" : p.description()); perishableBox.setSelected(p.tracksExpiry());
             categoryCombo.setSelectedIndex(0);
             if (p.categoryId() != null) {
                 for (int i = 0; i < categories.size(); i++) {
@@ -160,7 +160,7 @@ final class StockProductFormDialog {
                 "Stock Mínimo:", minStockField, "Embalagens por Caixa:", packagesPerBoxField, "Unidades por Embalagem:", unitsPerPackageField,
                 "Total de Unidades por Caixa:", unitsPerBoxField, "Peso líquido/unidade (kg):", netWeightField,
                 "Peso bruto/unidade (kg):", grossWeightField, "Preço Grosso (MT):", wholesalePriceField,
-                "Qtd mín. grosso:", wholesaleMinQtyField, "Descrição:", descField, "Nova Imagem (opcional):", imagePanel
+                "Qtd mín. grosso:", wholesaleMinQtyField, "Validade:", perishableBox, "Descrição:", descField, "Nova Imagem (opcional):", imagePanel
         );
 
         ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Editar Produto", "fas-edit",
@@ -173,14 +173,14 @@ final class StockProductFormDialog {
                     null, referenceField, barcodeField, nameField, salesPriceField, purchasePriceField,
                     minStockField, packagesPerBoxField, unitsPerPackageField, descField, wholesalePriceField,
                     wholesaleMinQtyField, netWeightField, grossWeightField, categoryCombo, taxCombo, categories, vatRates);
-            byte[] selectedImage = imageHolder[0];
+            byte[] selectedImage = imageHolder[0]; boolean perishable = perishableBox.isSelected();
 
             return () -> {
                 owner.comercialApiClient.updateProduct(
                         selected.id(), data.reference(), data.barcode(), data.name(), data.salesPrice(), data.purchasePrice(),
                         data.minStock(), data.packaging().unitsPerBox(), data.packaging().packagesPerBox(), data.packaging().unitsPerPackage(),
                         data.categoryId(), selected.saleType() != null ? selected.saleType() : "UNIT", selected.stockTracked(), data.taxRateId(),
-                        data.description(), data.wholesalePrice(), data.wholesaleMinQty(), data.netWeightKg(), data.grossWeightKg());
+                        data.description(), data.wholesalePrice(), data.wholesaleMinQty(), data.netWeightKg(), data.grossWeightKg(), selected.businessUnitId(), perishable);
                 if (selectedImage != null) owner.comercialApiClient.updateProductImage(selected.id(), selectedImage);
                 return null;
             };

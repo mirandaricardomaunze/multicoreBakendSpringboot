@@ -156,7 +156,7 @@ public class StockTransferPrintLinesTableBuilder {
         if (!hasPackaging(product)) return "—";
         BigDecimal safeQty = quantity == null ? BigDecimal.ZERO : quantity;
         BigDecimal packages = safeQty.divide(BigDecimal.valueOf(product.getUnitsPerPackage()), 3, RoundingMode.HALF_UP);
-        return packages.stripTrailingZeros().toPlainString();
+        return MoneyFormat.formatQty(packages);
     }
 
     public static String formatBoxes(Product product, BigDecimal quantity) {
@@ -164,7 +164,7 @@ public class StockTransferPrintLinesTableBuilder {
         BigDecimal safeQty = quantity == null ? BigDecimal.ZERO : quantity;
         long unitsPerBox = (long) product.getPackagesPerBox() * product.getUnitsPerPackage();
         BigDecimal boxes = safeQty.divide(BigDecimal.valueOf(unitsPerBox), 3, RoundingMode.HALF_UP);
-        return boxes.stripTrailingZeros().toPlainString();
+        return MoneyFormat.formatQty(boxes);
     }
 
     public static String formatBoxPercentage(Product product, BigDecimal quantity) {
@@ -173,7 +173,7 @@ public class StockTransferPrintLinesTableBuilder {
         long unitsPerBox = (long) product.getPackagesPerBox() * product.getUnitsPerPackage();
         BigDecimal percentage = safeQty.multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(unitsPerBox), 2, RoundingMode.HALF_UP);
-        return percentage.stripTrailingZeros().toPlainString() + "%";
+        return MoneyFormat.formatQty(percentage) + "%";
     }
 
     public static boolean hasPackaging(Product product) {
@@ -183,12 +183,12 @@ public class StockTransferPrintLinesTableBuilder {
     public static String formatRate(BigDecimal rate) {
         if (rate == null) return "0%";
         BigDecimal percent = rate.multiply(BigDecimal.valueOf(100));
-        return percent.stripTrailingZeros().toPlainString() + "%";
+        return MoneyFormat.formatQty(percent) + "%";
     }
 
     public static String formatQty(BigDecimal qty) {
         if (qty == null || BigDecimal.ZERO.compareTo(qty) == 0) return "0";
-        return qty.stripTrailingZeros().toPlainString();
+        return MoneyFormat.formatQty(qty);
     }
 
     private static String productValue(String primary, String fallback) {

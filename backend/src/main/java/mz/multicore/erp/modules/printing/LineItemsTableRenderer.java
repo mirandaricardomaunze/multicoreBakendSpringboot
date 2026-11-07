@@ -167,7 +167,7 @@ public final class LineItemsTableRenderer {
     }
 
     private static String decimal(BigDecimal value) {
-        return value.stripTrailingZeros().toPlainString().replace('.', ',');
+        return MoneyFormat.formatQty(value);
     }
 
     /** Quantidade em embalagens comerciais equivalentes para o modelo corporativo. */
@@ -355,7 +355,7 @@ public final class LineItemsTableRenderer {
         if (!hasPackaging(row)) return "—";
         BigDecimal packages = safeQuantity(row.quantity())
                 .divide(BigDecimal.valueOf(row.unitsPerPackage()), 3, RoundingMode.HALF_UP);
-        return packages.stripTrailingZeros().toPlainString();
+        return MoneyFormat.formatQty(packages);
     }
 
     /** Quantidade da linha expressa em caixas equivalentes, incluindo fracções de caixa. */
@@ -364,7 +364,7 @@ public final class LineItemsTableRenderer {
         long unitsPerBox = (long) row.packagesPerBox() * row.unitsPerPackage();
         BigDecimal boxes = safeQuantity(row.quantity())
                 .divide(BigDecimal.valueOf(unitsPerBox), 3, RoundingMode.HALF_UP);
-        return boxes.stripTrailingZeros().toPlainString();
+        return MoneyFormat.formatQty(boxes);
     }
 
     /** 100% corresponde exactamente a uma caixa; valores acima de 100% representam várias caixas. */
@@ -374,7 +374,7 @@ public final class LineItemsTableRenderer {
         BigDecimal percentage = safeQuantity(row.quantity())
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(unitsPerBox), 2, RoundingMode.HALF_UP);
-        return percentage.stripTrailingZeros().toPlainString() + "%";
+        return MoneyFormat.formatQty(percentage) + "%";
     }
 
     private static boolean hasPackaging(Row row) {

@@ -98,7 +98,7 @@ class CanonicalControlsTest {
         JTable table = new JTable(1, 1);
         JLabel label = (JLabel) TableCellRenderers.status().getTableCellRendererComponent(
                 table, "CUSTOM_STATE", false, false, 0, 0);
-        assertEquals("CUSTOM STATE", label.getText());
+        assertEquals("Custom state", label.getText());
         assertEquals(UIHelper.TEXT_MUTED, label.getForeground());
     }
 }

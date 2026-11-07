@@ -77,8 +77,8 @@ public class FleetManifestDocumentRenderer {
         try { table.setWidths(new float[]{25f, 25f, 25f, 25f}); } catch (Exception ignored) {}
 
         addKpiCell(table, "PARADAS / ENTREGAS", String.valueOf(m.getTotalStops()));
-        addKpiCell(table, "TOTAL CAIXAS (Cx.)", m.getTotalBoxes() != null ? m.getTotalBoxes().toPlainString() : "0.00");
-        addKpiCell(table, "TOTAL EMBALAGENS (Emb.)", m.getTotalPackages() != null ? m.getTotalPackages().toPlainString() : "0.00");
+        addKpiCell(table, "TOTAL CAIXAS (Cx.)", MoneyFormat.formatQty(m.getTotalBoxes()));
+        addKpiCell(table, "TOTAL EMBALAGENS (Emb.)", MoneyFormat.formatQty(m.getTotalPackages()));
         addKpiCell(table, "TOTAL A COBRAR", CURRENCY_FMT.format(m.getTotalAmountToCollect() != null ? m.getTotalAmountToCollect() : BigDecimal.ZERO));
         return table;
     }
@@ -122,8 +122,8 @@ public class FleetManifestDocumentRenderer {
             addCell(table, stop.getDeliveryAddress() != null ? stop.getDeliveryAddress() : "-", Element.ALIGN_LEFT, alt, false);
             addCell(table, stop.getDocumentNumber(), Element.ALIGN_CENTER, alt, true);
 
-            String volText = (stop.getBoxCount() != null ? stop.getBoxCount().toPlainString() : "0.00") + " Cx\n" +
-                    (stop.getPackageCount() != null ? stop.getPackageCount().toPlainString() : "0.00") + " Emb";
+            String volText = MoneyFormat.formatQty(stop.getBoxCount()) + " Cx\n" +
+                    MoneyFormat.formatQty(stop.getPackageCount()) + " Emb";
             addCell(table, volText, Element.ALIGN_RIGHT, alt, false);
 
             String condText = stop.getAmountToCollect() != null && stop.getAmountToCollect().signum() > 0

@@ -10,6 +10,7 @@ import mz.multicore.erp.architecture.quantity.PackagingComposition;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.validation.ImagePayloadValidator;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.comercial.dto.CreateProductRequest;
 import mz.multicore.erp.modules.comercial.dto.POSCatalogItemDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductCategoryDTO;
 import mz.multicore.erp.modules.comercial.dto.ProductDTO;
@@ -337,8 +338,37 @@ public class ComercialProductCatalogService {
                 p.getNetUnitWeightKg(), p.getGrossUnitWeightKg(), p.getVersion(),
                 p.getBusinessUnit() != null ? p.getBusinessUnit().getId() : null,
                 p.getBusinessUnit() != null ? p.getBusinessUnit().getName() : null,
-                p.getBusinessUnit() != null ? p.getBusinessUnit().getCode() : null
+                p.getBusinessUnit() != null ? p.getBusinessUnit().getCode() : null,
+                p.isTracksExpiry()
         );
+    }
+
+    /** Pedido HTTP completo, incluindo a opção de produto perecível ({@code tracksExpiry}). */
+    public ProductDTO createProduct(CreateProductRequest r) {
+        ProductDTO created = createProduct(r.sku(), r.reference(), r.barcode(), r.name(), r.unitPrice(),
+                r.purchasePrice(), r.minStock(), r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(),
+                r.categoryId(), r.saleType(), r.stockTracked(), r.taxRateId(), r.description(), r.wholesalePrice(),
+                r.wholesaleMinQty(), r.netUnitWeightKg(), r.grossUnitWeightKg(), r.businessUnitId());
+        return applyExpiryTracking(created.id(), r.tracksExpiry());
+    }
+
+    public ProductDTO updateProduct(Long id, CreateProductRequest r) {
+        updateProduct(id, r.reference(), r.barcode(), r.name(), r.unitPrice(), r.purchasePrice(), r.minStock(),
+                r.unitsPerBox(), r.packagesPerBox(), r.unitsPerPackage(), r.categoryId(), r.saleType(),
+                r.stockTracked(), r.taxRateId(), r.description(), r.wholesalePrice(), r.wholesaleMinQty(),
+                r.netUnitWeightKg(), r.grossUnitWeightKg(), r.businessUnitId());
+        return applyExpiryTracking(id, r.tracksExpiry());
+    }
+
+    /** Perecível = validade obrigatória nas entradas. {@code null} (cliente anterior) mantém o valor actual. */
+    private ProductDTO applyExpiryTracking(Long productId, Boolean tracksExpiry) {
+        Product product = productRepository.findByIdAndCompaniesId(productId, CurrentUserContext.getCurrentCompanyId())
+                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        if (tracksExpiry != null && tracksExpiry != product.isTracksExpiry()) {
+            product.setTracksExpiry(tracksExpiry);
+            product = productRepository.save(product);
+        }
+        return toDTO(product);
     }
 
     private PackagingComposition storedPackaging(Product product) {

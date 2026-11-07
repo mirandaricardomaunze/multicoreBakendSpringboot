@@ -96,9 +96,7 @@ public class SystemMonitoringDialog {
         JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftActions.setOpaque(false);
 
-        refreshButton = new ModernButton("Actualizar", UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
-        refreshButton.setIcon(UIHelper.icon("fas-sync-alt", 14, Color.WHITE));
-        refreshButton.addActionListener(e -> refreshDataAsync());
+        refreshButton = UIHelper.createRefreshButton(this::refreshDataAsync);
         leftActions.add(refreshButton);
 
         ModernButton copyButton = new ModernButton("Copiar Diagnóstico", UIHelper.ACCENT, UIHelper.ACCENT_HOVER);

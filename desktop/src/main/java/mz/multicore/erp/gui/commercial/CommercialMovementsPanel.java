@@ -47,9 +47,7 @@ public final class CommercialMovementsPanel extends JPanel {
         setOpaque(false);
         setBorder(new EmptyBorder(15, 5, 5, 5));
 
-        ModernButton refresh = UIHelper.createSecondaryButton("Actualizar");
-        refresh.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refresh.addActionListener(e -> refresh());
+        ModernButton refresh = UIHelper.createRefreshButton(() -> refresh());
         add(feedback, BorderLayout.NORTH);
 
         ModernPanel card = new ModernPanel(16);

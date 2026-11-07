@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui;
 
+import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.QuickPeekPanel;
 import mz.multicore.erp.gui.components.TableCellRenderers;
@@ -52,7 +53,7 @@ public final class StockCategoriesViewCoordinator {
     }
 
     public static ProductCategoryDTO selectedCategory(StockPanel owner) {
-        int row = owner.categoriesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(owner.categoriesTable);
         if (row < 0 || row >= owner.categoriesFiltered.size()) {
             owner.showStockNotice(FeedbackType.WARNING, "Seleccione uma categoria", "Escolha uma categoria na tabela para continuar.");
             return null;
@@ -77,10 +78,10 @@ public final class StockCategoriesViewCoordinator {
         peek.setSubtitle("Código: " + owner.categoriesModel.getValueAt(modelRow, 0));
         peek.setStatus(String.valueOf(owner.categoriesModel.getValueAt(modelRow, 4)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Código", String.valueOf(owner.categoriesModel.getValueAt(modelRow, 0)), false),
-                new QuickPeekPanel.PeekItem("Designação", String.valueOf(owner.categoriesModel.getValueAt(modelRow, 1)), false),
-                new QuickPeekPanel.PeekItem("Cor Hex", String.valueOf(owner.categoriesModel.getValueAt(modelRow, 2)), false),
-                new QuickPeekPanel.PeekItem("Total de Produtos", String.valueOf(owner.categoriesModel.getValueAt(modelRow, 3)), true)));
+                new QuickPeekPanel.PeekItem("Código", peek.cell(owner.categoriesModel.getValueAt(modelRow, 0), 0), false),
+                new QuickPeekPanel.PeekItem("Designação", peek.cell(owner.categoriesModel.getValueAt(modelRow, 1), 1), false),
+                new QuickPeekPanel.PeekItem("Cor Hex", peek.cell(owner.categoriesModel.getValueAt(modelRow, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Total de Produtos", peek.cell(owner.categoriesModel.getValueAt(modelRow, 3), 3), true)));
     }
 
     public static DefaultTableCellRenderer createColorCellRenderer() {

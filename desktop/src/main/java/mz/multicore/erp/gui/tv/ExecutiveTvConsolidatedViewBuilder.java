@@ -68,7 +68,7 @@ public final class ExecutiveTvConsolidatedViewBuilder {
         masterTitle.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
         masterTitle.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
         masterTitleRow.add(masterTitle, BorderLayout.WEST);
-        masterTitleRow.add(ExecutiveTvTheme.buildStatusBadge(globalPct), BorderLayout.EAST);
+        masterTitleRow.add(ExecutiveTvTheme.buildStatusBadge(globalPct, lightMode), BorderLayout.EAST);
         masterCard.add(masterTitleRow, BorderLayout.NORTH);
 
         GoalProgressBar masterBar = new GoalProgressBar(32);
@@ -151,10 +151,10 @@ public final class ExecutiveTvConsolidatedViewBuilder {
             badge.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
             badge.setForeground(ExecutiveTvTheme.getTextMutedColor(lightMode));
             badge.setOpaque(true);
-            badge.setBackground(lightMode ? new Color(241, 245, 249) : new Color(51, 65, 85, 40));
+            badge.setBackground(lightMode ? new Color(241, 245, 249) : new Color(51, 65, 85));
             badge.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ExecutiveTvTheme.getCardBorderColor(lightMode), 1, true), new EmptyBorder(2, 6, 2, 6)));
         } else {
-            badge = ExecutiveTvTheme.buildStatusBadge(pct);
+            badge = ExecutiveTvTheme.buildStatusBadge(pct, lightMode);
         }
         top.add(badge, BorderLayout.EAST);
         card.add(top, BorderLayout.NORTH);

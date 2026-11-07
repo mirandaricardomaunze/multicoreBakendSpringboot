@@ -49,7 +49,7 @@ public class InvoiceInstallmentsDialog {
         ));
 
         headerCard.add(createHeaderItem("Fatura", invoice.invoiceNumber() != null ? invoice.invoiceNumber() : "—"));
-        headerCard.add(createHeaderItem("Cliente", invoice.clientName() != null ? invoice.clientName() : (invoice.customerName() != null ? invoice.customerName() : "Consumidor Final")));
+        headerCard.add(createHeaderItem("Cliente", invoice.buyerName() != null ? invoice.buyerName() : "Consumidor Final"));
         headerCard.add(createHeaderItem("Total Faturado", CURRENCY_FMT.format(invoice.totalAmount() != null ? invoice.totalAmount() : BigDecimal.ZERO)));
 
         headerCard.add(createHeaderItem("Saldo Devedor", CURRENCY_FMT.format(invoice.outstandingAmount())));

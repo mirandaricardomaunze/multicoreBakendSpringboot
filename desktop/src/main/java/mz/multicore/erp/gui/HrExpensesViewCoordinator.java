@@ -19,9 +19,9 @@ public final class HrExpensesViewCoordinator {
         peek.setSubtitle(String.valueOf(owner.expensesModel.getValueAt(row, 2)));
         peek.setStatus(String.valueOf(owner.expensesModel.getValueAt(row, 3)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Valor Reembolsável", String.valueOf(owner.expensesModel.getValueAt(row, 1)), true),
-                new QuickPeekPanel.PeekItem("Categoria", String.valueOf(owner.expensesModel.getValueAt(row, 2)), false),
-                new QuickPeekPanel.PeekItem("Motivo de Rejeição", String.valueOf(owner.expensesModel.getValueAt(row, 4)), false)
+                new QuickPeekPanel.PeekItem("Valor Reembolsável", peek.cell(owner.expensesModel.getValueAt(row, 1), 1), true),
+                new QuickPeekPanel.PeekItem("Categoria", peek.cell(owner.expensesModel.getValueAt(row, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Motivo de Rejeição", peek.cell(owner.expensesModel.getValueAt(row, 4), 4), false)
         ));
     }
 

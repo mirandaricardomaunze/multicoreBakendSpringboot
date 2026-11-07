@@ -26,10 +26,10 @@ final class HRLiabilitiesOperationsCoordinator {
         peek.setSubtitle("Período: " + model.getValueAt(row, 1));
         peek.setStatus(String.valueOf(model.getValueAt(row, 5)), UIHelper.ACCENT_BLUE);
         List<QuickPeekPanel.PeekItem> items = List.of(
-                new QuickPeekPanel.PeekItem("Valor da Retenção", String.valueOf(model.getValueAt(row, 3)), true),
-                new QuickPeekPanel.PeekItem("Prazo Limite", String.valueOf(model.getValueAt(row, 4)), false),
-                new QuickPeekPanel.PeekItem("Entregue Por", String.valueOf(model.getValueAt(row, 6)), false),
-                new QuickPeekPanel.PeekItem("Referência de Pagamento", String.valueOf(model.getValueAt(row, 7)), false)
+                new QuickPeekPanel.PeekItem("Valor da Retenção", peek.cell(model.getValueAt(row, 3), 3), true),
+                new QuickPeekPanel.PeekItem("Prazo Limite", peek.cell(model.getValueAt(row, 4), 4), false),
+                new QuickPeekPanel.PeekItem("Entregue Por", peek.cell(model.getValueAt(row, 6), 6), false),
+                new QuickPeekPanel.PeekItem("Referência de Pagamento", peek.cell(model.getValueAt(row, 7), 7), false)
         );
         peek.setItems(items);
     }

@@ -97,9 +97,7 @@ public class FleetManifestsViewDialog {
                 content
         );
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> reload.run());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> reload.run());
 
         ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir A4");
         printBtn.setIcon(UIHelper.icon("fas-print", 14));

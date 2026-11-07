@@ -111,9 +111,7 @@ public final class RecurringContractsPanel extends JPanel {
                 TableFilter.label("Estado:"), statusFilterCombo
         );
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> loadContracts());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadContracts());
 
         ModernButton batchBillingBtn = UIHelper.createPrimaryButton("Faturar Avenças");
         batchBillingBtn.setIcon(UIHelper.icon("fas-file-invoice-dollar", 14));
@@ -211,7 +209,7 @@ public final class RecurringContractsPanel extends JPanel {
     }
 
     private void showContractActionsDialog() {
-        int row = table.getSelectedRow();
+        int row = TableFilter.selectedModelRow(table);
         if (row < 0 || row >= currentContracts.size()) return;
         RecurringContractDTO selected = currentContracts.get(row);
         RecurringContractsOperationsCoordinator.manageContractStatus(this, contractApiClient, selected, feedback, this::loadContracts);

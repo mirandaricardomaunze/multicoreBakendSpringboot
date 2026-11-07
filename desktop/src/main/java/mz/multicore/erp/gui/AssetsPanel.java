@@ -121,9 +121,7 @@ public final class AssetsPanel extends JPanel {
                 TableFilter.label("Estado:"), statusFilterCombo
         );
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> loadAssets());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadAssets());
 
         ActionMenuButton depreciationMenu = UIHelper.createActionMenuButton("Amortizações")
                 .addAction("Calcular Quotas", UIHelper.icon("fas-calculator", 14, UIHelper.PENDING_YELLOW), this::openDepreciationDialog)

@@ -48,9 +48,7 @@ public class PlatformSupportTicketsView extends JPanel {
         statusBtn.setIcon(UIHelper.icon("fas-tasks", 14));
         statusBtn.addActionListener(e -> changeTicketStatus());
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> loadTickets());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadTickets());
 
         ModernPanel listCard = new ModernPanel(16);
         listCard.setLayout(new BorderLayout());

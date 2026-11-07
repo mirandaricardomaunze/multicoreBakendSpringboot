@@ -120,9 +120,7 @@ final class PurchaseOrdersPanel {
         poFormContentPanel.add(draftCard, BorderLayout.CENTER);
         owner.poFormContent = poFormContentPanel;
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> { owner.poSearchField.setText(""); refresh(); });
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> { owner.poSearchField.setText(""); refresh(); });
 
         ActionMenuButton actionsMenu = UIHelper.createActionMenuButton("Acções da Encomenda");
         actionsMenu.addAction("Editar / Consultar", UIHelper.icon("fas-edit", 14, UIHelper.ACCENT_BLUE), operations::openSelectedEditor);

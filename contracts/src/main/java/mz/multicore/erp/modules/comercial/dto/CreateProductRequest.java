@@ -28,8 +28,24 @@ public record CreateProductRequest(
         BigDecimal wholesaleMinQty,
         BigDecimal netUnitWeightKg,
         BigDecimal grossUnitWeightKg,
-        Long businessUnitId
+        Long businessUnitId,
+        /** Perecível. {@code null} (cliente anterior) mantém o valor actual; na criação vale {@code false}. */
+        Boolean tracksExpiry
 ) {
+    /** Construtor compatível anterior à opção de produto perecível. */
+    public CreateProductRequest(
+            String sku, String reference, String barcode, String name,
+            BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,
+            int unitsPerBox, Integer packagesPerBox, Integer unitsPerPackage,
+            Long categoryId, String saleType, boolean stockTracked, Long taxRateId,
+            String description, BigDecimal wholesalePrice, BigDecimal wholesaleMinQty,
+            BigDecimal netUnitWeightKg, BigDecimal grossUnitWeightKg, Long businessUnitId) {
+        this(sku, reference, barcode, name, unitPrice, purchasePrice, minStock,
+                unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType,
+                stockTracked, taxRateId, description, wholesalePrice, wholesaleMinQty,
+                netUnitWeightKg, grossUnitWeightKg, businessUnitId, null);
+    }
+
     public CreateProductRequest(
             String sku, String reference, String barcode, String name,
             BigDecimal unitPrice, BigDecimal purchasePrice, BigDecimal minStock,

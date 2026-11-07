@@ -22,21 +22,21 @@ public final class CommercialMovementsOperationsCoordinator {
     }
 
     public static void populatePeek(QuickPeekPanel peek, JTable table, DefaultTableModel model, int mr) {
-        int row = table.convertRowIndexToModel(mr);
+        int row = mr; // o controlador já entrega a linha do modelo
         peek.setHeaderIcon("fas-exchange-alt", UIHelper.ACCENT_BLUE);
         peek.setTitle(String.valueOf(model.getValueAt(row, 0)) + " " + model.getValueAt(row, 1));
         peek.setSubtitle("Entidade: " + model.getValueAt(row, 2) + " • " + model.getValueAt(row, 6));
         peek.setStatus(UIHelper.humanStatus(String.valueOf(model.getValueAt(row, 7))), UIHelper.ACCENT_BLUE);
 
         List<QuickPeekPanel.PeekItem> items = new ArrayList<>();
-        items.add(new QuickPeekPanel.PeekItem("Tipo Documento", String.valueOf(model.getValueAt(row, 0)), false));
-        items.add(new QuickPeekPanel.PeekItem("Número", String.valueOf(model.getValueAt(row, 1)), false));
-        items.add(new QuickPeekPanel.PeekItem("Cliente / Destino", String.valueOf(model.getValueAt(row, 2)), false));
-        items.add(new QuickPeekPanel.PeekItem("Artigos", String.valueOf(model.getValueAt(row, 3)), false));
-        items.add(new QuickPeekPanel.PeekItem("Qtd Movimentada", String.valueOf(model.getValueAt(row, 4)), true));
-        items.add(new QuickPeekPanel.PeekItem("Armazém", String.valueOf(model.getValueAt(row, 5)), false));
-        items.add(new QuickPeekPanel.PeekItem("Data Emissão", String.valueOf(model.getValueAt(row, 6)), false));
-        items.add(new QuickPeekPanel.PeekItem("Total Geral", String.valueOf(model.getValueAt(row, 8)), true));
+        items.add(new QuickPeekPanel.PeekItem("Tipo Documento", peek.cell(model.getValueAt(row, 0), 0), false));
+        items.add(new QuickPeekPanel.PeekItem("Número", peek.cell(model.getValueAt(row, 1), 1), false));
+        items.add(new QuickPeekPanel.PeekItem("Cliente / Destino", peek.cell(model.getValueAt(row, 2), 2), false));
+        items.add(new QuickPeekPanel.PeekItem("Artigos", peek.cell(model.getValueAt(row, 3), 3), false));
+        items.add(new QuickPeekPanel.PeekItem("Qtd Movimentada", peek.cell(model.getValueAt(row, 4), 4), true));
+        items.add(new QuickPeekPanel.PeekItem("Armazém", peek.cell(model.getValueAt(row, 5), 5), false));
+        items.add(new QuickPeekPanel.PeekItem("Data Emissão", peek.cell(model.getValueAt(row, 6), 6), false));
+        items.add(new QuickPeekPanel.PeekItem("Total Geral", peek.cell(model.getValueAt(row, 8), 8), true));
         peek.setItems(items);
     }
 

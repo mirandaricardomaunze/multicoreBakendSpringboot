@@ -2,13 +2,18 @@ package mz.multicore.erp.gui.tv;
 
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.dto.InvoiceLineDTO;
+import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JComponent;
+import java.awt.Component;
+import java.awt.Container;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
@@ -125,6 +130,48 @@ class ExecutiveTvDashboardDecompositionHarnessTest {
 
         JPanel kpiLight = ExecutiveTvTheme.buildTvKpi("TESTE", "100,00 MT", "Subtítulo", java.awt.Color.BLUE, true);
         assertNotNull(kpiLight);
+    }
+
+    @Test
+    void opaqueTvBadgesHaveSolidBackgroundInBothThemes() {
+        for (boolean lightMode : new boolean[]{true, false}) {
+            assertEquals(255, ExecutiveTvTheme.getHeaderBgColor(lightMode).getAlpha());
+            for (double pct : new double[]{0, 60, 85, 105}) {
+                assertOpaqueBackground(ExecutiveTvTheme.buildStatusBadge(pct, lightMode));
+            }
+
+            ExecutiveTvHeaderBuilder.HeaderActions actions = (ExecutiveTvHeaderBuilder.HeaderActions)
+                    Proxy.newProxyInstance(getClass().getClassLoader(),
+                            new Class<?>[]{ExecutiveTvHeaderBuilder.HeaderActions.class},
+                            (proxy, method, args) -> null);
+            ExecutiveTvHeaderBuilder headerBuilder = new ExecutiveTvHeaderBuilder(actions);
+            JPanel header = headerBuilder.build(lightMode, ExecutiveTvDashboardDialog.Period.HOJE);
+            assertOpaqueBackground(header);
+            headerBuilder.applyTheme(!lightMode);
+            assertOpaqueBackground(header);
+
+            BusinessUnitDTO unit = new BusinessUnitDTO(987654L, "AUDIT", "Auditoria", null, null, null, true);
+            JPanel consolidated = ExecutiveTvConsolidatedViewBuilder.build(
+                    List.of(unit), List.of(), ExecutiveTvDashboardDialog.Period.HOJE, lightMode);
+            assertOpaqueBackground(consolidated);
+
+            SellerPerformanceDialog sellers = new SellerPerformanceDialog(null, List.of(), "Hoje", lightMode);
+            try {
+                assertOpaqueBackground(sellers.getContentPane());
+            } finally {
+                sellers.dispose();
+            }
+        }
+    }
+
+    private void assertOpaqueBackground(Component component) {
+        if (component instanceof JComponent ui && ui.isOpaque()) {
+            assertNotNull(ui.getBackground());
+            assertEquals(255, ui.getBackground().getAlpha(), component.getClass().getSimpleName());
+        }
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) assertOpaqueBackground(child);
+        }
     }
 
     private void assertNoForbiddenUnicode(String text) {

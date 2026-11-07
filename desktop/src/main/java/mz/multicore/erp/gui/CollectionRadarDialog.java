@@ -161,9 +161,7 @@ public class CollectionRadarDialog {
             }, err -> ToastManager.show(tableCard, FeedbackType.ERROR, "Erro ao carregar radar: " + err.getMessage()));
         };
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 13));
-        refreshBtn.addActionListener(e -> loadData.run());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadData.run());
 
         ModernButton reminderBtn = UIHelper.createSuccessButton("Gerar Lembrete");
         reminderBtn.setIcon(UIHelper.icon("fas-paper-plane", 13));

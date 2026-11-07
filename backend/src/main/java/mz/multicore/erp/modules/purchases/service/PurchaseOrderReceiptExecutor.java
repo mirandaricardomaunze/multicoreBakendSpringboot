@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.purchases.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -108,9 +109,8 @@ public class PurchaseOrderReceiptExecutor {
             if (accounted.compareTo(outstanding) > 0) {
                 throw new BusinessRuleException(String.format(
                         "Linha %s: %s recebidas + %s danificadas + %s em falta excedem as %s por receber.",
-                        line.getProduct().getName(), qty.toPlainString(),
-                        item.safeDamaged().toPlainString(), item.safeMissing().toPlainString(),
-                        outstanding.toPlainString()));
+                        line.getProduct().getName(), DisplayNumbers.qty(qty), DisplayNumbers.qty(item.safeDamaged()),
+                        DisplayNumbers.qty(item.safeMissing()), DisplayNumbers.qty(outstanding)));
             }
             receiveLine(order, line, qty, accepted);
             recordDiscrepancies(order, line, item);

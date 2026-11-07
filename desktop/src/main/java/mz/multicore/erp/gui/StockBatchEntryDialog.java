@@ -50,7 +50,7 @@ final class StockBatchEntryDialog {
             UIHelper.styleTextField(f);
         }
 
-        expirationField.putClientProperty("JTextField.placeholderText", "yyyy-MM-dd (ex: 2027-12-31)");
+        expirationField.putClientProperty("JTextField.placeholderText", "Opcional - deixe vazio se o produto não tem validade");
         batchField.putClientProperty("JTextField.placeholderText", "Opcional - gerado a partir da validade se vazio");
         serialField.putClientProperty("JTextField.placeholderText", "Opcional");
 
@@ -93,7 +93,7 @@ final class StockBatchEntryDialog {
         );
 
         boolean confirmed = new ModernFormDialog(UIHelper.mainWindow, "Adicionar Lote / Validade", "fas-boxes",
-                "Registe lote e data de validade (FEFO)", dialogPanel).showDialog();
+                "Registe a entrada; a validade só é necessária para perecíveis (FEFO)", dialogPanel).showDialog();
         if (!confirmed) return;
 
         int whIdx = whCombo.getSelectedIndex();
@@ -123,24 +123,27 @@ final class StockBatchEntryDialog {
             return;
         }
 
+        // Validade só obrigatória em produtos perecíveis; loiça, mobília e afins entram sem validade.
         String expRaw = expirationField.getText().trim();
-        if (expRaw.isEmpty()) {
-            owner.showStockNotice(FeedbackType.ERROR, "Validade obrigatória", "Introduza a validade no formato yyyy-MM-dd.");
+        LocalDate expirationDate = null;
+        if (expRaw.isEmpty() && selectedDTO.tracksExpiry()) {
+            owner.showStockNotice(FeedbackType.ERROR, "Validade obrigatória",
+                    "'" + selectedDTO.name() + "' é perecível. Introduza a validade no formato yyyy-MM-dd.");
             return;
         }
-        LocalDate expirationDate;
-        try {
-            expirationDate = LocalDate.parse(expRaw);
-        } catch (DateTimeParseException ex) {
-            owner.showStockNotice(FeedbackType.ERROR, "Validade inválida", "Use o formato yyyy-MM-dd, por exemplo 2027-12-31.");
-            return;
+        if (!expRaw.isEmpty()) {
+            try {
+                expirationDate = LocalDate.parse(expRaw);
+            } catch (DateTimeParseException ex) {
+                owner.showStockNotice(FeedbackType.ERROR, "Validade inválida", "Use o formato yyyy-MM-dd, por exemplo 2027-12-31.");
+                return;
+            }
         }
-        if (expirationDate.isBefore(LocalDate.now())) {
-            boolean allowExpired = ModernMessageDialog.confirm(
-                    SwingUtilities.getWindowAncestor(owner), FeedbackType.WARNING, "Validade Expirada",
-                    "A validade indicada já se encontra expirada.\nPretende registar a entrada do lote mesmo assim?",
-                    "Registar Lote");
-            if (!allowExpired) return;
+        // O servidor recusa lotes vencidos (ProductBatchMutationService); avisar já aqui.
+        if (expirationDate != null && expirationDate.isBefore(LocalDate.now())) {
+            owner.showStockNotice(FeedbackType.ERROR, "Validade expirada",
+                    "Não é possível dar entrada de um lote já vencido. Verifique a data de validade.");
+            return;
         }
 
         String batch = batchField.getText().trim();

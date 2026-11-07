@@ -84,9 +84,7 @@ final class PurchaseBusinessUnitsPanel {
         JComboBox<String> statusFilter = TableFilter.combo("Todos os estados", "Activo", "Inactivo");
         TableFilter.install(table, searchField, new TableFilter.ColumnFilter(statusFilter, 5));
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> { searchField.setText(""); loadBusinessUnits(); });
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> { searchField.setText(""); loadBusinessUnits(); });
 
         ModernButton newBtn = UIHelper.createSuccessButton("Novo Negócio");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));

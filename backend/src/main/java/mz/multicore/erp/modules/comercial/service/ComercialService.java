@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
 import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
@@ -201,12 +202,11 @@ public class ComercialService {
         }
         BigDecimal outstanding = invoice.outstandingAmount();
         if (amountPaid.compareTo(outstanding) > 0) {
-            throw new BusinessRuleException("Valor do recibo (" + amountPaid
-                    + ") excede o saldo em dívida (" + outstanding + ").");
+            throw new BusinessRuleException("Valor do recibo (" + DisplayNumbers.money(amountPaid)
+                    + " MT) excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
 
-        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(
-                        treasuryAccountId, CurrentUserContext.getCurrentCompanyId())
+        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(treasuryAccountId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."));
 
         Receipt receipt = new Receipt();
@@ -470,6 +470,11 @@ public class ComercialService {
                 unitsPerBox, packagesPerBox, unitsPerPackage, categoryId, saleType, stockTracked, taxRateId,
                 description, wholesalePrice, wholesaleMinQty, netUnitWeightKg, grossUnitWeightKg, businessUnitId);
     }
+
+    @Transactional
+    public ProductDTO createProduct(CreateProductRequest r) { return productCatalogService.createProduct(r); }
+    @Transactional
+    public ProductDTO updateProduct(Long id, CreateProductRequest r) { return productCatalogService.updateProduct(id, r); }
 
     @Transactional(readOnly = true)
     public ProductDTO findProductByBarcode(String barcode) { return productCatalogService.findProductByBarcode(barcode); }

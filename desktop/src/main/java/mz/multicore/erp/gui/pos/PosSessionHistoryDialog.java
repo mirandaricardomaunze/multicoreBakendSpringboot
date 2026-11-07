@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.pos;
 
+import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.desktop.client.POSApiClient;
 import mz.multicore.erp.desktop.client.PrintApiClient;
 import mz.multicore.erp.gui.components.ModernButton;
@@ -107,10 +108,7 @@ public class PosSessionHistoryDialog extends JDialog {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
         footer.setBackground(UIHelper.ROW_ALT);
 
-        ModernButton btnReload = UIHelper.createPrimaryButton("Actualizar");
-        btnReload.setIcon(UIHelper.icon("fas-sync-alt", 13, Color.WHITE));
-        btnReload.setForeground(Color.WHITE);
-        btnReload.addActionListener(e -> loadData());
+        ModernButton btnReload = UIHelper.createRefreshButton(() -> loadData());
 
         ModernButton btnPrintZ = UIHelper.createPrimaryButton("Re-imprimir Relatório Z (A4)");
         btnPrintZ.setIcon(UIHelper.icon("fas-print", 13, Color.WHITE));
@@ -153,7 +151,7 @@ public class PosSessionHistoryDialog extends JDialog {
     }
 
     private void printSelectedZ() {
-        int selectedRow = table.getSelectedRow();
+        int selectedRow = TableFilter.selectedModelRow(table);
         if (selectedRow < 0 || currentList == null || selectedRow >= currentList.size()) {
             ToastManager.show(this, FeedbackType.WARNING, "Seleccione uma sessão na tabela para reimprimir o Relatório Z.");
             return;

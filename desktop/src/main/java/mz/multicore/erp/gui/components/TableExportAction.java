@@ -70,11 +70,15 @@ public final class TableExportAction {
         for (int row : modelRows) {
             List<String> cells = new ArrayList<>(columns);
             for (int column = 0; column < columns; column++) {
-                Object value = table.getModel().getValueAt(row, table.convertColumnIndexToModel(column));
-                cells.add(value == null ? "" : String.valueOf(value));
+                cells.add(displayedText(table, row, column));
             }
             rows.add(cells);
         }
         return new TableExportRequest(title, headers, rows);
+    }
+
+    /** O texto que a coluna mostra: "1.460,00 MT" e não "1460.00". Ver {@link CellText}. */
+    static String displayedText(JTable table, int modelRow, int viewColumn) {
+        return CellText.displayed(table, modelRow, viewColumn);
     }
 }

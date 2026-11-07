@@ -218,9 +218,9 @@ class ReceivablesServiceTest {
         BusinessRuleException error = assertThrows(BusinessRuleException.class,
                 () -> service.assertCreditAvailable(cliente, new BigDecimal("3000.00")));
         assertTrue(error.getMessage().contains("Limite de crédito excedido"));
-        assertTrue(error.getMessage().contains("10000.00"));
-        assertTrue(error.getMessage().contains("8000.00"));
-        assertTrue(error.getMessage().contains("2000.00"));
+        assertTrue(error.getMessage().contains("10.000,00"));
+        assertTrue(error.getMessage().contains("8.000,00"));
+        assertTrue(error.getMessage().contains("2.000,00"));
         assertTrue(error.getMessage().contains("Loja Central"));
     }
 

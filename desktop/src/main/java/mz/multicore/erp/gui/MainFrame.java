@@ -200,8 +200,8 @@ public class MainFrame extends JFrame {
                     productionApiClient, fleetApiClient,
                     () -> {
                         navigate("stock");
-                        if (topBar != null) topBar.setActive("Stock & Armazéns");
-                        if (sidebar != null) sidebar.setActive("Stock & Armazéns");
+                        if (topBar != null) topBar.setActive("Stock");
+                        if (sidebar != null) sidebar.setActive("Stock");
                         if (stockPanel != null) stockPanel.showWarehouseTransfers();
                     });
             financeiroPanel = sellerSession ? null : new FinanceiroPanel(financeApiClient, comercialApiClient, bankReconciliationApiClient, cashFlowForecastApiClient);
@@ -235,6 +235,7 @@ public class MainFrame extends JFrame {
             addCard(posPanel, "pos");
             addCard(comercialPanel, "comercial"); addCard(comprasPanel, "compras");
             addCard(stockPanel, "stock"); addCard(financeiroPanel, "financeiro");
+            if (stockPanel != null) { addCard(stockPanel.warehousesScreen(), "armazens"); addCard(stockPanel.categoriesScreen(), "categorias"); }
             addCard(hrPanel, "hr"); addCard(performancePanel, "desempenho");
             addCard(crmPanel, "crm"); addCard(clientesPanel, "clientes");
             addCard(fiscalPanel, "fiscal"); addCard(accountingPanel, "contabilidade");
@@ -429,32 +430,7 @@ public class MainFrame extends JFrame {
             if (stockPanel != null) stockPanel.showWarehouseTransfers();
         }
         cardLayout.show(contentPanel, cardName);
-        String modName = switch (cardName) {
-            case "dashboard"  -> "Painel Inicial";
-            case "pos"        -> "POS — Caixa";
-            case "comercial"  -> "Vendas & Faturação";
-            case "compras"    -> "Compras";
-            case "stock"      -> "Stock & Armazéns";
-            case "financeiro" -> "Tesouraria";
-            case "hr"         -> "Recursos Humanos";
-            case "desempenho" -> "Desempenho Comercial";
-            case "crm"        -> "CRM & Assistência";
-            case "clientes"   -> "Clientes";
-            case "fiscal"     -> "Área Fiscal";
-            case "contabilidade" -> "Contabilidade";
-            case "assets"     -> "Activos & Património";
-            case "manufacturing" -> "Produção & Fabrico";
-            case "fleet"      -> "Gestão de Frotas";
-            case "recurring"  -> "Avenças & Contratos";
-            case "quality"    -> "Qualidade & HST";
-            case "approvals"  -> "Aprovações";
-            case "auditoria_forense" -> "Auditoria Forense";
-            case "assistente_ia" -> "Assistente de Gestão";
-            case "config"     -> "Configurações";
-            case "notifications" -> "Notificações";
-            case "plataforma" -> "Plataforma";
-            default           -> cardName;
-        };
+        String modName = MainFrameModuleTitles.titleFor(cardName);
         if (topBar != null) topBar.setActive(modName);
         syncSidebar(cardName, modName);
         adjustSidebarForPos("pos".equals(cardName));
@@ -486,6 +462,8 @@ public class MainFrame extends JFrame {
             case "auditoria_forense" -> forensicAuditPanel.loadData();
             case "pos"        -> posPanel.onPanelSelected();
             case "stock"      -> stockPanel.onPanelSelected();
+            case "armazens"   -> stockPanel.warehousesScreen().onPanelSelected();
+            case "categorias" -> stockPanel.categoriesScreen().onPanelSelected();
             case "compras"    -> comprasPanel.onPanelSelected();
             case "config"     -> configPanel.onPanelSelected();
             case "notifications" -> notificationsPanel.onPanelSelected();
@@ -496,7 +474,7 @@ public class MainFrame extends JFrame {
     private void navigateFromNotification(String cardName) {
         String navLabel = switch (cardName) {
             case "approvals" -> "Aprovações";
-            case "stock", "stock_waste" -> "Stock & Armazéns";
+            case "stock", "stock_waste" -> "Stock";
             case "config" -> "Configurações";
             case "clientes", "risco_credito" -> "Clientes";
             case "quality" -> "Qualidade & HST";
@@ -527,6 +505,7 @@ public class MainFrame extends JFrame {
             else if (comp instanceof ApprovalsPanel p)  p.onPanelSelected();
             else if (comp instanceof POSPanel p)        p.onPanelSelected();
             else if (comp instanceof StockPanel p)      p.onPanelSelected();
+            else if (comp instanceof StockSideScreen p) p.onPanelSelected();
             else if (comp instanceof ComprasPanel p)    p.onPanelSelected();
             else if (comp instanceof ConfigPanel p)     p.onPanelSelected();
             else if (comp instanceof NotificationsPanel p) p.onPanelSelected();
@@ -621,10 +600,12 @@ public class MainFrame extends JFrame {
                 () -> navigate("compras"), List.of("encomenda", "aquisicoes", "recepcao", "fatura de compra")
         ));
         items.add(new GlobalSearchDialog.SearchItem(
-                "mod_stock", "Stock & Armazéns", "Módulos", null,
+                "mod_stock", "Stock", "Módulos", null,
                 UIHelper.icon("fas-boxes", 16, UIHelper.MODULE_STOCK), UIHelper.MODULE_STOCK,
                 () -> navigate("stock"), List.of("artigos", "produtos", "inventario", "transferencias", "lotes")
         ));
+        items.add(new GlobalSearchDialog.SearchItem("mod_armazens", "Armazéns", "Módulos", null, UIHelper.icon("fas-warehouse", 16, UIHelper.ACCENT_CYAN), UIHelper.ACCENT_CYAN, () -> navigate("armazens"), List.of("armazem", "deposito", "loja", "localizacao", "capacidade")));
+        items.add(new GlobalSearchDialog.SearchItem("mod_categorias", "Categorias de Produto", "Módulos", null, UIHelper.icon("fas-tags", 16, UIHelper.ACCENT_PINK), UIHelper.ACCENT_PINK, () -> navigate("categorias"), List.of("categoria", "familia", "grupo", "classificacao")));
         items.add(new GlobalSearchDialog.SearchItem(
                 "mod_financeiro", "Tesouraria & Contas", "Módulos", null,
                 UIHelper.icon("fas-coins", 16, UIHelper.MODULE_FINANCEIRO), UIHelper.MODULE_FINANCEIRO,

@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
@@ -132,6 +133,6 @@ public class CreditControlService {
 
     private static String formatMoney(BigDecimal val) {
         BigDecimal safe = val == null ? BigDecimal.ZERO : val;
-        return safe.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        return DisplayNumbers.money(safe);
     }
 }

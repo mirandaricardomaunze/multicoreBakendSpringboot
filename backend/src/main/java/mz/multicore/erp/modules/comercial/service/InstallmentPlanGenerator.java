@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.comercial.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.dto.CreateInstallmentPlanRequest;
@@ -101,7 +102,7 @@ public class InstallmentPlanGenerator {
                 amounts.add(amt.setScale(2, RoundingMode.HALF_UP));
             }
             if (sum.compareTo(invoiceTotal.setScale(2, RoundingMode.HALF_UP)) != 0) {
-                throw new BusinessRuleException("A soma das prestações (" + sum + " MT) não corresponde ao total da fatura (" + invoiceTotal + " MT).");
+                throw new BusinessRuleException("A soma das prestações (" + DisplayNumbers.money(sum) + " MT) não corresponde ao total da fatura (" + DisplayNumbers.money(invoiceTotal) + " MT).");
             }
         } else {
             BigDecimal base = invoiceTotal.divide(BigDecimal.valueOf(count), 2, RoundingMode.FLOOR);

@@ -41,7 +41,7 @@ public final class OutstandingPaymentDialog {
         JLabel info = new JLabel(String.format(
                 "<html><b>Fatura:</b> %s · <b>Cliente:</b> %s<br><b>Total:</b> %,.2f MT &nbsp; " +
                         "<b>Pago:</b> %,.2f MT &nbsp; <b>Em dívida:</b> %,.2f MT</html>",
-                invoice.invoiceNumber(), invoice.clientName(), invoice.totalAmount(), paid, outstanding));
+                invoice.invoiceNumber(), invoice.buyerName(), invoice.totalAmount(), paid, outstanding));
         info.setForeground(UIHelper.TEXT_LIGHT);
         JPanel form = UIHelper.createDialogForm("Resumo:", info, "Método:", method,
                 "Conta de Tesouraria:", account, "Valor a Receber (MT):", amount,

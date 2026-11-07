@@ -24,10 +24,10 @@ public final class HrVacationsViewCoordinator {
         peek.setSubtitle("Férias Ref. " + owner.vacationsModel.getValueAt(row, 5) + " • " + owner.vacationsModel.getValueAt(row, 4) + " dias");
         peek.setStatus(String.valueOf(owner.vacationsModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Início", String.valueOf(owner.vacationsModel.getValueAt(row, 2)), false),
-                new QuickPeekPanel.PeekItem("Fim", String.valueOf(owner.vacationsModel.getValueAt(row, 3)), false),
-                new QuickPeekPanel.PeekItem("Dias Marcados", String.valueOf(owner.vacationsModel.getValueAt(row, 4)), true),
-                new QuickPeekPanel.PeekItem("Decidido Por", String.valueOf(owner.vacationsModel.getValueAt(row, 7)), false)
+                new QuickPeekPanel.PeekItem("Início", peek.cell(owner.vacationsModel.getValueAt(row, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Fim", peek.cell(owner.vacationsModel.getValueAt(row, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Dias Marcados", peek.cell(owner.vacationsModel.getValueAt(row, 4), 4), true),
+                new QuickPeekPanel.PeekItem("Decidido Por", peek.cell(owner.vacationsModel.getValueAt(row, 7), 7), false)
         ));
     }
 

@@ -70,19 +70,19 @@ final class FiscalWithholdingsTab {
         UIHelper.styleScrollPane(scroll);
 
         TableQuickPeekController.install(withholdingsTable, card, (peek, mr) -> {
-            int row = withholdingsTable.convertRowIndexToModel(mr);
+            int row = mr; // o controlador já entrega a linha do modelo
             peek.setHeaderIcon("fas-hand-holding-usd", UIHelper.ACCENT_BLUE);
             peek.setTitle(String.valueOf(withholdingsModel.getValueAt(row, 1)));
             peek.setSubtitle("NUIT: " + withholdingsModel.getValueAt(row, 2) + " • " + withholdingsModel.getValueAt(row, 4));
             peek.setStatus(String.valueOf(withholdingsModel.getValueAt(row, 9)), UIHelper.ACCENT_BLUE);
             peek.setItems(List.of(
-                    new QuickPeekPanel.PeekItem("Data", String.valueOf(withholdingsModel.getValueAt(row, 0)), false),
-                    new QuickPeekPanel.PeekItem("Descrição", String.valueOf(withholdingsModel.getValueAt(row, 3)), false),
-                    new QuickPeekPanel.PeekItem("Base Tributável", String.valueOf(withholdingsModel.getValueAt(row, 5)), false),
-                    new QuickPeekPanel.PeekItem("Taxa Retenção", String.valueOf(withholdingsModel.getValueAt(row, 6)), false),
-                    new QuickPeekPanel.PeekItem("Valor Retido", String.valueOf(withholdingsModel.getValueAt(row, 7)), true),
-                    new QuickPeekPanel.PeekItem("Valor Líquido", String.valueOf(withholdingsModel.getValueAt(row, 8)), false),
-                    new QuickPeekPanel.PeekItem("Entregue em", String.valueOf(withholdingsModel.getValueAt(row, 10)), false)
+                    new QuickPeekPanel.PeekItem("Data", peek.cell(withholdingsModel.getValueAt(row, 0), 0), false),
+                    new QuickPeekPanel.PeekItem("Descrição", peek.cell(withholdingsModel.getValueAt(row, 3), 3), false),
+                    new QuickPeekPanel.PeekItem("Base Tributável", peek.cell(withholdingsModel.getValueAt(row, 5), 5), false),
+                    new QuickPeekPanel.PeekItem("Taxa Retenção", peek.cell(withholdingsModel.getValueAt(row, 6), 6), false),
+                    new QuickPeekPanel.PeekItem("Valor Retido", peek.cell(withholdingsModel.getValueAt(row, 7), 7), true),
+                    new QuickPeekPanel.PeekItem("Valor Líquido", peek.cell(withholdingsModel.getValueAt(row, 8), 8), false),
+                    new QuickPeekPanel.PeekItem("Entregue em", peek.cell(withholdingsModel.getValueAt(row, 10), 10), false)
             ));
         });
 

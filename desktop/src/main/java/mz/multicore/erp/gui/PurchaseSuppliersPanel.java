@@ -28,9 +28,7 @@ final class PurchaseSuppliersPanel {
                 .addAction("Activar/Desactivar", UIHelper.icon("fas-power-off", 14),
                         () -> PurchaseSuppliersViewCoordinator.toggleSelectedSupplier(owner));
 
-        ModernButton refreshSupsBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshSupsBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshSupsBtn.addActionListener(e -> { supplierSearchField.setText(""); owner.loadSuppliers(); });
+        ModernButton refreshSupsBtn = UIHelper.createRefreshButton(() -> { supplierSearchField.setText(""); owner.loadSuppliers(); });
 
         ModernButton newSupBtn = UIHelper.createSuccessButton("Novo Fornecedor");
         newSupBtn.setIcon(UIHelper.icon("fas-plus", 14));

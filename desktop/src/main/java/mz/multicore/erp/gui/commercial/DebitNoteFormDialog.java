@@ -24,7 +24,7 @@ public final class DebitNoteFormDialog {
     public static void show(JComponent parent, DebitNoteApiClient debitApiClient, List<InvoiceDTO> invoices,
                             Runnable onCreated, Consumer<Throwable> onError) {
         JComboBox<String> invoice = new JComboBox<>();
-        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.clientName());
+        for (InvoiceDTO inv : invoices) invoice.addItem(inv.invoiceNumber() + " — " + inv.buyerName());
         UIHelper.styleComboBox(invoice);
 
         JComboBox<String> reason = new JComboBox<>(DEBIT_REASONS);
@@ -43,7 +43,7 @@ public final class DebitNoteFormDialog {
         ModernButton remove = UIHelper.createDangerButton("Remover");
         remove.setIcon(UIHelper.icon("fas-minus", 14));
         remove.addActionListener(e -> {
-            int sel = lineTable.getSelectedRow();
+            int sel = TableFilter.selectedModelRow(lineTable);
             if (sel >= 0) {
                 lines.removeRow(sel);
             } else {

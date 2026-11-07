@@ -45,8 +45,8 @@ final class PosReturnDialog {
         } else if (!owner.salesHistoryList.isEmpty()) {
             JComboBox<String> invoiceCombo = new JComboBox<>();
             for (InvoiceDTO inv : owner.salesHistoryList) {
-                String clientDesc = inv.clientName() != null && !inv.clientName().isBlank()
-                        ? inv.clientName() : "Cliente Geral";
+                String clientDesc = inv.buyerName() != null && !inv.buyerName().isBlank()
+                        ? inv.buyerName() : "Cliente Geral";
                 invoiceCombo.addItem(inv.invoiceNumber() + " · " + clientDesc + " (" + inv.totalAmount() + " MT)");
             }
             UIHelper.styleComboBox(invoiceCombo);

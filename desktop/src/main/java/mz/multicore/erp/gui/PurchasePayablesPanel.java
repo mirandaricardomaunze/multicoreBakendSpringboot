@@ -26,9 +26,7 @@ final class PurchasePayablesPanel {
         payBtn.setIcon(UIHelper.icon("fas-money-bill-wave", 14));
         payBtn.addActionListener(e -> openSupplierPaymentDialog());
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> refresh());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> refresh());
 
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));

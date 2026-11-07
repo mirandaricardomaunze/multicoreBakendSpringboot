@@ -33,9 +33,7 @@ final class ConfigSubscriptionPanel {
         renewBtn.setIcon(UIHelper.icon("fas-crown", 13, Color.WHITE));
         renewBtn.addActionListener(e -> SubscriptionRenewalDialog.show(owner, owner.mySubscriptionApiClient, this::applyMySubscription));
 
-        ModernButton refreshBtn = UIHelper.createSecondaryButton("Actualizar");
-        refreshBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        refreshBtn.addActionListener(e -> loadMySubscription());
+        ModernButton refreshBtn = UIHelper.createRefreshButton(() -> loadMySubscription());
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);

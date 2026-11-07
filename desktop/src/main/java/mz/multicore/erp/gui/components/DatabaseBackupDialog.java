@@ -217,7 +217,7 @@ public class DatabaseBackupDialog extends JDialog {
     }
 
     private void verifySelectedBackup() {
-        int row = filesTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(filesTable);
         if (row < 0) {
             ToastManager.show(this, FeedbackType.WARNING, "Por favor selecione um arquivo de backup na tabela.");
             return;

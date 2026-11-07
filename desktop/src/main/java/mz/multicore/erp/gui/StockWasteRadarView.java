@@ -39,9 +39,7 @@ public class StockWasteRadarView extends JPanel {
         radarSearchField.setPreferredSize(new Dimension(280, UIHelper.FORM_CONTROL_HEIGHT));
         UIHelper.onTextChange(radarSearchField, this::applyRadarFilters);
 
-        ModernButton reloadRadarBtn = UIHelper.createSecondaryButton("Actualizar");
-        reloadRadarBtn.setIcon(UIHelper.icon("fas-sync-alt", 14));
-        reloadRadarBtn.addActionListener(e -> { if (onReload != null) onReload.run(); });
+        ModernButton reloadRadarBtn = UIHelper.createRefreshButton(() -> { if (onReload != null) onReload.run(); });
 
         ModernButton wasteRadarBtn = UIHelper.createDangerButton("Registar Quebra deste Lote");
         wasteRadarBtn.setIcon(UIHelper.icon("fas-trash-alt", 14));
@@ -161,7 +159,7 @@ public class StockWasteRadarView extends JPanel {
     }
 
     public ExpiringBatchAlertDTO getSelectedAlert() {
-        int row = radarTable.getSelectedRow();
+        int row = TableFilter.selectedModelRow(radarTable);
         if (row < 0) return null;
         String batchNum = (String) radarTableModel.getValueAt(row, 0);
         return currentRadarList.stream().filter(b -> b.batchNumber().equals(batchNum)).findFirst().orElse(null);

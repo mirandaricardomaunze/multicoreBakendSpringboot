@@ -13,6 +13,9 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -151,5 +154,21 @@ class ExecutiveSuiteHarnessTest {
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                 BigDecimal.ZERO, 0, BigDecimal.ZERO, BigDecimal.ZERO);
         assertDoesNotThrow(() -> widget.updateMetrics(emptyMetrics));
+    }
+
+    @Test
+    void marginBadgeRemainsFullyOpaqueAfterMetricChanges() {
+        ProfitAnalyticsWidget widget = new ProfitAnalyticsWidget();
+        JPanel header = (JPanel) ((BorderLayout) widget.getLayout()).getLayoutComponent(BorderLayout.NORTH);
+        JLabel badge = (JLabel) ((BorderLayout) header.getLayout()).getLayoutComponent(BorderLayout.EAST);
+        assertTrue(badge.isOpaque());
+        assertEquals(255, badge.getBackground().getAlpha());
+
+        ProfitMetrics lowMargin = new ProfitMetrics(
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, BigDecimal.ZERO);
+        widget.updateMetrics(lowMargin);
+        assertEquals(255, badge.getBackground().getAlpha());
+        assertTrue(badge.getText().contains("Margem"));
     }
 }

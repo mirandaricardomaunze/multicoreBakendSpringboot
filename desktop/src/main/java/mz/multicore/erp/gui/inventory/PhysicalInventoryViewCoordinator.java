@@ -39,34 +39,23 @@ public final class PhysicalInventoryViewCoordinator {
         peek.setSubtitle("SKU: " + tableModel.getValueAt(row, 0));
         peek.setStatus(String.valueOf(tableModel.getValueAt(row, 6)), UIHelper.ACCENT_BLUE);
         peek.setItems(List.of(
-                new QuickPeekPanel.PeekItem("Qtd Sistema", String.valueOf(tableModel.getValueAt(row, 2)), false),
-                new QuickPeekPanel.PeekItem("Qtd Contada", String.valueOf(tableModel.getValueAt(row, 3)), false),
-                new QuickPeekPanel.PeekItem("Divergência", String.valueOf(tableModel.getValueAt(row, 4)), true),
-                new QuickPeekPanel.PeekItem("Impacto Financeiro", String.valueOf(tableModel.getValueAt(row, 5)), true)
+                new QuickPeekPanel.PeekItem("Qtd Sistema", peek.cell(tableModel.getValueAt(row, 2), 2), false),
+                new QuickPeekPanel.PeekItem("Qtd Contada", peek.cell(tableModel.getValueAt(row, 3), 3), false),
+                new QuickPeekPanel.PeekItem("Divergência", peek.cell(tableModel.getValueAt(row, 4), 4), true),
+                new QuickPeekPanel.PeekItem("Impacto Financeiro", peek.cell(tableModel.getValueAt(row, 5), 5), true)
         ));
     }
 
     public static JPanel buildToolbar(
             JComboBox<String> sessionCombo, JLabel statusLabel, JLabel countModeLabel,
-            JTextField searchField, ModernButton refreshBtn, JTextField barcodeField,
+            JTextField searchField, JTextField barcodeField,
             JTextField manualQty, ModernButton recordBtn, ModernButton peekBtn
     ) {
-        JPanel bar = new JPanel(new BorderLayout(12, 0));
-        bar.setOpaque(false);
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
-        left.add(TableFilter.label("Sessão:", "fas-clipboard-list"));
-        left.add(sessionCombo); left.add(statusLabel); left.add(countModeLabel);
-        left.add(searchField); left.add(refreshBtn);
-        bar.add(left, BorderLayout.WEST);
-
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        right.setOpaque(false);
-        right.add(TableFilter.label("Bipar Barcode / SKU:", "fas-barcode"));
-        right.add(barcodeField); right.add(TableFilter.label("Qtd:"));
-        right.add(manualQty); right.add(recordBtn); right.add(peekBtn);
-        bar.add(right, BorderLayout.EAST);
-        return bar;
+        // Uma só linha, como nos outros ecrãs: sem espaço, a pesquisa e o selector encolhem em vez de sair da janela.
+        return TableFilter.bar(
+                TableFilter.label("Sessão:", "fas-clipboard-list"), sessionCombo, statusLabel, countModeLabel,
+                searchField, TableFilter.label("Bipar:", "fas-barcode"), barcodeField,
+                TableFilter.label("Qtd:"), manualQty, recordBtn, peekBtn);
     }
 
     public static void updateKpiAndButtons(
@@ -85,7 +74,8 @@ public final class PhysicalInventoryViewCoordinator {
         surplus.setText(String.format("%,.2f MT", session.totalSurplusValue()));
         deficit.setText(String.format("%,.2f MT", session.totalDeficitValue()));
         status.setText(" [" + session.status().getDescription() + "] ");
-        countMode.setText(session.blindCounting() ? "(Contagem Cega)" : "(Contagem Aberta)");
+        countMode.setText(session.blindCounting() ? "(Cega)" : "(Aberta)");
+        countMode.setToolTipText(session.blindCounting() ? "Contagem cega: quantidades esperadas ocultas" : "Contagem aberta");
 
         boolean isDraft = session.status() == InventoryStatus.DRAFT;
         boolean inProgress = session.status() == InventoryStatus.IN_PROGRESS;

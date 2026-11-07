@@ -190,7 +190,7 @@ final class StockTransferCreateModalDialog {
             refreshTransferFEFO.run();
         });
         removeLineBtn.addActionListener(ev -> {
-            int sel = linesTable.getSelectedRow();
+            int sel = TableFilter.selectedModelRow(linesTable);
             if (sel >= 0) linesModel.removeRow(sel);
         });
         JPanel lineButtons = UIHelper.actionsBar(removeLineBtn, addLineBtn);

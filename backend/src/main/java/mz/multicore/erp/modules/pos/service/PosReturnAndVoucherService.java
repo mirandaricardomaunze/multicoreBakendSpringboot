@@ -1,5 +1,6 @@
 package mz.multicore.erp.modules.pos.service;
 
+import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
@@ -186,7 +187,7 @@ public class PosReturnAndVoucherService {
                 .orElseThrow(() -> new BusinessRuleException("Abra uma sessão de caixa antes de devolver dinheiro ao cliente."));
         BigDecimal expected = sessionAndShiftService.computeExpectedCash(session.getId(), session.getOpeningBalance());
         if (expected.compareTo(amount) < 0) {
-            throw new BusinessRuleException("Saldo de caixa insuficiente para reembolso. Disponível: " + expected + " MT");
+            throw new BusinessRuleException("Saldo de caixa insuficiente para reembolso. Disponível: " + DisplayNumbers.money(expected) + " MT");
         }
         TillMovement movement = new TillMovement();
         movement.setTillSession(session);
@@ -217,7 +218,7 @@ public class PosReturnAndVoucherService {
         if (voucher.getRemainingAmount().compareTo(amount) < 0) {
             throw new BusinessRuleException(String.format(
                     "Saldo insuficiente no vale de compras. Saldo disponível: %s MT, valor a abater: %s MT.",
-                    voucher.getRemainingAmount(), amount));
+                    DisplayNumbers.money(voucher.getRemainingAmount()), DisplayNumbers.money(amount)));
         }
         BigDecimal newRemaining = voucher.getRemainingAmount().subtract(amount).setScale(2, RoundingMode.HALF_UP);
         voucher.setRemainingAmount(newRemaining);

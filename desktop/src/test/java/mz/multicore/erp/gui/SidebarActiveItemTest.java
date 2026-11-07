@@ -23,7 +23,8 @@ class SidebarActiveItemTest {
     private static final Map<String, String> ADMIN_SCREENS = Map.ofEntries(
             Map.entry("dashboard", "Painel Inicial"), Map.entry("pos", "POS — Caixa"),
             Map.entry("comercial", "Vendas & Faturação"), Map.entry("compras", "Compras"),
-            Map.entry("stock", "Stock & Armazéns"), Map.entry("financeiro", "Tesouraria"),
+            Map.entry("stock", "Stock"), Map.entry("armazens", "Armazéns"),
+            Map.entry("categorias", "Categorias"), Map.entry("financeiro", "Tesouraria"),
             Map.entry("hr", "Recursos Humanos"), Map.entry("desempenho", "Desempenho Comercial"),
             Map.entry("crm", "CRM & Assistência"), Map.entry("clientes", "Clientes"),
             Map.entry("fiscal", "Área Fiscal"), Map.entry("contabilidade", "Contabilidade"),
