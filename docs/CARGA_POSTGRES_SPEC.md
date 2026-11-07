@@ -1,6 +1,6 @@
 # Carga e integridade em PostgreSQL — Especificação e harness
 
-**Última actualização:** 2026-10-31
+**Última actualização:** 2026-11-07
 
 ## Objectivo
 
@@ -11,9 +11,16 @@ Medir a venda POS em paralelo em PostgreSQL e provar que a conta bate no fim. Co
 
 Usar sempre uma instância descartável, com dados de demonstração: os guiões escrevem na base.
 
-1. Levantar o backend sobre PostgreSQL com Flyway, `ddl-auto=validate` e `app.seed-demo-data=true`.
-2. `python scripts/exercitar-modulos.py <porta>`
-3. `python scripts/carga-pos.py <porta> 5,10,20,40 30`
+1. Levantar o backend com o perfil `prod` sobre PostgreSQL, com Flyway, `ddl-auto=validate` e
+   `app.seed-demo-data=true`. As guardas de produção obrigam a:
+   - `server.address=127.0.0.1`, porque há dados de demonstração;
+   - `ATTACHMENT_KEY` aleatória;
+   - `DB_PASSWORD` com pelo menos 16 caracteres;
+   - nesta instância apenas, `security.two-factor.required=false`, porque os guiões não fazem 2FA.
+2. O perfil `prod` substitui as senhas de demonstração no arranque. Na base descartável, repor o hash
+   BCrypt de `password` nas contas de demonstração depois de cada arranque.
+3. `python scripts/exercitar-modulos.py <porta>` (opcional para a carga)
+4. `python scripts/carga-pos.py <porta> 5,10,20,40 30`
 
 A ordem importa. Depois da carga há stock para vender as 999.999 unidades que
 `exercitar-modulos.py` usa para provar a recusa por falta de stock, e essa verificação deixa de
@@ -33,6 +40,37 @@ ele. Foi o que aconteceu nesta validação.
 | CG-05 | Paragem brusca do PostgreSQL | Recuperação automática, sem perder vendas aceites |
 
 CG-01 a CG-03 são verificados por `carga-pos.py`. CG-04 e CG-05 foram conferidos em SQL.
+
+## Evidência de 2026-11-07
+
+A carga correu sobre uma base acabada de criar, sem `exercitar-modulos.py` antes, de propósito: assim
+a primeira rajada de vendas cria o "Consumidor Final" e a série FT do ano. Foi isso que revelou dois
+defeitos que a ordem de 31-10 escondia.
+
+| Postos | Vendas | Erros | Vendas/s | p50 ms | p95 ms | p99 ms | Máx. ms |
+|-------:|-------:|------:|---------:|-------:|-------:|-------:|--------:|
+| 5 | 1.990 | 0 | 66,3 | 56 | 166 | 280 | 760 |
+| 10 | 3.302 | 0 | 110,1 | 87 | 112 | 139 | 418 |
+| 20 | 3.294 | 0 | 109,8 | 169 | 243 | 493 | 630 |
+| 40 | 3.666 | 0 | 122,2 | 324 | 387 | 470 | 727 |
+
+- 12.252 vendas aceites, stock reduzido em 12.252 e 12.252 pagamentos gravados.
+- Faturas numeradas de 1 a 12.252, sem duplicados nem buracos (CG-04).
+- 0 linhas `ERROR` no log do backend.
+- Inclui a verificação de reservas de pedidos de separação em cada venda (`SaleStockIssuer`). Mesma
+  máquina de 31-10; a diferença de débito não deve ser lida como ganho de desempenho.
+
+**Defeitos encontrados e corrigidos:**
+
+| Id | Defeito | Correcção |
+|----|---------|-----------|
+| CG-06 | Numa base nova, as primeiras vendas simultâneas criavam o "Consumidor Final" ao mesmo tempo; 4 em 5 falhavam por chave duplicada. | `WalkInClientBootstrap` cria-o no arranque e quando nasce uma empresa. Se mesmo assim faltar, é criado numa transacção à parte, e quem perde a corrida lê o registo do outro. |
+| CG-07 | A primeira fatura simultânea de cada ano criava a série FT ao mesmo tempo; em PostgreSQL o INSERT recusado abortava a transacção e 4 vendas saíam com erro 500. Repetia-se a cada 1 de Janeiro. | `DocumentSequenceBootstrap` cria as séries do ano e do seguinte. A criação passou para uma transacção à parte. |
+| CG-08 | `carga-pos.py` reutilizava a ligação do administrador, parada durante a ronda; em `prod` o servidor fecha-a aos 20 s e o Windows dá o erro 10053. | O guião religa antes de usar uma ligação parada há mais de 15 s. |
+
+`exercitar-modulos.py` na mesma instância: 38 verificações aprovadas. Uma falha antiga, alheia a esta
+alteração, continua por tratar: a folha de 2026/7 já vem processada nos dados de demonstração sem
+lançamentos, e o guião não a consegue reprocessar (RHC-53).
 
 ## Evidência de 2026-10-31
 

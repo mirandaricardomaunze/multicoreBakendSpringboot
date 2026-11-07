@@ -277,17 +277,16 @@ section("Compras: a dívida ao fornecedor nasce e baixa ao pagar")
 payables = call("/api/purchases/payables?companyId=1", token)[1]
 if payables:
     payable = payables[0]
-    owed = Decimal(str(payable.get("outstandingAmount") or payable.get("totalAmount") or 0))
+    owed = Decimal(str(payable["outstanding"]))
     account = call("/api/finance/accounts?companyId=1", token)[1][0]["id"]
     pay = min(owed, Decimal("1000"))
-    code, _ = call(f"/api/purchases/{payable['id']}/pay?amount={pay}"
+    code, _ = call(f"/api/purchases/{payable['purchaseId']}/pay?amount={pay}"
                    f"&financeAccountId={account}&reference=TESTE", token, "POST")
     check("pagamento ao fornecedor aceite", 200, code)
     after_pay = [p for p in call("/api/purchases/payables?companyId=1", token)[1]
-                 if p["id"] == payable["id"]]
+                 if p["purchaseId"] == payable["purchaseId"]]
     if after_pay:
-        left = Decimal(str(after_pay[0].get("outstandingAmount")
-                           or after_pay[0].get("totalAmount") or 0))
+        left = Decimal(str(after_pay[0]["outstanding"]))
         check("a dívida baixa exactamente o que se pagou", owed - pay, left)
     else:
         print("  NOTA  a conta saiu da lista de pendentes — ficou liquidada")

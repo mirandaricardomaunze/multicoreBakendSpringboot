@@ -36,5 +36,10 @@ public final class DocumentSeries {
     /** Lançamento contabilístico (diário). */
     public static final String JOURNAL_ENTRY = "LC";
 
+    /** Todas as séries acima, para as criar antecipadamente ({@link DocumentSequenceBootstrap}). */
+    public static final java.util.List<String> ALL = java.util.List.of(INVOICE, ORDER, QUOTATION, RECEIPT,
+            CREDIT_NOTE, DEBIT_NOTE, STOCK_TRANSFER, DELIVERY_GUIDE, PURCHASE, PURCHASE_ORDER, PAYSLIP,
+            EMPLOYMENT_CONTRACT, TERMINATION, JOURNAL_ENTRY);
+
     private DocumentSeries() {}
 }
