@@ -67,10 +67,13 @@ defeitos que a ordem de 31-10 escondia.
 | CG-06 | Numa base nova, as primeiras vendas simultâneas criavam o "Consumidor Final" ao mesmo tempo; 4 em 5 falhavam por chave duplicada. | `WalkInClientBootstrap` cria-o no arranque e quando nasce uma empresa. Se mesmo assim faltar, é criado numa transacção à parte, e quem perde a corrida lê o registo do outro. |
 | CG-07 | A primeira fatura simultânea de cada ano criava a série FT ao mesmo tempo; em PostgreSQL o INSERT recusado abortava a transacção e 4 vendas saíam com erro 500. Repetia-se a cada 1 de Janeiro. | `DocumentSequenceBootstrap` cria as séries do ano e do seguinte. A criação passou para uma transacção à parte. |
 | CG-08 | `carga-pos.py` reutilizava a ligação do administrador, parada durante a ronda; em `prod` o servidor fecha-a aos 20 s e o Windows dá o erro 10053. | O guião religa antes de usar uma ligação parada há mais de 15 s. |
+| CG-09 | `exercitar-modulos.py` enviava o recibo com campos antigos e lia a recusa como "folha já processada"; o RHC-53 parecia falhar. | Corpo actualizado; a nota mostra a resposta real. |
 
-`exercitar-modulos.py` na mesma instância: 38 verificações aprovadas. Uma falha antiga, alheia a esta
-alteração, continua por tratar: a folha de 2026/7 já vem processada nos dados de demonstração sem
-lançamentos, e o guião não a consegue reprocessar (RHC-53).
+`exercitar-modulos.py`: 42 verificações aprovadas, 0 falhas, numa base nova. A falha antiga do RHC-53
+não estava na contabilidade, estava no guião: o pedido do recibo usava campos que a API já não aceita
+(`overtimeHours` e `bonuses` em vez de `overtime` e `allowances`). Como a nota presumia "folha já
+processada", o recibo nunca era pago e não havia lançamento. O guião foi corrigido e passou a mostrar
+a resposta real (CG-09).
 
 ## Evidência de 2026-10-31
 

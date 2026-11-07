@@ -186,8 +186,8 @@ check("capital negativo é recusado", 400, code)
 
 section("RH §B5: as retenções nascem no pagamento e reapurar não as duplica")
 code, slip = call("/api/hr/payslips", token, "POST",
-                  {"employeeId": 1, "year": 2026, "month": 7, "overtimeHours": 0,
-                   "bonuses": 0, "otherDeductions": 0})
+                  {"employeeId": 1, "year": 2026, "month": 7, "overtime": 0,
+                   "allowances": 0, "otherDeductions": 0})
 if code == 200:
     check("recibo nasce em rascunho", "DRAFT", slip["status"])
     check("aprovado antes de pago", "APPROVED",
@@ -195,7 +195,9 @@ if code == 200:
     check("pago", "PAID",
           call(f"/api/hr/payslips/{slip['id']}/mark-paid", token, "POST")[1]["status"])
 else:
-    print(f"  NOTA  a folha de 2026/7 já tinha sido processada ({code})")
+    # Mostrar a resposta: a nota antiga presumia "já processada" e escondeu durante semanas que o
+    # corpo usava campos que a API já não aceita (overtimeHours/bonuses), e o RHC-53 parecia falhar.
+    print(f"  NOTA  recibo de 2026/7 recusado ({code}): {str(slip)[:160]}")
 
 # Reapurar em vez de somar recibo a recibo é o que torna isto idempotente: pagar o mesmo recibo
 # duas vezes não pode duplicar a dívida ao Estado.
