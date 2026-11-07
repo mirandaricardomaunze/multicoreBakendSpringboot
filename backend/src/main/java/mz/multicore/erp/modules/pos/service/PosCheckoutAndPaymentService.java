@@ -54,6 +54,7 @@ public class PosCheckoutAndPaymentService {
     private final PosSessionAndShiftService sessionAndShiftService;
     private final PosReturnAndVoucherService returnAndVoucherService;
     private final PosPriceGuard priceGuard;
+    private final mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer; // respeita reservas; nulo só no construtor legado
 
     public PosCheckoutAndPaymentService(
             InvoiceRepository invoiceRepository, ClientRepository clientRepository,
@@ -64,8 +65,10 @@ public class PosCheckoutAndPaymentService {
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             ReceivablesService receivablesService, ApplicationEventPublisher eventPublisher,
             QuotationRepository quotationRepository, PosSessionAndShiftService sessionAndShiftService,
-            PosReturnAndVoucherService returnAndVoucherService, PosPriceGuard priceGuard) {
+            PosReturnAndVoucherService returnAndVoucherService, PosPriceGuard priceGuard,
+            mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer) {
         this.priceGuard = priceGuard;
+        this.saleStockIssuer = saleStockIssuer;
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -307,10 +310,9 @@ public class PosCheckoutAndPaymentService {
     private void deductStockForSale(Invoice invoice, Warehouse warehouse, Client client, String walkInLabel) {
         String clientLabel = walkInLabel != null ? client.getName() + " — " + walkInLabel : client.getName();
         String desc = String.format("Venda POS %s - Cliente %s", invoice.getInvoiceNumber(), clientLabel);
-        for (InvoiceLine line : invoice.getLines()) {
-            inventoryService.registerMovement(line.getProduct(), warehouse, line.getQuantity().negate(),
-                    "SALE", line.getBatchNumber(), line.getSerialNumber(), desc);
-        }
+        if (saleStockIssuer != null) saleStockIssuer.issue(invoice, warehouse, desc);
+        else invoice.getLines().forEach(line -> inventoryService.registerMovement(line.getProduct(), warehouse,
+                line.getQuantity().negate(), "SALE", line.getBatchNumber(), line.getSerialNumber(), desc));
     }
 
     private void registerTillMovement(TillSession session, BigDecimal amount, String invoiceNumber) {

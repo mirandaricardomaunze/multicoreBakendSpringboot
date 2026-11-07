@@ -137,7 +137,7 @@ public class POSService {
                 invoiceRepository, clientRepository, productRepository, warehouseRepository,
                 companyRepository, inventoryService, financeService, paymentEntryRepository,
                 tillMovementRepository, walkInClientProvider, documentNumberService, auditLogService,
-                receivablesService, eventPublisher, quotationRepository, sss, rvs, null);
+                receivablesService, eventPublisher, quotationRepository, sss, rvs, null, null);
         this.tillSessionRepository = tillSessionRepository;
         this.companyRepository = companyRepository;
         this.financeService = financeService;

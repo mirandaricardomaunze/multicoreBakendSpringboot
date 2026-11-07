@@ -96,6 +96,7 @@ class OrderBillingAndReprintSecurityHarnessTest {
         orderRepository = mock(OrderRepository.class);
         invoiceRepository = mock(InvoiceRepository.class);
         inventoryService = mock(InventoryService.class);
+        when(inventoryService.lockAndGetPhysicalQuantity(anyLong(), anyLong())).thenReturn(new java.math.BigDecimal("1000"));
         documentNumberService = mock(DocumentNumberService.class);
         receivablesService = mock(ReceivablesService.class);
 

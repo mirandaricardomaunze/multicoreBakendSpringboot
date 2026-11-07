@@ -153,6 +153,8 @@ class BusinessUnitHarnessTest {
         invoiceRepository = mock(InvoiceRepository.class);
         warehouseRepository = mock(WarehouseRepository.class);
         inventoryService = mock(InventoryService.class);
+        // Stock folgado: estes testes são sobre unidades de negócio, não sobre disponibilidade.
+        when(inventoryService.lockAndGetPhysicalQuantity(anyLong(), anyLong())).thenReturn(new java.math.BigDecimal("1000"));
         documentNumberService = mock(DocumentNumberService.class);
         receivablesService = mock(ReceivablesService.class);
 

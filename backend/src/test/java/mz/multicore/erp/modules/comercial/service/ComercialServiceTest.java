@@ -125,6 +125,9 @@ class ComercialServiceTest {
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
         when(orderRepository.findForUpdate(anyLong(), anyLong()))
                 .thenAnswer(inv -> orderRepository.findById(inv.getArgument(0)));
+        // Stock físico folgado e sem reservas: os testes de faturação não são sobre disponibilidade.
+        when(inventoryService.lockAndGetPhysicalQuantity(anyLong(), anyLong())).thenReturn(new BigDecimal("1000"));
+        when(orderLineRepository.sumActiveReservations(anyLong(), anyLong())).thenReturn(BigDecimal.ZERO);
     }
 
     @AfterEach
@@ -326,6 +329,75 @@ class ComercialServiceTest {
         verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
     }
 
+    @Test
+    void createOrder_armazemInactivo_recusaSemConsumirNumero() {
+        warehouse.setActive(false);
+        when(clientRepository.findByIdAndCompaniesId(CLIENT_ID, COMPANY_ID)).thenReturn(Optional.of(client));
+        when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(warehouse));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class,
+                () -> service.createOrder(invoiceRequest(new BigDecimal("2"), null)));
+
+        assertTrue(error.getMessage().contains("inactivo"), error.getMessage());
+        verify(documentNumberService, never()).next(DocumentSeries.ORDER);
+    }
+
+    @Test // CR-01
+    void billOrder_encomendaA4AprovadaPorGerenteComExcessoDeCredito_fatura() {
+        // O gerente aprovou sabendo do excesso (alçadas do OrderRiskEvaluator): a fatura não o desfaz.
+        Order order = pendingOrder(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(approvalService.wasApprovedByPerson("ORDER", 1L)).thenReturn(true);
+        doThrow(new BusinessRuleException("Limite de crédito excedido")).when(receivablesService).assertCreditAvailable(any(), any());
+
+        InvoiceDTO dto = service.billOrder(1L);
+
+        assertEquals(InvoiceStatus.APPROVED, dto.status());
+        verify(receivablesService, never()).assertCreditAvailable(any(), any());
+    }
+
+    @Test // CR-02
+    void billOrder_encomendaA4AprovadaAutomaticamente_continuaPresaAoLimite() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(approvalService.wasApprovedByPerson("ORDER", 1L)).thenReturn(false);
+        doThrow(new BusinessRuleException("Limite de crédito excedido")).when(receivablesService).assertCreditAvailable(any(), any());
+
+        assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
+    @Test // CR-03
+    void billSeparatedOrder_pedidoDeSeparacao_respeitaSempreOLimite() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        order.setKind(mz.multicore.erp.modules.comercial.model.OrderKind.PICKING_REQUEST);
+        order.setStatus("SEPARATED");
+        order.getLines().get(0).setSeparatedQuantity(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(approvalService.wasApprovedByPerson(any(), any())).thenReturn(true);
+        doThrow(new BusinessRuleException("Limite de crédito excedido")).when(receivablesService).assertCreditAvailable(any(), any());
+
+        assertThrows(BusinessRuleException.class, () -> service.billSeparatedOrder(1L));
+    }
+
+    @Test // RS-05
+    void billOrder_stockReservadoParaPedidoDeSeparacao_recusaSemConsumirNumeroFiscal() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(inventoryService.lockAndGetPhysicalQuantity(anyLong(), anyLong())).thenReturn(new BigDecimal("5"));
+        when(orderLineRepository.sumActiveReservations(anyLong(), anyLong())).thenReturn(new BigDecimal("4"));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
+
+        assertTrue(error.getMessage().contains("reservado"), error.getMessage());
+        assertEquals("PENDING", order.getStatus());
+        verify(documentNumberService, never()).next(DocumentSeries.INVOICE);
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+    }
+
     // ─────────────────── IVA: a taxa é do artigo, não do pedido ───────────────────
     // Regressão do bug fiscal: o painel enviava 16% fixo e o serviço aceitava, pelo que o mesmo
     // artigo isento saía a 0% no POS e a 16% na fatura. Ver docs/IVA_TAXA_CANONICA_SPEC.md.
@@ -516,6 +588,55 @@ class ComercialServiceTest {
     }
 
     @Test
+    void billOrder_semPerfilDeVenda_recusaENaoMoveStock() {
+        CurrentUserContext.setCurrentUser("colaborador", "EMPLOYEE");
+        Order order = pendingOrder(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
+
+        assertTrue(error.getMessage().contains("Sem permissão"), error.getMessage());
+        assertEquals("PENDING", order.getStatus());
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
+    @Test
+    void billOrder_pedidoDeSeparacaoSeparado_recusaFaturacaoDirecta() {
+        // Pela rota directa saltava o perfil de gerente do circuito, ficava BILLED em vez de
+        // INVOICED e não deixava evento no histórico do pedido.
+        Order order = pendingOrder(new BigDecimal("3"));
+        order.setKind(mz.multicore.erp.modules.comercial.model.OrderKind.PICKING_REQUEST);
+        order.setStatus("SEPARATED");
+        order.getLines().get(0).setSeparatedQuantity(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        BusinessRuleException error = assertThrows(BusinessRuleException.class, () -> service.billOrder(1L));
+
+        assertTrue(error.getMessage().contains("circuito de separação"), error.getMessage());
+        assertEquals("SEPARATED", order.getStatus());
+        verify(inventoryService, never()).registerMovement(any(), any(), any(), any(), any(), any(), any());
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
+    @Test
+    void billSeparatedOrder_pedidoDeSeparacao_fatura() {
+        Order order = pendingOrder(new BigDecimal("3"));
+        order.setKind(mz.multicore.erp.modules.comercial.model.OrderKind.PICKING_REQUEST);
+        order.setStatus("SEPARATED");
+        order.getLines().get(0).setSeparatedQuantity(new BigDecimal("3"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        InvoiceDTO dto = service.billSeparatedOrder(1L);
+
+        assertEquals(InvoiceStatus.APPROVED, dto.status());
+        verify(inventoryService).registerMovement(
+                eq(product), eq(warehouse), eq(new BigDecimal("3").negate()), eq("SALE"),
+                any(), any(), any());
+    }
+
+    @Test
     void billOrder_encomendaJaFaturada_bloqueia() {
         Order order = pendingOrder(new BigDecimal("3"));
         order.setStatus("BILLED");
@@ -575,17 +696,21 @@ class ComercialServiceTest {
     // ────────────────────────── searchCancellableOrders ──────────────────────────
 
     @Test
+    @SuppressWarnings("unchecked")
     void searchCancellableOrders_excluiFaturadasECanceladas() {
-        when(orderRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(
-                orderStatus("EC-2026/1", client(5L, "Cliente Loja"), "PENDING_APPROVAL"),
-                orderStatus("EC-2026/2", client(6L, "Padaria Central"), "PENDING"),
-                orderStatus("EC-2026/3", client(7L, "Mercado X"), "BILLED"),
-                orderStatus("EC-2026/4", client(8L, "Quiosque Y"), "CANCELLED")));
+        when(orderRepository.searchOpen(eq(COMPANY_ID), any(), eq("padaria"))).thenReturn(List.of(
+                orderStatus("EC-2026/2", client(6L, "Padaria Central"), "PENDING")));
 
-        // Por aprovar + aprovada são canceláveis; faturada e cancelada não.
-        assertEquals(2, service.searchCancellableOrders("").size());
-        assertEquals(1, service.searchCancellableOrders("padaria").size());
-        assertTrue(service.searchCancellableOrders("EC-2026/3").isEmpty());
+        assertEquals(1, service.searchCancellableOrders("  Padaria ").size());
+
+        // A filtragem é feita na base; o que se prova aqui é que só pede os estados canceláveis.
+        org.mockito.ArgumentCaptor<java.util.Collection<String>> statuses = org.mockito.ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(orderRepository).searchOpen(eq(COMPANY_ID), statuses.capture(), eq("padaria"));
+        assertTrue(statuses.getValue().containsAll(List.of("PENDING_APPROVAL", "PENDING", "AWAITING_SEPARATION", "IN_SEPARATION", "SEPARATED")));
+        assertFalse(statuses.getValue().contains("BILLED"));
+        assertFalse(statuses.getValue().contains("INVOICED"));
+        assertFalse(statuses.getValue().contains("CANCELLED"));
+        assertFalse(statuses.getValue().contains("GUIDE_PENDING"));
     }
 
     // ────────────────────────── cancelInvoice ──────────────────────────
@@ -772,14 +897,14 @@ class ComercialServiceTest {
 
     @Test
     void searchPendingOrders_porNumeroOuCliente_filtra() {
-        when(orderRepository.findByCompanyIdAndStatusAndInvoiceIdIsNull(COMPANY_ID, "PENDING"))
-                .thenReturn(List.of(
-                        orderDoc("EC-2026/1", client(5L, "Cliente Loja")),
+        when(orderRepository.searchOpen(COMPANY_ID, List.of("PENDING"), "ec-2026/1"))
+                .thenReturn(List.of(orderDoc("EC-2026/1", client(5L, "Cliente Loja"))));
+        when(orderRepository.searchOpen(COMPANY_ID, List.of("PENDING"), ""))
+                .thenReturn(List.of(orderDoc("EC-2026/1", client(5L, "Cliente Loja")),
                         orderDoc("EC-2026/2", client(6L, "Padaria Central"))));
 
         assertEquals(1, service.searchPendingOrders("EC-2026/1").size());
-        assertEquals(1, service.searchPendingOrders("padaria").size());
-        assertEquals(2, service.searchPendingOrders("").size());
+        assertEquals(2, service.searchPendingOrders(null).size());
         assertTrue(service.searchPendingOrders("zzz").isEmpty());
     }
 

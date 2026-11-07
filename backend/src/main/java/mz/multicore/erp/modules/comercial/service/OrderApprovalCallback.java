@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.modules.approvals.service.ApprovalCallback;
 import mz.multicore.erp.modules.comercial.model.Order;
+import mz.multicore.erp.modules.comercial.model.OrderStatus;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +32,8 @@ public class OrderApprovalCallback implements ApprovalCallback {
     public void onApproved(Long documentId) {
         orderRepository.findById(documentId).ifPresent(order -> {
             // Só promove encomendas ainda à espera de aprovação — nunca reabre uma já faturada.
-            if ("PENDING_APPROVAL".equalsIgnoreCase(order.getStatus())) {
-                order.setStatus("PENDING");
+            if (OrderStatus.is(order.getStatus(), OrderStatus.PENDING_APPROVAL)) {
+                order.setStatus(OrderStatus.PENDING.name());
                 orderRepository.save(order);
             }
         });
@@ -42,8 +43,8 @@ public class OrderApprovalCallback implements ApprovalCallback {
     @Transactional
     public void onRejected(Long documentId, String reason) {
         orderRepository.findById(documentId).ifPresent(order -> {
-            if ("PENDING_APPROVAL".equalsIgnoreCase(order.getStatus())) {
-                order.setStatus("CANCELLED");
+            if (OrderStatus.is(order.getStatus(), OrderStatus.PENDING_APPROVAL)) {
+                order.setStatus(OrderStatus.CANCELLED.name());
                 orderRepository.save(order);
             }
         });

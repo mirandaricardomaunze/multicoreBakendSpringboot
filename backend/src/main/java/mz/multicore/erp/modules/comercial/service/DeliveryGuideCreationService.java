@@ -13,6 +13,8 @@ import mz.multicore.erp.modules.comercial.model.DeliveryGuideStatus;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderKind;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
+import mz.multicore.erp.modules.comercial.model.OrderStatus;
+import mz.multicore.erp.modules.comercial.model.OrderStatusLabel;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
@@ -121,19 +123,19 @@ public class DeliveryGuideCreationService {
 
     @Transactional
     public DeliveryGuideDTO createFromOrder(CreateDeliveryGuideRequest request) {
-        Order order = orderRepository.findById(request.orderId())
+        // Bloqueada como na faturação: guia e fatura em simultâneo não podem ambas ver "por faturar".
+        Order order = orderRepository.findForUpdate(request.orderId(), CurrentUserContext.requireCurrentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
-        CurrentUserContext.requireCompany(order.getCompany().getId());
 
         if (OrderKind.orDefault(order.getKind()).usesWarehouseTransfer()) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber()
                     + " é uma reposição interna e não tem cliente a quem entregar. "
                     + "Converta-a em transferência entre armazéns.");
         }
-        if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
+        if (!OrderStatus.is(order.getStatus(), OrderStatus.PENDING)) {
             throw new BusinessRuleException(
                     "Só encomendas aprovadas e ainda não expedidas/faturadas podem gerar guia. "
-                            + "Estado actual da encomenda: " + order.getStatus());
+                            + "Estado actual da encomenda: " + OrderStatusLabel.of(order.getStatus()) + ".");
         }
 
         if (request.responsible() == null || request.responsible().isBlank()) {
@@ -174,7 +176,7 @@ public class DeliveryGuideCreationService {
 
         DeliveryGuide saved = guideRepository.save(guide);
 
-        order.setStatus("GUIDE_PENDING");
+        order.setStatus(OrderStatus.GUIDE_PENDING.name());
         order.setDeliveryGuideId(saved.getId());
         orderRepository.save(order);
 

@@ -114,7 +114,7 @@ public class ComercialService {
                 new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                         companyRepository, warehouseRepository, inventoryService, receiptRepository, financeService,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                        receivablesService, eventPublisher, businessUnitRepository),
+                        receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository)),
                 new ComercialOrderLifecycleService(orderRepository, orderLineRepository, clientRepository,
                         productRepository, companyRepository, warehouseRepository, inventoryService, invoiceRepository,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
@@ -123,7 +123,7 @@ public class ComercialService {
                         new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                                 companyRepository, warehouseRepository, inventoryService, receiptRepository, financeService,
                                 approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                                receivablesService, eventPublisher, businessUnitRepository))
+                                receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository)))
         );
     }
 
@@ -511,17 +511,14 @@ public class ComercialService {
     @Transactional
     public OrderDTO placeOrder(Company company, Client client, Warehouse warehouse, String walkInName,
                                List<OrderLine> lines, OrderKind kind, OrderTerms terms) {
-        return placeOrder(company, client, warehouse, null, walkInName, lines, kind, terms);
-    }
-
-    @Transactional
-    public OrderDTO placeOrder(Company company, Client client, Warehouse warehouse, Warehouse destination,
-                               String walkInName, List<OrderLine> lines, OrderKind kind, OrderTerms terms) {
-        return orderLifecycleService.placeOrder(company, client, warehouse, destination, walkInName, lines, kind, terms);
+        return orderLifecycleService.placeOrder(company, client, warehouse, null, walkInName, lines, kind, terms);
     }
 
     @Transactional
     public InvoiceDTO billOrder(Long orderId) { return orderLifecycleService.billOrder(orderId); }
+
+    @Transactional
+    public InvoiceDTO billSeparatedOrder(Long orderId) { return orderLifecycleService.billSeparatedOrder(orderId); }
 
     @Transactional(readOnly = true)
     public List<OrderDTO> getOrdersByCompany(Long companyId) { return orderLifecycleService.getOrdersByCompany(companyId); }
