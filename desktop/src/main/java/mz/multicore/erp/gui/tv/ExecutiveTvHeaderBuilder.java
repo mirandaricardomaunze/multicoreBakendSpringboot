@@ -10,18 +10,24 @@ import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
+import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
- * Construtor do cabeçalho corporativo em duas linhas para o painel de TV Executiva.
+ * Cabeçalho do painel de TV em duas linhas: identidade, contexto e relógio; depois o período
+ * (controlo segmentado), a unidade, o rodízio e as acções em ícones com dica.
+ * O cabeçalho é reconstruído ao mudar de tema; o selector de unidade é sempre a mesma instância.
  */
 public class ExecutiveTvHeaderBuilder {
 
@@ -36,193 +42,178 @@ public class ExecutiveTvHeaderBuilder {
         void onToggleSlideshow();
     }
 
+    public static final String ALL_UNITS = "Todas as unidades";
+    private static final Locale PT = Locale.forLanguageTag("pt-MZ");
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", PT);
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM 'de' yyyy", PT);
+
     private final HeaderActions actions;
+    private final Map<ExecutiveTvDashboardDialog.Period, ModernButton> periodButtons =
+            new EnumMap<>(ExecutiveTvDashboardDialog.Period.class);
+    private final JComboBox<String> businessUnitCombo = new JComboBox<>(new String[]{ALL_UNITS});
     private JPanel container;
-    private JLabel clockLabel, meetingBadgeLabel;
-    private ModernButton themeToggleBtn;
-    private ModernButton fullScreenBtn;
-    private ModernButton autoSlideBtn;
-    private JComboBox<String> businessUnitCombo;
-    private final Map<ExecutiveTvDashboardDialog.Period, ModernButton> periodButtons = new EnumMap<>(ExecutiveTvDashboardDialog.Period.class);
+    private JLabel timeLabel, dateLabel, contextLabel;
+    private ModernButton slideshowButton;
+    private boolean lightMode, fullScreen, slideshowActive;
+    private int slideshowSeconds = ExecutiveTvTimerCoordinator.SLIDESHOW_DURATION_SECONDS;
+    private ExecutiveTvDashboardDialog.Period period = ExecutiveTvDashboardDialog.Period.ESTE_MES;
+    private String context = "Visão consolidada";
+    private LocalDateTime lastClock = LocalDateTime.now();
 
     public ExecutiveTvHeaderBuilder(HeaderActions actions) {
         this.actions = actions;
+        businessUnitCombo.addActionListener(e -> actions.onBusinessUnitChanged(businessUnitCombo.getSelectedIndex()));
     }
 
     public JPanel build(boolean lightMode, ExecutiveTvDashboardDialog.Period currentPeriod) {
         container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
         container.setOpaque(true);
-        container.setBackground(ExecutiveTvTheme.getHeaderBgColor(lightMode));
-        container.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, ExecutiveTvTheme.getCardBorderColor(lightMode)),
-                new EmptyBorder(8, 16, 8, 16)
-        ));
-
-        container.add(buildRow1(lightMode));
-        container.add(Box.createVerticalStrut(8));
-        container.add(buildRow2(lightMode, currentPeriod));
+        this.period = currentPeriod;
+        applyTheme(lightMode);
         return container;
     }
 
-    private JPanel buildRow1(boolean lightMode) {
-        JPanel row1 = new JPanel(new BorderLayout(12, 0));
-        row1.setOpaque(false);
-
-        JPanel brandBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        brandBox.setOpaque(false);
-        brandBox.add(new JLabel(UIHelper.icon("fas-tv", 16, UIHelper.ACCENT_BLUE)));
-
-        JLabel brandLbl = new JLabel("MULTICORE ERP");
-        brandLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 15));
-        brandLbl.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
-        brandBox.add(brandLbl);
-
-        meetingBadgeLabel = new JLabel("  SALA DE REUNIÕES  ");
-        meetingBadgeLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 10));
-        meetingBadgeLabel.setForeground(lightMode ? new Color(146, 64, 14) : new Color(252, 211, 77));
-        meetingBadgeLabel.setOpaque(true);
-        meetingBadgeLabel.setBackground(lightMode ? new Color(255, 251, 235) : new Color(69, 26, 3));
-        meetingBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(245, 158, 11, 80), 1, true),
-                BorderFactory.createEmptyBorder(2, 6, 2, 6)
-        ));
-        brandBox.add(meetingBadgeLabel);
-        row1.add(brandBox, BorderLayout.WEST);
-
-        clockLabel = new JLabel("—");
-        clockLabel.setFont(new Font(UIHelper.FONT, Font.BOLD, 13));
-        clockLabel.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
-        clockLabel.setHorizontalAlignment(JLabel.CENTER);
-        row1.add(clockLabel, BorderLayout.CENTER);
-
-        JPanel sysControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        sysControls.setOpaque(false);
-
-        themeToggleBtn = createBtn(lightMode ? "Tema Escuro" : "Tema Claro", lightMode ? "fas-moon" : "fas-sun", UIHelper.PENDING_YELLOW, 115, actions::onToggleTheme);
-        fullScreenBtn = createBtn("Tela Cheia", "fas-expand", UIHelper.ACCENT_BLUE, 105, actions::onToggleFullScreen);
-
-        sysControls.add(themeToggleBtn);
-        sysControls.add(createBtn("Metas", "fas-bullseye", UIHelper.PENDING_YELLOW, 85, actions::onOpenGoals));
-        sysControls.add(createBtn("Vendedores", "fas-users", UIHelper.ACCENT_CYAN, 105, actions::onOpenSellers));
-        sysControls.add(fullScreenBtn);
-        sysControls.add(createBtn("Sair", "fas-times", UIHelper.REJECTED_RED, 75, actions::onClose));
-
-        row1.add(sysControls, BorderLayout.EAST);
-        return row1;
+    /** Reconstrói o cabeçalho com as cores do tema, mantendo o estado actual. */
+    public void applyTheme(boolean lightMode) {
+        this.lightMode = lightMode;
+        if (container == null) return;
+        container.removeAll();
+        container.setBackground(ExecutiveTvTheme.getHeaderBgColor(lightMode));
+        container.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, ExecutiveTvTheme.getCardBorderColor(lightMode)),
+                BorderFactory.createEmptyBorder(14, 20, 14, 20)));
+        container.add(buildIdentityRow());
+        container.add(Box.createVerticalStrut(14));
+        container.add(buildToolbarRow());
+        setClock(lastClock);
+        container.revalidate();
+        container.repaint();
     }
 
-    private ModernButton createBtn(String title, String icon, Color iconColor, int width, Runnable action) {
-        ModernButton btn = UIHelper.createSecondaryButton(title);
-        btn.setIcon(UIHelper.icon(icon, 12, iconColor));
-        btn.setPreferredSize(new Dimension(width, 28));
-        btn.addActionListener(e -> action.run());
-        return btn;
+    private JPanel buildIdentityRow() {
+        JPanel row = ExecutiveTvComponents.transparent(new BorderLayout(16, 0));
+        JPanel brand = ExecutiveTvComponents.transparent(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        brand.add(ExecutiveTvComponents.iconChip("fas-chart-line", UIHelper.ACCENT_BLUE, lightMode));
+        JPanel titles = ExecutiveTvComponents.transparent(new GridLayout(2, 1, 0, 0));
+        titles.add(ExecutiveTvComponents.label("Painel Executivo", Font.BOLD, 20, ExecutiveTvTheme.getTextLightColor(lightMode)));
+        contextLabel = ExecutiveTvComponents.label(contextText(), Font.PLAIN, 13, ExecutiveTvTheme.getTextMutedColor(lightMode));
+        titles.add(contextLabel);
+        brand.add(titles);
+        row.add(brand, BorderLayout.WEST);
+
+        JPanel clock = ExecutiveTvComponents.transparent(new GridLayout(2, 1, 0, 0));
+        timeLabel = ExecutiveTvComponents.label("", Font.BOLD, 24, ExecutiveTvTheme.getTextLightColor(lightMode));
+        timeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        dateLabel = ExecutiveTvComponents.label("", Font.PLAIN, 13, ExecutiveTvTheme.getTextMutedColor(lightMode));
+        dateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        clock.add(timeLabel);
+        clock.add(dateLabel);
+        row.add(clock, BorderLayout.EAST);
+        return row;
     }
 
-    private JPanel buildRow2(boolean lightMode, ExecutiveTvDashboardDialog.Period currentPeriod) {
-        JPanel row2 = new JPanel(new BorderLayout(12, 0));
-        row2.setOpaque(false);
+    private JPanel buildToolbarRow() {
+        JPanel row = ExecutiveTvComponents.transparent(new BorderLayout(16, 0));
+        row.add(buildPeriodSegments(), BorderLayout.WEST);
 
-        JPanel periodBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        periodBox.setOpaque(false);
+        JPanel tools = ExecutiveTvComponents.transparent(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        ExecutiveTvComponents.styleCombo(businessUnitCombo, 250, lightMode);
+        businessUnitCombo.setToolTipText("Unidade de negócio apresentada");
+        tools.add(businessUnitCombo);
+        slideshowButton = ExecutiveTvComponents.ghostButton("", "fas-play", UIHelper.APPROVED_GREEN,
+                actions::onToggleSlideshow, lightMode);
+        updateSlideshowButton(slideshowActive, slideshowSeconds);
+        tools.add(slideshowButton);
+        tools.add(ExecutiveTvComponents.divider(lightMode));
+        tools.add(ExecutiveTvComponents.iconButton("fas-bullseye", "Metas por unidade", actions::onOpenGoals, lightMode));
+        tools.add(ExecutiveTvComponents.iconButton("fas-users", "Desempenho dos vendedores", actions::onOpenSellers, lightMode));
+        tools.add(ExecutiveTvComponents.iconButton(lightMode ? "fas-moon" : "fas-sun",
+                lightMode ? "Tema escuro" : "Tema claro", actions::onToggleTheme, lightMode));
+        tools.add(ExecutiveTvComponents.iconButton(fullScreen ? "fas-compress" : "fas-expand",
+                fullScreen ? "Sair do ecrã inteiro (F11)" : "Ecrã inteiro (F11)", actions::onToggleFullScreen, lightMode));
+        tools.add(ExecutiveTvComponents.iconButton("fas-times", "Fechar o painel (Esc)", actions::onClose, lightMode));
+        row.add(tools, BorderLayout.EAST);
+        return row;
+    }
 
-        JLabel perLbl = new JLabel("Período: ");
-        perLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        perLbl.setForeground(ExecutiveTvTheme.getTextMutedColor(lightMode));
-        periodBox.add(perLbl);
-
+    private JPanel buildPeriodSegments() {
+        JPanel track = new ExecutiveTvComponents.RoundedSurface(new FlowLayout(FlowLayout.LEFT, 2, 0),
+                ExecutiveTvTheme.getSurfaceAltColor(lightMode), ExecutiveTvTheme.getCardBorderColor(lightMode), 12);
+        track.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+        periodButtons.clear();
         for (ExecutiveTvDashboardDialog.Period p : ExecutiveTvDashboardDialog.Period.values()) {
-            ModernButton btn = UIHelper.createSecondaryButton(p.getLabel());
-            btn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-            btn.setPreferredSize(new Dimension(btn.getPreferredSize().width + 10, 26));
-            btn.addActionListener(e -> actions.onPeriodSelected(p));
-            periodButtons.put(p, btn);
-            periodBox.add(btn);
+            ModernButton segment = new ModernButton(p.getShortLabel());
+            segment.setFont(ExecutiveTvComponents.font(Font.BOLD, 13));
+            segment.setCornerRadius(9);
+            segment.setPreferredSize(new Dimension(92, ExecutiveTvComponents.CONTROL_HEIGHT - 6));
+            segment.addActionListener(e -> actions.onPeriodSelected(p));
+            periodButtons.put(p, segment);
+            track.add(segment);
         }
-        updatePeriodStyles(currentPeriod, lightMode);
-        row2.add(periodBox, BorderLayout.WEST);
-
-        JPanel filterControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        filterControls.setOpaque(false);
-
-        JLabel buLbl = new JLabel("Unidade de Negócio: ");
-        buLbl.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        buLbl.setForeground(ExecutiveTvTheme.getTextMutedColor(lightMode));
-        filterControls.add(buLbl);
-
-        businessUnitCombo = new JComboBox<>(new String[]{"Todas as Unidades (Visão Consolidada)"});
-        businessUnitCombo.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-        businessUnitCombo.setPreferredSize(new Dimension(240, 28));
-        UIHelper.styleComboBox(businessUnitCombo);
-        businessUnitCombo.addActionListener(e -> actions.onBusinessUnitChanged(businessUnitCombo.getSelectedIndex()));
-        filterControls.add(businessUnitCombo);
-
-        autoSlideBtn = UIHelper.createSecondaryButton("Rodízio TV (15s)");
-        autoSlideBtn.setIcon(UIHelper.icon("fas-play", 11, UIHelper.APPROVED_GREEN));
-        autoSlideBtn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-        autoSlideBtn.setPreferredSize(new Dimension(135, 28));
-        autoSlideBtn.addActionListener(e -> actions.onToggleSlideshow());
-        filterControls.add(autoSlideBtn);
-
-        row2.add(filterControls, BorderLayout.EAST);
-        return row2;
+        updatePeriodStyles(period, lightMode);
+        return track;
     }
 
     public void updatePeriodStyles(ExecutiveTvDashboardDialog.Period currentPeriod, boolean lightMode) {
+        this.period = currentPeriod;
+        Color idle = ExecutiveTvTheme.getSurfaceAltColor(lightMode);
         for (Map.Entry<ExecutiveTvDashboardDialog.Period, ModernButton> entry : periodButtons.entrySet()) {
-            boolean active = entry.getKey() == currentPeriod;
-            ModernButton btn = entry.getValue();
-            if (active) {
-                btn.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
-                btn.setForeground(Color.WHITE);
-                btn.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+            ModernButton segment = entry.getValue();
+            if (entry.getKey() == currentPeriod) {
+                segment.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
             } else {
-                btn.setColors(lightMode ? Color.WHITE : new Color(30, 41, 59), lightMode ? new Color(241, 245, 249) : new Color(51, 65, 85));
-                btn.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
-                btn.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ExecutiveTvTheme.getCardBorderColor(lightMode), 1, true), BorderFactory.createEmptyBorder(3, 9, 3, 9)));
+                segment.setColors(idle, ExecutiveTvTheme.tint(ExecutiveTvTheme.getTextLightColor(lightMode), idle, 0.08));
+                segment.setForeground(ExecutiveTvTheme.getTextMutedColor(lightMode));
             }
         }
+        refreshContext();
     }
 
-    public void applyTheme(boolean lightMode) {
-        if (container != null) {
-            container.setBackground(ExecutiveTvTheme.getHeaderBgColor(lightMode));
-            container.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ExecutiveTvTheme.getCardBorderColor(lightMode)), new EmptyBorder(8, 16, 8, 16)));
+    public void setClock(LocalDateTime now) {
+        lastClock = now;
+        if (timeLabel != null) timeLabel.setText(now.format(TIME));
+        if (dateLabel != null) {
+            String date = now.format(DATE);
+            dateLabel.setText(Character.toUpperCase(date.charAt(0)) + date.substring(1));
         }
-        if (themeToggleBtn != null) {
-            themeToggleBtn.setText(lightMode ? "Tema Escuro" : "Tema Claro");
-            themeToggleBtn.setIcon(UIHelper.icon(lightMode ? "fas-moon" : "fas-sun", 12, UIHelper.PENDING_YELLOW));
-        }
-        if (clockLabel != null) clockLabel.setForeground(ExecutiveTvTheme.getTextLightColor(lightMode));
-        if (meetingBadgeLabel != null) meetingBadgeLabel.setForeground(lightMode ? new Color(146, 64, 14) : new Color(252, 211, 77));
-        if (meetingBadgeLabel != null) meetingBadgeLabel.setBackground(lightMode ? new Color(255, 251, 235) : new Color(69, 26, 3));
     }
-
-    public void setClockText(String text) { if (clockLabel != null) clockLabel.setText(text); }
 
     public void setFullScreenState(boolean isFullScreen) {
-        if (fullScreenBtn != null) {
-            fullScreenBtn.setText(isFullScreen ? "Janela" : "Tela Cheia");
-            fullScreenBtn.setIcon(UIHelper.icon(isFullScreen ? "fas-compress" : "fas-expand", 12, UIHelper.ACCENT_BLUE));
-        }
+        this.fullScreen = isFullScreen;
+        applyTheme(lightMode);
     }
 
     public void updateSlideshowButton(boolean active, int secondsRemaining) {
-        if (autoSlideBtn == null) return;
-        autoSlideBtn.setIcon(UIHelper.icon(active ? "fas-pause" : "fas-play", 11, active ? UIHelper.PENDING_YELLOW : UIHelper.APPROVED_GREEN));
-        autoSlideBtn.setText(active ? String.format("Rodízio (%ds)", secondsRemaining) : "Rodízio TV (15s)");
+        this.slideshowActive = active;
+        this.slideshowSeconds = secondsRemaining;
+        if (slideshowButton == null) return;
+        slideshowButton.setText(active ? String.format("Rodízio · %ds", secondsRemaining) : "Rodízio");
+        slideshowButton.setIcon(UIHelper.icon(active ? "fas-pause" : "fas-play", 13,
+                active ? UIHelper.PENDING_YELLOW : UIHelper.APPROVED_GREEN));
+        slideshowButton.setToolTipText(active ? "Pausar o rodízio entre unidades (Espaço)"
+                : "Mostrar cada unidade durante " + ExecutiveTvTimerCoordinator.SLIDESHOW_DURATION_SECONDS + " s (Espaço)");
+        slideshowButton.setPreferredSize(new Dimension(130, ExecutiveTvComponents.CONTROL_HEIGHT));
     }
 
     public void populateBusinessUnits(List<BusinessUnitDTO> units) {
-        if (businessUnitCombo == null) return;
-        String selected = (String) businessUnitCombo.getSelectedItem();
+        Object selected = businessUnitCombo.getSelectedItem();
         businessUnitCombo.removeAllItems();
-        businessUnitCombo.addItem("Todas as Unidades (Visão Consolidada)");
-        if (units != null) {
-            for (BusinessUnitDTO bu : units) businessUnitCombo.addItem(bu.name());
-        }
+        businessUnitCombo.addItem(ALL_UNITS);
+        if (units != null) units.forEach(bu -> businessUnitCombo.addItem(bu.name()));
         if (selected != null) businessUnitCombo.setSelectedItem(selected);
+        refreshContext();
+    }
+
+    /** Actualiza a linha de contexto (unidade · período) depois de mudar de vista. */
+    public void refreshContext() {
+        int index = businessUnitCombo.getSelectedIndex();
+        context = index <= 0 ? "Visão consolidada" : String.valueOf(businessUnitCombo.getSelectedItem());
+        if (contextLabel != null) contextLabel.setText(contextText());
+    }
+
+    private String contextText() {
+        return context + "  ·  " + period.getLabel();
     }
 
     public JComboBox<String> getBusinessUnitCombo() { return businessUnitCombo; }

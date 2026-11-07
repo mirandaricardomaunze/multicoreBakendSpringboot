@@ -13,12 +13,17 @@ O ecrã permite visualizar com máxima clareza:
 
 ## 2. Princípios de Design para Ecrãs Grandes (3 a 6 Metros de Distância)
 1. **Contraste Nobre e Anti-Ofuscamento (Dark Slate & Executive Light):**
-   - **Tema Escuro (Dark Slate):** Fundo em `Slate 900` (`#0F172A`) e cartões em `Slate 800` (`#1E293B`) com bordas `Slate 700` (`#334155`).
-   - **Tema Claro (Executive Light):** Fundo em `Slate 100` (`#F1F5F9`) e cartões brancos (`#FFFFFF`) com bordas `Slate 200` (`#E2E8F0`).
-   - Alternância instantânea através do botão **`[ Tema Claro / Tema Escuro ]`** no cabeçalho.
-2. **Cabeçalho Estruturado em 2 Linhas (Zero Sobreposição):**
-   - **Linha 1:** Marca `MULTICORE ERP`, Badge da Sala, Relógio Digital em tempo real e Controles de Janela (`Tema`, `Metas`, `Tela Cheia`, `Sair`).
-   - **Linha 2:** Filtros de Período (`Hoje`, `Esta Semana`, `Mês Atual`, `Este Ano`) e Seletor de Unidade com `[ Rodízio TV (15s) ]`.
+   - Todas as cores vivem em `ExecutiveTvTheme` (única fonte de tokens do pacote).
+   - **Tema Escuro (Slate):** fundo `#090E1A`, cabeçalho `#0D1322`, cartões `#11192A` com contorno `#212D45`.
+   - **Tema Claro (Executive Light):** fundo `#F1F5F9`, cartões brancos com contorno `#E2E8F0`.
+   - Cartões arredondados (raio 16) desenhados à mão: o contorno tem o mesmo raio do fundo.
+   - Alternância pelo ícone de sol/lua no cabeçalho.
+2. **Cabeçalho em 2 Linhas (Zero Sobreposição):**
+   - **Linha 1:** ícone e título «Painel Executivo», linha de contexto (unidade · período) e relógio grande com a data por extenso.
+   - **Linha 2:** período num controlo segmentado (`Hoje`, `7 dias`, `Mês`, `Ano`), selector de unidade no tema do painel,
+     botão `Rodízio` (com contagem quando activo) e acções só com ícone e dica: Metas, Vendedores, Tema, Ecrã inteiro, Fechar.
+3. **Rodapé curto:** atalhos à esquerda; à direita, o estado real da sincronização
+   («Actualizado às HH:mm» ou «Sem ligação ao servidor»). Os dados são lidos num `SwingWorker`, fora do EDT.
 3. **Tipografia de Alta Definição e Isenção de Emojis Unicode:**
    - Valores principais em fontes nítidas (18px a 24px).
    - Proibido o uso de emojis Unicode que renderizam como retângulos `▯` no Java 2D do Windows; status textual limpo com badges semânticos e ícones FontAwesome.
@@ -35,19 +40,27 @@ A percentagem da meta atingida define a cor e o estado do negócio:
 - Azul Safira (`#3B82F6` / `#2563EB`) — *80.0% a 99.9% (NO RITMO)*.
 - Verde Esmeralda (`#10B981` / `#059669`) — *100% ou mais (META SUPERADA)*.
 
-Marcadores discretos pontilhados em **25%**, **50%** e **75%** ajudam a balizar visualmente se o negócio já superou as metas quinzenais e semanais.
+- Cinzento neutro — *sem meta definida (SEM META)*. Sem meta não há «ALERTA» nem «meta superada».
+
+Divisões discretas em **25%**, **50%** e **75%** no trilho e, nos períodos de vários dias, um **marcador do ritmo
+esperado** (triângulo e traço): onde a barra devia estar hoje se as vendas fossem constantes. Os números ficam fora
+da barra, em rótulos grandes. Estado e cores vêm de `GoalStatus`.
 
 ---
 
 ## 4. Modos de Apresentação
 1. **Visão Global Consolidada:**
-   - Super barra de progresso da empresa no topo.
-   - Grelha multicard com todas as Unidades de Negócio ativas lado a lado (destacando unidades participantes com metas ativas e unidades desmarcadas como `FORA DA META`).
-   - Gráfico de donut com o share de vendas de cada unidade.
-   - Top 5 Artigos mais faturados.
+   - Cartão principal: faturado em destaque, percentagem da meta, barra com ritmo esperado e quanto falta
+     (ou botão «Definir metas» quando não há meta).
+   - KPIs 2×2 à direita (`ExecutiveTvMetrics`): Faturas e ticket médio, Ritmo diário, Previsão de fecho ao ritmo
+     actual e Necessário por dia nos dias restantes (ou «Acima da meta» / «Meta não definida»).
+   - Cartões por unidade de negócio (estado, faturado, % e meta; `FORA DA META` para unidades excluídas), com estado
+     vazio quando não há unidades activas.
+   - Participação nas vendas: anel com legenda (nome e %); acima de 5 unidades agrupa em «Outras».
+   - Top 5 artigos com posição, valor e barra relativa ao primeiro.
 2. **Visão Focada por Unidade de Negócio:**
-   - Foco na linha de distribuição selecionada (ex.: Unilever).
-   - Metas, realizados, superávit e faturas recentes daquela divisão.
+   - O mesmo cartão principal e KPIs aplicados à unidade (`ExecutiveTvSummaryBuilder`, partilhado).
+   - Top artigos e últimas faturas da unidade.
 3. **Rodízio Automático / Slideshow TV (15 segundos):**
    - Transição periódica contínua sem necessidade de toque em teclado ou rato.
    - Ideal para TV permanente em salas de reuniões, recepção ou gabinete da administração.
@@ -65,6 +78,6 @@ Marcadores discretos pontilhados em **25%**, **50%** e **75%** ajudam a balizar 
 ---
 
 ## 6. Atalhos da Sala de Reuniões
-- **`F11`**: Alternar Tela Cheia / Janela.
+- **`F11`**: Alternar ecrã inteiro / janela.
 - **`Espaço`**: Iniciar ou Pausar o Rodízio Automático de ecrãs.
 - **`ESC`**: Sair do Painel e voltar ao ERP.

@@ -10,10 +10,9 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsDevice;
@@ -22,47 +21,49 @@ import java.awt.Window;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Painel Executivo para Sala de Reuniões e TV de Administração (War Room / Full Screen TV Dashboard).
- * Projetado para exibição contínua em projetores e televisões em alta resolução.
+ * Painel Executivo para a sala de reuniões e a TV da administração, pensado para ecrã inteiro.
+ * Coordena dados, tema e temporizadores; o desenho fica nos builders do pacote.
  */
 public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHeaderBuilder.HeaderActions, ExecutiveTvTimerCoordinator.TimerListener {
 
     public enum Period {
-        HOJE("Hoje"),
-        ESTA_SEMANA("Esta Semana"),
-        ESTE_MES("Mês Atual"),
-        ESTE_ANO("Este Ano");
+        HOJE("Hoje", "Hoje"),
+        ESTA_SEMANA("Últimos 7 dias", "7 dias"),
+        ESTE_MES("Este mês", "Mês"),
+        ESTE_ANO("Este ano", "Ano");
 
-        private final String label;
-        Period(String label) { this.label = label; }
+        private final String label, shortLabel;
+        Period(String label, String shortLabel) { this.label = label; this.shortLabel = shortLabel; }
         public String getLabel() { return label; }
+        public String getShortLabel() { return shortLabel; }
     }
 
+    private static final DateTimeFormatter UPDATED_AT = DateTimeFormatter.ofPattern("HH:mm");
     private final ComercialApiClient comercialApiClient;
     private final Long companyId;
     private final ExecutiveTvHeaderBuilder headerBuilder;
     private final ExecutiveTvTimerCoordinator timerCoordinator;
-
-    private boolean lightMode = false;
-    private boolean isFullScreen = false;
+    private boolean lightMode, isFullScreen, loading;
     private Period currentPeriod = Period.ESTE_MES;
     private int slideshowIndex = 0;
     private List<BusinessUnitDTO> businessUnits = new ArrayList<>();
     private List<InvoiceDTO> allInvoices = new ArrayList<>();
-    private JPanel mainContentContainer;
-    private JLabel shortcutsHint;
+    private JPanel mainContentContainer, footer;
+    private String syncText = "A carregar dados...";
+    private boolean syncOk = true; // falso quando a última leitura ao servidor falhou ou não há cliente
 
     public ExecutiveTvDashboardDialog(Window owner, ComercialApiClient comercialApiClient, Long companyId) {
-        super(owner, "Painel Executivo de Negócios • Sala de Reuniões", ModalityType.MODELESS);
+        super(owner, "Painel Executivo", ModalityType.MODELESS);
         this.comercialApiClient = comercialApiClient;
         this.companyId = companyId != null ? companyId : 1L;
         this.headerBuilder = new ExecutiveTvHeaderBuilder(this);
         this.timerCoordinator = new ExecutiveTvTimerCoordinator(this);
-
         initComponents();
         setupKeyBindings();
         timerCoordinator.start();
@@ -75,31 +76,30 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         setLayout(new BorderLayout());
         add(headerBuilder.build(lightMode, currentPeriod), BorderLayout.NORTH);
 
-        mainContentContainer = new JPanel(new BorderLayout());
-        mainContentContainer.setOpaque(false);
-        mainContentContainer.setBorder(new EmptyBorder(12, 16, 16, 16));
+        mainContentContainer = ExecutiveTvComponents.transparent(new BorderLayout());
+        mainContentContainer.setBorder(new EmptyBorder(16, 20, 8, 20));
         add(mainContentContainer, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(6, 16, 8, 16));
-        shortcutsHint = new JLabel("Atalhos da Sala: [F11] Alternar Tela Cheia  •  [Espaço] Pausar/Continuar Rodízio  •  [ESC] Fechar Janela");
-        shortcutsHint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        shortcutsHint.setForeground(ExecutiveTvTheme.getTextMutedColor(lightMode));
-        footer.add(shortcutsHint, BorderLayout.WEST);
-
-        JLabel statusHint = new JLabel("Atualização Automática: Activa (a cada 45s)");
-        statusHint.setFont(new Font(UIHelper.FONT, Font.PLAIN, 11));
-        statusHint.setForeground(new Color(16, 185, 129));
-        footer.add(statusHint, BorderLayout.EAST);
-        add(footer, BorderLayout.SOUTH);
-
-        Dimension screen = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-        setSize(Math.min(screen.width - 40, 1366), Math.min(screen.height - 60, 768));
-        setLocationRelativeTo(getOwner());
+        rebuildFooter();
+        applyWindowedBounds();
         addWindowListener(new WindowAdapter() {
             @Override public void windowClosing(WindowEvent e) { timerCoordinator.stop(); }
         });
+    }
+
+    /** Rodapé curto: atalhos à esquerda, estado da sincronização à direita. */
+    private void rebuildFooter() {
+        if (footer != null) remove(footer);
+        footer = ExecutiveTvComponents.transparent(new BorderLayout());
+        footer.setBorder(new EmptyBorder(4, 22, 10, 22));
+        footer.add(ExecutiveTvComponents.label("F11  ecrã inteiro     Espaço  rodízio     Esc  fechar", Font.PLAIN, 12,
+                ExecutiveTvTheme.getTextFaintColor(lightMode)), BorderLayout.WEST);
+        JLabel sync = ExecutiveTvComponents.label(syncText, Font.PLAIN, 12, ExecutiveTvTheme.getTextMutedColor(lightMode));
+        sync.setIcon(UIHelper.icon("fas-circle", 8, syncOk ? UIHelper.APPROVED_GREEN : UIHelper.PENDING_YELLOW));
+        sync.setIconTextGap(8);
+        footer.add(sync, BorderLayout.EAST);
+        add(footer, BorderLayout.SOUTH);
+        footer.revalidate();
+        footer.repaint();
     }
 
     private void setupKeyBindings() {
@@ -108,33 +108,46 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         getRootPane().registerKeyboardAction(e -> onToggleSlideshow(), KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
     }
 
+    /** Lê unidades e faturas fora do EDT; a TV continua a responder durante a leitura. */
     private void loadData() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                if (comercialApiClient != null) {
-                    List<BusinessUnitDTO> units = comercialApiClient.getActiveBusinessUnits(companyId);
-                    if (units != null) {
-                        businessUnits = units;
-                        headerBuilder.populateBusinessUnits(businessUnits);
-                    }
-                    List<InvoiceDTO> invoices = comercialApiClient.getAllInvoices();
-                    if (invoices != null) allInvoices = invoices;
+        if (loading) return;
+        if (comercialApiClient == null) { syncOk = false; syncText = "Sem ligação ao servidor"; rebuildFooter(); renderCurrentView(); return; }
+        loading = true;
+        new SwingWorker<Object[], Void>() {
+            @Override protected Object[] doInBackground() {
+                return new Object[]{comercialApiClient.getActiveBusinessUnits(companyId), comercialApiClient.getAllInvoices()};
+            }
+            @Override @SuppressWarnings("unchecked") protected void done() {
+                loading = false;
+                try {
+                    Object[] data = get();
+                    if (data[0] != null) { businessUnits = (List<BusinessUnitDTO>) data[0]; headerBuilder.populateBusinessUnits(businessUnits); }
+                    if (data[1] != null) allInvoices = (List<InvoiceDTO>) data[1];
+                    syncOk = true;
+                    syncText = "Actualizado às " + LocalDateTime.now().format(UPDATED_AT);
+                } catch (Exception ex) {
+                    syncOk = false;
+                    syncText = "Sem ligação ao servidor · a mostrar os últimos dados";
                 }
-            } catch (Exception ignored) {}
-            renderCurrentView();
-        });
+                rebuildFooter();
+                renderCurrentView();
+            }
+        }.execute();
     }
 
     private void renderCurrentView() {
         mainContentContainer.removeAll();
         List<InvoiceDTO> filtered = ExecutiveTvCalculationHelper.filterInvoices(allInvoices, currentPeriod);
         int selectedIdx = headerBuilder.getBusinessUnitCombo().getSelectedIndex();
-        if (selectedIdx <= 0 || businessUnits.isEmpty()) {
-            mainContentContainer.add(ExecutiveTvConsolidatedViewBuilder.build(businessUnits, filtered, currentPeriod, lightMode), BorderLayout.CENTER);
+        if (selectedIdx <= 0 || selectedIdx > businessUnits.size()) {
+            mainContentContainer.add(ExecutiveTvConsolidatedViewBuilder.build(businessUnits, filtered, currentPeriod,
+                    lightMode, this::onOpenGoals), BorderLayout.CENTER);
         } else {
             BusinessUnitDTO unit = businessUnits.get(selectedIdx - 1);
-            mainContentContainer.add(ExecutiveTvUnitViewBuilder.build(unit, filtered, currentPeriod, lightMode), BorderLayout.CENTER);
+            mainContentContainer.add(ExecutiveTvUnitViewBuilder.build(unit, filtered, currentPeriod, lightMode,
+                    this::onOpenGoals), BorderLayout.CENTER);
         }
+        headerBuilder.refreshContext();
         mainContentContainer.revalidate();
         mainContentContainer.repaint();
     }
@@ -144,8 +157,7 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         lightMode = !lightMode;
         getContentPane().setBackground(ExecutiveTvTheme.getBgColor(lightMode));
         headerBuilder.applyTheme(lightMode);
-        headerBuilder.updatePeriodStyles(currentPeriod, lightMode);
-        shortcutsHint.setForeground(ExecutiveTvTheme.getTextMutedColor(lightMode));
+        rebuildFooter();
         renderCurrentView();
     }
 
@@ -176,19 +188,23 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
             } catch (Exception ex) { setBounds(GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds()); }
         } else {
             if (gd.getFullScreenWindow() == this) gd.setFullScreenWindow(null);
-            Dimension screen = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-            setSize(Math.min(screen.width - 40, 1366), Math.min(screen.height - 60, 768));
-            setLocationRelativeTo(getOwner());
+            applyWindowedBounds();
         }
         headerBuilder.setFullScreenState(isFullScreen);
         setVisible(true);
+    }
+
+    private void applyWindowedBounds() {
+        Dimension screen = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+        setSize(Math.min(screen.width - 40, 1366), Math.min(screen.height - 60, 800));
+        setLocationRelativeTo(getOwner());
     }
 
     @Override public void onClose() { timerCoordinator.stop(); dispose(); }
     @Override public void onPeriodSelected(Period p) { if (p != null) { currentPeriod = p; headerBuilder.updatePeriodStyles(p, lightMode); renderCurrentView(); } }
     @Override public void onBusinessUnitChanged(int idx) { if (!timerCoordinator.isSlideshowActive()) renderCurrentView(); }
     @Override public void onToggleSlideshow() { boolean act = timerCoordinator.toggleSlideshow(); headerBuilder.updateSlideshowButton(act, timerCoordinator.getSecondsToNextSlide()); }
-    @Override public void onClockTick(String t) { headerBuilder.setClockText(t); }
+    @Override public void onClockTick(LocalDateTime now) { headerBuilder.setClock(now); }
     @Override public void onAutoRefresh() { loadData(); }
     @Override public void onCountdownTick(int s) { headerBuilder.updateSlideshowButton(true, s); }
     @Override public void onSlideAdvance() {
@@ -196,4 +212,3 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         if (total > 1) { slideshowIndex = (slideshowIndex + 1) % total; headerBuilder.getBusinessUnitCombo().setSelectedIndex(slideshowIndex); renderCurrentView(); }
     }
 }
-

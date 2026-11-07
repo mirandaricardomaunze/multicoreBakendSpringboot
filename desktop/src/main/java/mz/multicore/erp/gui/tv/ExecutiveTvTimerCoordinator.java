@@ -2,7 +2,6 @@ package mz.multicore.erp.gui.tv;
 
 import javax.swing.Timer;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Coordenador dos temporizadores de atualização do painel de TV (Relógio, Auto-refresh e Rodízio).
@@ -10,10 +9,8 @@ import java.time.format.DateTimeFormatter;
 public class ExecutiveTvTimerCoordinator {
 
     public static final int SLIDESHOW_DURATION_SECONDS = 15;
-    private static final DateTimeFormatter CLOCK_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy  •  HH:mm:ss");
-
     public interface TimerListener {
-        void onClockTick(String formattedTime);
+        void onClockTick(LocalDateTime now);
         void onAutoRefresh();
         void onSlideAdvance();
         void onCountdownTick(int secondsRemaining);
@@ -33,10 +30,10 @@ public class ExecutiveTvTimerCoordinator {
 
     public void start() {
         clockTimer = new Timer(1000, e -> {
-            if (listener != null) listener.onClockTick(LocalDateTime.now().format(CLOCK_FMT));
+            if (listener != null) listener.onClockTick(LocalDateTime.now());
         });
         clockTimer.start();
-        if (listener != null) listener.onClockTick(LocalDateTime.now().format(CLOCK_FMT));
+        if (listener != null) listener.onClockTick(LocalDateTime.now());
 
         autoRefreshTimer = new Timer(45000, e -> {
             if (listener != null) listener.onAutoRefresh();
