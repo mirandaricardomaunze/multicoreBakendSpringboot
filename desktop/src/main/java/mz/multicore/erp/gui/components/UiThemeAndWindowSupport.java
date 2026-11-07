@@ -181,6 +181,7 @@ final class UiThemeAndWindowSupport {
         } else {
             restyleAllWindows(previous, theme);
         }
+        ThemeChangeListeners.fire(theme);
     }
 
     static Theme cycleTheme() {

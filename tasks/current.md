@@ -39,6 +39,11 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Decisões permanentes relevantes
 
+35. **Painel Executivo com Tema e Modais Próprios:**
+    - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.
+    - Os modais (Metas, Vendedores) abrem sempre no tema actual do painel, na moldura `ExecutiveTvDialog`.
+    - SPEC em `docs/SALA_DE_REUNIOES_TV_SPEC.md` §7 (ET-01 a ET-07); harness em `ExecutiveThemeConsistencyHarnessTest`.
+
 34. **Circuito da Encomenda Validado no Backend:**
     - A faturação directa não aceita pedidos de separação. A conferência exige todas as linhas.
       A folha A4 é `POST`.

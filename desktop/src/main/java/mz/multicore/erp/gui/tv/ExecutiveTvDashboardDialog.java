@@ -1,30 +1,29 @@
 package mz.multicore.erp.gui.tv;
 
 import mz.multicore.erp.desktop.client.ComercialApiClient;
+import mz.multicore.erp.gui.components.Theme;
+import mz.multicore.erp.gui.components.ThemeChangeListeners;
 import mz.multicore.erp.gui.components.UIHelper;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 
 import javax.swing.JComponent;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Painel Executivo para a sala de reuniões e a TV da administração, pensado para ecrã inteiro.
@@ -49,7 +48,9 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
     private final Long companyId;
     private final ExecutiveTvHeaderBuilder headerBuilder;
     private final ExecutiveTvTimerCoordinator timerCoordinator;
-    private boolean lightMode, isFullScreen, loading;
+    private final Window anchor; // só para posicionar: o painel não é filho da janela principal
+    private final Consumer<Theme> appThemeListener = theme -> applyPanelTheme(theme == Theme.LIGHT); // alto contraste fica "Slate"
+    private boolean lightMode = UIHelper.isLight(), isFullScreen, loading;
     private Period currentPeriod = Period.ESTE_MES;
     private int slideshowIndex = 0;
     private List<BusinessUnitDTO> businessUnits = new ArrayList<>();
@@ -59,7 +60,8 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
     private boolean syncOk = true; // falso quando a última leitura ao servidor falhou ou não há cliente
 
     public ExecutiveTvDashboardDialog(Window owner, ComercialApiClient comercialApiClient, Long companyId) {
-        super(owner, "Painel Executivo", ModalityType.MODELESS);
+        super((Window) null, "Painel Executivo", ModalityType.MODELESS); // sem dono: a troca de tema descarta a janela principal
+        this.anchor = owner;
         this.comercialApiClient = comercialApiClient;
         this.companyId = companyId != null ? companyId : 1L;
         this.headerBuilder = new ExecutiveTvHeaderBuilder(this);
@@ -68,6 +70,14 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         setupKeyBindings();
         timerCoordinator.start();
         loadData();
+        ThemeChangeListeners.add(appThemeListener);
+    }
+
+    @Override // Esc, botão ou X: pára os temporizadores e deixa de ouvir o tema
+    public void dispose() {
+        timerCoordinator.stop();
+        ThemeChangeListeners.remove(appThemeListener);
+        super.dispose();
     }
 
     private void initComponents() {
@@ -77,27 +87,15 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         add(headerBuilder.build(lightMode, currentPeriod), BorderLayout.NORTH);
 
         mainContentContainer = ExecutiveTvComponents.transparent(new BorderLayout());
-        mainContentContainer.setBorder(new EmptyBorder(16, 20, 8, 20));
-        add(mainContentContainer, BorderLayout.CENTER);
+        mainContentContainer.setBorder(new EmptyBorder(16, 20, 20, 20)); // 20 px em baixo: os cartões não colam ao rodapé
+        add(ExecutiveTvComponents.responsiveScroll(mainContentContainer, ExecutiveTvComponents.MIN_CONTENT_HEIGHT), BorderLayout.CENTER);
         rebuildFooter();
         applyWindowedBounds();
-        addWindowListener(new WindowAdapter() {
-            @Override public void windowClosing(WindowEvent e) { timerCoordinator.stop(); }
-        });
     }
 
-    /** Rodapé curto: atalhos à esquerda, estado da sincronização à direita. */
     private void rebuildFooter() {
         if (footer != null) remove(footer);
-        footer = ExecutiveTvComponents.transparent(new BorderLayout());
-        footer.setBorder(new EmptyBorder(4, 22, 10, 22));
-        footer.add(ExecutiveTvComponents.label("F11  ecrã inteiro     Espaço  rodízio     Esc  fechar", Font.PLAIN, 12,
-                ExecutiveTvTheme.getTextFaintColor(lightMode)), BorderLayout.WEST);
-        JLabel sync = ExecutiveTvComponents.label(syncText, Font.PLAIN, 12, ExecutiveTvTheme.getTextMutedColor(lightMode));
-        sync.setIcon(UIHelper.icon("fas-circle", 8, syncOk ? UIHelper.APPROVED_GREEN : UIHelper.PENDING_YELLOW));
-        sync.setIconTextGap(8);
-        footer.add(sync, BorderLayout.EAST);
-        add(footer, BorderLayout.SOUTH);
+        add(footer = ExecutiveTvFooterBuilder.build(lightMode, syncText, syncOk), BorderLayout.SOUTH);
         footer.revalidate();
         footer.repaint();
     }
@@ -153,8 +151,11 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
     }
 
     @Override
-    public void onToggleTheme() {
-        lightMode = !lightMode;
+    public void onToggleTheme() { applyPanelTheme(!lightMode); } // os modais lêem lightMode ao abrir: seguem a troca
+
+    private void applyPanelTheme(boolean light) {
+        if (!isDisplayable()) return;
+        lightMode = light;
         getContentPane().setBackground(ExecutiveTvTheme.getBgColor(lightMode));
         headerBuilder.applyTheme(lightMode);
         rebuildFooter();
@@ -166,7 +167,7 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
         if ((businessUnits == null || businessUnits.isEmpty()) && comercialApiClient != null) {
             try { List<BusinessUnitDTO> loaded = comercialApiClient.getActiveBusinessUnits(companyId); if (loaded != null && !loaded.isEmpty()) businessUnits = loaded; } catch (Exception ignored) {}
         }
-        BusinessUnitGoalManager.showGoalsDialog(this, businessUnits, this::renderCurrentView);
+        BusinessUnitGoalManager.showGoalsDialog(this, businessUnits, this::renderCurrentView, lightMode);
     }
 
     @Override
@@ -178,7 +179,7 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
     @Override
     public void onToggleFullScreen() {
         GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        dispose();
+        super.dispose(); // só para trocar a moldura: os temporizadores continuam
         isFullScreen = !isFullScreen;
         setUndecorated(isFullScreen);
         if (isFullScreen) {
@@ -197,10 +198,10 @@ public class ExecutiveTvDashboardDialog extends JDialog implements ExecutiveTvHe
     private void applyWindowedBounds() {
         Dimension screen = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
         setSize(Math.min(screen.width - 40, 1366), Math.min(screen.height - 60, 800));
-        setLocationRelativeTo(getOwner());
+        setLocationRelativeTo(anchor);
     }
 
-    @Override public void onClose() { timerCoordinator.stop(); dispose(); }
+    @Override public void onClose() { dispose(); }
     @Override public void onPeriodSelected(Period p) { if (p != null) { currentPeriod = p; headerBuilder.updatePeriodStyles(p, lightMode); renderCurrentView(); } }
     @Override public void onBusinessUnitChanged(int idx) { if (!timerCoordinator.isSlideshowActive()) renderCurrentView(); }
     @Override public void onToggleSlideshow() { boolean act = timerCoordinator.toggleSlideshow(); headerBuilder.updateSlideshowButton(act, timerCoordinator.getSecondsToNextSlide()); }

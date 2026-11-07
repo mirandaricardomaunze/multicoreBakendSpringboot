@@ -12,6 +12,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
@@ -39,6 +40,8 @@ public final class ExecutiveTvComponents {
     public static final int RADIUS = 16;
     public static final int GAP = 14;
     public static final int CONTROL_HEIGHT = 38;
+    /** Altura mínima do conteúdo: abaixo disto a página rola em vez de cortar os cartões de baixo. */
+    public static final int MIN_CONTENT_HEIGHT = 600;
 
     private ExecutiveTvComponents() {}
 
@@ -189,8 +192,20 @@ public final class ExecutiveTvComponents {
      * e a barra é fina e transparente, como no resto do ERP.
      */
     public static JScrollPane verticalScroll(JComponent content) {
-        WidthTrackingPanel holder = new WidthTrackingPanel();
-        holder.add(content, BorderLayout.NORTH);
+        return scrollFor(content, BorderLayout.NORTH, 0);
+    }
+
+    /**
+     * Página responsiva: com altura suficiente o conteúdo ocupa a janela toda (sem barra);
+     * abaixo de {@code minHeight} mantém essa altura e passa a rolar, em vez de esmagar os cartões.
+     */
+    public static JScrollPane responsiveScroll(JComponent content, int minHeight) {
+        return scrollFor(content, BorderLayout.CENTER, minHeight);
+    }
+
+    private static JScrollPane scrollFor(JComponent content, String position, int minHeight) {
+        WidthTrackingPanel holder = new WidthTrackingPanel(minHeight);
+        holder.add(content, position);
         JScrollPane scroll = new JScrollPane(holder, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setOpaque(false);
@@ -223,17 +238,28 @@ public final class ExecutiveTvComponents {
         return g2;
     }
 
+    /** Acompanha sempre a largura; acompanha a altura só enquanto houver pelo menos {@code minHeight}. */
     private static final class WidthTrackingPanel extends JPanel implements Scrollable {
-        WidthTrackingPanel() {
+        private final int minHeight;
+
+        WidthTrackingPanel(int minHeight) {
             super(new BorderLayout());
+            this.minHeight = minHeight;
             setOpaque(false);
+        }
+
+        @Override public Dimension getPreferredSize() {
+            Dimension pref = super.getPreferredSize();
+            return new Dimension(pref.width, Math.max(pref.height, minHeight));
         }
 
         @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
         @Override public int getScrollableUnitIncrement(Rectangle r, int o, int d) { return 24; }
         @Override public int getScrollableBlockIncrement(Rectangle r, int o, int d) { return r.height; }
         @Override public boolean getScrollableTracksViewportWidth() { return true; }
-        @Override public boolean getScrollableTracksViewportHeight() { return false; }
+        @Override public boolean getScrollableTracksViewportHeight() {
+            return minHeight > 0 && getParent() instanceof JViewport viewport && viewport.getHeight() >= minHeight;
+        }
     }
 
     /** Superfície arredondada não opaca (o canto mostra o fundo do pai). */

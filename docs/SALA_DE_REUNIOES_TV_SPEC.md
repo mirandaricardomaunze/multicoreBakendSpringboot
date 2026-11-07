@@ -81,3 +81,34 @@ da barra, em rótulos grandes. Estado e cores vêm de `GoalStatus`.
 - **`F11`**: Alternar ecrã inteiro / janela.
 - **`Espaço`**: Iniciar ou Pausar o Rodízio Automático de ecrãs.
 - **`ESC`**: Sair do Painel e voltar ao ERP.
+
+---
+
+## 7. Tema e modais (2026-11-08)
+
+O painel tem dois temas, "Slate" (escuro) e "Executive Light" (claro), definidos em `ExecutiveTvTheme`,
+que é a única fonte de cores do pacote.
+
+- **Abertura:** o painel abre no tema da aplicação. O tema claro abre "Executive Light"; o escuro e o
+  alto contraste abrem "Slate".
+- **Troca no painel:** o botão de tema do cabeçalho troca o painel. Os modais lêem o tema actual ao
+  abrir, por isso seguem a troca.
+- **Troca na aplicação:** a troca reconstrói a janela principal. O painel já não é filho dela: não
+  fecha, e acompanha o tema novo (`ThemeChangeListeners`). Antes fechava, e os temporizadores do
+  rodízio e da actualização ficavam a correr.
+- **Modais:** Metas (`ExecutiveTvGoalsDialog`) e Vendedores (`SellerPerformanceDialog`) usam a mesma
+  moldura, `ExecutiveTvDialog`: Ctrl+S grava, Esc fecha, o erro aparece dentro do modal e o painel
+  fica escurecido por trás. Campos, caixas de selecção e tabela vêm de `ExecutiveTvFormControls`.
+  Antes, as Metas abriam brancas por cima do painel escuro, e a tabela dos Vendedores também.
+- **Valores:** os Vendedores mostram os valores com `DisplayNumbers` (`1.460,00 MT`), como o resto
+  do ERP.
+
+| Id | Regra | Harness |
+|----|-------|---------|
+| ET-01 | Os modais do painel não usam cores nem fábricas do tema da aplicação | `ExecutiveThemeConsistencyHarnessTest` |
+| ET-02 | Metas e Vendedores abrem na mesma moldura | idem |
+| ET-03 | Os modais recebem o tema actual do painel | idem |
+| ET-04 | O painel abre no tema da aplicação e acompanha a troca sem fechar | idem e `ThemeChangeListenersTest` |
+| ET-05 | Fechar pára os temporizadores; alternar o ecrã inteiro não | idem |
+| ET-06 | Ranking dos vendedores por faturação, com quota | idem |
+| ET-07 | A moldura pinta-se com o fundo do painel em cada tema | idem |
