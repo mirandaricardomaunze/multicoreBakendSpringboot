@@ -31,13 +31,14 @@ final class SectorModules {
     static final String EXPIRY = "validades";
     static final String PRODUCTION_PLAN = "plano-producao";
     static final String CUSTOM_ORDERS = "agenda-encomendas";
+    static final String CONSIGNMENT = "consignacao";
 
     private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
             ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades", PRODUCTION_PLAN, "Plano de Produção",
-            CUSTOM_ORDERS, "Agenda de Encomendas");
+            CUSTOM_ORDERS, "Agenda de Encomendas", CONSIGNMENT, "Consignação e Rota");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
             PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES",
-            PRODUCTION_PLAN, "PRODUCTION", CUSTOM_ORDERS, "CUSTOM_ORDERS");
+            PRODUCTION_PLAN, "PRODUCTION", CUSTOM_ORDERS, "CUSTOM_ORDERS", CONSIGNMENT, "CONSIGNMENT");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -60,6 +61,7 @@ final class SectorModules {
         ExpiryApiClient expiryApi = sector == null ? null : sector.expiry();
         ProductionPlanApiClient planApi = sector == null ? null : sector.productionPlan();
         CustomOrdersApiClient customOrdersApi = sector == null ? null : sector.customOrders();
+        ConsignmentApiClient consignmentApi = sector == null ? null : sector.consignment();
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
@@ -69,6 +71,7 @@ final class SectorModules {
         if (expiryApi != null) registry.addExpiry(expiryApi, comercialApi);
         if (planApi != null) registry.addProductionPlan(planApi, productionApi, comercialApi, inventoryApi);
         if (customOrdersApi != null) registry.addCustomOrders(customOrdersApi, comercialApi);
+        if (consignmentApi != null) registry.addConsignment(consignmentApi, comercialApi, inventoryApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -239,6 +242,30 @@ final class SectorModules {
                     .subtract(o.advancePaid()).max(BigDecimal.ZERO)).reduce(BigDecimal.ZERO, BigDecimal::add)));
         });
         modules.put(CUSTOM_ORDERS, new Module(CUSTOM_ORDERS, "fas-birthday-cake", UIHelper.ACCENT_PINK, true, page, panel::reload));
+    }
+
+    private void addConsignment(ConsignmentApiClient consignmentApi, ComercialApiClient comercialApi, InventoryApiClient inventoryApi) {
+        ConsignmentPanel panel = new ConsignmentPanel(consignmentApi, comercialApi, inventoryApi);
+        ModulePage page = new ModulePage("fas-truck", UIHelper.ACCENT_BLUE, "Consignação e Rota",
+                "Pão e bebidas deixados nos revendedores: guia de entrega, recolha das sobras e fatura só do vendido.",
+                new String[][]{{"No revendedor", "Guias por acertar", "fas-truck", "amber"},
+                        {"Entregue hoje", "Unidades na rota", "fas-truck-loading", "blue"},
+                        {"Faturado (30 dias)", "Só o vendido", "fas-file-invoice-dollar", "green"},
+                        {"Sobras", "Devolvido nas guias acertadas", "fas-undo", null}}, panel);
+        panel.onLoaded(all -> {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            var settled = all.stream().filter(d -> d.status() == mz.multicore.erp.modules.consignment.model.ConsignmentStatus.SETTLED).toList();
+            BigDecimal delivered = settled.stream().map(d -> ConsignmentPanel.sum(d, true)).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal sold = settled.stream().map(ConsignmentPanel::sold).reduce(BigDecimal.ZERO, BigDecimal::add);
+            page.setIndicator("No revendedor", String.valueOf(all.size() - settled.size()));
+            page.setIndicator("Entregue hoje", mz.multicore.erp.architecture.format.DisplayNumbers.qty(all.stream()
+                    .filter(d -> today.equals(d.deliveryDate())).map(d -> ConsignmentPanel.sum(d, true)).reduce(BigDecimal.ZERO, BigDecimal::add)));
+            page.setIndicator("Faturado (30 dias)", UIHelper.formatMzn(settled.stream().map(d -> d.invoiceTotal() == null ? BigDecimal.ZERO
+                    : d.invoiceTotal()).reduce(BigDecimal.ZERO, BigDecimal::add)));
+            page.setIndicator("Sobras", delivered.signum() == 0 ? "—" : delivered.subtract(sold).multiply(BigDecimal.valueOf(100))
+                    .divide(delivered, 1, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + "%");
+        });
+        modules.put(CONSIGNMENT, new Module(CONSIGNMENT, "fas-truck", UIHelper.ACCENT_BLUE, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

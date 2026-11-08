@@ -17,14 +17,17 @@ public class SectorApiClients {
     private final ExpiryApiClient expiry;
     private final ProductionPlanApiClient productionPlan;
     private final CustomOrdersApiClient customOrders;
+    private final ConsignmentApiClient consignment;
 
     public SectorApiClients(AdvancesApiClient advances, ButcheryApiClient butchery, ExpiryApiClient expiry,
-                            ProductionPlanApiClient productionPlan, CustomOrdersApiClient customOrders) {
+                            ProductionPlanApiClient productionPlan, CustomOrdersApiClient customOrders,
+                            ConsignmentApiClient consignment) {
         this.advances = advances;
         this.butchery = butchery;
         this.expiry = expiry;
         this.productionPlan = productionPlan;
         this.customOrders = customOrders;
+        this.consignment = consignment;
     }
 
     public AdvancesApiClient advances() {
@@ -45,5 +48,9 @@ public class SectorApiClients {
 
     public CustomOrdersApiClient customOrders() {
         return customOrders;
+    }
+
+    public ConsignmentApiClient consignment() {
+        return consignment;
     }
 }

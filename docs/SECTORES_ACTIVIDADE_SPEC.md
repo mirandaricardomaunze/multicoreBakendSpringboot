@@ -36,7 +36,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C08 | Entregas e frete | Parcial · **frete por zona feito** (Ctrl+Alt+F, zona = serviço `FRT-`) | Frota tem manifestos e paragens. Falta frete por zona/viagem/peso como linha de serviço, agenda de entregas, prova de entrega (assinatura, foto, nome de quem recebeu) e devolução na obra |
 | SA-C09 | Obras / projectos do cliente | Falta | Um empreiteiro, várias obras. Entregas, faturas, crédito, preços e extracto por obra |
 | SA-C10 | Adiantamentos e sinais | **Feito** · `ADIANTAMENTOS_SPEC` (fatura de adiantamento com IVA, NC + compensação, saldo em 2101; V123) | Sinal de encomenda (bolo, carne para festa, blocos por medida), adiantamento de empreiteiro; recibo de adiantamento e abate na fatura final |
-| SA-C11 | Consignação e venda em rota | Falta | Padaria entrega pão a revendedores, recolhe sobras e fatura o líquido; distribuidor de bebidas faz rota diária com carga e acerto |
+| SA-C11 | Consignação e venda em rota | **Feito (F4)** · `CONSIGNACAO_ROTA_SPEC` (armazém "Em consignação", fatura só do vendido; V128) | Padaria entrega pão a revendedores, recolhe sobras e fatura o líquido; distribuidor de bebidas faz rota diária com carga e acerto |
 | SA-C12 | Vasilhame e embalagens retornáveis | Falta | Grades e garrafas, botijas de gás, paletes de blocos. Conta-corrente de vasilhame por cliente, caução, devolução |
 | SA-C13 | Encomendas com data e personalização | **Feito (F4)** · `ENCOMENDAS_PERSONALIZADAS_SPEC` (agenda, fotografia, plano, ficha; V127) | Encomendas existem. Falta data/hora de entrega, ligação à produção, notas de personalização e imagem de referência |
 | SA-C14 | Sobras e remarcação | **Remarcação feita (F3)** · `VALIDADES_REMARCACAO_SPEC` (regras por dias, promoção automática) | Promoções existem. Falta remarcação automática por idade do lote (pão de ontem, carne a 1 dia da validade) e fecho de dia com sobras |
@@ -155,4 +155,4 @@ Relatórios de excepção no ecrã e em PDF, com alerta no Painel Executivo:
 2. Fatura de adiantamento (SA-C10): que documento fiscal a AT-MZ exige. Jurista.
 3. Material pago por levantar (SA-C07): o preço fica congelado no pagamento? Prazo máximo de levantamento?
 4. Vasilhame (SA-C12): caução cobrada em dinheiro ou só em conta-corrente?
-5. Consignação (SA-C11): a mercadoria entregue sai do stock na entrega ou só no acerto?
+5. ~~Consignação (SA-C11): a mercadoria entregue sai do stock na entrega ou só no acerto?~~ Decidido em 2026-11-08: sai na entrega para o armazém "Em consignação"; no acerto fatura-se só o vendido (`CONSIGNACAO_ROTA_SPEC`).
