@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Indicadores consolidados de reconciliação de uma conta bancária.
+ * Consolidated reconciliation indicators for a bank account.
  */
 public record BankReconciliationSummaryDTO(
         Long treasuryAccountId,

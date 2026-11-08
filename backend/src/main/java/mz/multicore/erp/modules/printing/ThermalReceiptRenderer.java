@@ -38,11 +38,15 @@ public final class ThermalReceiptRenderer {
      */
     public static void companyHeader(Document doc, Company company) {
         logo(doc, company);
-        centered(doc, company == null ? "Empresa" : company.getName(), PdfTheme.subtitleFont());
+        centered(doc, CompanyIdentityText.displayName(company, "Empresa"), PdfTheme.subtitleFont());
         if (company != null) {
+            String legalName = CompanyIdentityText.legalNameLine(company);
+            if (legalName != null) centered(doc, legalName, PdfTheme.smallFont());
             if (company.getTaxId() != null) centered(doc, "NUIT: " + company.getTaxId(), PdfTheme.smallFont());
-            if (notBlank(company.getAddress())) centered(doc, company.getAddress(), PdfTheme.smallFont());
-            if (notBlank(company.getPhone())) centered(doc, "Tel: " + company.getPhone(), PdfTheme.smallFont());
+            String address = company.formattedAddress();
+            if (notBlank(address)) centered(doc, address, PdfTheme.smallFont());
+            String phones = CompanyIdentityText.phones(company);
+            if (phones != null) centered(doc, "Tel: " + phones, PdfTheme.smallFont());
             if (notBlank(company.getEmail())) centered(doc, company.getEmail(), PdfTheme.smallFont());
         }
         dottedLine(doc);

@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Pedido de importação e registo de um extracto bancário para conferência de tesouraria.
+ * Request to import and record a bank statement for treasury review.
  */
 public record ImportBankStatementRequest(
         @NotNull(message = "A conta de tesouraria é obrigatória.")

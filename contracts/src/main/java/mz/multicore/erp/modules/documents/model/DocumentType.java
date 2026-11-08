@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.documents.model;
 
-/** Tipo de documento com configuração de colunas independente. */
+/** Document type with an independent column configuration. */
 public enum DocumentType {
     COMMERCIAL("Documentos Comerciais"),
     POS_RECEIPT("Recibo POS");

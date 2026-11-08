@@ -4,8 +4,8 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 /**
- * Validador para a anotação {@link ValidBiMZ}.
- * Valores nulos ou em branco são considerados válidos (para campos opcionais; use @NotBlank para tornar obrigatório).
+ * Validator for the {@link ValidBiMZ} annotation.
+ * Null or blank values are valid for optional fields; use @NotBlank to make a field mandatory.
  */
 public class ValidBiMZValidator implements ConstraintValidator<ValidBiMZ, String> {
 

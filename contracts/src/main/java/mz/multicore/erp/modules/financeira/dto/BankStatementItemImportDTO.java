@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Linha de movimento a importar a partir de um ficheiro de extracto bancário.
+ * Transaction line imported from a bank-statement file.
  */
 public record BankStatementItemImportDTO(
         LocalDate transactionDate,

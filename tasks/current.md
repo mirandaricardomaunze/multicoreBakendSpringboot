@@ -10,6 +10,19 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Trabalho activo
 
+- Grafo profissional de entrega em `tasks/graph.yaml`, governado por
+  `docs/DELIVERY_GRAPH_SPEC.md`. O `DeliveryGraphHarnessTest` valida dependências, ciclos, estados e
+  evidências e gera `backend/target/delivery-graph-report.md` com trabalho executável e bloqueios.
+- Migração transversal dos comentários e Javadocs de código para inglês profissional, conforme
+  `docs/CODE_COMMENT_LANGUAGE_SPEC.md`. A regra canónica já foi alterada; o legado deve ser revisto
+  por domínio, preservando conhecimento fiscal e operacional e removendo comentários redundantes.
+- Sectores de actividade (talho, padaria, estaleiro e outros) em `docs/SECTORES_ACTIVIDADE_SPEC.md`,
+  aprovada em 2026-11-08. F1 feita (perfil de actividade, unidades de medida, tabelas de preço; V112),
+  ainda por rever visualmente no desktop. F2 em curso: material por levantar (talão LV, V120) e granel por
+  medição (V121) feitos; faltam unidade nas linhas, obras, frete, adiantamentos e contingência das guias.
+- Registo profissional de empresas pelo superadmin em `docs/EMPRESA_CADASTRO_PROFISSIONAL_SPEC.md`:
+  perfil legal/fiscal/morada (V113), registo atómico com administrador, assinatura e banco, assistente
+  em passos. Corrigido o registo de empresa partido desde `513a0ad`. Falta a verificação ao vivo (CP-50..54).
 - Sem fase de código em curso. Paridade PostgreSQL e formato numérico concluídos e integrados em
   `main`; ver `docs/POSTGRES_SCHEMA_PARITY_SPEC.md` e `docs/FORMATO_NUMERICO_SPEC.md`.
 - Design do ecrã POS revisto em `docs/POS_DESIGN_ECRA_SPEC.md`. A balança real continua sem driver de

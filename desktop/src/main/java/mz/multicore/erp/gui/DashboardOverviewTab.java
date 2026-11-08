@@ -8,10 +8,11 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.util.function.Consumer;
 
-/** Aba 1 do Dashboard: Visão Geral, KPIs Comerciais, Gráficos e Widgets. */
+/** Dashboard tab containing the overview, commercial KPIs, charts, and operational widgets. */
 final class DashboardOverviewTab {
 
     private static final String NEXT_STEP_HINT = "Registe uma venda no POS ou escolha outro período.";
+    static final String NO_PENDING_MESSAGE = "Tudo em dia";
 
     private final Consumer<String> navigationHandler;
 
@@ -45,8 +46,9 @@ final class DashboardOverviewTab {
         JPanel commercialKpiGrid = KpiCard.createGrid(4, 10, 10);
 
         balanceValLabel = KpiCard.valueLabel("0,00 MT", 19);
+        // The balance is always current; the caption prevents it from appearing period-filtered.
         commercialKpiGrid.add(buildKpiCard("SALDO DE TESOURARIA", "fas-piggy-bank", UIHelper.KPI_INFO_SOFT,
-                balanceValLabel, null, UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
+                balanceValLabel, new JLabel("Saldo actual de caixa e bancos"), UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
                 "Clique para abrir módulo Financeiro / Tesouraria", "financeiro"));
 
         salesValLabel = KpiCard.valueLabel("0,00 MT", 19);
@@ -70,10 +72,10 @@ final class DashboardOverviewTab {
                 "Clique para abrir Ponto de Venda (POS)", "pos"));
 
         taxSummaryLabel = KpiCard.valueLabel("0,00 MT", 19);
-        taxDetailLabel = new JLabel("IVA Liquidado / Deduzido");
+        taxDetailLabel = new JLabel("A pagar · Liquidado: 0,00 | Dedutível: 0,00 MT");
         taxDetailLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 10));
         taxDetailLabel.setForeground(UIHelper.KPI_SUCCESS_SOFT);
-        commercialKpiGrid.add(buildKpiCard("RESUMO FISCAL DO IVA", "fas-percentage", UIHelper.KPI_SUCCESS_SOFT,
+        commercialKpiGrid.add(buildKpiCard("IVA DO PERÍODO", "fas-percentage", UIHelper.KPI_SUCCESS_SOFT,
                 taxSummaryLabel, taxDetailLabel,
                 UIHelper.KPI_INFO_DARK, UIHelper.KPI_INFO_END,
                 "Clique para abrir Área Fiscal", "fiscal"));
@@ -87,13 +89,15 @@ final class DashboardOverviewTab {
         financialChart = new SimpleBarChart("Vendas, Compras e IVA");
         salesChannelPieChart = new SimplePieChart("Vendas por Canal (POS vs Faturas)", false);
         operationsChart = new SimpleBarChart("Operações e Pendências");
-        operationsChart.setEmptyMessage("Sem pendências");
+        operationsChart.setEmptyMessage(NO_PENDING_MESSAGE);
+        operationsChart.setEmptyHint("Sem aprovações, tickets ou stock baixo por tratar.");
+        operationsChart.setEmptyIcon(UIHelper.icon("fas-check-circle", 30, UIHelper.APPROVED_GREEN));
         financialStructurePieChart = new SimplePieChart("Estrutura Financeira (Receita, Compras, IVA)", false);
         financialChart.setEmptyHint(NEXT_STEP_HINT);
         salesChannelPieChart.setEmptyHint(NEXT_STEP_HINT);
         financialStructurePieChart.setEmptyHint(NEXT_STEP_HINT);
 
-        // As pendências vêm primeiro: é o que o gestor pode resolver hoje.
+        // Pending items come first because they represent work the manager can resolve today.
         JPanel priorityRow = new JPanel(new GridLayout(1, 2, 12, 12));
         priorityRow.setOpaque(false);
         priorityRow.add(createChartCard(operationsChart));
@@ -154,18 +158,22 @@ final class DashboardOverviewTab {
     void applyData(DashboardDataCoordinator.DashboardData data) {
         balanceValLabel.setText(String.format("%,.2f MT", data.totalBalance()));
         salesValLabel.setText(String.format("%,.2f MT", data.totalSales()));
+        boolean comparable = DashboardTrendCalculator.hasComparison(data.compLabel());
         salesTrendBadge.updateTrend(data.salesTrendPercent(), data.compLabel());
+        salesTrendBadge.setVisible(comparable);
         salesSubLabel.setText(DashboardTrendCalculator.activityHint(data.totalSales(), data.previousSales(), data.compLabel(),
                 "Valor médio: " + DashboardTrendCalculator.formatAverageTicket(data.salesAvgTicket())));
 
         posSalesValLabel.setText(String.format("%,.2f MT", data.posSalesAmount()));
         posTrendBadge.updateTrend(data.posTrendPercent(), data.compLabel());
+        posTrendBadge.setVisible(comparable);
         posSalesCountSub.setText(DashboardTrendCalculator.activityHint(data.posSalesAmount(), data.previousPosSales(), data.compLabel(),
                 String.format("%d venda%s · média: %,.2f MT", data.posSalesCount(), data.posSalesCount() == 1 ? "" : "s", data.posAvgTicket())));
 
-        String labelPrefix = data.netVat().compareTo(BigDecimal.ZERO) >= 0 ? "IVA a Pagar: " : "IVA a Recuperar: ";
-        taxSummaryLabel.setText(labelPrefix + String.format("%,.2f MT", data.netVat().abs()));
-        taxDetailLabel.setText(String.format("Liquidado: %,.2f | Dedutível: %,.2f MT", data.outputVat(), data.inputVat()));
+        // Keep the value consistent with other cards by placing its direction in the caption.
+        String direction = data.netVat().compareTo(BigDecimal.ZERO) >= 0 ? "A pagar" : "A recuperar";
+        taxSummaryLabel.setText(String.format("%,.2f MT", data.netVat().abs()));
+        taxDetailLabel.setText(String.format("%s · Liquidado: %,.2f | Dedutível: %,.2f MT", direction, data.outputVat(), data.inputVat()));
 
         financialRow.setVisible(SimpleBarChart.hasData(
                 new BigDecimal[]{data.totalSales(), data.totalPurchases(), data.posSalesAmount()}));

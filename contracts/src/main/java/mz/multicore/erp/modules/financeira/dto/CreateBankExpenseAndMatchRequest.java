@@ -7,9 +7,9 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 /**
- * Pedido para registar um encargo ou comissão bancária diretamente a partir do extracto e reconciliar de imediato.
+ * Request to record a bank charge or fee directly from a statement and reconcile it immediately.
  *
- * <p>{@code amount} nulo é válido: o serviço assume o valor absoluto da linha do extracto.
+ * <p>A null {@code amount} is valid; the service uses the absolute value of the statement line.
  */
 public record CreateBankExpenseAndMatchRequest(
         @NotNull(message = "A linha do extracto é obrigatória.")

@@ -27,8 +27,8 @@ public final class LogisticsLoadCalculator {
     }
 
     /**
-     * Recomenda o porte de viatura e capacidade de transporte com base no peso total da carga.
-     * Apoia o armazém e logística na alocação da viatura adequada para o carregamento.
+     * Recommends vehicle size and transport capacity from the load's total weight.
+     * Helps warehouse and logistics staff allocate a suitable vehicle for loading.
      */
     public static String recommendedVehicleType(BigDecimal totalWeightKg) {
         if (totalWeightKg == null || totalWeightKg.signum() <= 0) {

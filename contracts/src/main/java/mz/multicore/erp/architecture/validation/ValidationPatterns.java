@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.util.regex.Pattern;
 
 /**
- * Padrões de validação canónicos partilhados entre backend e frontend.
- * Fonte única de verdade para formatos de dados do ERP Multicore em Moçambique.
+ * Canonical validation patterns shared by the backend and frontend.
+ * Single source of truth for Multicore ERP data formats in Mozambique.
  */
 public final class ValidationPatterns {
 
@@ -15,19 +15,19 @@ public final class ValidationPatterns {
     public static final String NUIT_REGEX = "^\\d{9}$";
     public static final Pattern NUIT_PATTERN = Pattern.compile(NUIT_REGEX);
 
-    /** Telefones móveis (Vodacom 84/85, Tmcel 82/83, Movitel 86/87) e fixos (21-28) em Moçambique. */
+    /** Mozambican mobile (Vodacom 84/85, Tmcel 82/83, Movitel 86/87) and landline (21-28) numbers. */
     public static final String PHONE_MZ_REGEX = "^(?:\\+?258[\\s-]?)?(8[2-7]\\d{7}|2[1-8]\\d{6})$";
     public static final Pattern PHONE_MZ_PATTERN = Pattern.compile(PHONE_MZ_REGEX);
 
-    /** Bilhete de Identidade Moçambicano: 12 algarismos seguidos de 1 letra maiúscula. */
+    /** Mozambican identity card: 12 digits followed by one uppercase letter. */
     public static final String BI_MZ_REGEX = "^\\d{12}[A-Z]$";
     public static final Pattern BI_MZ_PATTERN = Pattern.compile(BI_MZ_REGEX);
 
-    /** Código de barras: EAN-13, EAN-8, UPC ou alfanumérico padrão industrial (4 a 30 caracteres). */
+    /** Barcode: EAN-13, EAN-8, UPC, or industrial-standard alphanumeric code (4 to 30 characters). */
     public static final String BARCODE_REGEX = "^[A-Za-z0-9\\-_]{4,30}$";
     public static final Pattern BARCODE_PATTERN = Pattern.compile(BARCODE_REGEX);
 
-    /** Código de artigo (SKU): alfanumérico limpo (2 a 30 caracteres). */
+    /** Item code (SKU): clean alphanumeric value (2 to 30 characters). */
     public static final String SKU_REGEX = "^[A-Za-z0-9\\-_]{2,30}$";
     public static final Pattern SKU_PATTERN = Pattern.compile(SKU_REGEX);
 
@@ -40,8 +40,8 @@ public final class ValidationPatterns {
     }
 
     /**
-     * Validação canónica de NUIT em Moçambique (9 dígitos com algoritmo de dígito de controlo Módulo 11).
-     * O NUIT 999999999 é aceite como código canónico de Consumidor Final.
+     * Canonical Mozambican NUIT validation: nine digits with a Modulus 11 check digit.
+     * NUIT 999999999 is accepted as the canonical final-consumer code.
      */
     public static boolean isValidNuit(String nuit) {
         if (nuit == null) return false;
@@ -96,7 +96,7 @@ public final class ValidationPatterns {
         return pct != null && pct.compareTo(BigDecimal.ZERO) >= 0 && pct.compareTo(BigDecimal.valueOf(100)) <= 0;
     }
 
-    /** Limpa telefone moçambicano para o formato nacional padrão (ex.: "+258 84 123 4567" -> "841234567"). */
+    /** Normalizes a Mozambican telephone number to national format (for example, "+258 84 123 4567" -> "841234567"). */
     public static String cleanPhoneMozambique(String phone) {
         if (phone == null) return null;
         String digits = phone.replaceAll("[^0-9]", "");

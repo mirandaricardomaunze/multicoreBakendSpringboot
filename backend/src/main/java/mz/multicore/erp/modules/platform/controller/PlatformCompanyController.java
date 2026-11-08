@@ -1,8 +1,10 @@
 package mz.multicore.erp.modules.platform.controller;
 
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
+import mz.multicore.erp.modules.platform.dto.OnboardCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
+import mz.multicore.erp.modules.platform.service.PlatformCompanyOnboardingService;
 import mz.multicore.erp.modules.platform.service.PlatformCompanyService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +24,12 @@ import java.util.List;
 public class PlatformCompanyController {
 
     private final PlatformCompanyService platformCompanyService;
+    private final PlatformCompanyOnboardingService onboardingService;
 
-    public PlatformCompanyController(PlatformCompanyService platformCompanyService) {
+    public PlatformCompanyController(PlatformCompanyService platformCompanyService,
+                                     PlatformCompanyOnboardingService onboardingService) {
         this.platformCompanyService = platformCompanyService;
+        this.onboardingService = onboardingService;
     }
 
     @GetMapping
@@ -35,6 +40,12 @@ public class PlatformCompanyController {
     @PostMapping
     public PlatformCompanyDTO create(@Valid @RequestBody CreateCompanyRequest request) {
         return platformCompanyService.createCompany(request);
+    }
+
+    /** Company + first administrator + subscription (+ bank account) in one transaction. */
+    @PostMapping("/onboard")
+    public PlatformCompanyDTO onboard(@Valid @RequestBody OnboardCompanyRequest request) {
+        return onboardingService.onboard(request);
     }
 
     @PutMapping("/{id}")

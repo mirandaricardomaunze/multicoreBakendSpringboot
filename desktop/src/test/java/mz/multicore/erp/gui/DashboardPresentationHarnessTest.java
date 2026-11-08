@@ -55,7 +55,8 @@ class DashboardPresentationHarnessTest {
             List<SimpleBarChart> charts = new ArrayList<>();
             collect(root, charts);
 
-            assertThat(charts.get(0).getEmptyMessage()).isEqualTo("Sem pendências");
+            assertThat(charts.get(0).getEmptyMessage()).isEqualTo("Tudo em dia");
+            assertThat(charts.get(0).getEmptyIcon()).isNotNull();
 
             tab.applyData(data(ZERO, ZERO));
             assertThat(tab.financialRow.isVisible()).isFalse();
@@ -81,7 +82,7 @@ class DashboardPresentationHarnessTest {
     }
 
     @Test
-    @DisplayName("DA-06: Painel TV é uma acção separada dos filtros de período")
+    @DisplayName("DA-06: Painel Executivo é uma acção com nome, separada dos filtros de período")
     void da06_tvIsSeparatedFromPeriods() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             DashboardPanel panel = new DashboardPanel(
@@ -93,7 +94,7 @@ class DashboardPresentationHarnessTest {
                     .findFirst().orElseThrow();
 
             Component[] bar = tv.getParent().getComponents();
-            assertThat(tv.getText()).isNullOrEmpty();
+            assertThat(tv.getText()).isEqualTo(DashboardPeriodBar.TV_LABEL);
             assertThat(bar[0]).isSameAs(tv);
             assertThat(bar[1]).isInstanceOf(Box.Filler.class);
         });

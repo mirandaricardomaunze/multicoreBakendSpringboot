@@ -2,7 +2,6 @@ package mz.multicore.erp.modules.printing;
 
 import com.lowagie.text.Element;
 import com.lowagie.text.FontFactory;
-import com.lowagie.text.Image;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -66,13 +65,7 @@ public class InvoiceA4Renderer {
         PdfPTable table = twoColumns();
         table.setSpacingAfter(10f);
         PdfPCell companyCell = borderless();
-        addLogo(companyCell, company);
-        String name = company != null && company.getName() != null ? company.getName().toUpperCase() : "EMPRESA";
-        Paragraph nameParagraph = new Paragraph(name,
-                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13f, PdfTheme.BRAND));
-        nameParagraph.setSpacingAfter(2f);
-        companyCell.addElement(nameParagraph);
-        addCompanyDetails(companyCell, company);
+        CompanyDetailsBlock.addTo(companyCell, company);
         table.addCell(companyCell);
 
         PdfPCell documentCell = borderless();
@@ -154,24 +147,7 @@ public class InvoiceA4Renderer {
                 line.getLineTotal())).toList();
     }
 
-    private void addLogo(PdfPCell cell, Company company) {
-        if (company == null || company.getLogo() == null || company.getLogo().length == 0) return;
-        try {
-            Image logo = Image.getInstance(company.getLogo());
-            logo.scaleToFit(140f, 45f);
-            logo.setSpacingAfter(4f);
-            cell.addElement(logo);
-        } catch (Exception ignored) { }
-    }
 
-    private void addCompanyDetails(PdfPCell cell, Company company) {
-        if (company == null) return;
-        if (useful(company.getAddress())) cell.addElement(new Paragraph(company.getAddress().trim(), PdfTheme.bodyFont()));
-        String taxAndPhone = "NUIT: " + valueOrDash(company.getTaxId());
-        if (useful(company.getPhone())) taxAndPhone += " · Tel.: " + company.getPhone().trim();
-        cell.addElement(new Paragraph(taxAndPhone, PdfTheme.bodyFont()));
-        if (useful(company.getEmail())) cell.addElement(new Paragraph("E-mail: " + company.getEmail().trim(), PdfTheme.bodyFont()));
-    }
 
     private Paragraph legalDisclaimer() {
         Paragraph paragraph = new Paragraph("Os bens/serviços foram colocados à disposição do adquirente à data da emissão desta fatura. "

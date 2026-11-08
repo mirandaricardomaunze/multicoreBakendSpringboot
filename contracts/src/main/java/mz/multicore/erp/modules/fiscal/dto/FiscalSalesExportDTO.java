@@ -3,8 +3,8 @@ package mz.multicore.erp.modules.fiscal.dto;
 import java.math.BigDecimal;
 
 /**
- * Resultado da exportação fiscal de vendas (estrutura SAF-T).
- * {@code xml} é o ficheiro completo; os totais permitem conferir o conteúdo sem voltar a parsear.
+ * Result of a fiscal sales export in SAF-T format.
+ * {@code xml} contains the complete file; totals allow verification without reparsing it.
  */
 public record FiscalSalesExportDTO(
         String xml,

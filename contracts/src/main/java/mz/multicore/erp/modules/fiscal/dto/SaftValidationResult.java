@@ -3,12 +3,12 @@ package mz.multicore.erp.modules.fiscal.dto;
 import java.util.List;
 
 /**
- * Resultado da validação de um ficheiro SAF-T contra a XSD.
+ * Result of validating a SAF-T file against the XSD.
  *
- * @param xsdConfigured a XSD está configurada e acessível (senão nem se chega a validar)
- * @param valid         o XML é válido face à XSD (só significativo quando {@code xsdConfigured})
- * @param errors        erros de validação (vazio quando válido)
- * @param message       mensagem legível para a UI
+ * @param xsdConfigured whether the XSD is configured and accessible
+ * @param valid         whether the XML conforms to the XSD; meaningful only when {@code xsdConfigured}
+ * @param errors        validation errors, empty when valid
+ * @param message       human-readable message for the UI
  */
 public record SaftValidationResult(
         boolean xsdConfigured,

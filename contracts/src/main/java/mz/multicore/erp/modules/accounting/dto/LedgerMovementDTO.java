@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Movimento no razão de uma conta.
+ * Movement in an account ledger.
  *
- * @param runningBalance saldo acumulado até este movimento, inclusive
+ * @param runningBalance cumulative balance through this movement
  */
 public record LedgerMovementDTO(
         LocalDate date,

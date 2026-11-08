@@ -3,12 +3,11 @@ package mz.multicore.erp.architecture.version;
 import java.time.LocalDateTime;
 
 /**
- * Uma empresa vista numa versão do programa.
+ * Company observed using an application version.
  *
- * @param companyName  nome resolvido no <b>servidor</b>. O desktop não deve andar a cruzar ids
- *                     com outra listagem só para escrever um nome numa tabela — foi o incómodo
- *                     que já existiu no painel de Compras com o armazém.
- * @param lastUsername último utilizador visto nesta versão — para se saber a quem telefonar
+ * @param companyName  name resolved on the <b>server</b>; the desktop must not cross-reference IDs
+ *                     with another listing merely to display a name in a table
+ * @param lastUsername last user observed on this version, identifying whom to contact
  */
 public record ClientVersionUsageDTO(
         Long companyId,

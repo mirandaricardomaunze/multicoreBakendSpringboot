@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Lançamento manual (ajustes, amortizações, regularizações). */
+/** Manual journal entry for adjustments, amortization, or regularization. */
 public record CreateJournalEntryRequest(
         @NotNull(message = "A data do lançamento é obrigatória.")
         LocalDate entryDate,
@@ -24,7 +24,7 @@ public record CreateJournalEntryRequest(
         List<Line> lines
 ) {
 
-    /** Uma partida: conta + valor a débito <b>ou</b> a crédito. */
+    /** One posting: an account and either a debit <b>or</b> credit amount. */
     public record Line(
             @NotBlank(message = "Indique a conta da partida.") @Size(max = 50)
             String accountCode,

@@ -72,4 +72,17 @@ class WalkInClientProviderTest {
 
         verify(clients, times(2)).saveAndFlush(any());
     }
+
+    @Test // WI-04
+    void empresaNova_recebeOClienteSoDepoisDoCommit() throws Exception {
+        // ensureFor abre uma transacção própria: dentro da transacção que cria a empresa não a vê
+        // e o registo da empresa falhava (docs/EMPRESA_CADASTRO_PROFISSIONAL_HARNESS.md CP-30).
+        var listener = WalkInClientBootstrap.class.getMethod("onCompanyCreated",
+                mz.multicore.erp.architecture.events.CompanyCreatedEvent.class)
+                .getAnnotation(org.springframework.transaction.event.TransactionalEventListener.class);
+
+        assertNotNull(listener, "o listener tem de ser transaccional");
+        assertEquals(org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT, listener.phase());
+        assertTrue(listener.fallbackExecution(), "sem transacção (seeders) corre logo");
+    }
 }

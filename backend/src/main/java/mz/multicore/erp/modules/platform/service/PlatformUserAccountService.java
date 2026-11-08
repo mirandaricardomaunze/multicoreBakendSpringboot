@@ -55,6 +55,7 @@ public class PlatformUserAccountService {
         appUserRepository.findByUsername(request.username()).ifPresent(u -> {
             throw new BusinessRuleException("Utilizador já existe.");
         });
+        PasswordPolicy.validate(request.password(), request.username());
         Company company = requireCompany(request.companyId());
         String role = UserRole.normalize(request.companyRole());
 

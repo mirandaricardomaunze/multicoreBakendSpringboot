@@ -16,18 +16,17 @@ import java.awt.GridLayout;
 import java.math.BigDecimal;
 
 /**
- * Cartão de KPI profissional unificado, com paleta de cores sólida (sem gradientes)
- * e altura espaçosa (96px) para máxima legibilidade de dados em todo o sistema.
+ * Unified KPI card with a solid colour palette and a consistent 96-pixel height for legibility.
  */
 public final class KpiCard {
 
-    /** Altura padrão uniforme e espaçosa de todos os cards no sistema. */
+    /** Standard height shared by all KPI cards. */
     public static final int STANDARD_CARD_HEIGHT = 96;
     public static final int STANDARD_CARD_MIN_WIDTH = 140;
 
     private KpiCard() {}
 
-    /** Label de valor em destaque com o tamanho indicado. */
+    /** Creates a prominent value label using the requested font size. */
     public static JLabel valueLabel(String text, int size) {
         JLabel l = new JLabel(text);
         l.setFont(new Font(UIHelper.FONT, Font.BOLD, size));
@@ -35,7 +34,7 @@ public final class KpiCard {
         return l;
     }
 
-    /** Grelha padrão para cards de KPI com espaçamento e proporção uniformes. */
+    /** Creates the standard KPI grid with uniform spacing and proportions. */
     public static JPanel createGrid(int columns) {
         return createGrid(columns, 10, 10);
     }
@@ -110,10 +109,10 @@ public final class KpiCard {
         }
 
         if (trendBadge != null) {
-            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)); // sem recuo: valor alinhado com os cartões sem pílula
             centerPanel.setOpaque(false);
             if (valueLabel != null) centerPanel.add(valueLabel);
-            centerPanel.add(trendBadge);
+            centerPanel.add(Box.createHorizontalStrut(8)); centerPanel.add(trendBadge);
             card.add(centerPanel, BorderLayout.CENTER);
         } else if (valueLabel != null) {
             card.add(valueLabel, BorderLayout.CENTER);
@@ -162,11 +161,11 @@ public final class KpiCard {
             valueLabel.setForeground(pal.value);
         }
 
-        JPanel valueRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel valueRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         valueRow.setOpaque(false);
         valueRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         if (valueLabel != null) valueRow.add(valueLabel);
-        if (trendBadge != null) valueRow.add(trendBadge);
+        if (trendBadge != null) { valueRow.add(Box.createHorizontalStrut(8)); valueRow.add(trendBadge); }
         textPanel.add(valueRow);
 
         if (subLabel != null) {

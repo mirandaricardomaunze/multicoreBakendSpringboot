@@ -10,8 +10,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Anotação para validação declarativa de NUIT em Moçambique.
- * Valida o padrão canónico de 9 algarismos numéricos e opcionalmente o algoritmo Módulo 11 da AT.
+ * Annotation for declarative validation of Mozambican NUIT values.
+ * Validates the canonical nine-digit pattern and optionally the Tax Authority's Modulus 11 algorithm.
  */
 @Documented
 @Constraint(validatedBy = ValidNuitValidator.class)
@@ -23,8 +23,8 @@ public @interface ValidNuit {
     Class<? extends Payload>[] payload() default {};
 
     /**
-     * Quando true, valida adicionalmente o dígito de controlo Módulo 11 da Autoridade Tributária.
-     * O NUIT canónico de Consumidor Final (999999999) é sempre aceite.
+     * When true, also validates the Tax Authority's Modulus 11 check digit.
+     * The canonical final-consumer NUIT (999999999) is always accepted.
      */
     boolean checkModulo11() default false;
 }

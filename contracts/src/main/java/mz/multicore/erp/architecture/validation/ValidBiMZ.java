@@ -10,8 +10,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Anotação para validação declarativa de Bilhete de Identidade (B.I.) em Moçambique.
- * Formato padrão: 12 algarismos numéricos seguidos de 1 letra maiúscula de controlo.
+ * Annotation for declarative validation of Mozambican identity card numbers.
+ * Standard format: 12 digits followed by one uppercase check letter.
  */
 @Documented
 @Constraint(validatedBy = ValidBiMZValidator.class)

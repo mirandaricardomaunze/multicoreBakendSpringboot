@@ -7,13 +7,11 @@ import mz.multicore.erp.gui.tv.ExecutiveTvDashboardDialog;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Painel principal do Dashboard Executivo e Operacional.
- * Orquestrador desacoplado das abas de Visão Geral, Operações e Rentabilidade.
+ * Main executive and operational dashboard panel.
+ * Coordinates the overview, operations, and profitability tabs without coupling their internals.
  */
 public class DashboardPanel extends JPanel {
 
@@ -38,7 +36,7 @@ public class DashboardPanel extends JPanel {
     private final ProfitAnalyticsWidget profitAnalyticsWidget;
 
     private PeriodFilter currentPeriod = PeriodFilter.HOJE;
-    private final Map<PeriodFilter, ModernButton> periodButtons = new HashMap<>();
+    private final DashboardPeriodBar periodBar = new DashboardPeriodBar(this::openExecutiveTvDashboard, this::selectPeriod);
     private JLabel welcomeLabel;
 
     public DashboardPanel(
@@ -113,31 +111,9 @@ public class DashboardPanel extends JPanel {
         stack.add(subtitle);
 
         header.add(stack, BorderLayout.WEST);
-        header.add(buildPeriodFilterBar(), BorderLayout.EAST);
+        periodBar.select(currentPeriod);
+        header.add(periodBar.component(), BorderLayout.EAST);
         return header;
-    }
-
-    private JPanel buildPeriodFilterBar() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-        bar.setOpaque(false);
-
-        // Acção, não filtro: fica antes dos períodos, separada e sem cor de selecção.
-        ModernButton tvBtn = UIHelper.createIconButton("Painel TV", "fas-tv");
-        tvBtn.setToolTipText("Abrir Painel TV em ecrã inteiro (F11)");
-        tvBtn.addActionListener(e -> openExecutiveTvDashboard());
-        bar.add(tvBtn);
-        bar.add(Box.createHorizontalStrut(12));
-
-        for (PeriodFilter p : PeriodFilter.values()) {
-            ModernButton btn = UIHelper.createSecondaryButton(p.getLabel());
-            btn.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
-            btn.setPreferredSize(new Dimension(btn.getPreferredSize().width + 12, 28));
-            btn.addActionListener(e -> selectPeriod(p));
-            periodButtons.put(p, btn);
-            bar.add(btn);
-        }
-        updatePeriodButtonStyles();
-        return bar;
     }
 
     private JPanel buildOperationsTab() {
@@ -169,30 +145,11 @@ public class DashboardPanel extends JPanel {
     public void selectPeriod(PeriodFilter period) {
         if (period == null) return;
         this.currentPeriod = period;
-        updatePeriodButtonStyles();
+        periodBar.select(period);
         refreshData();
     }
 
     public PeriodFilter getCurrentPeriod() { return currentPeriod; }
-
-    private void updatePeriodButtonStyles() {
-        for (Map.Entry<PeriodFilter, ModernButton> entry : periodButtons.entrySet()) {
-            boolean active = entry.getKey() == currentPeriod;
-            ModernButton btn = entry.getValue();
-            if (active) {
-                btn.setColors(UIHelper.ACCENT_BLUE, UIHelper.ACCENT_BLUE_HOVER);
-                btn.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-            } else {
-                Color idleBg = UIHelper.isLight() ? UIHelper.ROW_ALT : UIHelper.BG_CARD;
-                Color idleHover = UIHelper.isLight() ? UIHelper.GRID : UIHelper.ROW_ALT;
-                btn.setColors(idleBg, idleHover);
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(UIHelper.BORDER, 1, true),
-                        BorderFactory.createEmptyBorder(3, 9, 3, 9)
-                ));
-            }
-        }
-    }
 
     public void updateWelcomeMessage(String username, String role) {
         welcomeLabel.setText("Olá, " + username);

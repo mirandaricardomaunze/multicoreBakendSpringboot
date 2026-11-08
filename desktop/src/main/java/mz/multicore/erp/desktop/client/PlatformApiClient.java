@@ -3,6 +3,7 @@ package mz.multicore.erp.desktop.client;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.CreatePlatformUserRequest;
 import mz.multicore.erp.modules.platform.dto.GrantAccessRequest;
+import mz.multicore.erp.modules.platform.dto.OnboardCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
 import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
@@ -46,6 +47,11 @@ public class PlatformApiClient {
 
     public PlatformCompanyDTO createCompany(CreateCompanyRequest request) {
         return clientFactory.authenticatedClient().post("/api/platform/companies", request, PlatformCompanyDTO.class);
+    }
+
+    /** Company, first administrator, subscription and bank account in one server transaction. */
+    public PlatformCompanyDTO onboardCompany(OnboardCompanyRequest request) {
+        return clientFactory.authenticatedClient().post("/api/platform/companies/onboard", request, PlatformCompanyDTO.class);
     }
 
     public PlatformCompanyDTO updateCompany(Long id, UpdateCompanyRequest request) {

@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Resumo do extracto bancário e progresso da conciliação.
+ * Bank-statement summary and reconciliation progress.
  */
 public record BankStatementDTO(
         Long id,

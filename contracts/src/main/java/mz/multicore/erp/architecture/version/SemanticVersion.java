@@ -1,24 +1,24 @@
 package mz.multicore.erp.architecture.version;
 
 /**
- * Comparação de versões {@code MAIOR.MENOR.CORRECÇÃO} (ex.: {@code 1.4.2}).
+ * Compares {@code MAJOR.MINOR.PATCH} versions, such as {@code 1.4.2}.
  *
- * <p><b>Fonte única</b> da pergunta "esta versão é mais antiga do que aquela?". Comparar versões
- * como texto é o erro clássico — {@code "1.10.0" < "1.9.0"} em ordem alfabética, e o resultado é
- * um cliente novo a ser bloqueado como se fosse velho. Aqui compara-se número a número.
+ * <p><b>Single source</b> for determining whether one version predates another. Lexicographic
+ * comparison incorrectly places {@code "1.10.0" < "1.9.0"} and can block a newer client. This
+ * implementation compares each numeric component.
  *
- * <p>Tolerante de propósito: aceita menos de três partes ({@code "1.2"} = {@code "1.2.0"}) e
- * ignora sufixos ({@code "1.2.0-SNAPSHOT"} = {@code "1.2.0"}), porque a versão chega de um
- * cabeçalho HTTP escrito por um cliente que pode estar desactualizado ou mal configurado.
+ * <p>Intentionally tolerant: accepts fewer than three components ({@code "1.2"} = {@code "1.2.0"})
+ * and ignores suffixes ({@code "1.2.0-SNAPSHOT"} = {@code "1.2.0"}) because the version comes from
+ * an HTTP header supplied by a potentially outdated or misconfigured client.
  */
 public final class SemanticVersion {
 
     private SemanticVersion() {}
 
     /**
-     * Compara duas versões.
+     * Compares two versions.
      *
-     * @return negativo se {@code a} < {@code b}, zero se iguais, positivo se {@code a} > {@code b}
+     * @return a negative value if {@code a} < {@code b}, zero if equal, or a positive value if {@code a} > {@code b}
      */
     public static int compare(String a, String b) {
         int[] left = parse(a);
@@ -30,15 +30,15 @@ public final class SemanticVersion {
         return 0;
     }
 
-    /** {@code version} é anterior a {@code other}. */
+    /** Returns whether {@code version} predates {@code other}. */
     public static boolean isOlderThan(String version, String other) {
         return compare(version, other) < 0;
     }
 
     /**
-     * Versão utilizável para comparação. Uma versão ilegível ou ausente vale {@code 0.0.0} — a
-     * leitura conservadora: um cliente que não se identifica é tratado como o mais antigo
-     * possível, e não como o mais recente.
+     * Produces a version suitable for comparison. A missing or unreadable version becomes
+     * {@code 0.0.0}; conservatively, an unidentified client is treated as the oldest possible
+     * version rather than the newest.
      */
     private static int[] parse(String version) {
         int[] parts = {0, 0, 0};
@@ -51,7 +51,7 @@ public final class SemanticVersion {
             try {
                 parts[i] = Integer.parseInt(chunks[i].trim());
             } catch (NumberFormatException ex) {
-                return new int[]{0, 0, 0}; // versão ilegível: trata como a mais antiga
+                return new int[]{0, 0, 0}; // Treat an unreadable version as the oldest.
             }
         }
         return parts;

@@ -70,9 +70,10 @@ public class PlatformCompanyService {
         Company company = new Company();
         company.setName(requireText(request.name(), "O nome da empresa é obrigatório."));
         company.setTaxId(taxId);
-        company.setEmail(request.email());
-        company.setAddress(request.address());
-        company.setPhone(request.phone());
+        company.setEmail(CompanyProfileMapper.clean(request.email()));
+        company.setAddress(CompanyProfileMapper.clean(request.address()));
+        company.setPhone(CompanyProfileMapper.clean(request.phone()));
+        CompanyProfileMapper.apply(company, request.profile());
         company.setActive(true);
         company.setCreatedBy(CurrentUserContext.getUsername());
         company = companyRepository.save(company);
@@ -87,9 +88,12 @@ public class PlatformCompanyService {
         PermissionGuard.requireSuperAdmin("editar uma empresa");
         Company company = requireCompany(companyId);
         company.setName(requireText(request.name(), "O nome da empresa é obrigatório."));
-        company.setEmail(request.email());
-        company.setAddress(request.address());
-        company.setPhone(request.phone());
+        company.setEmail(CompanyProfileMapper.clean(request.email()));
+        company.setAddress(CompanyProfileMapper.clean(request.address()));
+        company.setPhone(CompanyProfileMapper.clean(request.phone()));
+        if (request.profile() != null) {
+            CompanyProfileMapper.apply(company, request.profile());
+        }
         companyRepository.save(company);
         auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "PLATFORM_COMPANY_UPDATE",
                 "Empresa actualizada: " + company.getName());
@@ -120,12 +124,13 @@ public class PlatformCompanyService {
         return value.trim();
     }
 
-    private PlatformCompanyDTO toDto(Company company) {
+    PlatformCompanyDTO toDto(Company company) {
         return new PlatformCompanyDTO(
                 company.getId(), company.getName(), company.getTaxId(), company.getEmail(),
                 company.getAddress(), company.getPhone(),
                 company.getLogo() != null && company.getLogo().length > 0,
                 company.isActive(),
-                companyAccessRepository.countByCompanyId(company.getId()));
+                companyAccessRepository.countByCompanyId(company.getId()),
+                CompanyProfileMapper.toProfile(company));
     }
 }

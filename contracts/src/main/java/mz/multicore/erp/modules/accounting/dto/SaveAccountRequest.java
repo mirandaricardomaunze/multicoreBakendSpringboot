@@ -11,7 +11,7 @@ public record SaveAccountRequest(
         @NotBlank(message = "O nome da conta é obrigatório.")
         @Size(max = 200) String name,
 
-        /** Vazio = natureza habitual da classe do código. */
+        /** Blank uses the usual nature of the code's account class. */
         AccountNature nature,
 
         boolean postable

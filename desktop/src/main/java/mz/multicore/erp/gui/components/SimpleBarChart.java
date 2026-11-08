@@ -12,10 +12,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Gráfico de barras leve, desenhado à mão (sem dependências externas), para os painéis de
- * visão geral (Dashboard, RH, …). Mostra um título, eixo de base e barras arredondadas com o
- * valor por cima (formato compacto k/M) e a legenda por baixo. Reutilizável: cada painel passa
- * os seus próprios rótulos/valores/cores via {@link #setData}.
+ * Lightweight Java 2D bar chart for overview panels, with no external chart dependency. It renders
+ * a title, baseline, rounded bars, compact values, and captions supplied through {@link #setData}.
  */
 public class SimpleBarChart extends JPanel {
 
@@ -28,6 +26,7 @@ public class SimpleBarChart extends JPanel {
     private java.awt.Rectangle[] barBounds = new java.awt.Rectangle[0];
     private String emptyMessage = EMPTY_MESSAGE;
     private String emptyHint;
+    private javax.swing.Icon emptyIcon;
 
     public SimpleBarChart(String title) {
         this.title = title;
@@ -57,8 +56,7 @@ public class SimpleBarChart extends JPanel {
         repaint();
     }
 
-    /** Texto mostrado quando nenhum valor é positivo, para o gráfico não parecer avariado. */
-    /** Segunda linha do estado vazio: diz o que fazer a seguir. */
+    /** Sets the second empty-state line, which guides the user's next action. */
     public void setEmptyHint(String emptyHint) {
         this.emptyHint = emptyHint;
     }
@@ -67,6 +65,17 @@ public class SimpleBarChart extends JPanel {
         return emptyHint;
     }
 
+    /** Sets the icon above the message so an empty result can communicate a positive state. */
+    public void setEmptyIcon(javax.swing.Icon emptyIcon) {
+        this.emptyIcon = emptyIcon;
+        repaint();
+    }
+
+    public javax.swing.Icon getEmptyIcon() {
+        return emptyIcon;
+    }
+
+    /** Sets the message shown when no positive value is available to render. */
     public void setEmptyMessage(String emptyMessage) {
         this.emptyMessage = emptyMessage;
         repaint();
@@ -85,13 +94,23 @@ public class SimpleBarChart extends JPanel {
     }
 
     static void drawEmptyState(Graphics2D g, String message, String hint, int width, int height) {
-        g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-        g.setColor(UIHelper.TEXT_MUTED);
+        drawEmptyState(g, message, hint, null, width, height, null);
+    }
+
+    static void drawEmptyState(Graphics2D g, String message, String hint, javax.swing.Icon icon, int width, int height,
+                               java.awt.Component owner) {
+        int iconShift = icon != null ? (icon.getIconHeight() + 10) / 2 : 0;
+        g.setFont(new Font(UIHelper.FONT, icon != null ? Font.BOLD : Font.PLAIN, icon != null ? 14 : 13));
+        g.setColor(icon != null ? UIHelper.TEXT_LIGHT : UIHelper.TEXT_MUTED);
         java.awt.FontMetrics metrics = g.getFontMetrics();
-        int baseline = (height + metrics.getAscent()) / 2;
+        int baseline = (height + metrics.getAscent()) / 2 + iconShift;
+        if (icon != null) {
+            icon.paintIcon(owner, g, (width - icon.getIconWidth()) / 2, baseline - metrics.getAscent() - 10 - icon.getIconHeight());
+        }
         g.drawString(message, (width - metrics.stringWidth(message)) / 2, baseline);
         if (hint == null) return;
         g.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        g.setColor(UIHelper.TEXT_MUTED);
         java.awt.FontMetrics hintMetrics = g.getFontMetrics();
         g.drawString(hint, (width - hintMetrics.stringWidth(hint)) / 2, baseline + metrics.getHeight() + 4);
     }
@@ -136,12 +155,12 @@ public class SimpleBarChart extends JPanel {
         g.drawString(title, 16, 26);
 
         if (!hasData(values)) {
-            drawEmptyState(g, emptyMessage, emptyHint, width, height);
+            drawEmptyState(g, emptyMessage, emptyHint, emptyIcon, width, height, this);
             g.dispose();
             return;
         }
 
-        // 3 Linhas de benchmark de referência (25%, 50%, 75%)
+        // Reference benchmark lines at 25%, 50%, and 75%.
         java.awt.Stroke origStroke = g.getStroke();
         java.awt.Stroke dashed = new java.awt.BasicStroke(1.0f, java.awt.BasicStroke.CAP_BUTT,
                 java.awt.BasicStroke.JOIN_MITER, 10.0f, new float[]{3.0f, 3.0f}, 0.0f);
@@ -153,7 +172,7 @@ public class SimpleBarChart extends JPanel {
         }
         g.setStroke(origStroke);
 
-        // Linha de base do eixo
+        // Axis baseline.
         g.setColor(UIHelper.isLight() ? new Color(203, 213, 225) : new Color(55, 65, 81));
         g.drawLine(left, top + chartHeight, left + chartWidth, top + chartHeight);
 
@@ -180,19 +199,20 @@ public class SimpleBarChart extends JPanel {
         for (int i = 0; i < values.length; i++) {
             BigDecimal rawValue = values[i] == null ? BigDecimal.ZERO : values[i].abs();
             double ratio = rawValue.divide(max, 6, RoundingMode.HALF_UP).doubleValue();
-            int barHeight = Math.max(4, (int) Math.round(chartHeight * ratio));
+            // Do not draw zero-height bars because a coloured baseline can be mistaken for data.
+            int barHeight = rawValue.signum() == 0 ? 0 : Math.max(4, (int) Math.round(chartHeight * ratio));
             int x = left + i * slot + Math.max(0, (slot - barWidth) / 2);
             int y = top + chartHeight - barHeight;
 
-            barBounds[i] = new java.awt.Rectangle(x, y, barWidth, barHeight);
+            barBounds[i] = new java.awt.Rectangle(x, y - (barHeight == 0 ? 12 : 0), barWidth, Math.max(12, barHeight));
 
             Color barColor = i < colors.length && colors[i] != null ? colors[i] : UIHelper.ACCENT_BLUE;
             Color topColor = lighten(barColor, 0.25f);
 
-            // Gradiente vertical premium: topo iluminado, base canónica
+            // Use a vertical gradient with a lighter top and the canonical colour at the base.
             java.awt.GradientPaint gp = new java.awt.GradientPaint(x, y, topColor, x, y + barHeight, barColor);
             g.setPaint(gp);
-            g.fillRoundRect(x, y, barWidth, barHeight, 10, 10);
+            if (barHeight > 0) g.fillRoundRect(x, y, barWidth, barHeight, 10, 10);
 
             g.setFont(new Font(UIHelper.FONT, Font.BOLD, 11));
             g.setColor(UIHelper.TEXT_LIGHT);

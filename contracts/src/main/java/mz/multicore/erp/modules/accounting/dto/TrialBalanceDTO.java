@@ -5,10 +5,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Balancete de um período.
+ * Trial balance for a period.
  *
- * @param balanced   os totais de débito e crédito coincidem — se não coincidirem há lançamentos
- *                   corrompidos e o balancete diz-o em vez de fingir que está bem
+ * @param balanced   whether debit and credit totals match; a mismatch exposes corrupted entries
  */
 public record TrialBalanceDTO(
         LocalDate from,

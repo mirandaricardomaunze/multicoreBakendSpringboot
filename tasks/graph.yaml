@@ -1,0 +1,254 @@
+schemaVersion: 1
+objective: "Complete the production pilot with secure, traceable, and recoverable core operations."
+
+nodes:
+  - id: ARCH-MULTI-MODULE
+    title: "Protect physical module boundaries"
+    owner: platform
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: []
+    blockedBy: []
+    verification: ["MultiModuleArchitectureHarnessTest"]
+    doneWhen: ["contracts, backend, and desktop boundaries pass the architecture harness"]
+
+  - id: SECURITY-TENANT-BOUNDARY
+    title: "Enforce authenticated tenant isolation"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [ARCH-MULTI-MODULE]
+    blockedBy: []
+    verification: ["ApiRolePolicyEndpointCoverageHarnessTest", "TenantRequestBoundaryGuardTest"]
+    doneWhen: ["every protected request is bound to the authenticated company"]
+
+  - id: SECURITY-ACCOUNT-HARDENING
+    title: "Complete account and secret hardening"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [SECURITY-TENANT-BOUNDARY]
+    blockedBy: []
+    verification: ["SecurityEnterpriseHardeningHarnessTest", "SessionAndLoginLimitsHarnessTest"]
+    doneWhen: ["demo credentials, sessions, password reset, and one-time 2FA controls pass"]
+
+  - id: SECURITY-PRODUCTION-AUDIT
+    title: "Run the signed production security audit"
+    owner: platform
+    status: TODO
+    priority: CRITICAL
+    dependsOn: [SECURITY-ACCOUNT-HARDENING, DEPLOY-VPS]
+    blockedBy: []
+    verification: ["scripts/validar-producao.sh"]
+    doneWhen: ["production validation completes without critical findings"]
+
+  - id: CATALOG-PRODUCTS
+    title: "Stabilise products, pricing, and packaging"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [ARCH-MULTI-MODULE]
+    blockedBy: []
+    verification: ["ProductTest", "DocumentPackageQuantityCoverageHarnessTest"]
+    doneWhen: ["product pricing and Caixa-to-Embalagem-to-Unidade quantities are consistent"]
+
+  - id: INVENTORY-FEFO
+    title: "Protect stock, batches, expiry, and FEFO"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [CATALOG-PRODUCTS, SECURITY-TENANT-BOUNDARY]
+    blockedBy: []
+    verification: ["ProductBatchServiceTest", "StockWasteHarnessTest"]
+    doneWhen: ["stock-changing operations preserve tenant, batch, expiry, and FEFO invariants"]
+
+  - id: PURCHASE-RECEIPT
+    title: "Close purchase receipt into traceable stock"
+    owner: backend
+    status: VERIFIED
+    priority: HIGH
+    dependsOn: [INVENTORY-FEFO]
+    blockedBy: []
+    verification: ["PurchaseServiceTest", "PurchaseOrderServiceTest"]
+    doneWhen: ["approved receipts create traceable stock and supplier obligations"]
+
+  - id: ORDER-LIFECYCLE
+    title: "Complete order approval, picking, and reservation"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [INVENTORY-FEFO]
+    blockedBy: []
+    verification: ["OrderStatusTest", "OrderPickingConferenciaHarnessTest", "OrderStockAvailabilityTest"]
+    doneWhen: ["orders preserve reservations through approval and picking"]
+
+  - id: DELIVERY-GUIDE
+    title: "Complete delivery-guide dispatch and approval"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [ORDER-LIFECYCLE]
+    blockedBy: []
+    verification: ["DeliveryGuideApprovalReservationTest"]
+    doneWhen: ["guide approval consumes only available reserved stock and remains traceable"]
+
+  - id: INVOICE-ISSUANCE
+    title: "Issue immutable commercial invoices"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [INVENTORY-FEFO, SECURITY-TENANT-BOUNDARY]
+    blockedBy: []
+    verification: ["InvoiceNumberUniquenessPerCompanyTest", "InvoicePrintServiceTest"]
+    doneWhen: ["invoice numbering, totals, tax, stock, and audit effects are atomic"]
+
+  - id: PAYMENT-TREASURY
+    title: "Settle invoices through treasury"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [INVOICE-ISSUANCE]
+    blockedBy: []
+    verification: ["InvoicePaymentConcurrencyHarnessTest", "PosSalePaymentQueryServiceTest"]
+    doneWhen: ["receipts and settlements reconcile invoice balances and treasury movements"]
+
+  - id: POS-CHECKOUT
+    title: "Complete atomic POS checkout"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [INVENTORY-FEFO, INVOICE-ISSUANCE, PAYMENT-TREASURY]
+    blockedBy: []
+    verification: ["POSServiceTest", "PosPrePilotoHarnessTest", "PosVoucherUiHarnessTest"]
+    doneWhen: ["checkout atomically records sale, stock, payment, change, customer, and audit data"]
+
+  - id: POS-MOBILE-PAYMENT
+    title: "Integrate real M-Pesa and e-Mola payments"
+    owner: external
+    status: BLOCKED
+    priority: HIGH
+    dependsOn: [POS-CHECKOUT]
+    blockedBy: ["operator credentials", "production callback contract"]
+    verification: ["provider sandbox acceptance", "idempotent callback integration test"]
+    doneWhen: ["real payment confirmation is idempotent and reconciled before sale completion"]
+
+  - id: POS-SCALE
+    title: "Integrate the production weighing scale"
+    owner: desktop
+    status: BLOCKED
+    priority: MEDIUM
+    dependsOn: [POS-CHECKOUT]
+    blockedBy: ["final scale model", "serial protocol documentation"]
+    verification: ["hardware acceptance test"]
+    doneWhen: ["stable readings from final hardware feed POS quantities safely"]
+
+  - id: POS-CASH-DRAWER
+    title: "Integrate the production cash drawer"
+    owner: desktop
+    status: BLOCKED
+    priority: MEDIUM
+    dependsOn: [POS-CHECKOUT]
+    blockedBy: ["final drawer interface and hardware"]
+    verification: ["hardware acceptance test"]
+    doneWhen: ["drawer opens only for authorised cash operations"]
+
+  - id: ACCOUNTING-AUTOMATIC-POSTING
+    title: "Post operational events to the general ledger"
+    owner: backend
+    status: VERIFIED
+    priority: HIGH
+    dependsOn: [PURCHASE-RECEIPT, PAYMENT-TREASURY, POS-CHECKOUT]
+    blockedBy: []
+    verification: ["AutomaticPostingServiceTest"]
+    doneWhen: ["sales, purchases, payments, payroll, and stock events produce balanced entries"]
+
+  - id: BANK-RECONCILIATION
+    title: "Reconcile bank statements with treasury"
+    owner: backend
+    status: VERIFIED
+    priority: HIGH
+    dependsOn: [PAYMENT-TREASURY, ACCOUNTING-AUTOMATIC-POSTING]
+    blockedBy: []
+    verification: ["BankReconciliationHarnessTest", "BankReconciliationUnifiedHarnessTest"]
+    doneWhen: ["imported statement lines match or create authorised treasury movements"]
+
+  - id: FISCAL-SAFT-XSD
+    title: "Validate SAF-T against the official AT-MZ schema"
+    owner: external
+    status: BLOCKED
+    priority: CRITICAL
+    dependsOn: [INVOICE-ISSUANCE]
+    blockedBy: ["official AT-MZ XSD"]
+    verification: ["SaftValidationServiceTest", "official XSD acceptance evidence"]
+    doneWhen: ["generated SAF-T passes the official schema and fiscal sample validation"]
+
+  - id: LEGAL-REVIEW
+    title: "Obtain legal and licence approval"
+    owner: external
+    status: BLOCKED
+    priority: CRITICAL
+    dependsOn: [SECURITY-ACCOUNT-HARDENING]
+    blockedBy: ["qualified legal reviewer"]
+    verification: ["signed legal review"]
+    doneWhen: ["legal compliance and licence wording are formally approved"]
+
+  - id: BACKUP-RESTORE
+    title: "Prove encrypted backup and isolated restore"
+    owner: platform
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [SECURITY-ACCOUNT-HARDENING]
+    blockedBy: []
+    verification: ["tasks/archive/2026-11-01-backup-content-verification.md"]
+    doneWhen: ["encrypted backup content and isolated PostgreSQL restore are verified"]
+
+  - id: POSTGRES-PARITY
+    title: "Maintain PostgreSQL schema parity"
+    owner: backend
+    status: VERIFIED
+    priority: CRITICAL
+    dependsOn: [ARCH-MULTI-MODULE]
+    blockedBy: []
+    verification: ["PostgresSchemaParityHarnessTest"]
+    doneWhen: ["migrations and JPA mappings match the production PostgreSQL schema"]
+
+  - id: LOAD-FINAL-HARDWARE
+    title: "Repeat measured load on final shop hardware"
+    owner: platform
+    status: BLOCKED
+    priority: HIGH
+    dependsOn: [POS-CHECKOUT, POSTGRES-PARITY]
+    blockedBy: ["final pilot hardware"]
+    verification: ["docs/CARGA_POSTGRES_SPEC.md signed result"]
+    doneWhen: ["measured POS capacity on final hardware meets the pilot target"]
+
+  - id: DEPLOY-VPS
+    title: "Deploy and verify the production VPS"
+    owner: platform
+    status: TODO
+    priority: CRITICAL
+    dependsOn: [POSTGRES-PARITY, BACKUP-RESTORE]
+    blockedBy: []
+    verification: ["scripts/deploy-smoke.sh", "actuator health check"]
+    doneWhen: ["HTTPS backend, private PostgreSQL, monitoring, and restore path are operational"]
+
+  - id: BRANCH-PROTECTION
+    title: "Enforce required build checks on main"
+    owner: platform
+    status: BLOCKED
+    priority: HIGH
+    dependsOn: [ARCH-MULTI-MODULE]
+    blockedBy: ["GitHub repository administrator action"]
+    verification: ["main ruleset screenshot", "blocked failing pull request"]
+    doneWhen: ["main requires build and postgres-parity checks with no unauthorised bypass"]
+
+  - id: PILOT-ACCEPTANCE
+    title: "Complete signed shop pilot acceptance"
+    owner: external
+    status: BLOCKED
+    priority: CRITICAL
+    dependsOn: [SECURITY-PRODUCTION-AUDIT, POS-CHECKOUT, FISCAL-SAFT-XSD, LEGAL-REVIEW, LOAD-FINAL-HARDWARE]
+    blockedBy: ["pilot shop schedule", "authorised acceptance signatory"]
+    verification: ["docs/GUIA_ACEITACAO_LOJA.md signed evidence"]
+    doneWhen: ["the authorised pilot checklist is completed and signed without critical defects"]
+

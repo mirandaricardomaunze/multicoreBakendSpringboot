@@ -3,22 +3,21 @@ package mz.multicore.erp.modules.accounting.model;
 import java.math.BigDecimal;
 
 /**
- * Natureza do saldo de uma conta — de que lado é que ela "cresce".
+ * Nature of an account balance, indicating the side on which it increases.
  *
- * <p>É o que decide se um saldo é <b>devedor</b> ou <b>credor</b> no balancete: numa conta de
- * natureza devedora (Caixa, Clientes, Custos) o saldo é {@code débito − crédito}; numa credora
- * (Fornecedores, Capital, Proveitos) é o contrário. Sem isto, metade do balancete sairia com o
- * sinal trocado.
+ * <p>Determines whether a trial-balance amount is <b>debit</b> or <b>credit</b>. For debit-nature
+ * accounts (Cash, Customers, Expenses), the balance is {@code debit − credit}; credit-nature
+ * accounts (Suppliers, Equity, Revenue) use the reverse. This prevents inverted balance signs.
  */
 public enum AccountNature {
 
-    /** Cresce a débito: activo e custos. */
+    /** Increases on the debit side: assets and expenses. */
     DEVEDORA,
 
-    /** Cresce a crédito: passivo, capital próprio e proveitos. */
+    /** Increases on the credit side: liabilities, equity, and revenue. */
     CREDORA;
 
-    /** Saldo da conta, com o sinal certo para a sua natureza. */
+    /** Account balance with the sign appropriate to its nature. */
     public BigDecimal balanceOf(BigDecimal totalDebit, BigDecimal totalCredit) {
         BigDecimal debit = totalDebit == null ? BigDecimal.ZERO : totalDebit;
         BigDecimal credit = totalCredit == null ? BigDecimal.ZERO : totalCredit;

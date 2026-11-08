@@ -3,17 +3,16 @@ package mz.multicore.erp.architecture.paging;
 import java.util.List;
 
 /**
- * Página de resultados na fronteira HTTP.
+ * Page of results exposed at the HTTP boundary.
  *
- * <p>Existe para o desktop não depender do mecanismo interno de paginação do servidor
- * nem de entidades persistentes: é um record simples,
- * com o que a UI precisa para desenhar um rodapé de paginação.
+ * <p>Keeps the desktop independent of the server's internal pagination mechanism and persistent
+ * entities. This simple record contains what the UI needs to render pagination controls.
  *
- * @param items         os registos desta página, já convertidos em DTO
- * @param page          índice da página, a começar em 0
- * @param size          tamanho pedido
- * @param totalElements total de registos que a consulta encontrou
- * @param totalPages    total de páginas
+ * @param items         records on this page, already converted to DTOs
+ * @param page          zero-based page index
+ * @param size          requested page size
+ * @param totalElements total records found by the query
+ * @param totalPages    total number of pages
  */
 public record PageResponse<T>(
         List<T> items,
@@ -23,17 +22,17 @@ public record PageResponse<T>(
         int totalPages
 ) {
 
-    /** Há mais páginas a seguir a esta. */
+    /** Returns whether another page follows this one. */
     public boolean hasNext() {
         return page + 1 < totalPages;
     }
 
-    /** Esta não é a primeira página. */
+    /** Returns whether this is not the first page. */
     public boolean hasPrevious() {
         return page > 0;
     }
 
-    /** Página única a partir de uma lista já em memória (adopção incremental). */
+    /** Creates a single page from an in-memory list for incremental adoption. */
     public static <T> PageResponse<T> single(List<T> items) {
         return new PageResponse<>(items, 0, items.size(), items.size(), 1);
     }

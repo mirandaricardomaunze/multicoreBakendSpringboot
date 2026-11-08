@@ -1,15 +1,16 @@
 package mz.multicore.erp.gui.components;
 
-/** Duas linhas em vez de reticências: empresas do mesmo grupo diferem muitas vezes no fim do nome. */
+/** Uses two lines because companies in the same group often differ only at the end of their names. */
 final class SidebarBrandText {
 
-    private static final int TEXT_WIDTH = 118;
+    /** Fits before the collapse button; at 118 pixels the name extended beneath the button. */
+    private static final int TEXT_WIDTH = 104;
 
     private SidebarBrandText() {
     }
 
     static String wrapped(String name) {
         String safe = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-        return "<html><div style='width:" + TEXT_WIDTH + "px'>" + safe + "</div></html>";
+        return "<html><body style='width:" + TEXT_WIDTH + "px'>" + safe + "</body></html>";
     }
 }

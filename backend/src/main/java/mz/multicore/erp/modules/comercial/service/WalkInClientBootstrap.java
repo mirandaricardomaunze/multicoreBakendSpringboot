@@ -5,7 +5,8 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -27,7 +28,13 @@ public class WalkInClientBootstrap implements ApplicationRunner {
         this.walkInClientProvider = walkInClientProvider;
     }
 
-    @EventListener
+    /**
+     * Runs after the company's transaction commits. {@link WalkInClientProvider#ensureFor} uses a
+     * transaction of its own, which cannot see a company that is not committed yet: running it
+     * inside the creating transaction made every company registration fail. Without a surrounding
+     * transaction (seeders) it runs immediately.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onCompanyCreated(CompanyCreatedEvent event) {
         walkInClientProvider.ensureFor(event.companyId());
     }

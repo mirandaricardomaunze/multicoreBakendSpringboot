@@ -3,14 +3,12 @@ package mz.multicore.erp.gui.platform;
 import mz.multicore.erp.desktop.client.PlatformApiClient;
 import mz.multicore.erp.gui.components.FeedbackType;
 import mz.multicore.erp.gui.components.ModernButton;
-import mz.multicore.erp.gui.components.ModernFormDialog;
 import mz.multicore.erp.gui.components.ModernMessageDialog;
 import mz.multicore.erp.gui.components.ModernPanel;
 import mz.multicore.erp.gui.components.TableFilter;
 import mz.multicore.erp.gui.components.UIHelper;
-import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
+import mz.multicore.erp.modules.platform.dto.CompanyProfile;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
-import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -42,7 +40,7 @@ public class PlatformCompaniesView extends JPanel {
         setBackground(UIHelper.BG_DARK);
         setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        ModernButton newBtn = UIHelper.createSuccessButton("Nova Empresa");
+        ModernButton newBtn = UIHelper.createSuccessButton("Registar Empresa");
         newBtn.setIcon(UIHelper.icon("fas-plus", 14));
         newBtn.addActionListener(e -> createCompany());
 
@@ -55,7 +53,7 @@ public class PlatformCompaniesView extends JPanel {
         listCard.setLayout(new BorderLayout());
         listCard.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        String[] cols = {"Nome", "NUIT", "Email", "Nº Utilizadores", "Estado"};
+        String[] cols = {"Empresa", "NUIT", "Localidade", "Telefone", "Email", "Utilizadores", "Estado"};
         companiesModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) {
@@ -75,9 +73,9 @@ public class PlatformCompaniesView extends JPanel {
         JScrollPane scroll = new JScrollPane(companiesTable);
         UIHelper.styleScrollPane(scroll);
 
-        JTextField cSearch = TableFilter.searchField("Nome, NUIT ou email…");
+        JTextField cSearch = TableFilter.searchField("Nome, NUIT, cidade ou email…");
         JComboBox<String> cEstado = TableFilter.combo("Todos os estados", "Activa", "Suspensa");
-        TableFilter.install(companiesTable, cSearch, new TableFilter.ColumnFilter(cEstado, 4));
+        TableFilter.install(companiesTable, cSearch, new TableFilter.ColumnFilter(cEstado, 6));
         JPanel cBar = TableFilter.bar(cSearch, TableFilter.label("Estado:"), cEstado);
         cBar.setBorder(new EmptyBorder(0, 0, 10, 0));
 
@@ -97,7 +95,8 @@ public class PlatformCompaniesView extends JPanel {
             companiesModel.setRowCount(0);
             for (PlatformCompanyDTO c : companies) {
                 companiesModel.addRow(new Object[]{
-                        c.name(), c.taxId(), c.email() == null ? "" : c.email(),
+                        displayName(c), c.taxId(), locality(c.profile()),
+                        c.phone() == null ? "" : c.phone(), c.email() == null ? "" : c.email(),
                         c.userCount(), c.active() ? "ACTIVA" : "SUSPENSA"
                 });
             }
@@ -114,118 +113,47 @@ public class PlatformCompaniesView extends JPanel {
     }
 
     private void createCompany() {
-        JTextField nameField = new JTextField();
-        JTextField taxIdField = new JTextField();
-        JTextField emailField = new JTextField();
-        JTextField addressField = new JTextField();
-        JTextField phoneField = new JTextField();
-        UIHelper.styleTextField(nameField);
-        UIHelper.styleTextField(taxIdField);
-        UIHelper.styleTextField(emailField);
-        UIHelper.styleTextField(addressField);
-        UIHelper.styleTextField(phoneField);
-        final byte[][] logoHolder = {null};
-
-        JPanel form = UIHelper.createDialogForm(
-                "Nome:", nameField,
-                "NUIT:", taxIdField,
-                "Email:", emailField,
-                "Endereço:", addressField,
-                "Telefone:", phoneField,
-                "Logótipo:", logoPicker(logoHolder, false)
-        );
-
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Nova Empresa",
-                "fas-building", "Registar uma empresa na plataforma", form)
-                .setConfirmButton("Criar", "fas-plus");
-        dlg.setOnSaveAsync(() -> {
-            if (nameField.getText().trim().isEmpty() || taxIdField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("Nome e NUIT são obrigatórios.");
-            }
-            CreateCompanyRequest request = new CreateCompanyRequest(
-                    nameField.getText().trim(), taxIdField.getText().trim(),
-                    emailField.getText().trim(), addressField.getText().trim(), phoneField.getText().trim());
-            byte[] logo = logoHolder[0];
-            return () -> {
-                PlatformCompanyDTO created = platformApiClient.createCompany(request);
-                if (logo != null) platformApiClient.updateCompanyLogo(created.id(), logo);
-                return created;
-            };
-        });
-
-        if (dlg.showDialog()) {
-            feedbackHandler.showSuccess("Empresa criada com sucesso.");
-            loadCompanies();
+        CompanyWizardDialog.Outcome outcome =
+                CompanyWizardDialog.showCreate(SwingUtilities.getWindowAncestor(this), platformApiClient);
+        if (outcome == null) return;
+        if (outcome.logoFailed()) {
+            feedbackHandler.showNotice(FeedbackType.WARNING, "Empresa registada sem logótipo",
+                    "A empresa, o administrador e a assinatura foram criados, mas o logótipo não foi carregado. "
+                            + "Edite a empresa para tentar de novo.");
+        } else {
+            feedbackHandler.showSuccess("Empresa '" + displayName(outcome.company())
+                    + "' registada com administrador e assinatura.");
         }
+        loadCompanies();
     }
 
     private void editSelectedCompany() {
         PlatformCompanyDTO company = selectedCompany();
         if (company == null) return;
-
-        JTextField nameField = new JTextField(company.name());
-        JTextField emailField = new JTextField(company.email() == null ? "" : company.email());
-        JTextField addressField = new JTextField(company.address() == null ? "" : company.address());
-        JTextField phoneField = new JTextField(company.phone() == null ? "" : company.phone());
-        UIHelper.styleTextField(nameField);
-        UIHelper.styleTextField(emailField);
-        UIHelper.styleTextField(addressField);
-        UIHelper.styleTextField(phoneField);
-        final byte[][] logoHolder = {null};
-
-        JPanel form = UIHelper.createDialogForm(
-                "Nome:", nameField,
-                "Email:", emailField,
-                "Endereço:", addressField,
-                "Telefone:", phoneField,
-                "Logótipo:", logoPicker(logoHolder, company.hasLogo())
-        );
-
-        ModernFormDialog dlg = new ModernFormDialog(UIHelper.mainWindow, "Editar Empresa",
-                "fas-pen", "NUIT: " + company.taxId(), form).setConfirmButton("Guardar", "fas-check");
-        dlg.setOnSaveAsync(() -> {
-            if (nameField.getText().trim().isEmpty()) {
-                throw new IllegalArgumentException("O nome é obrigatório.");
-            }
-            UpdateCompanyRequest request = new UpdateCompanyRequest(
-                    nameField.getText().trim(), emailField.getText().trim(),
-                    addressField.getText().trim(), phoneField.getText().trim());
-            byte[] logo = logoHolder[0];
-            return () -> {
-                PlatformCompanyDTO updated = platformApiClient.updateCompany(company.id(), request);
-                if (logo != null) platformApiClient.updateCompanyLogo(company.id(), logo);
-                return updated;
-            };
-        });
-
-        if (dlg.showDialog()) {
+        CompanyWizardDialog.Outcome outcome =
+                CompanyWizardDialog.showEdit(SwingUtilities.getWindowAncestor(this), platformApiClient, company);
+        if (outcome == null) return;
+        if (outcome.logoFailed()) {
+            feedbackHandler.showNotice(FeedbackType.WARNING, "Logótipo não carregado",
+                    "Os dados da empresa foram guardados, mas o logótipo não foi carregado. Tente de novo.");
+        } else {
             feedbackHandler.showSuccess("Empresa actualizada.");
-            loadCompanies();
         }
+        loadCompanies();
     }
 
-    private JComponent logoPicker(byte[][] holder, boolean hasExisting) {
-        JLabel preview = new JLabel(hasExisting ? "(logótipo actual definido)" : "(sem logótipo)");
-        JButton pick = new JButton("Escolher Imagem", UIHelper.icon("fas-image", 16));
-        pick.addActionListener(e -> {
-            JFileChooser fc = new JFileChooser();
-            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagens (PNG, JPG)", "png", "jpg", "jpeg"));
-            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                byte[] bytes = UIHelper.readScaledImage(fc.getSelectedFile(), 320);
-                if (bytes == null) {
-                    feedbackHandler.showNotice(FeedbackType.WARNING, "Imagem inválida", "Seleccione uma imagem válida para o logótipo.");
-                    return;
-                }
-                holder[0] = bytes;
-                preview.setText(null);
-                preview.setIcon(UIHelper.imageIconFromBytes(bytes, 64, 40));
-            }
-        });
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        p.setOpaque(false);
-        p.add(pick);
-        p.add(preview);
-        return p;
+    private static String displayName(PlatformCompanyDTO c) {
+        CompanyProfile p = c.profile();
+        return p != null && p.tradeName() != null && !p.tradeName().isBlank() ? p.tradeName() : c.name();
+    }
+
+    private static String locality(CompanyProfile p) {
+        if (p == null) return "";
+        String city = p.city() == null ? "" : p.city().trim();
+        String province = p.province() == null ? "" : p.province().label();
+        if (city.isEmpty()) return province;
+        if (province.isEmpty() || province.toLowerCase().contains(city.toLowerCase())) return city;
+        return city + ", " + province;
     }
 
     private void toggleSelectedCompany() {

@@ -114,7 +114,7 @@ public class ModernFormDialog {
         dialog.setMinimumSize(new Dimension(Math.min(MIN_WIDTH, maxW), Math.min(MIN_HEIGHT, maxH)));
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.getRootPane().registerKeyboardAction(e -> {
-                    if (saveBtn.getParent() != null && saveBtn.isEnabled()) attemptSave();
+                    if (saveBtn.getParent() != null && saveBtn.isVisible() && saveBtn.isEnabled()) attemptSave();
                 }, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S,
                         java.awt.event.InputEvent.CTRL_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
         dialog.getRootPane().registerKeyboardAction(e -> dialog.dispose(),
@@ -167,6 +167,19 @@ public class ModernFormDialog {
         return this;
     }
 
+    /**
+     * Adds a footer button right before the confirm button (after "Cancelar"), for actions that
+     * move the form forward, like "Anterior"/"Seguinte" in a multi-step form.
+     */
+    public ModernFormDialog addActionButtonBeforeConfirm(ModernButton btn) {
+        btn.setPreferredSize(new Dimension(130, 38));
+        int index = java.util.Arrays.asList(buttonRow.getComponents()).indexOf(saveBtn);
+        buttonRow.add(btn, index < 0 ? buttonRow.getComponentCount() : index);
+        buttonRow.revalidate();
+        buttonRow.repaint();
+        return this;
+    }
+
     /** Fecha o modal por código (para acções extra que terminam o diálogo). */
     public void close() {
         dialog.dispose();
@@ -178,6 +191,17 @@ public class ModernFormDialog {
         if (iconCode != null) {
             saveBtn.setIcon(UIHelper.icon(iconCode, 14));
         }
+        return this;
+    }
+
+    /**
+     * Shows or hides the confirm button. A multi-step form hides it until the last step; while
+     * hidden, Ctrl+S and {@link #submit()} do nothing.
+     */
+    public ModernFormDialog setConfirmVisible(boolean visible) {
+        saveBtn.setVisible(visible);
+        buttonRow.revalidate();
+        buttonRow.repaint();
         return this;
     }
 
@@ -272,7 +296,7 @@ public class ModernFormDialog {
 
     /** Executa a confirmação do modal programaticamente (ex.: duplo clique ou Enter na tabela). */
     public void submit() {
-        if (saveBtn != null && saveBtn.isEnabled() && saveBtn.getParent() != null) {
+        if (saveBtn != null && saveBtn.isVisible() && saveBtn.isEnabled() && saveBtn.getParent() != null) {
             attemptSave();
         }
     }
