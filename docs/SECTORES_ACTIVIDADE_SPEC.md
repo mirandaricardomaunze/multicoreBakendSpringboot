@@ -31,7 +31,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C03 | Tabelas de preço | **Feito (F1)** | Tabelas com escalões e validade, por cliente, aplicadas na fatura, encomenda e cotação (`TABELAS_PRECO_SPEC`). Falta (F2): preço por unidade alternativa e preço da tabela no carrinho do POS |
 | SA-C04 | Variantes de artigo | Falta | Tamanho/cor; espessura de varão; gramagem; sabor. Um artigo-pai, stock e preço por variante |
 | SA-C05 | Venda ao peso e balança real | **Driver feito (F3)** · `BALANCA_SERIE_SPEC` (porta série, configuração por posto) | Etiqueta EAN-13 lida. Falta driver da balança e o resto: ver `PROMPT_BALANCA_VENDA_PESO.md` |
-| SA-C06 | Produção e transformação | Parcial | BOM e ordem simples. Falta receita versionada, rendimento, desmancha, cura, plano do dia: ver `PROMPT_PRODUCAO_TRANSFORMACAO.md` |
+| SA-C06 | Produção e transformação | **Plano diário feito (F4)** · `PLANO_PRODUCAO_SPEC` + desmancha `DESMANCHA_SPEC` (V126) | BOM e ordem simples. Falta receita versionada, rendimento, desmancha, cura, plano do dia: ver `PROMPT_PRODUCAO_TRANSFORMACAO.md` |
 | SA-C07 | Material pago por levantar | **Feito (F2)** · `MATERIAL_POR_LEVANTAR_SPEC` | Cliente paga 200 sacos e levanta aos poucos. Saldo por linha de fatura, guias parciais contra a fatura, stock reservado, extracto do cliente |
 | SA-C08 | Entregas e frete | Parcial · **frete por zona feito** (Ctrl+Alt+F, zona = serviço `FRT-`) | Frota tem manifestos e paragens. Falta frete por zona/viagem/peso como linha de serviço, agenda de entregas, prova de entrega (assinatura, foto, nome de quem recebeu) e devolução na obra |
 | SA-C09 | Obras / projectos do cliente | Falta | Um empreiteiro, várias obras. Entregas, faturas, crédito, preços e extracto por obra |

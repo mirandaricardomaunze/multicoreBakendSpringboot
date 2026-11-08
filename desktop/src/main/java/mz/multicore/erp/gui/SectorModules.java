@@ -29,11 +29,13 @@ final class SectorModules {
     static final String ADVANCES = "adiantamentos";
     static final String BUTCHERY = "talho";
     static final String EXPIRY = "validades";
+    static final String PRODUCTION_PLAN = "plano-producao";
 
     private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
-            ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades");
+            ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades", PRODUCTION_PLAN, "Plano de Produção");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
-            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES");
+            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES",
+            PRODUCTION_PLAN, "PRODUCTION");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -51,7 +53,7 @@ final class SectorModules {
                                 UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,
                                 BulkStockApiClient bulkApi, ProjectsApiClient projectsApi,
                                 AdvancesApiClient advancesApi, FinanceApiClient financeApi, ButcheryApiClient butcheryApi,
-                                ExpiryApiClient expiryApi) {
+                                ExpiryApiClient expiryApi, ProductionPlanApiClient planApi, ProductionApiClient productionApi) {
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
@@ -59,6 +61,7 @@ final class SectorModules {
         if (advancesApi != null) registry.addAdvances(advancesApi, comercialApi, financeApi, inventoryApi);
         if (butcheryApi != null) registry.addButchery(butcheryApi, comercialApi, inventoryApi);
         if (expiryApi != null) registry.addExpiry(expiryApi, comercialApi);
+        if (planApi != null) registry.addProductionPlan(planApi, productionApi, comercialApi, inventoryApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -190,6 +193,26 @@ final class SectorModules {
             page.setIndicator("Perdas no mês", UIHelper.formatMzn(board.expiryLossesThisMonth()));
         });
         modules.put(EXPIRY, new Module(EXPIRY, "fas-hourglass-half", UIHelper.PENDING_YELLOW, true, page, panel::reload));
+    }
+
+    private void addProductionPlan(ProductionPlanApiClient planApi, ProductionApiClient productionApi, ComercialApiClient comercialApi,
+                                   InventoryApiClient inventoryApi) {
+        ProductionPlanPanel panel = new ProductionPlanPanel(planApi, productionApi, comercialApi, inventoryApi);
+        ModulePage page = new ModulePage("fas-bread-slice", UIHelper.ACCENT_ORANGE, "Plano de Produção",
+                "Plano do dia pelas vendas, matéria-prima em falta, lotes tirados do forno com custo real e fecho com sobras.",
+                new String[][]{{"Receitas no plano", "Produtos a fazer hoje", "fas-clipboard-list", "blue"},
+                        {"Produzido", "Unidades tiradas do forno", "fas-bread-slice", "green"},
+                        {"Por produzir", "Ainda falta fazer", "fas-hourglass-half", "amber"},
+                        {"Custo produzido", "Ingredientes e mão-de-obra", "fas-coins", null}}, panel);
+        panel.onLoaded(plan -> {
+            BigDecimal produced = plan.lines().stream().map(l -> l.producedQty()).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal remaining = plan.lines().stream().map(l -> l.remainingQty()).reduce(BigDecimal.ZERO, BigDecimal::add);
+            page.setIndicator("Receitas no plano", String.valueOf(plan.lines().size()));
+            page.setIndicator("Produzido", mz.multicore.erp.architecture.format.DisplayNumbers.qty(produced));
+            page.setIndicator("Por produzir", mz.multicore.erp.architecture.format.DisplayNumbers.qty(remaining));
+            page.setIndicator("Custo produzido", UIHelper.formatMzn(plan.producedCost()));
+        });
+        modules.put(PRODUCTION_PLAN, new Module(PRODUCTION_PLAN, "fas-bread-slice", UIHelper.ACCENT_ORANGE, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

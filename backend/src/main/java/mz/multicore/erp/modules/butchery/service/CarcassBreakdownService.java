@@ -17,6 +17,7 @@ import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -45,14 +46,15 @@ public class CarcassBreakdownService {
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final StockMovementRegistrationService movementService;
+    private final AverageCostUpdater averageCost;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
                                    ProductRepository productRepository, CompanyRepository companyRepository,
                                    WarehouseRepository warehouseRepository, StockRepository stockRepository,
-                                   StockMovementRegistrationService movementService, DocumentNumberService documentNumberService,
-                                   AuditLogService auditLogService) {
+                                   StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
+                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
         this.templateRepository = templateRepository;
         this.breakdownRepository = breakdownRepository;
         this.productRepository = productRepository;
@@ -60,6 +62,7 @@ public class CarcassBreakdownService {
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.movementService = movementService;
+        this.averageCost = averageCost;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -174,7 +177,7 @@ public class CarcassBreakdownService {
             Product cut = cuts.get(i);
             BreakdownCostRules.Allocation allocation = allocations.get(i);
             BigDecimal kg = request.lines().get(i).kg();
-            updateAverageCost(cut, warehouse, kg, allocation.cost());
+            averageCost.beforeEntry(cut, warehouse, kg, allocation.cost());
             movementService.registerMovement(cut, warehouse, kg, MOVEMENT_TYPE, breakdown.getNumber(), null, description, null);
             CarcassBreakdownLine line = new CarcassBreakdownLine();
             line.setBreakdown(breakdown);
@@ -223,17 +226,6 @@ public class CarcassBreakdownService {
         breakdown = breakdownRepository.save(breakdown);
         auditLogService.logCurrent("CARCASS_BREAKDOWN_CANCEL", "Desmancha " + breakdown.getNumber() + " anulada: " + request.reason().trim());
         return toDto(breakdown);
-    }
-
-    /** Weighted average cost of the cut in this warehouse: old stock at the old cost plus the new kg at their cost. */
-    private void updateAverageCost(Product cut, Warehouse warehouse, BigDecimal kg, BigDecimal cost) {
-        BigDecimal onHand = stockRepository.findByProductIdAndWarehouseId(cut.getId(), warehouse.getId())
-                .map(Stock::getQuantity).orElse(BigDecimal.ZERO).max(BigDecimal.ZERO);
-        BigDecimal total = onHand.add(kg);
-        if (total.signum() <= 0) return;
-        BigDecimal value = onHand.multiply(nz(cut.getPurchasePrice())).add(cost);
-        cut.setPurchasePrice(value.divide(total, 2, RoundingMode.HALF_UP));
-        productRepository.save(cut);
     }
 
     private Product trackedProduct(Long companyId, Long productId) {
