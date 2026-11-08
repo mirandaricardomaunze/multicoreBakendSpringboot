@@ -55,6 +55,7 @@ final class MainFrameSidebarBuilder {
             if (sectors != null) sectors.addSidebarItem(sb, SectorModules.BUTCHERY, true, navigate);
             if (sectors != null) sectors.addSidebarItem(sb, SectorModules.EXPIRY, true, navigate);
             if (sectors != null) sectors.addSidebarItem(sb, SectorModules.PRODUCTION_PLAN, true, navigate);
+            if (sectors != null) sectors.addSidebarItem(sb, SectorModules.CUSTOM_ORDERS, true, navigate);
             sb.addItem(UIHelper.icon("fas-headset", 16, UIHelper.MODULE_CRM), "CRM e Assistência", UIHelper.MODULE_CRM, () -> navigate.accept("crm"));
             sb.addSection("Avisos");
             sb.addItem(UIHelper.icon("fas-bell", 16, UIHelper.ACCENT_ORANGE), "Notificações", UIHelper.ACCENT_ORANGE, () -> navigate.accept("notifications"));
@@ -103,6 +104,7 @@ final class MainFrameSidebarBuilder {
             sectors.addSidebarItem(sb, SectorModules.BUTCHERY, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.EXPIRY, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.PRODUCTION_PLAN, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.CUSTOM_ORDERS, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.PRICES, false, navigate);
         }
         sb.addItem(UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), "Avenças & Contratos", UIHelper.ACCENT_BLUE, () -> navigate.accept("recurring"));

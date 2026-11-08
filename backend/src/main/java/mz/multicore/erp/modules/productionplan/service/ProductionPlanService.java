@@ -156,6 +156,46 @@ public class ProductionPlanService {
         return toDto(plan);
     }
 
+    /**
+     * Adds quantities to the plan of a day (custom orders sent to production). Existing lines grow; recipes not
+     * yet planned get a new line. A closed day refuses it.
+     */
+    @Transactional
+    public ProductionPlanDTO addToPlan(Long companyId, Long warehouseId, LocalDate date, Map<Long, BigDecimal> quantitiesByBom) {
+        CurrentUserContext.requireCompany(companyId);
+        Warehouse warehouse = requireWarehouse(companyId, warehouseId);
+        ProductionPlan plan = planRepository.findDay(companyId, warehouseId, date).orElseGet(() -> {
+            ProductionPlan created = new ProductionPlan();
+            created.setCompany(warehouse.getCompany());
+            created.setWarehouse(warehouse);
+            created.setPlanDate(date);
+            return created;
+        });
+        requireOpen(plan);
+        int order = plan.getLines().size();
+        for (Map.Entry<Long, BigDecimal> entry : quantitiesByBom.entrySet()) {
+            ProductionPlanLine line = plan.getLines().stream().filter(l -> l.getBom().getId().equals(entry.getKey())).findFirst()
+                    .orElse(null);
+            if (line == null) {
+                BillOfMaterials bom = requireRecipe(companyId, entry.getKey());
+                line = new ProductionPlanLine();
+                line.setPlan(plan);
+                line.setBom(bom);
+                line.setProduct(bom.getFinishedProduct());
+                line.setSortOrder(order++);
+                plan.getLines().add(line);
+            }
+            line.setPlannedQty(line.getPlannedQty().add(entry.getValue()));
+        }
+        return toDto(planRepository.save(plan));
+    }
+
+    /** First active recipe that makes the product, if any. */
+    @Transactional(readOnly = true)
+    public Optional<Long> recipeFor(Long companyId, Long productId) {
+        return recipes(companyId).stream().filter(b -> b.getFinishedProduct().getId().equals(productId)).map(BillOfMaterials::getId).findFirst();
+    }
+
     @Transactional(readOnly = true)
     public List<MaterialRequirementDTO> requirements(Long companyId, Long planId) {
         CurrentUserContext.requireCompany(companyId);

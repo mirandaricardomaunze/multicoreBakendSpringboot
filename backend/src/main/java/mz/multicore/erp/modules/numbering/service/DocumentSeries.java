@@ -39,11 +39,13 @@ public final class DocumentSeries {
     public static final String MATERIAL_PICKUP = "LV";
     /** Internal carcass breakdown record of the butchery (F3). Not a fiscal series. */
     public static final String CARCASS_BREAKDOWN = "DM";
+    /** Internal consignment delivery note to a reseller (F4). Not a fiscal series. */
+    public static final String CONSIGNMENT = "CG";
 
     /** Todas as séries acima, para as criar antecipadamente ({@link DocumentSequenceBootstrap}). */
     public static final java.util.List<String> ALL = java.util.List.of(INVOICE, ORDER, QUOTATION, RECEIPT,
             CREDIT_NOTE, DEBIT_NOTE, STOCK_TRANSFER, DELIVERY_GUIDE, PURCHASE, PURCHASE_ORDER, PAYSLIP,
-            EMPLOYMENT_CONTRACT, TERMINATION, JOURNAL_ENTRY, MATERIAL_PICKUP, CARCASS_BREAKDOWN);
+            EMPLOYMENT_CONTRACT, TERMINATION, JOURNAL_ENTRY, MATERIAL_PICKUP, CARCASS_BREAKDOWN, CONSIGNMENT);
 
     private DocumentSeries() {}
 }

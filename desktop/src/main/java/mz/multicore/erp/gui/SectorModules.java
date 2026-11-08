@@ -30,12 +30,14 @@ final class SectorModules {
     static final String BUTCHERY = "talho";
     static final String EXPIRY = "validades";
     static final String PRODUCTION_PLAN = "plano-producao";
+    static final String CUSTOM_ORDERS = "agenda-encomendas";
 
     private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
-            ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades", PRODUCTION_PLAN, "Plano de Produção");
+            ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades", PRODUCTION_PLAN, "Plano de Produção",
+            CUSTOM_ORDERS, "Agenda de Encomendas");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
             PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES",
-            PRODUCTION_PLAN, "PRODUCTION");
+            PRODUCTION_PLAN, "PRODUCTION", CUSTOM_ORDERS, "CUSTOM_ORDERS");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -51,9 +53,13 @@ final class SectorModules {
     static SectorModules create(ComercialPanel comercial, StockPanel stock, ConfigPanel config, ComercialApiClient comercialApi,
                                 InventoryApiClient inventoryApi, PromotionApiClient promotionApi, ActivityApiClient activityApi,
                                 UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,
-                                BulkStockApiClient bulkApi, ProjectsApiClient projectsApi,
-                                AdvancesApiClient advancesApi, FinanceApiClient financeApi, ButcheryApiClient butcheryApi,
-                                ExpiryApiClient expiryApi, ProductionPlanApiClient planApi, ProductionApiClient productionApi) {
+                                BulkStockApiClient bulkApi, ProjectsApiClient projectsApi, FinanceApiClient financeApi,
+                                ProductionApiClient productionApi, SectorApiClients sector) {
+        AdvancesApiClient advancesApi = sector == null ? null : sector.advances();
+        ButcheryApiClient butcheryApi = sector == null ? null : sector.butchery();
+        ExpiryApiClient expiryApi = sector == null ? null : sector.expiry();
+        ProductionPlanApiClient planApi = sector == null ? null : sector.productionPlan();
+        CustomOrdersApiClient customOrdersApi = sector == null ? null : sector.customOrders();
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
@@ -62,6 +68,7 @@ final class SectorModules {
         if (butcheryApi != null) registry.addButchery(butcheryApi, comercialApi, inventoryApi);
         if (expiryApi != null) registry.addExpiry(expiryApi, comercialApi);
         if (planApi != null) registry.addProductionPlan(planApi, productionApi, comercialApi, inventoryApi);
+        if (customOrdersApi != null) registry.addCustomOrders(customOrdersApi, comercialApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -213,6 +220,25 @@ final class SectorModules {
             page.setIndicator("Custo produzido", UIHelper.formatMzn(plan.producedCost()));
         });
         modules.put(PRODUCTION_PLAN, new Module(PRODUCTION_PLAN, "fas-bread-slice", UIHelper.ACCENT_ORANGE, true, page, panel::reload));
+    }
+
+    private void addCustomOrders(CustomOrdersApiClient customOrdersApi, ComercialApiClient comercialApi) {
+        CustomOrdersPanel panel = new CustomOrdersPanel(customOrdersApi, comercialApi);
+        ModulePage page = new ModulePage("fas-birthday-cake", UIHelper.ACCENT_PINK, "Agenda de Encomendas",
+                "Bolos, salgados e carne por encomenda: dia e hora de entrega, personalização com fotografia e produção do dia.",
+                new String[][]{{"Encomendas", "No período escolhido", "fas-calendar-alt", "blue"},
+                        {"Para hoje", "Entregas de hoje", "fas-clock", "amber"},
+                        {"Prontas", "À espera do cliente", "fas-check-circle", "green"},
+                        {"Por receber", "Total menos sinais", "fas-hand-holding-usd", null}}, panel);
+        panel.onLoaded(all -> {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            page.setIndicator("Encomendas", String.valueOf(all.size()));
+            page.setIndicator("Para hoje", String.valueOf(all.stream().filter(o -> today.equals(o.deliveryDate())).count()));
+            page.setIndicator("Prontas", String.valueOf(all.stream().filter(o -> o.stage() == mz.multicore.erp.modules.customorders.model.CustomOrderStage.READY).count()));
+            page.setIndicator("Por receber", UIHelper.formatMzn(all.stream().map(o -> (o.total() == null ? BigDecimal.ZERO : o.total())
+                    .subtract(o.advancePaid()).max(BigDecimal.ZERO)).reduce(BigDecimal.ZERO, BigDecimal::add)));
+        });
+        modules.put(CUSTOM_ORDERS, new Module(CUSTOM_ORDERS, "fas-birthday-cake", UIHelper.ACCENT_PINK, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────
