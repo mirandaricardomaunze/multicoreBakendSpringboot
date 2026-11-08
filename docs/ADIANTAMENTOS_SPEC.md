@@ -1,6 +1,6 @@
 # Spec — Adiantamentos e sinais de clientes (SA-C10)
 
-**Data:** 2026-11-08 · **Estado:** decidido, por implementar · **SPEC mestre:** `docs/SECTORES_ACTIVIDADE_SPEC.md`
+**Data:** 2026-11-08 · **Estado:** feito (servidor e desktop), por rever visualmente · **SPEC mestre:** `docs/SECTORES_ACTIVIDADE_SPEC.md`
 
 ## Problema
 
@@ -61,3 +61,26 @@ Ponta a ponta por HTTP: sinal de 3.000 → FT + RC (caixa +3.000) → fatura fin
 3.000 + compensação → em dívida 7.000; caixa só +3.000; diário equilibrado; IVA total = IVA de 10.000.
 Mais: aplicar duas vezes recusado, cliente diferente recusado, anulação da compensação sem tocar caixa,
 paridade PostgreSQL, `ApiRolePolicy`.
+
+## Implementação (2026-11-08)
+
+- Módulo `advances` (`/api/advances`): listar (vendedor), receber e aplicar (gestão). Migração
+  `V123__adiantamentos.sql` só acrescenta a tabela `customer_advances`.
+- O artigo de sistema `SYS-ADIANT-<empresa>` é criado no primeiro sinal (não no arranque). Encomendas,
+  cotações, POS e faturas sem preço indicado recusam-no (`Product#requireOrdinarySale`).
+- O valor recebido inclui IVA; a linha da fatura leva o preço sem IVA.
+- Aplicar move o valor pago da fatura do sinal para a fatura final e emite o recibo de compensação
+  (`COMPENSACAO_ADIANTAMENTO`), que não mexe na tesouraria nem no diário e não entra no extracto.
+- Anulação recusada para o recibo original de um sinal já aplicado e para o recibo de compensação.
+- Desktop: módulo **Adiantamentos** (só gestão) com indicadores, "Receber Sinal" (imprime a fatura do sinal)
+  e "Aplicar na Fatura".
+
+## Limites conhecidos
+
+- Aplica-se o sinal inteiro: a fatura final tem de ter em dívida pelo menos o valor do sinal.
+- Um sinal aplicado não se desfaz no módulo; corrige-se com documentos normais (nota de débito, etc.).
+- Ainda não existe: devolução do sinal ao cliente, aviso automático no editor da fatura final e PDF próprio do recibo RC.
+
+Teste: `CustomerAdvanceHttpIntegrationTest` (caixa só uma vez, conta 2101, extracto, balancete equilibrado,
+aplicar duas vezes, outro cliente, fatura de sinal como destino, anulações recusadas, idempotência,
+Consumidor Final e artigo de sistema fora do módulo).

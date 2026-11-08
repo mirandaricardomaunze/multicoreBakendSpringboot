@@ -18,8 +18,20 @@ public record CreateInvoiceLineRequest(
 
     BigDecimal discountPercentage, // e.g. 10.00
     String batchNumber,            // Lote
-    String serialNumber            // Série
+    String serialNumber,           // Série
+
+    /**
+     * Price typed by the operator. Honoured only for the system product "Adiantamento" (advance invoices,
+     * {@code docs/ADIANTAMENTOS_SPEC.md}); every other product keeps the price of the product or price list.
+     */
+    @Positive(message = "O preço indicado deve ser positivo.")
+    BigDecimal unitPrice
 ) {
+    public CreateInvoiceLineRequest(Long productId, BigDecimal quantity, BigDecimal taxRate,
+                                    BigDecimal discountPercentage, String batchNumber, String serialNumber) {
+        this(productId, quantity, taxRate, discountPercentage, batchNumber, serialNumber, null);
+    }
+
     public CreateInvoiceLineRequest(Long productId, Integer quantity, BigDecimal taxRate) {
         this(productId, BigDecimal.valueOf(quantity), taxRate, BigDecimal.ZERO, null, null);
     }

@@ -152,4 +152,16 @@ public class Product extends BaseEntity {
                 ? taxRate.getRate()
                 : mz.multicore.erp.architecture.pricing.TaxRates.STANDARD_VAT;
     }
+
+    /**
+     * Refuses the system product "Adiantamento" outside the advances module: it is only sold through an
+     * advance invoice with the amount actually received ({@code docs/ADIANTAMENTOS_SPEC.md}).
+     */
+    public Product requireOrdinarySale() {
+        if (mz.multicore.erp.modules.advances.AdvancePayments.isSystemSku(sku)) {
+            throw new mz.multicore.erp.architecture.exception.BusinessRuleException(
+                    "O artigo Adiantamento só se usa no módulo Adiantamentos.");
+        }
+        return this;
+    }
 }

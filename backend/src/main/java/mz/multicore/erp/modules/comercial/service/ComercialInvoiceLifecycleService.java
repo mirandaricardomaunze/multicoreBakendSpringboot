@@ -154,7 +154,7 @@ public class ComercialInvoiceLifecycleService {
                             + "' (pertencente a: " + prodBuName + "). Desmarque o filtro de negócio para emitir produtos mistos.");
                 }
             }
-            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, lineReq.quantity());
+            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, lineReq.quantity(), lineReq.unitPrice());
             BigDecimal taxRate = product.effectiveTaxRate();
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);

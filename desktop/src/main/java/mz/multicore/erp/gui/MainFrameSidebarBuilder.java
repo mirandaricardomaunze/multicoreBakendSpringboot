@@ -96,6 +96,7 @@ final class MainFrameSidebarBuilder {
         sb.addItem(UIHelper.icon("fas-address-book", 16, UIHelper.MODULE_CLIENTES), "Clientes", UIHelper.MODULE_CLIENTES, () -> navigate.accept("clientes"));
         if (sectors != null) {
             sectors.addSidebarItem(sb, SectorModules.PROJECTS, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.ADVANCES, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.PRICES, false, navigate);
         }
         sb.addItem(UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), "Avenças & Contratos", UIHelper.ACCENT_BLUE, () -> navigate.accept("recurring"));

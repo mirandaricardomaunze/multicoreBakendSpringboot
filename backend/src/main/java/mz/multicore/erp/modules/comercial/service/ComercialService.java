@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.events.PaymentReceivedEvent;
+import mz.multicore.erp.modules.advances.AdvancePayments;
 import mz.multicore.erp.architecture.events.ReceiptCancelledEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageQuery;
@@ -255,6 +256,8 @@ public class ComercialService {
 
         Invoice invoice = invoiceRepository.lockByIdAndCompanyId(receipt.getInvoice().getId(), companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura do recibo não encontrada."));
+        if (AdvancePayments.isOffsetPayment(receipt.getPaymentMethod()) || receipt.getAmountPaid().compareTo(invoice.getAmountPaid()) > 0)
+            throw new BusinessRuleException("Este recibo está ligado a um adiantamento já aplicado e não pode ser anulado.");
         BigDecimal remaining = invoice.getAmountPaid().subtract(receipt.getAmountPaid());
         invoice.setAmountPaid(remaining.compareTo(BigDecimal.ZERO) > 0
                 ? remaining.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);

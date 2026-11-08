@@ -26,10 +26,12 @@ final class SectorModules {
     static final String PRICES = "precos";
     static final String PICKUPS = "levantamentos";
     static final String PROJECTS = "obras";
+    static final String ADVANCES = "adiantamentos";
 
-    private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras");
+    private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
+            ADVANCES, "Adiantamentos");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
-            PROJECTS, "CUSTOMER_PROJECTS");
+            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -45,11 +47,13 @@ final class SectorModules {
     static SectorModules create(ComercialPanel comercial, StockPanel stock, ConfigPanel config, ComercialApiClient comercialApi,
                                 InventoryApiClient inventoryApi, PromotionApiClient promotionApi, ActivityApiClient activityApi,
                                 UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,
-                                BulkStockApiClient bulkApi, ProjectsApiClient projectsApi) {
+                                BulkStockApiClient bulkApi, ProjectsApiClient projectsApi,
+                                AdvancesApiClient advancesApi, FinanceApiClient financeApi) {
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
         if (projectsApi != null) registry.addProjects(projectsApi, comercialApi);
+        if (advancesApi != null) registry.addAdvances(advancesApi, comercialApi, financeApi, inventoryApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -122,6 +126,25 @@ final class SectorModules {
             page.setIndicator("Em dívida", UIHelper.formatMzn(all.stream().map(p -> p.outstanding()).reduce(BigDecimal.ZERO, BigDecimal::add)));
         });
         modules.put(PROJECTS, new Module(PROJECTS, "fas-hard-hat", UIHelper.ACCENT_ORANGE, true, page, panel::reload));
+    }
+
+    private void addAdvances(AdvancesApiClient advancesApi, ComercialApiClient comercialApi, FinanceApiClient financeApi,
+                             InventoryApiClient inventoryApi) {
+        AdvancesPanel panel = new AdvancesPanel(advancesApi, comercialApi, financeApi, inventoryApi);
+        ModulePage page = new ModulePage("fas-hand-holding-usd", UIHelper.APPROVED_GREEN, "Adiantamentos",
+                "Sinais e adiantamentos de clientes: fatura com IVA no recebimento e desconto na fatura final, sem cobrar duas vezes.",
+                new String[][]{{"Em aberto", "Sinais por aplicar", "fas-hourglass-half", "amber"},
+                        {"Valor em aberto", "Recebido e por descontar", "fas-coins", "blue"},
+                        {"Aplicados no mês", "Descontados em faturas", "fas-check-double", "green"}}, panel);
+        panel.onLoaded(all -> {
+            var open = all.stream().filter(a -> a.status() == mz.multicore.erp.modules.advances.model.CustomerAdvanceStatus.OPEN).toList();
+            java.time.LocalDate monthStart = java.time.LocalDate.now().withDayOfMonth(1);
+            page.setIndicator("Em aberto", String.valueOf(open.size()));
+            page.setIndicator("Valor em aberto", UIHelper.formatMzn(open.stream().map(a -> a.amount()).reduce(BigDecimal.ZERO, BigDecimal::add)));
+            page.setIndicator("Aplicados no mês", String.valueOf(all.stream().filter(a -> a.appliedAt() != null
+                    && !a.appliedAt().toLocalDate().isBefore(monthStart)).count()));
+        });
+        modules.put(ADVANCES, new Module(ADVANCES, "fas-hand-holding-usd", UIHelper.APPROVED_GREEN, false, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

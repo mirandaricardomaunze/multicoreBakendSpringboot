@@ -21,30 +21,33 @@ class SectorModulesHarnessTest {
     private static SectorModules modules() {
         return SectorModules.create(null, null, null, mock(ComercialApiClient.class), mock(InventoryApiClient.class),
                 mock(PromotionApiClient.class), null, mock(UnitsApiClient.class), mock(PricingApiClient.class),
-                mock(PickupApiClient.class), mock(BulkStockApiClient.class), mock(ProjectsApiClient.class));
+                mock(PickupApiClient.class), mock(BulkStockApiClient.class), mock(ProjectsApiClient.class),
+                mock(AdvancesApiClient.class), mock(FinanceApiClient.class));
     }
 
     @Test
-    @DisplayName("SM-01: Preços, Levantamentos and Obras are their own pages with a module header")
+    @DisplayName("SM-01: Preços, Levantamentos, Obras and Adiantamentos are their own pages with a module header")
     void modulesHaveOwnPages() {
         Map<String, JComponent> cards = new LinkedHashMap<>();
         modules().registerCards((page, card) -> cards.put(card, page));
-        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras");
+        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos");
         cards.values().forEach(page -> assertThat(page).isInstanceOf(ModulePage.class));
         assertThat(MainFrameModuleTitles.titleFor("levantamentos")).isEqualTo("Levantamentos");
         assertThat(MainFrameModuleTitles.titleFor("obras")).isEqualTo("Obras");
         assertThat(MainFrameModuleTitles.titleFor("precos")).isEqualTo("Preços");
+        assertThat(MainFrameModuleTitles.titleFor("adiantamentos")).isEqualTo("Adiantamentos");
         assertThat(MainFrameModuleTitles.titleFor("stock")).isEqualTo("Stock");
     }
 
     @Test
-    @DisplayName("SM-02: Sellers see Levantamentos and Obras but not Preços")
+    @DisplayName("SM-02: Sellers see Levantamentos and Obras but not Preços nor Adiantamentos (they issue invoices)")
     void sellerSidebar() {
         SectorModules modules = modules();
         CollapsibleSidebar sidebar = new CollapsibleSidebar("MULTICORE", "Teste");
         modules.addSidebarItem(sidebar, SectorModules.PICKUPS, true, card -> { });
         modules.addSidebarItem(sidebar, SectorModules.PROJECTS, true, card -> { });
         modules.addSidebarItem(sidebar, SectorModules.PRICES, true, card -> { });
+        modules.addSidebarItem(sidebar, SectorModules.ADVANCES, true, card -> { });
         List<SidebarNavItem> items = sidebar.getNavItems();
         assertThat(items).hasSize(2);
     }
@@ -54,15 +57,17 @@ class SectorModulesHarnessTest {
     void profileDrivesMenu() {
         SectorModules modules = modules();
         CollapsibleSidebar sidebar = new CollapsibleSidebar("MULTICORE", "Teste");
-        for (String card : List.of(SectorModules.PRICES, SectorModules.PICKUPS, SectorModules.PROJECTS)) {
+        for (String card : List.of(SectorModules.PRICES, SectorModules.PICKUPS, SectorModules.PROJECTS, SectorModules.ADVANCES)) {
             modules.addSidebarItem(sidebar, card, false, c -> { });
         }
         List<SidebarNavItem> items = sidebar.getNavItems();
         modules.applyCapabilities(List.of("PRICE_LISTS"));
         assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("general retail: only Preços").isEqualTo(1);
         modules.applyCapabilities(List.of("PRICE_LISTS", "PENDING_PICKUP", "CUSTOMER_PROJECTS"));
-        assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("building materials: all three").isEqualTo(3);
+        assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("building materials: three").isEqualTo(3);
+        modules.applyCapabilities(List.of("PRICE_LISTS", "ADVANCE_PAYMENTS"));
+        assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("bakery: prices and advances").isEqualTo(2);
         modules.applyCapabilities(List.of());
-        assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("unknown profile: show all").isEqualTo(3);
+        assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("unknown profile: show all").isEqualTo(4);
     }
 }

@@ -62,8 +62,25 @@ public class PriceResolutionService {
      */
     public static BigDecimal unitPrice(PriceResolutionService resolver, PriceSelection selection,
                                        Product product, BigDecimal quantity) {
+        product.requireOrdinarySale();
         if (resolver == null) return product.effectiveUnitPrice(quantity);
         return resolver.resolve(selection, product, quantity).unitPrice();
+    }
+
+    /**
+     * Invoice line price. The typed price is used only for the system product "Adiantamento", where it is the
+     * amount received; any other product ignores it and follows {@link #unitPrice(PriceResolutionService,
+     * PriceSelection, Product, BigDecimal)}.
+     */
+    public static BigDecimal unitPrice(PriceResolutionService resolver, PriceSelection selection,
+                                       Product product, BigDecimal quantity, BigDecimal typedPrice) {
+        if (!mz.multicore.erp.modules.advances.AdvancePayments.isSystemSku(product.getSku())) {
+            return unitPrice(resolver, selection, product, quantity);
+        }
+        if (typedPrice == null || typedPrice.signum() <= 0) {
+            throw new BusinessRuleException("O adiantamento precisa do valor recebido.");
+        }
+        return typedPrice;
     }
 
     /** Selection for a document. Null-safe: without a resolver or a client it returns {@link PriceSelection#NONE}. */
