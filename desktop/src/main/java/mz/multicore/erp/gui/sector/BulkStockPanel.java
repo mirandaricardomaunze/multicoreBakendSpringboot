@@ -231,7 +231,7 @@ public class BulkStockPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(14, 14, 14, 14));
-        card.add(UIHelper.tableCardTop("Medições de Granel (areia, brita, pedra)", filters, refreshBtn, settingsBtn,
+        card.add(ResponsiveSupport.cardTop("Medições de Granel (areia, brita, pedra)", filters, refreshBtn, settingsBtn,
                 rejectBtn, approveBtn, recordBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);

@@ -108,7 +108,7 @@ public class AdvancesPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Adiantamentos e Sinais", filters, refreshBtn, printBtn, applyBtn, receiveBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Adiantamentos e Sinais", filters, refreshBtn, printBtn, applyBtn, receiveBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         return card;

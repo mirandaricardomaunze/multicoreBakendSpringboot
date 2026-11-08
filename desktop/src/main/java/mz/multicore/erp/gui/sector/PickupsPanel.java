@@ -61,6 +61,7 @@ public class PickupsPanel extends JPanel {
         split.setBorder(BorderFactory.createEmptyBorder());
         split.setResizeWeight(0.45);
         split.setDividerSize(10);
+        ResponsiveSupport.adaptiveSplit(split, 980);
         split.setContinuousLayout(true);
         add(split, BorderLayout.CENTER);
         syncButtons();
@@ -106,7 +107,7 @@ public class PickupsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Material por Levantar", filters, refreshBtn, registerBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Material por Levantar", filters, refreshBtn, registerBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(accountTable), BorderLayout.SOUTH);
         card.setMinimumSize(new Dimension(420, 200));
@@ -179,7 +180,7 @@ public class PickupsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(14, 14, 14, 14));
-        card.add(UIHelper.tableCardTop("O que o cliente ainda tem no estaleiro", null), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("O que o cliente ainda tem no estaleiro", null), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;
     }
@@ -200,7 +201,7 @@ public class PickupsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(14, 14, 14, 14));
-        card.add(UIHelper.tableCardTop("Talões emitidos", null, cancelBtn, printBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Talões emitidos", null, cancelBtn, printBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;
     }

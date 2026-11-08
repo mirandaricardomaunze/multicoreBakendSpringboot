@@ -73,6 +73,7 @@ public class CustomOrdersPanel extends JPanel {
         split.setBorder(BorderFactory.createEmptyBorder());
         split.setResizeWeight(0.66);
         split.setDividerSize(10);
+        ResponsiveSupport.adaptiveSplit(split, 980);
         add(split, BorderLayout.CENTER);
         updateActions();
     }
@@ -127,7 +128,7 @@ public class CustomOrdersPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Agenda de Encomendas", filters, refreshBtn, printBtn, stageBtn, planBtn, editBtn, scheduleBtn),
+        card.add(ResponsiveSupport.cardTop("Agenda de Encomendas", filters, refreshBtn, printBtn, stageBtn, planBtn, editBtn, scheduleBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);

@@ -28,18 +28,18 @@ public class ModulePage extends JPanel {
         header.setOpaque(false);
         JLabel icon = new JLabel(UIHelper.icon(iconCode, 28, accent));
         header.add(icon, BorderLayout.WEST);
-        JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
+        JPanel text = new JPanel(new BorderLayout(0, 2));
         text.setOpaque(false);
         JLabel heading = UIHelper.createHeading(title);
-        JLabel description = new JLabel(subtitle);
-        description.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-        description.setForeground(UIHelper.TEXT_MUTED);
-        text.add(heading);
-        text.add(description);
+        text.add(heading, BorderLayout.NORTH);
+        text.add(ResponsiveSupport.wrappingText(subtitle, new Font(UIHelper.FONT, Font.PLAIN, 13), UIHelper.TEXT_MUTED),
+                BorderLayout.CENTER);
         header.add(text, BorderLayout.CENTER);
 
-        kpiGrid = KpiCard.createGrid(Math.max(1, kpis.length), 12, 0);
+        kpiGrid = KpiCard.createGrid(Math.max(1, kpis.length), 12, 12);
         kpiGrid.setOpaque(false);
+        // Indicators fill one row on wide windows and wrap to two on a laptop instead of squeezing their text.
+        ResponsiveSupport.adaptiveColumns(kpiGrid, (GridLayout) kpiGrid.getLayout(), 210, Math.max(1, kpis.length));
         for (String[] kpi : kpis) {
             JLabel value = KpiCard.valueLabel("—", 22);
             indicators.put(kpi[0], value);

@@ -70,6 +70,7 @@ public class PriceListsPanel extends JPanel {
         split.setBorder(BorderFactory.createEmptyBorder());
         split.setResizeWeight(0.42);
         split.setDividerSize(10);
+        ResponsiveSupport.adaptiveSplit(split, 980);
         split.setContinuousLayout(true);
         add(split, BorderLayout.CENTER);
         syncButtons();
@@ -110,7 +111,7 @@ public class PriceListsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Tabelas de Preço", filters, refreshBtn, newListBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Tabelas de Preço", filters, refreshBtn, newListBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(listTable), BorderLayout.SOUTH);
         card.setMinimumSize(new Dimension(380, 200));
@@ -208,7 +209,7 @@ public class PriceListsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(14, 14, 14, 14));
-        card.add(UIHelper.tableCardTop("Preços da tabela", filters, removeItemBtn, addItemBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Preços da tabela", filters, removeItemBtn, addItemBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(itemTable), BorderLayout.SOUTH);
         return card;
@@ -237,7 +238,7 @@ public class PriceListsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(14, 14, 14, 14));
-        card.add(UIHelper.tableCardTop("Clientes com esta tabela", filters, unassignBtn, assignBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Clientes com esta tabela", filters, unassignBtn, assignBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(clientTable), BorderLayout.SOUTH);
         return card;

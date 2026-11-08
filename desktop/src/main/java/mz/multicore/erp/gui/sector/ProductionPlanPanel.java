@@ -409,7 +409,7 @@ public class ProductionPlanPanel extends JPanel {
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
         JPanel filters = new JPanel();
         filters.setOpaque(false);
-        card.add(UIHelper.tableCardTop(title, filters, actions == null ? new JComponent[0] : actions), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop(title, filters, actions == null ? new JComponent[0] : actions), BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
         return card;
     }

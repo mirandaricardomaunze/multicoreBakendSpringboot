@@ -61,6 +61,7 @@ public class ConsignmentPanel extends JPanel {
         split.setBorder(BorderFactory.createEmptyBorder());
         split.setResizeWeight(0.62);
         split.setDividerSize(10);
+        ResponsiveSupport.adaptiveSplit(split, 980);
         add(split, BorderLayout.CENTER);
         settleBtn.setEnabled(false);
     }
@@ -98,7 +99,7 @@ public class ConsignmentPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Guias de Consignação", filters, UIHelper.createRefreshButton(this::reload), settleBtn, newBtn),
+        card.add(ResponsiveSupport.cardTop("Guias de Consignação", filters, UIHelper.createRefreshButton(this::reload), settleBtn, newBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);

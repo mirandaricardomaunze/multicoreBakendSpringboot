@@ -68,6 +68,7 @@ public class ButcheryPanel extends JPanel {
         split.setBorder(BorderFactory.createEmptyBorder());
         split.setResizeWeight(0.55);
         split.setDividerSize(10);
+        ResponsiveSupport.adaptiveSplit(split, 980);
         tabs.addTab("Desmanchas", UIHelper.icon("fas-drumstick-bite", 15, UIHelper.REJECTED_RED), split);
         tabs.addTab("Modelos de Desmancha", UIHelper.icon("fas-sitemap", 15, UIHelper.ACCENT_BLUE), buildTemplates());
         add(tabs, BorderLayout.CENTER);
@@ -108,7 +109,7 @@ public class ButcheryPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Desmanchas (últimos 90 dias)", filters, refreshBtn, cancelBtn, newBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Desmanchas (últimos 90 dias)", filters, refreshBtn, cancelBtn, newBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         return card;
@@ -170,7 +171,7 @@ public class ButcheryPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Modelos de Desmancha", note, UIHelper.createRefreshButton(this::reload), editTemplateBtn, newBtn),
+        card.add(ResponsiveSupport.cardTop("Modelos de Desmancha", note, UIHelper.createRefreshButton(this::reload), editTemplateBtn, newBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;

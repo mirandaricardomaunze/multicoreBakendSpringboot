@@ -59,7 +59,7 @@ final class BulkSettingsDialog {
         ModernPanel card = new ModernPanel(14);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(10, 10, 10, 10));
-        card.add(UIHelper.tableCardTop("Produtos já a granel", null), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Produtos já a granel", null), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
 
         JLabel hint = new JLabel("<html>A tolerância é a perda natural aceite sem aprovação (vento, chuva, compactação). "

@@ -105,7 +105,7 @@ public class ExpiryPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Lotes Vencidos e por Vencer (14 dias)", filters, refreshBtn, applyBtn, writeOffBtn, markdownBtn),
+        card.add(ResponsiveSupport.cardTop("Lotes Vencidos e por Vencer (14 dias)", filters, refreshBtn, applyBtn, writeOffBtn, markdownBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
@@ -131,7 +131,7 @@ public class ExpiryPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(UIHelper.tableCardTop("Regras de Remarcação", note, UIHelper.createRefreshButton(this::reload), editRuleBtn, newBtn),
+        card.add(ResponsiveSupport.cardTop("Regras de Remarcação", note, UIHelper.createRefreshButton(this::reload), editRuleBtn, newBtn),
                 BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;

@@ -119,7 +119,7 @@ public class ProductUnitsPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(14, 14, 14, 14));
-        card.add(UIHelper.tableCardTop("Unidades de compra e venda", null, addBtn, editBtn, removeBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Unidades de compra e venda", null, addBtn, editBtn, removeBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         syncButtons();
         return card;

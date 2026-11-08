@@ -25,10 +25,15 @@ import java.util.List;
 public class ActivityProfilePanel extends JPanel {
 
     private static final int COLUMNS = 3;
+    /** Narrowest card that still reads well; the grid fits as many columns as the width allows. */
+    private static final int MIN_CARD_WIDTH = 290;
+    /** Below this width the capabilities summary moves under the cards instead of beside them. */
+    private static final int SIDE_SUMMARY_MIN_WIDTH = 900;
 
     private final ActivityApiClient activityApiClient;
     private final InlineFeedbackPanel feedback = new InlineFeedbackPanel();
-    private final JPanel cardsGrid = new JPanel(new GridLayout(0, COLUMNS, 12, 12));
+    private final GridLayout gridLayout = new GridLayout(0, COLUMNS, 12, 12);
+    private final JPanel cardsGrid = new JPanel(gridLayout);
     private final JPanel capabilityList = new JPanel();
     private final JLabel summaryCount = new JLabel();
     private final JLabel statusLabel = new JLabel();
@@ -51,18 +56,21 @@ public class ActivityProfilePanel extends JPanel {
         add(buildHeader(), BorderLayout.NORTH);
 
         cardsGrid.setOpaque(false);
-        JPanel gridHolder = new JPanel(new BorderLayout());
-        gridHolder.setOpaque(false);
+        JPanel gridHolder = ResponsiveSupport.widthTracking(new BorderLayout());
         gridHolder.add(cardsGrid, BorderLayout.NORTH);
-        JScrollPane scroll = new JScrollPane(gridHolder);
-        UIHelper.styleScrollPane(scroll);
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        scroll.setBorder(BorderFactory.createEmptyBorder());
+        ResponsiveSupport.adaptiveColumns(cardsGrid, gridLayout, MIN_CARD_WIDTH);
+        JScrollPane scroll = ResponsiveSupport.verticalScroll(gridHolder);
 
-        JPanel center = new JPanel(new BorderLayout(14, 0));
+        JPanel center = new JPanel(new BorderLayout(14, 14));
         center.setOpaque(false);
         center.add(scroll, BorderLayout.CENTER);
-        center.add(buildSummary(), BorderLayout.EAST);
+        JComponent summary = buildSummary();
+        center.add(summary, BorderLayout.EAST);
+        center.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                placeSummary(center, summary);
+            }
+        });
         add(center, BorderLayout.CENTER);
 
         saveBtn.setIcon(UIHelper.icon("fas-save", 14));
@@ -82,11 +90,9 @@ public class ActivityProfilePanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout(0, 6));
         header.setOpaque(false);
         header.add(UIHelper.createHeading("Perfil de Actividade da Empresa"), BorderLayout.NORTH);
-        JLabel intro = new JLabel("<html>Escolha o que a empresa faz. Pode combinar vários sectores, por exemplo "
-                + "<b>Estaleiro</b> e <b>Fábrica de blocos</b>. As capacidades de cada sector somam-se. "
-                + "Desligar um sector simplifica os ecrãs, mas <b>nunca apaga dados</b>.</html>");
-        intro.setFont(new Font(UIHelper.FONT, Font.PLAIN, 13));
-        intro.setForeground(UIHelper.TEXT_MUTED);
+        JTextArea intro = ResponsiveSupport.wrappingText("Escolha o que a empresa faz. Pode combinar vários sectores, por "
+                + "exemplo Estaleiro e Fábrica de blocos. As capacidades de cada sector somam-se. Desligar um sector "
+                + "simplifica os ecrãs, mas nunca apaga dados.", new Font(UIHelper.FONT, Font.PLAIN, 13), UIHelper.TEXT_MUTED);
         header.add(intro, BorderLayout.CENTER);
         header.add(feedback, BorderLayout.SOUTH);
         return header;
@@ -96,7 +102,7 @@ public class ActivityProfilePanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout(0, 10));
         card.setBorder(new EmptyBorder(16, 16, 16, 16));
-        card.setPreferredSize(new Dimension(320, 10));
+        card.setPreferredSize(new Dimension(300, 10));
 
         JPanel top = new JPanel(new BorderLayout(0, 4));
         top.setOpaque(false);
@@ -113,24 +119,34 @@ public class ActivityProfilePanel extends JPanel {
 
         capabilityList.setOpaque(false);
         capabilityList.setLayout(new BoxLayout(capabilityList, BoxLayout.Y_AXIS));
-        JScrollPane listScroll = new JScrollPane(capabilityList);
-        UIHelper.styleScrollPane(listScroll);
-        listScroll.setBorder(BorderFactory.createEmptyBorder());
-        listScroll.getVerticalScrollBar().setUnitIncrement(16);
-        card.add(listScroll, BorderLayout.CENTER);
+        JPanel listHolder = ResponsiveSupport.widthTracking(new BorderLayout());
+        listHolder.add(capabilityList, BorderLayout.NORTH);
+        card.add(ResponsiveSupport.verticalScroll(listHolder), BorderLayout.CENTER);
 
         JPanel bottom = new JPanel(new BorderLayout(0, 8));
         bottom.setOpaque(false);
         statusLabel.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
         statusLabel.setForeground(UIHelper.TEXT_MUTED);
         bottom.add(statusLabel, BorderLayout.NORTH);
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
         actions.setOpaque(false);
         actions.add(resetBtn);
         actions.add(saveBtn);
         bottom.add(actions, BorderLayout.SOUTH);
         card.add(bottom, BorderLayout.SOUTH);
         return card;
+    }
+
+    /** Beside the cards on wide windows; under them, with a fixed height, on narrow ones. */
+    private static void placeSummary(JPanel center, JComponent summary) {
+        boolean side = center.getWidth() >= SIDE_SUMMARY_MIN_WIDTH;
+        Object where = side ? BorderLayout.EAST : BorderLayout.SOUTH;
+        if (where.equals(((BorderLayout) center.getLayout()).getConstraints(summary))) return;
+        center.remove(summary);
+        summary.setPreferredSize(side ? new Dimension(300, 10) : new Dimension(10, 230));
+        center.add(summary, where);
+        center.revalidate();
+        center.repaint();
     }
 
     /** Called with the active capabilities after every save (the menu uses it to show or hide sector modules). */
@@ -193,8 +209,9 @@ public class ActivityProfilePanel extends JPanel {
             capabilityList.add(Box.createVerticalStrut(8));
         }
         if (active.isEmpty()) {
-            JLabel none = new JLabel("<html>Nenhum sector escolhido.<br>Escolha pelo menos um.</html>");
-            none.setForeground(UIHelper.TEXT_MUTED);
+            JTextArea none = ResponsiveSupport.wrappingText("Nenhum sector escolhido. Escolha pelo menos um.",
+                    new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_MUTED);
+            none.setAlignmentX(Component.LEFT_ALIGNMENT);
             capabilityList.add(none);
         }
         summaryCount.setText(selected.size() + (selected.size() == 1 ? " sector · " : " sectores · ")
@@ -210,7 +227,11 @@ public class ActivityProfilePanel extends JPanel {
 
     private JComponent capabilityRow(String code) {
         ActivityOptionDTO capability = capabilities.get(code);
-        JPanel row = new JPanel(new BorderLayout(10, 0));
+        JPanel row = new JPanel(new BorderLayout(10, 0)) {
+            @Override public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         row.setOpaque(false);
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel icon = new JLabel(UIHelper.icon(SectorVisuals.capabilityIcon(code), 15, UIHelper.APPROVED_GREEN));
@@ -218,12 +239,15 @@ public class ActivityProfilePanel extends JPanel {
         row.add(icon, BorderLayout.WEST);
         String label = capability == null ? code : capability.label();
         String description = capability == null ? "" : capability.description();
-        JLabel text = new JLabel("<html><b>" + escape(label) + "</b><br><span style='font-size:10px'>"
-                + escape(description) + "</span></html>");
-        text.setForeground(UIHelper.TEXT_LIGHT);
-        text.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
+        JPanel text = new JPanel(new BorderLayout(0, 2));
+        text.setOpaque(false);
+        JLabel title = new JLabel(label);
+        title.setForeground(UIHelper.TEXT_LIGHT);
+        title.setFont(new Font(UIHelper.FONT, Font.BOLD, 12));
+        text.add(title, BorderLayout.NORTH);
+        text.add(ResponsiveSupport.wrappingText(description, new Font(UIHelper.FONT, Font.PLAIN, 11), UIHelper.TEXT_MUTED),
+                BorderLayout.CENTER);
         row.add(text, BorderLayout.CENTER);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height + 4));
         return row;
     }
 
@@ -274,9 +298,8 @@ public class ActivityProfilePanel extends JPanel {
             title.setFont(new Font(UIHelper.FONT, Font.BOLD, 14));
             title.setForeground(UIHelper.TEXT_LIGHT);
             body.add(title, BorderLayout.NORTH);
-            JLabel description = new JLabel("<html>" + escape(profile.description()) + "</html>");
-            description.setFont(new Font(UIHelper.FONT, Font.PLAIN, 12));
-            description.setForeground(UIHelper.TEXT_MUTED);
+            JTextArea description = ResponsiveSupport.wrappingText(profile.description(),
+                    new Font(UIHelper.FONT, Font.PLAIN, 12), UIHelper.TEXT_MUTED);
             body.add(description, BorderLayout.CENTER);
 
             JPanel chips = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
