@@ -22,7 +22,8 @@ class SectorModulesHarnessTest {
         return SectorModules.create(null, null, null, mock(ComercialApiClient.class), mock(InventoryApiClient.class),
                 mock(PromotionApiClient.class), null, mock(UnitsApiClient.class), mock(PricingApiClient.class),
                 mock(PickupApiClient.class), mock(BulkStockApiClient.class), mock(ProjectsApiClient.class),
-                mock(AdvancesApiClient.class), mock(FinanceApiClient.class), mock(ButcheryApiClient.class));
+                mock(AdvancesApiClient.class), mock(FinanceApiClient.class), mock(ButcheryApiClient.class),
+                mock(ExpiryApiClient.class));
     }
 
     @Test
@@ -30,7 +31,7 @@ class SectorModulesHarnessTest {
     void modulesHaveOwnPages() {
         Map<String, JComponent> cards = new LinkedHashMap<>();
         modules().registerCards((page, card) -> cards.put(card, page));
-        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos", "talho");
+        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos", "talho", "validades");
         cards.values().forEach(page -> assertThat(page).isInstanceOf(ModulePage.class));
         assertThat(MainFrameModuleTitles.titleFor("levantamentos")).isEqualTo("Levantamentos");
         assertThat(MainFrameModuleTitles.titleFor("obras")).isEqualTo("Obras");

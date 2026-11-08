@@ -39,8 +39,8 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C11 | Consignação e venda em rota | Falta | Padaria entrega pão a revendedores, recolhe sobras e fatura o líquido; distribuidor de bebidas faz rota diária com carga e acerto |
 | SA-C12 | Vasilhame e embalagens retornáveis | Falta | Grades e garrafas, botijas de gás, paletes de blocos. Conta-corrente de vasilhame por cliente, caução, devolução |
 | SA-C13 | Encomendas com data e personalização | Parcial | Encomendas existem. Falta data/hora de entrega, ligação à produção, notas de personalização e imagem de referência |
-| SA-C14 | Sobras e remarcação | Parcial | Promoções existem. Falta remarcação automática por idade do lote (pão de ontem, carne a 1 dia da validade) e fecho de dia com sobras |
-| SA-C15 | Perecíveis, FEFO e alertas | Parcial | `tracksExpiry` e lotes. Falta FEFO obrigatório na venda e na produção, alertas por dias e relatório de perdas por validade |
+| SA-C14 | Sobras e remarcação | **Remarcação feita (F3)** · `VALIDADES_REMARCACAO_SPEC` (regras por dias, promoção automática) | Promoções existem. Falta remarcação automática por idade do lote (pão de ontem, carne a 1 dia da validade) e fecho de dia com sobras |
+| SA-C15 | Perecíveis, FEFO e alertas | **Feito (F3)** · `VALIDADES_REMARCACAO_SPEC` (quadro, abate por validade, perdas; V125) | `tracksExpiry` e lotes. Falta FEFO obrigatório na venda e na produção, alertas por dias e relatório de perdas por validade |
 | SA-C16 | Compra com rendimento | **Desmancha feita (F3)** · `DESMANCHA_SPEC` (custo por kg, rendimento, perda; V124) | Compra de animal ou carcaça por peso, com rendimento esperado e real; custo por kg vendável |
 | SA-C17 | Stock a granel e inventário por medição | **Feito (F2)** · `STOCK_GRANEL_SPEC` | Areia, brita, pedra em monte: inventário por medição em m³, tolerância de perda natural, ajuste justificado |
 | SA-C18 | Báscula de camião | Falta | Pesagem de entrada e saída, tara do camião, talão de pesagem ligado à guia. Reaproveita o driver da SA-C05 |

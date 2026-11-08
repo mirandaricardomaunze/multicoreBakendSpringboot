@@ -28,11 +28,12 @@ final class SectorModules {
     static final String PROJECTS = "obras";
     static final String ADVANCES = "adiantamentos";
     static final String BUTCHERY = "talho";
+    static final String EXPIRY = "validades";
 
     private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
-            ADVANCES, "Adiantamentos", BUTCHERY, "Talho");
+            ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
-            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN");
+            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -49,13 +50,15 @@ final class SectorModules {
                                 InventoryApiClient inventoryApi, PromotionApiClient promotionApi, ActivityApiClient activityApi,
                                 UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,
                                 BulkStockApiClient bulkApi, ProjectsApiClient projectsApi,
-                                AdvancesApiClient advancesApi, FinanceApiClient financeApi, ButcheryApiClient butcheryApi) {
+                                AdvancesApiClient advancesApi, FinanceApiClient financeApi, ButcheryApiClient butcheryApi,
+                                ExpiryApiClient expiryApi) {
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
         if (projectsApi != null) registry.addProjects(projectsApi, comercialApi);
         if (advancesApi != null) registry.addAdvances(advancesApi, comercialApi, financeApi, inventoryApi);
         if (butcheryApi != null) registry.addButchery(butcheryApi, comercialApi, inventoryApi);
+        if (expiryApi != null) registry.addExpiry(expiryApi, comercialApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -170,6 +173,23 @@ final class SectorModules {
             page.setIndicator("Acima do aceite", String.valueOf(month.stream().filter(b -> b.lossAboveTolerance()).count()));
         });
         modules.put(BUTCHERY, new Module(BUTCHERY, "fas-drumstick-bite", UIHelper.REJECTED_RED, true, page, panel::reload));
+    }
+
+    private void addExpiry(ExpiryApiClient expiryApi, ComercialApiClient comercialApi) {
+        ExpiryPanel panel = new ExpiryPanel(expiryApi, comercialApi);
+        ModulePage page = new ModulePage("fas-hourglass-half", UIHelper.PENDING_YELLOW, "Validades",
+                "Lotes vencidos e por vencer, remarcação automática no POS e abate do que venceu, sem perder de vista o valor.",
+                new String[][]{{"Vencido em stock", "Valor a custo a abater", "fas-skull-crossbones", "red"},
+                        {"Em risco (7 dias)", "Valor a custo a vender já", "fas-hourglass-half", "amber"},
+                        {"Lotes remarcados", "Com desconto hoje", "fas-tag", "blue"},
+                        {"Perdas no mês", "Abatido por validade", "fas-chart-line", null}}, panel);
+        panel.onLoaded(board -> {
+            page.setIndicator("Vencido em stock", UIHelper.formatMzn(board.expiredCostValue()));
+            page.setIndicator("Em risco (7 dias)", UIHelper.formatMzn(board.atRiskCostValue()));
+            page.setIndicator("Lotes remarcados", String.valueOf(board.markedDownLots()));
+            page.setIndicator("Perdas no mês", UIHelper.formatMzn(board.expiryLossesThisMonth()));
+        });
+        modules.put(EXPIRY, new Module(EXPIRY, "fas-hourglass-half", UIHelper.PENDING_YELLOW, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

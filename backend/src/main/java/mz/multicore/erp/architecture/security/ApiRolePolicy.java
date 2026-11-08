@@ -33,7 +33,7 @@ public final class ApiRolePolicy {
             "/api/movimentos", "/api/credit-notes", "/api/debit-notes",
             "/api/recurring-contracts", "/api/recurring/contracts", "/api/intelligence",
             "/api/hr", "/api/quality", "/api/activity", "/api/units", "/api/pricing", "/api/pickups", "/api/bulk-stock", "/api/projects",
-            "/api/advances", "/api/butchery");
+            "/api/advances", "/api/butchery", "/api/expiry");
 
     /** Business-sector areas (SA-C01..C03): every role may read, only management may change. */
     private static final Set<String> READ_SELLER_WRITE_MANAGER_AREAS = Set.of(
@@ -77,6 +77,10 @@ public final class ApiRolePolicy {
         }
         if (READ_SELLER_WRITE_MANAGER_AREAS.stream().anyMatch(area -> matches(uri, area))) {
             return "GET".equalsIgnoreCase(method) ? seller : manager;
+        }
+        if (matches(uri, "/api/expiry")) {
+            boolean managerOnly = "PUT".equalsIgnoreCase(method) || uri.contains("/markdowns");
+            return managerOnly ? manager : seller;
         }
         if (matches(uri, "/api/butchery")) {
             boolean managerOnly = "PUT".equalsIgnoreCase(method) || uri.endsWith("/cancel");
