@@ -19,5 +19,7 @@ public enum StockMovementType {
     /** Estorno de uma venda anulada (reposição de stock). */
     REVERSAL,
     /** Saída por quebra, perda ou desperdício de stock. */
-    WASTE
+    WASTE,
+    /** Saída da matéria-prima e entrada dos produtos obtidos numa desmancha ou produção. */
+    PRODUCTION
 }

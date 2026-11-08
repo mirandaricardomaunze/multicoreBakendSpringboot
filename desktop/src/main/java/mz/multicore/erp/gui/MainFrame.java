@@ -166,7 +166,8 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.PickupApiClient pickupApiClient,
             mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
             mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient,
-            mz.multicore.erp.desktop.client.AdvancesApiClient advancesApiClient
+            mz.multicore.erp.desktop.client.AdvancesApiClient advancesApiClient,
+            mz.multicore.erp.desktop.client.ButcheryApiClient butcheryApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -240,7 +241,7 @@ public class MainFrame extends JFrame {
             notificationCoordinator = new MainFrameNotificationCoordinator(notificationFeed, notificationReadStore, this::navigateFromNotification);
             plataformaPanel = null;
             sectorModules = SectorModules.create(comercialPanel, stockPanel, configPanel, comercialApiClient, inventoryApiClient, promotionApiClient,
-                    activityApiClient, unitsApiClient, pricingApiClient, pickupApiClient, bulkStockApiClient, projectsApiClient, advancesApiClient, financeApiClient);
+                    activityApiClient, unitsApiClient, pricingApiClient, pickupApiClient, bulkStockApiClient, projectsApiClient, advancesApiClient, financeApiClient, butcheryApiClient);
             addCard(sellerDashboardPanel != null ? sellerDashboardPanel : dashboardPanel, "dashboard");
             addCard(posPanel, "pos");
             addCard(comercialPanel, "comercial"); addCard(comprasPanel, "compras");

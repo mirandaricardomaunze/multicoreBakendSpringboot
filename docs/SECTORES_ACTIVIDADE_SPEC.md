@@ -41,7 +41,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C13 | Encomendas com data e personalização | Parcial | Encomendas existem. Falta data/hora de entrega, ligação à produção, notas de personalização e imagem de referência |
 | SA-C14 | Sobras e remarcação | Parcial | Promoções existem. Falta remarcação automática por idade do lote (pão de ontem, carne a 1 dia da validade) e fecho de dia com sobras |
 | SA-C15 | Perecíveis, FEFO e alertas | Parcial | `tracksExpiry` e lotes. Falta FEFO obrigatório na venda e na produção, alertas por dias e relatório de perdas por validade |
-| SA-C16 | Compra com rendimento | Falta | Compra de animal ou carcaça por peso, com rendimento esperado e real; custo por kg vendável |
+| SA-C16 | Compra com rendimento | **Desmancha feita (F3)** · `DESMANCHA_SPEC` (custo por kg, rendimento, perda; V124) | Compra de animal ou carcaça por peso, com rendimento esperado e real; custo por kg vendável |
 | SA-C17 | Stock a granel e inventário por medição | **Feito (F2)** · `STOCK_GRANEL_SPEC` | Areia, brita, pedra em monte: inventário por medição em m³, tolerância de perda natural, ajuste justificado |
 | SA-C18 | Báscula de camião | Falta | Pesagem de entrada e saída, tara do camião, talão de pesagem ligado à guia. Reaproveita o driver da SA-C05 |
 | SA-C19 | Pagamentos e crédito | Parcial | Pagamentos mistos, crédito com limite, vales. Falta operador M-Pesa/e-Mola real (já registado em `tasks/current.md`) |

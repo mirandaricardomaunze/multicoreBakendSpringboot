@@ -16,6 +16,8 @@ public enum ActivityCapability {
             "Lotes com validade, saída do mais antigo e alertas."),
     PRODUCTION("Produção e transformação",
             "Receitas, ordens de produção, rendimento e desperdício."),
+    CARCASS_BREAKDOWN("Desmancha de carcaças",
+            "Carcaça por peso em cortes, com custo por kg, rendimento e perda."),
     MARKDOWNS("Remarcação de sobras",
             "Preço reduzido para artigos do dia anterior ou perto da validade."),
     CUSTOM_ORDERS("Encomendas personalizadas",

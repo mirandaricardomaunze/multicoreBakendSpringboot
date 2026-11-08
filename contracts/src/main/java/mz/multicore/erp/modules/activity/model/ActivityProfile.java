@@ -23,7 +23,7 @@ public enum ActivityProfile {
             EnumSet.of(MULTI_UNIT_SALES, PRICE_LISTS, DELIVERIES, PENDING_PICKUP, ADVANCE_PAYMENTS)),
     BUTCHER("Talho e charcutaria",
             "Venda ao peso, desmancha de carcaças, quebras e encomendas.",
-            EnumSet.of(WEIGHED_SALES, PERISHABLES, PRODUCTION, MARKDOWNS, PRICE_LISTS,
+            EnumSet.of(WEIGHED_SALES, PERISHABLES, PRODUCTION, CARCASS_BREAKDOWN, MARKDOWNS, PRICE_LISTS,
                     CUSTOM_ORDERS, ADVANCE_PAYMENTS, MULTI_UNIT_SALES)),
     BAKERY("Padaria e pastelaria",
             "Receitas, plano de produção diário, sobras, revenda em rota e bolos por encomenda.",

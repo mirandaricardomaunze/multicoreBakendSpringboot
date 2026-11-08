@@ -27,11 +27,12 @@ final class SectorModules {
     static final String PICKUPS = "levantamentos";
     static final String PROJECTS = "obras";
     static final String ADVANCES = "adiantamentos";
+    static final String BUTCHERY = "talho";
 
     private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
-            ADVANCES, "Adiantamentos");
+            ADVANCES, "Adiantamentos", BUTCHERY, "Talho");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
-            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS");
+            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -48,12 +49,13 @@ final class SectorModules {
                                 InventoryApiClient inventoryApi, PromotionApiClient promotionApi, ActivityApiClient activityApi,
                                 UnitsApiClient unitsApi, PricingApiClient pricingApi, PickupApiClient pickupApi,
                                 BulkStockApiClient bulkApi, ProjectsApiClient projectsApi,
-                                AdvancesApiClient advancesApi, FinanceApiClient financeApi) {
+                                AdvancesApiClient advancesApi, FinanceApiClient financeApi, ButcheryApiClient butcheryApi) {
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
         if (projectsApi != null) registry.addProjects(projectsApi, comercialApi);
         if (advancesApi != null) registry.addAdvances(advancesApi, comercialApi, financeApi, inventoryApi);
+        if (butcheryApi != null) registry.addButchery(butcheryApi, comercialApi, inventoryApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -145,6 +147,29 @@ final class SectorModules {
                     && !a.appliedAt().toLocalDate().isBefore(monthStart)).count()));
         });
         modules.put(ADVANCES, new Module(ADVANCES, "fas-hand-holding-usd", UIHelper.APPROVED_GREEN, false, page, panel::reload));
+    }
+
+    private void addButchery(ButcheryApiClient butcheryApi, ComercialApiClient comercialApi, InventoryApiClient inventoryApi) {
+        ButcheryPanel panel = new ButcheryPanel(butcheryApi, comercialApi, inventoryApi);
+        ModulePage page = new ModulePage("fas-drumstick-bite", UIHelper.REJECTED_RED, "Talho",
+                "Desmancha de carcaças: cortes por peso, custo real de cada kg, rendimento contra o modelo e perda.",
+                new String[][]{{"Desmanchas no mês", "Carcaças cortadas", "fas-drumstick-bite", "blue"},
+                        {"Kg processados", "Entrada no mês", "fas-weight-hanging", null},
+                        {"Perda média", "Peso não aproveitado", "fas-percentage", "amber"},
+                        {"Acima do aceite", "Rever pesagens", "fas-exclamation-triangle", "red"}}, panel);
+        panel.onLoaded(all -> {
+            java.time.LocalDate monthStart = java.time.LocalDate.now().withDayOfMonth(1);
+            var month = all.stream().filter(b -> b.status() == mz.multicore.erp.modules.butchery.model.CarcassBreakdownStatus.POSTED
+                    && b.createdAt() != null && !b.createdAt().toLocalDate().isBefore(monthStart)).toList();
+            BigDecimal input = month.stream().map(b -> b.inputKg()).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal loss = month.stream().map(b -> b.lossKg()).reduce(BigDecimal.ZERO, BigDecimal::add);
+            page.setIndicator("Desmanchas no mês", String.valueOf(month.size()));
+            page.setIndicator("Kg processados", mz.multicore.erp.architecture.format.DisplayNumbers.qty(input) + " kg");
+            page.setIndicator("Perda média", input.signum() == 0 ? "—" : loss.multiply(BigDecimal.valueOf(100))
+                    .divide(input, 1, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + "%");
+            page.setIndicator("Acima do aceite", String.valueOf(month.stream().filter(b -> b.lossAboveTolerance()).count()));
+        });
+        modules.put(BUTCHERY, new Module(BUTCHERY, "fas-drumstick-bite", UIHelper.REJECTED_RED, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

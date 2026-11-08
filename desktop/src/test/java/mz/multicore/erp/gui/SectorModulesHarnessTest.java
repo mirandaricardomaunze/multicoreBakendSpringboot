@@ -22,7 +22,7 @@ class SectorModulesHarnessTest {
         return SectorModules.create(null, null, null, mock(ComercialApiClient.class), mock(InventoryApiClient.class),
                 mock(PromotionApiClient.class), null, mock(UnitsApiClient.class), mock(PricingApiClient.class),
                 mock(PickupApiClient.class), mock(BulkStockApiClient.class), mock(ProjectsApiClient.class),
-                mock(AdvancesApiClient.class), mock(FinanceApiClient.class));
+                mock(AdvancesApiClient.class), mock(FinanceApiClient.class), mock(ButcheryApiClient.class));
     }
 
     @Test
@@ -30,7 +30,7 @@ class SectorModulesHarnessTest {
     void modulesHaveOwnPages() {
         Map<String, JComponent> cards = new LinkedHashMap<>();
         modules().registerCards((page, card) -> cards.put(card, page));
-        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos");
+        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos", "talho");
         cards.values().forEach(page -> assertThat(page).isInstanceOf(ModulePage.class));
         assertThat(MainFrameModuleTitles.titleFor("levantamentos")).isEqualTo("Levantamentos");
         assertThat(MainFrameModuleTitles.titleFor("obras")).isEqualTo("Obras");
@@ -69,5 +69,19 @@ class SectorModulesHarnessTest {
         assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("bakery: prices and advances").isEqualTo(2);
         modules.applyCapabilities(List.of());
         assertThat(items.stream().filter(SidebarNavItem::isVisible).count()).as("unknown profile: show all").isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("SM-04: Talho shows only for the butcher capability; a bakery with production does not see it")
+    void butcheryFollowsItsOwnCapability() {
+        SectorModules modules = modules();
+        CollapsibleSidebar sidebar = new CollapsibleSidebar("MULTICORE", "Teste");
+        modules.addSidebarItem(sidebar, SectorModules.BUTCHERY, true, c -> { });
+        SidebarNavItem talho = sidebar.getNavItems().get(0);
+        modules.applyCapabilities(List.of("PRODUCTION", "CUSTOM_ORDERS"));
+        assertThat(talho.isVisible()).isFalse();
+        modules.applyCapabilities(List.of("CARCASS_BREAKDOWN"));
+        assertThat(talho.isVisible()).isTrue();
+        assertThat(MainFrameModuleTitles.titleFor("talho")).isEqualTo("Talho");
     }
 }
