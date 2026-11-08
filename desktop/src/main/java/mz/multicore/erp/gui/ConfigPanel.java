@@ -91,6 +91,8 @@ public class ConfigPanel extends JPanel {
         tabbedPane.addTab("A Minha Assinatura", UIHelper.icon("fas-id-card", 16, UIHelper.APPROVED_GREEN), subscriptionPanel.buildPanel());
         if (activityPanel != null) {
             tabbedPane.addTab("Perfil de Actividade", UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_ORANGE), activityPanel);
+            tabbedPane.addTab("Balança deste Posto", UIHelper.icon("fas-balance-scale", 16, UIHelper.ACCENT_BLUE),
+                    new mz.multicore.erp.gui.pos.scale.ScaleSettingsPanel());
         }
 
         add(tabbedPane, BorderLayout.CENTER);

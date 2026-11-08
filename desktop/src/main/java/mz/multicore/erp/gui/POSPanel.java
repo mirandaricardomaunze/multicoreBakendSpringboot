@@ -174,7 +174,7 @@ public class POSPanel extends JPanel {
         this.cartController = new PosCartController(this);
         this.checkoutCoordinator = new PosCheckoutCoordinator(this);
         this.suspendedSaleActions = new PosSuspendedSaleActions(this);
-        this.scaleReader = new mz.multicore.erp.modules.pos.scale.SerialScaleReader(true);
+        this.scaleReader = mz.multicore.erp.modules.pos.scale.ScaleConnection.connectedReader();
         this.scaleWidget = new mz.multicore.erp.gui.pos.scale.PosScaleLiveWidget(this.scaleReader);
         this.scaleWidget.setOnWeightCapturedCallback(this.catalogController::handleScaleWeightCaptured);
         this.loyaltyController = new mz.multicore.erp.gui.pos.loyalty.PosLoyaltyController(comercialApiClient);

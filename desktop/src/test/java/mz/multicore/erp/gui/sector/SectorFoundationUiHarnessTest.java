@@ -51,16 +51,17 @@ class SectorFoundationUiHarnessTest {
     }
 
     @Test
-    @DisplayName("SA-UI-03: As Configurações ganham o Perfil de Actividade no fim, sem mudar a ordem das outras")
+    @DisplayName("SA-UI-03: As Configurações ganham o Perfil de Actividade e a Balança deste Posto no fim, sem mudar a ordem das outras")
     void configAppendsActivityTab() {
         ConfigPanel panel = new ConfigPanel(mock(UserApiClient.class), mock(AuditApiClient.class),
                 mock(BackupApiClient.class), mock(DocumentConfigApiClient.class), mock(SupportApiClient.class),
                 mock(MySubscriptionApiClient.class), mock(SystemMonitoringApiClient.class), mock(ActivityApiClient.class));
         JTabbedPane tabs = firstTabbedPane(panel);
-        assertThat(tabs.getTabCount()).isEqualTo(7);
+        assertThat(tabs.getTabCount()).isEqualTo(8);
         assertThat(tabs.getTitleAt(0)).isEqualTo("Log de Auditoria Geral");
         assertThat(tabs.getTitleAt(6)).isEqualTo("Perfil de Actividade");
         assertThat(tabs.getComponentAt(6)).isInstanceOf(ActivityProfilePanel.class);
+        assertThat(tabs.getTitleAt(7)).as("the workstation scale follows the activity profile").isEqualTo("Balança deste Posto");
     }
 
     @Test

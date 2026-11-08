@@ -105,10 +105,24 @@ final class BreakdownFormDialog {
             cutProducts.add(p);
             cuts.addRow(new Object[]{p.name(), "", "—"});
         });
+        ModernButton weigh = UIHelper.createSecondaryButton("Ler balança");
+        weigh.setIcon(UIHelper.icon("fas-balance-scale", 13));
+        weigh.setToolTipText("Põe o peso estável da balança no corte seleccionado (ou na carcaça, se nenhum estiver seleccionado)");
+        weigh.addActionListener(e -> {
+            BigDecimal weight = stableWeight(parent);
+            if (weight == null) return;
+            int row = TableFilter.selectedModelRow(table);
+            if (row < 0) inputKg.setText(weight.toPlainString());
+            else cuts.setValueAt(weight.toPlainString(), row, 1);
+        });
+        JPanel addButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        addButtons.setOpaque(false);
+        addButtons.add(add);
+        addButtons.add(weigh);
         JPanel addRow = new JPanel(new BorderLayout(8, 0));
         addRow.setOpaque(false);
         addRow.add(extra, BorderLayout.CENTER);
-        addRow.add(add, BorderLayout.EAST);
+        addRow.add(addButtons, BorderLayout.EAST);
         JPanel cutsBox = new JPanel(new BorderLayout(0, 6));
         cutsBox.setOpaque(false);
         cutsBox.add(addRow, BorderLayout.NORTH);
@@ -157,6 +171,21 @@ final class BreakdownFormDialog {
                 p -> p.name() + (p.sku() == null ? "" : "  ·  " + p.sku()), p -> p.name() + " " + p.sku());
         combo.setItems(products);
         return combo;
+    }
+
+    /** Stable weight of the workstation scale, or {@code null} with a message when it cannot be used. */
+    static BigDecimal stableWeight(JComponent parent) {
+        var reader = mz.multicore.erp.modules.pos.scale.ScaleConnection.connectedReader();
+        var reading = reader.getCurrentReading();
+        if (reader.isSimulationMode()) {
+            ToastManager.show(parent, FeedbackType.WARNING, "Sem balança neste posto: configure-a em Configurações › Balança deste Posto.");
+            return null;
+        }
+        if (reading.status() != mz.multicore.erp.modules.pos.scale.SerialScaleReader.ScaleStatus.STABLE || reading.weightKg().signum() <= 0) {
+            ToastManager.show(parent, FeedbackType.WARNING, "O peso ainda não está estável. Aguarde e tente de novo.");
+            return null;
+        }
+        return reading.weightKg();
     }
 
     static void onChange(JTextField field, Runnable action) {

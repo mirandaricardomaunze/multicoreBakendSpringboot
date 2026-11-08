@@ -79,6 +79,13 @@ public class SerialScaleReader {
             return currentReading.get();
         }
 
+        String upper = rawFrame.toUpperCase(java.util.Locale.ROOT);
+        if (upper.contains("OL") || upper.contains("OVER") || upper.contains("HHHH")) {
+            ScaleReading overload = new ScaleReading(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP), ScaleStatus.OVERLOAD, "kg",
+                    System.currentTimeMillis());
+            updateReading(overload);
+            return overload;
+        }
         try {
             String cleaned = rawFrame.replaceAll("[^0-9.\\-+]", "").trim();
             if (cleaned.isEmpty()) {
@@ -120,6 +127,11 @@ public class SerialScaleReader {
 
     public BigDecimal getTareWeightKg() {
         return tareWeightKg;
+    }
+
+    /** The serial link stopped answering: the scale shows as disconnected until a new frame arrives. */
+    public void markDisconnected() {
+        updateReading(ScaleReading.disconnected());
     }
 
     public boolean isSimulationMode() {
