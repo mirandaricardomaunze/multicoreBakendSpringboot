@@ -36,6 +36,8 @@ public final class StockProductDetailTabsBuilder {
         tabs.addTab("Especificações & Logística", UIHelper.icon("fas-info-circle", 15, UIHelper.ACCENT_BLUE), buildSpecsTab(product));
         tabs.addTab("Saldos por Armazém",        UIHelper.icon("fas-warehouse", 15, UIHelper.ACCENT_CYAN), buildWarehousesTab(owner, product));
         tabs.addTab("Lotes & Validades",         UIHelper.icon("fas-calendar-times", 15, UIHelper.ACCENT_ORANGE), buildBatchesTab(owner, product));
+        JComponent unitsTab = mz.multicore.erp.gui.sector.SectorDesktopWiring.productUnitsTab(owner, product.id());
+        if (unitsTab != null) tabs.addTab("Unidades", UIHelper.icon("fas-ruler-combined", 15, UIHelper.MODULE_STOCK), unitsTab);
 
         return tabs;
     }

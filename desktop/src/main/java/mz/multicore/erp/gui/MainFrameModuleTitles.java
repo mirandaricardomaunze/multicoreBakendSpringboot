@@ -32,7 +32,7 @@ final class MainFrameModuleTitles {
             case "config"     -> "Configurações";
             case "notifications" -> "Notificações";
             case "plataforma" -> "Plataforma";
-            default           -> card;
+            default           -> SectorModules.title(card);
         };
     }
 }

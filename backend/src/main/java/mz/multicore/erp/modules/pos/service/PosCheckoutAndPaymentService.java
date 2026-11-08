@@ -156,7 +156,7 @@ public class PosCheckoutAndPaymentService {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
             BigDecimal unitPrice = (lineReq.unitPrice() != null && lineReq.unitPrice().compareTo(BigDecimal.ZERO) > 0)
-                    ? lineReq.unitPrice() : product.effectiveUnitPrice(lineReq.quantity());
+                    ? lineReq.unitPrice() : PosPriceGuard.defaultPrice(priceGuard, request, product, lineReq.quantity());
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);
             line.setQuantity(lineReq.quantity());

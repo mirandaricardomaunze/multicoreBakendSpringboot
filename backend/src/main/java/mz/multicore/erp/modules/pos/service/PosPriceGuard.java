@@ -13,6 +13,7 @@ import mz.multicore.erp.modules.pos.dto.POSCheckoutRequest;
 import mz.multicore.erp.modules.promotions.service.PromotionService;
 import org.springframework.stereotype.Component;
 
+import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -31,10 +32,21 @@ public class PosPriceGuard {
     private final PromotionService promotionService;
     private final PosDiscountAuthorizationService authorizationService;
     private final AuditLogService auditLogService;
+    /** Price lists (SA-C03); {@code null} in legacy constructors. */
+    private final PriceResolutionService priceResolver;
 
     public PosPriceGuard(ProductRepository productRepository, QuotationRepository quotationRepository,
                          PromotionService promotionService, PosDiscountAuthorizationService authorizationService,
                          AuditLogService auditLogService) {
+        this(productRepository, quotationRepository, promotionService, authorizationService, auditLogService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PosPriceGuard(ProductRepository productRepository, QuotationRepository quotationRepository,
+                         PromotionService promotionService, PosDiscountAuthorizationService authorizationService,
+                         AuditLogService auditLogService,
+                         PriceResolutionService priceResolver) {
+        this.priceResolver = priceResolver;
         this.productRepository = productRepository;
         this.quotationRepository = quotationRepository;
         this.promotionService = promotionService;
@@ -47,13 +59,16 @@ public class PosPriceGuard {
         if ("ADMIN".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role)) return;
 
         List<QuotationLine> quoted = quotedLines(request);
+        PriceResolutionService.PriceSelection pricing = priceResolver == null || request.clientId() == null
+                ? PriceResolutionService.PriceSelection.NONE
+                : priceResolver.selectionFor(request.companyId(), request.clientId(), java.time.LocalDate.now());
         BigDecimal needed = BigDecimal.ZERO;
         for (POSCheckoutLineRequest line : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(line.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + line.productId()));
             QuotationLine agreed = quoted.stream()
                     .filter(candidate -> candidate.getProduct().getId().equals(product.getId())).findFirst().orElse(null);
-            requireAllowedPrice(line, product, agreed);
+            requireAllowedPrice(line, product, agreed, listPrice(pricing, product, line.quantity()));
             BigDecimal discount = line.discountPercentage() == null ? BigDecimal.ZERO : line.discountPercentage();
             if (discount.compareTo(allowedDiscount(request, line, product, agreed)) > 0) needed = needed.max(discount);
         }
@@ -63,16 +78,35 @@ public class PosPriceGuard {
         }
     }
 
+    /** Price stored when the desktop sends none: the client's list price, otherwise the product rule. */
+    static BigDecimal defaultPrice(PosPriceGuard guard, POSCheckoutRequest request, Product product, BigDecimal quantity) {
+        if (guard == null || guard.priceResolver == null) return product.effectiveUnitPrice(quantity);
+        var selection = guard.priceResolver.selectionFor(request.companyId(), request.clientId(), java.time.LocalDate.now());
+        return guard.priceResolver.resolve(selection, product, quantity).unitPrice();
+    }
+
     private List<QuotationLine> quotedLines(POSCheckoutRequest request) {
         if (request.quotationId() == null) return List.of();
         return quotationRepository.findByIdWithLinesAndCompanyId(request.quotationId(), request.companyId())
                 .map(Quotation::getLines).orElse(List.of());
     }
 
-    private static void requireAllowedPrice(POSCheckoutLineRequest line, Product product, QuotationLine agreed) {
+    /**
+     * Client list price, or {@code null}. The floor never becomes stricter than before: with a list, the lower
+     * of the list price and the normal price applies.
+     */
+    private BigDecimal listPrice(PriceResolutionService.PriceSelection pricing, Product product, BigDecimal quantity) {
+        if (priceResolver == null || !pricing.hasList()) return null;
+        PriceResolutionService.ResolvedPrice resolved = priceResolver.resolve(pricing, product, quantity);
+        return PriceResolutionService.SOURCE_PRICE_LIST.equals(resolved.source()) ? resolved.unitPrice() : null;
+    }
+
+    private static void requireAllowedPrice(POSCheckoutLineRequest line, Product product, QuotationLine agreed,
+                                            BigDecimal listPrice) {
         BigDecimal price = line.unitPrice();
         if (price == null || price.signum() <= 0) return;
         BigDecimal floor = agreed != null ? agreed.getUnitPrice() : product.effectiveUnitPrice(line.quantity());
+        if (agreed == null && listPrice != null && floor != null) floor = floor.min(listPrice);
         if (price.compareTo(floor) < 0) {
             throw new BusinessRuleException("O preço de '" + product.getName() + "' é inferior ao permitido. "
                     + "Só um gerente pode vender abaixo do preço de tabela.");

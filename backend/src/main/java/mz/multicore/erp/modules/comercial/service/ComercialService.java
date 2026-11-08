@@ -114,7 +114,7 @@ public class ComercialService {
                 new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                         companyRepository, warehouseRepository, inventoryService, receiptRepository, financeService,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                        receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository)),
+                        receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null),
                 new ComercialOrderLifecycleService(orderRepository, orderLineRepository, clientRepository,
                         productRepository, companyRepository, warehouseRepository, inventoryService, invoiceRepository,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
@@ -123,7 +123,7 @@ public class ComercialService {
                         new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                                 companyRepository, warehouseRepository, inventoryService, receiptRepository, financeService,
                                 approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                                receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository)))
+                                receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null), null)
         );
     }
 

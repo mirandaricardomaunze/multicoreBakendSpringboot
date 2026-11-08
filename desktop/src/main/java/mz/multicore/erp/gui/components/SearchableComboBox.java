@@ -1,5 +1,6 @@
 package mz.multicore.erp.gui.components;
 
+import javax.swing.ComboBoxEditor;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -74,6 +75,22 @@ public class SearchableComboBox<T> extends JComboBox<T> {
             super.setSelectedItem(item);
             JTextField editor = editorField();
             if (editor != null) editor.setText(labelFor(item));
+        } finally {
+            updating = previousUpdating;
+        }
+    }
+
+    /**
+     * Swing writes the chosen item into the editor with {@code toString()} when the user picks it from the
+     * popup. Records print their internal form ({@code EligibleInvoiceDTO[invoiceId=…]}), so the editor shows the
+     * same label as the list instead.
+     */
+    @Override
+    public void configureEditor(ComboBoxEditor anEditor, Object anObject) {
+        boolean previousUpdating = updating;
+        updating = true;
+        try {
+            super.configureEditor(anEditor, anObject == null || anObject instanceof String ? anObject : labelFor(anObject));
         } finally {
             updating = previousUpdating;
         }

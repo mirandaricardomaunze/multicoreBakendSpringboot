@@ -76,6 +76,14 @@ public class Product extends BaseEntity {
     @Column(name = "sale_type", nullable = false, length = 20)
     private ProductSaleType saleType = ProductSaleType.UNIT;
 
+    /**
+     * Explicit base unit (SA-C02, {@code docs/UNIDADES_MEDIDA_SPEC.md}). {@code null} for older products,
+     * whose base is then "KG" for weighed sales and "UN" otherwise, which is what their stock always meant.
+     * See {@code ProductUnitService.baseUnitCodeOf}.
+     */
+    @Column(name = "base_unit_code", length = 20)
+    private String baseUnitCode;
+
     @Column(name = "stock_tracked", nullable = false)
     private boolean stockTracked = true;
 

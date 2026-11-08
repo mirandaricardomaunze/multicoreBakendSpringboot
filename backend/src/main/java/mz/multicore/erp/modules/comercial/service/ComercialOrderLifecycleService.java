@@ -22,6 +22,7 @@ import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -49,6 +50,7 @@ public class ComercialOrderLifecycleService {
     private final OrderRiskEvaluator orderRiskEvaluator;
     private final ComercialClientAndCreditService clientAndCreditService;
     private final ComercialInvoiceLifecycleService invoiceLifecycleService;
+    private final PriceResolutionService priceResolver;
 
     public ComercialOrderLifecycleService(
             OrderRepository orderRepository,
@@ -66,7 +68,9 @@ public class ComercialOrderLifecycleService {
             ReceivablesService receivablesService,
             OrderRiskEvaluator orderRiskEvaluator,
             ComercialClientAndCreditService clientAndCreditService,
-            ComercialInvoiceLifecycleService invoiceLifecycleService) {
+            ComercialInvoiceLifecycleService invoiceLifecycleService,
+            PriceResolutionService priceResolver) {
+        this.priceResolver = priceResolver;
         this.orderRepository = orderRepository;
         this.orderLineRepository = orderLineRepository;
         this.clientRepository = clientRepository;
@@ -96,7 +100,7 @@ public class ComercialOrderLifecycleService {
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
         Warehouse warehouse = requireActiveWarehouse(request.warehouseId(), request.companyId(), "Armazém");
         Warehouse destination = resolveDestination(request.companyId(), request.destinationWarehouseId(), kind, warehouse);
-        List<OrderLine> lines = buildOrderLines(request.companyId(), request.lines());
+        List<OrderLine> lines = buildOrderLines(request.companyId(), client, request.lines());
         clientAndCreditService.validatePaymentTermsForClient(client, request.paymentTerms(), request.companyId());
         return placeOrder(company, client, warehouse, destination, request.walkInName(), lines, kind, request.agreedTerms());
     }
@@ -118,7 +122,7 @@ public class ComercialOrderLifecycleService {
         Warehouse warehouse = requireActiveWarehouse(request.warehouseId(), companyId, "Armazém");
         OrderKind kind = OrderKind.orDefault(order.getKind());
         Warehouse destination = resolveDestination(companyId, request.destinationWarehouseId(), kind, warehouse);
-        List<OrderLine> replacement = buildOrderLines(companyId, request.lines());
+        List<OrderLine> replacement = buildOrderLines(companyId, client, request.lines());
         if (order.isReservationActive()) {
             revalidateReservation(order, warehouse, replacement);
             replacement.forEach(line -> line.setReservedQuantity(line.getQuantity()));
@@ -153,7 +157,8 @@ public class ComercialOrderLifecycleService {
         }
     }
 
-    private List<OrderLine> buildOrderLines(Long companyId, List<CreateInvoiceLineRequest> requests) {
+    private List<OrderLine> buildOrderLines(Long companyId, Client client, List<CreateInvoiceLineRequest> requests) {
+        var pricing = PriceResolutionService.selectionFor(priceResolver, companyId, client);
         if (requests == null || requests.isEmpty()) {
             throw new BusinessRuleException("A encomenda deve conter pelo menos uma linha.");
         }
@@ -168,7 +173,7 @@ public class ComercialOrderLifecycleService {
             }
             Product product = productRepository.findByIdAndCompaniesId(request.productId(), companyId)
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + request.productId()));
-            BigDecimal unitPrice = product.effectiveUnitPrice(request.quantity());
+            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, request.quantity());
             BigDecimal taxRate = product.effectiveTaxRate();
             LineCalculator.LineAmounts amounts = LineCalculator.compute(unitPrice, request.quantity(), discount, taxRate);
             OrderLine line = new OrderLine();

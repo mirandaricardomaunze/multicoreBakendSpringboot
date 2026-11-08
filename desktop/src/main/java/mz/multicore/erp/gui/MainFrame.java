@@ -107,6 +107,7 @@ public class MainFrame extends JFrame {
     private final MainFrameNotificationCoordinator notificationCoordinator;
     private TopNavBar topBar;
     private CollapsibleSidebar sidebar;
+    private SectorModules sectorModules;
     private mz.multicore.erp.gui.components.StatusBar statusBar;
     private String sessionDisplayName;
     private boolean sidebarCollapsedForPos;
@@ -158,7 +159,13 @@ public class MainFrame extends JFrame {
             mz.multicore.erp.desktop.client.RecurringContractApiClient recurringContractApiClient,
             mz.multicore.erp.desktop.client.DashboardApiClient dashboardApiClient,
             AiAssistantApiClient aiAssistantApiClient,
-            mz.multicore.erp.desktop.client.QualityApiClient qualityApiClient
+            mz.multicore.erp.desktop.client.QualityApiClient qualityApiClient,
+            mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient,
+            mz.multicore.erp.desktop.client.UnitsApiClient unitsApiClient,
+            mz.multicore.erp.desktop.client.PricingApiClient pricingApiClient,
+            mz.multicore.erp.desktop.client.PickupApiClient pickupApiClient,
+            mz.multicore.erp.desktop.client.BulkStockApiClient bulkStockApiClient,
+            mz.multicore.erp.desktop.client.ProjectsApiClient projectsApiClient
     ) {
         this.desktopSessionStore = desktopSessionStore;
         this.versionApiClient = versionApiClient;
@@ -220,7 +227,7 @@ public class MainFrame extends JFrame {
             posPanel        = new POSPanel(posApiClient, comercialApiClient, inventoryApiClient, financeApiClient,
                     promotionApiClient, scaleBarcodeParser, printApiClient);
             comprasPanel    = sellerSession ? null : new ComprasPanel(purchaseApiClient, inventoryApiClient, comercialApiClient, financeApiClient, accountStatementApiClient);
-            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient);
+            configPanel     = sellerSession ? null : new ConfigPanel(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient, mySubscriptionApiClient, systemMonitoringApiClient, activityApiClient);
             performancePanel = sellerSession ? null : new PerformancePanel(performanceApiClient, desktopSessionStore);
             forensicAuditPanel = sellerSession ? null : new ForensicAuditPanel(forensicAuditApiClient);
             aiAssistantPanel = sellerSession ? null : new AiManagementAssistantPanel(aiAssistantApiClient, this::navigate);
@@ -231,6 +238,8 @@ public class MainFrame extends JFrame {
                     this::navigateFromNotification, this::updateNotificationBadge);
             notificationCoordinator = new MainFrameNotificationCoordinator(notificationFeed, notificationReadStore, this::navigateFromNotification);
             plataformaPanel = null;
+            sectorModules = SectorModules.create(comercialPanel, stockPanel, configPanel, comercialApiClient, inventoryApiClient, promotionApiClient,
+                    activityApiClient, unitsApiClient, pricingApiClient, pickupApiClient, bulkStockApiClient, projectsApiClient);
             addCard(sellerDashboardPanel != null ? sellerDashboardPanel : dashboardPanel, "dashboard");
             addCard(posPanel, "pos");
             addCard(comercialPanel, "comercial"); addCard(comprasPanel, "compras");
@@ -248,12 +257,14 @@ public class MainFrame extends JFrame {
             addCard(forensicAuditPanel, "auditoria_forense");
             addCard(aiAssistantPanel, "assistente_ia");
             addCard(notificationsPanel, "notifications");
+            sectorModules.registerCards(this::addCard);
         }
 
         setLayout(new BorderLayout());
         // A empresa guardada é escolhida primeiro: o nome e o menu da sidebar dependem dela.
         JComboBox<DesktopSession.CompanyAccess> companyCombo = buildCompanyCombo();
         sidebar = buildSidebar();
+        if (sectorModules != null) sectorModules.applyProfileAsync(sidebar);
         if (comercialPanel != null) comercialPanel.onTabChanged(() -> syncSidebar("comercial", ""));
         topBar = topBarBuilder.build(superAdmin, this, this::openGlobalSearch, this::openRecentItemsHistory,
                 notificationCoordinator != null ? notificationCoordinator.buildNotificationBell() : null,
@@ -353,7 +364,7 @@ public class MainFrame extends JFrame {
                 desktopSessionStore.requireSession(),
                 superAdmin,
                 this::navigate,
-                comercialPanel
+                comercialPanel, sectorModules
         );
     }
 
@@ -468,6 +479,7 @@ public class MainFrame extends JFrame {
             case "config"     -> configPanel.onPanelSelected();
             case "notifications" -> notificationsPanel.onPanelSelected();
             case "plataforma" -> plataformaPanel.onPanelSelected();
+            default -> { if (sectorModules != null) sectorModules.onSelected(cardName); }
         }
     }
 

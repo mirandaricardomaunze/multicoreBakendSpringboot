@@ -43,6 +43,8 @@ final class OrderStockAvailability {
         Map<Long, BigDecimal> needed = new LinkedHashMap<>();
         Map<Long, Product> products = new HashMap<>();
         for (Outgoing item : outgoing) {
+            // Services and other untracked products never hold stock, matching registerMovement, which skips them.
+            if (!item.product().isStockTracked()) continue;
             needed.merge(item.product().getId(), item.quantity(), BigDecimal::add);
             products.put(item.product().getId(), item.product());
         }

@@ -32,6 +32,7 @@ final class CommercialOrderOperations {
         resetOrderDraft(owner);
         owner.editingOrder = null;
         owner.lastCreatedOrder = null;
+        OrderEditorExtras.reset(owner);
         owner.orderGridEditable = true;
         if (owner.orderBarcodeField != null) owner.orderBarcodeField.setEnabled(true);
         owner.orderKindCombo.setEnabled(true);
@@ -184,12 +185,13 @@ final class CommercialOrderOperations {
                     order.totalAmount(),
                     impressoes,
                     order.kind(),
-                    order.quotationNumber() == null ? "—" : order.quotationNumber(),
+                    order.quotationNumber() == null ? "Directa" : "Cotação " + order.quotationNumber(),
                     formatExpectedDelivery(order),
                     order.businessUnitName() != null && !order.businessUnitName().isBlank()
                             ? order.businessUnitName() : "—"
             });
         }
+        OrderPrintColumn.refresh(owner, owner.getCachedOrders());
     }
 
     static OrderDTO findCachedOrder(ComercialPanel owner, Long orderId) {
@@ -201,7 +203,7 @@ final class CommercialOrderOperations {
     }
 
     static String formatExpectedDelivery(OrderDTO order) {
-        if (order.expectedDeliveryDate() == null) return "—";
+        if (order.expectedDeliveryDate() == null) return "Sem data";
         String date = order.expectedDeliveryDate().format(DTF_SHORT);
         return order.deliveryOverdue() ? date + " (em atraso)" : date;
     }

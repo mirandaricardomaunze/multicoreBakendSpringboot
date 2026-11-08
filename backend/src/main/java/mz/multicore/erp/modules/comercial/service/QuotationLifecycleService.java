@@ -26,6 +26,7 @@ import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -50,6 +51,7 @@ public class QuotationLifecycleService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
     private final QuotationQueryService queryService;
+    private final PriceResolutionService priceResolver;
 
     public QuotationLifecycleService(QuotationRepository quotationRepository,
                                      ClientRepository clientRepository,
@@ -59,7 +61,9 @@ public class QuotationLifecycleService {
                                      WalkInClientProvider walkInClientProvider,
                                      DocumentNumberService documentNumberService,
                                      AuditLogService auditLogService,
-                                     QuotationQueryService queryService) {
+                                     QuotationQueryService queryService,
+                                     PriceResolutionService priceResolver) {
+        this.priceResolver = priceResolver;
         this.quotationRepository = quotationRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -234,6 +238,7 @@ public class QuotationLifecycleService {
                                Long companyId, boolean isUpdate) {
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
+        var pricing = PriceResolutionService.selectionFor(priceResolver, companyId, quotation.getClient());
         for (CreateQuotationLineRequest lineReq : lineRequests) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
@@ -246,7 +251,7 @@ public class QuotationLifecycleService {
             } else if (discount.compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new BusinessRuleException("O desconto de linha não pode exceder 100%.");
             }
-            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, lineReq.quantity());
             BigDecimal taxRate = product.effectiveTaxRate();
             LineCalculator.LineAmounts amounts = LineCalculator.compute(
                     unitPrice, lineReq.quantity(), discount, taxRate);

@@ -30,6 +30,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -59,6 +60,7 @@ public class ComercialInvoiceLifecycleService {
     private final ApplicationEventPublisher eventPublisher;
     private final BusinessUnitRepository businessUnitRepository;
     private final SaleStockIssuer saleStockIssuer;
+    private final PriceResolutionService priceResolver;
 
     public ComercialInvoiceLifecycleService(
             InvoiceRepository invoiceRepository,
@@ -75,7 +77,8 @@ public class ComercialInvoiceLifecycleService {
             AuditLogService auditLogService,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
-            @Autowired(required = false) BusinessUnitRepository businessUnitRepository, SaleStockIssuer saleStockIssuer) {
+            @Autowired(required = false) BusinessUnitRepository businessUnitRepository, SaleStockIssuer saleStockIssuer,
+            @Autowired(required = false) PriceResolutionService priceResolver) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
@@ -92,6 +95,7 @@ public class ComercialInvoiceLifecycleService {
         this.eventPublisher = eventPublisher;
         this.businessUnitRepository = businessUnitRepository;
         this.saleStockIssuer = saleStockIssuer;
+        this.priceResolver = priceResolver;
     }
 
     public void publishSale(Invoice invoice, BigDecimal amountPaidNow, boolean cashPayment) {
@@ -136,6 +140,7 @@ public class ComercialInvoiceLifecycleService {
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
         boolean hasHighDiscount = false;
+        var pricing = PriceResolutionService.selectionFor(priceResolver, request.companyId(), client);
 
         for (CreateInvoiceLineRequest lineReq : request.lines()) {
             Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
@@ -149,7 +154,7 @@ public class ComercialInvoiceLifecycleService {
                             + "' (pertencente a: " + prodBuName + "). Desmarque o filtro de negócio para emitir produtos mistos.");
                 }
             }
-            BigDecimal unitPrice = product.effectiveUnitPrice(lineReq.quantity());
+            BigDecimal unitPrice = PriceResolutionService.unitPrice(priceResolver, pricing, product, lineReq.quantity());
             BigDecimal taxRate = product.effectiveTaxRate();
             InvoiceLine line = new InvoiceLine();
             line.setProduct(product);

@@ -51,7 +51,7 @@ public class QuotationService {
         QuotationQueryService qService = new QuotationQueryService(quotationRepository);
         QuotationLifecycleService lService = new QuotationLifecycleService(
                 quotationRepository, clientRepository, productRepository, companyRepository,
-                warehouseRepository, walkInClientProvider, documentNumberService, auditLogService, qService);
+                warehouseRepository, walkInClientProvider, documentNumberService, auditLogService, qService, null);
         QuotationConversionService cService = new QuotationConversionService(
                 quotationRepository, auditLogService, comercialService, qService, lService);
         this.queryService = qService;

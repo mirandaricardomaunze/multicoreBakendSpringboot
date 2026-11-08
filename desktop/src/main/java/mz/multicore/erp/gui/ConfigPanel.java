@@ -32,6 +32,8 @@ public class ConfigPanel extends JPanel {
     private final ConfigBackupsPanel backupsPanel;
     private final ConfigDocumentColumnsPanel columnsPanel;
     private final ConfigSubscriptionPanel subscriptionPanel;
+    /** Activity profile panel (SA-C01); {@code null} in legacy constructors. */
+    private final mz.multicore.erp.gui.sector.ActivityProfilePanel activityPanel;
     private UserManagementPanel usersPanel;
 
     // TAB 1: AUDIT LOGS
@@ -47,6 +49,18 @@ public class ConfigPanel extends JPanel {
                        DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
                        MySubscriptionApiClient mySubscriptionApiClient,
                        SystemMonitoringApiClient monitoringApiClient) {
+        this(userApiClient, auditApiClient, backupApiClient, documentConfigApiClient, supportApiClient,
+                mySubscriptionApiClient, monitoringApiClient, null);
+    }
+
+    /** With the company activity profile (SA-C01): appends its tab at the end. */
+    public ConfigPanel(UserApiClient userApiClient, AuditApiClient auditApiClient, BackupApiClient backupApiClient,
+                       DocumentConfigApiClient documentConfigApiClient, SupportApiClient supportApiClient,
+                       MySubscriptionApiClient mySubscriptionApiClient,
+                       SystemMonitoringApiClient monitoringApiClient,
+                       mz.multicore.erp.desktop.client.ActivityApiClient activityApiClient) {
+        this.activityPanel = activityApiClient == null ? null
+                : new mz.multicore.erp.gui.sector.ActivityProfilePanel(activityApiClient);
         this.userApiClient = userApiClient;
         this.auditApiClient = auditApiClient;
         this.backupApiClient = backupApiClient;
@@ -75,6 +89,9 @@ public class ConfigPanel extends JPanel {
         tabbedPane.addTab("Colunas dos Documentos", UIHelper.icon("fas-table", 16, UIHelper.PENDING_YELLOW), columnsPanel.buildPanel());
         tabbedPane.addTab("Suporte à Plataforma", UIHelper.icon("fas-headset", 16, UIHelper.ACCENT_SKY), supportPanel.buildPanel());
         tabbedPane.addTab("A Minha Assinatura", UIHelper.icon("fas-id-card", 16, UIHelper.APPROVED_GREEN), subscriptionPanel.buildPanel());
+        if (activityPanel != null) {
+            tabbedPane.addTab("Perfil de Actividade", UIHelper.icon("fas-industry", 16, UIHelper.ACCENT_ORANGE), activityPanel);
+        }
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -185,6 +202,7 @@ public class ConfigPanel extends JPanel {
         if (columnsPanel != null) columnsPanel.refresh();
         if (supportPanel != null) supportPanel.refresh();
         if (subscriptionPanel != null) subscriptionPanel.refresh();
+        if (activityPanel != null) activityPanel.refresh();
     }
 
     void loadAuditLogs() {
