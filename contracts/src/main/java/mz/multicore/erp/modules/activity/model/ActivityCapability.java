@@ -36,6 +36,8 @@ public enum ActivityCapability {
             "Entregar a revendedores, recolher sobras e cobrar o vendido."),
     RETURNABLES("Vasilhame e retornáveis",
             "Grades, garrafas, botijas e paletes com conta-corrente."),
+    TRUCK_SCALE("Báscula de camião",
+            "Pesagem de entrada e saída, peso líquido e talão de pesagem."),
     VARIANTS("Variantes de artigo",
             "Tamanho, cor, espessura ou sabor do mesmo artigo.");
 

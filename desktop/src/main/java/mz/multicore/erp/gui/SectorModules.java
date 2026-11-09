@@ -33,14 +33,19 @@ final class SectorModules {
     static final String CUSTOM_ORDERS = "agenda-encomendas";
     static final String CONSIGNMENT = "consignacao";
     static final String RETURNABLES = "vasilhame";
+    static final String VARIANTS = "variantes";
+    static final String WEIGHBRIDGE = "bascula";
 
-    private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
-            ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades", PRODUCTION_PLAN, "Plano de Produção",
-            CUSTOM_ORDERS, "Agenda de Encomendas", CONSIGNMENT, "Consignação e Rota", RETURNABLES, "Vasilhame");
-    private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
-            PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES",
-            PRODUCTION_PLAN, "PRODUCTION", CUSTOM_ORDERS, "CUSTOM_ORDERS", CONSIGNMENT, "CONSIGNMENT",
-            RETURNABLES, "RETURNABLES");
+    private static final Map<String, String> TITLES = Map.ofEntries(Map.entry(PRICES, "Preços"),
+            Map.entry(PICKUPS, "Levantamentos"), Map.entry(PROJECTS, "Obras"), Map.entry(ADVANCES, "Adiantamentos"),
+            Map.entry(BUTCHERY, "Talho"), Map.entry(EXPIRY, "Validades"), Map.entry(PRODUCTION_PLAN, "Plano de Produção"),
+            Map.entry(CUSTOM_ORDERS, "Agenda de Encomendas"), Map.entry(CONSIGNMENT, "Consignação e Rota"),
+            Map.entry(RETURNABLES, "Vasilhame"), Map.entry(VARIANTS, "Variantes"), Map.entry(WEIGHBRIDGE, "Báscula"));
+    private static final Map<String, String> CAPABILITIES = Map.ofEntries(Map.entry(PRICES, "PRICE_LISTS"),
+            Map.entry(PICKUPS, "PENDING_PICKUP"), Map.entry(PROJECTS, "CUSTOMER_PROJECTS"), Map.entry(ADVANCES, "ADVANCE_PAYMENTS"),
+            Map.entry(BUTCHERY, "CARCASS_BREAKDOWN"), Map.entry(EXPIRY, "PERISHABLES"), Map.entry(PRODUCTION_PLAN, "PRODUCTION"),
+            Map.entry(CUSTOM_ORDERS, "CUSTOM_ORDERS"), Map.entry(CONSIGNMENT, "CONSIGNMENT"), Map.entry(RETURNABLES, "RETURNABLES"),
+            Map.entry(VARIANTS, "VARIANTS"), Map.entry(WEIGHBRIDGE, "TRUCK_SCALE"));
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -65,6 +70,8 @@ final class SectorModules {
         CustomOrdersApiClient customOrdersApi = sector == null ? null : sector.customOrders();
         ConsignmentApiClient consignmentApi = sector == null ? null : sector.consignment();
         ReturnablesApiClient returnablesApi = sector == null ? null : sector.returnables();
+        VariantsApiClient variantsApi = sector == null ? null : sector.variants();
+        WeighbridgeApiClient weighbridgeApi = sector == null ? null : sector.weighbridge();
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
@@ -76,6 +83,8 @@ final class SectorModules {
         if (customOrdersApi != null) registry.addCustomOrders(customOrdersApi, comercialApi);
         if (consignmentApi != null) registry.addConsignment(consignmentApi, comercialApi, inventoryApi);
         if (returnablesApi != null) registry.addReturnables(returnablesApi, comercialApi, inventoryApi);
+        if (variantsApi != null) registry.addVariants(variantsApi, comercialApi);
+        if (weighbridgeApi != null) registry.addWeighbridge(weighbridgeApi, comercialApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -288,6 +297,46 @@ final class SectorModules {
             page.setIndicator("Fora há mais de 30 dias", String.valueOf(all.stream().filter(b -> b.daysOut() > 30).count()));
         });
         modules.put(RETURNABLES, new Module(RETURNABLES, "fas-box-open", UIHelper.APPROVED_GREEN, true, page, panel::reload));
+    }
+
+    private void addVariants(VariantsApiClient variantsApi, ComercialApiClient comercialApi) {
+        VariantsPanel panel = new VariantsPanel(variantsApi, comercialApi);
+        ModulePage page = new ModulePage("fas-th", UIHelper.ACCENT_PINK, "Variantes",
+                "Tamanho, cor, espessura ou sabor do mesmo artigo: um código, preço e stock por combinação, numa só grelha.",
+                new String[][]{{"Famílias", "Artigos com variantes", "fas-th", "blue"},
+                        {"Variantes", "Combinações à venda", "fas-layer-group", null},
+                        {"Sem stock", "Combinações a zero", "fas-exclamation-triangle", "red"},
+                        {"Stock total", "Em todas as variantes", "fas-boxes", "green"}}, panel);
+        panel.onLoaded(all -> {
+            page.setIndicator("Famílias", String.valueOf(all.size()));
+            page.setIndicator("Variantes", String.valueOf(all.stream().mapToInt(f -> f.variants().size()).sum()));
+            page.setIndicator("Sem stock", String.valueOf(all.stream().flatMap(f -> f.variants().stream())
+                    .filter(v -> v.stock().signum() <= 0).count()));
+            page.setIndicator("Stock total", mz.multicore.erp.architecture.format.DisplayNumbers.qty(all.stream()
+                    .map(f -> f.totalStock()).reduce(BigDecimal.ZERO, BigDecimal::add)));
+        });
+        modules.put(VARIANTS, new Module(VARIANTS, "fas-th", UIHelper.ACCENT_PINK, false, page, panel::reload));
+    }
+
+    private void addWeighbridge(WeighbridgeApiClient weighbridgeApi, ComercialApiClient comercialApi) {
+        WeighbridgePanel panel = new WeighbridgePanel(weighbridgeApi, comercialApi);
+        ModulePage page = new ModulePage("fas-truck", UIHelper.ACCENT_CYAN, "Báscula",
+                "Pesagem de camiões à entrada e à saída: peso líquido, talão de pesagem e pesos escritos à mão assinalados.",
+                new String[][]{{"No recinto", "Camiões por pesar à saída", "fas-truck", "amber"},
+                        {"Pesagens hoje", "Talões concluídos", "fas-check-double", "green"},
+                        {"Toneladas hoje", "Peso líquido", "fas-weight-hanging", "blue"},
+                        {"Pesos manuais", "Escritos à mão (7 dias)", "fas-hand-paper", "red"}}, panel);
+        panel.onLoaded(all -> {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            var closedToday = all.stream().filter(t -> t.secondAt() != null && today.equals(t.secondAt().toLocalDate())).toList();
+            page.setIndicator("No recinto", String.valueOf(all.stream().filter(t -> t.status()
+                    == mz.multicore.erp.modules.weighbridge.model.WeighingStatus.OPEN).count()));
+            page.setIndicator("Pesagens hoje", String.valueOf(closedToday.size()));
+            page.setIndicator("Toneladas hoje", closedToday.stream().map(t -> t.netWeight()).reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(1000), 2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + " t");
+            page.setIndicator("Pesos manuais", String.valueOf(all.stream().filter(t -> t.manual()).count()));
+        });
+        modules.put(WEIGHBRIDGE, new Module(WEIGHBRIDGE, "fas-truck", UIHelper.ACCENT_CYAN, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

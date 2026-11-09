@@ -29,7 +29,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C01 | Perfil de Actividade da empresa | **Feito (F1)** | Um ou mais perfis por empresa em Configurações › Perfil de Actividade. Falta (F2+): esconder menus e semear dados por perfil |
 | SA-C02 | Unidades de medida e conversões por produto | **Feito (F1)** | Catálogo, unidade base e unidades alternativas por produto (`UNIDADES_MEDIDA_SPEC`). Na fatura e na encomenda: Ctrl+U "Quantidade noutra unidade" (o documento grava a unidade base). Falta: compras e POS |
 | SA-C03 | Tabelas de preço | **Feito (F1)** | Tabelas com escalões e validade, por cliente, aplicadas na fatura, encomenda e cotação (`TABELAS_PRECO_SPEC`). Falta (F2): preço por unidade alternativa e preço da tabela no carrinho do POS |
-| SA-C04 | Variantes de artigo | Falta | Tamanho/cor; espessura de varão; gramagem; sabor. Um artigo-pai, stock e preço por variante |
+| SA-C04 | Variantes de artigo | **Feito (F5)** · `VARIANTES_ARTIGO_SPEC` (família, grelha de stock; V130) | Tamanho/cor; espessura de varão; gramagem; sabor. Um artigo-pai, stock e preço por variante |
 | SA-C05 | Venda ao peso e balança real | **Driver feito (F3)** · `BALANCA_SERIE_SPEC` (porta série, configuração por posto) | Etiqueta EAN-13 lida. Falta driver da balança e o resto: ver `PROMPT_BALANCA_VENDA_PESO.md` |
 | SA-C06 | Produção e transformação | **Plano diário feito (F4)** · `PLANO_PRODUCAO_SPEC` + desmancha `DESMANCHA_SPEC` (V126) | BOM e ordem simples. Falta receita versionada, rendimento, desmancha, cura, plano do dia: ver `PROMPT_PRODUCAO_TRANSFORMACAO.md` |
 | SA-C07 | Material pago por levantar | **Feito (F2)** · `MATERIAL_POR_LEVANTAR_SPEC` | Cliente paga 200 sacos e levanta aos poucos. Saldo por linha de fatura, guias parciais contra a fatura, stock reservado, extracto do cliente |
@@ -43,7 +43,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C15 | Perecíveis, FEFO e alertas | **Feito (F3)** · `VALIDADES_REMARCACAO_SPEC` (quadro, abate por validade, perdas; V125) | `tracksExpiry` e lotes. Falta FEFO obrigatório na venda e na produção, alertas por dias e relatório de perdas por validade |
 | SA-C16 | Compra com rendimento | **Desmancha feita (F3)** · `DESMANCHA_SPEC` (custo por kg, rendimento, perda; V124) | Compra de animal ou carcaça por peso, com rendimento esperado e real; custo por kg vendável |
 | SA-C17 | Stock a granel e inventário por medição | **Feito (F2)** · `STOCK_GRANEL_SPEC` | Areia, brita, pedra em monte: inventário por medição em m³, tolerância de perda natural, ajuste justificado |
-| SA-C18 | Báscula de camião | Falta | Pesagem de entrada e saída, tara do camião, talão de pesagem ligado à guia. Reaproveita o driver da SA-C05 |
+| SA-C18 | Báscula de camião | **Feito (F5)** · `BASCULA_CAMIAO_SPEC` (duas pesagens, talão TP, peso manual assinalado; V131) | Pesagem de entrada e saída, tara do camião, talão de pesagem ligado à guia. Reaproveita o driver da SA-C05 |
 | SA-C19 | Pagamentos e crédito | Parcial | Pagamentos mistos, crédito com limite, vales. Falta operador M-Pesa/e-Mola real (já registado em `tasks/current.md`) |
 | SA-C20 | Contingência sem internet | Parcial | POS tem fila local (`POS_CONTINGENCIA_RESILIENCIA_SPEC`). Falta para guias de levantamento no estaleiro e apontamentos de produção |
 | SA-C21 | Controlos anti-fraude por sector | Parcial | Auditoria e aprovações existem. Faltam relatórios de excepção específicos (ver §4) |
