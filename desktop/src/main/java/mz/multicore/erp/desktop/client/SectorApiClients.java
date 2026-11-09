@@ -21,11 +21,12 @@ public class SectorApiClients {
     private final ReturnablesApiClient returnables;
     private final VariantsApiClient variants;
     private final WeighbridgeApiClient weighbridge;
+    private final ExceptionsApiClient exceptions;
 
     public SectorApiClients(AdvancesApiClient advances, ButcheryApiClient butchery, ExpiryApiClient expiry,
                             ProductionPlanApiClient productionPlan, CustomOrdersApiClient customOrders,
                             ConsignmentApiClient consignment, ReturnablesApiClient returnables, VariantsApiClient variants,
-                            WeighbridgeApiClient weighbridge) {
+                            WeighbridgeApiClient weighbridge, ExceptionsApiClient exceptions) {
         this.advances = advances;
         this.butchery = butchery;
         this.expiry = expiry;
@@ -35,6 +36,7 @@ public class SectorApiClients {
         this.returnables = returnables;
         this.variants = variants;
         this.weighbridge = weighbridge;
+        this.exceptions = exceptions;
     }
 
     public AdvancesApiClient advances() {
@@ -71,5 +73,9 @@ public class SectorApiClients {
 
     public WeighbridgeApiClient weighbridge() {
         return weighbridge;
+    }
+
+    public ExceptionsApiClient exceptions() {
+        return exceptions;
     }
 }

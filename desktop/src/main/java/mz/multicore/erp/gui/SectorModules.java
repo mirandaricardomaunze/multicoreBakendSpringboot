@@ -35,12 +35,15 @@ final class SectorModules {
     static final String RETURNABLES = "vasilhame";
     static final String VARIANTS = "variantes";
     static final String WEIGHBRIDGE = "bascula";
+    /** Anti-fraud report: useful to every business, so it has no capability and is always shown to managers. */
+    static final String EXCEPTIONS = "excepcoes";
 
     private static final Map<String, String> TITLES = Map.ofEntries(Map.entry(PRICES, "Preços"),
             Map.entry(PICKUPS, "Levantamentos"), Map.entry(PROJECTS, "Obras"), Map.entry(ADVANCES, "Adiantamentos"),
             Map.entry(BUTCHERY, "Talho"), Map.entry(EXPIRY, "Validades"), Map.entry(PRODUCTION_PLAN, "Plano de Produção"),
             Map.entry(CUSTOM_ORDERS, "Agenda de Encomendas"), Map.entry(CONSIGNMENT, "Consignação e Rota"),
-            Map.entry(RETURNABLES, "Vasilhame"), Map.entry(VARIANTS, "Variantes"), Map.entry(WEIGHBRIDGE, "Báscula"));
+            Map.entry(RETURNABLES, "Vasilhame"), Map.entry(VARIANTS, "Variantes"), Map.entry(WEIGHBRIDGE, "Báscula"),
+            Map.entry(EXCEPTIONS, "Excepções"));
     private static final Map<String, String> CAPABILITIES = Map.ofEntries(Map.entry(PRICES, "PRICE_LISTS"),
             Map.entry(PICKUPS, "PENDING_PICKUP"), Map.entry(PROJECTS, "CUSTOMER_PROJECTS"), Map.entry(ADVANCES, "ADVANCE_PAYMENTS"),
             Map.entry(BUTCHERY, "CARCASS_BREAKDOWN"), Map.entry(EXPIRY, "PERISHABLES"), Map.entry(PRODUCTION_PLAN, "PRODUCTION"),
@@ -72,6 +75,7 @@ final class SectorModules {
         ReturnablesApiClient returnablesApi = sector == null ? null : sector.returnables();
         VariantsApiClient variantsApi = sector == null ? null : sector.variants();
         WeighbridgeApiClient weighbridgeApi = sector == null ? null : sector.weighbridge();
+        ExceptionsApiClient exceptionsApi = sector == null ? null : sector.exceptions();
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
@@ -85,6 +89,7 @@ final class SectorModules {
         if (returnablesApi != null) registry.addReturnables(returnablesApi, comercialApi, inventoryApi);
         if (variantsApi != null) registry.addVariants(variantsApi, comercialApi);
         if (weighbridgeApi != null) registry.addWeighbridge(weighbridgeApi, comercialApi);
+        if (exceptionsApi != null) registry.addExceptions(exceptionsApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -339,6 +344,24 @@ final class SectorModules {
         modules.put(WEIGHBRIDGE, new Module(WEIGHBRIDGE, "fas-truck", UIHelper.ACCENT_CYAN, true, page, panel::reload));
     }
 
+    private void addExceptions(ExceptionsApiClient exceptionsApi) {
+        ExceptionsPanel panel = new ExceptionsPanel(exceptionsApi);
+        ModulePage page = new ModulePage("fas-user-secret", UIHelper.REJECTED_RED, "Excepções",
+                "O que a gestão deve verificar: perdas, sobras, guias sem fatura, pesos à mão, anulações, descontos e caixa.",
+                new String[][]{{"Gravidade alta", "Verificar hoje", "fas-exclamation-circle", "red"},
+                        {"Gravidade média", "Verificar esta semana", "fas-exclamation-triangle", "amber"},
+                        {"Gravidade baixa", "Para conhecimento", "fas-info-circle", "blue"},
+                        {"Operadores envolvidos", "Com pelo menos uma excepção", "fas-users", null}}, panel);
+        panel.onLoaded(report -> {
+            page.setIndicator("Gravidade alta", String.valueOf(report.high()));
+            page.setIndicator("Gravidade média", String.valueOf(report.medium()));
+            page.setIndicator("Gravidade baixa", String.valueOf(report.low()));
+            page.setIndicator("Operadores envolvidos", String.valueOf(report.findings().stream().map(f -> f.operator())
+                    .filter(java.util.Objects::nonNull).distinct().count()));
+        });
+        modules.put(EXCEPTIONS, new Module(EXCEPTIONS, "fas-user-secret", UIHelper.REJECTED_RED, false, page, panel::reload));
+    }
+
     // ─── MainFrame delegation ───────────────────────────────────────────────────
 
     void registerCards(BiConsumer<JComponent, String> addCard) {
@@ -377,7 +400,8 @@ final class SectorModules {
     void applyCapabilities(List<String> capabilities) {
         Set<String> active = capabilities == null ? Set.of() : new HashSet<>(capabilities);
         sidebarItems.forEach((card, items) -> {
-            boolean visible = active.isEmpty() || active.contains(CAPABILITIES.get(card));
+            String capability = CAPABILITIES.get(card);
+            boolean visible = capability == null || active.isEmpty() || active.contains(capability);
             items.forEach(item -> item.setVisible(visible));
         });
         sidebarItems.values().stream().flatMap(List::stream).findFirst()

@@ -112,6 +112,7 @@ final class MainFrameSidebarBuilder {
             sectors.addSidebarItem(sb, SectorModules.RETURNABLES, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.VARIANTS, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.WEIGHBRIDGE, false, navigate);
+            sectors.addSidebarItem(sb, SectorModules.EXCEPTIONS, false, navigate);
             sectors.addSidebarItem(sb, SectorModules.PRICES, false, navigate);
         }
         sb.addItem(UIHelper.icon("fas-file-contract", 16, UIHelper.ACCENT_BLUE), "Avenças & Contratos", UIHelper.ACCENT_BLUE, () -> navigate.accept("recurring"));

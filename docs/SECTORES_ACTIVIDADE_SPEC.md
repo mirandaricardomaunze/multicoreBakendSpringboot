@@ -46,7 +46,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C18 | Báscula de camião | **Feito (F5)** · `BASCULA_CAMIAO_SPEC` (duas pesagens, talão TP, peso manual assinalado; V131) | Pesagem de entrada e saída, tara do camião, talão de pesagem ligado à guia. Reaproveita o driver da SA-C05 |
 | SA-C19 | Pagamentos e crédito | Parcial | Pagamentos mistos, crédito com limite, vales. Falta operador M-Pesa/e-Mola real (já registado em `tasks/current.md`) |
 | SA-C20 | Contingência sem internet | Parcial | POS tem fila local (`POS_CONTINGENCIA_RESILIENCIA_SPEC`). Falta para guias de levantamento no estaleiro e apontamentos de produção |
-| SA-C21 | Controlos anti-fraude por sector | Parcial | Auditoria e aprovações existem. Faltam relatórios de excepção específicos (ver §4) |
+| SA-C21 | Controlos anti-fraude por sector | **Feito (F6)** · `ANTIFRAUDE_SECTORES_SPEC` (12 controlos, ecrã e PDF) | Auditoria e aprovações existem. Faltam relatórios de excepção específicos (ver §4) |
 | SA-C22 | Restauração (mesas, comandas, cozinha) | Falta | Vertical própria, fase final |
 | SA-C23 | Agenda e ordens de serviço (oficina, salão) | Falta | Vertical própria, fase final |
 | SA-C24 | Farmácia | Falta | Regulado; só depois de parecer jurídico |

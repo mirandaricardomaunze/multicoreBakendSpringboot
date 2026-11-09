@@ -26,7 +26,8 @@ class SectorModulesHarnessTest {
                 new SectorApiClients(mock(AdvancesApiClient.class), mock(ButcheryApiClient.class), mock(ExpiryApiClient.class),
                         mock(ProductionPlanApiClient.class), mock(CustomOrdersApiClient.class),
                         mock(ConsignmentApiClient.class), mock(ReturnablesApiClient.class),
-                        mock(VariantsApiClient.class), mock(WeighbridgeApiClient.class)));
+                        mock(VariantsApiClient.class), mock(WeighbridgeApiClient.class),
+                        mock(ExceptionsApiClient.class)));
     }
 
     @Test
@@ -34,7 +35,7 @@ class SectorModulesHarnessTest {
     void modulesHaveOwnPages() {
         Map<String, JComponent> cards = new LinkedHashMap<>();
         modules().registerCards((page, card) -> cards.put(card, page));
-        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos", "talho", "validades", "plano-producao", "agenda-encomendas", "consignacao", "vasilhame", "variantes", "bascula");
+        assertThat(cards.keySet()).containsExactlyInAnyOrder("precos", "levantamentos", "obras", "adiantamentos", "talho", "validades", "plano-producao", "agenda-encomendas", "consignacao", "vasilhame", "variantes", "bascula", "excepcoes");
         cards.values().forEach(page -> assertThat(page).isInstanceOf(ModulePage.class));
         assertThat(MainFrameModuleTitles.titleFor("levantamentos")).isEqualTo("Levantamentos");
         assertThat(MainFrameModuleTitles.titleFor("obras")).isEqualTo("Obras");
@@ -87,5 +88,17 @@ class SectorModulesHarnessTest {
         modules.applyCapabilities(List.of("CARCASS_BREAKDOWN"));
         assertThat(talho.isVisible()).isTrue();
         assertThat(MainFrameModuleTitles.titleFor("talho")).isEqualTo("Talho");
+    }
+
+    @Test
+    @DisplayName("SM-05: Excepções has no capability, so every manager sees it whatever the activity profile")
+    void exceptionsAlwaysVisibleToManagers() {
+        SectorModules modules = modules();
+        CollapsibleSidebar sidebar = new CollapsibleSidebar("MULTICORE", "Teste");
+        modules.addSidebarItem(sidebar, SectorModules.EXCEPTIONS, false, c -> { });
+        modules.addSidebarItem(sidebar, SectorModules.EXCEPTIONS, true, c -> { });
+        assertThat(sidebar.getNavItems()).as("not for sellers").hasSize(1);
+        modules.applyCapabilities(List.of("PRICE_LISTS"));
+        assertThat(sidebar.getNavItems().get(0).isVisible()).isTrue();
     }
 }
