@@ -23,12 +23,12 @@ import mz.multicore.erp.modules.consignment.repository.ConsignmentDeliveryReposi
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.model.WarehouseType;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
+import mz.multicore.erp.modules.inventory.service.TransitWarehouseProvider;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
@@ -59,6 +59,7 @@ public class ConsignmentService {
     private final InvoiceRepository invoiceRepository;
     private final StockMovementRegistrationService movementService;
     private final StockWasteService wasteService;
+    private final TransitWarehouseProvider transitWarehouses;
     private final ComercialService comercialService;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
@@ -67,6 +68,7 @@ public class ConsignmentService {
                               ProductRepository productRepository, WarehouseRepository warehouseRepository,
                               StockRepository stockRepository, InvoiceRepository invoiceRepository,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
+                              TransitWarehouseProvider transitWarehouses,
                               ComercialService comercialService, DocumentNumberService documentNumberService,
                               AuditLogService auditLogService) {
         this.deliveryRepository = deliveryRepository;
@@ -77,6 +79,7 @@ public class ConsignmentService {
         this.invoiceRepository = invoiceRepository;
         this.movementService = movementService;
         this.wasteService = wasteService;
+        this.transitWarehouses = transitWarehouses;
         this.comercialService = comercialService;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
@@ -197,19 +200,7 @@ public class ConsignmentService {
 
     /** The company "Em consignação" warehouse: in transit, not for sale at the POS. Created on first use. */
     private Warehouse consignmentWarehouse(Warehouse source) {
-        Long companyId = source.getCompany().getId();
-        return warehouseRepository.findByCompanyId(companyId).stream()
-                .filter(w -> w.getType() == WarehouseType.TRANSIT && CONSIGNMENT_WAREHOUSE.equals(w.getName()))
-                .findFirst().orElseGet(() -> {
-                    Warehouse w = new Warehouse();
-                    w.setName(CONSIGNMENT_WAREHOUSE);
-                    w.setLocation("Mercadoria nos revendedores");
-                    w.setType(WarehouseType.TRANSIT);
-                    w.setAllowsSales(false);
-                    w.setActive(true);
-                    w.setCompany(source.getCompany());
-                    return warehouseRepository.save(w);
-                });
+        return transitWarehouses.named(source.getCompany(), CONSIGNMENT_WAREHOUSE, "Mercadoria nos revendedores");
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {

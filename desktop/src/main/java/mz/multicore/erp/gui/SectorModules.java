@@ -32,13 +32,15 @@ final class SectorModules {
     static final String PRODUCTION_PLAN = "plano-producao";
     static final String CUSTOM_ORDERS = "agenda-encomendas";
     static final String CONSIGNMENT = "consignacao";
+    static final String RETURNABLES = "vasilhame";
 
     private static final Map<String, String> TITLES = Map.of(PRICES, "Preços", PICKUPS, "Levantamentos", PROJECTS, "Obras",
             ADVANCES, "Adiantamentos", BUTCHERY, "Talho", EXPIRY, "Validades", PRODUCTION_PLAN, "Plano de Produção",
-            CUSTOM_ORDERS, "Agenda de Encomendas", CONSIGNMENT, "Consignação e Rota");
+            CUSTOM_ORDERS, "Agenda de Encomendas", CONSIGNMENT, "Consignação e Rota", RETURNABLES, "Vasilhame");
     private static final Map<String, String> CAPABILITIES = Map.of(PRICES, "PRICE_LISTS", PICKUPS, "PENDING_PICKUP",
             PROJECTS, "CUSTOMER_PROJECTS", ADVANCES, "ADVANCE_PAYMENTS", BUTCHERY, "CARCASS_BREAKDOWN", EXPIRY, "PERISHABLES",
-            PRODUCTION_PLAN, "PRODUCTION", CUSTOM_ORDERS, "CUSTOM_ORDERS", CONSIGNMENT, "CONSIGNMENT");
+            PRODUCTION_PLAN, "PRODUCTION", CUSTOM_ORDERS, "CUSTOM_ORDERS", CONSIGNMENT, "CONSIGNMENT",
+            RETURNABLES, "RETURNABLES");
 
     private record Module(String card, String icon, Color color, boolean sellerVisible, JComponent page, Runnable onSelected) {}
 
@@ -62,6 +64,7 @@ final class SectorModules {
         ProductionPlanApiClient planApi = sector == null ? null : sector.productionPlan();
         CustomOrdersApiClient customOrdersApi = sector == null ? null : sector.customOrders();
         ConsignmentApiClient consignmentApi = sector == null ? null : sector.consignment();
+        ReturnablesApiClient returnablesApi = sector == null ? null : sector.returnables();
         SectorModules registry = new SectorModules(activityApi);
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
@@ -72,6 +75,7 @@ final class SectorModules {
         if (planApi != null) registry.addProductionPlan(planApi, productionApi, comercialApi, inventoryApi);
         if (customOrdersApi != null) registry.addCustomOrders(customOrdersApi, comercialApi);
         if (consignmentApi != null) registry.addConsignment(consignmentApi, comercialApi, inventoryApi);
+        if (returnablesApi != null) registry.addReturnables(returnablesApi, comercialApi, inventoryApi);
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);
@@ -266,6 +270,24 @@ final class SectorModules {
                     .divide(delivered, 1, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + "%");
         });
         modules.put(CONSIGNMENT, new Module(CONSIGNMENT, "fas-truck", UIHelper.ACCENT_BLUE, true, page, panel::reload));
+    }
+
+    private void addReturnables(ReturnablesApiClient returnablesApi, ComercialApiClient comercialApi, InventoryApiClient inventoryApi) {
+        ReturnablesPanel panel = new ReturnablesPanel(returnablesApi, comercialApi, inventoryApi);
+        ModulePage page = new ModulePage("fas-box-open", UIHelper.APPROVED_GREEN, "Vasilhame",
+                "Grades, garrafas, botijas e paletes emprestadas: saldo por cliente, devoluções e cobrança do que não volta.",
+                new String[][]{{"Clientes com vasilhame", "Saldos em aberto", "fas-users", "blue"},
+                        {"Unidades fora", "Em todos os clientes", "fas-boxes", null},
+                        {"Valor fora", "Ao preço do artigo", "fas-coins", "amber"},
+                        {"Fora há mais de 30 dias", "Cobrar ou recolher", "fas-exclamation-triangle", "red"}}, panel);
+        panel.onLoaded(all -> {
+            page.setIndicator("Clientes com vasilhame", String.valueOf(all.stream().map(b -> b.clientId()).distinct().count()));
+            page.setIndicator("Unidades fora", mz.multicore.erp.architecture.format.DisplayNumbers.qty(all.stream()
+                    .map(b -> b.balance()).reduce(BigDecimal.ZERO, BigDecimal::add)));
+            page.setIndicator("Valor fora", UIHelper.formatMzn(all.stream().map(b -> b.value()).reduce(BigDecimal.ZERO, BigDecimal::add)));
+            page.setIndicator("Fora há mais de 30 dias", String.valueOf(all.stream().filter(b -> b.daysOut() > 30).count()));
+        });
+        modules.put(RETURNABLES, new Module(RETURNABLES, "fas-box-open", UIHelper.APPROVED_GREEN, true, page, panel::reload));
     }
 
     // ─── MainFrame delegation ───────────────────────────────────────────────────

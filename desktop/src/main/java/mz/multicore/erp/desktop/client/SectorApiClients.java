@@ -18,16 +18,18 @@ public class SectorApiClients {
     private final ProductionPlanApiClient productionPlan;
     private final CustomOrdersApiClient customOrders;
     private final ConsignmentApiClient consignment;
+    private final ReturnablesApiClient returnables;
 
     public SectorApiClients(AdvancesApiClient advances, ButcheryApiClient butchery, ExpiryApiClient expiry,
                             ProductionPlanApiClient productionPlan, CustomOrdersApiClient customOrders,
-                            ConsignmentApiClient consignment) {
+                            ConsignmentApiClient consignment, ReturnablesApiClient returnables) {
         this.advances = advances;
         this.butchery = butchery;
         this.expiry = expiry;
         this.productionPlan = productionPlan;
         this.customOrders = customOrders;
         this.consignment = consignment;
+        this.returnables = returnables;
     }
 
     public AdvancesApiClient advances() {
@@ -52,5 +54,9 @@ public class SectorApiClients {
 
     public ConsignmentApiClient consignment() {
         return consignment;
+    }
+
+    public ReturnablesApiClient returnables() {
+        return returnables;
     }
 }

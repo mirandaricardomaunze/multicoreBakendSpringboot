@@ -37,7 +37,7 @@ Estado: **Existe** · **Parcial** · **Falta**.
 | SA-C09 | Obras / projectos do cliente | Falta | Um empreiteiro, várias obras. Entregas, faturas, crédito, preços e extracto por obra |
 | SA-C10 | Adiantamentos e sinais | **Feito** · `ADIANTAMENTOS_SPEC` (fatura de adiantamento com IVA, NC + compensação, saldo em 2101; V123) | Sinal de encomenda (bolo, carne para festa, blocos por medida), adiantamento de empreiteiro; recibo de adiantamento e abate na fatura final |
 | SA-C11 | Consignação e venda em rota | **Feito (F4)** · `CONSIGNACAO_ROTA_SPEC` (armazém "Em consignação", fatura só do vendido; V128) | Padaria entrega pão a revendedores, recolhe sobras e fatura o líquido; distribuidor de bebidas faz rota diária com carga e acerto |
-| SA-C12 | Vasilhame e embalagens retornáveis | Falta | Grades e garrafas, botijas de gás, paletes de blocos. Conta-corrente de vasilhame por cliente, caução, devolução |
+| SA-C12 | Vasilhame e embalagens retornáveis | **Feito (F5)** · `VASILHAME_RETORNAVEIS_SPEC` (conta-corrente, armazém "Vasilhame em clientes", cobrança por fatura; V129) | Grades e garrafas, botijas de gás, paletes de blocos. Conta-corrente de vasilhame por cliente, caução, devolução |
 | SA-C13 | Encomendas com data e personalização | **Feito (F4)** · `ENCOMENDAS_PERSONALIZADAS_SPEC` (agenda, fotografia, plano, ficha; V127) | Encomendas existem. Falta data/hora de entrega, ligação à produção, notas de personalização e imagem de referência |
 | SA-C14 | Sobras e remarcação | **Remarcação feita (F3)** · `VALIDADES_REMARCACAO_SPEC` (regras por dias, promoção automática) | Promoções existem. Falta remarcação automática por idade do lote (pão de ontem, carne a 1 dia da validade) e fecho de dia com sobras |
 | SA-C15 | Perecíveis, FEFO e alertas | **Feito (F3)** · `VALIDADES_REMARCACAO_SPEC` (quadro, abate por validade, perdas; V125) | `tracksExpiry` e lotes. Falta FEFO obrigatório na venda e na produção, alertas por dias e relatório de perdas por validade |
@@ -154,5 +154,5 @@ Relatórios de excepção no ecrã e em PDF, com alerta no Painel Executivo:
 1. Qual é o sector da loja piloto? Define se F2, F3 ou F4 vem logo a seguir a F1.
 2. Fatura de adiantamento (SA-C10): que documento fiscal a AT-MZ exige. Jurista.
 3. Material pago por levantar (SA-C07): o preço fica congelado no pagamento? Prazo máximo de levantamento?
-4. Vasilhame (SA-C12): caução cobrada em dinheiro ou só em conta-corrente?
+4. ~~Vasilhame (SA-C12): caução cobrada em dinheiro ou só em conta-corrente?~~ Decidido em 2026-11-09: só conta-corrente; o que não volta é faturado (`VASILHAME_RETORNAVEIS_SPEC`).
 5. ~~Consignação (SA-C11): a mercadoria entregue sai do stock na entrega ou só no acerto?~~ Decidido em 2026-11-08: sai na entrega para o armazém "Em consignação"; no acerto fatura-se só o vendido (`CONSIGNACAO_ROTA_SPEC`).
