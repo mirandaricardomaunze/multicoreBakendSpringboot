@@ -49,3 +49,6 @@ cp.txt
 *.ear
 hs_err_pid*
 replay_pid*
+
+# Ralph loop runtime state
+.ralph/
