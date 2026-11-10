@@ -233,7 +233,7 @@ public class ComercialService {
 
         eventPublisher.publishEvent(new PaymentReceivedEvent(
                 invoice.getCompany().getId(), receipt.getId(), receiptNum,
-                LocalDate.now(), amountPaid, "CASH".equalsIgnoreCase(paymentMethod)));
+                LocalDate.now(), amountPaid, "CASH".equalsIgnoreCase(paymentMethod) || "DINHEIRO".equalsIgnoreCase(paymentMethod)));
 
         return toDTO(receipt);
     }

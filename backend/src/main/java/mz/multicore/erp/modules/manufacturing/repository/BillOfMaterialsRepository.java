@@ -13,4 +13,5 @@ public interface BillOfMaterialsRepository extends JpaRepository<BillOfMaterials
     List<BillOfMaterials> findByCompanyIdOrderByNameAsc(Long companyId);
     Optional<BillOfMaterials> findByIdAndCompanyId(Long id, Long companyId);
     boolean existsByCompanyIdAndBomCode(Long companyId, String bomCode);
+    boolean existsByCompanyIdAndFinishedProductIdAndActiveTrue(Long companyId, Long productId);
 }

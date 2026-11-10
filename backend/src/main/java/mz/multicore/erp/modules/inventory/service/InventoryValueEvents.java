@@ -31,6 +31,6 @@ final class InventoryValueEvents {
         publisher.publishEvent(new InventoryValueChangedEvent(warehouse.getCompany().getId(),
                 type == StockMovementType.WASTE ? JournalSource.STOCK_WASTE : JournalSource.STOCK_ADJUSTMENT,
                 movement.getId(), description == null ? product.getName() : description, LocalDate.now(),
-                out ? value : BigDecimal.ZERO, out ? BigDecimal.ZERO : value, null));
+                out ? value : BigDecimal.ZERO, out ? BigDecimal.ZERO : value, null, product.getId()));
     }
 }

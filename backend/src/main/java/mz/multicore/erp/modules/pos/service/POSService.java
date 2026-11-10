@@ -217,7 +217,7 @@ public class POSService {
         session = tillSessionRepository.save(session);
 
         if (depositAccountId != null) {
-            BigDecimal netCash = expected.subtract(session.getOpeningBalance());
+            BigDecimal netCash = expected.subtract(session.getOpeningBalance()).subtract(sessionAndShiftService.counterReceiptsNet(sessionId));
             if (netCash.compareTo(BigDecimal.ZERO) > 0) {
                 financeService.registerTransaction(depositAccountId, "DEBIT", netCash,
                         "Depósito de fecho de caixa — sessão " + sessionId + " (operador " + session.getOperator() + ")");

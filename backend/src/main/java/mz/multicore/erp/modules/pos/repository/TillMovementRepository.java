@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 public interface TillMovementRepository extends JpaRepository<TillMovement, Long> {
     List<TillMovement> findByTillSessionId(Long tillSessionId);
 
+    java.util.Optional<TillMovement> findFirstByMovementTypeAndDescriptionAndTillSessionCompanyId(
+            mz.multicore.erp.modules.pos.model.TillMovementType movementType, String description, Long companyId);
+
     List<TillMovement> findByTillSessionCompanyIdAndMovementDateBetween(
             Long companyId, LocalDateTime from, LocalDateTime to);
 }

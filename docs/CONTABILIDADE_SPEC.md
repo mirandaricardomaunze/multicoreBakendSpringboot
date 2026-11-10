@@ -176,8 +176,15 @@ Três tabelas: `accounts`, `journal_entries`, `journal_lines`. Índice único pa
 | `STOCK_WASTE` | Quebra aprovada | D CMVMC 6101 / C 3201, ao custo do artigo |
 | `STOCK_ADJUSTMENT` | Acerto de inventário (contagem, granel) | Para menos: D 6101 / C 3201; para mais: D 3201 / C 6101 |
 | `CARCASS_BREAKDOWN` / `_CANCEL` | Desmancha / anulação | Carcaça sai ao valor contabilístico, cortes entram ao custo pago (e o inverso) |
-| `PRODUCTION_RUN` | Lote do plano de produção | Ingredientes: D 6101 / C 3201; produto: D 3201 / C Variação da produção 7301 (custo total) |
+| `PRODUCTION_RUN` | Lote do plano de produção | Ingredientes: D 6101 / C 3201; produto: D 3401 / C Variação da produção 7301 (custo total) |
 | `PRODUCTION_CONSUMPTION` | Ordem de produção concluída | Matéria-prima consumida: D 6101 / C 3201 (o produto acabado continua em `PRODUCTION`) |
 
 Cada documento lança uma só vez (índice `uk_journal_source_document`). Sem plano de contas, não lança. As entradas
 manuais (`ENTRY`) não lançam. Teste: `InventoryPostingHttpIntegrationTest`.
+
+**Produtos fabricados (3401) e mercadorias (3201).** Um artigo é fabricado quando é o produto de uma ficha técnica
+activa (BOM). Esses artigos vivem em **3401 Produtos acabados**: entram pela ordem de produção (`PRODUCTION`) e pelo
+lote do plano (`PRODUCTION_RUN`); a venda credita 3401 pelo custo deles e 3201 pelo resto; a nota de crédito de
+devolução repõe cada parte na sua conta; quebras e acertos desses artigos mexem em 3401. Sem a conta 3401 no plano,
+fica tudo em 3201. Código: `GoodsAccounts` (accounting) e `BomFinishedGoodsLookup` (manufacturing). Testes:
+`GoodsAccountsTest`, `InventoryPostingHttpIntegrationTest`.

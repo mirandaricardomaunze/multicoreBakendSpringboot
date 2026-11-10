@@ -61,14 +61,15 @@ public class PosSessionAndShiftService {
     public BigDecimal computeExpectedCash(Long sessionId, BigDecimal openingBalance) {
         BigDecimal expected = openingBalance;
         for (TillMovement m : tillMovementRepository.findByTillSessionId(sessionId)) {
-            TillMovementType type = m.getMovementType();
-            if (type == TillMovementType.SALE || type == TillMovementType.SUPRIMENTO) {
-                expected = expected.add(m.getAmount());
-            } else if (type == TillMovementType.SANGRIA || type == TillMovementType.REFUND) {
-                expected = expected.subtract(m.getAmount());
-            }
+            expected = expected.add(m.getMovementType().signed(m.getAmount()));
         }
         return expected;
+    }
+
+    /** Net cash of the counter receipts in the drawer: their receipts already debited the treasury account. */
+    public BigDecimal counterReceiptsNet(Long sessionId) {
+        return tillMovementRepository.findByTillSessionId(sessionId).stream().filter(m -> m.getMovementType().counterReceipt())
+                .map(m -> m.getMovementType().signed(m.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public TillMovement addCashMovement(Long sessionId, String type, BigDecimal amount, String description) {
@@ -85,6 +86,9 @@ public class PosSessionAndShiftService {
             movementType = TillMovementType.valueOf(type == null ? "" : type.toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new BusinessRuleException("Tipo de movimento de caixa inválido: " + type);
+        }
+        if (movementType.counterReceipt()) {
+            throw new BusinessRuleException("Os recebimentos ao balcão entram pela emissão do recibo, não à mão.");
         }
 
         if (movementType == TillMovementType.SANGRIA) {

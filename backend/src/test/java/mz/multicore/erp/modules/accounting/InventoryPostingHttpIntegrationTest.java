@@ -75,6 +75,27 @@ class InventoryPostingHttpIntegrationTest {
         assertThat(new BigDecimal(trial.get("totalDebit").asText())).isEqualByComparingTo(new BigDecimal(trial.get("totalCredit").asText()));
     }
 
+    @Test
+    void manufacturedProductsLiveInFinishedGoods() throws Exception {
+        Ctx c = context();
+        long flour = product(c, "Farinha (teste acabados)", "0", "40");
+        long bread = product(c, "Pao caseiro (teste acabados)", "15", "10");
+        json(send(post("/api/manufacturing/boms"), c, """
+                {"bomCode":"PA-%s","name":"Pao caseiro","finishedProductId":%d,"baseQuantity":10,
+                 "items":[{"rawMaterialProductId":%d,"requiredQuantity":1}]}"""
+                .formatted(UUID.randomUUID().toString().substring(0, 6), bread, flour)));
+        entry(c, bread, "20");
+        BigDecimal goods = ledger(c, "3201");
+        BigDecimal finished = ledger(c, "3401");
+
+        // Waste of 3 loaves at cost 10: the finished goods account drops by 30, the goods account does not move.
+        json(send(post("/api/inventory/waste"), c, """
+                {"companyId":%s,"warehouseId":%d,"productId":%d,"quantity":3,"reason":"EXPIRED","notes":"Pao duro",
+                 "idempotencyKey":"w-%s"}""".formatted(c.companyId(), c.warehouseId(), bread, UUID.randomUUID())));
+        assertThat(ledger(c, "3401").subtract(finished)).isEqualByComparingTo("-30");
+        assertThat(ledger(c, "3201").subtract(goods)).isEqualByComparingTo("0");
+    }
+
     private BigDecimal ledger(Ctx c, String account) throws Exception {
         return new BigDecimal(getJson("/api/accounting/ledger/" + account + "?from=2000-01-01&to=" + LocalDate.now().plusDays(1), c)
                 .get("closingBalance").asText());

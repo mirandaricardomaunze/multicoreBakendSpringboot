@@ -240,11 +240,15 @@ Documenta o **preço proposto a um cliente** e por quanto tempo é garantido.
    `CommercialPostingHandler` lança as fontes `CREDIT_NOTE` e `DEBIT_NOTE` na aprovação.
 7. ~~**Quebras e acertos não chegam à contabilidade**~~ — **resolvido (2026-11-10)**, ver §3.
 8. ~~**Ordem de produção altera o stock por fora do serviço central**~~ — **resolvido (2026-11-10)**, ver §4.1.
-9. **Em aberto (contabilista):** a ordem de produção lança o produto acabado em **3401 Produtos acabados**, mas a
-   venda desse produto credita **3201 Mercadorias**. Decidir se os produtos fabricados vão para 3201 (mais simples)
-   ou se a venda passa a creditar 3401 para esses artigos.
-10. **Em aberto (operação):** recibos recebidos ao balcão (sinal, vasilhame, faturas em dívida) entram na conta de
-    tesouraria escolhida e não na gaveta da sessão POS. Formação na loja piloto: escolher a conta "Caixa" certa.
+9. ~~**Produtos fabricados entre 3401 e 3201**~~ — **resolvido (2026-11-10)**: o que tem ficha técnica activa
+   (BOM) vive em **3401 Produtos acabados** nos dois motores de produção, e a venda, a devolução, a quebra e o acerto
+   desse artigo mexem em 3401 (`GoodsAccounts`, `BomFinishedGoodsLookup`). O que se compra fica em 3201.
+   *A confirmar pelo contabilista;* saldos antigos na 3401/3201 corrigem-se com um lançamento manual.
+10. ~~**Recibos ao balcão fora da gaveta**~~ — **resolvido (2026-11-10)**: um recibo em numerário emitido por quem
+    tem sessão POS aberta entra na gaveta (`COUNTER_RECEIPT`, `CounterReceiptTillListener`) e aparece no fecho Z como
+    "Recebimentos ao balcão"; anular o recibo com a sessão aberta tira-o da gaveta. O recibo continua a lançar na
+    conta de tesouraria; o depósito do fecho deixa esses valores de fora para não contar duas vezes. No diálogo do
+    recibo, numerário escolhe a conta Caixa e os outros meios a conta Banco.
 
 ## 8. Documentos e movimentos sectoriais (2026-11)
 

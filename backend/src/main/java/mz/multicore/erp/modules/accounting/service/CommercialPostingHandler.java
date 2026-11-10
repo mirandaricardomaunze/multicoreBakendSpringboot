@@ -24,10 +24,12 @@ public class CommercialPostingHandler {
 
     private final PostingHelper postingHelper;
     private final JournalService journalService;
+    private final GoodsAccounts goodsAccounts;
 
-    public CommercialPostingHandler(PostingHelper postingHelper, JournalService journalService) {
+    public CommercialPostingHandler(PostingHelper postingHelper, JournalService journalService, GoodsAccounts goodsAccounts) {
         this.postingHelper = postingHelper;
         this.journalService = journalService;
+        this.goodsAccounts = goodsAccounts;
     }
 
     public void postSale(SaleRegisteredEvent event) {
@@ -64,13 +66,7 @@ public class CommercialPostingHandler {
                     tax, "IVA liquidado"));
         }
 
-        BigDecimal cost = safe(event.costOfGoods());
-        if (cost.signum() > 0) {
-            entry.addLine(JournalLine.debit(postingHelper.account(event.companyId(), PgcNirfChart.CMVMC),
-                    cost, "Custo das mercadorias vendidas"));
-            entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.MERCADORIAS),
-                    cost, "Saída de existências"));
-        }
+        goodsAccounts.addSaleCost(entry, event.companyId(), event.invoiceId(), safe(event.costOfGoods()));
 
         journalService.save(entry, event.companyId());
     }
@@ -151,13 +147,7 @@ public class CommercialPostingHandler {
         }
         entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.CLIENTES),
                 total, "Redução da dívida do cliente"));
-        BigDecimal cost = safe(event.returnedGoodsCost());
-        if (cost.signum() > 0) {
-            entry.addLine(JournalLine.debit(postingHelper.account(event.companyId(), PgcNirfChart.MERCADORIAS),
-                    cost, "Reposição das mercadorias devolvidas"));
-            entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.CMVMC),
-                    cost, "Estorno do custo da venda"));
-        }
+        goodsAccounts.addReturnCost(entry, event.companyId(), event.noteId(), safe(event.returnedGoodsCost()));
         journalService.save(entry, event.companyId());
     }
 

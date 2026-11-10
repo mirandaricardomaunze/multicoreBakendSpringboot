@@ -3,6 +3,7 @@ package mz.multicore.erp.gui.commercial;
 import mz.multicore.erp.desktop.client.ComercialApiClient;
 import mz.multicore.erp.gui.components.*;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
+import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,6 +14,10 @@ import java.util.List;
  * Diálogo modal para registo de recebimento de fatura e emissão de recibo comercial.
  */
 public final class ReceiptPaymentDialog {
+
+    /** Server codes, shown as labels. Cash picks the cash account (and the open POS drawer); others the bank. */
+    private static final String[] METHOD_CODES = {"CASH", "BANK_TRANSFER", "MPESA", "CARD"};
+    private static final String[] METHOD_LABELS = {"Numerário", "Transferência", "M-Pesa", "Cartão"};
 
     private ReceiptPaymentDialog() {}
 
@@ -27,8 +32,16 @@ public final class ReceiptPaymentDialog {
         UIHelper.styleComboBox(accountCombo);
         accounts.forEach(account -> accountCombo.addItem(account.name() + " (" + account.balance() + " MT)"));
 
-        JComboBox<String> methodCombo = new JComboBox<>(new String[]{"DINHEIRO", "TRANSFERÊNCIA", "M-PESA", "CARTÃO"});
+        JComboBox<String> methodCombo = new JComboBox<>(METHOD_LABELS);
         UIHelper.styleComboBox(methodCombo);
+        Runnable pickAccount = () -> {
+            TreasuryAccountType wanted = methodCombo.getSelectedIndex() == 0 ? TreasuryAccountType.CASH : TreasuryAccountType.BANK;
+            for (int i = 0; i < accounts.size(); i++) {
+                if (accounts.get(i).accountType() == wanted) { accountCombo.setSelectedIndex(i); return; }
+            }
+        };
+        pickAccount.run();
+        methodCombo.addActionListener(e -> pickAccount.run());
         MoneyField amountField = new MoneyField(invoiceTotal.toString());
 
         JLabel invoiceLabel = new JLabel(invoiceNumber);
@@ -53,7 +66,7 @@ public final class ReceiptPaymentDialog {
                 return;
             }
             Long accountId = accounts.get(accountCombo.getSelectedIndex()).id();
-            String method = String.valueOf(methodCombo.getSelectedItem());
+            String method = METHOD_CODES[Math.max(0, methodCombo.getSelectedIndex())];
 
             UIHelper.runWithProgress(parent, "A emitir recibo…",
                     () -> apiClient.createReceipt(invoiceId, accountId, method, amount), ignored -> {

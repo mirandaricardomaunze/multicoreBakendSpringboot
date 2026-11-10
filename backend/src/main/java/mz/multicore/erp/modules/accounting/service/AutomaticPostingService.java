@@ -44,7 +44,7 @@ public class AutomaticPostingService {
                                    JournalService journalService,
                                    AuditLogService auditLogService) {
         PostingHelper helper = new PostingHelper(chartOfAccountsService, journalService);
-        this.commercialPostingHandler = new CommercialPostingHandler(helper, journalService);
+        this.commercialPostingHandler = new CommercialPostingHandler(helper, journalService, new GoodsAccounts(helper, null));
         this.procurementPostingHandler = new ProcurementPostingHandler(helper, journalService);
         this.operationsPostingHandler = new OperationsPostingHandler(helper, journalService, auditLogService);
     }

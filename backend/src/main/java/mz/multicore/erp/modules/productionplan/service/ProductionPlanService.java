@@ -293,7 +293,7 @@ public class ProductionPlanService {
         eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(plan.getCompany().getId(),
                 mz.multicore.erp.modules.accounting.model.JournalSource.PRODUCTION_RUN, run.getId(), batch, plan.getPlanDate(),
                 ingredientCost, product.isStockTracked() ? total : BigDecimal.ZERO,
-                mz.multicore.erp.modules.accounting.service.PgcNirfChart.VARIACAO_PRODUCAO));
+                mz.multicore.erp.modules.accounting.service.PgcNirfChart.VARIACAO_PRODUCAO, product.getId()));
         auditLogService.logCurrent("PRODUCTION_RUN", "Produzido " + DisplayNumbers.qty(request.quantity()) + " de " + product.getName()
                 + " (lote " + batch + ", custo " + DisplayNumbers.money(total) + " MT).");
         return toDto(run);
