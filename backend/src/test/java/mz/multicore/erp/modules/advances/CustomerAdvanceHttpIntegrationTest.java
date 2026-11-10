@@ -85,6 +85,30 @@ class CustomerAdvanceHttpIntegrationTest {
     }
 
     @Test
+    void clientGivesUpAndTheAdvanceIsRefundedLeavingCashAndLedgerAsBefore() throws Exception {
+        Ctx c = context();
+        BigDecimal cashBefore = treasuryBalance(c);
+        BigDecimal ledgerBefore = clientsLedger(c);
+        JsonNode advance = receive(c, c.clientId(), new BigDecimal("2320.00"), "adv-" + UUID.randomUUID());
+        assertThat(treasuryBalance(c).subtract(cashBefore)).isEqualByComparingTo("2320");
+
+        byte[] receiptPdf = mockMvc.perform(auth(get("/api/print/receipt/document/" + advance.get("receiptId").asLong()), c))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertThat(new String(receiptPdf, 0, 4)).isEqualTo("%PDF");
+
+        String refund = "{\"companyId\":%s,\"reason\":\"Cliente desistiu da festa\"}".formatted(c.companyId());
+        JsonNode refunded = json(send(post("/api/advances/" + advance.get("id").asLong() + "/refund"), c, refund));
+        assertThat(refunded.get("status").asText()).isEqualTo("REFUNDED");
+        assertThat(refunded.get("creditNoteNumber").asText()).startsWith("NC");
+        assertThat(treasuryBalance(c)).as("the money left the till").isEqualByComparingTo(cashBefore);
+        assertThat(clientsLedger(c)).as("account 2101 back where it was").isEqualByComparingTo(ledgerBefore);
+        send(post("/api/advances/" + advance.get("id").asLong() + "/refund"), c, refund).andExpect(status().isBadRequest());
+        send(post("/api/advances/" + advance.get("id").asLong() + "/apply"), c,
+                "{\"companyId\":%s,\"invoiceId\":%d}".formatted(c.companyId(), advance.get("advanceInvoiceId").asLong()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void retryReturnsTheSameAdvanceAndTheSystemProductStaysInsideTheModule() throws Exception {
         Ctx c = context();
         String key = "adv-" + UUID.randomUUID();

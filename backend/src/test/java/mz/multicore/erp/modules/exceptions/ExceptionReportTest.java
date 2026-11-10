@@ -32,6 +32,7 @@ class ExceptionReportTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper om;
+    @Autowired private mz.multicore.erp.modules.audit.repository.AuditLogRepository auditLogRepository;
 
     private record Ctx(String token, String companyId, long warehouseId) {}
 
@@ -62,10 +63,19 @@ class ExceptionReportTest {
                 {"companyId":%s,"plate":"EXC-%s","direction":"OUT","weightKg":9000,"fromScale":false,"requestKey":"ex-%s"}"""
                 .formatted(c.companyId(), UUID.randomUUID().toString().substring(0, 4), UUID.randomUUID())));
 
+        for (int i = 0; i < 3; i++) {
+            var log = new mz.multicore.erp.modules.audit.model.AuditLog();
+            log.setUsername("caixa-teste");
+            log.setCompanyId(Long.valueOf(c.companyId()));
+            log.setAction("POS_WEIGHT_MANUAL");
+            log.setDetails("Venda ao peso com peso escrito à mão");
+            auditLogRepository.save(log);
+        }
+
         LocalDate today = LocalDate.now();
         JsonNode report = getJson("/api/exceptions?companyId=" + c.companyId() + "&from=" + today.minusDays(7) + "&to=" + today, c);
         String codes = report.get("findings").toString();
-        assertThat(codes).contains("BREAKDOWN_LOSS").contains("WEIGHING_MANUAL");
+        assertThat(codes).contains("BREAKDOWN_LOSS").contains("WEIGHING_MANUAL").contains("POS_WEIGHT_MANUAL");
         assertThat(report.get("high").asLong()).as("30% loss against 5% accepted is serious").isGreaterThanOrEqualTo(1);
         assertThat(report.get("findings").get(0).get("severity").asText()).isEqualTo("HIGH");
 

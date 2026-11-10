@@ -113,6 +113,13 @@ class PickupHttpIntegrationTest {
         assertThat(reopened.get("summary").get("status").asText()).isEqualTo("OPEN");
         assertThat(new BigDecimal(reopened.get("lines").get(0).get("balance").asText())).isEqualByComparingTo("180");
 
+        // 20 bags already left the yard: a credit note can only give back the 180 still waiting.
+        String creditNote = """
+                {"invoiceId":%d,"reason":"ERROR","description":"Teste de levantamento",
+                 "lines":[{"invoiceLineId":%d,"quantity":%s}]}""";
+        send(post("/api/credit-notes"), c, creditNote.formatted(invoiceId, lineId, "181")).andExpect(status().isBadRequest());
+        send(post("/api/credit-notes"), c, creditNote.formatted(invoiceId, lineId, "180")).andExpect(status().isOk());
+
         byte[] pdf = mockMvc.perform(auth(get("/api/pickups/slips/" + first.get("id").asLong() + "/pdf?companyId="
                         + c.companyId()), c))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();

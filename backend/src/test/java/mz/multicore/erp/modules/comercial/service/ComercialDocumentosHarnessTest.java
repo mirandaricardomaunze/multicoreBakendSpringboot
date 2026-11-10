@@ -54,7 +54,7 @@ class ComercialDocumentosHarnessTest {
     private final DocumentNumberService numbers = mock(DocumentNumberService.class);
     private final CreditNoteQueryService queryService = mock(CreditNoteQueryService.class);
     private final CreditNoteCreationService creationService = new CreditNoteCreationService(
-            creditNoteRepository, invoiceRepository, warehouseRepository, numbers, queryService);
+            creditNoteRepository, invoiceRepository, warehouseRepository, numbers, queryService, java.util.List.of());
 
     @BeforeEach
     void signIn() {

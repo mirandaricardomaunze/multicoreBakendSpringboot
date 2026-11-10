@@ -60,6 +60,7 @@ public class ConsignmentService {
     private final StockMovementRegistrationService movementService;
     private final StockWasteService wasteService;
     private final TransitWarehouseProvider transitWarehouses;
+    private final mz.multicore.erp.modules.inventory.service.InventoryService inventoryService;
     private final ComercialService comercialService;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
@@ -69,6 +70,7 @@ public class ConsignmentService {
                               StockRepository stockRepository, InvoiceRepository invoiceRepository,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
                               TransitWarehouseProvider transitWarehouses,
+                              mz.multicore.erp.modules.inventory.service.InventoryService inventoryService,
                               ComercialService comercialService, DocumentNumberService documentNumberService,
                               AuditLogService auditLogService) {
         this.deliveryRepository = deliveryRepository;
@@ -80,6 +82,7 @@ public class ConsignmentService {
         this.movementService = movementService;
         this.wasteService = wasteService;
         this.transitWarehouses = transitWarehouses;
+        this.inventoryService = inventoryService;
         this.comercialService = comercialService;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
@@ -132,8 +135,9 @@ public class ConsignmentService {
                 if (stock.compareTo(l.quantity()) < 0) {
                     throw new BusinessRuleException("Só há " + DisplayNumbers.qty(stock) + " de " + product.getName() + " em " + source.getName() + ".");
                 }
+                LocalDate expiry = oldestExpiry(product, source);
                 movementService.registerMovement(product, source, l.quantity().negate(), MOVEMENT_TYPE, null, null, description, null);
-                movementService.registerMovement(product, consignment, l.quantity(), MOVEMENT_TYPE, delivery.getNumber(), null, description, null);
+                movementService.registerMovement(product, consignment, l.quantity(), MOVEMENT_TYPE, delivery.getNumber(), null, description, expiry);
             }
             ConsignmentLine line = new ConsignmentLine();
             line.setDelivery(delivery);
@@ -170,10 +174,11 @@ public class ConsignmentService {
             line.setDamaged(s.damaged());
             Product product = line.getProduct();
             if (product.isStockTracked() && s.returned().signum() > 0) {
+                LocalDate expiry = oldestExpiry(product, delivery.getConsignmentWarehouse());
                 movementService.registerMovement(product, delivery.getConsignmentWarehouse(), s.returned().negate(), MOVEMENT_TYPE,
                         null, null, description, null);
                 movementService.registerMovement(product, delivery.getSourceWarehouse(), s.returned(), MOVEMENT_TYPE,
-                        null, null, description, null);
+                        delivery.getNumber(), null, description, expiry);
             }
             if (product.isStockTracked() && s.damaged().signum() > 0) {
                 wasteService.registerWaste(new CreateStockWasteRequest(request.companyId(), delivery.getConsignmentWarehouse().getId(),
@@ -201,6 +206,16 @@ public class ConsignmentService {
     /** The company "Em consignação" warehouse: in transit, not for sale at the POS. Created on first use. */
     private Warehouse consignmentWarehouse(Warehouse source) {
         return transitWarehouses.named(source.getCompany(), CONSIGNMENT_WAREHOUSE, "Mercadoria nos revendedores");
+    }
+
+    /**
+     * Expiry of the lot that leaves first (FEFO), so perishable goods keep their date at the reseller and when they
+     * come back, and the Validades screen still sees them. {@code null} for products without expiry.
+     */
+    private LocalDate oldestExpiry(Product product, Warehouse warehouse) {
+        if (!product.isTracksExpiry()) return null;
+        return inventoryService.findNextFEFO(product.getId(), warehouse.getId())
+                .map(mz.multicore.erp.modules.inventory.dto.ProductBatchDTO::expirationDate).orElse(null);
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {

@@ -42,7 +42,10 @@ falta. A gestão precisa de uma lista curta do que verificar, por gravidade.
 - **Báscula vs guia:** a guia de remessa não guarda o peso, por isso a diferença não se calcula.
 - **Produção vs farinha:** o consumo é calculado pela receita, por isso não pode divergir. Só uma contagem física
   da farinha mostraria desvio (fica para o inventário).
-- **Venda ao peso manual no POS:** o POS ainda não regista se o peso foi lido ou escrito.
+- **Venda ao peso manual no POS (feito em 2026-11-10):** cada linha de artigo ao peso vai marcada "SCALE" ou
+  "MANUAL" (`POSCheckoutLineRequest.weightSource`); as manuais ficam na auditoria (`POS_WEIGHT_MANUAL`) e o controlo
+  `POS_WEIGHT_MANUAL` (Talho) assinala o operador com 3 ou mais, ALTA a partir de 9. Uma linha cujo peso foi lido e
+  depois alterado conta como manual.
 - **Alerta no Painel Executivo (feito em 2026-11-10):** o rodapé do painel mostra as excepções de gravidade alta e
   média dos últimos 7 dias. O módulo regista a fonte em `ExecutiveAlerts`; o painel não depende do módulo, as
   contagens lêem-se em segundo plano (cache de 1 minuto) e, sem permissão ou sem servidor, não aparece nada.

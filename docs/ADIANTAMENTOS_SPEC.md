@@ -79,7 +79,14 @@ paridade PostgreSQL, `ApiRolePolicy`.
 
 - Aplica-se o sinal inteiro: a fatura final tem de ter em dívida pelo menos o valor do sinal.
 - Um sinal aplicado não se desfaz no módulo; corrige-se com documentos normais (nota de débito, etc.).
-- Ainda não existe: devolução do sinal ao cliente, aviso automático no editor da fatura final e PDF próprio do recibo RC.
+- **Feito em 2026-11-10:**
+  - **Devolução do sinal** (`POST /api/advances/{id}/refund`, só gestão, com motivo): nota de crédito aprovada sobre a
+    fatura do sinal e anulação do recibo do sinal (saída de caixa e lançamento contrário). Estado `REFUNDED`. A caixa
+    e a conta 2101 voltam ao ponto de partida. Depende da pergunta 6 do parecer.
+  - **Aviso na fatura final:** ao emitir uma fatura (directa ou de encomenda) para um cliente com sinal em aberto, o
+    desktop avisa e indica "Adiantamentos › Aplicar na Fatura" (`AdvanceReminder`). Não aplica sozinho.
+  - **PDF do recibo RC** em A4 (`/api/print/receipt/document/{id}`), impresso logo a seguir à fatura do sinal; o
+    recibo de compensação diz que não houve entrada de dinheiro.
 
 **Parecer pedido:** `docs/PEDIDO_PARECER_FATURA_ADIANTAMENTO.md` (8 perguntas ao jurista/contabilista, enviado
 para confirmação da redacção e do circuito fiscal).

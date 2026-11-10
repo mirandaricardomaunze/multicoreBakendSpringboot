@@ -135,6 +135,7 @@ final class PosBarcodeActions {
         }
         for (POSPanel.CartItem it : owner.cartItems) {
             if (it.serial == null && it.product.id().equals(product.id())) {
+                it.scaleWeight = (it.scaleWeight == null ? it.qty : it.scaleWeight).add(qtyKg);
                 it.qty = it.qty.add(qtyKg);
                 owner.updateCartTotal();
                 return;
@@ -148,6 +149,7 @@ final class PosBarcodeActions {
                     BigDecimal discount = promo.map(p -> p.discountPercent()).orElse(BigDecimal.ZERO);
                     POSPanel.CartItem item = new POSPanel.CartItem(product, qtyKg, discount, null, null);
                     item.note = promo.map(p -> "Promo: " + p.name()).orElse("-");
+                    item.scaleWeight = qtyKg;
                     owner.cartItems.add(item);
                     owner.updateCartTotal();
                 }, error -> owner.showPosNotice(FeedbackType.ERROR,

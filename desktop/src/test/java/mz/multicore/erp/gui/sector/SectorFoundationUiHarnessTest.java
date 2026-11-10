@@ -57,11 +57,12 @@ class SectorFoundationUiHarnessTest {
                 mock(BackupApiClient.class), mock(DocumentConfigApiClient.class), mock(SupportApiClient.class),
                 mock(MySubscriptionApiClient.class), mock(SystemMonitoringApiClient.class), mock(ActivityApiClient.class));
         JTabbedPane tabs = firstTabbedPane(panel);
-        assertThat(tabs.getTabCount()).isEqualTo(8);
+        assertThat(tabs.getTabCount()).isEqualTo(9);
         assertThat(tabs.getTitleAt(0)).isEqualTo("Log de Auditoria Geral");
         assertThat(tabs.getTitleAt(6)).isEqualTo("Perfil de Actividade");
         assertThat(tabs.getComponentAt(6)).isInstanceOf(ActivityProfilePanel.class);
         assertThat(tabs.getTitleAt(7)).as("the workstation scale follows the activity profile").isEqualTo("Balança deste Posto");
+        assertThat(tabs.getTitleAt(8)).as("then the cash drawer of the workstation").isEqualTo("Gaveta deste Posto");
     }
 
     @Test

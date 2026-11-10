@@ -202,6 +202,41 @@ public class CustomerAdvanceService {
         return toDto(advance);
     }
 
+    /**
+     * The client gave up: an approved credit note cancels the advance invoice (base and VAT) and the advance receipt is
+     * cancelled, which takes the money out of the till and reverses its ledger entry. Everything is undone with the
+     * ordinary documents; no amount stays with the client or the company. Pending legal opinion (question 6 of
+     * {@code docs/PEDIDO_PARECER_FATURA_ADIANTAMENTO.md}).
+     */
+    @Transactional
+    public CustomerAdvanceDTO refund(Long advanceId, mz.multicore.erp.modules.advances.dto.RefundAdvanceRequest request) {
+        CurrentUserContext.requireCompany(request.companyId());
+        PermissionGuard.requireManagerOrAdmin("devolver adiantamento");
+        CustomerAdvance advance = advanceRepository.lockByIdAndCompanyId(advanceId, request.companyId())
+                .orElseThrow(() -> new BusinessRuleException("Adiantamento não encontrado."));
+        if (advance.getStatus() != CustomerAdvanceStatus.OPEN) {
+            throw new BusinessRuleException("Só se devolve um adiantamento em aberto; este já foi aplicado ou devolvido.");
+        }
+        Invoice advanceInvoice = advance.getAdvanceInvoice();
+        InvoiceLine line = advanceInvoice.getLines().get(0);
+        CreditNoteDTO created = creditNoteService.create(new CreateCreditNoteRequest(advanceInvoice.getId(),
+                CreditNoteReason.CANCELLATION.name(), null, "Devolução do sinal ao cliente: " + request.reason().trim(),
+                List.of(new CreateCreditNoteLineRequest(line.getId(), line.getQuantity()))));
+        CreditNoteDTO note = creditNoteService.approve(created.id());
+        comercialService.cancelReceipt(advance.getReceipt().getId(), "Devolução do sinal ao cliente: " + request.reason().trim());
+        advance.setStatus(CustomerAdvanceStatus.REFUNDED);
+        advance.setCreditNote(creditNoteRepository.findById(note.id()).orElseThrow());
+        advance.setAppliedAt(LocalDateTime.now());
+        advance.setAppliedBy(CurrentUserContext.getUsername());
+        String notes = (advance.getNotes() == null ? "" : advance.getNotes() + " · ") + "Devolvido: " + request.reason().trim();
+        advance.setNotes(notes.length() > 300 ? notes.substring(0, 300) : notes);
+        advance = advanceRepository.save(advance);
+        auditLogService.logCurrent("CUSTOMER_ADVANCE_REFUND", "Sinal " + advanceInvoice.getInvoiceNumber() + " de "
+                + DisplayNumbers.money(advance.getAmount()) + " MT devolvido a " + advance.getClient().getName()
+                + " (nota de crédito " + note.noteNumber() + "): " + request.reason().trim());
+        return toDto(advance);
+    }
+
     private void requireTarget(CustomerAdvance advance, Invoice target, BigDecimal amount) {
         if (target.getClient() == null || !target.getClient().getId().equals(advance.getClient().getId())) {
             throw new BusinessRuleException("O adiantamento só se aplica a uma fatura do mesmo cliente.");

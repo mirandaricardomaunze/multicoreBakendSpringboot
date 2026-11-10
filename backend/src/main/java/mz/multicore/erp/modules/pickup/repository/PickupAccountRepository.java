@@ -37,6 +37,8 @@ public interface PickupAccountRepository extends JpaRepository<PickupAccount, Lo
 
     boolean existsByInvoiceId(Long invoiceId);
 
+    Optional<PickupAccount> findByInvoiceId(Long invoiceId);
+
     @Query("select i from Invoice i left join fetch i.client where i.company.id = :companyId "
             + "and i.status in :statuses and i.deliveryGuideId is null "
             + "and not exists (select a.id from PickupAccount a where a.invoice = i) "

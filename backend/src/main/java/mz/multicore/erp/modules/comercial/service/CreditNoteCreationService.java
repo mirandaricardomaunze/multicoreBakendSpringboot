@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,6 +36,7 @@ public class CreditNoteCreationService {
     private final WarehouseRepository warehouseRepository;
     private final DocumentNumberService documentNumberService;
     private final CreditNoteQueryService queryService;
+    private final List<CreditNoteLineGuard> lineGuards;
 
     @Autowired
     public CreditNoteCreationService(
@@ -42,13 +44,15 @@ public class CreditNoteCreationService {
             InvoiceRepository invoiceRepository,
             WarehouseRepository warehouseRepository,
             DocumentNumberService documentNumberService,
-            CreditNoteQueryService queryService
+            CreditNoteQueryService queryService,
+            List<CreditNoteLineGuard> lineGuards
     ) {
         this.creditNoteRepository = creditNoteRepository;
         this.invoiceRepository = invoiceRepository;
         this.warehouseRepository = warehouseRepository;
         this.documentNumberService = documentNumberService;
         this.queryService = queryService;
+        this.lineGuards = lineGuards == null ? List.of() : lineGuards;
     }
 
     @Transactional
@@ -118,6 +122,7 @@ public class CreditNoteCreationService {
                         DisplayNumbers.qty(requested), sourceLine.getProduct().getName(), DisplayNumbers.qty(qtySold),
                         DisplayNumbers.qty(alreadyReturned), DisplayNumbers.qty(remaining)));
             }
+            for (CreditNoteLineGuard guard : lineGuards) guard.check(invoice, sourceLine, requested, remaining);
 
             BigDecimal price = sourceLine.getUnitPrice();
             BigDecimal taxRate = sourceLine.getTaxRate() == null ? BigDecimal.ZERO : sourceLine.getTaxRate();

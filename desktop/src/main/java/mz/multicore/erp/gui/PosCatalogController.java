@@ -409,6 +409,7 @@ final class PosCatalogController {
         if (selected < 0 || selected >= owner.cartItems.size()) selected = owner.cartItems.size() - 1;
         POSPanel.CartItem item = owner.cartItems.get(selected);
         item.qty = weight;
+        item.scaleWeight = weight;
         owner.updateCartTotal(selected);
         ToastManager.success(owner, String.format("Peso de %.3f kg aplicado a '%s'.", weight, item.product.name()));
     }

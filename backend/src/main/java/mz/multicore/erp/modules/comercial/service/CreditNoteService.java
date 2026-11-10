@@ -53,7 +53,7 @@ public class CreditNoteService {
     ) {
         CreditNoteQueryService qService = new CreditNoteQueryService(creditNoteRepository, invoiceRepository);
         CreditNoteCreationService cService = new CreditNoteCreationService(
-                creditNoteRepository, invoiceRepository, warehouseRepository, documentNumberService, qService);
+                creditNoteRepository, invoiceRepository, warehouseRepository, documentNumberService, qService, java.util.List.of());
         CreditNoteLifecycleService lService = new CreditNoteLifecycleService(
                 creditNoteRepository, inventoryService, auditLogService, eventPublisher, qService);
         this.creationService = cService;

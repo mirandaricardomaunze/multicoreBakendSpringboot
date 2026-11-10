@@ -34,6 +34,12 @@ public class CustomerAdvanceController {
         return ResponseEntity.ok(advanceService.receive(request));
     }
 
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<CustomerAdvanceDTO> refund(@PathVariable Long id,
+                                                     @RequestBody @Valid mz.multicore.erp.modules.advances.dto.RefundAdvanceRequest request) {
+        return ResponseEntity.ok(advanceService.refund(id, request));
+    }
+
     @PostMapping("/{id}/apply")
     public ResponseEntity<CustomerAdvanceDTO> apply(@PathVariable Long id, @RequestBody @Valid ApplyAdvanceRequest request) {
         return ResponseEntity.ok(advanceService.apply(id, request));

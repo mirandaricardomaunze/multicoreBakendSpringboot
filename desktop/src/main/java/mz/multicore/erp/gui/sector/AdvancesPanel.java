@@ -35,6 +35,7 @@ public class AdvancesPanel extends JPanel {
 
     static final String OPEN_LABEL = "EM ABERTO";
     static final String APPLIED_LABEL = "APLICADO";
+    static final String REFUNDED_LABEL = "DEVOLVIDO";
     private static final String[] COLUMNS = {"Data", "Cliente", "Valor", "Estado", "Fatura do sinal", "Recibo",
             "Fatura final", "Nota de crédito", "Observações"};
     private static final String[][] METHODS = {{"CASH", "Numerário"}, {"MPESA", "M-Pesa"}, {"EMOLA", "E-Mola"},
@@ -52,6 +53,7 @@ public class AdvancesPanel extends JPanel {
     private final ModernButton receiveBtn = UIHelper.createSuccessButton("Receber Sinal");
     private final ModernButton applyBtn = UIHelper.createPrimaryButton("Aplicar na Fatura");
     private final ModernButton printBtn = UIHelper.createSecondaryButton("Imprimir Fatura");
+    private final ModernButton refundBtn = UIHelper.createSecondaryButton("Devolver Sinal");
     private final List<CustomerAdvanceDTO> advances = new ArrayList<>();
     private Consumer<List<CustomerAdvanceDTO>> onLoaded = list -> { };
 
@@ -87,7 +89,7 @@ public class AdvancesPanel extends JPanel {
 
         JTextField search = TableFilter.searchField("Cliente, fatura ou recibo…");
         search.setPreferredSize(new Dimension(210, UIHelper.FORM_CONTROL_HEIGHT));
-        JComboBox<String> state = TableFilter.combo("Todos os estados", OPEN_LABEL, APPLIED_LABEL);
+        JComboBox<String> state = TableFilter.combo("Todos os estados", OPEN_LABEL, APPLIED_LABEL, REFUNDED_LABEL);
         UIHelper.styleComboBox(state);
         state.setPreferredSize(new Dimension(150, UIHelper.FORM_CONTROL_HEIGHT));
         state.setSelectedItem(OPEN_LABEL);
@@ -101,6 +103,9 @@ public class AdvancesPanel extends JPanel {
         applyBtn.setIcon(UIHelper.icon("fas-link", 14));
         applyBtn.setToolTipText("Desconta o sinal na fatura final do mesmo cliente, sem nova entrada de caixa");
         applyBtn.addActionListener(e -> openApply());
+        refundBtn.setIcon(UIHelper.icon("fas-undo", 14));
+        refundBtn.setToolTipText("O cliente desistiu: nota de crédito do sinal e saída do dinheiro da caixa (só gestão)");
+        refundBtn.addActionListener(e -> openRefund());
         printBtn.setIcon(UIHelper.icon("fas-print", 14));
         printBtn.addActionListener(e -> printAdvanceInvoice());
         ModernButton refreshBtn = UIHelper.createRefreshButton(this::reload);
@@ -108,7 +113,7 @@ public class AdvancesPanel extends JPanel {
         ModernPanel card = new ModernPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(15, 15, 15, 15));
-        card.add(ResponsiveSupport.cardTop("Adiantamentos e Sinais", filters, refreshBtn, printBtn, applyBtn, receiveBtn), BorderLayout.NORTH);
+        card.add(ResponsiveSupport.cardTop("Adiantamentos e Sinais", filters, refreshBtn, printBtn, refundBtn, applyBtn, receiveBtn), BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         card.add(ClientTablePagination.install(table), BorderLayout.SOUTH);
         return card;
@@ -146,12 +151,14 @@ public class AdvancesPanel extends JPanel {
     }
 
     static String statusLabel(CustomerAdvanceStatus status) {
+        if (status == CustomerAdvanceStatus.REFUNDED) return REFUNDED_LABEL;
         return status == CustomerAdvanceStatus.APPLIED ? APPLIED_LABEL : OPEN_LABEL;
     }
 
     private void updateActions() {
         CustomerAdvanceDTO selected = selected();
         applyBtn.setEnabled(selected != null && selected.status() == CustomerAdvanceStatus.OPEN);
+        refundBtn.setEnabled(selected != null && selected.status() == CustomerAdvanceStatus.OPEN);
         printBtn.setEnabled(selected != null);
     }
 
@@ -271,6 +278,33 @@ public class AdvancesPanel extends JPanel {
         UIHelper.loadAsync(this, () -> api.list(companyId), loaded -> apply(loaded, applied.id()), error -> reload());
     }
 
+    // ─── Refund ─────────────────────────────────────────────────────────────────
+
+    private void openRefund() {
+        CustomerAdvanceDTO advance = selected();
+        Long companyId = CurrentUserContext.findCurrentCompanyId();
+        if (advance == null || companyId == null || advance.status() != CustomerAdvanceStatus.OPEN) return;
+        JTextField reason = new JTextField();
+        UIHelper.styleTextField(reason);
+        FormField reasonForm = new FormField("Motivo", reason, true, "Ex.: cliente desistiu da encomenda");
+        JLabel info = new JLabel("<html><div style='width:360px'>Devolver <b>" + UIHelper.formatMzn(advance.amount()) + "</b> a "
+                + advance.clientName() + ". É emitida e aprovada a <b>nota de crédito</b> da fatura " + advance.advanceInvoiceNumber()
+                + " e o recibo " + advance.receiptNumber() + " é anulado: o dinheiro sai da caixa. Esta operação não se desfaz.</div></html>");
+        info.setForeground(UIHelper.TEXT_LIGHT);
+        ModernFormDialog dialog = new ModernFormDialog(UIHelper.mainWindow, "Devolver Sinal", "fas-undo",
+                "O cliente desistiu da encomenda", UIHelper.createDialogForm(1, new Object[]{"", info, "", reasonForm}))
+                .setConfirmButton("Devolver", "fas-undo");
+        CustomerAdvanceDTO[] result = new CustomerAdvanceDTO[1];
+        dialog.setOnSaveAsync(() -> {
+            if (!reasonForm.validateRequired()) throw new IllegalArgumentException("Indique o motivo.");
+            String text = reason.getText().trim();
+            return () -> { result[0] = api.refund(companyId, advance.id(), text); return null; };
+        });
+        if (!dialog.showDialog() || result[0] == null) return;
+        ToastManager.success(this, "Sinal devolvido a " + advance.clientName() + " (nota de crédito " + result[0].creditNoteNumber() + ").");
+        UIHelper.loadAsync(this, () -> api.list(companyId), loaded -> apply(loaded, advance.id()), error -> reload());
+    }
+
     // ─── Print ──────────────────────────────────────────────────────────────────
 
     private void printAdvanceInvoice() {
@@ -280,7 +314,17 @@ public class AdvancesPanel extends JPanel {
 
     private void print(CustomerAdvanceDTO advance) {
         UIHelper.runWithProgress(this, "A gerar a fatura do sinal…", () -> comercialApi.renderInvoice(advance.advanceInvoiceId()),
-                pdf -> PrintPreviewDialog.show(this, pdf, "adiantamento-" + advance.advanceInvoiceNumber().replace('/', '-')),
+                pdf -> {
+                    PrintPreviewDialog.show(this, pdf, "adiantamento-" + advance.advanceInvoiceNumber().replace('/', '-'));
+                    printReceipt(advance);
+                },
                 error -> feedback.show(FeedbackType.ERROR, "Não foi possível gerar o PDF", error.getMessage(), null, null));
+    }
+
+    /** The receipt (RC) of the advance, after the invoice, so the client takes both documents. */
+    private void printReceipt(CustomerAdvanceDTO advance) {
+        UIHelper.runWithProgress(this, "A gerar o recibo do sinal…", () -> api.receiptPdf(advance.receiptId()),
+                pdf -> PrintPreviewDialog.show(this, pdf, "recibo-" + advance.receiptNumber().replace('/', '-')),
+                error -> feedback.show(FeedbackType.ERROR, "Não foi possível gerar o recibo", error.getMessage(), null, null));
     }
 }

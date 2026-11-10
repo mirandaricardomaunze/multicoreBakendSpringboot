@@ -83,6 +83,7 @@ final class CommercialOrderActions {
 
         UIHelper.runWithProgress(panel, "A faturar encomenda…", billAction, invoice -> {
             ToastManager.success(panel, "Encomenda " + orderNum + " faturada · fatura " + invoice.invoiceNumber() + ".");
+            mz.multicore.erp.gui.sector.AdvanceReminder.afterInvoice(panel, invoice);
 
             panel.loadOrdersTable();
             panel.loadInvoicesTable();

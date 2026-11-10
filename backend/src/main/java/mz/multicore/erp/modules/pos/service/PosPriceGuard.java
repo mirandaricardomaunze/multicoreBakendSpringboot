@@ -55,6 +55,7 @@ public class PosPriceGuard {
     }
 
     public void requireAuthorized(POSCheckoutRequest request) {
+        logTypedWeights(request);
         String role = CurrentUserContext.getRole();
         if ("ADMIN".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role)) return;
 
@@ -75,6 +76,15 @@ public class PosPriceGuard {
         if (needed.signum() > 0) {
             String manager = authorizationService.consume(request.discountAuthorization(), request.companyId(), needed);
             auditLogService.logCurrent("POS_DISCOUNT_AUTHORIZED", "Desconto de " + needed + "% autorizado por " + manager);
+        }
+    }
+
+    /** A weight typed instead of read from the scale is audited per line (anti-fraud report, SA-C21). */
+    private void logTypedWeights(POSCheckoutRequest request) {
+        for (POSCheckoutLineRequest line : request.lines()) {
+            if (!POSCheckoutLineRequest.WEIGHT_TYPED.equals(line.weightSource())) continue;
+            auditLogService.logCurrent("POS_WEIGHT_MANUAL", "Venda ao peso com peso escrito à mão: " + line.quantity()
+                    + " kg do artigo " + line.productId() + ".");
         }
     }
 

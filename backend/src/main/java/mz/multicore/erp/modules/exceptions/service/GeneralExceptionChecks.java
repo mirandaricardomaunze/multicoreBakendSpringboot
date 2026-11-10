@@ -23,6 +23,7 @@ public class GeneralExceptionChecks implements ExceptionCheck {
     static final List<String> CANCEL_ACTIONS = List.of("INVOICE_CANCEL", "RECEIPT_CANCEL", "CREDIT_NOTE_CANCEL", "DEBIT_NOTE_CANCEL",
             "ORDER_CANCEL", "DELIVERY_GUIDE_CANCEL", "MATERIAL_PICKUP_CANCEL", "CARCASS_BREAKDOWN_CANCEL", "POS_RETURN", "POS_REFUND_CASH");
     static final int CANCEL_LIMIT = 3;
+    static final int WEIGHT_LIMIT = 3;
     static final BigDecimal DISCOUNT_LIMIT = new BigDecimal("10");
     static final BigDecimal CASH_LIMIT = new BigDecimal("100");
 
@@ -44,6 +45,16 @@ public class GeneralExceptionChecks implements ExceptionCheck {
             findings.add(new ExceptionFindingDTO(SECTOR, "CANCELLATIONS_BY_OPERATOR", count >= CANCEL_LIMIT * 3 ? ExceptionSeverity.HIGH
                     : ExceptionSeverity.MEDIUM, "Muitas anulações e devoluções", who + " fez " + count
                     + " anulações ou devoluções no período. Confirme os motivos na auditoria.", who, to, null, BigDecimal.valueOf(count)));
+        });
+        Map<String, Integer> typedWeights = new TreeMap<>();
+        for (var a : queries.audit(companyId, start, end, List.of("POS_WEIGHT_MANUAL"))) {
+            typedWeights.merge(a.getUsername() == null ? "—" : a.getUsername(), 1, Integer::sum);
+        }
+        typedWeights.forEach((who, count) -> {
+            if (count < WEIGHT_LIMIT) return;
+            findings.add(new ExceptionFindingDTO("Talho", "POS_WEIGHT_MANUAL", count >= WEIGHT_LIMIT * 3 ? ExceptionSeverity.HIGH
+                    : ExceptionSeverity.MEDIUM, "Vendas ao peso escritas à mão", who + " escreveu o peso à mão em " + count
+                    + " linhas de venda no POS em vez de o ler da balança.", who, to, null, BigDecimal.valueOf(count)));
         });
         Map<String, BigDecimal> discounts = new TreeMap<>();
         Map<String, Integer> discountCount = new HashMap<>();

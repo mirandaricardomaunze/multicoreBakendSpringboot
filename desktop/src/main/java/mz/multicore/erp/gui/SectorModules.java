@@ -80,7 +80,10 @@ final class SectorModules {
         if (pricingApi != null) registry.addPrices(pricingApi, comercialApi, promotionApi);
         if (pickupApi != null) registry.addPickups(pickupApi);
         if (projectsApi != null) registry.addProjects(projectsApi, comercialApi);
-        if (advancesApi != null) registry.addAdvances(advancesApi, comercialApi, financeApi, inventoryApi);
+        if (advancesApi != null) {
+            registry.addAdvances(advancesApi, comercialApi, financeApi, inventoryApi);
+            AdvanceReminder.register(advancesApi);
+        }
         if (butcheryApi != null) registry.addButchery(butcheryApi, comercialApi, inventoryApi);
         if (expiryApi != null) registry.addExpiry(expiryApi, comercialApi);
         if (planApi != null) registry.addProductionPlan(planApi, productionApi, comercialApi, inventoryApi);

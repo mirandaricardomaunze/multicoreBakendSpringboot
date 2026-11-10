@@ -18,6 +18,16 @@ public class PosCartItem {
     public String serial;
     public String note;
     public BigDecimal customUnitPrice;
+    /** Weight that came from the scale (capture or scale label); {@code null} when nothing was weighed. */
+    public BigDecimal scaleWeight;
+
+    /** Where the quantity of a product sold by weight came from, for the anti-fraud report; {@code null} otherwise. */
+    public String weightSource() {
+        if (product == null || !"WEIGHT".equals(product.saleType())) return null;
+        boolean fromScale = scaleWeight != null && qty != null && scaleWeight.compareTo(qty) == 0;
+        return fromScale ? mz.multicore.erp.modules.pos.dto.POSCheckoutLineRequest.WEIGHT_FROM_SCALE
+                : mz.multicore.erp.modules.pos.dto.POSCheckoutLineRequest.WEIGHT_TYPED;
+    }
 
     public PosCartItem(ProductDTO product, BigDecimal qty, BigDecimal discount, String batch, String serial) {
         this(product, qty, discount, batch, serial, null);

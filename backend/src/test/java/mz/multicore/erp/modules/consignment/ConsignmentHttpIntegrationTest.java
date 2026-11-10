@@ -64,6 +64,28 @@ class ConsignmentHttpIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void perishableBreadKeepsItsExpiryAtTheReseller() throws Exception {
+        Ctx c = context();
+        long bread = json(send(post("/api/comercial/products"), c, """
+                {"sku":"CGV-%s","name":"Pão perecível (teste consignação)","unitPrice":10,"purchasePrice":4,"minStock":0,
+                 "unitsPerBox":1,"saleType":"UNIT","stockTracked":true,"tracksExpiry":true}"""
+                .formatted(UUID.randomUUID().toString().substring(0, 8)))).get("id").asLong();
+        LocalDate expiry = LocalDate.now().plusDays(2);
+        send(post("/api/inventory/movements"), c, """
+                {"productId":%d,"warehouseId":%d,"quantity":50,"movementType":"ENTRY","batchNumber":"L-%s","expirationDate":"%s"}"""
+                .formatted(bread, c.warehouseId(), UUID.randomUUID().toString().substring(0, 6), expiry)).andExpect(status().isOk());
+        JsonNode delivery = json(send(post("/api/consignments"), c, deliver(c, c.clientId(), bread, "30")));
+
+        JsonNode atReseller = null;
+        for (JsonNode lot : getJson("/api/expiry/board?companyId=" + c.companyId() + "&days=14", c).get("lots")) {
+            if (delivery.get("number").asText().equals(lot.get("batchNumber").asText())) atReseller = lot;
+        }
+        assertThat(atReseller).as("the lot at the reseller is on the expiry board").isNotNull();
+        assertThat(atReseller.get("expirationDate").asText()).isEqualTo(expiry.toString());
+        assertThat(new BigDecimal(atReseller.get("quantity").asText())).isEqualByComparingTo("30");
+    }
+
     private String deliver(Ctx c, long clientId, long productId, String qty) {
         return """
                 {"companyId":%s,"clientId":%d,"warehouseId":%d,"deliveryDate":"%s","route":"Rota Matola",

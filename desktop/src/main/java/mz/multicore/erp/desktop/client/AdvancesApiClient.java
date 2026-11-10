@@ -27,6 +27,15 @@ public class AdvancesApiClient {
         return clientFactory.authenticatedClient().post("/api/advances", request, CustomerAdvanceDTO.class);
     }
 
+    public byte[] receiptPdf(Long receiptId) {
+        return clientFactory.authenticatedClient().getBytes("/api/print/receipt/document/" + receiptId);
+    }
+
+    public CustomerAdvanceDTO refund(Long companyId, Long advanceId, String reason) {
+        return clientFactory.authenticatedClient().post("/api/advances/" + advanceId + "/refund",
+                new mz.multicore.erp.modules.advances.dto.RefundAdvanceRequest(companyId, reason), CustomerAdvanceDTO.class);
+    }
+
     public CustomerAdvanceDTO apply(Long companyId, Long advanceId, Long invoiceId) {
         return clientFactory.authenticatedClient().post("/api/advances/" + advanceId + "/apply",
                 new ApplyAdvanceRequest(companyId, invoiceId), CustomerAdvanceDTO.class);

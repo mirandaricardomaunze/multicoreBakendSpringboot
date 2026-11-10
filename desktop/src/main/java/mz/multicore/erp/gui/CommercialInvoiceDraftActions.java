@@ -385,6 +385,7 @@ final class CommercialInvoiceDraftActions {
             CreateInvoiceRequest request = buildInvoiceRequest(panel);
             UIHelper.runWithProgress(panel, "A emitir fatura…", () -> panel.comercialApiClient.createInvoice(request), created -> {
                 panel.setLastCreatedInvoice(created);
+                mz.multicore.erp.gui.sector.AdvanceReminder.afterInvoice(panel, created);
                 resetInvoiceDraft(panel);
                 if (created.status() == InvoiceStatus.PENDING_DISCOUNT_APPROVAL) {
                     panel.showCommercialNotice(FeedbackType.WARNING, "Fatura aguarda aprovação",

@@ -14,6 +14,38 @@ public final class DesktopLocalSettings {
     static final String SCALE_PORT = "desktop.scale.port";
     static final String SCALE_BAUD = "desktop.scale.baud";
     static final String SCALE_MODE = "desktop.scale.mode";
+    static final String DRAWER_ENABLED = "desktop.drawer.enabled";
+    static final String DRAWER_PRINTER = "desktop.drawer.printer";
+    static final String DRAWER_PIN = "desktop.drawer.pin";
+
+    /** Cash drawer wired to a receipt printer of this workstation; {@code pin} 0 = pin 2, 1 = pin 5. */
+    public record DrawerSettings(boolean enabled, String printer, int pin) {
+        public boolean hasPrinter() {
+            return printer != null && !printer.isBlank();
+        }
+    }
+
+    public static DrawerSettings drawerSettings() {
+        return readDrawerSettings(settingsFile());
+    }
+
+    static DrawerSettings readDrawerSettings(Path file) {
+        Properties p = load(file);
+        return new DrawerSettings(Boolean.parseBoolean(p.getProperty(DRAWER_ENABLED)), p.getProperty(DRAWER_PRINTER, ""),
+                "1".equals(p.getProperty(DRAWER_PIN, "0").trim()) ? 1 : 0);
+    }
+
+    public static void saveDrawerSettings(DrawerSettings settings) {
+        writeDrawerSettings(settingsFile(), settings);
+    }
+
+    static void writeDrawerSettings(Path file, DrawerSettings settings) {
+        Properties p = load(file);
+        p.setProperty(DRAWER_ENABLED, String.valueOf(settings.enabled()));
+        p.setProperty(DRAWER_PRINTER, settings.printer() == null ? "" : settings.printer().trim());
+        p.setProperty(DRAWER_PIN, String.valueOf(settings.pin()));
+        store(file, p);
+    }
 
     /**
      * Serial scale of this workstation. An empty {@code port} means simulation. {@code mode}: CONTINUOUS (the scale
@@ -75,13 +107,17 @@ public final class DesktopLocalSettings {
         p.setProperty(SCALE_PORT, settings.port() == null ? "" : settings.port().trim());
         p.setProperty(SCALE_BAUD, String.valueOf(settings.baud()));
         p.setProperty(SCALE_MODE, settings.mode() == null ? "CONTINUOUS" : settings.mode());
+        store(file, p);
+    }
+
+    private static void store(Path file, Properties p) {
         try {
             Files.createDirectories(file.getParent());
             try (java.io.OutputStream out = Files.newOutputStream(file)) {
                 p.store(out, "Multicore desktop");
             }
         } catch (IOException error) {
-            throw new IllegalStateException("Não foi possível gravar a configuração local da balança.", error);
+            throw new IllegalStateException("Não foi possível gravar a configuração local do posto.", error);
         }
     }
 

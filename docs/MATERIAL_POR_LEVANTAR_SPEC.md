@@ -54,6 +54,7 @@ O botão do armazém mostra o material vendido que ainda está no estaleiro.
 
 ## Limites conhecidos
 
-- Uma nota de crédito sobre material já levantado não é bloqueada pelo módulo das notas; o saldo fica
-  em zero e não negativo. Ligar esta regra ao fluxo das notas de crédito fica para depois.
+- **Feito em 2026-11-10:** uma nota de crédito sobre uma fatura com material por levantar só pode creditar o que
+  ainda está no estaleiro (vendido − já creditado − levantado). As notas de crédito chamam os `CreditNoteLineGuard`;
+  o módulo de levantamentos implementa `PickupCreditNoteGuard`, sem o módulo comercial depender dele.
 - Sem modo offline: se a internet falhar, o talão não se emite (SA-C20, fase seguinte).

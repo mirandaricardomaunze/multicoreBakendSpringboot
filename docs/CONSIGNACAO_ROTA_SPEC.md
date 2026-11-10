@@ -41,7 +41,8 @@ enquanto se contam as devoluções.
 
 ## Limites
 
-- O lote e a validade do pão não acompanham a mercadoria para o armazém de consignação (entra sem lote).
+- **Feito em 2026-11-10:** a mercadoria perecível leva para o armazém de consignação a validade do lote que sai
+  primeiro (FEFO), com o número da guia como lote, e volta à loja com essa validade; o módulo Validades vê-a.
 - Não há ainda guia de transporte fiscal para a rota; a guia CG é interna.
 
 ## Testes
