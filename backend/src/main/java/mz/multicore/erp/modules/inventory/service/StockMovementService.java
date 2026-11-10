@@ -54,7 +54,7 @@ public class StockMovementService {
     ) {
         StockMovementRegistrationService reg = new StockMovementRegistrationService(
                 stockMovementRepository, stockMovementOperationRepository, stockRepository,
-                warehouseRepository, productRepository, companyRepository, productBatchService);
+                warehouseRepository, productRepository, companyRepository, productBatchService, null);
         StockMovementQueryService query = new StockMovementQueryService(stockMovementRepository);
         StockAdjustmentCoordinator adj = new StockAdjustmentCoordinator(
                 stockAdjustmentOperationRepository, stockRepository, warehouseRepository,

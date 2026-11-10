@@ -37,6 +37,7 @@ class ProductionServiceTest {
     private WarehouseRepository warehouseRepository;
     private StockRepository stockRepository;
     private ApplicationEventPublisher eventPublisher;
+    private mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService;
 
     private ProductionService service;
 
@@ -55,6 +56,7 @@ class ProductionServiceTest {
         warehouseRepository = mock(WarehouseRepository.class);
         stockRepository = mock(StockRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
+        movementService = mock(mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService.class);
 
         service = new ProductionService(
                 bomRepository,
@@ -63,7 +65,8 @@ class ProductionServiceTest {
                 productRepository,
                 warehouseRepository,
                 stockRepository,
-                eventPublisher
+                eventPublisher,
+                movementService
         );
 
         company = new Company();
@@ -192,23 +195,55 @@ class ProductionServiceTest {
         rawStock.setQuantity(new BigDecimal("50.00"));
         when(stockRepository.findForReservation(20L, 100L)).thenReturn(Optional.of(rawStock));
 
-        Stock finishedStock = new Stock();
-        finishedStock.setProduct(finishedProduct);
-        finishedStock.setWarehouse(finishedWh);
-        finishedStock.setQuantity(BigDecimal.ZERO);
-        when(stockRepository.findForReservation(10L, 200L)).thenReturn(Optional.of(finishedStock));
-
         ProductionOrderDTO completed = service.completeProduction(1L, 500L, new BigDecimal("10.00"));
         assertEquals(ProductionOrderStatus.COMPLETED, completed.status());
         assertEquals(new BigDecimal("10.00"), completed.producedQuantity());
 
-        // Verificar baixa no estoque de matéria prima: 50 - 20 = 30
-        assertEquals(new BigDecimal("30.00"), rawStock.getQuantity());
+        // Stock moves only through the central service (lots, FEFO, audit trail), never by editing Stock directly.
+        verify(movementService).registerMovement(eq(rawMaterial), eq(rawWh), eq(new BigDecimal("-20.00")), eq("PRODUCTION"),
+                isNull(), isNull(), anyString(), isNull());
+        verify(movementService).registerMovement(eq(finishedProduct), eq(finishedWh), eq(new BigDecimal("10.00")), eq("PRODUCTION"),
+                any(), isNull(), anyString(), isNull());
+        verify(stockRepository, never()).save(any(Stock.class));
+        assertEquals(new BigDecimal("50.00"), rawStock.getQuantity());
 
-        // Verificar entrada no estoque de produto acabado: 0 + 10 = 10
-        assertEquals(new BigDecimal("10.00"), finishedStock.getQuantity());
-
-        // Verificar publicação de ProductionCompletedEvent
         verify(eventPublisher, times(1)).publishEvent(any(ProductionCompletedEvent.class));
+        // The raw material consumed is posted too, so the goods account follows the stock.
+        verify(eventPublisher, times(1)).publishEvent(argThat((Object e) -> e instanceof mz.multicore.erp.architecture.events.InventoryValueChangedEvent ev
+                && ev.source() == mz.multicore.erp.modules.accounting.model.JournalSource.PRODUCTION_CONSUMPTION
+                && ev.valueOut().compareTo(new BigDecimal("3000.00")) == 0));
+    }
+
+    @Test
+    @DisplayName("Ordem de Produção recusa concluir quando falta matéria-prima, sem consumir nada")
+    void productionOrderRefusesShortage() {
+        BillOfMaterials bom = new BillOfMaterials();
+        bom.setId(51L);
+        bom.setCompany(company);
+        bom.setFinishedProduct(finishedProduct);
+        bom.setBaseQuantity(BigDecimal.ONE);
+        ProductionOrder order = new ProductionOrder();
+        order.setId(501L);
+        order.setCompany(company);
+        order.setBom(bom);
+        order.setTargetProduct(finishedProduct);
+        order.setSourceWarehouse(rawWh);
+        order.setTargetWarehouse(finishedWh);
+        order.setPlannedQuantity(new BigDecimal("10.00"));
+        order.setStatus(ProductionOrderStatus.IN_PROGRESS);
+        ProductionOrderLine line = new ProductionOrderLine();
+        line.setComponentProduct(rawMaterial);
+        line.setPlannedQuantity(new BigDecimal("20.00"));
+        line.setUnitCost(new BigDecimal("150.00"));
+        order.addLine(line);
+        when(productionOrderRepository.findByIdAndCompanyId(501L, 1L)).thenReturn(Optional.of(order));
+        Stock rawStock = new Stock();
+        rawStock.setQuantity(new BigDecimal("5.00"));
+        when(stockRepository.findForReservation(20L, 100L)).thenReturn(Optional.of(rawStock));
+
+        assertThrows(mz.multicore.erp.architecture.exception.BusinessRuleException.class,
+                () -> service.completeProduction(1L, 501L, new BigDecimal("10.00")));
+        verifyNoInteractions(movementService);
+        assertEquals(ProductionOrderStatus.IN_PROGRESS, order.getStatus());
     }
 }

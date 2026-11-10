@@ -37,7 +37,7 @@ public class ProductionService {
                              ProductRepository productRepository,
                              WarehouseRepository warehouseRepository,
                              StockRepository stockRepository) {
-        this(bomRepository, productionOrderRepository, companyRepository, productRepository, warehouseRepository, stockRepository, null);
+        this(bomRepository, productionOrderRepository, companyRepository, productRepository, warehouseRepository, stockRepository, null, null);
     }
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
@@ -46,11 +46,12 @@ public class ProductionService {
                              ProductRepository productRepository,
                              WarehouseRepository warehouseRepository,
                              StockRepository stockRepository,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher,
+                             mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService) {
         this(
                 new BillOfMaterialsService(bomRepository, companyRepository, productRepository),
                 new ProductionOrderLifecycleService(productionOrderRepository, bomRepository,
-                        companyRepository, warehouseRepository, stockRepository, eventPublisher)
+                        companyRepository, warehouseRepository, stockRepository, eventPublisher, movementService)
         );
     }
 

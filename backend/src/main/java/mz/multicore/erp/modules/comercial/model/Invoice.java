@@ -114,6 +114,18 @@ public class Invoice extends BaseEntity {
      * Saldo por liquidar (valor a pagar − recebido), nunca negativo.
      * É este o valor que o cliente ainda deve — não o total da fatura.
      */
+    /**
+     * New debt this invoice adds against the client's credit limit. An advance invoice is paid on the spot by its
+     * own receipt ({@code docs/ADIANTAMENTOS_SPEC.md}), so its lines never count against the limit.
+     */
+    public BigDecimal creditExposure() {
+        BigDecimal advances = lines.stream()
+                .filter(l -> l.getProduct() != null && mz.multicore.erp.modules.advances.AdvancePayments.isSystemSku(l.getProduct().getSku()))
+                .map(l -> l.getLineTotal() == null ? BigDecimal.ZERO : l.getLineTotal())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return safeTotal().subtract(advances).max(BigDecimal.ZERO);
+    }
+
     public BigDecimal outstandingAmount() {
         BigDecimal remaining = payableTotal().subtract(safePaid());
         return remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining : BigDecimal.ZERO;

@@ -43,7 +43,13 @@ public enum JournalSource {
     ASSET_DEPRECIATION("Depreciação de activo"),
 
     /** Fuel supplied to a fleet vehicle. */
-    FLEET_FUEL("Combustível de frota");
+    FLEET_FUEL("Combustível de frota"),
+    STOCK_WASTE("Quebra de existências"),
+    STOCK_ADJUSTMENT("Acerto de existências"),
+    CARCASS_BREAKDOWN("Desmancha"),
+    CARCASS_BREAKDOWN_CANCEL("Anulação de desmancha"),
+    PRODUCTION_RUN("Lote produzido"),
+    PRODUCTION_CONSUMPTION("Consumo de produção");
 
     private final String label;
 

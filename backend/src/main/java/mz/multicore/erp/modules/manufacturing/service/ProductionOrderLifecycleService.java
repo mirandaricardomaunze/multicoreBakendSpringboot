@@ -4,7 +4,6 @@ import mz.multicore.erp.architecture.events.ProductionCompletedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -35,6 +34,7 @@ public class ProductionOrderLifecycleService {
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService;
 
     @Autowired
     public ProductionOrderLifecycleService(
@@ -43,8 +43,10 @@ public class ProductionOrderLifecycleService {
             CompanyRepository companyRepository,
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
-            @Autowired(required = false) ApplicationEventPublisher eventPublisher
+            @Autowired(required = false) ApplicationEventPublisher eventPublisher,
+            mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService
     ) {
+        this.movementService = movementService;
         this.productionOrderRepository = productionOrderRepository;
         this.bomRepository = bomRepository;
         this.companyRepository = companyRepository;
@@ -164,37 +166,27 @@ public class ProductionOrderLifecycleService {
                 ? actualProducedQty
                 : order.getPlannedQuantity();
 
+        if (movementService == null) {
+            throw new BusinessRuleException("Serviço de stock indisponível: a ordem de produção não pode ser concluída.");
+        }
         Long sourceWhId = order.getSourceWarehouse() != null ? order.getSourceWarehouse().getId() : null;
+        String description = "Ordem de produção " + order.getOrderNumber();
+        ProductionShortageCheck.assertAvailable(stockRepository, order);
         BigDecimal actualRawMaterialCost = BigDecimal.ZERO;
-
         for (ProductionOrderLine line : order.getLines()) {
             line.setConsumedQuantity(line.getPlannedQuantity());
             BigDecimal lineCost = line.getUnitCost().multiply(line.getConsumedQuantity()).setScale(2, RoundingMode.HALF_UP);
             line.setTotalCost(lineCost);
             actualRawMaterialCost = actualRawMaterialCost.add(lineCost);
-
             if (sourceWhId != null) {
-                Stock rawStock = stockRepository.findForReservation(line.getComponentProduct().getId(), sourceWhId).orElse(null);
-                if (rawStock != null) {
-                    BigDecimal newQty = rawStock.getQuantity().subtract(line.getConsumedQuantity());
-                    rawStock.setQuantity(newQty.compareTo(BigDecimal.ZERO) >= 0 ? newQty : BigDecimal.ZERO);
-                    stockRepository.save(rawStock);
-                }
+                movementService.registerMovement(line.getComponentProduct(), order.getSourceWarehouse(),
+                        line.getConsumedQuantity().negate(), "PRODUCTION", null, null, description, null);
             }
         }
 
-        Long targetWhId = order.getTargetWarehouse() != null ? order.getTargetWarehouse().getId() : null;
-        if (targetWhId != null) {
-            Stock finishedStock = stockRepository.findForReservation(order.getTargetProduct().getId(), targetWhId)
-                    .orElseGet(() -> {
-                        Stock s = new Stock();
-                        s.setProduct(order.getTargetProduct());
-                        s.setWarehouse(order.getTargetWarehouse());
-                        s.setQuantity(BigDecimal.ZERO);
-                        return s;
-                    });
-            finishedStock.setQuantity(finishedStock.getQuantity().add(qtyProduced));
-            stockRepository.save(finishedStock);
+        if (order.getTargetWarehouse() != null) {
+            movementService.registerMovement(order.getTargetProduct(), order.getTargetWarehouse(), qtyProduced, "PRODUCTION",
+                    order.getOrderNumber(), null, description, null);
         }
 
         BigDecimal laborOverhead = order.getBom() != null
@@ -212,6 +204,12 @@ public class ProductionOrderLifecycleService {
         order.setCompletionDate(LocalDate.now());
 
         ProductionOrder saved = productionOrderRepository.save(order);
+        if (eventPublisher != null && sourceWhId != null) {
+            // The finished product is posted by ProductionCompletedEvent; this posts the raw material consumed.
+            eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(companyId,
+                    mz.multicore.erp.modules.accounting.model.JournalSource.PRODUCTION_CONSUMPTION, saved.getId(),
+                    saved.getOrderNumber(), saved.getCompletionDate(), actualRawMaterialCost, BigDecimal.ZERO, null));
+        }
         if (eventPublisher != null) {
             eventPublisher.publishEvent(new ProductionCompletedEvent(
                     companyId,

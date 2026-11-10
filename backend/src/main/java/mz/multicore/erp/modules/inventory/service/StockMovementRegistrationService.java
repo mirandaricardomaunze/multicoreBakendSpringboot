@@ -40,6 +40,7 @@ public class StockMovementRegistrationService {
     private final ProductRepository productRepository;
     private final CompanyRepository companyRepository;
     private final ProductBatchService productBatchService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Autowired
     public StockMovementRegistrationService(
@@ -49,8 +50,10 @@ public class StockMovementRegistrationService {
             WarehouseRepository warehouseRepository,
             ProductRepository productRepository,
             CompanyRepository companyRepository,
-            ProductBatchService productBatchService
+            ProductBatchService productBatchService,
+            @Autowired(required = false) org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
+        this.eventPublisher = eventPublisher;
         this.stockMovementRepository = stockMovementRepository;
         this.stockMovementOperationRepository = stockMovementOperationRepository;
         this.stockRepository = stockRepository;
@@ -78,10 +81,11 @@ public class StockMovementRegistrationService {
             throw new BusinessRuleException("Tipo de movimento de stock inválido: " + movementType);
         }
 
-        if (quantity.compareTo(BigDecimal.ZERO) > 0) {
-            return registerEntry(product, warehouse, quantity, type, batchNumber, serialNumber, description, expirationDate);
-        }
-        return registerExit(product, warehouse, quantity.negate(), type, serialNumber, description);
+        StockMovement movement = quantity.compareTo(BigDecimal.ZERO) > 0
+                ? registerEntry(product, warehouse, quantity, type, batchNumber, serialNumber, description, expirationDate)
+                : registerExit(product, warehouse, quantity.negate(), type, serialNumber, description);
+        InventoryValueEvents.publish(eventPublisher, product, warehouse, quantity, type, movement, description);
+        return movement;
     }
 
     private StockMovement registerEntry(Product product, Warehouse warehouse, BigDecimal quantity,

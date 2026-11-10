@@ -182,7 +182,7 @@ public class ComercialInvoiceLifecycleService {
         invoice.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotalAmount(subtotal.add(totalTax).setScale(2, RoundingMode.HALF_UP));
 
-        receivablesService.assertCreditAvailable(client, invoice.getTotalAmount());
+        receivablesService.assertCreditAvailable(client, invoice.creditExposure());
         invoice.setInvoiceNumber(documentNumberService.next(DocumentSeries.INVOICE));
         invoice.setCreatedBy(CurrentUserContext.getUsername());
 

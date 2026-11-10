@@ -49,12 +49,14 @@ public class CarcassBreakdownService {
     private final AverageCostUpdater averageCost;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
                                    ProductRepository productRepository, CompanyRepository companyRepository,
                                    WarehouseRepository warehouseRepository, StockRepository stockRepository,
                                    StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
-                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
+                                   DocumentNumberService documentNumberService, AuditLogService auditLogService,
+                                   org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.templateRepository = templateRepository;
         this.breakdownRepository = breakdownRepository;
         this.productRepository = productRepository;
@@ -65,6 +67,7 @@ public class CarcassBreakdownService {
         this.averageCost = averageCost;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     // ─── Models ─────────────────────────────────────────────────────────────────
@@ -172,6 +175,7 @@ public class CarcassBreakdownService {
         breakdown.setCreatedBy(CurrentUserContext.getUsername());
 
         String description = "Desmancha " + breakdown.getNumber() + " - " + source.getName();
+        BigDecimal carcassBookValue = nz(source.getPurchasePrice()).multiply(request.inputKg()).setScale(2, RoundingMode.HALF_UP);
         movementService.registerMovement(source, warehouse, request.inputKg().negate(), MOVEMENT_TYPE, null, null, description, null);
         for (int i = 0; i < cuts.size(); i++) {
             Product cut = cuts.get(i);
@@ -190,6 +194,10 @@ public class CarcassBreakdownService {
             breakdown.getLines().add(line);
         }
         breakdown = breakdownRepository.save(breakdown);
+        // The carcass leaves stock at its book value and the cuts enter at the cost shared among them.
+        eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(warehouse.getCompany().getId(),
+                mz.multicore.erp.modules.accounting.model.JournalSource.CARCASS_BREAKDOWN, breakdown.getId(), breakdown.getNumber(),
+                java.time.LocalDate.now(), carcassBookValue, inputCost, null));
         CarcassBreakdownDTO dto = toDto(breakdown);
         auditLogService.logCurrent("CARCASS_BREAKDOWN_POST", "Desmancha " + breakdown.getNumber() + ": "
                 + DisplayNumbers.qty(request.inputKg()) + " kg de " + source.getName() + " deram "
@@ -219,6 +227,10 @@ public class CarcassBreakdownService {
         }
         movementService.registerMovement(breakdown.getSourceProduct(), breakdown.getWarehouse(), breakdown.getInputKg(), "REVERSAL",
                 null, null, description, null);
+        eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(
+                breakdown.getCompany().getId(), mz.multicore.erp.modules.accounting.model.JournalSource.CARCASS_BREAKDOWN_CANCEL,
+                breakdown.getId(), breakdown.getNumber(), java.time.LocalDate.now(), breakdown.getInputCost(),
+                nz(breakdown.getSourceProduct().getPurchasePrice()).multiply(breakdown.getInputKg()).setScale(2, RoundingMode.HALF_UP), null));
         breakdown.setStatus(CarcassBreakdownStatus.CANCELLED);
         breakdown.setCancellationReason(request.reason().trim());
         breakdown.setCancelledAt(LocalDateTime.now());

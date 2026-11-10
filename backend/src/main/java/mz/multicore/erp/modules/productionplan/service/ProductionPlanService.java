@@ -64,13 +64,15 @@ public class ProductionPlanService {
     private final AverageCostUpdater averageCost;
     private final StockWasteService wasteService;
     private final AuditLogService auditLogService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public ProductionPlanService(ProductionPlanRepository planRepository, ProductionRunRepository runRepository,
                                  ProductionPlanLineRepository lineRepository,
                                  ProductionSalesHistoryRepository salesHistory, BillOfMaterialsRepository bomRepository,
                                  WarehouseRepository warehouseRepository, StockRepository stockRepository,
                                  StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
-                                 StockWasteService wasteService, AuditLogService auditLogService) {
+                                 StockWasteService wasteService, AuditLogService auditLogService,
+                                 org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.planRepository = planRepository;
         this.runRepository = runRepository;
         this.lineRepository = lineRepository;
@@ -82,6 +84,7 @@ public class ProductionPlanService {
         this.averageCost = averageCost;
         this.wasteService = wasteService;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -286,6 +289,11 @@ public class ProductionPlanService {
         run.setRequestKey(request.requestKey());
         run.setCreatedBy(CurrentUserContext.getUsername());
         run = runRepository.save(run);
+        // Ingredients leave at cost (consumption); the product enters at its full cost, labour and overhead included.
+        eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.InventoryValueChangedEvent(plan.getCompany().getId(),
+                mz.multicore.erp.modules.accounting.model.JournalSource.PRODUCTION_RUN, run.getId(), batch, plan.getPlanDate(),
+                ingredientCost, product.isStockTracked() ? total : BigDecimal.ZERO,
+                mz.multicore.erp.modules.accounting.service.PgcNirfChart.VARIACAO_PRODUCAO));
         auditLogService.logCurrent("PRODUCTION_RUN", "Produzido " + DisplayNumbers.qty(request.quantity()) + " de " + product.getName()
                 + " (lote " + batch + ", custo " + DisplayNumbers.money(total) + " MT).");
         return toDto(run);

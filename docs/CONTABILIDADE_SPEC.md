@@ -166,3 +166,18 @@ não é venda.
 
 Três tabelas: `accounts`, `journal_entries`, `journal_lines`. Índice único parcial em
 `(company_id, source, source_document_id)` para a trava de duplicação.
+
+## Existências fora de vendas e compras (2026-11-10)
+
+`InventoryValueChangedEvent` → `InventoryPostingService`, para a conta Mercadorias (3201) acompanhar o stock físico:
+
+| Origem (`JournalSource`) | Quando | Lançamento |
+|---|---|---|
+| `STOCK_WASTE` | Quebra aprovada | D CMVMC 6101 / C 3201, ao custo do artigo |
+| `STOCK_ADJUSTMENT` | Acerto de inventário (contagem, granel) | Para menos: D 6101 / C 3201; para mais: D 3201 / C 6101 |
+| `CARCASS_BREAKDOWN` / `_CANCEL` | Desmancha / anulação | Carcaça sai ao valor contabilístico, cortes entram ao custo pago (e o inverso) |
+| `PRODUCTION_RUN` | Lote do plano de produção | Ingredientes: D 6101 / C 3201; produto: D 3201 / C Variação da produção 7301 (custo total) |
+| `PRODUCTION_CONSUMPTION` | Ordem de produção concluída | Matéria-prima consumida: D 6101 / C 3201 (o produto acabado continua em `PRODUCTION`) |
+
+Cada documento lança uma só vez (índice `uk_journal_source_document`). Sem plano de contas, não lança. As entradas
+manuais (`ENTRY`) não lançam. Teste: `InventoryPostingHttpIntegrationTest`.
