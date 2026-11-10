@@ -45,8 +45,10 @@ $emoji = '[' + (Get-Range 0x2600 0x27BF) + (Get-Range 0x2B00 0x2BFF) + (Get-Rang
          '|[' + (Get-Range 0xD83C 0xD83E) + '][' + (Get-Range 0xDC00 0xDFFF) + ']'
 
 Push-Location $WorkDir
+# Native git writes progress/warnings to stderr; under 'Stop' PS 5.1 would turn that into a crash.
+$ErrorActionPreference = 'Continue'
 try {
-    if ($IncludeUntracked) { git add -N -A 2>$null | Out-Null }
+    if ($IncludeUntracked) { cmd /c "git add -N -A 2>nul" | Out-Null }
     $diffFile = [IO.Path]::GetTempFileName()
     git -c core.quotepath=off diff $Base --unified=0 --no-color --no-ext-diff "--output=$diffFile" | Out-Null
     $status = git -c core.quotepath=off diff $Base --name-status --no-renames

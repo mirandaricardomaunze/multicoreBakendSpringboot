@@ -58,18 +58,22 @@ function Initialize-Worktree {
         Copy-Item (Join-Path $srcClaude 'skills') $dst -Recurse -Force -ErrorAction SilentlyContinue
         Copy-Item (Join-Path $srcClaude 'settings.json') $dst -Force -ErrorAction SilentlyContinue
     }
-    # Goals/specs created but not yet committed in the main checkout: copy only when missing,
-    # never overwrite progress the loop already made in the worktree.
+    $synced = New-Object System.Collections.Generic.List[string]
+    # Goals/specs/baselines created in the main checkout: copy only when missing, never overwrite
+    # progress the loop already made in the worktree (e.g. baseline lines it has already paid off).
+    $copyIfMissing = @('backend\src\test\resources\architecture\cross-module-repository-baseline.txt')
     foreach ($g in Get-RalphGoals $repo) {
         $rel = $g.Path.Substring($repo.Length + 1)
-        foreach ($f in @($rel, $g.Spec) + @((Get-Content $g.Path -Encoding UTF8 | Where-Object { $_ -match '^harness:\s*(\S+)' } | ForEach-Object { $Matches[1] }))) {
-            if (-not $f) { continue }
-            $src = Join-Path $repo $f; $dst = Join-Path $work $f
-            if ((Test-Path $src) -and -not (Test-Path $dst)) {
-                New-Item -ItemType Directory -Force -Path (Split-Path $dst -Parent) | Out-Null
-                Copy-Item $src $dst
-                Write-Host "[ralph] copied into worktree: $f"
-            }
+        $copyIfMissing += @($rel, $g.Spec) + @((Get-Content $g.Path -Encoding UTF8 | Where-Object { $_ -match '^harness:\s*(\S+)' } | ForEach-Object { $Matches[1] }))
+    }
+    foreach ($f in $copyIfMissing) {
+        if (-not $f) { continue }
+        $src = Join-Path $repo $f; $dst = Join-Path $work $f
+        if ((Test-Path $src) -and -not (Test-Path $dst)) {
+            New-Item -ItemType Directory -Force -Path (Split-Path $dst -Parent) | Out-Null
+            Copy-Item $src $dst
+            $synced.Add($f)
+            Write-Host "[ralph] copied into worktree: $f"
         }
     }
     # The harness judges the loop, so the main checkout is its source of truth: always refresh it.
@@ -80,22 +84,24 @@ function Initialize-Worktree {
         'backend\src\test\java\mz\multicore\erp\architecture\RalphGoalsHarnessTest.java',
         'backend\src\test\java\mz\multicore\erp\architecture\CleanArchitectureHarnessTest.java',
         'backend\src\test\java\mz\multicore\erp\architecture\ModuleDecouplingHarnessTest.java',
-        'backend\src\test\java\mz\multicore\erp\architecture\CrossModuleRepositoryScanner.java',
-        'backend\src\test\resources\architecture\cross-module-repository-baseline.txt'
+        'backend\src\test\java\mz\multicore\erp\architecture\CrossModuleRepositoryScanner.java'
     )
     foreach ($f in $harness) {
         $src = Join-Path $repo $f; $dst = Join-Path $work $f
         if (Test-Path $src) {
             New-Item -ItemType Directory -Force -Path (Split-Path $dst -Parent) | Out-Null
             Copy-Item $src $dst -Force
+            $synced.Add($f)
         }
     }
-    # Commit the bootstrap so the diff guard only ever judges what the iterations add.
-    git -C $work add -A
-    git -C $work diff --cached --quiet
-    if ($LASTEXITCODE -ne 0) {
-        git -C $work commit -q -m "chore(ralph): sincroniza goals, specs e harness do checkout principal`n`n$coAuthor"
-        Write-Host '[ralph] bootstrap commit with harness/goals from the main checkout'
+    # Commit ONLY the synced files, so pending (not yet gated) iteration work is never swept into
+    # the bootstrap commit, and the diff guard only judges what the iterations add.
+    $paths = @($synced | ForEach-Object { $_ -replace '\\', '/' } | Select-Object -Unique)
+    $changed = @(git -C $work status --porcelain -- $paths)
+    if ($changed.Count -gt 0) {
+        git -C $work add -- $paths
+        git -C $work commit -q -m "chore(ralph): sincroniza goals, specs e harness do checkout principal`n`n$coAuthor" -- $paths
+        Write-Host "[ralph] bootstrap commit: $($changed.Count) harness/goal file(s) from the main checkout"
     }
     return $work
 }

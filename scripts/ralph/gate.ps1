@@ -45,8 +45,14 @@ if ($Full) {
 
 $started = Get-Date
 Write-Host "[gate] $($goal.Id) :: diff-guard"
-$guardText = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$here\diff-guard.ps1" -WorkDir $WorkDir -IncludeUntracked:$IncludeUntracked | Out-String
-$guardExit = $LASTEXITCODE
+# Switches cannot be passed as -Name:$value through powershell.exe -File on PS 5.1: append only when set.
+# Run through cmd so the guard's stderr (e.g. a crash) lands in the gate report instead of vanishing.
+$guardCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$here\diff-guard.ps1`" -WorkDir `"$WorkDir`""
+if ($IncludeUntracked) { $guardCmd += ' -IncludeUntracked' }
+$guard = Invoke-Native -CommandLine $guardCmd -WorkDir $WorkDir
+$guardText = $guard.Output
+$guardExit = $guard.ExitCode
+if ($guardExit -ne 0 -and $guardText -notmatch 'DIFF-GUARD FAIL') { $guardText = "DIFF-GUARD CRASH (exit $guardExit)`n$guardText" }
 Write-Host $guardText.Trim()
 
 Write-Host "[gate] $($goal.Id) :: $cmdLine"
