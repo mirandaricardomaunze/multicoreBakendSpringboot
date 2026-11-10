@@ -187,11 +187,11 @@ public class PosCheckoutAndPaymentService {
         List<PosPaymentRequest> payments = request.payments();
         boolean hasMultiPayments = payments != null && !payments.isEmpty();
         BigDecimal totalPaid = BigDecimal.ZERO;
+        PosPaymentSplit split = hasMultiPayments ? PosPaymentSplit.of(payments) : null;
         if (hasMultiPayments) {
-            for (PosPaymentRequest p : payments) totalPaid = totalPaid.add(p.amount());
-            totalPaid = totalPaid.setScale(2, RoundingMode.HALF_UP);
-            if (totalPaid.compareTo(totalAmount) > 0) {
-                throw new BusinessRuleException("Soma dos pagamentos (" + DisplayNumbers.money(totalPaid) + " MT) excede o total da venda (" + DisplayNumbers.money(totalAmount) + " MT).");
+            totalPaid = split.settled(); // a CREDIT line stays owed: it never counts as paid
+            if (split.declared().compareTo(totalAmount) > 0) {
+                throw new BusinessRuleException("Soma dos pagamentos (" + DisplayNumbers.money(split.declared()) + " MT) excede o total da venda (" + DisplayNumbers.money(totalAmount) + " MT).");
             }
         } else if (request.treasuryAccountId() != null) {
             totalPaid = totalAmount;
@@ -228,12 +228,12 @@ public class PosCheckoutAndPaymentService {
             registerTillMovement(session, totalAmount, savedInvoice.getInvoiceNumber());
         }
 
-        boolean cashPayment = !hasMultiPayments || payments.stream().anyMatch(p -> "CASH".equalsIgnoreCase(p.method()));
+        BigDecimal moneyNow = split == null ? totalPaid : split.money(), cashNow = split == null ? totalPaid : split.cash();
         BigDecimal costOfGoods = savedInvoice.getLines().stream().map(InvoiceLine::lineCost).reduce(BigDecimal.ZERO, BigDecimal::add);
         eventPublisher.publishEvent(new SaleRegisteredEvent(
                 savedInvoice.getCompany().getId(), savedInvoice.getId(), savedInvoice.getInvoiceNumber(),
                 LocalDate.now(), savedInvoice.getTotalBeforeTax(), savedInvoice.getTaxAmount(),
-                savedInvoice.getTotalAmount(), costOfGoods, totalPaid, cashPayment));
+                savedInvoice.getTotalAmount(), costOfGoods, moneyNow, cashNow.signum() > 0, cashNow));
         return savedInvoice;
     }
 

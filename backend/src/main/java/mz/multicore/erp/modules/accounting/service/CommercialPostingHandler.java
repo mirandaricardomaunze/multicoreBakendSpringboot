@@ -50,9 +50,13 @@ public class CommercialPostingHandler {
         entry.setSourceDocumentNumber(event.invoiceNumber());
 
         BigDecimal onCredit = total.subtract(paidNow);
-        if (paidNow.signum() > 0) {
-            entry.addLine(JournalLine.debit(postingHelper.cashAccount(event.companyId(), event.cashPayment()),
-                    paidNow, "Recebido no acto"));
+        // A split payment (cash + M-Pesa) debits each part to its own account.
+        BigDecimal cashNow = safe(event.cashPaidNow()).max(BigDecimal.ZERO).min(paidNow);
+        if (cashNow.signum() > 0) {
+            entry.addLine(JournalLine.debit(postingHelper.cashAccount(event.companyId(), true), cashNow, "Recebido no acto"));
+        }
+        if (paidNow.subtract(cashNow).signum() > 0) {
+            entry.addLine(JournalLine.debit(postingHelper.cashAccount(event.companyId(), false), paidNow.subtract(cashNow), "Recebido no acto"));
         }
         if (onCredit.signum() > 0) {
             entry.addLine(JournalLine.debit(postingHelper.account(event.companyId(), PgcNirfChart.CLIENTES),

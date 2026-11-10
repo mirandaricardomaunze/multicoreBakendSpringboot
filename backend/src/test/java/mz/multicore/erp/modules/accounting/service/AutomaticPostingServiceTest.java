@@ -112,6 +112,18 @@ class AutomaticPostingServiceTest {
         assertEquals(BigDecimal.ZERO, debitOf(entry, PgcNirfChart.CAIXA));
     }
 
+    @Test // CT-23b
+    void vendaPagaEmNumerarioEMpesa_cadaParteNaSuaConta() {
+        service.onSaleRegistered(new SaleRegisteredEvent(COMPANY_ID, 10L, "FT-2026/1", HOJE, new BigDecimal("200.00"),
+                new BigDecimal("32.00"), new BigDecimal("232.00"), BigDecimal.ZERO, new BigDecimal("232.00"), true,
+                new BigDecimal("100.00")));
+
+        JournalEntry entry = captureEntry();
+        assertEquals(new BigDecimal("100.00"), debitOf(entry, PgcNirfChart.CAIXA));
+        assertEquals(new BigDecimal("132.00"), debitOf(entry, PgcNirfChart.BANCO));
+        assertTrue(entry.isBalanced());
+    }
+
     @Test // CT-23
     void vendaParcialmentePaga_repartePorCaixaEClientes() {
         service.onSaleRegistered(venda("100.00", "16.00", "116.00", "0", "40.00", true));

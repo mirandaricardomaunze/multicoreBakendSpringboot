@@ -10,6 +10,7 @@ public enum JournalSource {
     INVOICE("Fatura"),
     INVOICE_CANCELLATION("Anulação de fatura"),
     RECEIPT_CANCELLATION("Anulação de recibo"),
+    CUSTOMER_REFUND("Reembolso ao cliente"),
 
     /** Customer receipt or treasury settlement. */
     RECEIPT("Recibo"),

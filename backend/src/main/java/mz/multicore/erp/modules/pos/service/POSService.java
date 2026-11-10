@@ -132,7 +132,7 @@ public class POSService {
                 tillSessionRepository, tillMovementRepository, paymentEntryRepository, shiftReconciliationRepository, sss);
         PosReturnAndVoucherService rvs = new PosReturnAndVoucherService(
                 invoiceRepository, creditNoteRepository, creditNoteService, storeVoucherRepository,
-                tillMovementRepository, financeService, auditLogService, sss);
+                tillMovementRepository, financeService, auditLogService, sss, eventPublisher);
         PosCheckoutAndPaymentService cps = new PosCheckoutAndPaymentService(
                 invoiceRepository, clientRepository, productRepository, warehouseRepository,
                 companyRepository, inventoryService, financeService, paymentEntryRepository,

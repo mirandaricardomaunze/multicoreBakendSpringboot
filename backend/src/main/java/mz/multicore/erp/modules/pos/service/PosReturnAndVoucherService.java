@@ -52,6 +52,7 @@ public class PosReturnAndVoucherService {
     private final FinanceService financeService;
     private final AuditLogService auditLogService;
     private final PosSessionAndShiftService sessionAndShiftService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public PosReturnAndVoucherService(InvoiceRepository invoiceRepository,
                                       CreditNoteRepository creditNoteRepository,
@@ -60,7 +61,9 @@ public class PosReturnAndVoucherService {
                                       TillMovementRepository tillMovementRepository,
                                       FinanceService financeService,
                                       AuditLogService auditLogService,
-                                      PosSessionAndShiftService sessionAndShiftService) {
+                                      PosSessionAndShiftService sessionAndShiftService,
+                                      org.springframework.context.ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.invoiceRepository = invoiceRepository;
         this.creditNoteRepository = creditNoteRepository;
         this.creditNoteService = creditNoteService;
@@ -126,18 +129,24 @@ public class PosReturnAndVoucherService {
         String description = "Reembolso POS " + note.noteNumber() + " (Fatura " + invoice.getInvoiceNumber() + ")";
 
         switch (method) {
-            case CASH -> { refundCash(request.operator(), request.companyId(), amount, description); return null; }
+            case CASH -> { refundCash(request.operator(), request.companyId(), amount, description); publishRefund(request, note, amount, true); return null; }
             case CARD, BANK_TRANSFER, MPESA, EMOLA -> {
                 if (request.treasuryAccountId() == null) {
                     throw new BusinessRuleException("Conta de tesouraria é obrigatória para reembolso por " + method + ".");
                 }
                 financeService.registerTransaction(request.treasuryAccountId(), "CREDIT", amount, description);
+                publishRefund(request, note, amount, false);
                 return null;
             }
             case CREDIT -> { return null; }
             case STORE_CREDIT -> { return createStoreVoucherForReturn(invoice, note, amount, request.operator()); }
         }
         return null;
+    }
+
+    private void publishRefund(POSReturnRequest request, CreditNoteDTO note, BigDecimal amount, boolean cash) {
+        if (eventPublisher != null) eventPublisher.publishEvent(new mz.multicore.erp.architecture.events.CustomerRefundedEvent(
+                request.companyId(), note.id(), note.noteNumber(), LocalDate.now(), amount, cash));
     }
 
     private StoreVoucher createStoreVoucherForReturn(Invoice invoice, CreditNoteDTO note, BigDecimal amount, String operator) {

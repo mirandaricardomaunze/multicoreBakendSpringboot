@@ -51,7 +51,7 @@ public class ProductionService {
         this(
                 new BillOfMaterialsService(bomRepository, companyRepository, productRepository),
                 new ProductionOrderLifecycleService(productionOrderRepository, bomRepository,
-                        companyRepository, warehouseRepository, stockRepository, eventPublisher, movementService)
+                        companyRepository, warehouseRepository, stockRepository, eventPublisher, movementService, null)
         );
     }
 

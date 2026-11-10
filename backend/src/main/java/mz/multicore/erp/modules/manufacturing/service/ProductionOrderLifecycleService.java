@@ -35,6 +35,7 @@ public class ProductionOrderLifecycleService {
     private final StockRepository stockRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService;
+    private final mz.multicore.erp.modules.numbering.service.DocumentNumberService numbers;
 
     @Autowired
     public ProductionOrderLifecycleService(
@@ -44,8 +45,9 @@ public class ProductionOrderLifecycleService {
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             @Autowired(required = false) ApplicationEventPublisher eventPublisher,
-            mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService
-    ) {
+            mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService,
+            @Autowired(required = false) mz.multicore.erp.modules.numbering.service.DocumentNumberService numbers) {
+        this.numbers = numbers;
         this.movementService = movementService;
         this.productionOrderRepository = productionOrderRepository;
         this.bomRepository = bomRepository;
@@ -71,7 +73,8 @@ public class ProductionOrderLifecycleService {
         Warehouse targetWh = warehouseRepository.findById(request.targetWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de produto acabado não encontrado."));
 
-        String orderNumber = "OP-" + System.currentTimeMillis() % 1000000;
+        String orderNumber = numbers != null ? numbers.next(mz.multicore.erp.modules.numbering.service.DocumentSeries.PRODUCTION_ORDER)
+                : "OP-" + System.currentTimeMillis();
         BigDecimal plannedQty = request.plannedQuantity();
         BigDecimal baseRatio = plannedQty.divide(bom.getBaseQuantity(), 6, RoundingMode.HALF_UP);
 
