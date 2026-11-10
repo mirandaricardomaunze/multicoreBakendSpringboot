@@ -41,7 +41,6 @@ class CleanArchitectureHarnessTest {
             "backend/src/main/java/mz/multicore/erp/modules/audit/controller/AuditController.java -> AuditLog",
             "backend/src/main/java/mz/multicore/erp/modules/users/controller/UserController.java -> AppUser");
 
-    private static final Pattern MODULE_OF_FILE = Pattern.compile("/modules/([a-z0-9]+)/");
     private static final Pattern REPOSITORY_IMPORT =
             Pattern.compile("^import mz\\.multicore\\.erp\\.modules\\.([a-z0-9]+)\\.repository\\.(\\w+);", Pattern.MULTILINE);
     private static final Pattern MODEL_IMPORT =
@@ -140,17 +139,7 @@ class CleanArchitectureHarnessTest {
 
     @Test
     void ca07_noNewCrossModuleRepositoryCoupling() throws IOException {
-        Set<String> found = new TreeSet<>();
-        for (Path file : javaFiles(BACKEND)) {
-            Matcher owner = MODULE_OF_FILE.matcher(file.toString().replace('\\', '/'));
-            String own = owner.find() ? owner.group(1) : "";
-            Matcher m = REPOSITORY_IMPORT.matcher(read(file));
-            while (m.find()) {
-                if (!m.group(1).equals(own)) {
-                    found.add(rel(file) + " -> " + m.group(1) + ".repository." + m.group(2));
-                }
-            }
-        }
+        Set<String> found = CrossModuleRepositoryScanner.links();
         Path baselineFile = BASELINES.resolve("cross-module-repository-baseline.txt");
         if (Boolean.getBoolean("architecture.baseline.write")) {
             Files.createDirectories(BASELINES);

@@ -28,7 +28,7 @@ $qualityTests = @(
     # loop and delivery
     'RalphGoalsHarnessTest', 'DeliveryGraphHarnessTest',
     # layers, modularity, coupling, SRP
-    'MultiModuleArchitectureHarnessTest', 'EnterpriseModulesArchitectureHarnessTest', 'CleanArchitectureHarnessTest',
+    'MultiModuleArchitectureHarnessTest', 'EnterpriseModulesArchitectureHarnessTest', 'CleanArchitectureHarnessTest', 'ModuleDecouplingHarnessTest',
     # security and persistence boundaries
     'ApiRolePolicyEndpointCoverageHarnessTest', 'MigrationPostgresDialectHarnessTest',
     # UI uniformity: colours, icons, KPIs, contrast, panel pattern, thin desktop context

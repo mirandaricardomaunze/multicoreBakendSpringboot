@@ -49,7 +49,7 @@ contracts/backend/desktop), `EnterpriseModulesArchitectureHarnessTest` (DTO reco
 | DG-05 | `System.out`, `printStackTrace` | logger SLF4J |
 | DG-06 | `BigDecimal.ZERO.equals`, `double`/`float` no backend/contracts | `compareTo`/`signum`, `BigDecimal` |
 | DG-07 | `@Autowired`, `@Inject` | construtor com campos `final` |
-| DG-08 | Apagar testes; alterar harness protegido, baselines ou scripts do loop | só o responsável |
+| DG-08 | Apagar testes; alterar harness protegido ou scripts do loop; **acrescentar** linhas a uma baseline (apagar é permitido: é pagar dívida) | só o responsável |
 | DG-09 | Controller a importar Repository | Service |
 | DG-10 | DRY: o mesmo bloco de ≥ 6 linhas úteis acrescentado duas vezes | extrair método/classe partilhada |
 

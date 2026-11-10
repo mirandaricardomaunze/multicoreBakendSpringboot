@@ -24,9 +24,12 @@ function Add-Finding([string]$rule, [string]$file, [int]$line, [string]$text, [s
 }
 
 # Protected harness: the loop must never edit the rules that judge it.
+# Baselines are not listed here: deleting lines (paying debt) is allowed, adding lines is DG-08 below.
+$baselineDir = 'backend/src/test/resources/architecture/'
 $protected = @(
-    'backend/src/test/resources/architecture/',
     'backend/src/test/java/mz/multicore/erp/architecture/CleanArchitectureHarnessTest.java',
+    'backend/src/test/java/mz/multicore/erp/architecture/ModuleDecouplingHarnessTest.java',
+    'backend/src/test/java/mz/multicore/erp/architecture/CrossModuleRepositoryScanner.java',
     'backend/src/test/java/mz/multicore/erp/architecture/RalphGoalsHarnessTest.java',
     'scripts/ralph/',
     'docs/RALPH_LOOP_SPEC.md',
@@ -76,6 +79,8 @@ Remove-Item $diffFile -ErrorAction SilentlyContinue
 
 foreach ($a in $added) {
     $f = $a.File; $t = $a.Text
+    if ($f.StartsWith($baselineDir) -and $t.Trim() -ne '') {
+        Add-Finding 'DG-08' $f $a.Line $t 'baseline so pode encolher: nao acrescentar violacoes'; continue }
     if ($f -notlike '*.java') { continue }
     $isTest = $f -match '/src/test/'
     $isMain = $f -match '/src/main/'

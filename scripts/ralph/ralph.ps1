@@ -38,7 +38,7 @@ $allowedTools = @(
     'Read', 'Edit', 'Write', 'Glob', 'Grep', 'TodoWrite',
     'Bash(mvn:*)', 'Bash(git status:*)', 'Bash(git diff:*)', 'Bash(git log:*)', 'Bash(git show:*)',
     'Bash(ls:*)', 'Bash(cat:*)', 'Bash(head:*)', 'Bash(tail:*)', 'Bash(grep:*)', 'Bash(find:*)',
-    'Bash(wc:*)', 'Bash(sed -n:*)', 'Bash(mkdir:*)'
+    'Bash(wc:*)', 'Bash(sed -n:*)', 'Bash(mkdir:*)', 'Bash(cd:*)'
 )
 
 # ---------- workspace ----------
@@ -79,6 +79,8 @@ function Initialize-Worktree {
         'scripts\ralph\common.ps1', 'scripts\ralph\gate.ps1', 'scripts\ralph\diff-guard.ps1', 'scripts\ralph\PROMPT.md',
         'backend\src\test\java\mz\multicore\erp\architecture\RalphGoalsHarnessTest.java',
         'backend\src\test\java\mz\multicore\erp\architecture\CleanArchitectureHarnessTest.java',
+        'backend\src\test\java\mz\multicore\erp\architecture\ModuleDecouplingHarnessTest.java',
+        'backend\src\test\java\mz\multicore\erp\architecture\CrossModuleRepositoryScanner.java',
         'backend\src\test\resources\architecture\cross-module-repository-baseline.txt'
     )
     foreach ($f in $harness) {
