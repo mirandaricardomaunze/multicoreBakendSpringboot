@@ -89,7 +89,16 @@ final class SectorModules {
         if (returnablesApi != null) registry.addReturnables(returnablesApi, comercialApi, inventoryApi);
         if (variantsApi != null) registry.addVariants(variantsApi, comercialApi);
         if (weighbridgeApi != null) registry.addWeighbridge(weighbridgeApi, comercialApi);
-        if (exceptionsApi != null) registry.addExceptions(exceptionsApi);
+        if (exceptionsApi != null) {
+            registry.addExceptions(exceptionsApi);
+            mz.multicore.erp.gui.tv.ExecutiveAlerts.register(() -> {
+                Long companyId = CurrentUserContext.findCurrentCompanyId();
+                if (companyId == null) return null;
+                java.time.LocalDate today = java.time.LocalDate.now();
+                var report = exceptionsApi.report(companyId, today.minusDays(7), today);
+                return new mz.multicore.erp.gui.tv.ExecutiveAlerts.Counts(report.high(), report.medium());
+            });
+        }
         if (comercial != null) {
             if (pricingApi != null) comercial.putClientProperty(OrderEditorExtras.PRICING_KEY, pricingApi);
             SectorDesktopWiring.attachProjects(comercial, projectsApi);

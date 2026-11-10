@@ -29,6 +29,7 @@ public class ScaleSettingsPanel extends JPanel {
     private final JComboBox<String> mode = new JComboBox<>(java.util.Arrays.stream(MODES).map(m -> m[1]).toArray(String[]::new));
     private final JLabel live = new JLabel("—");
     private final JLabel liveStatus = new JLabel(" ");
+    private final JLabel rawFrame = new JLabel(" ");
     private final Timer timer = new Timer(300, e -> refreshLive());
 
     public ScaleSettingsPanel() {
@@ -61,10 +62,14 @@ public class ScaleSettingsPanel extends JPanel {
         live.setIcon(UIHelper.icon("fas-balance-scale", 26, UIHelper.ACCENT_BLUE));
         live.setIconTextGap(12);
         liveStatus.setForeground(UIHelper.TEXT_MUTED);
-        JPanel liveBox = new JPanel(new GridLayout(2, 1, 0, 4));
+        rawFrame.setForeground(UIHelper.TEXT_MUTED);
+        rawFrame.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        rawFrame.setToolTipText("Para o teste de aceitação: o que a balança enviou, com os caracteres de controlo visíveis");
+        JPanel liveBox = new JPanel(new GridLayout(3, 1, 0, 4));
         liveBox.setOpaque(false);
         liveBox.add(live);
         liveBox.add(liveStatus);
+        liveBox.add(rawFrame);
 
         ModernButton save = UIHelper.createSuccessButton("Gravar e Ligar");
         save.setIcon(UIHelper.icon("fas-plug", 14));
@@ -122,6 +127,9 @@ public class ScaleSettingsPanel extends JPanel {
         ScaleReading reading = ScaleConnection.shared().reader().getCurrentReading();
         live.setText(reading.weightKg().toPlainString().replace('.', ',') + " kg");
         boolean simulation = ScaleConnection.shared().reader().isSimulationMode();
+        var reader = ScaleConnection.shared().reader();
+        rawFrame.setText(simulation ? " " : "Tramas recebidas: " + reader.getFrameCount() + "   ·   última: "
+                + mz.multicore.erp.modules.pos.scale.SerialScaleReader.visible(reader.getLastRawFrame()));
         liveStatus.setText(statusText(reading.status(), simulation));
         liveStatus.setForeground(reading.status() == ScaleStatus.STABLE && !simulation ? UIHelper.APPROVED_GREEN
                 : reading.status() == ScaleStatus.DISCONNECTED || reading.status() == ScaleStatus.OVERLOAD

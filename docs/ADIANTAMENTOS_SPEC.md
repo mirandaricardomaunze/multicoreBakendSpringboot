@@ -81,6 +81,9 @@ paridade PostgreSQL, `ApiRolePolicy`.
 - Um sinal aplicado não se desfaz no módulo; corrige-se com documentos normais (nota de débito, etc.).
 - Ainda não existe: devolução do sinal ao cliente, aviso automático no editor da fatura final e PDF próprio do recibo RC.
 
+**Parecer pedido:** `docs/PEDIDO_PARECER_FATURA_ADIANTAMENTO.md` (8 perguntas ao jurista/contabilista, enviado
+para confirmação da redacção e do circuito fiscal).
+
 Teste: `CustomerAdvanceHttpIntegrationTest` (caixa só uma vez, conta 2101, extracto, balancete equilibrado,
 aplicar duas vezes, outro cliente, fatura de sinal como destino, anulações recusadas, idempotência,
 Consumidor Final e artigo de sistema fora do módulo).

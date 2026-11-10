@@ -43,8 +43,10 @@ falta. A gestão precisa de uma lista curta do que verificar, por gravidade.
 - **Produção vs farinha:** o consumo é calculado pela receita, por isso não pode divergir. Só uma contagem física
   da farinha mostraria desvio (fica para o inventário).
 - **Venda ao peso manual no POS:** o POS ainda não regista se o peso foi lido ou escrito.
-- **Alerta no Painel Executivo:** o painel é de outra frente de trabalho; o relatório expõe as contagens por
-  gravidade para ligar lá depois.
+- **Alerta no Painel Executivo (feito em 2026-11-10):** o rodapé do painel mostra as excepções de gravidade alta e
+  média dos últimos 7 dias. O módulo regista a fonte em `ExecutiveAlerts`; o painel não depende do módulo, as
+  contagens lêem-se em segundo plano (cache de 1 minuto) e, sem permissão ou sem servidor, não aparece nada.
+  Harness `ExecutiveAlertsHarnessTest` (EA-01, EA-02).
 
 ## Interface
 

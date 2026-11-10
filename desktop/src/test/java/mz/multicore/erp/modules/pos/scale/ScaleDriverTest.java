@@ -72,4 +72,14 @@ class ScaleDriverTest {
         }
         throw new NoSuchMethodException(name);
     }
+
+    @Test
+    void lastFrameIsKeptAndShownWithControlCharacters() {
+        SerialScaleReader reader = new SerialScaleReader(false);
+        long before = reader.getFrameCount();
+        reader.parseRawFrame((char) 0x02 + "00001.450kg" + (char) 0x0D);
+        assertThat(reader.getFrameCount()).isEqualTo(before + 1);
+        assertThat(SerialScaleReader.visible(reader.getLastRawFrame())).isEqualTo("<STX>00001.450kg<CR>");
+        assertThat(SerialScaleReader.visible(null)).isEqualTo("—");
+    }
 }

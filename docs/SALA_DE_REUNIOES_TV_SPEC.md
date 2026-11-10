@@ -112,3 +112,19 @@ que é a única fonte de cores do pacote.
 | ET-05 | Fechar pára os temporizadores; alternar o ecrã inteiro não | idem |
 | ET-06 | Ranking dos vendedores por faturação, com quota | idem |
 | ET-07 | A moldura pinta-se com o fundo do painel em cada tema | idem |
+
+## 8. Alerta de excepções no rodapé (2026-11-10)
+
+O rodapé mostra, ao centro, as excepções anti-fraude de gravidade **alta** e **média** dos últimos 7 dias
+(`docs/ANTIFRAUDE_SECTORES_SPEC.md`), por exemplo "Excepções a verificar (7 dias): 2 altas · 3 médias — módulo
+Excepções". Sem excepções, sem permissão ou sem servidor, o rodapé fica como antes.
+
+- O painel não depende do módulo de excepções: o módulo regista a fonte em `ExecutiveAlerts` (pacote `gui.tv`).
+- A leitura é feita em segundo plano, com cache de 1 minuto; o rodapé já é reconstruído a cada actualização automática.
+- Cores e tipos de letra do tema do painel (`ExecutiveTvTheme`); o ícone usa as cores de estado.
+- `ExecutiveTvDashboardDialog` não mudou (está no tecto de 215 linhas).
+
+| ID | Regra | Harness |
+|---|---|---|
+| EA-01 | Excepções altas e médias aparecem no centro do rodapé | `ExecutiveAlertsHarnessTest` |
+| EA-02 | Sem excepções ou sem fonte, não aparece alerta | `ExecutiveAlertsHarnessTest` |

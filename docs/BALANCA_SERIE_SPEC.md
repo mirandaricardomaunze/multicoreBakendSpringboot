@@ -27,6 +27,12 @@ Ligar" e o peso em directo com o estado (estável, a estabilizar, sobrecarga, se
 `ScaleDriverTest` (tramas, sobrecarga, comandos, definições por posto, simulação sem porta),
 `SerialScaleReaderTest`, `SectorFoundationUiHarnessTest` SA-UI-03.
 
+## Aceitação na loja piloto
+
+Guia passo a passo e folha de registo em `docs/ACEITACAO_LOJA_PILOTO_SECTORES.md`. O ecrã Balança deste Posto
+mostra as **tramas recebidas** e a **última trama** com os caracteres de controlo visíveis (`<STX>`, `<CR>`…), para
+diagnosticar porta, velocidade e formato no local.
+
 ## Limites
 
 - Etiquetas de balança com preço (EAN-13 de peso) já eram lidas; a impressão de etiquetas não faz parte desta fase.
