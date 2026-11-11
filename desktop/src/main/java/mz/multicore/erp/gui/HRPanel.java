@@ -353,12 +353,13 @@ public class HRPanel extends JPanel {
     private void markSelectedPayslipPaid() {
         PayslipDTO sel = selectedPayslip();
         if (sel == null) return;
-        UIHelper.runWithProgress(this, "A actualizar recibo…", () -> {
-            hrApiClient.markPayslipPaid(sel.id());
-            return null;
-        }, ignored -> {
-            showSuccess("Recibo marcado como pago.");
-            loadPayslips();
+        UIHelper.loadAsync(this, hrApiClient::treasuryAccounts, accounts -> {
+            Long accountId = PayslipPaymentAccountDialog.choose(this, sel, accounts);
+            if (accountId == null) return;
+            UIHelper.runWithProgress(this, "A actualizar recibo…", () -> hrApiClient.markPayslipPaid(sel.id(), accountId), ignored -> {
+                showSuccess("Recibo marcado como pago.");
+                loadPayslips();
+            }, this::showActionError);
         }, this::showActionError);
     }
 

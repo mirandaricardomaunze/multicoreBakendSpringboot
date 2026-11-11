@@ -125,6 +125,7 @@ public class HRService {
 
     @Transactional
     public PayslipDTO markPayslipPaid(Long id) { return payslipLifecycleService.markPayslipPaid(id); }
+    public PayslipDTO markPayslipPaid(Long id, Long financeAccountId) { return payslipLifecycleService.markPayslipPaid(id, financeAccountId); }
 
     @Transactional
     public PayslipDTO cancelPayslip(Long id) { return payslipLifecycleService.cancelPayslip(id); }

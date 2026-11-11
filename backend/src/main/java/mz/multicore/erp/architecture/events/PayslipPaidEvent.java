@@ -35,5 +35,14 @@ public record PayslipPaidEvent(
         BigDecimal employeeInss,
         BigDecimal employerInss,
         BigDecimal otherDeductions,
-        BigDecimal netPay
-) {}
+        BigDecimal netPay,
+        boolean cashPayment
+) {
+    /** Pago em numerário pela conta Caixa (o caminho anterior à escolha da conta). */
+    public PayslipPaidEvent(Long companyId, Long payslipId, String payslipNumber, String employeeName, LocalDate date,
+                            BigDecimal grossPay, BigDecimal absenceDeduction, BigDecimal irps, BigDecimal employeeInss,
+                            BigDecimal employerInss, BigDecimal otherDeductions, BigDecimal netPay) {
+        this(companyId, payslipId, payslipNumber, employeeName, date, grossPay, absenceDeduction, irps, employeeInss,
+                employerInss, otherDeductions, netPay, true);
+    }
+}

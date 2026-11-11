@@ -25,7 +25,8 @@ public class ReportSalesAnalyzer {
     }
 
     SalesSummaryDTO summarise(List<Invoice> sales) {
-        BigDecimal total = sales.stream().map(Invoice::getTotalAmount).filter(value -> value != null)
+        // Net of approved credit/debit notes: a returned sale (or an advance credited on the final invoice) is not revenue.
+        BigDecimal total = sales.stream().map(Invoice::payableTotal).filter(value -> value != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new SalesSummaryDTO(sales.size(), total);
     }
@@ -67,7 +68,7 @@ public class ReportSalesAnalyzer {
                         ? "SYSTEM" : invoice.getCreatedBy()));
         return byOperator.entrySet().stream()
                 .map(entry -> new OperatorSalesSummaryDTO(entry.getKey(), entry.getValue().size(),
-                        entry.getValue().stream().map(invoice -> valueOrZero(invoice.getTotalAmount()))
+                        entry.getValue().stream().map(invoice -> valueOrZero(invoice.payableTotal()))
                                 .reduce(BigDecimal.ZERO, BigDecimal::add)))
                 .sorted(Comparator.comparing(OperatorSalesSummaryDTO::total).reversed()).toList();
     }

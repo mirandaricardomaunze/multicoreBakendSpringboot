@@ -80,7 +80,7 @@ public class OperationsPostingHandler {
                     postingHelper.account(event.companyId(), PgcNirfChart.PESSOAL_OUTROS_DESCONTOS),
                     other, "Outros descontos ao pessoal"));
         }
-        entry.addLine(JournalLine.credit(postingHelper.account(event.companyId(), PgcNirfChart.CAIXA),
+        entry.addLine(JournalLine.credit(postingHelper.cashAccount(event.companyId(), event.cashPayment()),
                 safe(event.netPay()), "Líquido pago ao colaborador"));
 
         journalService.save(entry, event.companyId());

@@ -61,6 +61,8 @@ public class AssetDepreciationBatchService {
             if (depreciationRepository.existsByCompanyIdAndAssetIdAndPeriodYearAndPeriodMonth(companyId, asset.getId(), year, month)) {
                 continue;
             }
+            // An asset only depreciates from the month it was acquired: a run for May never touches a June purchase.
+            if (asset.getAcquisitionDate() != null && asset.getAcquisitionDate().isAfter(calcDate)) continue;
 
             BigDecimal quota = depreciationEngine.calculateMonthlyDepreciation(asset);
             if (quota.compareTo(BigDecimal.ZERO) <= 0) {

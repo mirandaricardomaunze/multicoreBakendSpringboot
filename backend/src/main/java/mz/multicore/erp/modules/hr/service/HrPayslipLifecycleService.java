@@ -63,6 +63,11 @@ public class HrPayslipLifecycleService {
     }
 
     public PayslipDTO markPayslipPaid(Long id) {
+        return markPayslipPaid(id, null);
+    }
+
+    /** Pays the net salary from the chosen treasury account (bank transfer or cash); none chosen: the cash account. */
+    public PayslipDTO markPayslipPaid(Long id, Long financeAccountId) {
         guard.ensureHrManager();
         Payslip p = payslipRepository.findByIdWithEmployeeAndCompanyId(id, guard.currentCompanyId())
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
@@ -75,8 +80,11 @@ public class HrPayslipLifecycleService {
         p.setPaymentDate(LocalDate.now());
         Payslip saved = payslipRepository.save(p);
 
-        financeService.registerAutoPayout(saved.getNetPay(), String.format(
-                "Pagamento Salário %s - %s", saved.getPayslipNumber(), saved.getEmployee().getName()));
+        String payout = String.format("Pagamento Salário %s - %s", saved.getPayslipNumber(), saved.getEmployee().getName());
+        if (financeAccountId != null) financeService.registerTransaction(financeAccountId, "CREDIT", saved.getNetPay(), payout);
+        else financeService.registerAutoPayout(saved.getNetPay(), payout);
+        boolean cash = financeAccountId == null || financeService.accountType(financeAccountId)
+                == mz.multicore.erp.modules.financeira.model.TreasuryAccountType.CASH;
 
         payrollLiabilityService.accrueForPeriod(saved.getYear(), saved.getMonth());
 
@@ -85,7 +93,7 @@ public class HrPayslipLifecycleService {
                 saved.getEmployee().getName(), saved.getPaymentDate(),
                 saved.getBaseSalary().add(saved.getAllowances()).add(saved.getOvertime()).add(HrPayslipIssuanceService.orZero(saved.getSalesBonus())),
                 saved.getAbsenceDeduction(), saved.getIrpsDeduction(), saved.getInssDeduction(),
-                saved.getEmployerInss(), saved.getOtherDeductions(), saved.getNetPay()));
+                saved.getEmployerInss(), saved.getOtherDeductions(), saved.getNetPay(), cash));
 
         auditLogService.logCurrent("PAYSLIP_PAID", String.format(
                 "Recibo %s pago a %s, líquido %s",
