@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ApproveWasteRequest;
@@ -38,7 +38,7 @@ public class StockWasteLifecycleService {
     public static final BigDecimal APPROVAL_THRESHOLD = new BigDecimal("2500.00");
 
     private final StockWasteRepository wasteRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final ProductBatchRepository batchRepository;
     private final InventoryService inventoryService;
@@ -48,7 +48,7 @@ public class StockWasteLifecycleService {
 
     public StockWasteLifecycleService(
             StockWasteRepository wasteRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             ProductBatchRepository batchRepository,
             InventoryService inventoryService,
@@ -57,7 +57,7 @@ public class StockWasteLifecycleService {
             ApprovalService approvalService
     ) {
         this.wasteRepository = wasteRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.batchRepository = batchRepository;
         this.inventoryService = inventoryService;
@@ -104,8 +104,7 @@ public class StockWasteLifecycleService {
         Company company = companyLookup.require(req.companyId());
         Warehouse warehouse = warehouseRepository.findById(req.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado: " + req.warehouseId()));
-        Product product = productRepository.findById(req.productId())
-                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado: " + req.productId()));
+        Product product = productLookup.require(req.productId());
 
         ProductBatch batch = null;
         if (req.batchId() != null) {

@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
@@ -19,11 +19,11 @@ import java.math.RoundingMode;
 public class AverageCostUpdater {
 
     private final StockRepository stockRepository;
-    private final ProductRepository productRepository;
+    private final ProductCommandService productCommands;
 
-    public AverageCostUpdater(StockRepository stockRepository, ProductRepository productRepository) {
+    public AverageCostUpdater(StockRepository stockRepository, ProductCommandService productCommands) {
         this.stockRepository = stockRepository;
-        this.productRepository = productRepository;
+        this.productCommands = productCommands;
     }
 
     public void beforeEntry(Product product, Warehouse warehouse, BigDecimal quantity, BigDecimal totalCost) {
@@ -33,6 +33,6 @@ public class AverageCostUpdater {
         if (total.signum() <= 0) return;
         BigDecimal oldCost = product.getPurchasePrice() == null ? BigDecimal.ZERO : product.getPurchasePrice();
         product.setPurchasePrice(onHand.multiply(oldCost).add(totalCost).divide(total, 2, RoundingMode.HALF_UP));
-        productRepository.save(product);
+        productCommands.saveProduct(product);
     }
 }

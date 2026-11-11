@@ -20,7 +20,7 @@ Cada critério de migração apaga as suas linhas de
 ## Critérios de aceitação
 
 - [x] MD-P01 — ProductLookup (com categorias) e comandos de gravação no Service de produto — `ProductLookupTest`
-- [ ] MD-P02 — inventory sem Product/ProductCategory Repository — `ModuleDecouplingHarnessTest`
+- [x] MD-P02 — inventory sem Product/ProductCategory Repository — `ModuleDecouplingHarnessTest`
 - [ ] MD-P03 — purchases, crm, architecture, promotions, pricing, pos, manufacturing, backup — `ModuleDecouplingHarnessTest`
 - [ ] MD-P04 — restantes módulos — `ModuleDecouplingHarnessTest`
 - [ ] MD-P05 — zero ligações a Product/ProductCategory Repository fora de comercial; suite verde — `ModuleDecouplingHarnessTest`
@@ -38,3 +38,4 @@ Cada critério de migração apaga as suas linhas de
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
 - 2026-11-11 · MD-P01 · `comercial.service.ProductLookup` (produtos e categorias; `require*` com "Produto não encontrado." / "Categoria não encontrada.", `find*` com Optional para manter mensagens já testadas) e `ProductCommandService` (`saveProduct`, `saveCategory`) para gravações alheias; `ProductLookupTest` verde. Nota: os testes correm a partir da raiz do reactor (DTOs no módulo `contracts`).
+- 2026-11-11 · MD-P02 · os 12 serviços de `inventory` lêem produtos só pelo `ProductLookup` e o `AverageCostUpdater` grava via `ProductCommandService`; quebras e rascunhos de transferência passam à mensagem normalizada "Produto não encontrado."; 12 linhas apagadas do baseline CA-07; testes de inventário, auditoria e harnesses verdes.

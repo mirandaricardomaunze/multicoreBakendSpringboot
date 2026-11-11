@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
@@ -37,7 +37,7 @@ public class StockMovementRegistrationService {
     private final StockMovementOperationRepository stockMovementOperationRepository;
     private final StockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final CompanyLookup companyLookup;
     private final ProductBatchService productBatchService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
@@ -48,7 +48,7 @@ public class StockMovementRegistrationService {
             StockMovementOperationRepository stockMovementOperationRepository,
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             CompanyLookup companyLookup,
             ProductBatchService productBatchService,
             @Autowired(required = false) org.springframework.context.ApplicationEventPublisher eventPublisher
@@ -58,7 +58,7 @@ public class StockMovementRegistrationService {
         this.stockMovementOperationRepository = stockMovementOperationRepository;
         this.stockRepository = stockRepository;
         this.warehouseRepository = warehouseRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.companyLookup = companyLookup;
         this.productBatchService = productBatchService;
     }
@@ -182,8 +182,7 @@ public class StockMovementRegistrationService {
                 return queryService.toDTO(previous.get().getStockMovement());
             }
         }
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), companyId)
-                .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
+        Product product = productLookup.requireForCompany(request.productId(), companyId);
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
         if (!companyId.equals(warehouse.getCompany().getId())) {

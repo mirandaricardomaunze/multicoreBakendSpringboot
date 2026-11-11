@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferLineRequest;
@@ -39,7 +39,6 @@ public class StockTransferService {
     private final StockTransferRepository transferRepository;
     private final WarehouseRepository warehouseRepository;
     private final CompanyLookup companyLookup;
-    private final ProductRepository productRepository;
     private final StockRepository stockRepository;
     private final StockMovementRepository stockMovementRepository;
     private final ProductBatchService productBatchService;
@@ -58,7 +57,7 @@ public class StockTransferService {
             StockTransferRepository transferRepository,
             WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             ProductBatchService productBatchService,
@@ -66,7 +65,7 @@ public class StockTransferService {
             AuditLogService auditLogService,
             ApplicationEventPublisher eventPublisher
     ) {
-        this(transferRepository, warehouseRepository, companyLookup, productRepository,
+        this(transferRepository, warehouseRepository, companyLookup, productLookup,
                 stockRepository, stockMovementRepository, productBatchService, documentNumberService,
                 auditLogService, eventPublisher, null, null);
     }
@@ -75,7 +74,7 @@ public class StockTransferService {
             StockTransferRepository transferRepository,
             WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             ProductBatchService productBatchService,
@@ -84,7 +83,7 @@ public class StockTransferService {
             ApplicationEventPublisher eventPublisher,
             mz.multicore.erp.modules.approvals.service.ApprovalService approvalService
     ) {
-        this(transferRepository, warehouseRepository, companyLookup, productRepository,
+        this(transferRepository, warehouseRepository, companyLookup, productLookup,
                 stockRepository, stockMovementRepository, productBatchService, documentNumberService,
                 auditLogService, eventPublisher, approvalService, null);
     }
@@ -94,7 +93,7 @@ public class StockTransferService {
             StockTransferRepository transferRepository,
             WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             ProductBatchService productBatchService,
@@ -107,7 +106,6 @@ public class StockTransferService {
         this.transferRepository = transferRepository;
         this.warehouseRepository = warehouseRepository;
         this.companyLookup = companyLookup;
-        this.productRepository = productRepository;
         this.stockRepository = stockRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.productBatchService = productBatchService;
@@ -121,7 +119,7 @@ public class StockTransferService {
         this.validator = new StockTransferValidator(stockRepository, productBatchService);
         this.workflowCoordinator = new StockTransferWorkflowCoordinator(approvalService, eventPublisher, transferRepository, auditLogService);
         this.draftService = new StockTransferDraftService(transferRepository, warehouseRepository, companyLookup,
-                productRepository, documentNumberService, auditLogService, validator);
+                productLookup, documentNumberService, auditLogService, validator);
     }
 
     @Transactional

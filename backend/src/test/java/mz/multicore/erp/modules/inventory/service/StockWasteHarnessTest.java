@@ -4,7 +4,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -53,7 +55,7 @@ class StockWasteHarnessTest {
 
         service = new StockWasteService(
                 wasteRepository,
-                productRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository,
                 batchRepository,
                 inventoryService,
