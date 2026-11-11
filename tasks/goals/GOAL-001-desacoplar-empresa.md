@@ -20,7 +20,7 @@ Cada critério de migração apaga as suas linhas de
 ## Critérios de aceitação
 
 - [x] MD-C01 — CompanyLookup com require/reference/findAll/findByTaxId/lockForUpdate e mensagens PT-MZ — `CompanyLookupTest`
-- [ ] MD-C02 — hr sem CompanyRepository — `ModuleDecouplingHarnessTest`
+- [x] MD-C02 — hr sem CompanyRepository — `ModuleDecouplingHarnessTest`
 - [ ] MD-C03 — inventory e comercial sem CompanyRepository — `ModuleDecouplingHarnessTest`
 - [ ] MD-C04 — purchases, platform, fleet, users — `ModuleDecouplingHarnessTest`
 - [ ] MD-C05 — manufacturing, crm, assets, architecture, support, subscription, recurring, promotions, pos, performance, intelligence, backup, approvals — `ModuleDecouplingHarnessTest`
@@ -43,3 +43,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-10 · gate · FAIL da iteração 1 não foi violação: o diff-guard saiu com exit 1 e saída vazia (rebentou antes de imprimir; os ficheiros novos continuavam `??`, logo `git add -N -A 2>$null` falhou sob `ErrorActionPreference=Stop` do PS 5.1). Linhas novas revistas à mão contra DG-01..10: limpas. Ficheiros novos marcados intent-to-add; nenhum código alterado. Se voltar a falhar igual, o responsável deve endurecer a linha 49 de `scripts/ralph/diff-guard.ps1` (protegido).
 - 2026-11-10 · gate · 3.º FAIL igual com os ficheiros já `A` e o `git add -N -A` sem stderr. A causa provável passa a ser a ligação de `-IncludeUntracked:True` via `powershell.exe -File` em `gate.ps1:48`. Nenhum código alterado. Goal posto em BLOCKED: só o responsável altera `scripts/ralph/`. Ver Perguntas em aberto.
 - 2026-11-10 · gate · desbloqueado pelo responsável; gate verde sobre o MD-C01 (diff-guard 246 linhas, Maven PASS).
+- 2026-11-11 · MD-C02 · os 21 serviços de `hr` lêem a empresa por `CompanyLookup`; o gate falhou porque 10 testes de `hr` ainda passavam `CompanyRepository` aos construtores — passam agora `new CompanyLookup(companyRepository)` (stubs intactos); 21 linhas `hr -> company.repository` apagadas do baseline CA-07. Testes de hr, `ModuleDecouplingHarnessTest` e `CleanArchitectureHarnessTest` verdes.

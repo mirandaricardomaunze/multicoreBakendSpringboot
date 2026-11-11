@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.*;
 import mz.multicore.erp.modules.hr.model.*;
@@ -22,7 +22,7 @@ import java.util.List;
 public class PayrollDeductionService {
     private final PayrollDeductionRepository deductionRepository;
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final FinanceService financeService;
     private final AuditLogService auditLogService;
     private final PayrollDeductionApplicationService applicationService;
@@ -31,14 +31,14 @@ public class PayrollDeductionService {
     @Autowired
     public PayrollDeductionService(PayrollDeductionRepository deductionRepository,
                                    EmployeeRepository employeeRepository,
-                                   CompanyRepository companyRepository,
+                                   CompanyLookup companyLookup,
                                    @Lazy FinanceService financeService,
                                    AuditLogService auditLogService,
                                    PayrollDeductionApplicationService applicationService,
                                    PayrollDeductionQueryService queryService) {
         this.deductionRepository = deductionRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.financeService = financeService;
         this.auditLogService = auditLogService;
         this.applicationService = applicationService;
@@ -49,12 +49,12 @@ public class PayrollDeductionService {
     public PayrollDeductionService(PayrollDeductionRepository deductionRepository,
                                    PayslipDeductionLineRepository lineRepository,
                                    EmployeeRepository employeeRepository,
-                                   CompanyRepository companyRepository,
+                                   CompanyLookup companyLookup,
                                    @Lazy FinanceService financeService,
                                    AuditLogService auditLogService) {
         this.deductionRepository = deductionRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.financeService = financeService;
         this.auditLogService = auditLogService;
         this.applicationService = new PayrollDeductionApplicationService(deductionRepository, lineRepository);
@@ -69,8 +69,7 @@ public class PayrollDeductionService {
         PayrollDeductionKind kind = parseKind(request.kind());
         PayrollDeductionPolicy.validate(kind, request);
         PayrollDeduction deduction = new PayrollDeduction();
-        deduction.setCompany(companyRepository.findById(companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+        deduction.setCompany(companyLookup.requireActive(companyId()));
         deduction.setEmployee(employee);
         deduction.setKind(kind);
         deduction.setDescription(request.description().trim());

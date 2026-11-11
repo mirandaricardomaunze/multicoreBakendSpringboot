@@ -6,6 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -67,7 +68,7 @@ class PayrollLiabilityServiceTest {
         auditLogService = mock(AuditLogService.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
         service = new PayrollLiabilityService(liabilityRepository, payslipRepository,
-                companyRepository, hrPolicyService, financeService, auditLogService, eventPublisher);
+                new CompanyLookup(companyRepository), hrPolicyService, financeService, auditLogService, eventPublisher);
 
         Company company = new Company();
         company.setId(COMPANY);

@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.TimeSheetDTO;
 import mz.multicore.erp.modules.hr.model.Absence;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -32,7 +32,7 @@ public class TimeSheetPeriodCoordinator {
     public static final String PENDING_JUSTIFICATION = "PENDING_JUSTIFICATION";
 
     private final TimeSheetRepository timeSheetRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final EmployeeRepository employeeRepository;
     private final TimeEntryRepository timeEntryRepository;
     private final AbsenceRepository absenceRepository;
@@ -41,7 +41,7 @@ public class TimeSheetPeriodCoordinator {
     private final TimeSheetCalculator calculator;
 
     public TimeSheetPeriodCoordinator(TimeSheetRepository timeSheetRepository,
-                                      CompanyRepository companyRepository,
+                                      CompanyLookup companyLookup,
                                       EmployeeRepository employeeRepository,
                                       TimeEntryRepository timeEntryRepository,
                                       AbsenceRepository absenceRepository,
@@ -49,7 +49,7 @@ public class TimeSheetPeriodCoordinator {
                                       AuditLogService auditLogService,
                                       TimeSheetCalculator calculator) {
         this.timeSheetRepository = timeSheetRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.employeeRepository = employeeRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRepository = absenceRepository;
@@ -172,8 +172,7 @@ public class TimeSheetPeriodCoordinator {
     }
 
     private Company currentCompany() {
-        return companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada."));
+        return companyLookup.requireActive(currentCompanyId());
     }
 
     private Long currentCompanyId() {

@@ -6,6 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.SaveOccupationalHealthExamRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -50,7 +51,7 @@ class OccupationalHealthServiceTest {
                 .encodeToString("chave-de-32-bytes-para-aes256!!!".getBytes(
                         java.nio.charset.StandardCharsets.UTF_8)));
         auditLogService = mock(AuditLogService.class);
-        service = new OccupationalHealthService(repository, employeeRepository, companyRepository,
+        service = new OccupationalHealthService(repository, employeeRepository, new CompanyLookup(companyRepository),
                 supplierRepository, financeService, attachmentCrypto, auditLogService);
         CurrentUserContext.setCurrentCompanyId(7L);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");

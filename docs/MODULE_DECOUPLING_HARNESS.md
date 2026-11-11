@@ -12,7 +12,7 @@ correm sempre no gate.
 | ID | Garantia | Teste |
 |---|---|---|
 | MD-C01 | `CompanyLookup` em `company.service`: `require`, `reference`, `findAll`, `findByTaxId`, `lockForUpdate` (exige a transacção do chamador), mais `requireActive`, `find` e `count`; mensagens PT-MZ normalizadas; escritas alheias com `CompanyService.saveCompany` — **feito** | `CompanyLookupTest` |
-| MD-C02 | `hr` (21 ficheiros) sem `CompanyRepository` | `ModuleDecouplingHarnessTest` |
+| MD-C02 | `hr` (21 ficheiros) sem `CompanyRepository`; linhas removidas do baseline CA-07 — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-C03 | `inventory` (11) e `comercial` (9) sem `CompanyRepository` | `ModuleDecouplingHarnessTest` |
 | MD-C04 | `purchases`, `platform`, `fleet`, `users` sem `CompanyRepository` | `ModuleDecouplingHarnessTest` |
 | MD-C05 | `manufacturing`, `crm`, `assets`, `architecture`, `support`, `subscription`, `recurring`, `promotions`, `pos`, `performance`, `intelligence`, `backup`, `approvals` | `ModuleDecouplingHarnessTest` |

@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateSalaryChangeRequest;
 import mz.multicore.erp.modules.hr.dto.SalaryChangeDTO;
 import mz.multicore.erp.modules.hr.model.Employee;
@@ -23,16 +23,16 @@ public class SalaryChangeMutationService {
 
     private final SalaryChangeRepository salaryChangeRepository;
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public SalaryChangeMutationService(SalaryChangeRepository salaryChangeRepository,
                                        EmployeeRepository employeeRepository,
-                                       CompanyRepository companyRepository,
+                                       CompanyLookup companyLookup,
                                        AuditLogService auditLogService) {
         this.salaryChangeRepository = salaryChangeRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -71,8 +71,7 @@ public class SalaryChangeMutationService {
 
         SalaryChange change = new SalaryChange();
         change.setEmployee(employee);
-        change.setCompany(companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+        change.setCompany(companyLookup.requireActive(companyId));
         change.setPreviousSalary(previous);
         change.setNewSalary(newSalary);
         change.setEffectiveDate(effectiveDate);

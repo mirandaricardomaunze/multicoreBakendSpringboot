@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateTimeEntryRequest;
 import mz.multicore.erp.modules.hr.dto.TimeEntryDTO;
 import mz.multicore.erp.modules.hr.dto.TimeSheetDTO;
@@ -45,17 +45,17 @@ public class TimeSheetService {
                             TimeSheetRepository timeSheetRepository,
                             WorkScheduleRepository workScheduleRepository,
                             EmployeeRepository employeeRepository,
-                            CompanyRepository companyRepository,
+                            CompanyLookup companyLookup,
                             EmploymentContractService contractService,
                             AbsenceRepository absenceRepository,
                             AuditLogService auditLogService) {
         TimeSheetCalculator calc = new TimeSheetCalculator(timeEntryRepository, timeSheetRepository,
                 workScheduleRepository, employeeRepository, contractService);
-        TimeSheetPeriodCoordinator coord = new TimeSheetPeriodCoordinator(timeSheetRepository, companyRepository,
+        TimeSheetPeriodCoordinator coord = new TimeSheetPeriodCoordinator(timeSheetRepository, companyLookup,
                 employeeRepository, timeEntryRepository, absenceRepository, workScheduleRepository,
                 auditLogService, calc);
         TimeEntryRegistrationService reg = new TimeEntryRegistrationService(timeEntryRepository, employeeRepository,
-                companyRepository, auditLogService, coord);
+                companyLookup, auditLogService, coord);
         this.registrationService = reg;
         this.calculator = calc;
         this.periodCoordinator = coord;

@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.PayrollCostDTO;
 import mz.multicore.erp.modules.hr.dto.PayrollLiabilityDTO;
@@ -39,12 +39,12 @@ public class PayrollLiabilityService {
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
     public PayrollLiabilityService(PayrollLiabilityRepository liabilityRepository,
                                    PayslipRepository payslipRepository,
-                                   CompanyRepository companyRepository,
+                                   CompanyLookup companyLookup,
                                    HrPolicyService hrPolicyService,
                                    @Lazy FinanceService financeService,
                                    AuditLogService auditLogService,
                                    ApplicationEventPublisher eventPublisher) {
-        this(new PayrollLiabilityLifecycleService(liabilityRepository, payslipRepository, companyRepository,
+        this(new PayrollLiabilityLifecycleService(liabilityRepository, payslipRepository, companyLookup,
                         hrPolicyService, financeService, auditLogService, eventPublisher),
                 new PayrollLiabilityQueryService(liabilityRepository, payslipRepository));
     }

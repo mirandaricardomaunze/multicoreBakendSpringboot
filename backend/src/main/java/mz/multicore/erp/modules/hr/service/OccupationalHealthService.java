@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.security.AttachmentCrypto;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.*;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
@@ -43,12 +43,12 @@ public class OccupationalHealthService {
      */
     public OccupationalHealthService(OccupationalHealthExamRepository repository,
                                      EmployeeRepository employeeRepository,
-                                     CompanyRepository companyRepository,
+                                     CompanyLookup companyLookup,
                                      SupplierRepository supplierRepository,
                                      @Lazy FinanceService financeService,
                                      AttachmentCrypto attachmentCrypto,
                                      AuditLogService auditLogService) {
-        this(new OccupationalHealthRegistrationService(repository, employeeRepository, companyRepository,
+        this(new OccupationalHealthRegistrationService(repository, employeeRepository, companyLookup,
                         supplierRepository, attachmentCrypto, auditLogService),
                 new OccupationalHealthFinanceService(repository, supplierRepository, financeService, auditLogService),
                 new OccupationalHealthQueryService(repository, employeeRepository, attachmentCrypto, auditLogService));
