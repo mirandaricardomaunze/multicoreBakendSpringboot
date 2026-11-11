@@ -2,7 +2,6 @@ package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import org.springframework.stereotype.Component;
@@ -27,12 +26,9 @@ public class AverageCostUpdater {
     }
 
     public void beforeEntry(Product product, Warehouse warehouse, BigDecimal quantity, BigDecimal totalCost) {
-        BigDecimal onHand = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                .map(Stock::getQuantity).orElse(BigDecimal.ZERO).max(BigDecimal.ZERO);
-        BigDecimal total = onHand.add(quantity);
-        if (total.signum() <= 0) return;
-        BigDecimal oldCost = product.getPurchasePrice() == null ? BigDecimal.ZERO : product.getPurchasePrice();
-        product.setPurchasePrice(onHand.multiply(oldCost).add(totalCost).divide(total, 2, RoundingMode.HALF_UP));
+        if (quantity == null || quantity.signum() <= 0 || totalCost == null) return;
+        WeightedAverageCost.apply(stockRepository, product, warehouse, quantity,
+                totalCost.divide(quantity, 6, RoundingMode.HALF_UP));
         productRepository.save(product);
     }
 }

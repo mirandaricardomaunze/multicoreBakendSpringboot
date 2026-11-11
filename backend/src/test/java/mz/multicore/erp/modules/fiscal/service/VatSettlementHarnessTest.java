@@ -132,6 +132,32 @@ class VatSettlementHarnessTest {
         assertEquals(0, BigDecimal.ZERO.compareTo(result.creditToCarry()));
     }
 
+    @Test
+    void partiallyPaidInvoicesAndApprovedNotesCountInTheMonth() {
+        var creditNotes = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
+        var debitNotes = mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class);
+        FiscalSummaryService service = new FiscalSummaryService(invoiceRepository, purchaseRepository, creditNotes, debitNotes);
+        Invoice partial = createInvoice("FT-010", new BigDecimal("10000.00"), new BigDecimal("1600.00"),
+                new BigDecimal("11600.00"), InvoiceStatus.PARTIALLY_PAID);
+        mz.multicore.erp.modules.comercial.model.CreditNote note = new mz.multicore.erp.modules.comercial.model.CreditNote();
+        note.setNoteNumber("NC-001");
+        note.setStatus(mz.multicore.erp.modules.comercial.model.NoteStatus.APPROVED);
+        note.setIssueDate(LocalDateTime.of(2026, 6, 20, 9, 0));
+        note.setTotalBeforeTax(new BigDecimal("2500.00"));
+        note.setTaxAmount(new BigDecimal("400.00"));
+        note.setTotalAmount(new BigDecimal("2900.00"));
+        when(invoiceRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of(partial));
+        when(purchaseRepository.findByCompanyId(COMPANY_ID)).thenReturn(List.of());
+        when(creditNotes.findByCompanyId(COMPANY_ID)).thenReturn(List.of(note));
+        when(debitNotes.findByCompanyId(COMPANY_ID)).thenReturn(List.of());
+
+        IvaSummaryDTO result = service.computeMonth(COMPANY_ID, 2026, 6, BigDecimal.ZERO);
+
+        // 1600 of the partially paid invoice minus 400 of the credit note.
+        assertEquals(0, new BigDecimal("1200.00").compareTo(result.outputTax()));
+        assertEquals(0, new BigDecimal("7500.00").compareTo(result.salesBase()));
+    }
+
     private Invoice createInvoice(String num, BigDecimal base, BigDecimal tax, BigDecimal total, InvoiceStatus status) {
         Invoice inv = new Invoice();
         inv.setInvoiceNumber(num);

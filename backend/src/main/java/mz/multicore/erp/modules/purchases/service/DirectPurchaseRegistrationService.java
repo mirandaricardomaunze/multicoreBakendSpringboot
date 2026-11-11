@@ -83,6 +83,7 @@ public class DirectPurchaseRegistrationService {
         purchase.setWarehouse(warehouse);
         purchase.setCompany(company);
         purchase.setPurchaseDate(LocalDateTime.now());
+        purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
 
         BigDecimal total = BigDecimal.ZERO, totalTax = BigDecimal.ZERO;
 
@@ -111,15 +112,14 @@ public class DirectPurchaseRegistrationService {
             totalTax = totalTax.add(amounts.tax());
 
             String desc = String.format("Compra %s - Fornecedor %s", purchase.getPurchaseNumber(), supplier.getName());
-            inventoryService.registerMovement(
-                    product, warehouse, lineReq.quantity(), "PURCHASE",
+            inventoryService.registerPurchase(
+                    product, warehouse, lineReq.quantity(), lineReq.unitPrice(),
                     lineReq.batchNumber(), lineReq.serialNumber(), desc, lineReq.expirationDate()
             );
         }
 
         purchase.setTotalAmount(total.setScale(2, RoundingMode.HALF_UP));
         purchase.setTaxAmount(totalTax.setScale(2, RoundingMode.HALF_UP));
-        purchase.setPurchaseNumber(documentNumberService.next(DocumentSeries.PURCHASE));
 
         boolean payNow = request.financeAccountId() != null;
         purchase.setAmountPaid(payNow ? purchase.getTotalAmount() : BigDecimal.ZERO);

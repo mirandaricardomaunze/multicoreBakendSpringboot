@@ -96,6 +96,26 @@ class InventoryPostingHttpIntegrationTest {
         assertThat(ledger(c, "3201").subtract(goods)).isEqualByComparingTo("0");
     }
 
+    @Test
+    void purchaseAtANewPriceMovesTheAverageCost() throws Exception {
+        Ctx c = context();
+        long product = product(c, "Oleo 1 L (teste custo medio)", "150", "100");
+        entry(c, product, "10");
+        JsonNode suppliers = getJson("/api/purchases/suppliers?companyId=" + c.companyId(), c);
+        assertThat(suppliers.isEmpty()).as("seed needs a supplier").isFalse();
+
+        // 10 on hand at 100 plus 10 bought at 120: the cost becomes 110, so the next sale costs what it really cost.
+        json(send(post("/api/purchases"), c, """
+                {"supplierId":%d,"warehouseId":%d,"companyId":%s,
+                 "lines":[{"productId":%d,"quantity":10,"unitPrice":120,"taxRate":0}]}"""
+                .formatted(suppliers.get(0).get("id").asLong(), c.warehouseId(), c.companyId(), product)));
+        BigDecimal cost = null;
+        for (JsonNode p : getJson("/api/comercial/products", c)) {
+            if (p.get("id").asLong() == product) cost = new BigDecimal(p.get("purchasePrice").asText());
+        }
+        assertThat(cost).isEqualByComparingTo("110");
+    }
+
     private BigDecimal ledger(Ctx c, String account) throws Exception {
         return new BigDecimal(getJson("/api/accounting/ledger/" + account + "?from=2000-01-01&to=" + LocalDate.now().plusDays(1), c)
                 .get("closingBalance").asText());

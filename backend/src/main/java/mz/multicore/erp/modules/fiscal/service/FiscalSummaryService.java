@@ -28,10 +28,21 @@ public class FiscalSummaryService {
 
     private final InvoiceRepository invoiceRepository;
     private final PurchaseRepository purchaseRepository;
+    private final mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository;
+    private final mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository;
 
     public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository) {
+        this(invoiceRepository, purchaseRepository, null, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository,
+                                mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository,
+                                mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository) {
         this.invoiceRepository = invoiceRepository;
         this.purchaseRepository = purchaseRepository;
+        this.creditNoteRepository = creditNoteRepository;
+        this.debitNoteRepository = debitNoteRepository;
     }
 
     @Transactional(readOnly = true)
@@ -51,8 +62,8 @@ public class FiscalSummaryService {
         BigDecimal outputTax = BigDecimal.ZERO;
 
         for (Invoice inv : invoiceRepository.findByCompanyId(companyId)) {
-            if (inv.getStatus() == InvoiceStatus.CANCELLED) continue;
-            if (inv.getStatus() != InvoiceStatus.APPROVED && inv.getStatus() != InvoiceStatus.PAID) continue;
+            // VAT is due when the invoice is issued, paid or not: a partially paid invoice counts in full.
+            if (inv.getStatus() == null || !inv.getStatus().isRealisedSale()) continue;
             LocalDateTime created = inv.getCreatedAt();
             if (created == null || created.isBefore(start) || created.isAfter(end)) continue;
 
@@ -65,6 +76,26 @@ public class FiscalSummaryService {
                     inv.getInvoiceNumber(),
                     inv.getClient() != null ? inv.getClient().getName() : "—",
                     base, tax, total));
+        }
+
+        // Approved credit notes reduce the output tax of the month they are issued in; debit notes increase it.
+        if (creditNoteRepository != null) {
+            for (var note : creditNoteRepository.findByCompanyId(companyId)) {
+                if (note.getStatus() != mz.multicore.erp.modules.comercial.model.NoteStatus.APPROVED || !inPeriod(note.getIssueDate(), start, end)) continue;
+                salesBase = salesBase.subtract(nz(note.getTotalBeforeTax()));
+                outputTax = outputTax.subtract(nz(note.getTaxAmount()));
+                sales.add(new IvaSummaryDTO.IvaLineDTO(note.getNoteNumber(), note.getClient() != null ? note.getClient().getName() : "—",
+                        nz(note.getTotalBeforeTax()).negate(), nz(note.getTaxAmount()).negate(), nz(note.getTotalAmount()).negate()));
+            }
+        }
+        if (debitNoteRepository != null) {
+            for (var note : debitNoteRepository.findByCompanyId(companyId)) {
+                if (note.getStatus() != mz.multicore.erp.modules.comercial.model.NoteStatus.APPROVED || !inPeriod(note.getIssueDate(), start, end)) continue;
+                salesBase = salesBase.add(nz(note.getTotalBeforeTax()));
+                outputTax = outputTax.add(nz(note.getTaxAmount()));
+                sales.add(new IvaSummaryDTO.IvaLineDTO(note.getNoteNumber(), note.getClient() != null ? note.getClient().getName() : "—",
+                        nz(note.getTotalBeforeTax()), nz(note.getTaxAmount()), nz(note.getTotalAmount())));
+            }
         }
 
         List<IvaSummaryDTO.IvaLineDTO> purchases = new ArrayList<>();
@@ -99,6 +130,10 @@ public class FiscalSummaryService {
                 salesBase, outputTax, purchasesBase, inputTax, netDue,
                 prevCredit, payableAmount, creditToCarry, fiscalStatus,
                 sales, purchases);
+    }
+
+    private static boolean inPeriod(LocalDateTime date, LocalDateTime start, LocalDateTime end) {
+        return date != null && !date.isBefore(start) && !date.isAfter(end);
     }
 
     private BigDecimal nz(BigDecimal v) {

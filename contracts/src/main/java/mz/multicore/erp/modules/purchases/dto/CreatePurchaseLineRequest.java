@@ -15,7 +15,8 @@ public record CreatePurchaseLineRequest(
         @NotNull(message = "Preço unitário é obrigatório.")
         @Positive(message = "Preço unitário deve ser positivo.") BigDecimal unitPrice,
         String batchNumber,
-        @NotNull(message = "Validade do lote é obrigatória.") LocalDate expirationDate,
+        // Only perishable products (tracksExpiry) need it; the stock service enforces that on intake.
+        LocalDate expirationDate,
         String serialNumber,
         /**
          * Taxa de IVA da linha <b>como vem na factura do fornecedor</b> (ex.: 0.16, 0.05, 0.00).

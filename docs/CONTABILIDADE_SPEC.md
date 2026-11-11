@@ -188,3 +188,16 @@ lote do plano (`PRODUCTION_RUN`); a venda credita 3401 pelo custo deles e 3201 p
 devolução repõe cada parte na sua conta; quebras e acertos desses artigos mexem em 3401. Sem a conta 3401 no plano,
 fica tudo em 3201. Código: `GoodsAccounts` (accounting) e `BomFinishedGoodsLookup` (manufacturing). Testes:
 `GoodsAccountsTest`, `InventoryPostingHttpIntegrationTest`.
+
+## Custo médio, IVA e POS (2026-11-11)
+
+- **Custo médio nas compras:** a compra directa e a recepção de encomenda passam a actualizar o custo do artigo
+  pela média ponderada (stock da empresa ao custo antigo + quantidade comprada ao preço sem IVA)
+  (`InventoryService.registerPurchase`, `WeightedAverageCost`). Antes o custo ficava o que estava na ficha, e o CMVMC,
+  as quebras e os acertos usavam um custo desactualizado. Artigo sem custo ou sem stock fica com o preço da compra.
+- **Apuramento do IVA:** conta as faturas pagas em parte (antes só aprovadas e pagas) e as notas de crédito e de
+  débito aprovadas no mês (`FiscalSummaryService`). Teste: `VatSettlementHarnessTest`.
+- **POS:** linha `CREDIT` fica em dívida; pagamento misto lança numerário em Caixa e o resto em Banco; vale de loja
+  abate a Clientes; reembolso de devolução em dinheiro lança D Clientes / C Caixa ou Banco (`CUSTOMER_REFUND`).
+- **Compra sem validade obrigatória:** só os artigos perecíveis (`tracksExpiry`) exigem validade na entrada.
+

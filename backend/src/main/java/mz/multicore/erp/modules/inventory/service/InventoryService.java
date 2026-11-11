@@ -255,6 +255,14 @@ public class InventoryService {
         return stockMovementService.registerMovement(product, warehouse, quantity, movementType, batchNumber, serialNumber, description, expirationDate);
     }
 
+    /** Purchase entry: the product cost becomes the weighted average of the stock held and this purchase. */
+    @Transactional
+    public StockMovement registerPurchase(Product product, Warehouse warehouse, BigDecimal quantity, BigDecimal unitCost,
+                                          String batchNumber, String serialNumber, String description, LocalDate expiry) {
+        WeightedAverageCost.apply(stockRepository, product, warehouse, quantity, unitCost);
+        return registerMovement(product, warehouse, quantity, "PURCHASE", batchNumber, serialNumber, description, expiry);
+    }
+
     @Transactional
     public StockMovementDTO registerMovement(RegisterMovementRequest request) {
         return stockMovementService.registerMovement(request);
