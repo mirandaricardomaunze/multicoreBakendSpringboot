@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.recurring.service;
 
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.recurring.dto.BatchBillingResultDTO;
 import mz.multicore.erp.modules.recurring.dto.CreateRecurringContractRequest;
@@ -34,10 +34,10 @@ public class RecurringContractService {
             RecurringContractRepository contractRepository,
             RecurringBillingLogRepository billingLogRepository,
             CompanyLookup companyLookup,
-            ClientRepository clientRepository
+            ClientLookup clientLookup
     ) {
         this(
-                new RecurringContractLifecycleService(contractRepository, companyLookup, clientRepository),
+                new RecurringContractLifecycleService(contractRepository, companyLookup, clientLookup),
                 new RecurringBatchBillingProcessor(contractRepository, billingLogRepository)
         );
     }

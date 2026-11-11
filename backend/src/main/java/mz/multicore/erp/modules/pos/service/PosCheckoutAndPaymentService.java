@@ -9,6 +9,7 @@ import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -38,7 +39,7 @@ import java.util.Optional;
 public class PosCheckoutAndPaymentService {
 
     private final InvoiceRepository invoiceRepository;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final CompanyLookup companyLookup;
@@ -58,7 +59,7 @@ public class PosCheckoutAndPaymentService {
     private final mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer; // respeita reservas; nulo só no construtor legado
 
     public PosCheckoutAndPaymentService(
-            InvoiceRepository invoiceRepository, ClientRepository clientRepository,
+            InvoiceRepository invoiceRepository, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, PaymentEntryRepository paymentEntryRepository,
@@ -71,7 +72,7 @@ public class PosCheckoutAndPaymentService {
         this.priceGuard = priceGuard;
         this.saleStockIssuer = saleStockIssuer;
         this.invoiceRepository = invoiceRepository;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.companyLookup = companyLookup;
@@ -120,8 +121,7 @@ public class PosCheckoutAndPaymentService {
         Client client;
         String walkInLabel = null;
         if (request.clientId() != null) {
-            client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."));
+            client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         } else {
             if (request.walkInName() == null || request.walkInName().trim().isBlank()) {
                 throw new BusinessRuleException("É obrigatório indicar o nome do cliente para efetuar a venda no POS.");

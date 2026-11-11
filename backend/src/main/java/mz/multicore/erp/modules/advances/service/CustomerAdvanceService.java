@@ -25,11 +25,11 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.Receipt;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -63,7 +63,7 @@ public class CustomerAdvanceService {
     private final AdvanceProductProvisioner productProvisioner;
     private final ComercialService comercialService;
     private final CreditNoteService creditNoteService;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
     private final OrderRepository orderRepository;
     private final InvoiceRepository invoiceRepository;
@@ -74,7 +74,7 @@ public class CustomerAdvanceService {
 
     public CustomerAdvanceService(CustomerAdvanceRepository advanceRepository, AdvanceProductProvisioner productProvisioner,
                                   ComercialService comercialService, CreditNoteService creditNoteService,
-                                  ClientRepository clientRepository, CompanyLookup companyLookup,
+                                  ClientLookup clientLookup, CompanyLookup companyLookup,
                                   OrderRepository orderRepository, InvoiceRepository invoiceRepository,
                                   ReceiptRepository receiptRepository, CreditNoteRepository creditNoteRepository,
                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
@@ -82,7 +82,7 @@ public class CustomerAdvanceService {
         this.productProvisioner = productProvisioner;
         this.comercialService = comercialService;
         this.creditNoteService = creditNoteService;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
         this.orderRepository = orderRepository;
         this.invoiceRepository = invoiceRepository;
@@ -107,8 +107,7 @@ public class CustomerAdvanceService {
         if (AdvancePayments.isOffsetPayment(request.paymentMethod())) {
             throw new BusinessRuleException("Escolha a forma como o cliente pagou o sinal.");
         }
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("O adiantamento é de um cliente identificado, não do Consumidor Final.");
         }

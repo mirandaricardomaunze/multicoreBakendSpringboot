@@ -10,8 +10,8 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -52,7 +52,7 @@ public class ConsignmentService {
     private static final String MOVEMENT_TYPE = "TRANSFER";
 
     private final ConsignmentDeliveryRepository deliveryRepository;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
@@ -65,7 +65,7 @@ public class ConsignmentService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
-    public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientRepository clientRepository,
+    public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientLookup clientLookup,
                               ProductLookup productLookup, WarehouseRepository warehouseRepository,
                               StockRepository stockRepository, InvoiceRepository invoiceRepository,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
@@ -74,7 +74,7 @@ public class ConsignmentService {
                               ComercialService comercialService, DocumentNumberService documentNumberService,
                               AuditLogService auditLogService) {
         this.deliveryRepository = deliveryRepository;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
@@ -102,8 +102,7 @@ public class ConsignmentService {
         PermissionGuard.requireSeller("entregar em consignação");
         var existing = deliveryRepository.findByCompanyIdAndRequestKey(request.companyId(), request.requestKey());
         if (existing.isPresent()) return toDto(existing.get());
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Revendedor não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("A consignação é para um revendedor identificado, não para o Consumidor Final.");
         }

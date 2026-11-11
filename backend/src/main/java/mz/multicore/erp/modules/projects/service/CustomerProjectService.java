@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Order;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -35,19 +35,19 @@ public class CustomerProjectService {
 
     private final CustomerProjectRepository projectRepository;
     private final CustomerProjectOrderRepository linkRepository;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
     private final OrderRepository orderRepository;
     private final InvoiceRepository invoiceRepository;
     private final AuditLogService auditLogService;
 
     public CustomerProjectService(CustomerProjectRepository projectRepository, CustomerProjectOrderRepository linkRepository,
-                                  ClientRepository clientRepository, CompanyLookup companyLookup,
+                                  ClientLookup clientLookup, CompanyLookup companyLookup,
                                   OrderRepository orderRepository, InvoiceRepository invoiceRepository,
                                   AuditLogService auditLogService) {
         this.projectRepository = projectRepository;
         this.linkRepository = linkRepository;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
         this.orderRepository = orderRepository;
         this.invoiceRepository = invoiceRepository;
@@ -64,8 +64,7 @@ public class CustomerProjectService {
     public CustomerProjectDTO save(SaveCustomerProjectRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
         PermissionGuard.requireSeller("registar obra de cliente");
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("Uma obra pertence a um cliente identificado, não ao Consumidor Final.");
         }

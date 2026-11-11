@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.pricing.dto.ResolvedPriceDTO;
 import mz.multicore.erp.modules.pricing.repository.ClientPriceListRepository;
@@ -43,16 +43,16 @@ public class PriceResolutionService {
 
     private final ClientPriceListRepository assignmentRepository;
     private final PriceListItemRepository itemRepository;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
 
     public PriceResolutionService(ClientPriceListRepository assignmentRepository,
                                   PriceListItemRepository itemRepository,
-                                  ClientRepository clientRepository,
+                                  ClientLookup clientLookup,
                                   ProductLookup productLookup) {
         this.assignmentRepository = assignmentRepository;
         this.itemRepository = itemRepository;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.productLookup = productLookup;
     }
 
@@ -127,8 +127,7 @@ public class PriceResolutionService {
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
         PriceSelection selection = PriceSelection.NONE;
         if (clientId != null) {
-            clientRepository.findByIdAndCompaniesId(clientId, companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+            clientLookup.requireForCompany(clientId, companyId);
             selection = selectionFor(companyId, clientId, LocalDate.now());
         }
         ResolvedPrice price = resolve(selection, product, quantity);

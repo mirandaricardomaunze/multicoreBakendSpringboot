@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.backup.service;
 
 import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
@@ -30,7 +30,7 @@ public class BackupDataCollector {
 
     private final AppUserRepository userRepository;
     private final CompanyLookup companyLookup;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final SupplierRepository supplierRepository;
     private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
@@ -48,7 +48,7 @@ public class BackupDataCollector {
     public BackupDataCollector(
             AppUserRepository userRepository,
             CompanyLookup companyLookup,
-            ClientRepository clientRepository,
+            ClientLookup clientLookup,
             SupplierRepository supplierRepository,
             ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
@@ -64,7 +64,7 @@ public class BackupDataCollector {
     ) {
         this.userRepository = userRepository;
         this.companyLookup = companyLookup;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.supplierRepository = supplierRepository;
         this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
@@ -103,7 +103,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("clients", clientRepository == null ? List.of() : clientRepository.findDistinctByCompaniesIdOrderByName(companyId).stream().map(c -> {
+        data.put("clients", clientLookup == null ? List.of() : clientLookup.listForCompany(companyId).stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", c.getId());
             m.put("name", c.getName());

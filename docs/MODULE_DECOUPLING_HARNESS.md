@@ -33,7 +33,7 @@ correm sempre no gate.
 
 | ID | Garantia | Teste |
 |---|---|---|
-| MD-V01 | `ClientLookup` e migração de todos os leitores de `ClientRepository` (15) | `ClientLookupTest` |
+| MD-V01 | `ClientLookup` em `comercial.service`: `requireForCompany`/`findForCompany`, `require`/`find`, `listForCompany`; "Cliente não encontrado." normalizado; escrita do seeder via `ClientCommandService.saveClient`; migração de todos os leitores de `ClientRepository` (15) — **feito** | `ClientLookupTest` |
 | MD-V02 | `InvoiceLookup` e migração de `inventory` e `printing` | `InvoiceLookupTest` |
 | MD-V03 | Restantes leitores de `InvoiceRepository` (30 no total) | `ModuleDecouplingHarnessTest` |
 | MD-V04 | `OrderLookup` cobre encomendas, cotações e guias de entrega; leitores migrados | `OrderLookupTest` |

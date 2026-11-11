@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
 import mz.multicore.erp.modules.backup.dto.BackupVerificationDTO;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
@@ -50,7 +50,7 @@ public class BackupService {
     public BackupService(
             AppUserRepository userRepository,
             CompanyLookup companyLookup,
-            ClientRepository clientRepository,
+            ClientLookup clientLookup,
             SupplierRepository supplierRepository,
             ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
@@ -65,7 +65,7 @@ public class BackupService {
             AuditLogRepository auditLogRepository
     ) {
         this(
-                new BackupDataCollector(userRepository, companyLookup, clientRepository, supplierRepository,
+                new BackupDataCollector(userRepository, companyLookup, clientLookup, supplierRepository,
                         productLookup, warehouseRepository, stockRepository, stockMovementRepository,
                         invoiceRepository, receiptRepository, purchaseRepository, tillSessionRepository,
                         accountRepository, transactionRepository, auditLogRepository),

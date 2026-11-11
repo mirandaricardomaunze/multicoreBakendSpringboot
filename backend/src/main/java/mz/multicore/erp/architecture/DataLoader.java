@@ -1,6 +1,6 @@
 package mz.multicore.erp.architecture;
 
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -42,7 +42,7 @@ public class DataLoader implements CommandLineRunner {
 
     public DataLoader(
             EmployeeRepository employeeRepository,
-            ClientRepository clientRepository,
+            ClientCommandService clientCommandService,
             ProductLookup productLookup,
             ProductCommandService productCommandService,
             TreasuryAccountRepository accountRepository,
@@ -63,7 +63,7 @@ public class DataLoader implements CommandLineRunner {
                 companyLookup, appUserRepository, taxRateRepository,
                 productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
-                employeeRepository, clientRepository, productLookup, productCommandService, accountRepository,
+                employeeRepository, clientCommandService, productLookup, productCommandService, accountRepository,
                 hrService, crmService, companyLookup, companyService, warehouseRepository, stockRepository,
                 appUserRepository, supplierRepository, taxRateRepository,
                 passwordEncoder, this.referenceSeeder);

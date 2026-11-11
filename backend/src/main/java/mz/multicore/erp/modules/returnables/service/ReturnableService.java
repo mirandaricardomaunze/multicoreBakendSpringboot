@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
@@ -52,7 +52,7 @@ public class ReturnableService {
     private final ReturnableItemRepository itemRepository;
     private final ReturnableMovementRepository movementRepository;
     private final ProductLookup productLookup;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
@@ -63,7 +63,7 @@ public class ReturnableService {
     private final AuditLogService auditLogService;
 
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
-                             ProductLookup productLookup, ClientRepository clientRepository,
+                             ProductLookup productLookup, ClientLookup clientLookup,
                              CompanyLookup companyLookup, WarehouseRepository warehouseRepository,
                              StockRepository stockRepository, InvoiceRepository invoiceRepository,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
@@ -71,7 +71,7 @@ public class ReturnableService {
         this.itemRepository = itemRepository;
         this.movementRepository = movementRepository;
         this.productLookup = productLookup;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
@@ -237,8 +237,7 @@ public class ReturnableService {
     }
 
     private Client requireClient(Long companyId, Long clientId) {
-        Client client = clientRepository.findByIdAndCompaniesId(clientId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(clientId, companyId);
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("O vasilhame fica em nome de um cliente identificado, não do Consumidor Final.");
         }

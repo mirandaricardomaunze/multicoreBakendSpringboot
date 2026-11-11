@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
@@ -71,7 +72,7 @@ class CRMServiceTest {
         companyRepository = mock(CompanyRepository.class);
         warehouseRepository = mock(WarehouseRepository.class);
 
-        service = new CRMService(ticketRepository, workSheetRepository, clientRepository,
+        service = new CRMService(ticketRepository, workSheetRepository, new ClientLookup(clientRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 new ProductCommandService(productRepository, mock(ProductCategoryRepository.class)),
                 comercialService, new CompanyLookup(companyRepository), warehouseRepository);

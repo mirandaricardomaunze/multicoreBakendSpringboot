@@ -3,7 +3,7 @@ package mz.multicore.erp.architecture;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
@@ -41,7 +41,7 @@ import java.util.List;
 public class DemoEnterpriseDataSeeder {
 
     private final EmployeeRepository employeeRepository;
-    private final ClientRepository clientRepository;
+    private final ClientCommandService clientCommandService;
     private final ProductLookup productLookup;
     private final ProductCommandService productCommandService;
     private final TreasuryAccountRepository accountRepository;
@@ -58,7 +58,7 @@ public class DemoEnterpriseDataSeeder {
     private final ReferenceAndAdminDataSeeder referenceSeeder;
 
     public DemoEnterpriseDataSeeder(
-            EmployeeRepository employeeRepository, ClientRepository clientRepository,
+            EmployeeRepository employeeRepository, ClientCommandService clientCommandService,
             ProductLookup productLookup, ProductCommandService productCommandService,
             TreasuryAccountRepository accountRepository,
             HRService hrService, CRMService crmService,
@@ -68,7 +68,7 @@ public class DemoEnterpriseDataSeeder {
             TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
         this.employeeRepository = employeeRepository;
-        this.clientRepository = clientRepository;
+        this.clientCommandService = clientCommandService;
         this.productLookup = productLookup;
         this.productCommandService = productCommandService;
         this.accountRepository = accountRepository;
@@ -212,7 +212,7 @@ public class DemoEnterpriseDataSeeder {
         c.setEmail(email);
         c.setAddress(address);
         c.getCompanies().add(company);
-        return clientRepository.save(c);
+        return clientCommandService.saveClient(c);
     }
 
     private Product createProduct(String sku, String reference, String barcode, String name,

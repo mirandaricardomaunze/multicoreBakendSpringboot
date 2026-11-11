@@ -127,7 +127,7 @@ class QuotationConversionHarnessTest {
         creditNoteRepository = mock(CreditNoteRepository.class);
 
         posService = new POSService(
-                tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
+                tillSessionRepository, tillMovementRepository, invoiceRepository, new ClientLookup(clientRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository, new CompanyLookup(companyRepository), treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,

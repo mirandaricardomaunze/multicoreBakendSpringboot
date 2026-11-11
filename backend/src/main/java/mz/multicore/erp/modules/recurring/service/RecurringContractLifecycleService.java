@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.recurring.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Client;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.recurring.dto.CreateRecurringContractRequest;
@@ -22,16 +22,16 @@ public class RecurringContractLifecycleService {
 
     private final RecurringContractRepository contractRepository;
     private final CompanyLookup companyLookup;
-    private final ClientRepository clientRepository;
+    private final ClientLookup clientLookup;
 
     public RecurringContractLifecycleService(
             RecurringContractRepository contractRepository,
             CompanyLookup companyLookup,
-            ClientRepository clientRepository
+            ClientLookup clientLookup
     ) {
         this.contractRepository = contractRepository;
         this.companyLookup = companyLookup;
-        this.clientRepository = clientRepository;
+        this.clientLookup = clientLookup;
     }
 
     public List<RecurringContractDTO> listContracts(Long companyId) {
@@ -55,8 +55,7 @@ public class RecurringContractLifecycleService {
         }
 
         Company company = companyLookup.require(companyId);
-        Client client = clientRepository.findById(request.customerId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado: " + request.customerId()));
+        Client client = clientLookup.require(request.customerId());
 
         if (request.startDate() == null) {
             throw new BusinessRuleException("A data de início do contrato é obrigatória.");

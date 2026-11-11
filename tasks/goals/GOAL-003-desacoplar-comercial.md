@@ -1,7 +1,7 @@
 ---
 id: GOAL-003
 title: "Documentos comerciais e clientes só por Lookups do comercial"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -19,7 +19,7 @@ Cada critério de migração apaga as suas linhas de
 
 ## Critérios de aceitação
 
-- [ ] MD-V01 — ClientLookup e leitores de ClientRepository migrados — `ClientLookupTest`
+- [x] MD-V01 — ClientLookup e leitores de ClientRepository migrados — `ClientLookupTest`
 - [ ] MD-V02 — InvoiceLookup e migração de inventory e printing — `InvoiceLookupTest`
 - [ ] MD-V03 — restantes leitores de InvoiceRepository — `ModuleDecouplingHarnessTest`
 - [ ] MD-V04 — OrderLookup (encomendas, cotações, guias) e leitores migrados — `OrderLookupTest`
@@ -38,3 +38,4 @@ Cada critério de migração apaga as suas linhas de
 ## Registo de progresso
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
+- 2026-11-11 · MD-V01 · `ClientLookup` (`requireForCompany`/`findForCompany`, `require`/`find`, `listForCompany`; "Cliente não encontrado." normalizado) e `ClientCommandService.saveClient` para o seeder demo; os 15 leitores de fora (advances, backup, consignment, crm, pos — incluindo o `PosCheckoutAndPaymentService` do import wildcard —, pricing, projects, recurring, returnables, DataLoader/DemoEnterpriseDataSeeder) migrados, 15 linhas apagadas da baseline CA-07; `ClientLookupTest`, testes dos módulos e harnesses verdes.

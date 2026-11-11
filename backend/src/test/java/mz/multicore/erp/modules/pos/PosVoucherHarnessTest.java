@@ -8,6 +8,7 @@ import mz.multicore.erp.modules.comercial.dto.CreditNoteDTO;
 import mz.multicore.erp.modules.comercial.dto.CreditNoteLineDTO;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
@@ -109,7 +110,7 @@ public class PosVoucherHarnessTest {
 
         service = new POSService(
                 tillSessionRepository, tillMovementRepository, invoiceRepository,
-                clientRepository, new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new ClientLookup(clientRepository), new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository, new CompanyLookup(companyRepository),
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
