@@ -1,7 +1,7 @@
 ---
 id: GOAL-002
 title: "Módulos lêem produtos e categorias só pelo ProductLookup"
-status: IN_PROGRESS
+status: DONE
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -23,7 +23,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-P02 — inventory sem Product/ProductCategory Repository — `ModuleDecouplingHarnessTest`
 - [x] MD-P03 — purchases, crm, architecture, promotions, pricing, pos, manufacturing, backup — `ModuleDecouplingHarnessTest`
 - [x] MD-P04 — restantes módulos — `ModuleDecouplingHarnessTest`
-- [ ] MD-P05 — zero ligações a Product/ProductCategory Repository fora de comercial; suite verde — `ModuleDecouplingHarnessTest`
+- [x] MD-P05 — zero ligações a Product/ProductCategory Repository fora de comercial; suite verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
 
@@ -42,3 +42,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-11 · MD-P03 · 25 ficheiros de purchases, crm, architecture (DataLoader e seeders), promotions, pricing, pos, manufacturing e backup lêem produtos/categorias só pelo `ProductLookup`; CRM (tarifa e produtos internos) e seeders gravam via `ProductCommandService`; `PosCheckoutAndPaymentService` (import wildcard, fora da baseline) também migrado; mensagens específicas mantidas via `find*`; 28 linhas apagadas do baseline CA-07; testes de compras, POS, CRM, promoções, produção, backup, segurança e harnesses verdes.
 - 2026-11-11 · gate · DG-10 corrigido: a ordem dos campos `ProductCommandService`/`ProductLookup` no `WorkSheetService` coincidia linha a linha com o `ReferenceAndAdminDataSeeder` e foi trocada; `CRMServiceTest` e harnesses de arquitectura verdes.
 - 2026-11-11 · MD-P04 · weighbridge, variants, units, returnables, expiry, consignment, butchery, bulkstock e advances lêem produtos/categorias só pelo `ProductLookup` (`find*`, mensagens específicas mantidas); unidades, variantes e o artigo "Adiantamento" gravam via `ProductCommandService`; 10 linhas apagadas do baseline CA-07; testes HTTP/regras desses módulos, `ProductLookupTest` e harnesses verdes.
+- 2026-11-11 · MD-P05 · zero ligações a `ProductRepository`/`ProductCategoryRepository` fora de `comercial` (baseline CA-07 sem linhas de produto; o import wildcard `comercial.repository.*` do `PosCheckoutAndPaymentService` já não usa produto e fica para o GOAL-003); goal em `DONE`, onda GOAL-002 com 0 ligações no `ModuleDecouplingHarnessTest`; suite completa (`mvn test`) verde.

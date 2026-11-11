@@ -27,7 +27,7 @@ correm sempre no gate.
 | MD-P02 | `inventory` (12) sem Product/ProductCategory Repository; custo médio grava via `ProductCommandService.saveProduct` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-P03 | `purchases`, `crm`, `architecture`, `promotions`, `pricing`, `pos`, `manufacturing`, `backup`; CRM e seeders gravam via `ProductCommandService` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-P04 | Restantes (weighbridge, variants, units, returnables, expiry, consignment, butchery, bulkstock, advances); units, variants e advances gravam via `ProductCommandService` — **feito** | `ModuleDecouplingHarnessTest` |
-| MD-P05 | Zero ligações a Product/ProductCategory Repository fora de `comercial`; suite verde | `ModuleDecouplingHarnessTest` |
+| MD-P05 | Zero ligações a Product/ProductCategory Repository fora de `comercial` (verificado pela onda GOAL-002 em `DONE`); suite verde — **feito** | `ModuleDecouplingHarnessTest` |
 
 ## GOAL-003 — Documentos comerciais e clientes (79)
 
