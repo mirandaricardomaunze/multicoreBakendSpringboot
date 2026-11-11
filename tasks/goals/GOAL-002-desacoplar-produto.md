@@ -1,7 +1,7 @@
 ---
 id: GOAL-002
 title: "Módulos lêem produtos e categorias só pelo ProductLookup"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -19,7 +19,7 @@ Cada critério de migração apaga as suas linhas de
 
 ## Critérios de aceitação
 
-- [ ] MD-P01 — ProductLookup (com categorias) e comandos de gravação no Service de produto — `ProductLookupTest`
+- [x] MD-P01 — ProductLookup (com categorias) e comandos de gravação no Service de produto — `ProductLookupTest`
 - [ ] MD-P02 — inventory sem Product/ProductCategory Repository — `ModuleDecouplingHarnessTest`
 - [ ] MD-P03 — purchases, crm, architecture, promotions, pricing, pos, manufacturing, backup — `ModuleDecouplingHarnessTest`
 - [ ] MD-P04 — restantes módulos — `ModuleDecouplingHarnessTest`
@@ -37,3 +37,4 @@ Cada critério de migração apaga as suas linhas de
 ## Registo de progresso
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
+- 2026-11-11 · MD-P01 · `comercial.service.ProductLookup` (produtos e categorias; `require*` com "Produto não encontrado." / "Categoria não encontrada.", `find*` com Optional para manter mensagens já testadas) e `ProductCommandService` (`saveProduct`, `saveCategory`) para gravações alheias; `ProductLookupTest` verde. Nota: os testes correm a partir da raiz do reactor (DTOs no módulo `contracts`).

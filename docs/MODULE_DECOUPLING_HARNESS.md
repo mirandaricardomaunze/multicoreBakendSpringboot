@@ -23,7 +23,7 @@ correm sempre no gate.
 
 | ID | Garantia | Teste |
 |---|---|---|
-| MD-P01 | `ProductLookup` (inclui categorias) em `comercial.service`: `requireForCompany`, `listForCompany`, `findBySkuForCompany`, `findByBarcode`, `findAllById`; gravações alheias via comando do Service de produto | `ProductLookupTest` |
+| MD-P01 | `ProductLookup` (inclui categorias) em `comercial.service`: `requireForCompany`, `listForCompany`, `findBySkuForCompany`, `findByBarcode`, `findAllById` (mais `findForCompany`, `require`/`find`, `findBySku`, `findByReferenceForCompany`, `findByBarcodeForCompany`, `countByBusinessUnit` e categorias `require/findCategoryForCompany`, `findAllCategories`, `countCategories`); gravações alheias via `ProductCommandService.saveProduct`/`saveCategory` — **feito** | `ProductLookupTest` |
 | MD-P02 | `inventory` (12) sem Product/ProductCategory Repository | `ModuleDecouplingHarnessTest` |
 | MD-P03 | `purchases`, `crm`, `architecture`, `promotions`, `pricing`, `pos`, `manufacturing`, `backup` | `ModuleDecouplingHarnessTest` |
 | MD-P04 | Restantes (weighbridge, variants, units, returnables, expiry, consignment, butchery, bulkstock, advances) | `ModuleDecouplingHarnessTest` |
