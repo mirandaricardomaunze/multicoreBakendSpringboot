@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 import mz.multicore.erp.modules.purchases.model.BusinessUnit;
 import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
@@ -15,12 +15,12 @@ import java.util.List;
 public class BusinessUnitQueryAndPolicyService {
 
     private final BusinessUnitRepository businessUnitRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
 
     public BusinessUnitQueryAndPolicyService(BusinessUnitRepository businessUnitRepository,
-                                             ProductRepository productRepository) {
+                                             ProductLookup productLookup) {
         this.businessUnitRepository = businessUnitRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
     }
 
     public List<BusinessUnitDTO> findByCompany(Long companyId) {
@@ -56,7 +56,7 @@ public class BusinessUnitQueryAndPolicyService {
     }
 
     public BusinessUnitDTO toDTO(BusinessUnit unit) {
-        long count = productRepository.countByBusinessUnitId(unit.getId());
+        long count = productLookup.countByBusinessUnit(unit.getId());
         return new BusinessUnitDTO(
                 unit.getId(),
                 unit.getCode(),

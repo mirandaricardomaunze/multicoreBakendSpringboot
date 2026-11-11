@@ -9,6 +9,7 @@ import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
@@ -38,7 +39,7 @@ public class PosCheckoutAndPaymentService {
 
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
@@ -58,7 +59,7 @@ public class PosCheckoutAndPaymentService {
 
     public PosCheckoutAndPaymentService(
             InvoiceRepository invoiceRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, WarehouseRepository warehouseRepository,
+            ProductLookup productLookup, WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, PaymentEntryRepository paymentEntryRepository,
             TillMovementRepository tillMovementRepository, WalkInClientProvider walkInClientProvider,
@@ -71,7 +72,7 @@ public class PosCheckoutAndPaymentService {
         this.saleStockIssuer = saleStockIssuer;
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
@@ -152,7 +153,7 @@ public class PosCheckoutAndPaymentService {
         BigDecimal totalTax = BigDecimal.ZERO;
 
         for (POSCheckoutLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
+            Product product = productLookup.findForCompany(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId())).requireOrdinarySale();
             BigDecimal unitPrice = (lineReq.unitPrice() != null && lineReq.unitPrice().compareTo(BigDecimal.ZERO) > 0)
                     ? lineReq.unitPrice() : PosPriceGuard.defaultPrice(priceGuard, request, product, lineReq.quantity());

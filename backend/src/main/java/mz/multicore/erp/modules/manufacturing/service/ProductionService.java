@@ -1,6 +1,6 @@
 package mz.multicore.erp.modules.manufacturing.service;
 
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -34,22 +34,22 @@ public class ProductionService {
     public ProductionService(BillOfMaterialsRepository bomRepository,
                              ProductionOrderRepository productionOrderRepository,
                              CompanyLookup companyLookup,
-                             ProductRepository productRepository,
+                             ProductLookup productLookup,
                              WarehouseRepository warehouseRepository,
                              StockRepository stockRepository) {
-        this(bomRepository, productionOrderRepository, companyLookup, productRepository, warehouseRepository, stockRepository, null, null);
+        this(bomRepository, productionOrderRepository, companyLookup, productLookup, warehouseRepository, stockRepository, null, null);
     }
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
                              ProductionOrderRepository productionOrderRepository,
                              CompanyLookup companyLookup,
-                             ProductRepository productRepository,
+                             ProductLookup productLookup,
                              WarehouseRepository warehouseRepository,
                              StockRepository stockRepository,
                              ApplicationEventPublisher eventPublisher,
                              mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService) {
         this(
-                new BillOfMaterialsService(bomRepository, companyLookup, productRepository),
+                new BillOfMaterialsService(bomRepository, companyLookup, productLookup),
                 new ProductionOrderLifecycleService(productionOrderRepository, bomRepository,
                         companyLookup, warehouseRepository, stockRepository, eventPublisher, movementService)
         );

@@ -7,8 +7,9 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
@@ -36,7 +37,8 @@ public class WorkSheetService {
 
     private final WorkSheetRepository workSheetRepository;
     private final SupportTicketRepository ticketRepository;
-    private final ProductRepository productRepository;
+    private final ProductCommandService productCommandService;
+    private final ProductLookup productLookup;
     private final ComercialService comercialService;
     private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
@@ -49,14 +51,16 @@ public class WorkSheetService {
     public WorkSheetService(
             WorkSheetRepository workSheetRepository,
             SupportTicketRepository ticketRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
             ComercialService comercialService,
             CompanyLookup companyLookup,
             WarehouseRepository warehouseRepository
     ) {
         this.workSheetRepository = workSheetRepository;
         this.ticketRepository = ticketRepository;
-        this.productRepository = productRepository;
+        this.productCommandService = productCommandService;
+        this.productLookup = productLookup;
         this.comercialService = comercialService;
         this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
@@ -207,7 +211,7 @@ public class WorkSheetService {
 
     public Product internalProduct(Long companyId, String sku, String name, BigDecimal unitPrice,
                                    String description) {
-        Product product = productRepository.findBySkuAndCompaniesId(sku, companyId)
+        Product product = productLookup.findBySkuForCompany(sku, companyId)
                 .orElseGet(() -> {
                     Product created = new Product();
                     created.setSku(sku);
@@ -222,7 +226,7 @@ public class WorkSheetService {
         if (product.isStockTracked()) {
             product.setStockTracked(false);
         }
-        return productRepository.save(product);
+        return productCommandService.saveProduct(product);
     }
 
     public Product labourProduct(Long companyId) {

@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.manufacturing.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.manufacturing.dto.BillOfMaterialsDTO;
@@ -27,17 +27,17 @@ public class BillOfMaterialsService {
 
     private final BillOfMaterialsRepository bomRepository;
     private final CompanyLookup companyLookup;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
 
     @Autowired
     public BillOfMaterialsService(
             BillOfMaterialsRepository bomRepository,
             CompanyLookup companyLookup,
-            ProductRepository productRepository
+            ProductLookup productLookup
     ) {
         this.bomRepository = bomRepository;
         this.companyLookup = companyLookup;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
     }
 
     @Transactional
@@ -49,7 +49,7 @@ public class BillOfMaterialsService {
 
         Company company = companyLookup.require(companyId);
 
-        Product finishedProduct = productRepository.findById(request.finishedProductId())
+        Product finishedProduct = productLookup.find(request.finishedProductId())
                 .orElseThrow(() -> new BusinessRuleException("Produto acabado não encontrado: " + request.finishedProductId()));
 
         BillOfMaterials bom = new BillOfMaterials();
@@ -64,7 +64,7 @@ public class BillOfMaterialsService {
         bom.setActive(true);
 
         for (CreateBomRequest.CreateBomItemRequest itemReq : request.items()) {
-            Product rawMaterial = productRepository.findById(itemReq.rawMaterialProductId())
+            Product rawMaterial = productLookup.find(itemReq.rawMaterialProductId())
                     .orElseThrow(() -> new BusinessRuleException("Matéria-prima não encontrada: " + itemReq.rawMaterialProductId()));
 
             BomItem item = new BomItem();

@@ -7,8 +7,11 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -69,7 +72,9 @@ class CRMServiceTest {
         warehouseRepository = mock(WarehouseRepository.class);
 
         service = new CRMService(ticketRepository, workSheetRepository, clientRepository,
-                productRepository, comercialService, new CompanyLookup(companyRepository), warehouseRepository);
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new ProductCommandService(productRepository, mock(ProductCategoryRepository.class)),
+                comercialService, new CompanyLookup(companyRepository), warehouseRepository);
 
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(i -> {
             SupportTicket t = i.getArgument(0);

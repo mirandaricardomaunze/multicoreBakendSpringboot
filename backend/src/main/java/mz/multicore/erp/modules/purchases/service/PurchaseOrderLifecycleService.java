@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -36,7 +36,7 @@ public class PurchaseOrderLifecycleService {
 
     private final PurchaseOrderRepository orderRepository;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
@@ -45,7 +45,7 @@ public class PurchaseOrderLifecycleService {
     public PurchaseOrderLifecycleService(
             PurchaseOrderRepository orderRepository,
             SupplierRepository supplierRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
@@ -53,7 +53,7 @@ public class PurchaseOrderLifecycleService {
     ) {
         this.orderRepository = orderRepository;
         this.supplierRepository = supplierRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
@@ -93,7 +93,7 @@ public class PurchaseOrderLifecycleService {
         BigDecimal totalTax = BigDecimal.ZERO;
 
         for (CreatePurchaseOrderLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
+            Product product = productLookup.findForCompany(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
             BigDecimal taxRate = lineReq.taxRate() != null ? lineReq.taxRate() : product.effectiveTaxRate();
@@ -161,7 +161,7 @@ public class PurchaseOrderLifecycleService {
         BigDecimal total = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
         for (CreatePurchaseOrderLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
+            Product product = productLookup.findForCompany(lineReq.productId(), companyId)
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
             BigDecimal taxRate = lineReq.taxRate() != null ? lineReq.taxRate() : product.effectiveTaxRate();
             LineCalculator.LineAmounts amounts = LineCalculator.compute(

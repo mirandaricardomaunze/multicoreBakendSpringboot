@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 import mz.multicore.erp.modules.purchases.dto.CreateBusinessUnitRequest;
@@ -32,9 +32,9 @@ public class BusinessUnitService {
     public BusinessUnitService(BusinessUnitRepository businessUnitRepository,
                                SupplierRepository supplierRepository,
                                CompanyLookup companyLookup,
-                               ProductRepository productRepository,
+                               ProductLookup productLookup,
                                AuditLogService auditLogService) {
-        BusinessUnitQueryAndPolicyService qp = new BusinessUnitQueryAndPolicyService(businessUnitRepository, productRepository);
+        BusinessUnitQueryAndPolicyService qp = new BusinessUnitQueryAndPolicyService(businessUnitRepository, productLookup);
         this.queryAndPolicyService = qp;
         this.mutationService = new BusinessUnitMutationService(
                 businessUnitRepository, supplierRepository, companyLookup, auditLogService, qp);

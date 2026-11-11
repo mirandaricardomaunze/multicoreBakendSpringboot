@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -37,7 +37,7 @@ public class DirectPurchaseService {
     public DirectPurchaseService(
             SupplierRepository supplierRepository,
             PurchaseRepository purchaseRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup,
             InventoryService inventoryService,
@@ -47,7 +47,7 @@ public class DirectPurchaseService {
     ) {
         this(
                 new DirectPurchaseRegistrationService(
-                        supplierRepository, purchaseRepository, productRepository, warehouseRepository,
+                        supplierRepository, purchaseRepository, productLookup, warehouseRepository,
                         companyLookup, inventoryService, financeService, documentNumberService, eventPublisher),
                 new DirectPurchaseQueryService(purchaseRepository)
         );

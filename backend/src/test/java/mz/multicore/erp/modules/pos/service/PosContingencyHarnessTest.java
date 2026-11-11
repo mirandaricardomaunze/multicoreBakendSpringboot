@@ -9,7 +9,9 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -111,7 +113,7 @@ class PosContingencyHarnessTest {
                 tillMovementRepository,
                 invoiceRepository,
                 clientRepository,
-                productRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository,
                 new CompanyLookup(companyRepository),
                 treasuryAccountRepository,

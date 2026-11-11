@@ -15,6 +15,7 @@ import mz.multicore.erp.modules.comercial.model.QuotationStatus;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.model.Company;
@@ -127,7 +128,8 @@ class QuotationConversionHarnessTest {
 
         posService = new POSService(
                 tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
-                productRepository, warehouseRepository, new CompanyLookup(companyRepository), treasuryAccountRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                warehouseRepository, new CompanyLookup(companyRepository), treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
                 eventPublisher, storeVoucherRepository, creditNoteRepository, quotationRepository

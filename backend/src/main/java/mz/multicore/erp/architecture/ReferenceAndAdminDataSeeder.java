@@ -1,7 +1,8 @@
 package mz.multicore.erp.architecture;
 
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
@@ -21,7 +22,8 @@ public class ReferenceAndAdminDataSeeder {
     private final CompanyLookup companyLookup;
     private final AppUserRepository appUserRepository;
     private final TaxRateRepository taxRateRepository;
-    private final ProductCategoryRepository productCategoryRepository;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
     private final String superAdminPassword;
     private final PasswordEncoder passwordEncoder;
 
@@ -29,13 +31,15 @@ public class ReferenceAndAdminDataSeeder {
             CompanyLookup companyLookup,
             AppUserRepository appUserRepository,
             TaxRateRepository taxRateRepository,
-            ProductCategoryRepository productCategoryRepository,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
             @Value("${app.superadmin.password:}") String superAdminPassword,
             PasswordEncoder passwordEncoder) {
         this.companyLookup = companyLookup;
         this.appUserRepository = appUserRepository;
         this.taxRateRepository = taxRateRepository;
-        this.productCategoryRepository = productCategoryRepository;
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
         this.superAdminPassword = superAdminPassword;
         this.passwordEncoder = passwordEncoder;
     }
@@ -88,7 +92,7 @@ public class ReferenceAndAdminDataSeeder {
     }
 
     public void seedProductCategories() {
-        if (productCategoryRepository.count() > 0) return;
+        if (productLookup.countCategories() > 0) return;
         seedCategory("ALIMENT", "Alimentação", "#F59E0B");
         seedCategory("BEBIDAS", "Bebidas", "#3B82F6");
         seedCategory("HIGIENE", "Higiene Pessoal", "#10B981");
@@ -105,7 +109,7 @@ public class ReferenceAndAdminDataSeeder {
         c.setColorHex(colorHex);
         c.setActive(true);
         c.setCreatedBy("SYSTEM");
-        productCategoryRepository.save(c);
+        productCommandService.saveCategory(c);
     }
 
     public void seedMozambicanTaxRates() {

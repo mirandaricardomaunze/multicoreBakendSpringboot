@@ -12,6 +12,7 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
@@ -147,7 +148,7 @@ class BusinessUnitHarnessTest {
                 businessUnitRepository,
                 supplierRepository,
                 new CompanyLookup(companyRepository),
-                productRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 auditLogService
         );
 

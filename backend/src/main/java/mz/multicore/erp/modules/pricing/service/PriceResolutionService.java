@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.pricing.dto.ResolvedPriceDTO;
 import mz.multicore.erp.modules.pricing.repository.ClientPriceListRepository;
 import mz.multicore.erp.modules.pricing.repository.PriceListItemRepository;
@@ -44,16 +44,16 @@ public class PriceResolutionService {
     private final ClientPriceListRepository assignmentRepository;
     private final PriceListItemRepository itemRepository;
     private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
 
     public PriceResolutionService(ClientPriceListRepository assignmentRepository,
                                   PriceListItemRepository itemRepository,
                                   ClientRepository clientRepository,
-                                  ProductRepository productRepository) {
+                                  ProductLookup productLookup) {
         this.assignmentRepository = assignmentRepository;
         this.itemRepository = itemRepository;
         this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
     }
 
     /**
@@ -123,7 +123,7 @@ public class PriceResolutionService {
         if (quantity == null || quantity.signum() <= 0) {
             throw new BusinessRuleException("A quantidade tem de ser maior que zero.");
         }
-        Product product = productRepository.findByIdAndCompaniesId(productId, companyId)
+        Product product = productLookup.findForCompany(productId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
         PriceSelection selection = PriceSelection.NONE;
         if (clientId != null) {

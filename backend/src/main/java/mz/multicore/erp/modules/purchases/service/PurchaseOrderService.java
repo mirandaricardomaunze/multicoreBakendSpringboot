@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -43,7 +43,7 @@ public class PurchaseOrderService {
     public PurchaseOrderService(
             PurchaseOrderRepository orderRepository,
             SupplierRepository supplierRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup,
             InventoryService inventoryService,
@@ -55,7 +55,7 @@ public class PurchaseOrderService {
     ) {
         this(
                 orderRepository,
-                new PurchaseOrderLifecycleService(orderRepository, supplierRepository, productRepository,
+                new PurchaseOrderLifecycleService(orderRepository, supplierRepository, productLookup,
                         warehouseRepository, companyLookup, documentNumberService, auditLogService),
                 new PurchaseOrderReceiptExecutor(orderRepository, inventoryService, auditLogService,
                         discrepancyRepository, receiptRepository, payableRegistrar)

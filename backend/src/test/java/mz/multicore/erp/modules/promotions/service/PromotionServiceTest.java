@@ -5,8 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
 import mz.multicore.erp.modules.promotions.model.Promotion;
@@ -45,8 +44,7 @@ class PromotionServiceTest {
         service = new PromotionService(
                 promotionRepository,
                 mock(CompanyLookup.class),
-                mock(ProductRepository.class),
-                mock(ProductCategoryRepository.class),
+                mock(ProductLookup.class),
                 mock(AuditLogService.class));
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");

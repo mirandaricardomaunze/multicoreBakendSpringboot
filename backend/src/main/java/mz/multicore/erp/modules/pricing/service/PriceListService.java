@@ -6,7 +6,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -38,19 +38,19 @@ public class PriceListService {
     private final PriceListItemRepository itemRepository;
     private final ClientPriceListRepository assignmentRepository;
     private final CompanyLookup companyLookup;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final ClientRepository clientRepository;
     private final AuditLogService auditLogService;
 
     public PriceListService(PriceListRepository priceListRepository, PriceListItemRepository itemRepository,
                             ClientPriceListRepository assignmentRepository, CompanyLookup companyLookup,
-                            ProductRepository productRepository, ClientRepository clientRepository,
+                            ProductLookup productLookup, ClientRepository clientRepository,
                             AuditLogService auditLogService) {
         this.priceListRepository = priceListRepository;
         this.itemRepository = itemRepository;
         this.assignmentRepository = assignmentRepository;
         this.companyLookup = companyLookup;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.clientRepository = clientRepository;
         this.auditLogService = auditLogService;
     }
@@ -122,7 +122,7 @@ public class PriceListService {
     @Transactional
     public PriceListItemDTO saveItem(SavePriceListItemRequest request) {
         PriceList list = requireList(request.companyId(), request.priceListId());
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+        Product product = productLookup.findForCompany(request.productId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
         BigDecimal price = request.price();
         if (price == null || price.signum() <= 0) {

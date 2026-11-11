@@ -4,8 +4,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.company.service.CompanyService;
@@ -42,7 +42,8 @@ public class DemoEnterpriseDataSeeder {
 
     private final EmployeeRepository employeeRepository;
     private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
     private final TreasuryAccountRepository accountRepository;
     private final HRService hrService;
     private final CRMService crmService;
@@ -53,22 +54,23 @@ public class DemoEnterpriseDataSeeder {
     private final AppUserRepository appUserRepository;
     private final SupplierRepository supplierRepository;
     private final TaxRateRepository taxRateRepository;
-    private final ProductCategoryRepository productCategoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final ReferenceAndAdminDataSeeder referenceSeeder;
 
     public DemoEnterpriseDataSeeder(
             EmployeeRepository employeeRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, TreasuryAccountRepository accountRepository,
+            ProductLookup productLookup, ProductCommandService productCommandService,
+            TreasuryAccountRepository accountRepository,
             HRService hrService, CRMService crmService,
             CompanyLookup companyLookup, CompanyService companyService,
             WarehouseRepository warehouseRepository, StockRepository stockRepository,
             AppUserRepository appUserRepository, SupplierRepository supplierRepository,
-            TaxRateRepository taxRateRepository, ProductCategoryRepository productCategoryRepository,
+            TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
         this.employeeRepository = employeeRepository;
         this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
         this.accountRepository = accountRepository;
         this.hrService = hrService;
         this.crmService = crmService;
@@ -79,7 +81,6 @@ public class DemoEnterpriseDataSeeder {
         this.appUserRepository = appUserRepository;
         this.supplierRepository = supplierRepository;
         this.taxRateRepository = taxRateRepository;
-        this.productCategoryRepository = productCategoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.referenceSeeder = referenceSeeder;
     }
@@ -93,10 +94,10 @@ public class DemoEnterpriseDataSeeder {
         Company mzCompany = createCompany("Multicore Moçambique Lda", "400123456", "contacto@multicore.co.mz", "Avenida 24 de Julho 1500, Maputo");
         referenceSeeder.seedDefaultAdmin(ptCompany, mzCompany);
 
-        productCategoryRepository.findAll().forEach(category -> {
+        productLookup.findAllCategories().forEach(category -> {
             category.getCompanies().add(ptCompany);
             category.getCompanies().add(mzCompany);
-            productCategoryRepository.save(category);
+            productCommandService.saveCategory(category);
         });
         taxRateRepository.findAll().forEach(rate -> {
             rate.getCompanies().add(ptCompany);
@@ -228,7 +229,7 @@ public class DemoEnterpriseDataSeeder {
         p.setDescription(desc);
         p.setTaxRate(taxRate);
         p.getCompanies().addAll(List.of(companies));
-        return productRepository.save(p);
+        return productCommandService.saveProduct(p);
     }
 
     private void seedWarehouseStocks(Warehouse wh, Product erpLic, Product support, String supportQty,

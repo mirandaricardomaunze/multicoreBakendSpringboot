@@ -1,8 +1,6 @@
 # CA-07 frozen baseline (generated from HEAD 0b47d51 on 2026-11-10). May only SHRINK.
 # Never add lines: new code must call the owning module's service. See docs/CLEAN_ARCHITECTURE_RULES_SPEC.md
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> comercial.repository.ClientRepository
-backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> comercial.repository.ProductCategoryRepository
-backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> hr.repository.EmployeeRepository
@@ -11,8 +9,6 @@ backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> inventory
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> purchases.repository.SupplierRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> users.repository.AppUserRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> comercial.repository.ClientRepository
-backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> comercial.repository.ProductCategoryRepository
-backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> hr.repository.EmployeeRepository
@@ -20,7 +16,6 @@ backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.jav
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> purchases.repository.SupplierRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> users.repository.AppUserRepository
-backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> comercial.repository.ProductCategoryRepository
 backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> users.repository.AppUserRepository
 backend/src/main/java/mz/multicore/erp/architecture/security/TenantAccessService.java -> users.repository.AppUserRepository
@@ -41,7 +36,6 @@ backend/src/main/java/mz/multicore/erp/modules/audit/service/ForensicAuditServic
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> audit.repository.AuditLogRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> comercial.repository.InvoiceRepository
-backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> comercial.repository.ReceiptRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> financeira.repository.TreasuryTransactionRepository
@@ -55,7 +49,6 @@ backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollecto
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> audit.repository.AuditLogRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> comercial.repository.InvoiceRepository
-backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> comercial.repository.ReceiptRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> financeira.repository.TreasuryTransactionRepository
@@ -93,12 +86,9 @@ backend/src/main/java/mz/multicore/erp/modules/consignment/service/ConsignmentSe
 backend/src/main/java/mz/multicore/erp/modules/consignment/service/ConsignmentService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/consignment/service/ConsignmentService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/consignment/service/ConsignmentService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/crm/service/CRMQueryService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/crm/service/CRMService.java -> comercial.repository.ClientRepository
-backend/src/main/java/mz/multicore/erp/modules/crm/service/CRMService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/crm/service/CRMService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/crm/service/SupportTicketLifecycleService.java -> comercial.repository.ClientRepository
-backend/src/main/java/mz/multicore/erp/modules/crm/service/WorkSheetService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/crm/service/WorkSheetService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/customorders/service/CustomOrderService.java -> comercial.repository.OrderRepository
 backend/src/main/java/mz/multicore/erp/modules/dashboard/service/FinancialContractsAndAssetsPulseCalculator.java -> assets.repository.AssetRepository
@@ -135,12 +125,10 @@ backend/src/main/java/mz/multicore/erp/modules/intelligence/service/AiManagement
 backend/src/main/java/mz/multicore/erp/modules/intelligence/service/AiManagementAssistantService.java -> purchases.repository.PurchaseOrderRepository
 backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockWasteAnalyticsService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/inventory/service/StockWasteService.java -> comercial.repository.InvoiceRepository
-backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/BillOfMaterialsService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/BomFinishedGoodsLookup.java -> comercial.repository.CreditNoteRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/BomFinishedGoodsLookup.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionOrderLifecycleService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionOrderLifecycleService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionShortageCheck.java -> inventory.repository.StockRepository
@@ -184,19 +172,15 @@ backend/src/main/java/mz/multicore/erp/modules/platform/service/PlatformUserServ
 backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> comercial.repository.CreditNoteRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> comercial.repository.InvoiceRepository
-backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> comercial.repository.QuotationRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/PosCheckoutAndPaymentService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/pos/service/PosPriceGuard.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/PosPriceGuard.java -> comercial.repository.QuotationRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/PosReturnAndVoucherService.java -> comercial.repository.CreditNoteRepository
 backend/src/main/java/mz/multicore/erp/modules/pos/service/PosReturnAndVoucherService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceListService.java -> comercial.repository.ClientRepository
-backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceListService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceResolutionService.java -> comercial.repository.ClientRepository
-backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceResolutionService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/AssetDepreciationMapPrintService.java -> assets.repository.AssetRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/CompanyBankDetails.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/DeliveryGuidePrintService.java -> comercial.repository.DeliveryGuideRepository
@@ -231,26 +215,14 @@ backend/src/main/java/mz/multicore/erp/modules/productionplan/service/Production
 backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> comercial.repository.OrderRepository
-backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionLifecycleService.java -> comercial.repository.ProductCategoryRepository
-backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionLifecycleService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionService.java -> comercial.repository.ProductCategoryRepository
-backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/BusinessUnitQueryAndPolicyService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/BusinessUnitService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/DirectPurchaseRegistrationService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/DirectPurchaseRegistrationService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/DirectPurchaseService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/DirectPurchaseService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderLifecycleService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderLifecycleService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseOrderService.java -> inventory.repository.WarehouseRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/PurchaseService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/ReorderDataCollector.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/ReorderDataCollector.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/ReorderService.java -> comercial.repository.InvoiceRepository
-backend/src/main/java/mz/multicore/erp/modules/purchases/service/ReorderService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/purchases/service/ReorderService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/quality/service/QualityEquipmentService.java -> hr.repository.EmployeeRepository
 backend/src/main/java/mz/multicore/erp/modules/quality/service/WorkerEquipmentAssignmentService.java -> hr.repository.EmployeeRepository

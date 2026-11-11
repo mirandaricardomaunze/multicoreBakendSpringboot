@@ -4,7 +4,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -64,7 +66,8 @@ class PurchaseOrderServiceTest {
         discrepancyRepository = mock(mz.multicore.erp.modules.purchases.repository.GoodsReceiptDiscrepancyRepository.class);
         receiptRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderReceiptRepository.class);
         when(discrepancyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        service = new PurchaseOrderService(orderRepository, supplierRepository, productRepository,
+        service = new PurchaseOrderService(orderRepository, supplierRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository, new CompanyLookup(companyRepository), inventoryService, documentNumberService,
                 mock(AuditLogService.class), discrepancyRepository, receiptRepository,
                 mock(PurchaseOrderPayableRegistrar.class));

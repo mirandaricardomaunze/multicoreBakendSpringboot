@@ -1,8 +1,8 @@
 package mz.multicore.erp.architecture;
 
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.service.CRMService;
@@ -43,7 +43,8 @@ public class DataLoader implements CommandLineRunner {
     public DataLoader(
             EmployeeRepository employeeRepository,
             ClientRepository clientRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
             TreasuryAccountRepository accountRepository,
             HRService hrService,
             CRMService crmService,
@@ -54,18 +55,17 @@ public class DataLoader implements CommandLineRunner {
             AppUserRepository appUserRepository,
             SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
-            ProductCategoryRepository productCategoryRepository,
             boolean seedDemoData,
             String superAdminPassword,
             PasswordEncoder passwordEncoder) {
         this.seedDemoData = seedDemoData;
         this.referenceSeeder = new ReferenceAndAdminDataSeeder(
                 companyLookup, appUserRepository, taxRateRepository,
-                productCategoryRepository, superAdminPassword, passwordEncoder);
+                productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
-                employeeRepository, clientRepository, productRepository, accountRepository,
+                employeeRepository, clientRepository, productLookup, productCommandService, accountRepository,
                 hrService, crmService, companyLookup, companyService, warehouseRepository, stockRepository,
-                appUserRepository, supplierRepository, taxRateRepository, productCategoryRepository,
+                appUserRepository, supplierRepository, taxRateRepository,
                 passwordEncoder, this.referenceSeeder);
     }
 

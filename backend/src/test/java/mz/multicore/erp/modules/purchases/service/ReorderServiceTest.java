@@ -2,7 +2,9 @@ package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
@@ -36,7 +38,8 @@ class ReorderServiceTest {
         productRepository = mock(ProductRepository.class);
         invoiceRepository = mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class);
         purchaseLineRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository.class);
-        service = new ReorderService(stockRepository, productRepository, invoiceRepository, purchaseLineRepository);
+        service = new ReorderService(stockRepository,
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)), invoiceRepository, purchaseLineRepository);
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
     }

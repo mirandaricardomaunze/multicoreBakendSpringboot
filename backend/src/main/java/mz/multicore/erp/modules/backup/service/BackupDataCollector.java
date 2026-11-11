@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.backup.service;
 import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
@@ -32,7 +32,7 @@ public class BackupDataCollector {
     private final CompanyLookup companyLookup;
     private final ClientRepository clientRepository;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final StockMovementRepository stockMovementRepository;
@@ -50,7 +50,7 @@ public class BackupDataCollector {
             CompanyLookup companyLookup,
             ClientRepository clientRepository,
             SupplierRepository supplierRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
@@ -66,7 +66,7 @@ public class BackupDataCollector {
         this.companyLookup = companyLookup;
         this.clientRepository = clientRepository;
         this.supplierRepository = supplierRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.stockMovementRepository = stockMovementRepository;
@@ -122,7 +122,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("products", productRepository == null ? List.of() : productRepository.findDistinctByCompaniesIdOrderByName(companyId).stream().map(p -> {
+        data.put("products", productLookup == null ? List.of() : productLookup.listForCompany(companyId).stream().map(p -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", p.getId());
             m.put("sku", p.getSku());
