@@ -19,6 +19,7 @@ import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -108,7 +109,7 @@ class QuotationConversionHarnessTest {
         comercialService = mock(ComercialService.class);
 
         quotationService = new QuotationService(quotationRepository, clientRepository, productRepository,
-                companyRepository, warehouseRepository, walkInClientProvider, documentNumberService,
+                new CompanyLookup(companyRepository),warehouseRepository, walkInClientProvider, documentNumberService,
                 auditLogService, comercialService);
 
         tillSessionRepository = mock(TillSessionRepository.class);

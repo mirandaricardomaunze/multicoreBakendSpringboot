@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -38,7 +38,7 @@ public class ComercialOrderLifecycleService {
     private final OrderLineRepository orderLineRepository;
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final InventoryService inventoryService;
     private final InvoiceRepository invoiceRepository;
@@ -57,7 +57,7 @@ public class ComercialOrderLifecycleService {
             OrderLineRepository orderLineRepository,
             ClientRepository clientRepository,
             ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             WarehouseRepository warehouseRepository,
             @Lazy InventoryService inventoryService,
             InvoiceRepository invoiceRepository,
@@ -75,7 +75,7 @@ public class ComercialOrderLifecycleService {
         this.orderLineRepository = orderLineRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.inventoryService = inventoryService;
         this.invoiceRepository = invoiceRepository;
@@ -96,8 +96,7 @@ public class ComercialOrderLifecycleService {
                 ? clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                         .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."))
                 : walkInClientProvider.getOrCreate();
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         Warehouse warehouse = requireActiveWarehouse(request.warehouseId(), request.companyId(), "Armazém");
         Warehouse destination = resolveDestination(request.companyId(), request.destinationWarehouseId(), kind, warehouse);
         List<OrderLine> lines = buildOrderLines(request.companyId(), client, request.lines());
@@ -489,8 +488,7 @@ public class ComercialOrderLifecycleService {
 
     public Order createReplenishmentRecord(StockTransferDTO transfer) {
         CurrentUserContext.requireCompany(transfer.companyId());
-        Company company = companyRepository.findById(transfer.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(transfer.companyId());
         Warehouse origin = warehouseRepository.findById(transfer.originWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de origem não encontrado."));
         Warehouse destination = warehouseRepository.findById(transfer.destinationWarehouseId())

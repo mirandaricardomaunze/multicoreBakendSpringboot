@@ -78,10 +78,10 @@ class InventoryServiceDecompositionHarnessTest {
     }
 
     @Test
-    @DisplayName("Garante construtor de 9 argumentos para retrocompatibilidade com testes legados")
+    @DisplayName("Garante construtor de 10 argumentos (repositórios + CompanyLookup/CompanyService) para testes legados")
     void testBackwardCompatibleConstructor() {
         InventoryService service = new InventoryService(
-                null, null, null, null, null, null, null, null, null);
-        assertNotNull(service, "Construtor de 9 argumentos deve instanciar");
+                null, null, null, null, null, null, null, null, null, null);
+        assertNotNull(service, "Construtor de 10 argumentos deve instanciar");
     }
 }

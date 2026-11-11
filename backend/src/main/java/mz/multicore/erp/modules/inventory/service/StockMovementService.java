@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
 import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
 import mz.multicore.erp.modules.inventory.dto.StockMovementDTO;
@@ -48,17 +48,17 @@ public class StockMovementService {
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
             ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ProductBatchService productBatchService,
             AuditLogService auditLogService
     ) {
         StockMovementRegistrationService reg = new StockMovementRegistrationService(
                 stockMovementRepository, stockMovementOperationRepository, stockRepository,
-                warehouseRepository, productRepository, companyRepository, productBatchService, null);
+                warehouseRepository, productRepository, companyLookup, productBatchService, null);
         StockMovementQueryService query = new StockMovementQueryService(stockMovementRepository);
         StockAdjustmentCoordinator adj = new StockAdjustmentCoordinator(
                 stockAdjustmentOperationRepository, stockRepository, warehouseRepository,
-                productRepository, companyRepository, auditLogService, reg, query);
+                productRepository, companyLookup, auditLogService, reg, query);
         this.registrationService = reg;
         this.adjustmentCoordinator = adj;
         this.queryService = query;

@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.architecture.events.CompanyCreatedEvent;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.transaction.event.TransactionPhase;
@@ -20,11 +20,11 @@ import org.springframework.stereotype.Component;
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class WalkInClientBootstrap implements ApplicationRunner {
 
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WalkInClientProvider walkInClientProvider;
 
-    public WalkInClientBootstrap(CompanyRepository companyRepository, WalkInClientProvider walkInClientProvider) {
-        this.companyRepository = companyRepository;
+    public WalkInClientBootstrap(CompanyLookup companyLookup, WalkInClientProvider walkInClientProvider) {
+        this.companyLookup = companyLookup;
         this.walkInClientProvider = walkInClientProvider;
     }
 
@@ -41,7 +41,7 @@ public class WalkInClientBootstrap implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        for (Company company : companyRepository.findAll()) {
+        for (Company company : companyLookup.findAll()) {
             walkInClientProvider.ensureFor(company.getId());
         }
     }

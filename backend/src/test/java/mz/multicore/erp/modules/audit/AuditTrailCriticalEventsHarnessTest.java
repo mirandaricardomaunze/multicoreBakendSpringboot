@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ApproveWasteRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
@@ -98,7 +99,7 @@ class AuditTrailCriticalEventsHarnessTest {
         });
 
         StockWasteService wasteService = new StockWasteService(
-                wasteRepo, prodRepo, warehouseRepo, batchRepo, invService, invRepo, compRepo, auditLogService
+                wasteRepo, prodRepo, warehouseRepo, batchRepo, invService, invRepo, new CompanyLookup(compRepo), auditLogService
         );
 
         CreateStockWasteRequest req = new CreateStockWasteRequest(
@@ -142,7 +143,7 @@ class AuditTrailCriticalEventsHarnessTest {
                 wasteRepo, mock(mz.multicore.erp.modules.comercial.repository.ProductRepository.class),
                 mock(WarehouseRepository.class), mock(ProductBatchRepository.class),
                 mock(InventoryService.class), mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class),
-                mock(CompanyRepository.class), auditLogService
+                mock(CompanyLookup.class), auditLogService
         );
 
         // Aprovação
@@ -187,7 +188,7 @@ class AuditTrailCriticalEventsHarnessTest {
                 mock(mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository.class),
                 mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class),
                 null,
-                mock(CompanyRepository.class),
+                mock(CompanyLookup.class),
                 mock(WarehouseRepository.class),
                 null,
                 mock(mz.multicore.erp.modules.comercial.repository.ReceiptRepository.class),
@@ -307,7 +308,7 @@ class AuditTrailCriticalEventsHarnessTest {
                 mock(mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository.class),
                 invRepo,
                 null,
-                mock(CompanyRepository.class),
+                mock(CompanyLookup.class),
                 mock(WarehouseRepository.class),
                 null,
                 mock(mz.multicore.erp.modules.comercial.repository.ReceiptRepository.class),

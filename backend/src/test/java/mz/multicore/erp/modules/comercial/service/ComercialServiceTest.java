@@ -25,6 +25,7 @@ import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -111,7 +112,7 @@ class ComercialServiceTest {
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new ComercialService(clientRepository, productRepository, productCategoryRepository,
-                invoiceRepository, approvalService, companyRepository, warehouseRepository, inventoryService,
+                invoiceRepository, approvalService, new CompanyLookup(companyRepository), warehouseRepository, inventoryService,
                 receiptRepository, financeService, treasuryAccountRepository, orderRepository, orderLineRepository,
                 walkInClientProvider, documentNumberService, auditLogService, taxRateRepository,
                 receivablesService, eventPublisher);

@@ -6,7 +6,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.*;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
@@ -21,14 +21,14 @@ import java.util.Objects;
 public class StockTransferDraftService {
     private final StockTransferRepository transfers;
     private final WarehouseRepository warehouses;
-    private final CompanyRepository companies;
+    private final CompanyLookup companies;
     private final ProductRepository products;
     private final DocumentNumberService numbers;
     private final AuditLogService audit;
     private final StockTransferValidator validator;
 
     public StockTransferDraftService(StockTransferRepository transfers, WarehouseRepository warehouses,
-                                     CompanyRepository companies, ProductRepository products,
+                                     CompanyLookup companies, ProductRepository products,
                                      DocumentNumberService numbers, AuditLogService audit,
                                      StockTransferValidator validator) {
         this.transfers=transfers; this.warehouses=warehouses; this.companies=companies;
@@ -40,7 +40,7 @@ public class StockTransferDraftService {
         requireDifferent(request.originWarehouseId(), request.destinationWarehouseId());
         String driver=validator.requiredDriver(request.driverName(), request.responsible());
         String plate=validator.requiredPlate(request.vehiclePlate(), request.vehicle());
-        Company company=companies.findById(request.companyId()).orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company=companies.require(request.companyId());
         Warehouse origin=warehouse(request.originWarehouseId(), "origem");
         Warehouse destination=warehouse(request.destinationWarehouseId(), "destino");
         requireCompany(origin, destination, company.getId());

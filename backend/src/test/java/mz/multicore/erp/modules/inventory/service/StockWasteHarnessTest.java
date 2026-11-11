@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.*;
 import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
@@ -57,7 +58,7 @@ class StockWasteHarnessTest {
                 batchRepository,
                 inventoryService,
                 invoiceRepository,
-                companyRepository
+                new CompanyLookup(companyRepository)
         );
 
         company = new Company();

@@ -18,7 +18,7 @@ import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +66,7 @@ class StockTransferInTransitHarnessTest {
         transitService = new StockTransferTransitService(
                 transferRepository, stockRepository, stockMovementRepository, productBatchService, audit);
         service = new StockTransferService(
-                transferRepository, mock(WarehouseRepository.class), mock(CompanyRepository.class),
+                transferRepository, mock(WarehouseRepository.class), mock(CompanyLookup.class),
                 mock(ProductRepository.class), stockRepository, stockMovementRepository, productBatchService,
                 mock(DocumentNumberService.class), audit,
                 mock(org.springframework.context.ApplicationEventPublisher.class), null, transitService);

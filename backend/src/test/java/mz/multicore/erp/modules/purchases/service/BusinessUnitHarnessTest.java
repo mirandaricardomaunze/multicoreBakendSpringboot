@@ -16,6 +16,7 @@ import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -164,7 +165,7 @@ class BusinessUnitHarnessTest {
                 mock(ProductCategoryRepository.class),
                 invoiceRepository,
                 mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class),
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 warehouseRepository,
                 inventoryService,
                 mock(ReceiptRepository.class),

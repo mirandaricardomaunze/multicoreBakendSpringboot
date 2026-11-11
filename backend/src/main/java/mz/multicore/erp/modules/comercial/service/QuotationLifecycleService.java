@@ -18,7 +18,7 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
@@ -45,7 +45,7 @@ public class QuotationLifecycleService {
     private final QuotationRepository quotationRepository;
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final WalkInClientProvider walkInClientProvider;
     private final DocumentNumberService documentNumberService;
@@ -56,7 +56,7 @@ public class QuotationLifecycleService {
     public QuotationLifecycleService(QuotationRepository quotationRepository,
                                      ClientRepository clientRepository,
                                      ProductRepository productRepository,
-                                     CompanyRepository companyRepository,
+                                     CompanyLookup companyLookup,
                                      WarehouseRepository warehouseRepository,
                                      WalkInClientProvider walkInClientProvider,
                                      DocumentNumberService documentNumberService,
@@ -67,7 +67,7 @@ public class QuotationLifecycleService {
         this.quotationRepository = quotationRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.walkInClientProvider = walkInClientProvider;
         this.documentNumberService = documentNumberService;
@@ -83,8 +83,7 @@ public class QuotationLifecycleService {
                 ? clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."))
                 : walkInClientProvider.getOrCreate();
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
         if (!request.companyId().equals(warehouse.getCompany().getId())) {

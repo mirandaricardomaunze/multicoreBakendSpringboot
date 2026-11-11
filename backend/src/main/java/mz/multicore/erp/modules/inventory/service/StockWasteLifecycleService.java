@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ApproveWasteRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
 import mz.multicore.erp.modules.inventory.dto.StockWasteDTO;
@@ -42,7 +42,7 @@ public class StockWasteLifecycleService {
     private final WarehouseRepository warehouseRepository;
     private final ProductBatchRepository batchRepository;
     private final InventoryService inventoryService;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
     private final ApprovalService approvalService;
 
@@ -52,7 +52,7 @@ public class StockWasteLifecycleService {
             WarehouseRepository warehouseRepository,
             ProductBatchRepository batchRepository,
             InventoryService inventoryService,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AuditLogService auditLogService,
             ApprovalService approvalService
     ) {
@@ -61,7 +61,7 @@ public class StockWasteLifecycleService {
         this.warehouseRepository = warehouseRepository;
         this.batchRepository = batchRepository;
         this.inventoryService = inventoryService;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
         this.approvalService = approvalService;
     }
@@ -101,8 +101,7 @@ public class StockWasteLifecycleService {
             }
         }
 
-        Company company = companyRepository.findById(req.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + req.companyId()));
+        Company company = companyLookup.require(req.companyId());
         Warehouse warehouse = warehouseRepository.findById(req.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado: " + req.warehouseId()));
         Product product = productRepository.findById(req.productId())

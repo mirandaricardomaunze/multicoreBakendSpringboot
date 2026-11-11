@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
 import mz.multicore.erp.modules.inventory.dto.StockMovementDTO;
 import mz.multicore.erp.modules.inventory.model.*;
@@ -38,7 +38,7 @@ public class StockMovementRegistrationService {
     private final StockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final ProductBatchService productBatchService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
@@ -49,7 +49,7 @@ public class StockMovementRegistrationService {
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
             ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ProductBatchService productBatchService,
             @Autowired(required = false) org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
@@ -59,7 +59,7 @@ public class StockMovementRegistrationService {
         this.stockRepository = stockRepository;
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.productBatchService = productBatchService;
     }
 
@@ -191,8 +191,7 @@ public class StockMovementRegistrationService {
         }
         StockMovementOperation operation = null;
         if (key != null) {
-            Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+            Company company = companyLookup.require(companyId);
             operation = new StockMovementOperation();
             operation.setCompany(company);
             operation.setIdempotencyKey(key);

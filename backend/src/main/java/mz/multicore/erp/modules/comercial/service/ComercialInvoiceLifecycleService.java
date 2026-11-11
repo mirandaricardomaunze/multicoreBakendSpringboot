@@ -16,7 +16,7 @@ import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -47,7 +47,7 @@ public class ComercialInvoiceLifecycleService {
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final InventoryService inventoryService;
     private final ReceiptRepository receiptRepository;
@@ -66,7 +66,7 @@ public class ComercialInvoiceLifecycleService {
             InvoiceRepository invoiceRepository,
             ClientRepository clientRepository,
             ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             WarehouseRepository warehouseRepository,
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
@@ -82,7 +82,7 @@ public class ComercialInvoiceLifecycleService {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.inventoryService = inventoryService;
         this.receiptRepository = receiptRepository;
@@ -114,8 +114,7 @@ public class ComercialInvoiceLifecycleService {
                 ? clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
                         .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado."))
                 : walkInClientProvider.getOrCreate();
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
         if (!request.companyId().equals(warehouse.getCompany().getId())) {

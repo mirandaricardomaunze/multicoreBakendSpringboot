@@ -18,7 +18,7 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductSaleType;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -39,7 +39,7 @@ public class ComercialProductCatalogService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final TaxRateRepository taxRateRepository;
     private final BusinessUnitRepository businessUnitRepository;
     private final InventoryService inventoryService;
@@ -48,14 +48,14 @@ public class ComercialProductCatalogService {
     public ComercialProductCatalogService(
             ProductRepository productRepository,
             ProductCategoryRepository productCategoryRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             TaxRateRepository taxRateRepository,
             @Autowired(required = false) BusinessUnitRepository businessUnitRepository,
             @Lazy InventoryService inventoryService,
             AuditLogService auditLogService) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.taxRateRepository = taxRateRepository;
         this.businessUnitRepository = businessUnitRepository;
         this.inventoryService = inventoryService;
@@ -143,7 +143,7 @@ public class ComercialProductCatalogService {
         }
         Product sharedProduct = productRepository.findBySku(sku).orElse(null);
         if (sharedProduct != null) {
-            sharedProduct.getCompanies().add(companyRepository.getReferenceById(companyId));
+            sharedProduct.getCompanies().add(companyLookup.reference(companyId));
             return toDTO(productRepository.save(sharedProduct));
         }
         if (cleanReference != null && productRepository.findByReferenceAndCompaniesId(cleanReference, companyId).isPresent()) {
@@ -175,7 +175,7 @@ public class ComercialProductCatalogService {
                     .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
         }
         product.setCreatedBy("SYSTEM");
-        product.getCompanies().add(companyRepository.getReferenceById(companyId));
+        product.getCompanies().add(companyLookup.reference(companyId));
         return toDTO(productRepository.save(product));
     }
 

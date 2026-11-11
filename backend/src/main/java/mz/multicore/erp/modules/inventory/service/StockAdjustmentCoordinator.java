@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
 import mz.multicore.erp.modules.inventory.dto.StockMovementDTO;
 import mz.multicore.erp.modules.inventory.model.Stock;
@@ -38,7 +38,7 @@ public class StockAdjustmentCoordinator {
     private final StockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
     private final StockMovementRegistrationService registrationService;
     private final StockMovementQueryService queryService;
@@ -49,7 +49,7 @@ public class StockAdjustmentCoordinator {
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
             ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AuditLogService auditLogService,
             StockMovementRegistrationService registrationService,
             StockMovementQueryService queryService
@@ -58,7 +58,7 @@ public class StockAdjustmentCoordinator {
         this.stockRepository = stockRepository;
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
         this.registrationService = registrationService;
         this.queryService = queryService;
@@ -95,8 +95,7 @@ public class StockAdjustmentCoordinator {
 
         StockAdjustmentOperation operation = null;
         if (key != null) {
-            Company company = companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+            Company company = companyLookup.require(request.companyId());
             operation = new StockAdjustmentOperation();
             operation.setCompany(company);
             operation.setProduct(product);

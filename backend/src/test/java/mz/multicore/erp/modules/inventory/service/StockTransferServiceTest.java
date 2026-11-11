@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferLineRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
@@ -79,7 +80,7 @@ class StockTransferServiceTest {
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new StockTransferService(
-                transferRepository, warehouseRepository, companyRepository, productRepository,
+                transferRepository, warehouseRepository, new CompanyLookup(companyRepository), productRepository,
                 stockRepository, stockMovementRepository, productBatchService, documentNumberService,
                 auditLogService, eventPublisher);
 
