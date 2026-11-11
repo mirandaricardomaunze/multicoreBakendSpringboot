@@ -43,6 +43,10 @@ public class StockTransferLine {
     @Column(name = "returned_quantity", precision = 12, scale = 3)
     private BigDecimal returnedQuantity;
 
+    /** Quantidade perdida no transporte (partida, roubada): não volta à origem, abate-se como quebra. */
+    @Column(name = "lost_quantity", precision = 12, scale = 3)
+    private BigDecimal lostQuantity;
+
     @Column(name = "discrepancy_reason", length = 200)
     private String discrepancyReason;
 }

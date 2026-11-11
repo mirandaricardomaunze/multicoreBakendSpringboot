@@ -33,11 +33,14 @@ public class StockTransferReceiptService {
     private final ProductBatchService productBatchService;
     private final StockTransitLedger ledger;
     private final AuditLogService auditLogService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public StockTransferReceiptService(StockTransferRepository transferRepository,
                                        ProductBatchService productBatchService,
                                        StockTransitLedger ledger,
-                                       AuditLogService auditLogService) {
+                                       AuditLogService auditLogService,
+                                       org.springframework.context.ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.transferRepository = transferRepository;
         this.productBatchService = productBatchService;
         this.ledger = ledger;
@@ -84,7 +87,8 @@ public class StockTransferReceiptService {
 
             BigDecimal remaining = received;
             BigDecimal enteredDestination = BigDecimal.ZERO;
-            BigDecimal returnedOrigin = BigDecimal.ZERO;
+            BigDecimal returnedOrigin = BigDecimal.ZERO, lostQty = BigDecimal.ZERO;
+            boolean lost = req != null && Boolean.TRUE.equals(req.lostInTransit());
             for (StockTransferLineBatch parcel : line.getTransitBatches()) {
                 BigDecimal toDestination = parcel.getQuantity().min(remaining);
                 BigDecimal toOrigin = parcel.getQuantity().subtract(toDestination);
@@ -97,7 +101,9 @@ public class StockTransferReceiptService {
                     ledger.recordMovement(line.getProduct(), destination, toDestination, target, transfer, "entrada");
                     enteredDestination = enteredDestination.add(toDestination);
                 }
-                if (toOrigin.signum() > 0) {
+                if (toOrigin.signum() > 0 && lost) {
+                    lostQty = lostQty.add(toOrigin);
+                } else if (toOrigin.signum() > 0) {
                     ProductBatch back = productBatchService.addToBatch(line.getProduct(), origin,
                             parcel.getBatchNumber(), parcel.getExpirationDate(), toOrigin);
                     ledger.recordMovement(line.getProduct(), origin, toOrigin, back, transfer,
@@ -116,9 +122,10 @@ public class StockTransferReceiptService {
                         .append(returnedOrigin.stripTrailingZeros().toPlainString()).append(" devolvido(s) — ")
                         .append(req.discrepancyReason().trim());
             }
+            if (lostQty.signum() > 0) anyDiscrepancy = TransitLoss.record(transfer, line, lostQty, req, eventPublisher, discrepancySummary);
             line.setReceivedQuantity(enteredDestination);
             line.setReturnedQuantity(returnedOrigin);
-            line.setDiscrepancyReason(returnedOrigin.signum() > 0 ? req.discrepancyReason().trim() : null);
+            line.setDiscrepancyReason(returnedOrigin.add(lostQty).signum() > 0 ? req.discrepancyReason().trim() : null);
         }
 
         transfer.setStatus(anyDiscrepancy ? TransferStatus.RECEIVED_WITH_DISCREPANCY : TransferStatus.RECEIVED);

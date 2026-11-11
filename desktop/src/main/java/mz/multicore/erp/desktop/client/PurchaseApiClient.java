@@ -83,6 +83,13 @@ public class PurchaseApiClient {
         return clientFactory.authenticatedClient().post(path, null, PurchaseDTO.class);
     }
 
+    /** Devolução de mercadoria ao fornecedor (nota DF). */
+    public mz.multicore.erp.modules.purchases.dto.SupplierReturnDTO registerSupplierReturn(
+            Long purchaseId, mz.multicore.erp.modules.purchases.dto.CreateSupplierReturnRequest request) {
+        return clientFactory.authenticatedClient().post("/api/purchases/" + purchaseId + "/returns", request,
+                mz.multicore.erp.modules.purchases.dto.SupplierReturnDTO.class);
+    }
+
     // ─── Encomendas a fornecedor ─────────────────────────────────────────────
     public List<PurchaseOrderDTO> findOrdersByCompany(Long companyId) {
         return clientFactory.authenticatedClient()

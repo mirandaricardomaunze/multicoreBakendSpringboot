@@ -262,6 +262,7 @@ Nenhum cria documento fiscal paralelo: o fiscal é sempre FT, RC, NC, ND ou GR. 
 | Guia de consignação | `CG` | `consignment` | `TRANSFER` loja → "Em consignação"; no acerto: devolvido volta, estragado `WASTE`, vendido faturado (FT) |
 | Talão de pesagem | `TP` | `weighbridge` | Nenhum (só peso); peso manual assinalado |
 | Adiantamento | — | `advances` | FT do sinal + RC; aplicar: NC + recibo de compensação (sem caixa nem diário); devolver: NC + anulação do RC |
+| Devolução ao fornecedor | `DF` | `purchases` | Saída do stock da compra; abate a dívida ao fornecedor e o IVA dedutível; D Fornecedores / C Mercadorias e IVA dedutível |
 | Vasilhame | — | `returnables` | `TRANSFER` loja ⇄ "Vasilhame em clientes"; não devolvido faturado (FT) |
 
 Armazéns de trânsito (`TransitWarehouseProvider`, tipo `TRANSIT`, sem venda no POS): **"Em consignação"** e

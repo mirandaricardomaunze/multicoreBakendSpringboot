@@ -123,6 +123,31 @@ class StockTransferReceiptDiscrepancyHarnessTest {
     }
 
     @Test
+    void perdidoNoTransporte_naoVoltaAOrigem_eAbateComoQuebra() {
+        StockTransfer t = inTransit(parcel("LOTE-A", 5));
+        when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(t));
+        product.setPurchasePrice(new BigDecimal("40"));
+        var publisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        StockTransitLedger ledger = new StockTransitLedger(stockRepository, stockMovementRepository);
+        StockTransferTransitService withLedger = new StockTransferTransitService(transferRepository,
+                new StockTransferDispatchService(productBatchService, ledger, audit),
+                new StockTransferReceiptService(transferRepository, productBatchService, ledger, audit, publisher));
+
+        StockTransferDTO dto = withLedger.receive(1L, null,
+                List.of(new ReceiveLine(LINE_ID, new BigDecimal("3"), "Sacos rasgados no camiao", true)));
+
+        assertEquals("RECEIVED_WITH_DISCREPANCY", dto.status());
+        verify(productBatchService, never()).addToBatch(eq(product), eq(origin), anyString(), any(), any());
+        StockTransferLine line = t.getLines().get(0);
+        assertEquals(0, new BigDecimal("2").compareTo(line.getLostQuantity()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(line.getReturnedQuantity()));
+        ArgumentCaptor<mz.multicore.erp.architecture.events.InventoryValueChangedEvent> event =
+                ArgumentCaptor.forClass(mz.multicore.erp.architecture.events.InventoryValueChangedEvent.class);
+        verify(publisher).publishEvent(event.capture());
+        assertEquals(0, new BigDecimal("80").compareTo(event.getValue().valueOut()));
+    }
+
+    @Test
     void invariante_enviadoIgualRecebidoMaisDevolvido() {
         StockTransfer t = inTransit(parcel("LOTE-A", 5));
         when(transferRepository.findByIdWithLinesAndCompanyId(1L, 1L)).thenReturn(Optional.of(t));

@@ -40,9 +40,10 @@ public record StockTransferLineDTO(
                 packagesPerBox, unitsPerPackage, unitPrice, taxRate, null, null, null);
     }
 
-    /** Verdadeiro quando parte da linha voltou à origem na recepção. */
+    /** Verdadeiro quando parte da linha não entrou no destino: voltou à origem ou perdeu-se no transporte. */
     public boolean hasDiscrepancy() {
-        return returnedQuantity != null && returnedQuantity.signum() > 0;
+        return (returnedQuantity != null && returnedQuantity.signum() > 0)
+                || (receivedQuantity != null && quantity != null && receivedQuantity.compareTo(quantity) < 0);
     }
 
     public StockTransferLineDTO(

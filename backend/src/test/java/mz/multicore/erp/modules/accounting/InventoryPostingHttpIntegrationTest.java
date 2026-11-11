@@ -116,6 +116,39 @@ class InventoryPostingHttpIntegrationTest {
         assertThat(cost).isEqualByComparingTo("110");
     }
 
+    @Test
+    void returnToSupplierLowersDebtStockAndGoodsAccount() throws Exception {
+        Ctx c = context();
+        long product = product(c, "Tinta 5 L (teste devolucao)", "900", "500");
+        long supplier = getJson("/api/purchases/suppliers?companyId=" + c.companyId(), c).get(0).get("id").asLong();
+        JsonNode purchase = json(send(post("/api/purchases"), c, """
+                {"supplierId":%d,"warehouseId":%d,"companyId":%s,
+                 "lines":[{"productId":%d,"quantity":10,"unitPrice":500,"taxRate":0.16}]}"""
+                .formatted(supplier, c.warehouseId(), c.companyId(), product)));
+        long purchaseId = purchase.get("id").asLong();
+        long lineId = purchase.get("lines").get(0).get("id").asLong();
+        BigDecimal goods = ledger(c, "3201");
+        BigDecimal suppliers = ledger(c, "2201");
+
+        // 4 tins back: 2000 net + 320 VAT come off the debt; the goods account drops 2000.
+        JsonNode ret = json(send(post("/api/purchases/" + purchaseId + "/returns"), c, """
+                {"reason":"Latas amolgadas","lines":[{"purchaseLineId":%d,"quantity":4}]}""".formatted(lineId)));
+        assertThat(ret.get("returnNumber").asText()).startsWith("DF-");
+        assertThat(new BigDecimal(ret.get("totalAmount").asText())).isEqualByComparingTo("2320");
+        assertThat(ledger(c, "3201").subtract(goods)).isEqualByComparingTo("-2000");
+        assertThat(ledger(c, "2201").subtract(suppliers).abs()).isEqualByComparingTo("2320");
+        BigDecimal outstanding = null;
+        for (JsonNode p : getJson("/api/purchases/payables?companyId=" + c.companyId(), c)) {
+            if (p.get("purchaseId").asLong() == purchaseId) outstanding = new BigDecimal(p.get("outstanding").asText());
+        }
+        assertThat(outstanding).isEqualByComparingTo("3480");
+
+        // Only 6 are left to return.
+        send(post("/api/purchases/" + purchaseId + "/returns"), c, """
+                {"reason":"Mais latas","lines":[{"purchaseLineId":%d,"quantity":7}]}""".formatted(lineId))
+                .andExpect(status().is4xxClientError());
+    }
+
     private BigDecimal ledger(Ctx c, String account) throws Exception {
         return new BigDecimal(getJson("/api/accounting/ledger/" + account + "?from=2000-01-01&to=" + LocalDate.now().plusDays(1), c)
                 .get("closingBalance").asText());

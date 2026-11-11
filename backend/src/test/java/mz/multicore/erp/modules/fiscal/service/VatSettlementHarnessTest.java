@@ -136,7 +136,7 @@ class VatSettlementHarnessTest {
     void partiallyPaidInvoicesAndApprovedNotesCountInTheMonth() {
         var creditNotes = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
         var debitNotes = mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class);
-        FiscalSummaryService service = new FiscalSummaryService(invoiceRepository, purchaseRepository, creditNotes, debitNotes);
+        FiscalSummaryService service = new FiscalSummaryService(invoiceRepository, purchaseRepository, creditNotes, debitNotes, null);
         Invoice partial = createInvoice("FT-010", new BigDecimal("10000.00"), new BigDecimal("1600.00"),
                 new BigDecimal("11600.00"), InvoiceStatus.PARTIALLY_PAID);
         mz.multicore.erp.modules.comercial.model.CreditNote note = new mz.multicore.erp.modules.comercial.model.CreditNote();

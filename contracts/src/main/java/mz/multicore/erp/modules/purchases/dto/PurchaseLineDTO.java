@@ -14,5 +14,15 @@ public record PurchaseLineDTO(
         BigDecimal lineTotal,
         String batchNumber,
         LocalDate expirationDate,
-        String serialNumber
-) {}
+        String serialNumber,
+        /** Quantidade já devolvida ao fornecedor. */
+        BigDecimal returnedQuantity
+) {
+    /** Construtor retrocompatível, anterior às devoluções ao fornecedor. */
+    public PurchaseLineDTO(Long id, Long productId, String productName, String sku, BigDecimal quantity,
+                           BigDecimal unitPrice, BigDecimal taxRate, BigDecimal lineTotal, String batchNumber,
+                           LocalDate expirationDate, String serialNumber) {
+        this(id, productId, productName, sku, quantity, unitPrice, taxRate, lineTotal, batchNumber, expirationDate,
+                serialNumber, BigDecimal.ZERO);
+    }
+}

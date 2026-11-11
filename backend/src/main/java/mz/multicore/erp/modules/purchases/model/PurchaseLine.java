@@ -46,4 +46,8 @@ public class PurchaseLine {
 
     @Column(name = "serial_number")
     private String serialNumber; // Série
+
+    /** Quantidade já devolvida ao fornecedor; nunca passa da quantidade comprada. */
+    @Column(name = "returned_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal returnedQuantity = BigDecimal.ZERO;
 }

@@ -32,7 +32,7 @@ public class DirectPurchaseQueryService {
         List<PurchaseLineDTO> lines = p.getLines().stream().map(l -> new PurchaseLineDTO(
                 l.getId(), l.getProduct().getId(), l.getProduct().getName(), l.getProduct().getSku(),
                 l.getQuantity(), l.getUnitPrice(), l.getTaxRate(), l.getLineTotal(),
-                l.getBatchNumber(), l.getExpirationDate(), l.getSerialNumber()
+                l.getBatchNumber(), l.getExpirationDate(), l.getSerialNumber(), l.getReturnedQuantity()
         )).toList();
 
         Set<String> bus = p.getLines().stream()

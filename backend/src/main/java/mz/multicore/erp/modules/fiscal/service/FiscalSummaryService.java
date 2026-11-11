@@ -30,15 +30,18 @@ public class FiscalSummaryService {
     private final PurchaseRepository purchaseRepository;
     private final mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository;
     private final mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository;
+    private final mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository supplierReturnRepository;
 
     public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository) {
-        this(invoiceRepository, purchaseRepository, null, null);
+        this(invoiceRepository, purchaseRepository, null, null, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
     public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository,
                                 mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository,
-                                mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository) {
+                                mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository,
+                                mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository supplierReturnRepository) {
+        this.supplierReturnRepository = supplierReturnRepository;
         this.invoiceRepository = invoiceRepository;
         this.purchaseRepository = purchaseRepository;
         this.creditNoteRepository = creditNoteRepository;
@@ -116,6 +119,18 @@ public class FiscalSummaryService {
                     p.getPurchaseNumber(),
                     p.getSupplier() != null ? p.getSupplier().getName() : "—",
                     base, tax, total));
+        }
+
+        // Goods returned to the supplier reduce the deductible VAT of the month of the return.
+        if (supplierReturnRepository != null) {
+            for (var r : supplierReturnRepository.findByCompanyIdOrderByReturnDateDesc(companyId)) {
+                if (!inPeriod(r.getReturnDate(), start, end)) continue;
+                purchasesBase = purchasesBase.subtract(nz(r.getNetAmount()));
+                inputTax = inputTax.subtract(nz(r.getTaxAmount()));
+                purchases.add(new IvaSummaryDTO.IvaLineDTO(r.getReturnNumber(), r.getPurchase().getSupplier() != null
+                        ? r.getPurchase().getSupplier().getName() : "—", nz(r.getNetAmount()).negate(),
+                        nz(r.getTaxAmount()).negate(), nz(r.getTotalAmount()).negate()));
+            }
         }
 
         BigDecimal prevCredit = previousCredit != null && previousCredit.compareTo(BigDecimal.ZERO) > 0

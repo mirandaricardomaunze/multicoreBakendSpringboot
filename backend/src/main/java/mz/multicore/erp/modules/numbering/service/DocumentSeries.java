@@ -45,12 +45,14 @@ public final class DocumentSeries {
     public static final String WEIGHING_TICKET = "TP";
     /** Internal production order. Not a fiscal series; the number is also the batch of the finished product. */
     public static final String PRODUCTION_ORDER = "OP";
+    /** Internal return of goods to a supplier: lowers the debt, the stock and the deductible VAT. */
+    public static final String SUPPLIER_RETURN = "DF";
 
     /** Todas as séries acima, para as criar antecipadamente ({@link DocumentSequenceBootstrap}). */
     public static final java.util.List<String> ALL = java.util.List.of(INVOICE, ORDER, QUOTATION, RECEIPT,
             CREDIT_NOTE, DEBIT_NOTE, STOCK_TRANSFER, DELIVERY_GUIDE, PURCHASE, PURCHASE_ORDER, PAYSLIP,
             EMPLOYMENT_CONTRACT, TERMINATION, JOURNAL_ENTRY, MATERIAL_PICKUP, CARCASS_BREAKDOWN, CONSIGNMENT, WEIGHING_TICKET,
-            PRODUCTION_ORDER);
+            PRODUCTION_ORDER, SUPPLIER_RETURN);
 
     private DocumentSeries() {}
 }

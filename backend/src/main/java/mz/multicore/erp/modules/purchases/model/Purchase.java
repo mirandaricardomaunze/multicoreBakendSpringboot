@@ -58,11 +58,16 @@ public class Purchase extends BaseEntity {
     @Column(name = "status", nullable = false)
     private String status = "COMPLETED"; // COMPLETED, CANCELLED
 
+    /** Valor devolvido ao fornecedor (notas DF): abate ao que se deve. */
+    @Column(name = "returned_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal returnedAmount = BigDecimal.ZERO;
+
     @Transient
     public BigDecimal getOutstanding() {
         BigDecimal total = totalAmount == null ? BigDecimal.ZERO : totalAmount;
         BigDecimal paid = amountPaid == null ? BigDecimal.ZERO : amountPaid;
-        BigDecimal out = total.subtract(paid);
+        BigDecimal returned = returnedAmount == null ? BigDecimal.ZERO : returnedAmount;
+        BigDecimal out = total.subtract(returned).subtract(paid);
         return out.signum() > 0 ? out : BigDecimal.ZERO;
     }
 

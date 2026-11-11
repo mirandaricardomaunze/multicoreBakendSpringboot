@@ -61,3 +61,12 @@ destino aceitava stock fantasma que nunca chegou, ou a guia ficava retida em tr�
     `ReceiveStockTransferRequest(String notes)` mantido).
   - `StockTransferLineDTO`: campos `receivedQuantity`, `returnedQuantity`, `discrepancyReason`, método
     `hasDiscrepancy()`, e construtor retrocompatível de 12 argumentos preservado.
+
+## Perda no transporte (2026-11-11)
+
+Na conferência, o fiel de armazém pode marcar a linha como **"Perdido no transporte"** (partida, roubada). Nesse caso
+a diferença **não volta à origem**: fica registada em `lost_quantity` na linha da guia e o valor (custo do artigo) é
+abatido como quebra na contabilidade (`TRANSIT_LOSS`: D CMVMC / C Mercadorias). Sem a marca, a diferença volta à
+origem como antes. Invariante: despachado = recebido + devolvido à origem + perdido. Teste:
+`StockTransferReceiptDiscrepancyHarnessTest.perdidoNoTransporte_naoVoltaAOrigem_eAbateComoQuebra`.
+

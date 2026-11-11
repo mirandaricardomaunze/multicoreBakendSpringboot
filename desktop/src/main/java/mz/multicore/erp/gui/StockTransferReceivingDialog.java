@@ -42,6 +42,8 @@ public class StockTransferReceivingDialog {
     public static final int COL_RECEIVED = 3;
     public static final int COL_RETURNED = 4;
     public static final int COL_REASON = 5;
+    /** Ticked: the difference broke or vanished on the way; it is written off and does not return to origin. */
+    public static final int COL_LOST = 6;
 
     public static void show(Window parent, StockTransferDTO transfer,
                             BiConsumer<String, List<ReceiveStockTransferRequest.ReceiveLine>> onConfirm) {
@@ -70,13 +72,19 @@ public class StockTransferReceivingDialog {
 
         // Grelha de conferência
         String[] cols = {
-                "Produto", "Lote", "Despachado", "A Receber (Destino)", "Divergência (Volta à Origem)", "Motivo da Divergência"
+                "Produto", "Lote", "Despachado", "A Receber (Destino)", "Divergência", "Motivo da Divergência",
+                "Perdido no transporte"
         };
 
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) {
-                return c == COL_RECEIVED || c == COL_REASON;
+                return c == COL_RECEIVED || c == COL_REASON || c == COL_LOST;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int c) {
+                return c == COL_LOST ? Boolean.class : Object.class;
             }
         };
 
@@ -89,7 +97,8 @@ public class StockTransferReceivingDialog {
                     qty,
                     qty, // Sugestão inicial: recepção integral
                     BigDecimal.ZERO,
-                    ""
+                    "",
+                    Boolean.FALSE
             });
         }
 
@@ -122,6 +131,7 @@ public class StockTransferReceivingDialog {
         table.getColumnModel().getColumn(COL_RECEIVED).setPreferredWidth(125);
         table.getColumnModel().getColumn(COL_RETURNED).setPreferredWidth(145);
         table.getColumnModel().getColumn(COL_REASON).setPreferredWidth(180);
+        table.getColumnModel().getColumn(COL_LOST).setPreferredWidth(130);
         UIHelper.ensureHeadersFit(table);
 
         JScrollPane scroll = new JScrollPane(table);
@@ -157,7 +167,7 @@ public class StockTransferReceivingDialog {
                 parent,
                 "Conferência e Recepção de Mercadoria",
                 "fas-dolly-flatbed",
-                "Indique as quantidades recebidas no armazém de destino. Qualquer diferença voltará automaticamente à origem.",
+                "Indique as quantidades recebidas. A diferença volta à origem, excepto se marcar \"Perdido no transporte\" (abatida como quebra).",
                 content
         );
         dlg.setConfirmButton("Confirmar Recepção", "fas-check-circle");
@@ -186,14 +196,15 @@ public class StockTransferReceivingDialog {
                 if (received.compareTo(sent) < 0) {
                     if (reason.isEmpty()) {
                         throw new IllegalArgumentException(
-                                "Linha '" + line.productName() + "': indique o motivo da divergência (falta, avaria ou dano no transporte) para justificar a devolução de "
-                                        + sent.subtract(received) + " un à origem."
+                                "Linha '" + line.productName() + "': indique o motivo da divergência (falta, avaria ou dano no transporte) para justificar a diferença de "
+                                        + sent.subtract(received) + " un."
                         );
                     }
                     hasDiscrepancy = true;
                 }
 
-                receiveLines.add(new ReceiveStockTransferRequest.ReceiveLine(line.id(), received, reason.isEmpty() ? null : reason));
+                boolean lost = Boolean.TRUE.equals(model.getValueAt(i, COL_LOST)) && received.compareTo(sent) < 0;
+                receiveLines.add(new ReceiveStockTransferRequest.ReceiveLine(line.id(), received, reason.isEmpty() ? null : reason, lost));
             }
 
             String notes = notesField.getText().trim();
