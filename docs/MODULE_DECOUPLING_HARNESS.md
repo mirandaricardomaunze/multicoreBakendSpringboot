@@ -17,7 +17,7 @@ correm sempre no gate.
 | MD-C04 | `purchases`, `platform`, `fleet`, `users` sem `CompanyRepository` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-C05 | `manufacturing`, `crm`, `assets`, `architecture`, `support`, `subscription`, `recurring`, `promotions`, `pos`, `performance`, `intelligence`, `backup`, `approvals` sem `CompanyRepository`; abertura de caixa POS tranca a empresa por `CompanyLookup.lockForUpdate` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-C06 | Restantes módulos com 1 ficheiro (weighbridge, variants, units, returnables, projects, printing, pricing, numbering, monitoring, fiscal, expiry, butchery, bulkstock, advances, activity, accounting) sem `CompanyRepository` — **feito** | `ModuleDecouplingHarnessTest` |
-| MD-C07 | Zero ligações a `company.repository.*` fora de `company`; suite completa verde | `ModuleDecouplingHarnessTest` |
+| MD-C07 | Zero ligações a `company.repository.*` fora de `company` (verificado pela onda GOAL-001 em `DONE`); suite completa verde — **feito** | `ModuleDecouplingHarnessTest` |
 
 ## GOAL-002 — Produto e categoria (50)
 

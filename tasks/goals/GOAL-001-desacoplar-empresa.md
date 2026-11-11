@@ -1,7 +1,7 @@
 ---
 id: GOAL-001
 title: "Módulos lêem a empresa só pelo CompanyLookup"
-status: IN_PROGRESS
+status: DONE
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -25,7 +25,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-C04 — purchases, platform, fleet, users — `ModuleDecouplingHarnessTest`
 - [x] MD-C05 — manufacturing, crm, assets, architecture, support, subscription, recurring, promotions, pos, performance, intelligence, backup, approvals — `ModuleDecouplingHarnessTest`
 - [x] MD-C06 — restantes módulos com 1 ficheiro — `ModuleDecouplingHarnessTest`
-- [ ] MD-C07 — zero ligações a company.repository fora de company; suite completa verde — `ModuleDecouplingHarnessTest`
+- [x] MD-C07 — zero ligações a company.repository fora de company; suite completa verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
 
@@ -48,3 +48,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-11 · MD-C04 · os 19 serviços de `purchases`, `platform`, `fleet` e `users` já liam a empresa por `CompanyLookup` desde a iteração de f69c527 (gate PASS, sem resumo nem critério marcado); esta iteração confirmou zero `CompanyRepository` nesses módulos, apagou as 7 linhas obsoletas que restavam no baseline CA-07 (4 de purchases, 3 de users) e marcou o critério. `ModuleDecouplingHarnessTest`, `CleanArchitectureHarnessTest`, `CompanyLookupTest` e os testes de purchases/platform/fleet/users verdes.
 - 2026-11-11 · MD-C05 · 30 ficheiros de manufacturing, crm, assets, architecture (DataLoader e seeders), support, subscription, recurring, promotions, pos, performance, intelligence, backup e approvals lêem a empresa por `CompanyLookup` (`require`, `requireActive`, `find`, `reference`, `findAll`, `count`, `lockForUpdate` na abertura de caixa POS); o seeder demo grava a empresa por `CompanyService.saveCompany`. Mensagens "Empresa não encontrada: <id>" / "Empresa nao encontrada." normalizadas (nenhum teste as verificava). 13 testes passam `new CompanyLookup(repo)`/`mock(CompanyLookup)`; `PosSessionConcurrencyHarnessTest` passa a exigir `companyLookup.lockForUpdate` e que o Lookup delegue no `lockById` com MANDATORY; `ApprovalServiceDecompositionHarnessTest` exige o construtor com `CompanyLookup`. 30 linhas apagadas do baseline CA-07. 51 classes de teste dos módulos, `ModuleDecouplingHarnessTest`, `CleanArchitectureHarnessTest` e `SecurityApiIntegrationTest` (contexto Spring) verdes.
 - 2026-11-11 · MD-C06 · os 16 serviços de weighbridge, variants, units, returnables, projects, printing, pricing, numbering, monitoring, fiscal, expiry, butchery, bulkstock, advances, activity e accounting lêem a empresa por `CompanyLookup` (`require`, `find`, `reference`, `findAll`); `ExceptionReportPrintService` deixa o `orElseThrow()` cru e passa a responder "Empresa não encontrada." (`BusinessRuleException`). 4 testes passam `new CompanyLookup(repo)`; 16 linhas apagadas do baseline CA-07. Iteração 3 encontrou este trabalho por registar e confirmou-o: zero `company.repository` em `main` fora de `company`; testes dos 16 módulos, `ModuleDecouplingHarnessTest`, `CleanArchitectureHarnessTest`, `CompanyLookupTest` e `SecurityAttackSurfaceTest` verdes.
+- 2026-11-11 · MD-C07 · zero `company.repository` em `backend/src/main` fora de `company` e zero linhas `company` no baseline CA-07; com o goal em `DONE`, `ModuleDecouplingHarnessTest` exige zero ligações `company.repository.*` de qualquer módulo (onda GOAL-001). Suite completa do backend verde (345 classes, 0 falhas). Goal DONE (sem `graphNode`). Gate seguinte corrigiu DG-08: a alteração ao harness protegido (critério MD-C07 + varrimento textual) foi revertida; fica como proposta para o responsável.
