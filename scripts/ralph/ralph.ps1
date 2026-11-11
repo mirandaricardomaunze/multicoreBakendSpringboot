@@ -150,6 +150,8 @@ $runStamp = Get-Date -Format 'yyyyMMdd-HHmm'
 $gateFailures = 0
 $agentFailures = 0
 $limitWaits = 0
+$netWaits = 0
+$netWaitedMin = 0
 $lastGate = 'NONE'
 # Pending work from an interrupted run: establish the gate state first, so iteration 1 fixes it.
 $pending = @(git -C $work status --porcelain | Where-Object { $_ -notmatch '\.ralph/' })
@@ -205,12 +207,29 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
         }
         $i--; continue
     }
-    if (-not ($out -match 'RALPH_STATUS:') -and $mins -lt 1) {
+    # Transient network/API failure: nothing to gate. Back off (2, 4, 8 ... max 30 min) and retry.
+    $isShort = $out.Trim().Length -lt 600
+    if ($isShort -and $out -match '(API Error|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Can.t reach the API|fetch failed|socket hang up|\b5\d\d\b|overloaded)') {
+        $netWaits++
+        $waitMin = [math]::Min(30, [math]::Pow(2, [math]::Min($netWaits, 5)))
+        $netWaitedMin += $waitMin
+        if ($netWaitedMin -gt ($MaxLimitWaitHours * 60)) { Write-Progress-Line "Network/API unavailable for too long ('$($Matches[1])'). Stopping."; break }
+        Write-Progress-Line "Network/API error ('$($Matches[1])'). Waiting $waitMin min and retrying iteration $i."
+        $deadline = (Get-Date).AddMinutes($waitMin)
+        while ((Get-Date) -lt $deadline) {
+            if ($stopFiles | Where-Object { Test-Path $_ }) { break }
+            Start-Sleep -Seconds 30
+        }
+        $i--; continue
+    }
+    if (-not ($out -match 'RALPH_STATUS:') -and ($isShort -or $mins -lt 1)) {
         $agentFailures++
         Write-Progress-Line "iter $i :: agent produced no result in ${mins}min (see $logFile)."
         if ($agentFailures -ge 3) { Write-Progress-Line 'Agent failed 3 times in a row. Stopping.'; break }
         continue
     }
+    $netWaits = 0
+    $netWaitedMin = 0
     $agentFailures = 0
     $limitWaits = 0
 
