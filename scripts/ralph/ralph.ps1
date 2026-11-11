@@ -18,6 +18,8 @@ param(
     [string]$Goal,
     [int]$MaxIterations = 20,
     [int]$MaxGateFailures = 3,
+    [int]$MaxLimitWaitHours = 8,
+    [switch]$NoWaitOnLimit,
     [switch]$NoWorktree,
     [switch]$SkipPermissions,
     [switch]$Offline,
@@ -131,9 +133,34 @@ function Get-GateTail {
     (@($lines | Select-Object -First 2) + '...' + $interesting + '...' + ($lines | Select-Object -Last 25)) -join "`n"
 }
 
+function Get-LimitResetTime([string]$text) {
+    # e.g. "resets 11:30pm (Africa/Maputo)" -> next local occurrence; fallback 20 minutes.
+    if ($text -match 'resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)') {
+        $h = [int]$Matches[1] % 12; if ($Matches[3] -eq 'pm') { $h += 12 }
+        $m = if ($Matches[2]) { [int]$Matches[2] } else { 0 }
+        $t = (Get-Date).Date.AddHours($h).AddMinutes($m + 2)
+        if ($t -le (Get-Date)) { $t = $t.AddDays(1) }
+        return $t
+    }
+    return (Get-Date).AddMinutes(20)
+}
+
 # ---------- loop ----------
+$runStamp = Get-Date -Format 'yyyyMMdd-HHmm'
 $gateFailures = 0
+$agentFailures = 0
+$limitWaits = 0
 $lastGate = 'NONE'
+# Pending work from an interrupted run: establish the gate state first, so iteration 1 fixes it.
+$pending = @(git -C $work status --porcelain | Where-Object { $_ -notmatch '\.ralph/' })
+if ($pending.Count -gt 0 -and -not $DryRun) {
+    $g0 = Select-NextGoal -Root $work -GoalId $Goal
+    if ($g0) {
+        Write-Progress-Line "pending work found ($($pending.Count) files): running gate before iteration 1"
+        & "$PSScriptRoot\gate.ps1" -GoalFile $g0.Path -WorkDir $work -OutFile $gateFile -Offline:$Offline -IncludeUntracked:(-not $NoWorktree)
+        $lastGate = if ($LASTEXITCODE -eq 0) { 'PASS' } else { 'FAIL' }
+    }
+}
 for ($i = 1; $i -le $MaxIterations; $i++) {
     if ($stopFiles | Where-Object { Test-Path $_ }) { Write-Progress-Line 'STOP file found, stopping.'; break }
 
@@ -160,10 +187,34 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
     Push-Location $work
     try { $out = & $claude @cliArgs | Out-String } finally { Pop-Location }
     $mins = [math]::Round(((Get-Date) - $started).TotalMinutes, 1)
-    $logFile = Join-Path $state ("logs\iter-{0:D3}-{1}.md" -f $i, $g.Id)
+    $logFile = Join-Path $state ("logs\{0}-iter-{1:D3}-{2}.md" -f $runStamp, $i, $g.Id)
     Set-Content -LiteralPath $logFile -Value $out -Encoding UTF8
 
-    $status = if ($out -match 'RALPH_STATUS:\s*(CONTINUE|GOAL_DONE|NEEDS_HUMAN)') { $Matches[1] } else { 'UNKNOWN' }
+    # Account usage/rate limit: the agent did nothing, so wait for the reset and redo this iteration.
+    if ($out -match '(hit your .{0,40}limit|usage limit|rate limit|Credit balance is too low|overloaded_error)') {
+        $limitWaits++
+        $resume = Get-LimitResetTime $out
+        $waitMin = [math]::Max(5, [math]::Ceiling(($resume - (Get-Date)).TotalMinutes))
+        if ($NoWaitOnLimit -or ($limitWaits * $waitMin) -gt ($MaxLimitWaitHours * 60)) {
+            Write-Progress-Line "Usage limit reached ('$($Matches[1])'). Stopping; run again after the reset."; break }
+        Write-Progress-Line "Usage limit reached. Waiting $waitMin min (until $($resume.ToString('HH:mm'))) and retrying iteration $i."
+        $deadline = (Get-Date).AddMinutes($waitMin)
+        while ((Get-Date) -lt $deadline) {
+            if ($stopFiles | Where-Object { Test-Path $_ }) { break }
+            Start-Sleep -Seconds 60
+        }
+        $i--; continue
+    }
+    if (-not ($out -match 'RALPH_STATUS:') -and $mins -lt 1) {
+        $agentFailures++
+        Write-Progress-Line "iter $i :: agent produced no result in ${mins}min (see $logFile)."
+        if ($agentFailures -ge 3) { Write-Progress-Line 'Agent failed 3 times in a row. Stopping.'; break }
+        continue
+    }
+    $agentFailures = 0
+    $limitWaits = 0
+
+    $status =if ($out -match 'RALPH_STATUS:\s*(CONTINUE|GOAL_DONE|NEEDS_HUMAN)') { $Matches[1] } else { 'UNKNOWN' }
     $summary = if ($out -match 'RALPH_SUMMARY:\s*(.+)') { $Matches[1].Trim() } else { '(sem resumo)' }
 
     $gateArgs = @{ GoalFile = $g.Path; WorkDir = $work; OutFile = $gateFile; Offline = $Offline; Full = ($status -eq 'GOAL_DONE'); IncludeUntracked = (-not $NoWorktree) }
