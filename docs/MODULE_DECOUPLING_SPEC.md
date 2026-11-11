@@ -48,8 +48,9 @@ A suite completa tem de continuar verde no fecho de cada goal.
 
 ## 4. Fecho de cada onda
 
-Quando o goal da onda passa a `DONE`, o `ModuleDecouplingHarnessTest` exige zero ligações no âmbito
-dessa onda. As linhas resolvidas são apagadas da baseline do CA-07 (o diff-guard aceita apagar linhas da
+O `ModuleDecouplingHarnessTest` lê os goals e impõe em dois níveis: cada critério de migração assim que
+é marcado `[x]` (ex.: `MD-C02` exige zero ligações a `company.repository.*` a partir de `hr`), e a onda
+inteira quando o goal passa a `DONE`. Os critérios de criação de Lookups são provados pelos seus testes. As linhas resolvidas são apagadas da baseline do CA-07 (o diff-guard aceita apagar linhas da
 baseline, mas nunca acrescentá-las). Progresso em `backend/target/module-decoupling-report.md`.
 
 ## 5. Fora de âmbito
