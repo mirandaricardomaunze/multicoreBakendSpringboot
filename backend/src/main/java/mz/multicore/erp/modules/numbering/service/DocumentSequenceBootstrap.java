@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.numbering.service;
 
 import mz.multicore.erp.architecture.events.CompanyCreatedEvent;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.event.EventListener;
@@ -22,11 +22,11 @@ import java.time.LocalDate;
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class DocumentSequenceBootstrap implements ApplicationRunner {
 
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
 
-    public DocumentSequenceBootstrap(CompanyRepository companyRepository, DocumentNumberService documentNumberService) {
-        this.companyRepository = companyRepository;
+    public DocumentSequenceBootstrap(CompanyLookup companyLookup, DocumentNumberService documentNumberService) {
+        this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
     }
 
@@ -37,7 +37,7 @@ public class DocumentSequenceBootstrap implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        companyRepository.findAll().stream().map(Company::getId).forEach(this::ensureFor);
+        companyLookup.findAll().stream().map(Company::getId).forEach(this::ensureFor);
     }
 
     private void ensureFor(Long companyId) {

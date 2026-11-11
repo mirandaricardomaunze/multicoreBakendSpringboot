@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.FiscalSalesExportDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +50,7 @@ class FiscalSalesExportServiceTest {
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
         companyRepository = mock(CompanyRepository.class);
-        service = new FiscalSalesExportService(invoiceRepository, companyRepository);
+        service = new FiscalSalesExportService(invoiceRepository, new CompanyLookup(companyRepository));
 
         Company company = new Company();
         company.setId(COMPANY);

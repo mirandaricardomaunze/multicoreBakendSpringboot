@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.audit.dto.ForensicAuditSummaryDTO;
 import mz.multicore.erp.modules.audit.service.ForensicAuditService;
 import mz.multicore.erp.modules.backup.service.ScheduledBackupService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.monitoring.dto.TenantHealthDTO;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
 import org.slf4j.Logger;
@@ -28,7 +28,7 @@ public class TenantMonitoringService {
 
     private static final Logger log = LoggerFactory.getLogger(TenantMonitoringService.class);
 
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AppUserCompanyAccessRepository companyAccessRepository;
     private final ForensicAuditService forensicAuditService;
     private final ScheduledBackupService scheduledBackupService;
@@ -36,14 +36,14 @@ public class TenantMonitoringService {
     private final SystemAlertEmailService systemAlertEmailService;
 
     public TenantMonitoringService(
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AppUserCompanyAccessRepository companyAccessRepository,
             ForensicAuditService forensicAuditService,
             ScheduledBackupService scheduledBackupService,
             SystemIncidentManager systemIncidentManager,
             SystemAlertEmailService systemAlertEmailService
     ) {
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.companyAccessRepository = companyAccessRepository;
         this.forensicAuditService = forensicAuditService;
         this.scheduledBackupService = scheduledBackupService;
@@ -57,8 +57,8 @@ public class TenantMonitoringService {
 
         List<Company> companies = PermissionGuard.SUPERADMIN_ROLE.equalsIgnoreCase(
                 mz.multicore.erp.architecture.security.CurrentUserContext.getRole())
-                ? companyRepository.findAll()
-                : companyRepository.findById(
+                ? companyLookup.findAll()
+                : companyLookup.find(
                         mz.multicore.erp.architecture.security.CurrentUserContext.requireCurrentCompanyId())
                         .map(List::of).orElseGet(List::of);
         List<TenantHealthDTO> result = new ArrayList<>();

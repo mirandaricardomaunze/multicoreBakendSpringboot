@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.projects.dto.*;
 import mz.multicore.erp.modules.projects.model.CustomerProject;
 import mz.multicore.erp.modules.projects.model.CustomerProjectOrder;
@@ -36,19 +36,19 @@ public class CustomerProjectService {
     private final CustomerProjectRepository projectRepository;
     private final CustomerProjectOrderRepository linkRepository;
     private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final OrderRepository orderRepository;
     private final InvoiceRepository invoiceRepository;
     private final AuditLogService auditLogService;
 
     public CustomerProjectService(CustomerProjectRepository projectRepository, CustomerProjectOrderRepository linkRepository,
-                                  ClientRepository clientRepository, CompanyRepository companyRepository,
+                                  ClientRepository clientRepository, CompanyLookup companyLookup,
                                   OrderRepository orderRepository, InvoiceRepository invoiceRepository,
                                   AuditLogService auditLogService) {
         this.projectRepository = projectRepository;
         this.linkRepository = linkRepository;
         this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.orderRepository = orderRepository;
         this.invoiceRepository = invoiceRepository;
         this.auditLogService = auditLogService;
@@ -72,8 +72,7 @@ public class CustomerProjectService {
         boolean created = request.id() == null;
         CustomerProject project = created ? new CustomerProject() : requireProject(request.companyId(), request.id());
         if (created) {
-            project.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            project.setCompany(companyLookup.require(request.companyId()));
             project.setCode(String.format("OB-%04d", projectRepository.countByCompanyId(request.companyId()) + 1));
         } else if (!project.getClient().getId().equals(client.getId()) && !linkRepository.findByProjectWithOrder(project.getId()).isEmpty()) {
             throw new BusinessRuleException("A obra já tem encomendas: não pode mudar de cliente.");

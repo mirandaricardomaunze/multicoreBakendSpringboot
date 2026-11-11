@@ -14,7 +14,7 @@ import mz.multicore.erp.modules.bulkstock.repository.BulkMeasurementRepository;
 import mz.multicore.erp.modules.bulkstock.repository.BulkStockSettingRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
 import mz.multicore.erp.modules.inventory.model.StockMovementType;
@@ -52,7 +52,7 @@ public class BulkStockService {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final StockMovementRegistrationService movementService;
     private final ProductUnitService productUnitService;
     private final PickupService pickupService;
@@ -60,7 +60,7 @@ public class BulkStockService {
 
     public BulkStockService(BulkStockSettingRepository settingRepository, BulkMeasurementRepository measurementRepository,
                             ProductRepository productRepository, WarehouseRepository warehouseRepository,
-                            StockRepository stockRepository, CompanyRepository companyRepository,
+                            StockRepository stockRepository, CompanyLookup companyLookup,
                             StockMovementRegistrationService movementService, ProductUnitService productUnitService,
                             PickupService pickupService, AuditLogService auditLogService) {
         this.settingRepository = settingRepository;
@@ -68,7 +68,7 @@ public class BulkStockService {
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.movementService = movementService;
         this.productUnitService = productUnitService;
         this.pickupService = pickupService;
@@ -98,8 +98,7 @@ public class BulkStockService {
         BigDecimal tolerance = BulkMeasurementRules.requireTolerance(request.tolerancePercent());
         BulkStockSetting setting = existing.orElseGet(BulkStockSetting::new);
         if (setting.getId() == null) {
-            setting.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            setting.setCompany(companyLookup.require(request.companyId()));
             setting.setProduct(product);
         }
         setting.setTolerancePercent(tolerance);

@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.variants.dto.*;
@@ -33,15 +33,15 @@ public class VariantService {
 
     private final ProductFamilyRepository familyRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final AuditLogService auditLogService;
 
     public VariantService(ProductFamilyRepository familyRepository, ProductRepository productRepository,
-                          CompanyRepository companyRepository, InventoryService inventoryService, AuditLogService auditLogService) {
+                          CompanyLookup companyLookup, InventoryService inventoryService, AuditLogService auditLogService) {
         this.familyRepository = familyRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.auditLogService = auditLogService;
     }
@@ -72,7 +72,7 @@ public class VariantService {
         if (values1.isEmpty()) throw new BusinessRuleException("Indique pelo menos um valor de " + request.attribute1().trim() + ".");
         if (twoAttributes && values2.isEmpty()) throw new BusinessRuleException("Indique os valores de " + request.attribute2().trim() + ".");
         if (!twoAttributes) values2 = List.of();
-        Company company = companyRepository.findById(request.companyId()).orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         ProductFamily family = new ProductFamily();
         family.setCompany(company);

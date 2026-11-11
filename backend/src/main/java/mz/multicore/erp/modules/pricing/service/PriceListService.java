@@ -9,7 +9,7 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.pricing.dto.*;
 import mz.multicore.erp.modules.pricing.model.ClientPriceList;
 import mz.multicore.erp.modules.pricing.model.PriceList;
@@ -37,19 +37,19 @@ public class PriceListService {
     private final PriceListRepository priceListRepository;
     private final PriceListItemRepository itemRepository;
     private final ClientPriceListRepository assignmentRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final ProductRepository productRepository;
     private final ClientRepository clientRepository;
     private final AuditLogService auditLogService;
 
     public PriceListService(PriceListRepository priceListRepository, PriceListItemRepository itemRepository,
-                            ClientPriceListRepository assignmentRepository, CompanyRepository companyRepository,
+                            ClientPriceListRepository assignmentRepository, CompanyLookup companyLookup,
                             ProductRepository productRepository, ClientRepository clientRepository,
                             AuditLogService auditLogService) {
         this.priceListRepository = priceListRepository;
         this.itemRepository = itemRepository;
         this.assignmentRepository = assignmentRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.productRepository = productRepository;
         this.clientRepository = clientRepository;
         this.auditLogService = auditLogService;
@@ -79,8 +79,7 @@ public class PriceListService {
         PriceList list;
         boolean created = request.id() == null;
         if (created) {
-            Company company = companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+            Company company = companyLookup.require(request.companyId());
             list = new PriceList();
             list.setCompany(company);
         } else {

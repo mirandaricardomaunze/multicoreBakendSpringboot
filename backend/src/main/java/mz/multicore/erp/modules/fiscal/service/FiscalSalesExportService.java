@@ -9,7 +9,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.FiscalSalesExportDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,18 +33,18 @@ public class FiscalSalesExportService {
             InvoiceStatus.APPROVED, InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.CANCELLED);
 
     private final InvoiceRepository invoiceRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final FiscalSalesXmlBuilder xmlBuilder;
 
     @Autowired
-    public FiscalSalesExportService(InvoiceRepository invoiceRepository, CompanyRepository companyRepository, FiscalSalesXmlBuilder xmlBuilder) {
+    public FiscalSalesExportService(InvoiceRepository invoiceRepository, CompanyLookup companyLookup, FiscalSalesXmlBuilder xmlBuilder) {
         this.invoiceRepository = invoiceRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.xmlBuilder = xmlBuilder;
     }
 
-    public FiscalSalesExportService(InvoiceRepository invoiceRepository, CompanyRepository companyRepository) {
-        this(invoiceRepository, companyRepository, new FiscalSalesXmlBuilder());
+    public FiscalSalesExportService(InvoiceRepository invoiceRepository, CompanyLookup companyLookup) {
+        this(invoiceRepository, companyLookup, new FiscalSalesXmlBuilder());
     }
 
     @Transactional(readOnly = true)
@@ -56,8 +56,7 @@ public class FiscalSalesExportService {
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(23, 59, 59);
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
 
         List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId).stream()
                 .filter(i -> ISSUED.contains(i.getStatus()) && withinPeriod(i.getCreatedAt(), start, end))

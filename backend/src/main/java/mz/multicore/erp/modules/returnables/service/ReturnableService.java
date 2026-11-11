@@ -15,7 +15,7 @@ import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
@@ -53,7 +53,7 @@ public class ReturnableService {
     private final ReturnableMovementRepository movementRepository;
     private final ProductRepository productRepository;
     private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final InvoiceRepository invoiceRepository;
@@ -64,7 +64,7 @@ public class ReturnableService {
 
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
                              ProductRepository productRepository, ClientRepository clientRepository,
-                             CompanyRepository companyRepository, WarehouseRepository warehouseRepository,
+                             CompanyLookup companyLookup, WarehouseRepository warehouseRepository,
                              StockRepository stockRepository, InvoiceRepository invoiceRepository,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
                              ComercialService comercialService, AuditLogService auditLogService) {
@@ -72,7 +72,7 @@ public class ReturnableService {
         this.movementRepository = movementRepository;
         this.productRepository = productRepository;
         this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.invoiceRepository = invoiceRepository;
@@ -103,8 +103,7 @@ public class ReturnableService {
         }
         ReturnableItem item = itemRepository.findByCompanyIdAndProductId(request.companyId(), product.getId()).orElseGet(() -> {
             ReturnableItem created = new ReturnableItem();
-            created.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            created.setCompany(companyLookup.require(request.companyId()));
             created.setProduct(product);
             return created;
         });

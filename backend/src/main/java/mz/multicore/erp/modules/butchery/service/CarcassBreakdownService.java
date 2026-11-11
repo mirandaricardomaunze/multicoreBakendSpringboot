@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.butchery.repository.CarcassBreakdownRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
@@ -42,7 +42,7 @@ public class CarcassBreakdownService {
     private final BreakdownTemplateRepository templateRepository;
     private final CarcassBreakdownRepository breakdownRepository;
     private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final StockMovementRegistrationService movementService;
@@ -52,7 +52,7 @@ public class CarcassBreakdownService {
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
-                                   ProductRepository productRepository, CompanyRepository companyRepository,
+                                   ProductRepository productRepository, CompanyLookup companyLookup,
                                    WarehouseRepository warehouseRepository, StockRepository stockRepository,
                                    StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                    DocumentNumberService documentNumberService, AuditLogService auditLogService,
@@ -60,7 +60,7 @@ public class CarcassBreakdownService {
         this.templateRepository = templateRepository;
         this.breakdownRepository = breakdownRepository;
         this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.movementService = movementService;
@@ -250,7 +250,7 @@ public class CarcassBreakdownService {
     }
 
     private Company company(Long companyId) {
-        return companyRepository.findById(companyId).orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        return companyLookup.require(companyId);
     }
 
     private static BigDecimal expectedYield(BreakdownTemplate template, Long productId) {

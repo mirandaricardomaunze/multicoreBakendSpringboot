@@ -117,7 +117,7 @@ class SecurityAttackSurfaceTest {
         assertEquals("", CurrentUserContext.getRole());
 
         CompanyRepository companyRepo = mock(CompanyRepository.class);
-        TenantMonitoringService monitoring = new TenantMonitoringService(companyRepo, accesses,
+        TenantMonitoringService monitoring = new TenantMonitoringService(new CompanyLookup(companyRepo), accesses,
                 mock(ForensicAuditService.class), mock(ScheduledBackupService.class),
                 mock(SystemIncidentManager.class), mock(SystemAlertEmailService.class));
         Company own = company(1L);

@@ -34,7 +34,7 @@ import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
@@ -64,7 +64,7 @@ public class CustomerAdvanceService {
     private final ComercialService comercialService;
     private final CreditNoteService creditNoteService;
     private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final OrderRepository orderRepository;
     private final InvoiceRepository invoiceRepository;
     private final ReceiptRepository receiptRepository;
@@ -74,7 +74,7 @@ public class CustomerAdvanceService {
 
     public CustomerAdvanceService(CustomerAdvanceRepository advanceRepository, AdvanceProductProvisioner productProvisioner,
                                   ComercialService comercialService, CreditNoteService creditNoteService,
-                                  ClientRepository clientRepository, CompanyRepository companyRepository,
+                                  ClientRepository clientRepository, CompanyLookup companyLookup,
                                   OrderRepository orderRepository, InvoiceRepository invoiceRepository,
                                   ReceiptRepository receiptRepository, CreditNoteRepository creditNoteRepository,
                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
@@ -83,7 +83,7 @@ public class CustomerAdvanceService {
         this.comercialService = comercialService;
         this.creditNoteService = creditNoteService;
         this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.orderRepository = orderRepository;
         this.invoiceRepository = invoiceRepository;
         this.receiptRepository = receiptRepository;
@@ -112,8 +112,7 @@ public class CustomerAdvanceService {
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("O adiantamento é de um cliente identificado, não do Consumidor Final.");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         Order order = request.orderId() == null ? null : requireClientOrder(request, client);
 
         // The amount typed is what the client pays, VAT included; the invoice line carries the net price.

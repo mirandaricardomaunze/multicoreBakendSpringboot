@@ -24,15 +24,12 @@ backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.
 backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> users.repository.AppUserRepository
 backend/src/main/java/mz/multicore/erp/architecture/security/TenantAccessService.java -> users.repository.AppUserRepository
-backend/src/main/java/mz/multicore/erp/modules/accounting/service/ChartOfAccountsBootstrap.java -> company.repository.CompanyRepository
-backend/src/main/java/mz/multicore/erp/modules/activity/service/CompanyActivityService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/advances/service/AdvanceProductProvisioner.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/advances/service/CustomerAdvanceService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/advances/service/CustomerAdvanceService.java -> comercial.repository.CreditNoteRepository
 backend/src/main/java/mz/multicore/erp/modules/advances/service/CustomerAdvanceService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/advances/service/CustomerAdvanceService.java -> comercial.repository.OrderRepository
 backend/src/main/java/mz/multicore/erp/modules/advances/service/CustomerAdvanceService.java -> comercial.repository.ReceiptRepository
-backend/src/main/java/mz/multicore/erp/modules/advances/service/CustomerAdvanceService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/approvals/service/ApprovalQueryService.java -> inventory.repository.StockTransferRepository
 backend/src/main/java/mz/multicore/erp/modules/approvals/service/ApprovalQueryService.java -> inventory.repository.StockWasteRepository
 backend/src/main/java/mz/multicore/erp/modules/approvals/service/ApprovalService.java -> inventory.repository.StockTransferRepository
@@ -70,11 +67,9 @@ backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> purchases.repository.SupplierRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> users.repository.AppUserRepository
 backend/src/main/java/mz/multicore/erp/modules/bulkstock/service/BulkStockService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/bulkstock/service/BulkStockService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/bulkstock/service/BulkStockService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/bulkstock/service/BulkStockService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/butchery/service/CarcassBreakdownService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/butchery/service/CarcassBreakdownService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/butchery/service/CarcassBreakdownService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/butchery/service/CarcassBreakdownService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialInvoiceLifecycleService.java -> inventory.repository.WarehouseRepository
@@ -118,7 +113,6 @@ backend/src/main/java/mz/multicore/erp/modules/dashboard/service/OperationalPuls
 backend/src/main/java/mz/multicore/erp/modules/dashboard/service/OperationalPulseService.java -> recurring.repository.RecurringContractRepository
 backend/src/main/java/mz/multicore/erp/modules/expiry/service/ExpiryService.java -> comercial.repository.ProductCategoryRepository
 backend/src/main/java/mz/multicore/erp/modules/expiry/service/ExpiryService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/expiry/service/ExpiryService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/expiry/service/ExpiryService.java -> inventory.repository.ProductBatchRepository
 backend/src/main/java/mz/multicore/erp/modules/expiry/service/ExpiryService.java -> inventory.repository.StockWasteRepository
 backend/src/main/java/mz/multicore/erp/modules/financeira/service/CashFlowDataCollector.java -> comercial.repository.InvoiceRepository
@@ -127,7 +121,6 @@ backend/src/main/java/mz/multicore/erp/modules/financeira/service/CashFlowForeca
 backend/src/main/java/mz/multicore/erp/modules/financeira/service/CashFlowForecastService.java -> purchases.repository.PurchaseRepository
 backend/src/main/java/mz/multicore/erp/modules/financeira/service/FinanceService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/fiscal/service/FiscalSalesExportService.java -> comercial.repository.InvoiceRepository
-backend/src/main/java/mz/multicore/erp/modules/fiscal/service/FiscalSalesExportService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/fiscal/service/FiscalSummaryService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/fiscal/service/FiscalSummaryService.java -> purchases.repository.PurchaseRepository
 backend/src/main/java/mz/multicore/erp/modules/fleet/service/FleetManifestBuilder.java -> comercial.repository.DeliveryGuideRepository
@@ -163,7 +156,6 @@ backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionS
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/manufacturing/service/ProductionShortageCheck.java -> inventory.repository.StockRepository
-backend/src/main/java/mz/multicore/erp/modules/monitoring/service/TenantMonitoringService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/monitoring/service/TenantMonitoringService.java -> users.repository.AppUserCompanyAccessRepository
 backend/src/main/java/mz/multicore/erp/modules/movimentos/service/MovimentoCollector.java -> comercial.repository.CreditNoteRepository
 backend/src/main/java/mz/multicore/erp/modules/movimentos/service/MovimentoCollector.java -> comercial.repository.DebitNoteRepository
@@ -181,7 +173,6 @@ backend/src/main/java/mz/multicore/erp/modules/movimentos/service/MovimentosServ
 backend/src/main/java/mz/multicore/erp/modules/movimentos/service/MovimentosService.java -> comercial.repository.QuotationRepository
 backend/src/main/java/mz/multicore/erp/modules/movimentos/service/MovimentosService.java -> comercial.repository.ReceiptRepository
 backend/src/main/java/mz/multicore/erp/modules/movimentos/service/MovimentosService.java -> inventory.repository.StockTransferRepository
-backend/src/main/java/mz/multicore/erp/modules/numbering/service/DocumentSequenceBootstrap.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/performance/service/EmployeeRankingService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/performance/service/EmployeeRankingService.java -> hr.repository.EmployeeRepository
 backend/src/main/java/mz/multicore/erp/modules/performance/service/GoalProgressEngine.java -> comercial.repository.InvoiceRepository
@@ -216,14 +207,12 @@ backend/src/main/java/mz/multicore/erp/modules/pos/service/PosReturnAndVoucherSe
 backend/src/main/java/mz/multicore/erp/modules/pos/service/PosReturnAndVoucherService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceListService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceListService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceListService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceResolutionService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/pricing/service/PriceResolutionService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/AssetDepreciationMapPrintService.java -> assets.repository.AssetRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/CompanyBankDetails.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/DeliveryGuidePrintService.java -> comercial.repository.DeliveryGuideRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/EmploymentContractPrintService.java -> hr.repository.EmploymentContractRepository
-backend/src/main/java/mz/multicore/erp/modules/printing/ExceptionReportPrintService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/FleetManifestPrintService.java -> fleet.repository.FleetManifestRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/GuideRemittanceDocumentRenderer.java -> comercial.repository.OrderRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/GuideRemittancePrintService.java -> comercial.repository.InvoiceRepository
@@ -254,7 +243,6 @@ backend/src/main/java/mz/multicore/erp/modules/productionplan/service/Production
 backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> comercial.repository.OrderRepository
-backend/src/main/java/mz/multicore/erp/modules/projects/service/CustomerProjectService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionLifecycleService.java -> comercial.repository.ProductCategoryRepository
 backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionLifecycleService.java -> comercial.repository.ProductRepository
 backend/src/main/java/mz/multicore/erp/modules/promotions/service/PromotionService.java -> comercial.repository.ProductCategoryRepository
@@ -294,14 +282,10 @@ backend/src/main/java/mz/multicore/erp/modules/reports/service/ReportService.jav
 backend/src/main/java/mz/multicore/erp/modules/returnables/service/ReturnableService.java -> comercial.repository.ClientRepository
 backend/src/main/java/mz/multicore/erp/modules/returnables/service/ReturnableService.java -> comercial.repository.InvoiceRepository
 backend/src/main/java/mz/multicore/erp/modules/returnables/service/ReturnableService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/returnables/service/ReturnableService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/returnables/service/ReturnableService.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/modules/returnables/service/ReturnableService.java -> inventory.repository.WarehouseRepository
 backend/src/main/java/mz/multicore/erp/modules/subscription/service/SubscriptionRenewalService.java -> pos.repository.MobilePaymentRepository
 backend/src/main/java/mz/multicore/erp/modules/subscription/service/SubscriptionService.java -> pos.repository.MobilePaymentRepository
 backend/src/main/java/mz/multicore/erp/modules/units/service/ProductUnitService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/units/service/UnitOfMeasureService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/variants/service/VariantService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/variants/service/VariantService.java -> company.repository.CompanyRepository
 backend/src/main/java/mz/multicore/erp/modules/weighbridge/service/WeighbridgeService.java -> comercial.repository.ProductRepository
-backend/src/main/java/mz/multicore/erp/modules/weighbridge/service/WeighbridgeService.java -> company.repository.CompanyRepository

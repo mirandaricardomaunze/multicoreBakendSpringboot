@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.expiry.dto.*;
 import mz.multicore.erp.modules.expiry.model.MarkdownRule;
 import mz.multicore.erp.modules.expiry.repository.MarkdownRuleRepository;
@@ -49,7 +49,7 @@ public class ExpiryService {
     private final ProductBatchRepository batchRepository;
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final MarkdownRuleRepository ruleRepository;
     private final StockWasteRepository wasteRepository;
     private final StockWasteService wasteService;
@@ -57,14 +57,14 @@ public class ExpiryService {
     private final AuditLogService auditLogService;
 
     public ExpiryService(InventoryService inventoryService, ProductBatchRepository batchRepository, ProductRepository productRepository,
-                         ProductCategoryRepository categoryRepository, CompanyRepository companyRepository,
+                         ProductCategoryRepository categoryRepository, CompanyLookup companyLookup,
                          MarkdownRuleRepository ruleRepository, StockWasteRepository wasteRepository, StockWasteService wasteService,
                          PromotionService promotionService, AuditLogService auditLogService) {
         this.inventoryService = inventoryService;
         this.batchRepository = batchRepository;
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.ruleRepository = ruleRepository;
         this.wasteRepository = wasteRepository;
         this.wasteService = wasteService;
@@ -111,8 +111,7 @@ public class ExpiryService {
                 : ruleRepository.findByIdAndCompanyId(request.id(), request.companyId())
                         .orElseThrow(() -> new BusinessRuleException("Regra de remarcação não encontrada."));
         if (rule.getCompany() == null) {
-            rule.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            rule.setCompany(companyLookup.require(request.companyId()));
         }
         rule.setCategory(request.categoryId() == null ? null
                 : categoryRepository.findByIdAndCompaniesId(request.categoryId(), request.companyId())
