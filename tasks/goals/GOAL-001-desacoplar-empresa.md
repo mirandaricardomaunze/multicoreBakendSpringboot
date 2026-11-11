@@ -22,7 +22,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-C01 — CompanyLookup com require/reference/findAll/findByTaxId/lockForUpdate e mensagens PT-MZ — `CompanyLookupTest`
 - [x] MD-C02 — hr sem CompanyRepository — `ModuleDecouplingHarnessTest`
 - [x] MD-C03 — inventory e comercial sem CompanyRepository — `ModuleDecouplingHarnessTest`
-- [ ] MD-C04 — purchases, platform, fleet, users — `ModuleDecouplingHarnessTest`
+- [x] MD-C04 — purchases, platform, fleet, users — `ModuleDecouplingHarnessTest`
 - [ ] MD-C05 — manufacturing, crm, assets, architecture, support, subscription, recurring, promotions, pos, performance, intelligence, backup, approvals — `ModuleDecouplingHarnessTest`
 - [ ] MD-C06 — restantes módulos com 1 ficheiro — `ModuleDecouplingHarnessTest`
 - [ ] MD-C07 — zero ligações a company.repository fora de company; suite completa verde — `ModuleDecouplingHarnessTest`
@@ -45,3 +45,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-10 · gate · desbloqueado pelo responsável; gate verde sobre o MD-C01 (diff-guard 246 linhas, Maven PASS).
 - 2026-11-11 · MD-C02 · os 21 serviços de `hr` lêem a empresa por `CompanyLookup`; o gate falhou porque 10 testes de `hr` ainda passavam `CompanyRepository` aos construtores — passam agora `new CompanyLookup(companyRepository)` (stubs intactos); 21 linhas `hr -> company.repository` apagadas do baseline CA-07. Testes de hr, `ModuleDecouplingHarnessTest` e `CleanArchitectureHarnessTest` verdes.
 - 2026-11-11 · MD-C03 · 11 serviços de `inventory` e 9 de `comercial` lêem a empresa por `CompanyLookup` (`require`, `find`, `reference`, `findAll`); a escrita do trancamento de stock passa por `CompanyService.saveCompany`, por isso o construtor legado de `InventoryService`/`WarehouseService` recebe `CompanyLookup` + `CompanyService` (harness de decomposição actualizado para 10 argumentos). "Empresa não encontrada: <id>" das quebras normalizada para "Empresa não encontrada." (nenhum teste a verificava). 14 testes passam `new CompanyLookup(repo)`/`mock(CompanyLookup)`; 20 linhas apagadas do baseline CA-07. Suites de inventory e comercial (478 testes), `ModuleDecouplingHarnessTest` e `CleanArchitectureHarnessTest` verdes.
+- 2026-11-11 · MD-C04 · os 19 serviços de `purchases`, `platform`, `fleet` e `users` já liam a empresa por `CompanyLookup` desde a iteração de f69c527 (gate PASS, sem resumo nem critério marcado); esta iteração confirmou zero `CompanyRepository` nesses módulos, apagou as 7 linhas obsoletas que restavam no baseline CA-07 (4 de purchases, 3 de users) e marcou o critério. `ModuleDecouplingHarnessTest`, `CleanArchitectureHarnessTest`, `CompanyLookupTest` e os testes de purchases/platform/fleet/users verdes.

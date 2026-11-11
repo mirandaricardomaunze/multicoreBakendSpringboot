@@ -14,7 +14,7 @@ correm sempre no gate.
 | MD-C01 | `CompanyLookup` em `company.service`: `require`, `reference`, `findAll`, `findByTaxId`, `lockForUpdate` (exige a transacção do chamador), mais `requireActive`, `find` e `count`; mensagens PT-MZ normalizadas; escritas alheias com `CompanyService.saveCompany` — **feito** | `CompanyLookupTest` |
 | MD-C02 | `hr` (21 ficheiros) sem `CompanyRepository`; linhas removidas do baseline CA-07 — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-C03 | `inventory` (11) e `comercial` (9) sem `CompanyRepository`; escrita do trancamento de stock via `CompanyService.saveCompany` — **feito** | `ModuleDecouplingHarnessTest` |
-| MD-C04 | `purchases`, `platform`, `fleet`, `users` sem `CompanyRepository` | `ModuleDecouplingHarnessTest` |
+| MD-C04 | `purchases`, `platform`, `fleet`, `users` sem `CompanyRepository` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-C05 | `manufacturing`, `crm`, `assets`, `architecture`, `support`, `subscription`, `recurring`, `promotions`, `pos`, `performance`, `intelligence`, `backup`, `approvals` | `ModuleDecouplingHarnessTest` |
 | MD-C06 | Restantes módulos com 1 ficheiro (weighbridge, variants, units, returnables, projects, printing, pricing, numbering, monitoring, fiscal, expiry, butchery, bulkstock, advances, activity, accounting) | `ModuleDecouplingHarnessTest` |
 | MD-C07 | Zero ligações a `company.repository.*` fora de `company`; suite completa verde | `ModuleDecouplingHarnessTest` |
