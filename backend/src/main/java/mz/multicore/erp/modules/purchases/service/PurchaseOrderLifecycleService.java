@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
@@ -38,7 +38,7 @@ public class PurchaseOrderLifecycleService {
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
@@ -47,7 +47,7 @@ public class PurchaseOrderLifecycleService {
             SupplierRepository supplierRepository,
             ProductRepository productRepository,
             WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService
     ) {
@@ -55,7 +55,7 @@ public class PurchaseOrderLifecycleService {
         this.supplierRepository = supplierRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -77,8 +77,7 @@ public class PurchaseOrderLifecycleService {
         if (warehouse.getCompany() == null || !request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         PurchaseOrder order = new PurchaseOrder();
         order.setSupplier(supplier);

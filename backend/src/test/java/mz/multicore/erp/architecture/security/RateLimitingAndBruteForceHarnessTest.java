@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
 import mz.multicore.erp.modules.users.repository.AppUserRepository;
 import mz.multicore.erp.modules.users.service.AppUserService;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,7 @@ class RateLimitingAndBruteForceHarnessTest {
         appUserService = new AppUserService(
                 appUserRepository,
                 passwordEncoder,
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 companyAccessRepository,
                 managerPinRateLimiter
         );

@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.monitoring.service.SystemAlertEmailService;
 import mz.multicore.erp.modules.monitoring.service.SystemIncidentManager;
 import mz.multicore.erp.modules.monitoring.service.TenantMonitoringService;
@@ -37,7 +38,7 @@ class SecurityAttackSurfaceTest {
     private final CompanyRepository companies = mock(CompanyRepository.class);
     private final BCryptPasswordEncoder passwords = new BCryptPasswordEncoder();
     private final AuthSessionService sessions = new AuthSessionService();
-    private final AppUserService userService = new AppUserService(users, passwords, companies, accesses,
+    private final AppUserService userService = new AppUserService(users, passwords, new CompanyLookup(companies), accesses,
             new ManagerPinRateLimiter(3, 5, java.time.Clock.systemUTC()), null, sessions);
 
     @AfterEach

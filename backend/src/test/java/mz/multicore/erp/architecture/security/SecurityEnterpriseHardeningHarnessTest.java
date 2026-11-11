@@ -3,6 +3,7 @@ package mz.multicore.erp.architecture.security;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
@@ -52,7 +53,7 @@ class SecurityEnterpriseHardeningHarnessTest {
         appUserService = new AppUserService(
                 appUserRepository,
                 passwordEncoder,
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 companyAccessRepository,
                 new ManagerPinRateLimiter(3, 5),
                 null,

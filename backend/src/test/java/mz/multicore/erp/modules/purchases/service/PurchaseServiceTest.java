@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -47,7 +47,7 @@ class PurchaseServiceTest {
                 purchaseRepository,
                 mock(ProductRepository.class),
                 mock(WarehouseRepository.class),
-                mock(CompanyRepository.class),
+                mock(CompanyLookup.class),
                 mock(InventoryService.class),
                 financeService,
                 mock(DocumentNumberService.class),

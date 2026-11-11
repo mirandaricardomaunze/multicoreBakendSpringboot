@@ -17,6 +17,7 @@ import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -145,7 +146,7 @@ class BusinessUnitHarnessTest {
         businessUnitService = new BusinessUnitService(
                 businessUnitRepository,
                 supplierRepository,
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 productRepository,
                 auditLogService
         );

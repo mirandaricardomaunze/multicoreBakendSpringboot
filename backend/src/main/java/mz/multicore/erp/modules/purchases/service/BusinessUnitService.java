@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.purchases.dto.BusinessUnitDTO;
 import mz.multicore.erp.modules.purchases.dto.CreateBusinessUnitRequest;
 import mz.multicore.erp.modules.purchases.dto.UpdateBusinessUnitRequest;
@@ -31,13 +31,13 @@ public class BusinessUnitService {
 
     public BusinessUnitService(BusinessUnitRepository businessUnitRepository,
                                SupplierRepository supplierRepository,
-                               CompanyRepository companyRepository,
+                               CompanyLookup companyLookup,
                                ProductRepository productRepository,
                                AuditLogService auditLogService) {
         BusinessUnitQueryAndPolicyService qp = new BusinessUnitQueryAndPolicyService(businessUnitRepository, productRepository);
         this.queryAndPolicyService = qp;
         this.mutationService = new BusinessUnitMutationService(
-                businessUnitRepository, supplierRepository, companyRepository, auditLogService, qp);
+                businessUnitRepository, supplierRepository, companyLookup, auditLogService, qp);
     }
 
     @Transactional(readOnly = true)

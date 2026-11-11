@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.comercial.model.DeliveryGuideLine;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateFleetManifestRequest;
 import mz.multicore.erp.modules.fleet.model.FleetManifest;
 import mz.multicore.erp.modules.fleet.model.FleetManifestStop;
@@ -28,18 +28,18 @@ public class FleetManifestBuilder {
     private final FleetManifestRepository manifestRepository;
     private final VehicleRepository vehicleRepository;
     private final DeliveryGuideRepository guideRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
 
     public FleetManifestBuilder(FleetManifestRepository manifestRepository,
                                 VehicleRepository vehicleRepository,
                                 DeliveryGuideRepository guideRepository,
-                                CompanyRepository companyRepository,
+                                CompanyLookup companyLookup,
                                 DocumentNumberService documentNumberService) {
         this.manifestRepository = manifestRepository;
         this.vehicleRepository = vehicleRepository;
         this.guideRepository = guideRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
     }
 
@@ -54,8 +54,7 @@ public class FleetManifestBuilder {
         if (request.deliveryGuideIds() == null || request.deliveryGuideIds().isEmpty()) {
             throw new BusinessRuleException("Seleccione pelo menos uma Guia de Remessa para o manifesto.");
         }
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
 
         Vehicle vehicle = null;
         String vehiclePlate = "N/A";

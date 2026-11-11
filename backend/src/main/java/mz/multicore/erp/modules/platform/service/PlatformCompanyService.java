@@ -6,7 +6,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
@@ -25,16 +26,19 @@ import java.util.List;
 @Service
 public class PlatformCompanyService {
 
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
+    private final CompanyService companyService;
     private final AppUserCompanyAccessRepository companyAccessRepository;
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
 
-    public PlatformCompanyService(CompanyRepository companyRepository,
+    public PlatformCompanyService(CompanyLookup companyLookup,
+                                  CompanyService companyService,
                                   AppUserCompanyAccessRepository companyAccessRepository,
                                   AuditLogService auditLogService,
                                   ApplicationEventPublisher eventPublisher) {
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
+        this.companyService = companyService;
         this.companyAccessRepository = companyAccessRepository;
         this.auditLogService = auditLogService;
         this.eventPublisher = eventPublisher;
@@ -43,7 +47,7 @@ public class PlatformCompanyService {
     @Transactional(readOnly = true)
     public List<PlatformCompanyDTO> listCompanies() {
         PermissionGuard.requireSuperAdmin("listar empresas");
-        return companyRepository.findAll().stream()
+        return companyLookup.findAll().stream()
                 .sorted(Comparator.comparing(Company::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toDto)
                 .toList();
@@ -54,7 +58,7 @@ public class PlatformCompanyService {
         PermissionGuard.requireSuperAdmin("mudar o estado de uma empresa");
         Company company = requireCompany(companyId);
         company.setActive(active);
-        companyRepository.save(company);
+        companyService.saveCompany(company);
         auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "PLATFORM_COMPANY_STATUS",
                 String.format("Empresa '%s' %s.", company.getName(), active ? "activada" : "desactivada"));
         return toDto(company);
@@ -64,7 +68,7 @@ public class PlatformCompanyService {
     public PlatformCompanyDTO createCompany(CreateCompanyRequest request) {
         PermissionGuard.requireSuperAdmin("criar uma empresa");
         String taxId = requireText(request.taxId(), "O NUIT é obrigatório.");
-        companyRepository.findByTaxId(taxId).ifPresent(existing -> {
+        companyLookup.findByTaxId(taxId).ifPresent(existing -> {
             throw new BusinessRuleException("Já existe uma empresa com o NUIT " + taxId + ".");
         });
         Company company = new Company();
@@ -76,7 +80,7 @@ public class PlatformCompanyService {
         CompanyProfileMapper.apply(company, request.profile());
         company.setActive(true);
         company.setCreatedBy(CurrentUserContext.getUsername());
-        company = companyRepository.save(company);
+        company = companyService.saveCompany(company);
         eventPublisher.publishEvent(new CompanyCreatedEvent(company.getId()));
         auditLogService.logEvent(CurrentUserContext.getUsername(), company.getId(), "PLATFORM_COMPANY_CREATE",
                 "Empresa criada: " + company.getName());
@@ -94,7 +98,7 @@ public class PlatformCompanyService {
         if (request.profile() != null) {
             CompanyProfileMapper.apply(company, request.profile());
         }
-        companyRepository.save(company);
+        companyService.saveCompany(company);
         auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "PLATFORM_COMPANY_UPDATE",
                 "Empresa actualizada: " + company.getName());
         return toDto(company);
@@ -107,14 +111,13 @@ public class PlatformCompanyService {
         mz.multicore.erp.architecture.validation.ImagePayloadValidator.validate(logo, 5 * 1024 * 1024);
         Company company = requireCompany(companyId);
         company.setLogo(logo != null && logo.length > 0 ? logo : null);
-        companyRepository.save(company);
+        companyService.saveCompany(company);
         auditLogService.logEvent(CurrentUserContext.getUsername(), companyId, "PLATFORM_COMPANY_LOGO",
                 "Logótipo actualizado: " + company.getName());
     }
 
     private Company requireCompany(Long companyId) {
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        return companyLookup.require(companyId);
     }
 
     private String requireText(String value, String message) {

@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.TreasuryAccountProvisioningService;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.CreatePlatformUserRequest;
@@ -47,7 +48,7 @@ class PlatformCompanyOnboardingServiceTest {
         companyRepository = mock(CompanyRepository.class);
         appUserRepository = mock(AppUserRepository.class);
         service = new PlatformCompanyOnboardingService(companyService, userService, subscriptionService,
-                treasury, companyRepository, appUserRepository, mock(AuditLogService.class));
+                treasury, new CompanyLookup(companyRepository), appUserRepository, mock(AuditLogService.class));
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
 

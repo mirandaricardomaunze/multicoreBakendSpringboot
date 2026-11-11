@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -53,20 +53,20 @@ public class PurchaseService {
             PurchaseRepository purchaseRepository,
             ProductRepository productRepository,
             WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             InventoryService inventoryService,
             FinanceService financeService,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             ApplicationEventPublisher eventPublisher
     ) {
-        this(new SupplierManagementService(supplierRepository, companyRepository, auditLogService),
+        this(new SupplierManagementService(supplierRepository, companyLookup, auditLogService),
                 createDirectPurchaseService(supplierRepository, purchaseRepository, productRepository,
-                        warehouseRepository, companyRepository, inventoryService, financeService,
+                        warehouseRepository, companyLookup, inventoryService, financeService,
                         documentNumberService, eventPublisher),
                 new SupplierPaymentService(purchaseRepository, financeService, eventPublisher, auditLogService,
                         createDirectPurchaseService(supplierRepository, purchaseRepository, productRepository,
-                                warehouseRepository, companyRepository, inventoryService, financeService,
+                                warehouseRepository, companyLookup, inventoryService, financeService,
                                 documentNumberService, eventPublisher)));
     }
 
@@ -75,13 +75,13 @@ public class PurchaseService {
             PurchaseRepository purchaseRepository,
             ProductRepository productRepository,
             WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             InventoryService inventoryService,
             FinanceService financeService,
             DocumentNumberService documentNumberService,
             ApplicationEventPublisher eventPublisher) {
         return new DirectPurchaseService(supplierRepository, purchaseRepository, productRepository,
-                warehouseRepository, companyRepository, inventoryService, financeService,
+                warehouseRepository, companyLookup, inventoryService, financeService,
                 documentNumberService, eventPublisher);
     }
 

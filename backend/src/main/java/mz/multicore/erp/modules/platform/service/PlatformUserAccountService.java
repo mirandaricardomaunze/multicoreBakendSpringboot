@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PasswordPolicy;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.platform.dto.CreatePlatformUserRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
 import mz.multicore.erp.modules.users.model.AppUser;
@@ -25,20 +25,20 @@ public class PlatformUserAccountService {
 
     private final AppUserRepository appUserRepository;
     private final AppUserCompanyAccessRepository companyAccessRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final AuthSessionService authSessionService;
 
     public PlatformUserAccountService(AppUserRepository appUserRepository,
                                       AppUserCompanyAccessRepository companyAccessRepository,
-                                      CompanyRepository companyRepository,
+                                      CompanyLookup companyLookup,
                                       PasswordEncoder passwordEncoder,
                                       AuditLogService auditLogService,
                                       AuthSessionService authSessionService) {
         this.appUserRepository = appUserRepository;
         this.companyAccessRepository = companyAccessRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
         this.authSessionService = authSessionService;
@@ -119,8 +119,7 @@ public class PlatformUserAccountService {
     }
 
     public Company requireCompany(Long companyId) {
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        return companyLookup.require(companyId);
     }
 
     public AppUser requireUser(String username) {

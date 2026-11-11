@@ -12,6 +12,7 @@ import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ApproveWasteRequest;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
@@ -251,7 +252,7 @@ class AuditTrailCriticalEventsHarnessTest {
         when(userRepo.save(any(AppUser.class))).thenAnswer(i -> i.getArgument(0));
 
         AppUserService userService = new AppUserService(
-                userRepo, encoder, compRepo, accessRepo,
+                userRepo, encoder, new CompanyLookup(compRepo), accessRepo,
                 new ManagerPinRateLimiter(3, 5), auditLogService
         );
 

@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.platform.service;
 import mz.multicore.erp.architecture.security.AuthSessionService;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.platform.dto.CreatePlatformUserRequest;
 import mz.multicore.erp.modules.platform.dto.GrantAccessRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
@@ -36,21 +36,21 @@ public class PlatformUserService {
 
     public PlatformUserService(AppUserRepository appUserRepository,
                                AppUserCompanyAccessRepository companyAccessRepository,
-                               CompanyRepository companyRepository,
+                               CompanyLookup companyLookup,
                                PasswordEncoder passwordEncoder,
                                AuditLogService auditLogService) {
-        this(appUserRepository, companyAccessRepository, companyRepository, passwordEncoder,
+        this(appUserRepository, companyAccessRepository, companyLookup, passwordEncoder,
                 auditLogService, null);
     }
 
     public PlatformUserService(AppUserRepository appUserRepository,
                                AppUserCompanyAccessRepository companyAccessRepository,
-                               CompanyRepository companyRepository,
+                               CompanyLookup companyLookup,
                                PasswordEncoder passwordEncoder,
                                AuditLogService auditLogService,
                                AuthSessionService authSessionService) {
         PlatformUserAccountService account = new PlatformUserAccountService(
-                appUserRepository, companyAccessRepository, companyRepository,
+                appUserRepository, companyAccessRepository, companyLookup,
                 passwordEncoder, auditLogService, authSessionService);
         this.accountService = account;
         this.accessService = new PlatformUserAccessService(

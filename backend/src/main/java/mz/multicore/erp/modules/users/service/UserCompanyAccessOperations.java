@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.AuthSessionService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.model.UserRole;
@@ -15,16 +15,16 @@ import mz.multicore.erp.modules.users.repository.AppUserRepository;
 final class UserCompanyAccessOperations {
 
     private final AppUserRepository appUserRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AppUserCompanyAccessRepository companyAccessRepository;
     private final AuditLogService auditLogService;
     private final AuthSessionService authSessionService;
 
-    UserCompanyAccessOperations(AppUserRepository appUserRepository, CompanyRepository companyRepository,
+    UserCompanyAccessOperations(AppUserRepository appUserRepository, CompanyLookup companyLookup,
                                 AppUserCompanyAccessRepository companyAccessRepository,
                                 AuditLogService auditLogService, AuthSessionService authSessionService) {
         this.appUserRepository = appUserRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.companyAccessRepository = companyAccessRepository;
         this.auditLogService = auditLogService;
         this.authSessionService = authSessionService;
@@ -35,8 +35,7 @@ final class UserCompanyAccessOperations {
                 .filter(access -> "ADMIN".equalsIgnoreCase(access.getRole())).isEmpty()) {
             throw new BusinessRuleException("Só um administrador da empresa de destino pode conceder-lhe acesso.");
         }
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
         user.grantCompany(company, role);
         return appUserRepository.save(user);
     }

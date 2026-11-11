@@ -5,6 +5,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
@@ -37,7 +39,8 @@ class PlatformCompanyServiceTest {
         companyAccessRepository = mock(AppUserCompanyAccessRepository.class);
         auditLogService = mock(AuditLogService.class);
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        service = new PlatformCompanyService(companyRepository, companyAccessRepository, auditLogService, eventPublisher);
+        service = new PlatformCompanyService(new CompanyLookup(companyRepository),
+                new CompanyService(companyRepository, null), companyAccessRepository, auditLogService, eventPublisher);
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
 

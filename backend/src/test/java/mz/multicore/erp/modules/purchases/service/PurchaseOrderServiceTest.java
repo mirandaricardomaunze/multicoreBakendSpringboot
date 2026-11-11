@@ -7,6 +7,7 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -64,7 +65,7 @@ class PurchaseOrderServiceTest {
         receiptRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderReceiptRepository.class);
         when(discrepancyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         service = new PurchaseOrderService(orderRepository, supplierRepository, productRepository,
-                warehouseRepository, companyRepository, inventoryService, documentNumberService,
+                warehouseRepository, new CompanyLookup(companyRepository), inventoryService, documentNumberService,
                 mock(AuditLogService.class), discrepancyRepository, receiptRepository,
                 mock(PurchaseOrderPayableRegistrar.class));
 

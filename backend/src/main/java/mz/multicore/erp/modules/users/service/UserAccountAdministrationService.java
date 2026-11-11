@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PasswordPolicy;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.model.UserRole;
@@ -28,24 +28,24 @@ public class UserAccountAdministrationService {
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AppUserCompanyAccessRepository companyAccessRepository;
     private final AuditLogService auditLogService;
     private final AuthSessionService authSessionService;
     private final UserCompanyAccessOperations companyAccess;
 
     public UserAccountAdministrationService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                                            CompanyRepository companyRepository,
+                                            CompanyLookup companyLookup,
                                             AppUserCompanyAccessRepository companyAccessRepository,
                                             AuditLogService auditLogService,
                                             AuthSessionService authSessionService) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.companyAccessRepository = companyAccessRepository;
         this.auditLogService = auditLogService;
         this.authSessionService = authSessionService;
-        this.companyAccess = new UserCompanyAccessOperations(appUserRepository, companyRepository,
+        this.companyAccess = new UserCompanyAccessOperations(appUserRepository, companyLookup,
                 companyAccessRepository, auditLogService, authSessionService);
     }
 
@@ -72,8 +72,7 @@ public class UserAccountAdministrationService {
         String normalizedRole = UserRole.normalize(role);
         user.setRole(normalizedRole);
         user.setActive(true);
-        Company company = companyRepository.findById(CurrentUserContext.getCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa ativa não encontrada."));
+        Company company = companyLookup.requireActive(CurrentUserContext.getCurrentCompanyId());
         user.grantCompany(company, normalizedRole);
         user.setCreatedBy(CurrentUserContext.getUsername());
 

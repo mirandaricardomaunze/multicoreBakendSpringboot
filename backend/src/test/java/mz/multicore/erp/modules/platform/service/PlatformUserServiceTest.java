@@ -6,6 +6,7 @@ import mz.multicore.erp.architecture.security.AuthSessionService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
@@ -39,7 +40,8 @@ class PlatformUserServiceTest {
         companyRepository = mock(CompanyRepository.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode(anyString())).thenAnswer(i -> "enc:" + i.getArgument(0));
-        service = new PlatformUserService(appUserRepository, companyAccessRepository, companyRepository,
+        service = new PlatformUserService(appUserRepository, companyAccessRepository,
+                new CompanyLookup(companyRepository),
                 encoder, mock(AuditLogService.class));
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
@@ -122,7 +124,7 @@ class PlatformUserServiceTest {
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode("nova-senha-2026")).thenReturn("hash-novo");
         PlatformUserService withSessions = new PlatformUserService(appUserRepository, companyAccessRepository,
-                companyRepository, encoder, mock(AuditLogService.class), sessions);
+                new CompanyLookup(companyRepository), encoder, mock(AuditLogService.class), sessions);
 
         withSessions.resetPassword("ana", "nova-senha-2026");
 

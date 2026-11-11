@@ -9,6 +9,7 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateFleetManifestRequest;
 import mz.multicore.erp.modules.fleet.dto.FleetManifestDTO;
 import mz.multicore.erp.modules.fleet.model.FleetManifest;
@@ -50,7 +51,7 @@ class FleetManifestServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
 
         service = new FleetManifestService(
-                manifestRepository, vehicleRepository, guideRepository, companyRepository, documentNumberService
+                manifestRepository, vehicleRepository, guideRepository, new CompanyLookup(companyRepository), documentNumberService
         );
 
         company = new Company();
