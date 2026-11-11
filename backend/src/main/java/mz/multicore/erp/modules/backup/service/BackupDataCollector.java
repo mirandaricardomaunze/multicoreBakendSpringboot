@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
 import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class BackupDataCollector {
 
     private final AppUserRepository userRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final ClientRepository clientRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
@@ -47,7 +47,7 @@ public class BackupDataCollector {
     @Autowired
     public BackupDataCollector(
             AppUserRepository userRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ClientRepository clientRepository,
             SupplierRepository supplierRepository,
             ProductRepository productRepository,
@@ -63,7 +63,7 @@ public class BackupDataCollector {
             AuditLogRepository auditLogRepository
     ) {
         this.userRepository = userRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.clientRepository = clientRepository;
         this.supplierRepository = supplierRepository;
         this.productRepository = productRepository;
@@ -94,7 +94,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("companies", companyRepository == null ? List.of() : companyRepository.findById(companyId).stream().map(c -> {
+        data.put("companies", companyLookup == null ? List.of() : companyLookup.find(companyId).stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", c.getId());
             m.put("name", c.getName());

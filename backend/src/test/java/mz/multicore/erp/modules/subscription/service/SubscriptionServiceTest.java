@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.subscription.dto.RecordPaymentRequest;
 import mz.multicore.erp.modules.subscription.dto.SaveSubscriptionRequest;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
@@ -43,7 +44,7 @@ class SubscriptionServiceTest {
         subscriptionRepository = mock(SubscriptionRepository.class);
         paymentRepository = mock(SubscriptionPaymentRepository.class);
         companyRepository = mock(CompanyRepository.class);
-        service = new SubscriptionService(subscriptionRepository, paymentRepository, companyRepository,
+        service = new SubscriptionService(subscriptionRepository, paymentRepository, new CompanyLookup(companyRepository),
                 mock(AuditLogService.class));
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }

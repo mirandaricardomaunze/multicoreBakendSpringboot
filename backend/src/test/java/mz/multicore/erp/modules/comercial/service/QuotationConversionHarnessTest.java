@@ -127,7 +127,7 @@ class QuotationConversionHarnessTest {
 
         posService = new POSService(
                 tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
-                productRepository, warehouseRepository, companyRepository, treasuryAccountRepository,
+                productRepository, warehouseRepository, new CompanyLookup(companyRepository), treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
                 eventPublisher, storeVoucherRepository, creditNoteRepository, quotationRepository

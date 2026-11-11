@@ -9,6 +9,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.model.Payslip;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
@@ -68,7 +69,7 @@ class CommercialPerformanceHarnessTest {
         bonusCalculatorEngine = new BonusCalculatorEngine();
         progressEngine = new GoalProgressEngine(invoiceRepository, employeeRepository, bonusCalculatorEngine);
         salesGoalService = new SalesGoalService(
-                salesGoalRepository, bonusRepository, companyRepository, employeeRepository,
+                salesGoalRepository, bonusRepository, new CompanyLookup(companyRepository), employeeRepository,
                 payslipRepository, payrollPeriodService, progressEngine, bonusCalculatorEngine, auditLogService
         );
         employeeRankingService = new EmployeeRankingService(invoiceRepository, employeeRepository, salesGoalRepository);

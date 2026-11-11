@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.manufacturing.service;
 import mz.multicore.erp.architecture.events.ProductionCompletedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -30,7 +30,7 @@ public class ProductionOrderLifecycleService {
 
     private final ProductionOrderRepository productionOrderRepository;
     private final BillOfMaterialsRepository bomRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -40,7 +40,7 @@ public class ProductionOrderLifecycleService {
     public ProductionOrderLifecycleService(
             ProductionOrderRepository productionOrderRepository,
             BillOfMaterialsRepository bomRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             @Autowired(required = false) ApplicationEventPublisher eventPublisher,
@@ -49,7 +49,7 @@ public class ProductionOrderLifecycleService {
         this.movementService = movementService;
         this.productionOrderRepository = productionOrderRepository;
         this.bomRepository = bomRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.eventPublisher = eventPublisher;
@@ -59,8 +59,7 @@ public class ProductionOrderLifecycleService {
     public ProductionOrderDTO createProductionOrder(Long companyId, CreateProductionOrderRequest request) {
         if (companyId == null) throw new BusinessRuleException("A empresa activa é obrigatória.");
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
 
         BillOfMaterials bom = bomRepository.findByIdAndCompanyId(request.bomId(), companyId)
                 .orElseThrow(() -> new BusinessRuleException("Ficha técnica não encontrada."));

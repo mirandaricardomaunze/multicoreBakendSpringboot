@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
 import mz.multicore.erp.modules.promotions.dto.PromotionDTO;
 import mz.multicore.erp.modules.promotions.model.Promotion;
@@ -38,14 +38,14 @@ public class PromotionService {
 
     public PromotionService(
             PromotionRepository promotionRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ProductRepository productRepository,
             ProductCategoryRepository categoryRepository,
             AuditLogService auditLogService
     ) {
         this(
                 new PromotionLifecycleService(
-                        promotionRepository, companyRepository, productRepository, categoryRepository, auditLogService),
+                        promotionRepository, companyLookup, productRepository, categoryRepository, auditLogService),
                 new PromotionDiscountCalculator(promotionRepository)
         );
     }

@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -40,7 +40,7 @@ public class PosCheckoutAndPaymentService {
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
     private final PaymentEntryRepository paymentEntryRepository;
@@ -59,7 +59,7 @@ public class PosCheckoutAndPaymentService {
     public PosCheckoutAndPaymentService(
             InvoiceRepository invoiceRepository, ClientRepository clientRepository,
             ProductRepository productRepository, WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository, InventoryService inventoryService,
+            CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, PaymentEntryRepository paymentEntryRepository,
             TillMovementRepository tillMovementRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
@@ -73,7 +73,7 @@ public class PosCheckoutAndPaymentService {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
         this.paymentEntryRepository = paymentEntryRepository;
@@ -114,8 +114,7 @@ public class PosCheckoutAndPaymentService {
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         Client client;
         String walkInLabel = null;

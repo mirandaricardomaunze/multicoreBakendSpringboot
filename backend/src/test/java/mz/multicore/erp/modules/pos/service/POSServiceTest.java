@@ -15,6 +15,7 @@ import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -107,7 +108,7 @@ class POSServiceTest {
         creditNoteRepository = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
 
         service = new POSService(tillSessionRepository, tillMovementRepository, invoiceRepository,
-                clientRepository, productRepository, warehouseRepository, companyRepository,
+                clientRepository, productRepository, warehouseRepository, new CompanyLookup(companyRepository),
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
                 receivablesService, eventPublisher, storeVoucherRepository, creditNoteRepository);

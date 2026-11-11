@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.intelligence.dto.*;
 import mz.multicore.erp.modules.intelligence.model.AiDocumentStatus;
 import mz.multicore.erp.modules.intelligence.model.AiDocumentVersion;
@@ -25,18 +25,18 @@ import java.util.UUID;
 public class AiDocumentLifecycleService {
     private final AiManagedDocumentRepository documentRepository;
     private final AiDocumentVersionRepository versionRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AiManagementReportService reportService;
     private final AuditLogService auditLogService;
 
     public AiDocumentLifecycleService(AiManagedDocumentRepository documentRepository,
                                       AiDocumentVersionRepository versionRepository,
-                                      CompanyRepository companyRepository,
+                                      CompanyLookup companyLookup,
                                       AiManagementReportService reportService,
                                       AuditLogService auditLogService) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.reportService = reportService;
         this.auditLogService = auditLogService;
     }
@@ -45,8 +45,7 @@ public class AiDocumentLifecycleService {
     public AiManagedDocumentDTO create(AiProfessionalDocumentRequest request) {
         PermissionGuard.requireManagerOrAdmin("guardar um documento gerado por IA");
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa nao encontrada."));
+        Company company = companyLookup.require(companyId);
         byte[] pdf = reportService.renderProfessionalDocument(request);
         String username = CurrentUserContext.getUsername();
 

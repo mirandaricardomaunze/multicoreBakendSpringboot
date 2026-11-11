@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
@@ -61,7 +62,7 @@ class ProductionServiceTest {
         service = new ProductionService(
                 bomRepository,
                 productionOrderRepository,
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 productRepository,
                 warehouseRepository,
                 stockRepository,

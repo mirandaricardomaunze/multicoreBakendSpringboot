@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.recurring.dto.CreateRecurringContractRequest;
 import mz.multicore.erp.modules.recurring.dto.RecurringContractDTO;
 import mz.multicore.erp.modules.recurring.model.BillingFrequency;
@@ -21,16 +21,16 @@ import java.util.List;
 public class RecurringContractLifecycleService {
 
     private final RecurringContractRepository contractRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final ClientRepository clientRepository;
 
     public RecurringContractLifecycleService(
             RecurringContractRepository contractRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ClientRepository clientRepository
     ) {
         this.contractRepository = contractRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.clientRepository = clientRepository;
     }
 
@@ -54,8 +54,7 @@ public class RecurringContractLifecycleService {
             throw new BusinessRuleException("Já existe um contrato registado com o número '" + number + "'.");
         }
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
         Client client = clientRepository.findById(request.customerId())
                 .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado: " + request.customerId()));
 

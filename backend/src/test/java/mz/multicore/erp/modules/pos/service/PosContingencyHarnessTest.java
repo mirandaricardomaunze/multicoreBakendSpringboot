@@ -15,6 +15,7 @@ import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -112,7 +113,7 @@ class PosContingencyHarnessTest {
                 clientRepository,
                 productRepository,
                 warehouseRepository,
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 treasuryAccountRepository,
                 inventoryService,
                 financeService,

@@ -3,7 +3,7 @@ package mz.multicore.erp.architecture;
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.fiscal.model.TaxType;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 @Component
 public class ReferenceAndAdminDataSeeder {
 
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AppUserRepository appUserRepository;
     private final TaxRateRepository taxRateRepository;
     private final ProductCategoryRepository productCategoryRepository;
@@ -26,13 +26,13 @@ public class ReferenceAndAdminDataSeeder {
     private final PasswordEncoder passwordEncoder;
 
     public ReferenceAndAdminDataSeeder(
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AppUserRepository appUserRepository,
             TaxRateRepository taxRateRepository,
             ProductCategoryRepository productCategoryRepository,
             @Value("${app.superadmin.password:}") String superAdminPassword,
             PasswordEncoder passwordEncoder) {
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.appUserRepository = appUserRepository;
         this.taxRateRepository = taxRateRepository;
         this.productCategoryRepository = productCategoryRepository;
@@ -78,7 +78,7 @@ public class ReferenceAndAdminDataSeeder {
                 }
             }
         } else {
-            companyRepository.findAll().forEach(c -> {
+            companyLookup.findAll().forEach(c -> {
                 if (admin.findCompanyAccess(c.getId()).isEmpty()) {
                     admin.grantCompany(c, "ADMIN");
                 }

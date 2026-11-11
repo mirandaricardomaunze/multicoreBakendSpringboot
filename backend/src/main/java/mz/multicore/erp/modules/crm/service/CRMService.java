@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.crm.service;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.ChangeTicketStatusRequest;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
@@ -54,14 +54,14 @@ public class CRMService {
             ClientRepository clientRepository,
             ProductRepository productRepository,
             ComercialService comercialService,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             WarehouseRepository warehouseRepository
     ) {
         this.ticketLifecycleService = new SupportTicketLifecycleService(
-                ticketRepository, clientRepository, companyRepository, workSheetRepository);
+                ticketRepository, clientRepository, companyLookup, workSheetRepository);
         this.workSheetService = new WorkSheetService(
                 workSheetRepository, ticketRepository, productRepository, comercialService,
-                companyRepository, warehouseRepository);
+                companyLookup, warehouseRepository);
         this.queryService = new CRMQueryService(
                 ticketRepository, workSheetRepository, productRepository,
                 this.ticketLifecycleService, this.workSheetService);

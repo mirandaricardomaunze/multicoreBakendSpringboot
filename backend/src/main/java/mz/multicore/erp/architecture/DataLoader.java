@@ -3,7 +3,8 @@ package mz.multicore.erp.architecture;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.service.CRMService;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
@@ -46,7 +47,8 @@ public class DataLoader implements CommandLineRunner {
             TreasuryAccountRepository accountRepository,
             HRService hrService,
             CRMService crmService,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
+            CompanyService companyService,
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             AppUserRepository appUserRepository,
@@ -58,11 +60,11 @@ public class DataLoader implements CommandLineRunner {
             PasswordEncoder passwordEncoder) {
         this.seedDemoData = seedDemoData;
         this.referenceSeeder = new ReferenceAndAdminDataSeeder(
-                companyRepository, appUserRepository, taxRateRepository,
+                companyLookup, appUserRepository, taxRateRepository,
                 productCategoryRepository, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
                 employeeRepository, clientRepository, productRepository, accountRepository,
-                hrService, crmService, companyRepository, warehouseRepository, stockRepository,
+                hrService, crmService, companyLookup, companyService, warehouseRepository, stockRepository,
                 appUserRepository, supplierRepository, taxRateRepository, productCategoryRepository,
                 passwordEncoder, this.referenceSeeder);
     }

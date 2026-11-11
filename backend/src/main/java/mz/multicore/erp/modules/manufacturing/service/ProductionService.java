@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.manufacturing.service;
 
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.manufacturing.dto.*;
@@ -33,25 +33,25 @@ public class ProductionService {
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
                              ProductionOrderRepository productionOrderRepository,
-                             CompanyRepository companyRepository,
+                             CompanyLookup companyLookup,
                              ProductRepository productRepository,
                              WarehouseRepository warehouseRepository,
                              StockRepository stockRepository) {
-        this(bomRepository, productionOrderRepository, companyRepository, productRepository, warehouseRepository, stockRepository, null, null);
+        this(bomRepository, productionOrderRepository, companyLookup, productRepository, warehouseRepository, stockRepository, null, null);
     }
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
                              ProductionOrderRepository productionOrderRepository,
-                             CompanyRepository companyRepository,
+                             CompanyLookup companyLookup,
                              ProductRepository productRepository,
                              WarehouseRepository warehouseRepository,
                              StockRepository stockRepository,
                              ApplicationEventPublisher eventPublisher,
                              mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService) {
         this(
-                new BillOfMaterialsService(bomRepository, companyRepository, productRepository),
+                new BillOfMaterialsService(bomRepository, companyLookup, productRepository),
                 new ProductionOrderLifecycleService(productionOrderRepository, bomRepository,
-                        companyRepository, warehouseRepository, stockRepository, eventPublisher, movementService)
+                        companyLookup, warehouseRepository, stockRepository, eventPublisher, movementService)
         );
     }
 

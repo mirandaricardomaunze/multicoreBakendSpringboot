@@ -9,7 +9,7 @@ import mz.multicore.erp.modules.assets.model.AssetStatus;
 import mz.multicore.erp.modules.assets.repository.AssetDepreciationRecordRepository;
 import mz.multicore.erp.modules.assets.repository.AssetRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ public class AssetDepreciationBatchService {
 
     private final AssetRepository assetRepository;
     private final AssetDepreciationRecordRepository depreciationRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AssetDepreciationEngine depreciationEngine;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -32,13 +32,13 @@ public class AssetDepreciationBatchService {
     public AssetDepreciationBatchService(
             AssetRepository assetRepository,
             AssetDepreciationRecordRepository depreciationRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             AssetDepreciationEngine depreciationEngine,
             ApplicationEventPublisher eventPublisher
     ) {
         this.assetRepository = assetRepository;
         this.depreciationRepository = depreciationRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.depreciationEngine = depreciationEngine;
         this.eventPublisher = eventPublisher;
     }
@@ -47,8 +47,7 @@ public class AssetDepreciationBatchService {
         if (companyId == null) throw new BusinessRuleException("A empresa activa é obrigatória.");
         if (month < 1 || month > 12) throw new BusinessRuleException("Mês inválido para cálculo de depreciações: " + month);
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
 
         List<Asset> activeAssets = assetRepository.findByCompanyIdOrderByAssetCodeAsc(companyId).stream()
                 .filter(a -> a.getStatus() == AssetStatus.ACTIVE || a.getStatus() == AssetStatus.DEPRECIATING)

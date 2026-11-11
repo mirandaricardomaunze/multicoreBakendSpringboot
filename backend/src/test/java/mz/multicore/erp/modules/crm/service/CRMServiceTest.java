@@ -11,6 +11,7 @@ import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.ChangeTicketStatusRequest;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
@@ -68,7 +69,7 @@ class CRMServiceTest {
         warehouseRepository = mock(WarehouseRepository.class);
 
         service = new CRMService(ticketRepository, workSheetRepository, clientRepository,
-                productRepository, comercialService, companyRepository, warehouseRepository);
+                productRepository, comercialService, new CompanyLookup(companyRepository), warehouseRepository);
 
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(i -> {
             SupportTicket t = i.getArgument(0);

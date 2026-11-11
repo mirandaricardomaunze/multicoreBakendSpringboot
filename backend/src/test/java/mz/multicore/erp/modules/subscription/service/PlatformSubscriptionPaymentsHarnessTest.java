@@ -4,6 +4,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.pos.dto.*;
 import mz.multicore.erp.modules.pos.model.MobilePaymentTransaction;
 import mz.multicore.erp.modules.pos.repository.MobilePaymentRepository;
@@ -48,7 +49,7 @@ class PlatformSubscriptionPaymentsHarnessTest {
         service = new SubscriptionService(
                 subscriptionRepository,
                 paymentRepository,
-                companyRepository,
+                new CompanyLookup(companyRepository),
                 auditLogService,
                 mobilePaymentService,
                 mobilePaymentRepository

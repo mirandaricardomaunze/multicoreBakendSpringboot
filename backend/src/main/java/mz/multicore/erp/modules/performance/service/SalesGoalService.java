@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.performance.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.repository.PayslipRepository;
 import mz.multicore.erp.modules.hr.service.PayrollPeriodService;
@@ -49,7 +49,7 @@ public class SalesGoalService {
     /** Construtor para retrocompatibilidade com testes legados. */
     public SalesGoalService(SalesGoalRepository salesGoalRepository,
                             SalesGoalBonusRepository bonusRepository,
-                            CompanyRepository companyRepository,
+                            CompanyLookup companyLookup,
                             EmployeeRepository employeeRepository,
                             PayslipRepository payslipRepository,
                             PayrollPeriodService payrollPeriodService,
@@ -58,7 +58,7 @@ public class SalesGoalService {
                             AuditLogService auditLogService) {
         SalesGoalQueryService qService = new SalesGoalQueryService(salesGoalRepository);
         SalesGoalLifecycleService lService = new SalesGoalLifecycleService(
-                salesGoalRepository, companyRepository, employeeRepository, qService, auditLogService);
+                salesGoalRepository, companyLookup, employeeRepository, qService, auditLogService);
         SalesGoalBonusService bService = new SalesGoalBonusService(
                 bonusRepository, employeeRepository, payslipRepository, payrollPeriodService,
                 bonusCalculatorEngine, auditLogService);

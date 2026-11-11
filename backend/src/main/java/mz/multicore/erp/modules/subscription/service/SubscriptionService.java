@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.subscription.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.pos.repository.MobilePaymentRepository;
 import mz.multicore.erp.modules.pos.service.MobilePaymentService;
 import mz.multicore.erp.modules.subscription.dto.MySubscriptionDTO;
@@ -47,21 +47,21 @@ public class SubscriptionService {
     /** Construtor legado de 4 parâmetros. */
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
                                SubscriptionPaymentRepository paymentRepository,
-                               CompanyRepository companyRepository,
+                               CompanyLookup companyLookup,
                                AuditLogService auditLogService) {
-        this(subscriptionRepository, paymentRepository, companyRepository, auditLogService, null, null);
+        this(subscriptionRepository, paymentRepository, companyLookup, auditLogService, null, null);
     }
 
     /** Construtor legado de 6 parâmetros. */
     @Autowired
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
                                SubscriptionPaymentRepository paymentRepository,
-                               CompanyRepository companyRepository,
+                               CompanyLookup companyLookup,
                                AuditLogService auditLogService,
                                MobilePaymentService mobilePaymentService,
                                MobilePaymentRepository mobilePaymentRepository) {
         SubscriptionQueryService qService = new SubscriptionQueryService(
-                subscriptionRepository, paymentRepository, companyRepository);
+                subscriptionRepository, paymentRepository, companyLookup);
         SubscriptionLifecycleService lService = new SubscriptionLifecycleService(
                 subscriptionRepository, auditLogService, qService);
         SubscriptionPaymentService pService = new SubscriptionPaymentService(

@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.comercial.model.ProductCategory;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
 import mz.multicore.erp.modules.promotions.dto.PromotionDTO;
 import mz.multicore.erp.modules.promotions.model.Promotion;
@@ -25,20 +25,20 @@ public class PromotionLifecycleService {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final PromotionRepository promotionRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
     private final AuditLogService auditLogService;
 
     public PromotionLifecycleService(
             PromotionRepository promotionRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ProductRepository productRepository,
             ProductCategoryRepository categoryRepository,
             AuditLogService auditLogService
     ) {
         this.promotionRepository = promotionRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.auditLogService = auditLogService;
@@ -54,8 +54,7 @@ public class PromotionLifecycleService {
             throw new BusinessRuleException("A data de fim não pode ser anterior à data de início.");
         }
 
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         Promotion promotion = new Promotion();
         promotion.setCompany(company);

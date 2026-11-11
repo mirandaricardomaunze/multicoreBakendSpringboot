@@ -7,7 +7,8 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
@@ -45,7 +46,8 @@ public class DemoEnterpriseDataSeeder {
     private final TreasuryAccountRepository accountRepository;
     private final HRService hrService;
     private final CRMService crmService;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
+    private final CompanyService companyService;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final AppUserRepository appUserRepository;
@@ -58,7 +60,8 @@ public class DemoEnterpriseDataSeeder {
     public DemoEnterpriseDataSeeder(
             EmployeeRepository employeeRepository, ClientRepository clientRepository,
             ProductRepository productRepository, TreasuryAccountRepository accountRepository,
-            HRService hrService, CRMService crmService, CompanyRepository companyRepository,
+            HRService hrService, CRMService crmService,
+            CompanyLookup companyLookup, CompanyService companyService,
             WarehouseRepository warehouseRepository, StockRepository stockRepository,
             AppUserRepository appUserRepository, SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository, ProductCategoryRepository productCategoryRepository,
@@ -69,7 +72,8 @@ public class DemoEnterpriseDataSeeder {
         this.accountRepository = accountRepository;
         this.hrService = hrService;
         this.crmService = crmService;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
+        this.companyService = companyService;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.appUserRepository = appUserRepository;
@@ -81,7 +85,7 @@ public class DemoEnterpriseDataSeeder {
     }
 
     public void seedDemoEnvironment() {
-        if (companyRepository.count() > 0) {
+        if (companyLookup.count() > 0) {
             referenceSeeder.seedDefaultAdmin();
             return;
         }
@@ -153,7 +157,7 @@ public class DemoEnterpriseDataSeeder {
         c.setTaxId(taxId);
         c.setEmail(email);
         c.setAddress(address);
-        return companyRepository.save(c);
+        return companyService.saveCompany(c);
     }
 
     private AppUser createAppUser(String username, String name, String role) {

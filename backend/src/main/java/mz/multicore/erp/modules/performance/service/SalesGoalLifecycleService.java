@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.performance.dto.CreateSalesGoalRequest;
@@ -30,18 +30,18 @@ import java.time.LocalDate;
 public class SalesGoalLifecycleService {
 
     private final SalesGoalRepository salesGoalRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final EmployeeRepository employeeRepository;
     private final SalesGoalQueryService queryService;
     private final AuditLogService auditLogService;
 
     public SalesGoalLifecycleService(SalesGoalRepository salesGoalRepository,
-                                     CompanyRepository companyRepository,
+                                     CompanyLookup companyLookup,
                                      EmployeeRepository employeeRepository,
                                      SalesGoalQueryService queryService,
                                      AuditLogService auditLogService) {
         this.salesGoalRepository = salesGoalRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.employeeRepository = employeeRepository;
         this.queryService = queryService;
         this.auditLogService = auditLogService;
@@ -54,8 +54,7 @@ public class SalesGoalLifecycleService {
         validateGoalDefinition(request.name(), request.periodStart(), request.periodEnd(),
                 request.targetRevenue(), request.targetMargin(), request.scope(), request.scopeRefId(), request.companyId());
 
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         if (salesGoalRepository.existsByCompanyIdAndNameAndPeriodStart(company.getId(), request.name().trim(), request.periodStart())) {
             throw new BusinessRuleException("Já existe uma meta com este nome para o mesmo início de período nesta empresa.");

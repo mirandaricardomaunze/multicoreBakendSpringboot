@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.UpdateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.VoidWorkSheetRequest;
@@ -38,7 +38,7 @@ public class WorkSheetService {
     private final SupportTicketRepository ticketRepository;
     private final ProductRepository productRepository;
     private final ComercialService comercialService;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
 
     public static final String LABOUR_SKU = "SERV-TEC";
@@ -51,14 +51,14 @@ public class WorkSheetService {
             SupportTicketRepository ticketRepository,
             ProductRepository productRepository,
             ComercialService comercialService,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             WarehouseRepository warehouseRepository
     ) {
         this.workSheetRepository = workSheetRepository;
         this.ticketRepository = ticketRepository;
         this.productRepository = productRepository;
         this.comercialService = comercialService;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
     }
 
@@ -167,8 +167,7 @@ public class WorkSheetService {
                     BigDecimal.ZERO, null, null));
         }
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada."));
+        Company company = companyLookup.requireActive(companyId);
         Warehouse warehouse = warehouseRepository.findByCompanyId(companyId).stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException(
                         "Nenhum armazém cadastrado para a empresa " + company.getName()));
@@ -215,7 +214,7 @@ public class WorkSheetService {
                     created.setName(name);
                     created.setUnitPrice(unitPrice);
                     created.setDescription(description);
-                    created.getCompanies().add(companyRepository.getReferenceById(companyId));
+                    created.getCompanies().add(companyLookup.reference(companyId));
                     created.setStockTracked(false);
                     return created;
                 });
