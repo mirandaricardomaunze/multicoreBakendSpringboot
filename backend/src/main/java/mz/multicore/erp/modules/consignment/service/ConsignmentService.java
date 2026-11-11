@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.consignment.dto.*;
@@ -53,7 +53,7 @@ public class ConsignmentService {
 
     private final ConsignmentDeliveryRepository deliveryRepository;
     private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final InvoiceRepository invoiceRepository;
@@ -66,7 +66,7 @@ public class ConsignmentService {
     private final AuditLogService auditLogService;
 
     public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientRepository clientRepository,
-                              ProductRepository productRepository, WarehouseRepository warehouseRepository,
+                              ProductLookup productLookup, WarehouseRepository warehouseRepository,
                               StockRepository stockRepository, InvoiceRepository invoiceRepository,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
                               TransitWarehouseProvider transitWarehouses,
@@ -75,7 +75,7 @@ public class ConsignmentService {
                               AuditLogService auditLogService) {
         this.deliveryRepository = deliveryRepository;
         this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.invoiceRepository = invoiceRepository;
@@ -127,7 +127,7 @@ public class ConsignmentService {
         Set<Long> seen = new HashSet<>();
         for (DeliverLineRequest l : request.lines()) {
             if (!seen.add(l.productId())) throw new BusinessRuleException("Cada artigo só aparece uma vez na guia.");
-            Product product = productRepository.findByIdAndCompaniesId(l.productId(), request.companyId())
+            Product product = productLookup.findForCompany(l.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Artigo não encontrado (ID " + l.productId() + ")."))
                     .requireOrdinarySale();
             if (product.isStockTracked()) {

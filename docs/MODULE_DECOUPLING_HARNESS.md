@@ -26,7 +26,7 @@ correm sempre no gate.
 | MD-P01 | `ProductLookup` (inclui categorias) em `comercial.service`: `requireForCompany`, `listForCompany`, `findBySkuForCompany`, `findByBarcode`, `findAllById` (mais `findForCompany`, `require`/`find`, `findBySku`, `findByReferenceForCompany`, `findByBarcodeForCompany`, `countByBusinessUnit` e categorias `require/findCategoryForCompany`, `findAllCategories`, `countCategories`); gravações alheias via `ProductCommandService.saveProduct`/`saveCategory` — **feito** | `ProductLookupTest` |
 | MD-P02 | `inventory` (12) sem Product/ProductCategory Repository; custo médio grava via `ProductCommandService.saveProduct` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-P03 | `purchases`, `crm`, `architecture`, `promotions`, `pricing`, `pos`, `manufacturing`, `backup`; CRM e seeders gravam via `ProductCommandService` — **feito** | `ModuleDecouplingHarnessTest` |
-| MD-P04 | Restantes (weighbridge, variants, units, returnables, expiry, consignment, butchery, bulkstock, advances) | `ModuleDecouplingHarnessTest` |
+| MD-P04 | Restantes (weighbridge, variants, units, returnables, expiry, consignment, butchery, bulkstock, advances); units, variants e advances gravam via `ProductCommandService` — **feito** | `ModuleDecouplingHarnessTest` |
 | MD-P05 | Zero ligações a Product/ProductCategory Repository fora de `comercial`; suite verde | `ModuleDecouplingHarnessTest` |
 
 ## GOAL-003 — Documentos comerciais e clientes (79)

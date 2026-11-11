@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -32,16 +32,16 @@ import java.util.List;
 public class WeighbridgeService {
 
     private final WeighingTicketRepository ticketRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
-    public WeighbridgeService(WeighingTicketRepository ticketRepository, ProductRepository productRepository,
+    public WeighbridgeService(WeighingTicketRepository ticketRepository, ProductLookup productLookup,
                               CompanyLookup companyLookup, DocumentNumberService documentNumberService,
                               AuditLogService auditLogService) {
         this.ticketRepository = ticketRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
@@ -65,7 +65,7 @@ public class WeighbridgeService {
         if (ticketRepository.hasOpenTicket(request.companyId(), plate)) {
             throw new BusinessRuleException("O camião " + plate + " já está no recinto: faça a 2.ª pesagem do talão aberto.");
         }
-        Product product = request.productId() == null ? null : productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+        Product product = request.productId() == null ? null : productLookup.findForCompany(request.productId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Artigo não encontrado nesta empresa."));
         WeighingTicket t = new WeighingTicket();
         t.setCompany(companyLookup.require(request.companyId()));

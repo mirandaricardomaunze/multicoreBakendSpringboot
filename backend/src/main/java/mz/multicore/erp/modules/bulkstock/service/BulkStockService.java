@@ -13,7 +13,7 @@ import mz.multicore.erp.modules.bulkstock.model.BulkStockSetting;
 import mz.multicore.erp.modules.bulkstock.repository.BulkMeasurementRepository;
 import mz.multicore.erp.modules.bulkstock.repository.BulkStockSettingRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
@@ -49,7 +49,7 @@ public class BulkStockService {
 
     private final BulkStockSettingRepository settingRepository;
     private final BulkMeasurementRepository measurementRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final CompanyLookup companyLookup;
@@ -59,13 +59,13 @@ public class BulkStockService {
     private final AuditLogService auditLogService;
 
     public BulkStockService(BulkStockSettingRepository settingRepository, BulkMeasurementRepository measurementRepository,
-                            ProductRepository productRepository, WarehouseRepository warehouseRepository,
+                            ProductLookup productLookup, WarehouseRepository warehouseRepository,
                             StockRepository stockRepository, CompanyLookup companyLookup,
                             StockMovementRegistrationService movementService, ProductUnitService productUnitService,
                             PickupService pickupService, AuditLogService auditLogService) {
         this.settingRepository = settingRepository;
         this.measurementRepository = measurementRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.companyLookup = companyLookup;
@@ -258,7 +258,7 @@ public class BulkStockService {
     }
 
     private Product requireProduct(Long companyId, Long productId) {
-        return productRepository.findByIdAndCompaniesId(productId, companyId)
+        return productLookup.findForCompany(productId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
     }
 

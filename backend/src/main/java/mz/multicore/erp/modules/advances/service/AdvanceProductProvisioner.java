@@ -3,7 +3,8 @@ package mz.multicore.erp.modules.advances.service;
 import mz.multicore.erp.modules.advances.AdvancePayments;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductSaleType;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import org.springframework.stereotype.Component;
 
@@ -17,15 +18,17 @@ import java.math.BigDecimal;
 @Component
 public class AdvanceProductProvisioner {
 
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
 
-    public AdvanceProductProvisioner(ProductRepository productRepository) {
-        this.productRepository = productRepository;
+    public AdvanceProductProvisioner(ProductLookup productLookup, ProductCommandService productCommandService) {
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
     }
 
     public Product forCompany(Company company) {
         String sku = AdvancePayments.systemSku(company.getId());
-        return productRepository.findBySkuAndCompaniesId(sku, company.getId()).orElseGet(() -> {
+        return productLookup.findBySkuForCompany(sku, company.getId()).orElseGet(() -> {
             Product product = new Product();
             product.setSku(sku);
             product.setName("Adiantamento");
@@ -36,7 +39,7 @@ public class AdvanceProductProvisioner {
             product.setSaleType(ProductSaleType.SERVICE);
             product.setStockTracked(false);
             product.getCompanies().add(company);
-            return productRepository.save(product);
+            return productCommandService.saveProduct(product);
         });
     }
 }

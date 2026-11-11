@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.butchery.model.*;
 import mz.multicore.erp.modules.butchery.repository.BreakdownTemplateRepository;
 import mz.multicore.erp.modules.butchery.repository.CarcassBreakdownRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
@@ -41,7 +41,7 @@ public class CarcassBreakdownService {
 
     private final BreakdownTemplateRepository templateRepository;
     private final CarcassBreakdownRepository breakdownRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
@@ -52,14 +52,14 @@ public class CarcassBreakdownService {
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
-                                   ProductRepository productRepository, CompanyLookup companyLookup,
+                                   ProductLookup productLookup, CompanyLookup companyLookup,
                                    WarehouseRepository warehouseRepository, StockRepository stockRepository,
                                    StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                    DocumentNumberService documentNumberService, AuditLogService auditLogService,
                                    org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.templateRepository = templateRepository;
         this.breakdownRepository = breakdownRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
@@ -241,7 +241,7 @@ public class CarcassBreakdownService {
     }
 
     private Product trackedProduct(Long companyId, Long productId) {
-        Product product = productRepository.findByIdAndCompaniesId(productId, companyId)
+        Product product = productLookup.findForCompany(productId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa (ID " + productId + ")."));
         if (!product.isStockTracked()) {
             throw new BusinessRuleException("O artigo '" + product.getName() + "' não controla stock e não entra numa desmancha.");

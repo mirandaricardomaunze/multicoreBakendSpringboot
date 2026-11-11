@@ -6,7 +6,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.StockDTO;
@@ -32,15 +33,18 @@ public class VariantService {
     private static final int MAX_VARIANTS = 200;
 
     private final ProductFamilyRepository familyRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
     private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final AuditLogService auditLogService;
 
-    public VariantService(ProductFamilyRepository familyRepository, ProductRepository productRepository,
-                          CompanyLookup companyLookup, InventoryService inventoryService, AuditLogService auditLogService) {
+    public VariantService(ProductFamilyRepository familyRepository, ProductLookup productLookup,
+                          ProductCommandService productCommandService, CompanyLookup companyLookup,
+                          InventoryService inventoryService, AuditLogService auditLogService) {
         this.familyRepository = familyRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
         this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.auditLogService = auditLogService;
@@ -64,7 +68,7 @@ public class VariantService {
         if (familyRepository.existsByCompanyIdAndSkuPrefixIgnoreCase(request.companyId(), prefix)) {
             throw new BusinessRuleException("Já existe uma família com o prefixo " + prefix + ".");
         }
-        Product template = productRepository.findByIdAndCompaniesId(request.templateProductId(), request.companyId())
+        Product template = productLookup.findForCompany(request.templateProductId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Artigo modelo não encontrado nesta empresa.")).requireOrdinarySale();
         List<String> values1 = VariantRules.clean(request.values1());
         List<String> values2 = VariantRules.clean(request.values2());
@@ -117,7 +121,7 @@ public class VariantService {
         ProductFamily family = requireFamily(request.companyId(), familyId);
         for (ProductVariant v : family.getVariants()) {
             v.getProduct().setUnitPrice(request.unitPrice());
-            productRepository.save(v.getProduct());
+            productCommandService.saveProduct(v.getProduct());
         }
         auditLogService.logCurrent("VARIANT_FAMILY_PRICE", "Preço de " + family.getName() + " passou a "
                 + DisplayNumbers.money(request.unitPrice()) + " MT em " + family.getVariants().size() + " variantes.");
@@ -135,12 +139,12 @@ public class VariantService {
                 throw new BusinessRuleException("Uma família tem no máximo " + MAX_VARIANTS + " variantes.");
             }
             String sku = VariantRules.sku(family.getSkuPrefix(), c);
-            if (productRepository.findBySku(sku).isPresent()) {
+            if (productLookup.findBySku(sku).isPresent()) {
                 throw new BusinessRuleException("O código " + sku + " já existe noutro artigo: escolha outro prefixo.");
             }
             ProductVariant variant = new ProductVariant();
             variant.setFamily(family);
-            variant.setProduct(productRepository.save(copyOf(family.getTemplateProduct(), family.getCompany(), sku,
+            variant.setProduct(productCommandService.saveProduct(copyOf(family.getTemplateProduct(), family.getCompany(), sku,
                     VariantRules.name(family.getName(), c))));
             variant.setValue1(c.value1());
             variant.setValue2(c.value2());

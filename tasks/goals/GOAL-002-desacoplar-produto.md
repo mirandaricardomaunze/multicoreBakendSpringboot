@@ -22,7 +22,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-P01 — ProductLookup (com categorias) e comandos de gravação no Service de produto — `ProductLookupTest`
 - [x] MD-P02 — inventory sem Product/ProductCategory Repository — `ModuleDecouplingHarnessTest`
 - [x] MD-P03 — purchases, crm, architecture, promotions, pricing, pos, manufacturing, backup — `ModuleDecouplingHarnessTest`
-- [ ] MD-P04 — restantes módulos — `ModuleDecouplingHarnessTest`
+- [x] MD-P04 — restantes módulos — `ModuleDecouplingHarnessTest`
 - [ ] MD-P05 — zero ligações a Product/ProductCategory Repository fora de comercial; suite verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
@@ -41,3 +41,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-11 · MD-P02 · os 12 serviços de `inventory` lêem produtos só pelo `ProductLookup` e o `AverageCostUpdater` grava via `ProductCommandService`; quebras e rascunhos de transferência passam à mensagem normalizada "Produto não encontrado."; 12 linhas apagadas do baseline CA-07; testes de inventário, auditoria e harnesses verdes.
 - 2026-11-11 · MD-P03 · 25 ficheiros de purchases, crm, architecture (DataLoader e seeders), promotions, pricing, pos, manufacturing e backup lêem produtos/categorias só pelo `ProductLookup`; CRM (tarifa e produtos internos) e seeders gravam via `ProductCommandService`; `PosCheckoutAndPaymentService` (import wildcard, fora da baseline) também migrado; mensagens específicas mantidas via `find*`; 28 linhas apagadas do baseline CA-07; testes de compras, POS, CRM, promoções, produção, backup, segurança e harnesses verdes.
 - 2026-11-11 · gate · DG-10 corrigido: a ordem dos campos `ProductCommandService`/`ProductLookup` no `WorkSheetService` coincidia linha a linha com o `ReferenceAndAdminDataSeeder` e foi trocada; `CRMServiceTest` e harnesses de arquitectura verdes.
+- 2026-11-11 · MD-P04 · weighbridge, variants, units, returnables, expiry, consignment, butchery, bulkstock e advances lêem produtos/categorias só pelo `ProductLookup` (`find*`, mensagens específicas mantidas); unidades, variantes e o artigo "Adiantamento" gravam via `ProductCommandService`; 10 linhas apagadas do baseline CA-07; testes HTTP/regras desses módulos, `ProductLookupTest` e harnesses verdes.

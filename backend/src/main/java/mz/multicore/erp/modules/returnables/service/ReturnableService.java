@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -51,7 +51,7 @@ public class ReturnableService {
 
     private final ReturnableItemRepository itemRepository;
     private final ReturnableMovementRepository movementRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
     private final ClientRepository clientRepository;
     private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
@@ -63,14 +63,14 @@ public class ReturnableService {
     private final AuditLogService auditLogService;
 
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
-                             ProductRepository productRepository, ClientRepository clientRepository,
+                             ProductLookup productLookup, ClientRepository clientRepository,
                              CompanyLookup companyLookup, WarehouseRepository warehouseRepository,
                              StockRepository stockRepository, InvoiceRepository invoiceRepository,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
                              ComercialService comercialService, AuditLogService auditLogService) {
         this.itemRepository = itemRepository;
         this.movementRepository = movementRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
         this.clientRepository = clientRepository;
         this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
@@ -96,7 +96,7 @@ public class ReturnableService {
     public ReturnableItemDTO saveItem(SaveReturnableItemRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
         PermissionGuard.requireManagerOrAdmin("definir vasilhame");
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+        Product product = productLookup.findForCompany(request.productId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Artigo não encontrado nesta empresa."));
         if (!product.isStockTracked()) {
             throw new BusinessRuleException("O vasilhame tem de controlar stock: '" + product.getName() + "' não controla.");
