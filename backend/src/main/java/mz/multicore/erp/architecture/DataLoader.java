@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.service.CRMService;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
 import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.service.StockMovementService;
 import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
@@ -42,7 +42,7 @@ public class DataLoader implements CommandLineRunner {
     }
 
     public DataLoader(
-            EmployeeRepository employeeRepository,
+            EmployeeCommandService employeeCommandService,
             ClientCommandService clientCommandService,
             ProductLookup productLookup,
             ProductCommandService productCommandService,
@@ -65,7 +65,7 @@ public class DataLoader implements CommandLineRunner {
                 companyLookup, userLookup, userCommands, taxRateRepository,
                 productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
-                employeeRepository, clientCommandService, productLookup, productCommandService, accountRepository,
+                employeeCommandService, clientCommandService, productLookup, productCommandService, accountRepository,
                 hrService, crmService, companyLookup, companyService, warehouseCommandService, stockMovementService,
                 userCommands, supplierRepository, taxRateRepository,
                 passwordEncoder, this.referenceSeeder);

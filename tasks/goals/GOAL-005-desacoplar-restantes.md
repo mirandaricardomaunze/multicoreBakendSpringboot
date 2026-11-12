@@ -20,7 +20,7 @@ Cada critério de migração apaga as suas linhas de
 ## Critérios de aceitação
 
 - [x] MD-R01 — AppUserLookup e leitores migrados — `AppUserLookupTest`
-- [ ] MD-R02 — EmployeeLookup e leitores migrados — `EmployeeLookupTest`
+- [x] MD-R02 — EmployeeLookup e leitores migrados — `EmployeeLookupTest`
 - [ ] MD-R03 — SupplierLookup e leitores migrados — `SupplierLookupTest`
 - [ ] MD-R04 — pos: Lookup das sessões/vendas e leitores migrados — `ModuleDecouplingHarnessTest`
 - [ ] MD-R05 — TreasuryAccountLookup e leitores migrados — `TreasuryAccountLookupTest`
@@ -40,3 +40,4 @@ Cada critério de migração apaga as suas linhas de
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
 - 2026-11-13 · MD-R01 · `AppUserLookup` (`require`/`find`, `requireByUsername`/`findByUsername`, `listAll`, `listForCompany`, `countActiveByCompanyAndRole`, `countAccessesForCompany`; "Utilizador não encontrado.") e `AppUserCommandService` (`saveUser`/`saveUsers`); 12 ficheiros migrados (seeders, `TenantAccessService`, backup, monitoring, platform) e 15 linhas apagadas da baseline CA-07; `AppUserLookupTest`, harnesses e testes das classes alteradas verdes.
+- 2026-11-13 · MD-R02 · `EmployeeLookup` (`require`/`find`: "Colaborador não encontrado."; `requireForCompany`/`findForCompany`: "Colaborador não encontrado nesta empresa."; `listForCompany`, `listByStatusForCompany`; recibos `findPayslip` e contratos `requireContractForCompany`: "Contrato não encontrado.", por serem do agregado mais próximo) e `EmployeeCommandService` (`saveEmployee`, `savePayslip`); 11 ficheiros migrados (seeders, performance, quality, printing) e 14 linhas apagadas da baseline CA-07; `EmployeeLookupTest`, harnesses e testes das classes alteradas verdes. Nota: compilar a partir da raiz (`mvn -f pom.xml -pl backend -am`), porque os DTOs vivem no módulo `contracts`.

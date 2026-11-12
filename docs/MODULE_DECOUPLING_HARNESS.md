@@ -55,7 +55,7 @@ correm sempre no gate.
 | ID | Garantia | Teste |
 |---|---|---|
 | MD-R01 | `users`: `AppUserLookup` (`require`/`find`, `requireByUsername`/`findByUsername`, `listAll`, `listForCompany`, `countActiveByCompanyAndRole`, `countAccessesForCompany`; "Utilizador não encontrado.") e leitores migrados (15 ligações); escritas alheias (plataforma, seeders) via `AppUserCommandService.saveUser`/`saveUsers` — **feito** | `AppUserLookupTest` |
-| MD-R02 | `hr`: `EmployeeLookup` e leitores migrados | `EmployeeLookupTest` |
+| MD-R02 | `hr`: `EmployeeLookup` (`require`/`find`, `requireForCompany`/`findForCompany`, `listForCompany`, `listByStatusForCompany`, mais `findPayslip` e `requireContractForCompany`; "Colaborador não encontrado." / "Colaborador não encontrado nesta empresa." / "Contrato não encontrado.") e leitores migrados (14 ligações); escritas alheias (seeder, prémio na folha) via `EmployeeCommandService.saveEmployee`/`savePayslip` — **feito** | `EmployeeLookupTest` |
 | MD-R03 | `purchases`: `SupplierLookup` (e documentos de compra) e leitores migrados | `SupplierLookupTest` |
 | MD-R04 | `pos`: Lookup das sessões/vendas POS e leitores migrados | `ModuleDecouplingHarnessTest` |
 | MD-R05 | `financeira`: `TreasuryAccountLookup` e leitores migrados | `TreasuryAccountLookupTest` |

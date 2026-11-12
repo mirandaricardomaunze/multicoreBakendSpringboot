@@ -2,8 +2,8 @@ package mz.multicore.erp.modules.performance.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
-import mz.multicore.erp.modules.hr.repository.PayslipRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.hr.service.PayrollPeriodService;
 import mz.multicore.erp.modules.performance.dto.AdjustBonusRequest;
 import mz.multicore.erp.modules.performance.dto.ApproveBonusRequest;
@@ -50,17 +50,17 @@ public class SalesGoalService {
     public SalesGoalService(SalesGoalRepository salesGoalRepository,
                             SalesGoalBonusRepository bonusRepository,
                             CompanyLookup companyLookup,
-                            EmployeeRepository employeeRepository,
-                            PayslipRepository payslipRepository,
+                            EmployeeLookup employeeLookup,
+                            EmployeeCommandService employeeCommandService,
                             PayrollPeriodService payrollPeriodService,
                             GoalProgressEngine progressEngine,
                             BonusCalculatorEngine bonusCalculatorEngine,
                             AuditLogService auditLogService) {
         SalesGoalQueryService qService = new SalesGoalQueryService(salesGoalRepository);
         SalesGoalLifecycleService lService = new SalesGoalLifecycleService(
-                salesGoalRepository, companyLookup, employeeRepository, qService, auditLogService);
+                salesGoalRepository, companyLookup, employeeLookup, qService, auditLogService);
         SalesGoalBonusService bService = new SalesGoalBonusService(
-                bonusRepository, employeeRepository, payslipRepository, payrollPeriodService,
+                bonusRepository, employeeLookup, employeeCommandService, payrollPeriodService,
                 bonusCalculatorEngine, auditLogService);
         SalesGoalProgressCoordinator pCoordinator = new SalesGoalProgressCoordinator(
                 salesGoalRepository, progressEngine, bService, auditLogService);

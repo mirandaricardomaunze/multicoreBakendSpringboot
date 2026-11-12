@@ -20,7 +20,7 @@ import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
 import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.StockMovementService;
@@ -39,7 +39,7 @@ import java.util.List;
 @Component
 public class DemoEnterpriseDataSeeder {
 
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeCommandService employeeCommandService;
     private final ClientCommandService clientCommandService;
     private final ProductLookup productLookup;
     private final ProductCommandService productCommandService;
@@ -57,7 +57,7 @@ public class DemoEnterpriseDataSeeder {
     private final ReferenceAndAdminDataSeeder referenceSeeder;
 
     public DemoEnterpriseDataSeeder(
-            EmployeeRepository employeeRepository, ClientCommandService clientCommandService,
+            EmployeeCommandService employeeCommandService, ClientCommandService clientCommandService,
             ProductLookup productLookup, ProductCommandService productCommandService,
             TreasuryAccountRepository accountRepository,
             HRService hrService, CRMService crmService,
@@ -66,7 +66,7 @@ public class DemoEnterpriseDataSeeder {
             AppUserCommandService userCommands, SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
-        this.employeeRepository = employeeRepository;
+        this.employeeCommandService = employeeCommandService;
         this.clientCommandService = clientCommandService;
         this.productLookup = productLookup;
         this.productCommandService = productCommandService;
@@ -201,7 +201,7 @@ public class DemoEnterpriseDataSeeder {
         e.setHireDate(hireDate);
         e.setCreatedBy("SYSTEM");
         e.setAppUser(appUser);
-        return employeeRepository.save(e);
+        return employeeCommandService.saveEmployee(e);
     }
 
     private Client createClient(String name, String taxId, String email, String address, Company company) {

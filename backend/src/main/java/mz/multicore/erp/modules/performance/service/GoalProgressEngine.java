@@ -4,7 +4,7 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.performance.dto.SalesGoalProgressDTO;
 import mz.multicore.erp.modules.performance.model.AlertLevel;
 import mz.multicore.erp.modules.performance.model.GoalScope;
@@ -23,14 +23,14 @@ import java.util.List;
 public class GoalProgressEngine {
 
     private final InvoiceLookup invoiceLookup;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeLookup employeeLookup;
     private final BonusCalculatorEngine bonusCalculatorEngine;
 
     public GoalProgressEngine(InvoiceLookup invoiceLookup,
-                              EmployeeRepository employeeRepository,
+                              EmployeeLookup employeeLookup,
                               BonusCalculatorEngine bonusCalculatorEngine) {
         this.invoiceLookup = invoiceLookup;
-        this.employeeRepository = employeeRepository;
+        this.employeeLookup = employeeLookup;
         this.bonusCalculatorEngine = bonusCalculatorEngine;
     }
 
@@ -50,7 +50,7 @@ public class GoalProgressEngine {
         // If scope is EMPLOYEE, find employee identifier to match createdBy
         Employee targetEmployee = null;
         if (goal.getScope() == GoalScope.EMPLOYEE && goal.getScopeRefId() != null) {
-            targetEmployee = employeeRepository.findById(goal.getScopeRefId()).orElse(null);
+            targetEmployee = employeeLookup.find(goal.getScopeRefId()).orElse(null);
         }
 
         BigDecimal currentRevenue = BigDecimal.ZERO;

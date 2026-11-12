@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.performance.dto.CreateSalesGoalRequest;
 import mz.multicore.erp.modules.performance.dto.SalesGoalDTO;
 import mz.multicore.erp.modules.performance.dto.UpdateSalesGoalRequest;
@@ -31,18 +31,18 @@ public class SalesGoalLifecycleService {
 
     private final SalesGoalRepository salesGoalRepository;
     private final CompanyLookup companyLookup;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeLookup employeeLookup;
     private final SalesGoalQueryService queryService;
     private final AuditLogService auditLogService;
 
     public SalesGoalLifecycleService(SalesGoalRepository salesGoalRepository,
                                      CompanyLookup companyLookup,
-                                     EmployeeRepository employeeRepository,
+                                     EmployeeLookup employeeLookup,
                                      SalesGoalQueryService queryService,
                                      AuditLogService auditLogService) {
         this.salesGoalRepository = salesGoalRepository;
         this.companyLookup = companyLookup;
-        this.employeeRepository = employeeRepository;
+        this.employeeLookup = employeeLookup;
         this.queryService = queryService;
         this.auditLogService = auditLogService;
     }
@@ -180,8 +180,7 @@ public class SalesGoalLifecycleService {
             if (scopeRefId == null) {
                 throw new BusinessRuleException("Para meta com escopo de colaborador, é obrigatório selecionar o trabalhador.");
             }
-            Employee emp = employeeRepository.findById(scopeRefId)
-                    .orElseThrow(() -> new BusinessRuleException("Colaborador selecionado não foi encontrado."));
+            Employee emp = employeeLookup.require(scopeRefId);
             if (!emp.getCompany().getId().equals(companyId)) {
                 throw new BusinessRuleException("O colaborador deve pertencer à mesma empresa da meta.");
             }
@@ -196,7 +195,7 @@ public class SalesGoalLifecycleService {
             return "Toda a Empresa";
         }
         if (scope == GoalScope.EMPLOYEE && refId != null) {
-            return employeeRepository.findById(refId).map(Employee::getName).orElse("Colaborador #" + refId);
+            return employeeLookup.find(refId).map(Employee::getName).orElse("Colaborador #" + refId);
         }
         return scope.name() + (refId != null ? " #" + refId : "");
     }

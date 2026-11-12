@@ -4,7 +4,7 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.performance.dto.EmployeeRankingDTO;
 import mz.multicore.erp.modules.performance.model.GoalScope;
 import mz.multicore.erp.modules.performance.model.GoalStatus;
@@ -24,14 +24,14 @@ import java.util.*;
 public class EmployeeRankingService {
 
     private final InvoiceLookup invoiceLookup;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeLookup employeeLookup;
     private final SalesGoalRepository salesGoalRepository;
 
     public EmployeeRankingService(InvoiceLookup invoiceLookup,
-                                  EmployeeRepository employeeRepository,
+                                  EmployeeLookup employeeLookup,
                                   SalesGoalRepository salesGoalRepository) {
         this.invoiceLookup = invoiceLookup;
-        this.employeeRepository = employeeRepository;
+        this.employeeLookup = employeeLookup;
         this.salesGoalRepository = salesGoalRepository;
     }
 
@@ -47,7 +47,7 @@ public class EmployeeRankingService {
                 .filter(inv -> inv.getStatus() != null && inv.getStatus().isRealisedSale())
                 .toList();
 
-        List<Employee> employees = employeeRepository.findByCompanyIdOrderByName(companyId);
+        List<Employee> employees = employeeLookup.listForCompany(companyId);
         Map<String, Employee> employeeByUsername = new HashMap<>();
         Map<String, Employee> employeeByName = new HashMap<>();
 

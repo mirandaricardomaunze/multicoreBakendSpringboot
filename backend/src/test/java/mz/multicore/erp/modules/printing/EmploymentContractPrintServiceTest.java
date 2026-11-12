@@ -9,7 +9,10 @@ import mz.multicore.erp.modules.hr.model.ContractStatus;
 import mz.multicore.erp.modules.hr.model.ContractType;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.model.EmploymentContract;
+import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.repository.EmploymentContractRepository;
+import mz.multicore.erp.modules.hr.repository.PayslipRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +41,8 @@ class EmploymentContractPrintServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(EmploymentContractRepository.class);
-        service = new EmploymentContractPrintService(repository);
+        service = new EmploymentContractPrintService(new EmployeeLookup(
+                mock(EmployeeRepository.class), mock(PayslipRepository.class), repository));
         CurrentUserContext.setCurrentCompanyId(COMPANY);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
     }
