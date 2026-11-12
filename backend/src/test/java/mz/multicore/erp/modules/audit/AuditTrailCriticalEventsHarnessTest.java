@@ -102,7 +102,8 @@ class AuditTrailCriticalEventsHarnessTest {
         StockWasteService wasteService = new StockWasteService(
                 wasteRepo, new mz.multicore.erp.modules.comercial.service.ProductLookup(prodRepo,
                         mock(mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository.class)),
-                warehouseRepo, batchRepo, invService, invRepo, new CompanyLookup(compRepo), auditLogService
+                warehouseRepo, batchRepo, invService, new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invRepo),
+                new CompanyLookup(compRepo), auditLogService
         );
 
         CreateStockWasteRequest req = new CreateStockWasteRequest(
@@ -145,7 +146,7 @@ class AuditTrailCriticalEventsHarnessTest {
         StockWasteService wasteService = new StockWasteService(
                 wasteRepo, mock(mz.multicore.erp.modules.comercial.service.ProductLookup.class),
                 mock(WarehouseRepository.class), mock(ProductBatchRepository.class),
-                mock(InventoryService.class), mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class),
+                mock(InventoryService.class), mock(mz.multicore.erp.modules.comercial.service.InvoiceLookup.class),
                 mock(CompanyLookup.class), auditLogService
         );
 

@@ -20,7 +20,7 @@ Cada critério de migração apaga as suas linhas de
 ## Critérios de aceitação
 
 - [x] MD-V01 — ClientLookup e leitores de ClientRepository migrados — `ClientLookupTest`
-- [ ] MD-V02 — InvoiceLookup e migração de inventory e printing — `InvoiceLookupTest`
+- [x] MD-V02 — InvoiceLookup e migração de inventory e printing — `InvoiceLookupTest`
 - [ ] MD-V03 — restantes leitores de InvoiceRepository — `ModuleDecouplingHarnessTest`
 - [ ] MD-V04 — OrderLookup (encomendas, cotações, guias) e leitores migrados — `OrderLookupTest`
 - [ ] MD-V05 — recibos, notas de crédito e de débito migrados — `ModuleDecouplingHarnessTest`
@@ -39,3 +39,4 @@ Cada critério de migração apaga as suas linhas de
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
 - 2026-11-11 · MD-V01 · `ClientLookup` (`requireForCompany`/`findForCompany`, `require`/`find`, `listForCompany`; "Cliente não encontrado." normalizado) e `ClientCommandService.saveClient` para o seeder demo; os 15 leitores de fora (advances, backup, consignment, crm, pos — incluindo o `PosCheckoutAndPaymentService` do import wildcard —, pricing, projects, recurring, returnables, DataLoader/DemoEnterpriseDataSeeder) migrados, 15 linhas apagadas da baseline CA-07; `ClientLookupTest`, testes dos módulos e harnesses verdes.
+- 2026-11-12 · MD-V02 · `InvoiceLookup` (`require`/`find` com "Fatura não encontrada.", `listCreatedBetween`); `printing` (Invoice/Receipt/GuideRemittancePrintService) e `inventory` (StockWasteService/StockWasteAnalyticsService) lêem facturas só pelo Lookup; 5 linhas apagadas da baseline CA-07; `InvoiceLookupTest`, testes de inventory/printing (81 classes), `AuditTrailCriticalEventsHarnessTest` e harnesses verdes.
