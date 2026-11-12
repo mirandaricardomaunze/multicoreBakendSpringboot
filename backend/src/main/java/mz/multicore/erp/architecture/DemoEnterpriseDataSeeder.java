@@ -25,7 +25,7 @@ import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.model.Supplier;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
 import mz.multicore.erp.modules.users.model.AppUser;
@@ -49,7 +49,7 @@ public class DemoEnterpriseDataSeeder {
     private final CRMService crmService;
     private final CompanyLookup companyLookup;
     private final CompanyService companyService;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseCommandService warehouseCommandService;
     private final StockRepository stockRepository;
     private final AppUserRepository appUserRepository;
     private final SupplierRepository supplierRepository;
@@ -63,7 +63,7 @@ public class DemoEnterpriseDataSeeder {
             TreasuryAccountRepository accountRepository,
             HRService hrService, CRMService crmService,
             CompanyLookup companyLookup, CompanyService companyService,
-            WarehouseRepository warehouseRepository, StockRepository stockRepository,
+            WarehouseCommandService warehouseCommandService, StockRepository stockRepository,
             AppUserRepository appUserRepository, SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
@@ -76,7 +76,7 @@ public class DemoEnterpriseDataSeeder {
         this.crmService = crmService;
         this.companyLookup = companyLookup;
         this.companyService = companyService;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseCommandService = warehouseCommandService;
         this.stockRepository = stockRepository;
         this.appUserRepository = appUserRepository;
         this.supplierRepository = supplierRepository;
@@ -176,7 +176,7 @@ public class DemoEnterpriseDataSeeder {
         w.setName(name);
         w.setLocation(location);
         w.setCompany(company);
-        return warehouseRepository.save(w);
+        return warehouseCommandService.saveWarehouse(w);
     }
 
     private void createSupplier(String name, String taxId, String email, String address, Company company) {

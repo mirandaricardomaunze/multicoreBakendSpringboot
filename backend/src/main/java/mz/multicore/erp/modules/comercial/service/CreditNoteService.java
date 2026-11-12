@@ -6,7 +6,7 @@ import mz.multicore.erp.modules.comercial.dto.CreditNoteDTO;
 import mz.multicore.erp.modules.comercial.model.CreditNote;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +45,7 @@ public class CreditNoteService {
     public CreditNoteService(
             CreditNoteRepository creditNoteRepository,
             InvoiceRepository invoiceRepository,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             InventoryService inventoryService,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
@@ -53,7 +53,7 @@ public class CreditNoteService {
     ) {
         CreditNoteQueryService qService = new CreditNoteQueryService(creditNoteRepository, invoiceRepository);
         CreditNoteCreationService cService = new CreditNoteCreationService(
-                creditNoteRepository, invoiceRepository, warehouseRepository, documentNumberService, qService, java.util.List.of());
+                creditNoteRepository, invoiceRepository, warehouseLookup, documentNumberService, qService, java.util.List.of());
         CreditNoteLifecycleService lService = new CreditNoteLifecycleService(
                 creditNoteRepository, inventoryService, auditLogService, eventPublisher, qService);
         this.creationService = cService;

@@ -66,7 +66,7 @@ class ProductionServiceTest {
                 productionOrderRepository,
                 new CompanyLookup(companyRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
-                warehouseRepository,
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
                 stockRepository,
                 eventPublisher,
                 movementService

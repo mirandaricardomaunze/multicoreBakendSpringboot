@@ -75,7 +75,8 @@ class CRMServiceTest {
         service = new CRMService(ticketRepository, workSheetRepository, new ClientLookup(clientRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 new ProductCommandService(productRepository, mock(ProductCategoryRepository.class)),
-                comercialService, new CompanyLookup(companyRepository), warehouseRepository);
+                comercialService, new CompanyLookup(companyRepository),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository));
 
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(i -> {
             SupportTicket t = i.getArgument(0);

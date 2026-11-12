@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest;
@@ -46,7 +46,7 @@ class PurchaseServiceTest {
                 supplierRepository,
                 purchaseRepository,
                 mock(ProductLookup.class),
-                mock(WarehouseRepository.class),
+                mock(WarehouseLookup.class),
                 mock(CompanyLookup.class),
                 mock(InventoryService.class),
                 financeService,

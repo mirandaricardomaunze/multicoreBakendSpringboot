@@ -76,7 +76,8 @@ class InventoryReportPrintServiceTest {
         when(stockRepository.findByWarehouseId(10L)).thenReturn(List.of(s1, s2));
 
         InventoryReportPrintService service = new InventoryReportPrintService(
-                stockRepository, warehouseRepository, companyService
+                stockRepository, new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
+                companyService
         );
 
         byte[] pdf = service.render(1L, 10L);

@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
@@ -58,7 +58,7 @@ public class ProductionPlanService {
     private final ProductionPlanLineRepository lineRepository;
     private final ProductionSalesHistoryRepository salesHistory;
     private final BillOfMaterialsRepository bomRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final StockMovementRegistrationService movementService;
     private final AverageCostUpdater averageCost;
@@ -69,7 +69,7 @@ public class ProductionPlanService {
     public ProductionPlanService(ProductionPlanRepository planRepository, ProductionRunRepository runRepository,
                                  ProductionPlanLineRepository lineRepository,
                                  ProductionSalesHistoryRepository salesHistory, BillOfMaterialsRepository bomRepository,
-                                 WarehouseRepository warehouseRepository, StockRepository stockRepository,
+                                 WarehouseLookup warehouseLookup, StockRepository stockRepository,
                                  StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                  StockWasteService wasteService, AuditLogService auditLogService,
                                  org.springframework.context.ApplicationEventPublisher eventPublisher) {
@@ -78,7 +78,7 @@ public class ProductionPlanService {
         this.lineRepository = lineRepository;
         this.salesHistory = salesHistory;
         this.bomRepository = bomRepository;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.movementService = movementService;
         this.averageCost = averageCost;
@@ -349,9 +349,7 @@ public class ProductionPlanService {
     }
 
     private Warehouse requireWarehouse(Long companyId, Long warehouseId) {
-        return warehouseRepository.findById(warehouseId)
-                .filter(w -> w.getCompany() != null && companyId.equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        return warehouseLookup.requireForCompany(warehouseId, companyId);
     }
 
     private static void requireOpen(ProductionPlan plan) {

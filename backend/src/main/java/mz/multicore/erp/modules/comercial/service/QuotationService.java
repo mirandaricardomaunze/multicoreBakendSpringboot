@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +43,7 @@ public class QuotationService {
                             ClientRepository clientRepository,
                             ProductRepository productRepository,
                             CompanyLookup companyLookup,
-                            WarehouseRepository warehouseRepository,
+                            WarehouseLookup warehouseLookup,
                             WalkInClientProvider walkInClientProvider,
                             DocumentNumberService documentNumberService,
                             AuditLogService auditLogService,
@@ -51,7 +51,7 @@ public class QuotationService {
         QuotationQueryService qService = new QuotationQueryService(quotationRepository);
         QuotationLifecycleService lService = new QuotationLifecycleService(
                 quotationRepository, clientRepository, productRepository, companyLookup,
-                warehouseRepository, walkInClientProvider, documentNumberService, auditLogService, qService, null);
+                warehouseLookup, walkInClientProvider, documentNumberService, auditLogService, qService, null);
         QuotationConversionService cService = new QuotationConversionService(
                 quotationRepository, auditLogService, comercialService, qService, lService);
         this.queryService = qService;

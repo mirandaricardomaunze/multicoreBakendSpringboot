@@ -168,7 +168,7 @@ class BusinessUnitHarnessTest {
                 invoiceRepository,
                 mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class),
                 new CompanyLookup(companyRepository),
-                warehouseRepository,
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
                 inventoryService,
                 mock(ReceiptRepository.class),
                 mock(mz.multicore.erp.modules.financeira.service.FinanceService.class),

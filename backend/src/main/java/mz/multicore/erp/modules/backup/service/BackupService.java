@@ -13,7 +13,7 @@ import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
 import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
@@ -53,7 +53,7 @@ public class BackupService {
             ClientLookup clientLookup,
             SupplierRepository supplierRepository,
             ProductLookup productLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             InvoiceLookup invoiceLookup,
@@ -66,7 +66,7 @@ public class BackupService {
     ) {
         this(
                 new BackupDataCollector(userRepository, companyLookup, clientLookup, supplierRepository,
-                        productLookup, warehouseRepository, stockRepository, stockMovementRepository,
+                        productLookup, warehouseLookup, stockRepository, stockMovementRepository,
                         invoiceLookup, receiptLookup, purchaseRepository, tillSessionRepository,
                         accountRepository, transactionRepository, auditLogRepository),
                 new BackupExecutionService(),

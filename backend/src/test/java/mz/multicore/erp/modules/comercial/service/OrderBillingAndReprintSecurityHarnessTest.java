@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -107,7 +107,7 @@ class OrderBillingAndReprintSecurityHarnessTest {
                 invoiceRepository,
                 mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class),
                 mock(CompanyLookup.class),
-                mock(WarehouseRepository.class),
+                mock(WarehouseLookup.class),
                 inventoryService,
                 mock(ReceiptRepository.class),
                 mock(FinanceService.class),

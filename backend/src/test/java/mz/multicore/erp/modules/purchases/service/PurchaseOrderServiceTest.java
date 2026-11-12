@@ -68,7 +68,8 @@ class PurchaseOrderServiceTest {
         when(discrepancyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         service = new PurchaseOrderService(orderRepository, supplierRepository,
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
-                warehouseRepository, new CompanyLookup(companyRepository), inventoryService, documentNumberService,
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
+                new CompanyLookup(companyRepository), inventoryService, documentNumberService,
                 mock(AuditLogService.class), discrepancyRepository, receiptRepository,
                 mock(PurchaseOrderPayableRegistrar.class));
 

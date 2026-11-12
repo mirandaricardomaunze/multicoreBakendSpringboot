@@ -44,7 +44,7 @@ correm sempre no gate.
 
 | ID | Garantia | Teste |
 |---|---|---|
-| MD-I01 | `WarehouseLookup` e migração dos leitores de `WarehouseRepository` (29) | `WarehouseLookupTest` |
+| MD-I01 | `WarehouseLookup` em `inventory.service` (`require`/`find`, `requireForCompany`/`findForCompany`, `listForCompany`) e migração dos leitores de `WarehouseRepository` (29); escrita do seeder via `WarehouseCommandService.saveWarehouse` — **feito** | `WarehouseLookupTest` |
 | MD-I02 | `StockLookup` só de leitura; toda a escrita de stock alheia passa pelo serviço de movimentos (ledger) | `StockLookupTest` |
 | MD-I03 | Leitores de `StockRepository` (20) migrados sem mudar saldos nem movimentos | `ModuleDecouplingHarnessTest` |
 | MD-I04 | Quebras, transferências, lotes e movimentos (16) por Lookup/Service do inventário | `ModuleDecouplingHarnessTest` |

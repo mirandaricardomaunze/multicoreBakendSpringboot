@@ -6,7 +6,7 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.manufacturing.dto.CreateProductionOrderRequest;
 import mz.multicore.erp.modules.manufacturing.dto.ProductionOrderDTO;
 import mz.multicore.erp.modules.manufacturing.model.*;
@@ -31,7 +31,7 @@ public class ProductionOrderLifecycleService {
     private final ProductionOrderRepository productionOrderRepository;
     private final BillOfMaterialsRepository bomRepository;
     private final CompanyLookup companyLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService;
@@ -41,7 +41,7 @@ public class ProductionOrderLifecycleService {
             ProductionOrderRepository productionOrderRepository,
             BillOfMaterialsRepository bomRepository,
             CompanyLookup companyLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             StockRepository stockRepository,
             @Autowired(required = false) ApplicationEventPublisher eventPublisher,
             mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService
@@ -50,7 +50,7 @@ public class ProductionOrderLifecycleService {
         this.productionOrderRepository = productionOrderRepository;
         this.bomRepository = bomRepository;
         this.companyLookup = companyLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.eventPublisher = eventPublisher;
     }
@@ -64,10 +64,10 @@ public class ProductionOrderLifecycleService {
         BillOfMaterials bom = bomRepository.findByIdAndCompanyId(request.bomId(), companyId)
                 .orElseThrow(() -> new BusinessRuleException("Ficha técnica não encontrada."));
 
-        Warehouse sourceWh = warehouseRepository.findById(request.sourceWarehouseId())
+        Warehouse sourceWh = warehouseLookup.find(request.sourceWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de matérias-primas não encontrado."));
 
-        Warehouse targetWh = warehouseRepository.findById(request.targetWarehouseId())
+        Warehouse targetWh = warehouseLookup.find(request.targetWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de produto acabado não encontrado."));
 
         String orderNumber = "OP-" + System.currentTimeMillis() % 1000000;

@@ -15,7 +15,7 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -39,7 +39,7 @@ public class ComercialOrderLifecycleService {
     private final ClientRepository clientRepository;
     private final ProductRepository productRepository;
     private final CompanyLookup companyLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final InventoryService inventoryService;
     private final InvoiceRepository invoiceRepository;
     private final ApprovalService approvalService;
@@ -58,7 +58,7 @@ public class ComercialOrderLifecycleService {
             ClientRepository clientRepository,
             ProductRepository productRepository,
             CompanyLookup companyLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             @Lazy InventoryService inventoryService,
             InvoiceRepository invoiceRepository,
             @Lazy ApprovalService approvalService,
@@ -76,7 +76,7 @@ public class ComercialOrderLifecycleService {
         this.clientRepository = clientRepository;
         this.productRepository = productRepository;
         this.companyLookup = companyLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.inventoryService = inventoryService;
         this.invoiceRepository = invoiceRepository;
         this.approvalService = approvalService;
@@ -474,7 +474,7 @@ public class ComercialOrderLifecycleService {
     }
 
     private Warehouse requireActiveWarehouse(Long warehouseId, Long companyId, String label) {
-        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+        Warehouse warehouse = warehouseLookup.find(warehouseId)
                 .orElseThrow(() -> new BusinessRuleException(label + " não encontrado."));
         String lower = label.toLowerCase(Locale.ROOT);
         if (!companyId.equals(warehouse.getCompany().getId())) {
@@ -489,9 +489,9 @@ public class ComercialOrderLifecycleService {
     public Order createReplenishmentRecord(StockTransferDTO transfer) {
         CurrentUserContext.requireCompany(transfer.companyId());
         Company company = companyLookup.require(transfer.companyId());
-        Warehouse origin = warehouseRepository.findById(transfer.originWarehouseId())
+        Warehouse origin = warehouseLookup.find(transfer.originWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de origem não encontrado."));
-        Warehouse destination = warehouseRepository.findById(transfer.destinationWarehouseId())
+        Warehouse destination = warehouseLookup.find(transfer.destinationWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de destino não encontrado."));
 
         Order order = new Order();

@@ -78,7 +78,7 @@ class QuotationServiceTest {
         comercialService = mock(ComercialService.class);
 
         service = new QuotationService(quotationRepository, clientRepository, productRepository,
-                new CompanyLookup(companyRepository),warehouseRepository, walkInClientProvider, documentNumberService,
+                new CompanyLookup(companyRepository), new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), walkInClientProvider, documentNumberService,
                 auditLogService, comercialService);
 
         company = company(1L);

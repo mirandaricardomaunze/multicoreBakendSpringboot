@@ -116,7 +116,7 @@ class PosContingencyHarnessTest {
                 new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository),
                 new ClientLookup(clientRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
-                warehouseRepository,
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
                 new CompanyLookup(companyRepository),
                 treasuryAccountRepository,
                 inventoryService,

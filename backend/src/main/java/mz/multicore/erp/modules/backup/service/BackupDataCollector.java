@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
 import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
@@ -33,7 +33,7 @@ public class BackupDataCollector {
     private final ClientLookup clientLookup;
     private final SupplierRepository supplierRepository;
     private final ProductLookup productLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final StockMovementRepository stockMovementRepository;
     private final InvoiceLookup invoiceLookup;
@@ -51,7 +51,7 @@ public class BackupDataCollector {
             ClientLookup clientLookup,
             SupplierRepository supplierRepository,
             ProductLookup productLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             InvoiceLookup invoiceLookup,
@@ -67,7 +67,7 @@ public class BackupDataCollector {
         this.clientLookup = clientLookup;
         this.supplierRepository = supplierRepository;
         this.productLookup = productLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.invoiceLookup = invoiceLookup;
@@ -133,7 +133,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("warehouses", warehouseRepository == null ? List.of() : warehouseRepository.findByCompanyId(companyId).stream().map(w -> {
+        data.put("warehouses", warehouseLookup == null ? List.of() : warehouseLookup.listForCompany(companyId).stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
             m.put("name", w.getName());

@@ -24,7 +24,7 @@ import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -64,7 +64,7 @@ public class ComercialService {
             InvoiceRepository invoiceRepository,
             @Lazy ApprovalService approvalService,
             CompanyLookup companyLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
@@ -78,7 +78,7 @@ public class ComercialService {
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher) {
         this(clientRepository, productRepository, productCategoryRepository, invoiceRepository,
-                approvalService, companyLookup, warehouseRepository, inventoryService,
+                approvalService, companyLookup, warehouseLookup, inventoryService,
                 receiptRepository, financeService, treasuryAccountRepository, orderRepository,
                 orderLineRepository, walkInClientProvider, documentNumberService, auditLogService,
                 taxRateRepository, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
@@ -91,7 +91,7 @@ public class ComercialService {
             InvoiceRepository invoiceRepository,
             @Lazy ApprovalService approvalService,
             CompanyLookup companyLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
@@ -113,16 +113,16 @@ public class ComercialService {
                 new ComercialProductCatalogService(productRepository, productCategoryRepository, companyLookup,
                         taxRateRepository, businessUnitRepository, inventoryService, auditLogService),
                 new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
-                        companyLookup, warehouseRepository, inventoryService, receiptRepository, financeService,
+                        companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
                         receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null),
                 new ComercialOrderLifecycleService(orderRepository, orderLineRepository, clientRepository,
-                        productRepository, companyLookup, warehouseRepository, inventoryService, invoiceRepository,
+                        productRepository, companyLookup, warehouseLookup, inventoryService, invoiceRepository,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
                         receivablesService, orderRiskEvaluator,
                         new ComercialClientAndCreditService(clientRepository, companyLookup, invoiceRepository, auditLogService),
                         new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
-                                companyLookup, warehouseRepository, inventoryService, receiptRepository, financeService,
+                                companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                                 approvalService, walkInClientProvider, documentNumberService, auditLogService,
                                 receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null), null)
         );

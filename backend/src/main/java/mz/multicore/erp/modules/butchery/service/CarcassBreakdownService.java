@@ -16,7 +16,7 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
@@ -43,7 +43,7 @@ public class CarcassBreakdownService {
     private final CarcassBreakdownRepository breakdownRepository;
     private final ProductLookup productLookup;
     private final CompanyLookup companyLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final StockMovementRegistrationService movementService;
     private final AverageCostUpdater averageCost;
@@ -53,7 +53,7 @@ public class CarcassBreakdownService {
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
                                    ProductLookup productLookup, CompanyLookup companyLookup,
-                                   WarehouseRepository warehouseRepository, StockRepository stockRepository,
+                                   WarehouseLookup warehouseLookup, StockRepository stockRepository,
                                    StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                    DocumentNumberService documentNumberService, AuditLogService auditLogService,
                                    org.springframework.context.ApplicationEventPublisher eventPublisher) {
@@ -61,7 +61,7 @@ public class CarcassBreakdownService {
         this.breakdownRepository = breakdownRepository;
         this.productLookup = productLookup;
         this.companyLookup = companyLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.movementService = movementService;
         this.averageCost = averageCost;
@@ -131,9 +131,7 @@ public class CarcassBreakdownService {
         var existing = breakdownRepository.findByCompanyIdAndRequestKey(request.companyId(), request.requestKey());
         if (existing.isPresent()) return toDto(existing.get());
 
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany() != null && request.companyId().equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse warehouse = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         Product source = trackedProduct(request.companyId(), request.sourceProductId());
         BreakdownTemplate template = request.templateId() == null ? null
                 : templateRepository.findByIdAndCompanyId(request.templateId(), request.companyId())

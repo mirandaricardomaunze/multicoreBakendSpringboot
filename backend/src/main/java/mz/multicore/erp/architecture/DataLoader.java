@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
 import mz.multicore.erp.modules.users.repository.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +50,7 @@ public class DataLoader implements CommandLineRunner {
             CRMService crmService,
             CompanyLookup companyLookup,
             CompanyService companyService,
-            WarehouseRepository warehouseRepository,
+            WarehouseCommandService warehouseCommandService,
             StockRepository stockRepository,
             AppUserRepository appUserRepository,
             SupplierRepository supplierRepository,
@@ -64,7 +64,7 @@ public class DataLoader implements CommandLineRunner {
                 productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
                 employeeRepository, clientCommandService, productLookup, productCommandService, accountRepository,
-                hrService, crmService, companyLookup, companyService, warehouseRepository, stockRepository,
+                hrService, crmService, companyLookup, companyService, warehouseCommandService, stockRepository,
                 appUserRepository, supplierRepository, taxRateRepository,
                 passwordEncoder, this.referenceSeeder);
     }

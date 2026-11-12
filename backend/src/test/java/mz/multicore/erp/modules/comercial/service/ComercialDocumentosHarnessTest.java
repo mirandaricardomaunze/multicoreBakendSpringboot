@@ -55,7 +55,8 @@ class ComercialDocumentosHarnessTest {
     private final DocumentNumberService numbers = mock(DocumentNumberService.class);
     private final CreditNoteQueryService queryService = mock(CreditNoteQueryService.class);
     private final CreditNoteCreationService creationService = new CreditNoteCreationService(
-            creditNoteRepository, invoiceRepository, warehouseRepository, numbers, queryService, java.util.List.of());
+            creditNoteRepository, invoiceRepository,
+            new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), numbers, queryService, java.util.List.of());
 
     @BeforeEach
     void signIn() {

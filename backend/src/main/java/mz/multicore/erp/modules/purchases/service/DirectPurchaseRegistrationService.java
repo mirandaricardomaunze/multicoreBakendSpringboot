@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -34,7 +34,7 @@ public class DirectPurchaseRegistrationService {
     private final SupplierRepository supplierRepository;
     private final PurchaseRepository purchaseRepository;
     private final ProductLookup productLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
@@ -43,7 +43,7 @@ public class DirectPurchaseRegistrationService {
 
     public DirectPurchaseRegistrationService(
             SupplierRepository supplierRepository, PurchaseRepository purchaseRepository,
-            ProductLookup productLookup, WarehouseRepository warehouseRepository,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, DocumentNumberService documentNumberService,
             ApplicationEventPublisher eventPublisher
@@ -51,7 +51,7 @@ public class DirectPurchaseRegistrationService {
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
         this.productLookup = productLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
@@ -69,8 +69,7 @@ public class DirectPurchaseRegistrationService {
             throw new BusinessRuleException("Fornecedor inactivo não pode ser usado em compras.");
         }
 
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }

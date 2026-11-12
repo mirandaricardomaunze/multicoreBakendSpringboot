@@ -22,7 +22,7 @@ import mz.multicore.erp.modules.crm.model.WorkSheet;
 import mz.multicore.erp.modules.crm.repository.SupportTicketRepository;
 import mz.multicore.erp.modules.crm.repository.WorkSheetRepository;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +41,7 @@ public class WorkSheetService {
     private final ProductLookup productLookup;
     private final ComercialService comercialService;
     private final CompanyLookup companyLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
 
     public static final String LABOUR_SKU = "SERV-TEC";
     public static final String PARTS_SKU = "PECAS-SUP";
@@ -55,7 +55,7 @@ public class WorkSheetService {
             ProductCommandService productCommandService,
             ComercialService comercialService,
             CompanyLookup companyLookup,
-            WarehouseRepository warehouseRepository
+            WarehouseLookup warehouseLookup
     ) {
         this.workSheetRepository = workSheetRepository;
         this.ticketRepository = ticketRepository;
@@ -63,7 +63,7 @@ public class WorkSheetService {
         this.productLookup = productLookup;
         this.comercialService = comercialService;
         this.companyLookup = companyLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
     }
 
     @Transactional
@@ -172,7 +172,7 @@ public class WorkSheetService {
         }
 
         Company company = companyLookup.requireActive(companyId);
-        Warehouse warehouse = warehouseRepository.findByCompanyId(companyId).stream().findFirst()
+        Warehouse warehouse = warehouseLookup.listForCompany(companyId).stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException(
                         "Nenhum armazém cadastrado para a empresa " + company.getName()));
 

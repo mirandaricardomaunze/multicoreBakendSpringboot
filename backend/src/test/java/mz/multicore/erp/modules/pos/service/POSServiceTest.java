@@ -114,7 +114,7 @@ class POSServiceTest {
                 new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
                 new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository),
                 new ClientLookup(clientRepository), new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
-                warehouseRepository, new CompanyLookup(companyRepository),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), new CompanyLookup(companyRepository),
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
                 receivablesService, eventPublisher, storeVoucherRepository,

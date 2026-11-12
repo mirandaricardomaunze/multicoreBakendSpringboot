@@ -20,8 +20,8 @@ import mz.multicore.erp.modules.inventory.model.StockMovement;
 import mz.multicore.erp.modules.inventory.model.StockMovementType;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pickup.service.PickupService;
 import mz.multicore.erp.modules.units.dto.UnitConversionDTO;
 import mz.multicore.erp.modules.units.service.ProductUnitService;
@@ -50,7 +50,7 @@ public class BulkStockService {
     private final BulkStockSettingRepository settingRepository;
     private final BulkMeasurementRepository measurementRepository;
     private final ProductLookup productLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final CompanyLookup companyLookup;
     private final StockMovementRegistrationService movementService;
@@ -59,14 +59,14 @@ public class BulkStockService {
     private final AuditLogService auditLogService;
 
     public BulkStockService(BulkStockSettingRepository settingRepository, BulkMeasurementRepository measurementRepository,
-                            ProductLookup productLookup, WarehouseRepository warehouseRepository,
+                            ProductLookup productLookup, WarehouseLookup warehouseLookup,
                             StockRepository stockRepository, CompanyLookup companyLookup,
                             StockMovementRegistrationService movementService, ProductUnitService productUnitService,
                             PickupService pickupService, AuditLogService auditLogService) {
         this.settingRepository = settingRepository;
         this.measurementRepository = measurementRepository;
         this.productLookup = productLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.companyLookup = companyLookup;
         this.movementService = movementService;
@@ -175,9 +175,7 @@ public class BulkStockService {
         BulkStockSetting setting = settingRepository.findByCompanyIdAndProductId(request.companyId(), product.getId())
                 .orElseThrow(() -> new BusinessRuleException("O produto " + product.getName()
                         + " não está marcado como granel. Um gestor define-o primeiro, com a tolerância de perda."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany().getId().equals(request.companyId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse warehouse = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         BulkMeasurementMethod method = parseMethod(request.method());
 
         BulkMeasurement m = new BulkMeasurement();

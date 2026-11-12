@@ -13,7 +13,7 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -38,7 +38,7 @@ public class PosCheckoutAndPaymentService {
     private final InvoiceCommandService invoiceCommands;
     private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
@@ -57,7 +57,7 @@ public class PosCheckoutAndPaymentService {
 
     public PosCheckoutAndPaymentService(
             InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
-            ProductLookup productLookup, WarehouseRepository warehouseRepository,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, PaymentEntryRepository paymentEntryRepository,
             TillMovementRepository tillMovementRepository, WalkInClientProvider walkInClientProvider,
@@ -72,7 +72,7 @@ public class PosCheckoutAndPaymentService {
         this.invoiceCommands = invoiceCommands;
         this.clientLookup = clientLookup;
         this.productLookup = productLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
@@ -109,8 +109,7 @@ public class PosCheckoutAndPaymentService {
         if (priceGuard != null) priceGuard.requireAuthorized(request);
         TillSession session = sessionAndShiftService.getActiveSession(request.operator(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Deverá abrir uma sessão de caixa antes de efetuar vendas no POS."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }

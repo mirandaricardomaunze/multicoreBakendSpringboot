@@ -17,7 +17,7 @@ import mz.multicore.erp.modules.crm.dto.VoidWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.WorkSheetDTO;
 import mz.multicore.erp.modules.crm.repository.SupportTicketRepository;
 import mz.multicore.erp.modules.crm.repository.WorkSheetRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,13 +57,13 @@ public class CRMService {
             ProductCommandService productCommandService,
             ComercialService comercialService,
             CompanyLookup companyLookup,
-            WarehouseRepository warehouseRepository
+            WarehouseLookup warehouseLookup
     ) {
         this.ticketLifecycleService = new SupportTicketLifecycleService(
                 ticketRepository, clientLookup, companyLookup, workSheetRepository);
         this.workSheetService = new WorkSheetService(
                 workSheetRepository, ticketRepository, productLookup, productCommandService, comercialService,
-                companyLookup, warehouseRepository);
+                companyLookup, warehouseLookup);
         this.queryService = new CRMQueryService(
                 ticketRepository, workSheetRepository, productCommandService,
                 this.ticketLifecycleService, this.workSheetService);

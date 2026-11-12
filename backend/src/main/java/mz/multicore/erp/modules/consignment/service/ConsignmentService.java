@@ -25,7 +25,7 @@ import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import mz.multicore.erp.modules.inventory.service.TransitWarehouseProvider;
@@ -54,7 +54,7 @@ public class ConsignmentService {
     private final ConsignmentDeliveryRepository deliveryRepository;
     private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService movementService;
@@ -66,7 +66,7 @@ public class ConsignmentService {
     private final AuditLogService auditLogService;
 
     public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientLookup clientLookup,
-                              ProductLookup productLookup, WarehouseRepository warehouseRepository,
+                              ProductLookup productLookup, WarehouseLookup warehouseLookup,
                               StockRepository stockRepository, InvoiceLookup invoiceLookup,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
                               TransitWarehouseProvider transitWarehouses,
@@ -76,7 +76,7 @@ public class ConsignmentService {
         this.deliveryRepository = deliveryRepository;
         this.clientLookup = clientLookup;
         this.productLookup = productLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.invoiceLookup = invoiceLookup;
         this.movementService = movementService;
@@ -106,9 +106,7 @@ public class ConsignmentService {
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("A consignação é para um revendedor identificado, não para o Consumidor Final.");
         }
-        Warehouse source = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany() != null && request.companyId().equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse source = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         Warehouse consignment = consignmentWarehouse(source);
         if (consignment.getId().equals(source.getId())) throw new BusinessRuleException("Escolha o armazém da loja, não o de consignação.");
 

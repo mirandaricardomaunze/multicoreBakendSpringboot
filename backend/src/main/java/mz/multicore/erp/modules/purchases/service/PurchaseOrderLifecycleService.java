@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderLineRequest;
@@ -37,7 +37,7 @@ public class PurchaseOrderLifecycleService {
     private final PurchaseOrderRepository orderRepository;
     private final SupplierRepository supplierRepository;
     private final ProductLookup productLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
@@ -46,7 +46,7 @@ public class PurchaseOrderLifecycleService {
             PurchaseOrderRepository orderRepository,
             SupplierRepository supplierRepository,
             ProductLookup productLookup,
-            WarehouseRepository warehouseRepository,
+            WarehouseLookup warehouseLookup,
             CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService
@@ -54,7 +54,7 @@ public class PurchaseOrderLifecycleService {
         this.orderRepository = orderRepository;
         this.supplierRepository = supplierRepository;
         this.productLookup = productLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
@@ -72,8 +72,7 @@ public class PurchaseOrderLifecycleService {
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
         }
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
@@ -146,8 +145,7 @@ public class PurchaseOrderLifecycleService {
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
         }
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }

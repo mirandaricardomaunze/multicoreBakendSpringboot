@@ -19,7 +19,7 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.TransitWarehouseProvider;
 import mz.multicore.erp.modules.returnables.dto.*;
@@ -54,7 +54,7 @@ public class ReturnableService {
     private final ProductLookup productLookup;
     private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
-    private final WarehouseRepository warehouseRepository;
+    private final WarehouseLookup warehouseLookup;
     private final StockRepository stockRepository;
     private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService stockMovements;
@@ -64,7 +64,7 @@ public class ReturnableService {
 
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
                              ProductLookup productLookup, ClientLookup clientLookup,
-                             CompanyLookup companyLookup, WarehouseRepository warehouseRepository,
+                             CompanyLookup companyLookup, WarehouseLookup warehouseLookup,
                              StockRepository stockRepository, InvoiceLookup invoiceLookup,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
                              ComercialService comercialService, AuditLogService auditLogService) {
@@ -73,7 +73,7 @@ public class ReturnableService {
         this.productLookup = productLookup;
         this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
-        this.warehouseRepository = warehouseRepository;
+        this.warehouseLookup = warehouseLookup;
         this.stockRepository = stockRepository;
         this.invoiceLookup = invoiceLookup;
         this.stockMovements = stockMovements;
@@ -160,9 +160,7 @@ public class ReturnableService {
         }
         Client client = requireClient(request.companyId(), request.clientId());
         ReturnableItem item = requireItem(request.companyId(), request.itemId());
-        Warehouse shop = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany() != null && request.companyId().equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse shop = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         Warehouse atClients = transitWarehouses.named(shop.getCompany(), CLIENTS_WAREHOUSE, "Grades, garrafas e paletes nos clientes");
         if (atClients.getId().equals(shop.getId())) throw new BusinessRuleException("Escolha o armazém da loja.");
         Product product = item.getProduct();

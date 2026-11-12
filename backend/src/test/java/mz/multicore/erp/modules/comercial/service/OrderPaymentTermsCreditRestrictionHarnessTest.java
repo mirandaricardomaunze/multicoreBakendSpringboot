@@ -19,7 +19,7 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.junit.jupiter.api.AfterEach;
@@ -54,7 +54,7 @@ class OrderPaymentTermsCreditRestrictionHarnessTest {
                 invoiceRepository,
                 mock(ApprovalService.class),
                 mock(CompanyLookup.class),
-                mock(WarehouseRepository.class),
+                mock(WarehouseLookup.class),
                 mock(InventoryService.class),
                 mock(ReceiptRepository.class),
                 mock(FinanceService.class),

@@ -1,7 +1,7 @@
 ---
 id: GOAL-004
 title: "Stock e armazéns só por Lookups e pelo ledger do inventário"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -19,7 +19,7 @@ Cada critério de migração apaga as suas linhas de
 
 ## Critérios de aceitação
 
-- [ ] MD-I01 — WarehouseLookup e leitores migrados — `WarehouseLookupTest`
+- [x] MD-I01 — WarehouseLookup e leitores migrados — `WarehouseLookupTest`
 - [ ] MD-I02 — StockLookup só de leitura; escrita alheia pelo serviço de movimentos — `StockLookupTest`
 - [ ] MD-I03 — leitores de StockRepository migrados sem mudar saldos — `ModuleDecouplingHarnessTest`
 - [ ] MD-I04 — quebras, transferências, lotes e movimentos migrados — `ModuleDecouplingHarnessTest`
@@ -37,3 +37,4 @@ Cada critério de migração apaga as suas linhas de
 ## Registo de progresso
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
+- 2026-11-12 · MD-I01 · `WarehouseLookup` (`require`/`find`, `requireForCompany`/`findForCompany`, `listForCompany`; "Armazém não encontrado." / "Armazém não encontrado nesta empresa.") e `WarehouseCommandService.saveWarehouse` para o seeder; 29 consumidores migrados e 29 linhas apagadas da baseline CA-07.

@@ -111,7 +111,7 @@ class QuotationConversionHarnessTest {
         comercialService = mock(ComercialService.class);
 
         quotationService = new QuotationService(quotationRepository, clientRepository, productRepository,
-                new CompanyLookup(companyRepository),warehouseRepository, walkInClientProvider, documentNumberService,
+                new CompanyLookup(companyRepository), new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), walkInClientProvider, documentNumberService,
                 auditLogService, comercialService);
 
         tillSessionRepository = mock(TillSessionRepository.class);
@@ -132,7 +132,7 @@ class QuotationConversionHarnessTest {
                 new InvoiceLookup(invoiceRepository), new InvoiceCommandService(invoiceRepository),
                 new ClientLookup(clientRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
-                warehouseRepository, new CompanyLookup(companyRepository), treasuryAccountRepository,
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), new CompanyLookup(companyRepository), treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
                 eventPublisher, storeVoucherRepository,
