@@ -38,7 +38,7 @@ correm sempre no gate.
 | MD-V03 | Restantes leitores de `InvoiceRepository` (30 no total): `InvoiceLookup` alargado (`listForCompany`/`listAll`/`listByStatus`/`findByContingencyReference`/`sumQuantitySoldByProductSince`) e `InvoiceCommandService` (`lockForCompany`/`save`) para as escritas — **feito** | `ModuleDecouplingHarnessTest`, `InvoiceCommandServiceTest` |
 | MD-V04 | `OrderLookup` cobre encomendas, cotações e guias de entrega; `OrderCommandService` (`saveOrder`, `markQuotationConvertedByPos`) para as escritas; leitores migrados (20, incluindo o wildcard do `PosCheckoutAndPaymentService`) — **feito** | `OrderLookupTest` |
 | MD-V05 | Recibos, notas de crédito e de débito por Lookup do agregado mais próximo: `ReceiptLookup` (`find`, `listForCompany`) + `ReceiptCommandService.save`; `InvoiceNoteLookup` (crédito e débito) + `InvoiceNoteCommandService.markCreditNotePosReturn`; leitores migrados (14) — **feito** | `ModuleDecouplingHarnessTest`, `ReceiptLookupTest`, `InvoiceNoteLookupTest` |
-| MD-V06 | Zero ligações a `comercial.repository.*` fora de `comercial`; suite verde | `ModuleDecouplingHarnessTest` |
+| MD-V06 | Zero ligações a `comercial.repository.*` fora de `comercial`; suite verde — **feito** (onda GOAL-003 imposta pelo harness: 0 ligações) | `ModuleDecouplingHarnessTest` |
 
 ## GOAL-004 — Inventário (65)
 
