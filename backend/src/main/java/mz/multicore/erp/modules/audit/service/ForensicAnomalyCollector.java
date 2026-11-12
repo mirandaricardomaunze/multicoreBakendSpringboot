@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.model.StockWaste;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -25,14 +25,14 @@ import java.util.List;
 public class ForensicAnomalyCollector {
 
     private final InvoiceLookup invoiceLookup;
-    private final StockWasteRepository stockWasteRepository;
+    private final StockWasteLookup stockWasteLookup;
     private final AuditLogRepository auditLogRepository;
 
     public ForensicAnomalyCollector(InvoiceLookup invoiceLookup,
-                                    StockWasteRepository stockWasteRepository,
+                                    StockWasteLookup stockWasteLookup,
                                     AuditLogRepository auditLogRepository) {
         this.invoiceLookup = invoiceLookup;
-        this.stockWasteRepository = stockWasteRepository;
+        this.stockWasteLookup = stockWasteLookup;
         this.auditLogRepository = auditLogRepository;
     }
 
@@ -96,8 +96,8 @@ public class ForensicAnomalyCollector {
 
     private void collectStockWasteAnomalies(Long companyId, List<ForensicAnomalyDTO> out) {
         List<StockWaste> wasteRecords = companyId != null
-                ? stockWasteRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
-                : stockWasteRepository.findAll();
+                ? stockWasteLookup.listForCompany(companyId)
+                : stockWasteLookup.listAll();
 
         for (StockWaste waste : wasteRecords) {
             LocalDateTime eventTime = waste.getCreatedAt() != null ? waste.getCreatedAt() : LocalDateTime.now();

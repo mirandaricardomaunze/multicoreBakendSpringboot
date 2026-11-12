@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
-import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
+import mz.multicore.erp.modules.inventory.service.StockTransferLookup;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,9 +41,9 @@ public class MovimentosService {
             OrderLookup orderLookup,
             InvoiceNoteLookup noteLookup,
             ReceiptLookup receiptLookup,
-            StockTransferRepository stockTransferRepository
+            StockTransferLookup stockTransferLookup
     ) {
-        this(new MovimentoCollector(invoiceLookup, orderLookup, noteLookup, receiptLookup, stockTransferRepository));
+        this(new MovimentoCollector(invoiceLookup, orderLookup, noteLookup, receiptLookup, stockTransferLookup));
     }
 
     /**

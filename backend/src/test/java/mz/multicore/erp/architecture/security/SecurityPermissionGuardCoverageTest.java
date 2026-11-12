@@ -38,7 +38,8 @@ class SecurityPermissionGuardCoverageTest {
         TreasuryAccountRepository accountRepository = Mockito.mock(TreasuryAccountRepository.class);
         PurchaseRepository purchaseRepository = Mockito.mock(PurchaseRepository.class);
 
-        forensicAuditService = new ForensicAuditService(invoiceLookup,stockWasteRepository, auditLogRepository);
+        forensicAuditService = new ForensicAuditService(invoiceLookup,
+                new mz.multicore.erp.modules.inventory.service.StockWasteLookup(stockWasteRepository), auditLogRepository);
         systemMonitoringService = new SystemMonitoringService(dataSource, backupService, null, "1.0.0", "backups");
         cashFlowForecastService = new CashFlowForecastService(accountRepository, invoiceLookup,purchaseRepository);
 

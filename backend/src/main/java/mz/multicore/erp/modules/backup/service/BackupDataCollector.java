@@ -8,8 +8,8 @@ import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
-import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
@@ -35,7 +35,7 @@ public class BackupDataCollector {
     private final ProductLookup productLookup;
     private final WarehouseLookup warehouseLookup;
     private final StockLookup stockLookup;
-    private final StockMovementRepository stockMovementRepository;
+    private final StockMovementLookup stockMovementLookup;
     private final InvoiceLookup invoiceLookup;
     private final ReceiptLookup receiptLookup;
     private final PurchaseRepository purchaseRepository;
@@ -53,7 +53,7 @@ public class BackupDataCollector {
             ProductLookup productLookup,
             WarehouseLookup warehouseLookup,
             StockLookup stockLookup,
-            StockMovementRepository stockMovementRepository,
+            StockMovementLookup stockMovementLookup,
             InvoiceLookup invoiceLookup,
             ReceiptLookup receiptLookup,
             PurchaseRepository purchaseRepository,
@@ -69,7 +69,7 @@ public class BackupDataCollector {
         this.productLookup = productLookup;
         this.warehouseLookup = warehouseLookup;
         this.stockLookup = stockLookup;
-        this.stockMovementRepository = stockMovementRepository;
+        this.stockMovementLookup = stockMovementLookup;
         this.invoiceLookup = invoiceLookup;
         this.receiptLookup = receiptLookup;
         this.purchaseRepository = purchaseRepository;
@@ -153,7 +153,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("stockMovements", stockMovementRepository == null ? List.of() : stockMovementRepository.findByCompanyId(companyId).stream().map(m -> {
+        data.put("stockMovements", stockMovementLookup == null ? List.of() : stockMovementLookup.listForCompany(companyId).stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", m.getId());
             map.put("movementType", m.getMovementType());

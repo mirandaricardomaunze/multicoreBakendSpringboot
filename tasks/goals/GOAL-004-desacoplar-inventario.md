@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
-verify: ["WarehouseLookupTest", "StockLookupTest", "ModuleDecouplingHarnessTest", "CleanArchitectureHarnessTest"]
+verify: ["WarehouseLookupTest", "StockLookupTest", "InventoryDocumentLookupsTest", "ModuleDecouplingHarnessTest", "CleanArchitectureHarnessTest"]
 blockedBy: []
 ---
 
@@ -22,7 +22,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-I01 — WarehouseLookup e leitores migrados — `WarehouseLookupTest`
 - [x] MD-I02 — StockLookup só de leitura; escrita alheia pelo serviço de movimentos — `StockLookupTest`
 - [x] MD-I03 — leitores de StockRepository migrados sem mudar saldos — `ModuleDecouplingHarnessTest`
-- [ ] MD-I04 — quebras, transferências, lotes e movimentos migrados — `ModuleDecouplingHarnessTest`
+- [x] MD-I04 — quebras, transferências, lotes e movimentos migrados — `ModuleDecouplingHarnessTest`
 - [ ] MD-I05 — zero ligações a inventory.repository fora de inventory; suite verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
@@ -40,3 +40,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-12 · MD-I01 · `WarehouseLookup` (`require`/`find`, `requireForCompany`/`findForCompany`, `listForCompany`; "Armazém não encontrado." / "Armazém não encontrado nesta empresa.") e `WarehouseCommandService.saveWarehouse` para o seeder; 29 consumidores migrados e 29 linhas apagadas da baseline CA-07.
 - 2026-11-12 · MD-I02 · `StockLookup` só de leitura (`find`, `quantityOf` com zero sem registo, `listForCompany`/`listForWarehouse`/`listForProduct`); a única escrita alheia (stock inicial do `DemoEnterpriseDataSeeder`) passa por `StockMovementService.registerMovement` (ENTRY, como SYSTEM na empresa do armazém), com o mesmo saldo e agora com movimento e lote; `StockLookupTest` guarda que nada fora do inventário faz `save`/`delete` num `StockRepository`; 2 linhas apagadas da baseline CA-07 (`DataLoader`, `DemoEnterpriseDataSeeder`).
 - 2026-11-12 · MD-I03 · 18 leitores de `StockRepository` (backup, bulkstock, butchery, consignment, intelligence, manufacturing, printing, productionplan, purchases, reports, returnables) passam a `StockLookup` (`quantityOf`, `listForCompany`, `listForWarehouse`); a verificação de faltas da produção usa `StockLookup.findForReservation` (lock pessimista, `Propagation.MANDATORY`); `StockLookupTest` guarda que nada fora do inventário importa o `StockRepository`; 18 linhas apagadas da baseline CA-07.
+- 2026-11-13 · MD-I04 · Lookups só de leitura `StockWasteLookup`, `StockTransferLookup`, `ProductBatchLookup` (com `requireForCompany` e as mensagens "Lote não encontrado." / "Lote não encontrado nesta empresa.") e `StockMovementLookup`; approvals, audit, backup, expiry, movimentos e printing migrados (12 classes); `InventoryDocumentLookupsTest` guarda que nada fora do inventário importa esses 4 repositórios; 16 linhas apagadas da baseline CA-07.

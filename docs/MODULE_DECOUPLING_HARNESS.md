@@ -47,7 +47,7 @@ correm sempre no gate.
 | MD-I01 | `WarehouseLookup` em `inventory.service` (`require`/`find`, `requireForCompany`/`findForCompany`, `listForCompany`) e migração dos leitores de `WarehouseRepository` (29); escrita do seeder via `WarehouseCommandService.saveWarehouse` — **feito** | `WarehouseLookupTest` |
 | MD-I02 | `StockLookup` só de leitura (`find`, `quantityOf`, `listForCompany`/`listForWarehouse`/`listForProduct`); toda a escrita de stock alheia passa pelo serviço de movimentos (ledger) — seeder demo migrado — **feito** | `StockLookupTest` |
 | MD-I03 | Leitores de `StockRepository` (18) migrados sem mudar saldos nem movimentos; `StockLookup.findForReservation` (lock pessimista, exige a transacção do chamador) para a verificação de faltas da produção — **feito** | `ModuleDecouplingHarnessTest`, `StockLookupTest` |
-| MD-I04 | Quebras, transferências, lotes e movimentos (16) por Lookup/Service do inventário | `ModuleDecouplingHarnessTest` |
+| MD-I04 | Quebras, transferências, lotes e movimentos (16) por Lookup/Service do inventário: `StockWasteLookup`, `StockTransferLookup`, `ProductBatchLookup` (`requireForCompany`: "Lote não encontrado." / "Lote não encontrado nesta empresa."), `StockMovementLookup` — **feito** | `ModuleDecouplingHarnessTest`, `InventoryDocumentLookupsTest` |
 | MD-I05 | Zero ligações a `inventory.repository.*` fora de `inventory`; suite verde | `ModuleDecouplingHarnessTest` |
 
 ## GOAL-005 — Restantes módulos (95)

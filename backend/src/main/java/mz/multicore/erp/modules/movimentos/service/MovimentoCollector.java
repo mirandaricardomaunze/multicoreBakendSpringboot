@@ -13,7 +13,7 @@ import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
-import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
+import mz.multicore.erp.modules.inventory.service.StockTransferLookup;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoTipo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ public class MovimentoCollector {
     private final OrderLookup orderLookup;
     private final InvoiceNoteLookup noteLookup;
     private final ReceiptLookup receiptLookup;
-    private final StockTransferRepository stockTransferRepository;
+    private final StockTransferLookup stockTransferLookup;
 
     @Autowired
     public MovimentoCollector(
@@ -45,13 +45,13 @@ public class MovimentoCollector {
             OrderLookup orderLookup,
             InvoiceNoteLookup noteLookup,
             ReceiptLookup receiptLookup,
-            @Autowired(required = false) StockTransferRepository stockTransferRepository
+            StockTransferLookup stockTransferLookup
     ) {
         this.invoiceLookup = invoiceLookup;
         this.orderLookup = orderLookup;
         this.noteLookup = noteLookup;
         this.receiptLookup = receiptLookup;
-        this.stockTransferRepository = stockTransferRepository;
+        this.stockTransferLookup = stockTransferLookup;
     }
 
     public List<MovimentoDTO> collectMovimentos(Long companyId, String query, LocalDate from, LocalDate to) {
@@ -142,8 +142,8 @@ public class MovimentoCollector {
     }
 
     private void collectTransfers(Long companyId, List<MovimentoDTO> out) {
-        if (stockTransferRepository == null) return;
-        for (StockTransfer t : stockTransferRepository.findByCompanyId(companyId)) {
+        if (stockTransferLookup == null) return;
+        for (StockTransfer t : stockTransferLookup.listForCompany(companyId)) {
             String route = (t.getOriginWarehouse() != null ? t.getOriginWarehouse().getName() : "-")
                     + " → " + (t.getDestinationWarehouse() != null ? t.getDestinationWarehouse().getName() : "-");
             out.add(new MovimentoDTO(MovimentoTipo.TRANSFERENCIA, t.getId(), t.getTransferNumber(), route, t.getTransferDate(),

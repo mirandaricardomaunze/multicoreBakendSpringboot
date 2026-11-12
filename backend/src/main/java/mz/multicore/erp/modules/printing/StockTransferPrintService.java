@@ -4,7 +4,7 @@ import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
-import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
+import mz.multicore.erp.modules.inventory.service.ProductBatchLookup;
 import mz.multicore.erp.modules.inventory.service.StockTransferService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,14 +32,14 @@ public class StockTransferPrintService {
     private final StockTransferPrintSummaryBuilder summaryBuilder;
 
     public StockTransferPrintService(StockTransferService stockTransferService) {
-        this(stockTransferService, (ProductBatchRepository) null);
+        this(stockTransferService, (ProductBatchLookup) null);
     }
 
     public StockTransferPrintService(StockTransferService stockTransferService,
-                                     ProductBatchRepository batchRepository) {
+                                     ProductBatchLookup batchLookup) {
         this(stockTransferService,
                 new StockTransferPrintRouteBuilder(),
-                new StockTransferPrintLinesTableBuilder(batchRepository),
+                new StockTransferPrintLinesTableBuilder(batchLookup),
                 new StockTransferPrintSummaryBuilder());
     }
 

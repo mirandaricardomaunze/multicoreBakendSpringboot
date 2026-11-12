@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.audit.dto.ForensicCategory;
 import mz.multicore.erp.modules.audit.dto.ForensicSeverity;
 import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +31,9 @@ public class ForensicAuditService {
 
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
     public ForensicAuditService(InvoiceLookup invoiceLookup,
-                                StockWasteRepository stockWasteRepository,
+                                StockWasteLookup stockWasteLookup,
                                 AuditLogRepository auditLogRepository) {
-        this(new ForensicAnomalyCollector(invoiceLookup,stockWasteRepository, auditLogRepository),
+        this(new ForensicAnomalyCollector(invoiceLookup, stockWasteLookup, auditLogRepository),
                 new ForensicSummaryEvaluator());
     }
 

@@ -17,8 +17,8 @@ import mz.multicore.erp.modules.inventory.dto.StockWasteDTO;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
 import mz.multicore.erp.modules.inventory.model.WasteStatus;
-import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.ProductBatchLookup;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
@@ -45,25 +45,25 @@ public class ExpiryService {
     private static final BigDecimal ONE = BigDecimal.ONE;
 
     private final InventoryService inventoryService;
-    private final ProductBatchRepository batchRepository;
+    private final ProductBatchLookup batchLookup;
     private final ProductLookup productLookup;
     private final CompanyLookup companyLookup;
     private final MarkdownRuleRepository ruleRepository;
-    private final StockWasteRepository wasteRepository;
+    private final StockWasteLookup wasteLookup;
     private final StockWasteService wasteService;
     private final PromotionService promotionService;
     private final AuditLogService auditLogService;
 
-    public ExpiryService(InventoryService inventoryService, ProductBatchRepository batchRepository, ProductLookup productLookup,
+    public ExpiryService(InventoryService inventoryService, ProductBatchLookup batchLookup, ProductLookup productLookup,
                          CompanyLookup companyLookup,
-                         MarkdownRuleRepository ruleRepository, StockWasteRepository wasteRepository, StockWasteService wasteService,
+                         MarkdownRuleRepository ruleRepository, StockWasteLookup wasteLookup, StockWasteService wasteService,
                          PromotionService promotionService, AuditLogService auditLogService) {
         this.inventoryService = inventoryService;
-        this.batchRepository = batchRepository;
+        this.batchLookup = batchLookup;
         this.productLookup = productLookup;
         this.companyLookup = companyLookup;
         this.ruleRepository = ruleRepository;
-        this.wasteRepository = wasteRepository;
+        this.wasteLookup = wasteLookup;
         this.wasteService = wasteService;
         this.promotionService = promotionService;
         this.auditLogService = auditLogService;
@@ -203,13 +203,7 @@ public class ExpiryService {
     }
 
     private ProductBatch requireBatch(Long companyId, Long batchId) {
-        ProductBatch batch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new BusinessRuleException("Lote não encontrado."));
-        if (batch.getWarehouse() == null || batch.getWarehouse().getCompany() == null
-                || !companyId.equals(batch.getWarehouse().getCompany().getId())) {
-            throw new BusinessRuleException("Lote não encontrado nesta empresa.");
-        }
-        return batch;
+        return batchLookup.requireForCompany(batchId, companyId);
     }
 
     private ExpiryLotDTO lotOf(Long companyId, ProductBatch batch) {
@@ -239,7 +233,7 @@ public class ExpiryService {
     }
 
     private BigDecimal lossesThisMonth(Long companyId, LocalDate today) {
-        return wasteRepository.findByCompanyIdAndPeriod(companyId, today.withDayOfMonth(1).atStartOfDay(), today.plusDays(1).atStartOfDay())
+        return wasteLookup.listForCompanyInPeriod(companyId, today.withDayOfMonth(1).atStartOfDay(), today.plusDays(1).atStartOfDay())
                 .stream().filter(w -> w.getReason() == WasteReason.EXPIRED && w.getStatus() == WasteStatus.APPROVED)
                 .map(w -> w.getTotalCost() == null ? BigDecimal.ZERO : w.getTotalCost()).reduce(BigDecimal.ZERO, BigDecimal::add);
     }

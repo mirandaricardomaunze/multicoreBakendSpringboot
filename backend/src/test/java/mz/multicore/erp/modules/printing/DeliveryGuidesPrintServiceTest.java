@@ -49,7 +49,7 @@ class DeliveryGuidesPrintServiceTest {
     void deliveryGuide_geraQuatroViasNominais() throws Exception {
         DeliveryGuideRepository repo = mock(DeliveryGuideRepository.class);
         DocumentConfigService config = mock(DocumentConfigService.class);
-        LineRowMapper mapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        LineRowMapper mapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
 
         DeliveryGuide guide = sampleDeliveryGuide();
         when(repo.findByIdWithLinesAndCompanyId(500L, 1L)).thenReturn(Optional.of(guide));
@@ -78,7 +78,7 @@ class DeliveryGuidesPrintServiceTest {
     void guideRemittance_geraQuatroViasNominais() throws Exception {
         InvoiceRepository invoiceRepo = mock(InvoiceRepository.class);
         DocumentConfigService config = mock(DocumentConfigService.class);
-        LineRowMapper mapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        LineRowMapper mapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
 
         Invoice invoice = sampleInvoice();
         when(invoiceRepo.findById(10L)).thenReturn(Optional.of(invoice));

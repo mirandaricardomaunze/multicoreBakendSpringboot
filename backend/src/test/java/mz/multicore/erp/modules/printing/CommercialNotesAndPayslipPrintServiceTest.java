@@ -49,7 +49,7 @@ class CommercialNotesAndPayslipPrintServiceTest {
     void creditNote_geraQuatroViasNominais() throws Exception {
         CreditNoteService service = mock(CreditNoteService.class);
         DocumentConfigService configService = mock(DocumentConfigService.class);
-        LineRowMapper lineRowMapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        LineRowMapper lineRowMapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
 
         CreditNote note = sampleCreditNote();
         when(service.loadForPrint(100L)).thenReturn(note);

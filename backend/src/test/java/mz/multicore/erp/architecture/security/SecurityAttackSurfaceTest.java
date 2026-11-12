@@ -145,7 +145,8 @@ class SecurityAttackSurfaceTest {
     @Test
     void forensicSummaryRejectsForeignCompanyForTenantAdmin() {
         ForensicAuditService forensic = new ForensicAuditService(new mz.multicore.erp.modules.comercial.service.InvoiceLookup(mock(InvoiceRepository.class)),
-                mock(StockWasteRepository.class), mock(AuditLogRepository.class));
+                new mz.multicore.erp.modules.inventory.service.StockWasteLookup(mock(StockWasteRepository.class)),
+                mock(AuditLogRepository.class));
         CurrentUserContext.setCurrentUser("admin-a", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(1L);
         assertThrows(BusinessRuleException.class,

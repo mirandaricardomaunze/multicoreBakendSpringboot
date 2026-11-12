@@ -157,7 +157,8 @@ class MovimentosServiceTest {
         var fullService = new MovimentosService(
                 new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderLookup(),
                 new mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup(creditNoteRepository, debitNoteRepository),
-                new mz.multicore.erp.modules.comercial.service.ReceiptLookup(receiptRepo), transferRepo);
+                new mz.multicore.erp.modules.comercial.service.ReceiptLookup(receiptRepo),
+                new mz.multicore.erp.modules.inventory.service.StockTransferLookup(transferRepo));
 
         var posInv = invoice("VD-1", clientNamed("Carlos"), null, days(2), InvoiceStatus.PAID, "80");
         posInv.setSalesChannel(mz.multicore.erp.modules.comercial.model.SalesChannel.POS);

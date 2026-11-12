@@ -69,7 +69,7 @@ class ForensicAuditHarnessTest {
 
         forensicAuditService = new ForensicAuditService(
                 new InvoiceLookup(invoiceRepository),
-                stockWasteRepository,
+                new mz.multicore.erp.modules.inventory.service.StockWasteLookup(stockWasteRepository),
                 auditLogRepository
         );
 

@@ -41,7 +41,7 @@ class InvoicePrintServiceTest {
     @BeforeEach
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
-        lineRowMapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        lineRowMapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
         documentConfigService = mock(DocumentConfigService.class);
         printService = new InvoicePrintService(new InvoiceLookup(invoiceRepository), lineRowMapper, documentConfigService);
 

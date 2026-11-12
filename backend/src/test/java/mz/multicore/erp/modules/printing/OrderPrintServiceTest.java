@@ -40,7 +40,7 @@ class OrderPrintServiceTest {
     @BeforeEach
     void setUp() {
         orderRepository = mock(OrderRepository.class);
-        lineRowMapper = new LineRowMapper(mock(ProductBatchRepository.class));
+        lineRowMapper = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class)));
         documentConfigService = mock(DocumentConfigService.class);
         printService = new OrderPrintService(new mz.multicore.erp.modules.comercial.service.OrderLookup(
                 orderRepository, mock(mz.multicore.erp.modules.comercial.repository.QuotationRepository.class),

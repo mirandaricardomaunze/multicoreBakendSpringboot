@@ -4,8 +4,8 @@ import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
 import mz.multicore.erp.modules.approvals.repository.ApprovalHistoryRepository;
 import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.StockTransferLookup;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,14 +40,14 @@ public class ApprovalService {
         this(requestRepository, historyRepository, callbacks, companyLookup, null, null);
     }
 
-    /** Construtor retrocompatível com providers de repositório. */
+    /** Construtor retrocompatível com providers dos Lookups do inventário. */
     public ApprovalService(ApprovalRequestRepository requestRepository, ApprovalHistoryRepository historyRepository,
                            List<ApprovalCallback> callbacks, CompanyLookup companyLookup,
-                           ObjectProvider<StockTransferRepository> stockTransferRepository,
-                           ObjectProvider<StockWasteRepository> stockWasteRepository) {
+                           ObjectProvider<StockTransferLookup> stockTransferLookup,
+                           ObjectProvider<StockWasteLookup> stockWasteLookup) {
         this(buildLifecycle(requestRepository, historyRepository, callbacks, companyLookup),
              buildQuery(requestRepository, historyRepository, callbacks, companyLookup,
-                        stockTransferRepository, stockWasteRepository));
+                        stockTransferLookup, stockWasteLookup));
     }
 
     private static ApprovalLifecycleService buildLifecycle(ApprovalRequestRepository reqRepo, ApprovalHistoryRepository histRepo,
@@ -57,9 +57,9 @@ public class ApprovalService {
 
     private static ApprovalQueryService buildQuery(ApprovalRequestRepository reqRepo, ApprovalHistoryRepository histRepo,
                                                    List<ApprovalCallback> cb, CompanyLookup companyLookup,
-                                                   ObjectProvider<StockTransferRepository> stRepo,
-                                                   ObjectProvider<StockWasteRepository> swRepo) {
-        return new ApprovalQueryService(reqRepo, buildLifecycle(reqRepo, histRepo, cb, companyLookup), stRepo, swRepo);
+                                                   ObjectProvider<StockTransferLookup> transfers,
+                                                   ObjectProvider<StockWasteLookup> wastes) {
+        return new ApprovalQueryService(reqRepo, buildLifecycle(reqRepo, histRepo, cb, companyLookup), transfers, wastes);
     }
 
     @Transactional
