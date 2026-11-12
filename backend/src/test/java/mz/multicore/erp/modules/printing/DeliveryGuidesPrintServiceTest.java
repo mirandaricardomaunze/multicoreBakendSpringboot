@@ -6,6 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
@@ -79,7 +80,7 @@ class DeliveryGuidesPrintServiceTest {
         when(invoiceRepo.findById(10L)).thenReturn(Optional.of(invoice));
         when(config.getColumns(eq(1L), any(DocumentType.class))).thenReturn(DocumentColumnsDTO.all());
 
-        GuideRemittancePrintService service = new GuideRemittancePrintService(invoiceRepo, mapper, config);
+        GuideRemittancePrintService service = new GuideRemittancePrintService(new InvoiceLookup(invoiceRepo), mapper, config);
         byte[] pdf = service.render(10L);
 
         PdfReader reader = new PdfReader(pdf);

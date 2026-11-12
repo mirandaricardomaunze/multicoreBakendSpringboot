@@ -10,6 +10,7 @@ import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
@@ -66,7 +67,7 @@ class ReceiptPrintServiceTest {
         when(config.getColumns(1L, mz.multicore.erp.modules.documents.model.DocumentType.POS_RECEIPT))
                 .thenReturn(DocumentColumnsDTO.all());
 
-        byte[] pdf = new ReceiptPrintService(invoices, payments, config).render(1L);
+        byte[] pdf = new ReceiptPrintService(new InvoiceLookup(invoices), payments, config).render(1L);
 
         assertTrue(pdf.length > 1_000);
         assertEquals("%PDF", new String(pdf, 0, 4, java.nio.charset.StandardCharsets.US_ASCII));

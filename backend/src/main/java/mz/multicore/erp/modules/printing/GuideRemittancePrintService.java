@@ -1,10 +1,9 @@
 package mz.multicore.erp.modules.printing;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,31 +24,30 @@ public class GuideRemittancePrintService {
             "4.ª VIA — QUADRUPLICADO (Comprovativo de Recepção e Devolução)"
     );
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final GuideRemittanceDocumentRenderer documentRenderer;
 
     @Autowired
-    public GuideRemittancePrintService(InvoiceRepository invoiceRepository,
+    public GuideRemittancePrintService(InvoiceLookup invoiceLookup,
                                        GuideRemittanceDocumentRenderer documentRenderer) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.documentRenderer = documentRenderer;
     }
 
-    public GuideRemittancePrintService(InvoiceRepository invoiceRepository, LineRowMapper lineRowMapper,
+    public GuideRemittancePrintService(InvoiceLookup invoiceLookup, LineRowMapper lineRowMapper,
                                        DocumentConfigService documentConfigService) {
-        this(invoiceRepository, new GuideRemittanceDocumentRenderer(lineRowMapper, documentConfigService, null));
+        this(invoiceLookup, new GuideRemittanceDocumentRenderer(lineRowMapper, documentConfigService, null));
     }
 
-    public GuideRemittancePrintService(InvoiceRepository invoiceRepository, LineRowMapper lineRowMapper,
+    public GuideRemittancePrintService(InvoiceLookup invoiceLookup, LineRowMapper lineRowMapper,
                                        DocumentConfigService documentConfigService,
                                        OrderRepository orderRepository) {
-        this(invoiceRepository, new GuideRemittanceDocumentRenderer(lineRowMapper, documentConfigService, orderRepository));
+        this(invoiceLookup, new GuideRemittanceDocumentRenderer(lineRowMapper, documentConfigService, orderRepository));
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long invoiceId) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
+        Invoice invoice = invoiceLookup.require(invoiceId);
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
         return documentRenderer.render(invoice);
     }
