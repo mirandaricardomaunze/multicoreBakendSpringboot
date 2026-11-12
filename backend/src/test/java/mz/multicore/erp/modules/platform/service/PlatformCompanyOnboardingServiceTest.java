@@ -48,7 +48,9 @@ class PlatformCompanyOnboardingServiceTest {
         companyRepository = mock(CompanyRepository.class);
         appUserRepository = mock(AppUserRepository.class);
         service = new PlatformCompanyOnboardingService(companyService, userService, subscriptionService,
-                treasury, new CompanyLookup(companyRepository), appUserRepository, mock(AuditLogService.class));
+                treasury, new CompanyLookup(companyRepository),
+                new mz.multicore.erp.modules.users.service.AppUserLookup(appUserRepository, null),
+                mock(AuditLogService.class));
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
 

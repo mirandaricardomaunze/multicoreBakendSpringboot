@@ -28,7 +28,7 @@ import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.model.Supplier;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
 import mz.multicore.erp.modules.users.model.AppUser;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -50,7 +50,7 @@ public class DemoEnterpriseDataSeeder {
     private final CompanyService companyService;
     private final WarehouseCommandService warehouseCommandService;
     private final StockMovementService stockMovementService;
-    private final AppUserRepository appUserRepository;
+    private final AppUserCommandService userCommands;
     private final SupplierRepository supplierRepository;
     private final TaxRateRepository taxRateRepository;
     private final PasswordEncoder passwordEncoder;
@@ -63,7 +63,7 @@ public class DemoEnterpriseDataSeeder {
             HRService hrService, CRMService crmService,
             CompanyLookup companyLookup, CompanyService companyService,
             WarehouseCommandService warehouseCommandService, StockMovementService stockMovementService,
-            AppUserRepository appUserRepository, SupplierRepository supplierRepository,
+            AppUserCommandService userCommands, SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
         this.employeeRepository = employeeRepository;
@@ -77,7 +77,7 @@ public class DemoEnterpriseDataSeeder {
         this.companyService = companyService;
         this.warehouseCommandService = warehouseCommandService;
         this.stockMovementService = stockMovementService;
-        this.appUserRepository = appUserRepository;
+        this.userCommands = userCommands;
         this.supplierRepository = supplierRepository;
         this.taxRateRepository = taxRateRepository;
         this.passwordEncoder = passwordEncoder;
@@ -111,7 +111,7 @@ public class DemoEnterpriseDataSeeder {
         joaoUser.grantCompany(ptCompany, "MANAGER");
         anaUser.grantCompany(ptCompany, "ADMIN");
         anaUser.grantCompany(mzCompany, "ADMIN");
-        appUserRepository.saveAll(List.of(mariaUser, joaoUser, anaUser));
+        userCommands.saveUsers(List.of(mariaUser, joaoUser, anaUser));
 
         Warehouse whLisboa = createWarehouse("Armazém Lisboa Central", "Lisboa", ptCompany);
         createWarehouse("Armazém Porto Norte", "Porto", ptCompany);
@@ -167,7 +167,7 @@ public class DemoEnterpriseDataSeeder {
         u.setPassword(passwordEncoder.encode("password"));
         u.setRole(role);
         u.setActive(true);
-        return appUserRepository.save(u);
+        return userCommands.saveUser(u);
     }
 
     private Warehouse createWarehouse(String name, String location, Company company) {

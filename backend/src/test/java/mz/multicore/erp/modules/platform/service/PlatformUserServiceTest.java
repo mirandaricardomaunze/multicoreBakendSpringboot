@@ -11,6 +11,8 @@ import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
 import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +42,8 @@ class PlatformUserServiceTest {
         companyRepository = mock(CompanyRepository.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode(anyString())).thenAnswer(i -> "enc:" + i.getArgument(0));
-        service = new PlatformUserService(appUserRepository, companyAccessRepository,
+        service = new PlatformUserService(new AppUserLookup(appUserRepository, companyAccessRepository),
+                new AppUserCommandService(appUserRepository),
                 new CompanyLookup(companyRepository),
                 encoder, mock(AuditLogService.class));
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
@@ -123,7 +126,9 @@ class PlatformUserServiceTest {
         when(appUserRepository.findByUsername("ana")).thenReturn(Optional.of(target));
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode("nova-senha-2026")).thenReturn("hash-novo");
-        PlatformUserService withSessions = new PlatformUserService(appUserRepository, companyAccessRepository,
+        PlatformUserService withSessions = new PlatformUserService(
+                new AppUserLookup(appUserRepository, companyAccessRepository),
+                new AppUserCommandService(appUserRepository),
                 new CompanyLookup(companyRepository), encoder, mock(AuditLogService.class), sessions);
 
         withSessions.resetPassword("ana", "nova-senha-2026");

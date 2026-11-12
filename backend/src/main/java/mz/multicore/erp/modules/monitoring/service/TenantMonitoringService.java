@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.backup.service.ScheduledBackupService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.monitoring.dto.TenantHealthDTO;
-import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ public class TenantMonitoringService {
     private static final Logger log = LoggerFactory.getLogger(TenantMonitoringService.class);
 
     private final CompanyLookup companyLookup;
-    private final AppUserCompanyAccessRepository companyAccessRepository;
+    private final AppUserLookup userLookup;
     private final ForensicAuditService forensicAuditService;
     private final ScheduledBackupService scheduledBackupService;
     private final SystemIncidentManager systemIncidentManager;
@@ -37,14 +37,14 @@ public class TenantMonitoringService {
 
     public TenantMonitoringService(
             CompanyLookup companyLookup,
-            AppUserCompanyAccessRepository companyAccessRepository,
+            AppUserLookup userLookup,
             ForensicAuditService forensicAuditService,
             ScheduledBackupService scheduledBackupService,
             SystemIncidentManager systemIncidentManager,
             SystemAlertEmailService systemAlertEmailService
     ) {
         this.companyLookup = companyLookup;
-        this.companyAccessRepository = companyAccessRepository;
+        this.userLookup = userLookup;
         this.forensicAuditService = forensicAuditService;
         this.scheduledBackupService = scheduledBackupService;
         this.systemIncidentManager = systemIncidentManager;
@@ -72,7 +72,7 @@ public class TenantMonitoringService {
         }
 
         for (Company company : companies) {
-            long userCount = companyAccessRepository.countByCompanyId(company.getId());
+            long userCount = userLookup.countAccessesForCompany(company.getId());
 
             int criticalAnomalies = 0;
             int totalAnomalies = 0;

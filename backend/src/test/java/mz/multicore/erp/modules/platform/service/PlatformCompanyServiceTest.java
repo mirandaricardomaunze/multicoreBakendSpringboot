@@ -40,7 +40,9 @@ class PlatformCompanyServiceTest {
         auditLogService = mock(AuditLogService.class);
         eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
         service = new PlatformCompanyService(new CompanyLookup(companyRepository),
-                new CompanyService(companyRepository, null), companyAccessRepository, auditLogService, eventPublisher);
+                new CompanyService(companyRepository, null),
+                new mz.multicore.erp.modules.users.service.AppUserLookup(null, companyAccessRepository),
+                auditLogService, eventPublisher);
         CurrentUserContext.setCurrentUser("superadmin", "SUPERADMIN");
     }
 

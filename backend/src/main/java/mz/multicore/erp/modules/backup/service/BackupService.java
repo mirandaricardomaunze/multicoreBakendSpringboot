@@ -17,7 +17,7 @@ import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +48,7 @@ public class BackupService {
     }
 
     public BackupService(
-            AppUserRepository userRepository,
+            AppUserLookup userLookup,
             CompanyLookup companyLookup,
             ClientLookup clientLookup,
             SupplierRepository supplierRepository,
@@ -65,7 +65,7 @@ public class BackupService {
             AuditLogRepository auditLogRepository
     ) {
         this(
-                new BackupDataCollector(userRepository, companyLookup, clientLookup, supplierRepository,
+                new BackupDataCollector(userLookup, companyLookup, clientLookup, supplierRepository,
                         productLookup, warehouseLookup, stockLookup, stockMovementLookup,
                         invoiceLookup, receiptLookup, purchaseRepository, tillSessionRepository,
                         accountRepository, transactionRepository, auditLogRepository),

@@ -7,8 +7,8 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.platform.dto.CreatePlatformUserRequest;
 import mz.multicore.erp.modules.platform.dto.GrantAccessRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
-import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,27 +34,27 @@ public class PlatformUserService {
         this.accessService = accessService;
     }
 
-    public PlatformUserService(AppUserRepository appUserRepository,
-                               AppUserCompanyAccessRepository companyAccessRepository,
+    public PlatformUserService(AppUserLookup userLookup,
+                               AppUserCommandService userCommands,
                                CompanyLookup companyLookup,
                                PasswordEncoder passwordEncoder,
                                AuditLogService auditLogService) {
-        this(appUserRepository, companyAccessRepository, companyLookup, passwordEncoder,
+        this(userLookup, userCommands, companyLookup, passwordEncoder,
                 auditLogService, null);
     }
 
-    public PlatformUserService(AppUserRepository appUserRepository,
-                               AppUserCompanyAccessRepository companyAccessRepository,
+    public PlatformUserService(AppUserLookup userLookup,
+                               AppUserCommandService userCommands,
                                CompanyLookup companyLookup,
                                PasswordEncoder passwordEncoder,
                                AuditLogService auditLogService,
                                AuthSessionService authSessionService) {
         PlatformUserAccountService account = new PlatformUserAccountService(
-                appUserRepository, companyAccessRepository, companyLookup,
+                userLookup, userCommands, companyLookup,
                 passwordEncoder, auditLogService, authSessionService);
         this.accountService = account;
         this.accessService = new PlatformUserAccessService(
-                appUserRepository, companyAccessRepository, account);
+                userLookup, userCommands, account);
     }
 
     @Transactional(readOnly = true)

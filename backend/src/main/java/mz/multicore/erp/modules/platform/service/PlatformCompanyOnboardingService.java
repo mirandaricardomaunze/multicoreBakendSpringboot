@@ -14,7 +14,7 @@ import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.subscription.dto.SaveSubscriptionRequest;
 import mz.multicore.erp.modules.subscription.service.SubscriptionService;
 import mz.multicore.erp.modules.users.model.UserRole;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +37,7 @@ public class PlatformCompanyOnboardingService {
     private final SubscriptionService subscriptionService;
     private final TreasuryAccountProvisioningService treasuryProvisioning;
     private final CompanyLookup companyLookup;
-    private final AppUserRepository appUserRepository;
+    private final AppUserLookup userLookup;
     private final AuditLogService auditLogService;
 
     public PlatformCompanyOnboardingService(PlatformCompanyService companyService,
@@ -45,14 +45,14 @@ public class PlatformCompanyOnboardingService {
                                             SubscriptionService subscriptionService,
                                             TreasuryAccountProvisioningService treasuryProvisioning,
                                             CompanyLookup companyLookup,
-                                            AppUserRepository appUserRepository,
+                                            AppUserLookup userLookup,
                                             AuditLogService auditLogService) {
         this.companyService = companyService;
         this.userService = userService;
         this.subscriptionService = subscriptionService;
         this.treasuryProvisioning = treasuryProvisioning;
         this.companyLookup = companyLookup;
-        this.appUserRepository = appUserRepository;
+        this.userLookup = userLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -67,7 +67,7 @@ public class PlatformCompanyOnboardingService {
             throw new BusinessRuleException("Indique o administrador da empresa.");
         }
         String username = admin.username() == null ? "" : admin.username().trim();
-        if (appUserRepository.findByUsername(username).isPresent()) {
+        if (userLookup.findByUsername(username).isPresent()) {
             throw new BusinessRuleException("O utilizador '" + username + "' já existe. Escolha outro nome.");
         }
         PasswordPolicy.validate(admin.password(), username);

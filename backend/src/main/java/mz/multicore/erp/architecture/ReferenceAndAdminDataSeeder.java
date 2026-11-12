@@ -9,7 +9,8 @@ import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.fiscal.model.TaxType;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.users.model.AppUser;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,8 @@ import java.math.BigDecimal;
 public class ReferenceAndAdminDataSeeder {
 
     private final CompanyLookup companyLookup;
-    private final AppUserRepository appUserRepository;
+    private final AppUserLookup userLookup;
+    private final AppUserCommandService userCommands;
     private final TaxRateRepository taxRateRepository;
     private final ProductLookup productLookup;
     private final ProductCommandService productCommandService;
@@ -29,14 +31,16 @@ public class ReferenceAndAdminDataSeeder {
 
     public ReferenceAndAdminDataSeeder(
             CompanyLookup companyLookup,
-            AppUserRepository appUserRepository,
+            AppUserLookup userLookup,
+            AppUserCommandService userCommands,
             TaxRateRepository taxRateRepository,
             ProductLookup productLookup,
             ProductCommandService productCommandService,
             @Value("${app.superadmin.password:}") String superAdminPassword,
             PasswordEncoder passwordEncoder) {
         this.companyLookup = companyLookup;
-        this.appUserRepository = appUserRepository;
+        this.userLookup = userLookup;
+        this.userCommands = userCommands;
         this.taxRateRepository = taxRateRepository;
         this.productLookup = productLookup;
         this.productCommandService = productCommandService;
@@ -51,7 +55,7 @@ public class ReferenceAndAdminDataSeeder {
     }
 
     public void seedSuperAdmin() {
-        if (appUserRepository.findByUsername("superadmin").isPresent()) return;
+        if (userLookup.findByUsername("superadmin").isPresent()) return;
         if (superAdminPassword == null || superAdminPassword.isBlank()) return;
         AppUser superAdmin = new AppUser();
         superAdmin.setUsername("superadmin");
@@ -61,11 +65,11 @@ public class ReferenceAndAdminDataSeeder {
         superAdmin.setActive(true);
         superAdmin.setPlatformAdmin(true);
         superAdmin.setCreatedBy("SYSTEM");
-        appUserRepository.save(superAdmin);
+        userCommands.saveUser(superAdmin);
     }
 
     public void seedDefaultAdmin(Company... companies) {
-        AppUser admin = appUserRepository.findByUsername("admin").orElseGet(() -> {
+        AppUser admin = userLookup.findByUsername("admin").orElseGet(() -> {
             AppUser u = new AppUser();
             u.setUsername("admin");
             u.setName("Administrador Geral");
@@ -73,7 +77,7 @@ public class ReferenceAndAdminDataSeeder {
             u.setRole("ADMIN");
             u.setActive(true);
             u.setCreatedBy("SYSTEM");
-            return appUserRepository.save(u);
+            return userCommands.saveUser(u);
         });
         if (companies != null && companies.length > 0) {
             for (Company c : companies) {
@@ -88,7 +92,7 @@ public class ReferenceAndAdminDataSeeder {
                 }
             });
         }
-        appUserRepository.save(admin);
+        userCommands.saveUser(admin);
     }
 
     public void seedProductCategories() {

@@ -13,7 +13,8 @@ import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.service.StockMovementService;
 import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -52,7 +53,8 @@ public class DataLoader implements CommandLineRunner {
             CompanyService companyService,
             WarehouseCommandService warehouseCommandService,
             StockMovementService stockMovementService,
-            AppUserRepository appUserRepository,
+            AppUserLookup userLookup,
+            AppUserCommandService userCommands,
             SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
             boolean seedDemoData,
@@ -60,12 +62,12 @@ public class DataLoader implements CommandLineRunner {
             PasswordEncoder passwordEncoder) {
         this.seedDemoData = seedDemoData;
         this.referenceSeeder = new ReferenceAndAdminDataSeeder(
-                companyLookup, appUserRepository, taxRateRepository,
+                companyLookup, userLookup, userCommands, taxRateRepository,
                 productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
                 employeeRepository, clientCommandService, productLookup, productCommandService, accountRepository,
                 hrService, crmService, companyLookup, companyService, warehouseCommandService, stockMovementService,
-                appUserRepository, supplierRepository, taxRateRepository,
+                userCommands, supplierRepository, taxRateRepository,
                 passwordEncoder, this.referenceSeeder);
     }
 

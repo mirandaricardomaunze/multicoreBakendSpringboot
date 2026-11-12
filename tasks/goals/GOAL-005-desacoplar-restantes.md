@@ -1,7 +1,7 @@
 ---
 id: GOAL-005
 title: "Nenhum módulo lê o Repository de outro"
-status: TODO
+status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -19,7 +19,7 @@ Cada critério de migração apaga as suas linhas de
 
 ## Critérios de aceitação
 
-- [ ] MD-R01 — AppUserLookup e leitores migrados — `AppUserLookupTest`
+- [x] MD-R01 — AppUserLookup e leitores migrados — `AppUserLookupTest`
 - [ ] MD-R02 — EmployeeLookup e leitores migrados — `EmployeeLookupTest`
 - [ ] MD-R03 — SupplierLookup e leitores migrados — `SupplierLookupTest`
 - [ ] MD-R04 — pos: Lookup das sessões/vendas e leitores migrados — `ModuleDecouplingHarnessTest`
@@ -39,3 +39,4 @@ Cada critério de migração apaga as suas linhas de
 ## Registo de progresso
 
 - 2026-11-10 · goal criado a partir da auditoria do acoplamento (CA-07).
+- 2026-11-13 · MD-R01 · `AppUserLookup` (`require`/`find`, `requireByUsername`/`findByUsername`, `listAll`, `listForCompany`, `countActiveByCompanyAndRole`, `countAccessesForCompany`; "Utilizador não encontrado.") e `AppUserCommandService` (`saveUser`/`saveUsers`); 12 ficheiros migrados (seeders, `TenantAccessService`, backup, monitoring, platform) e 15 linhas apagadas da baseline CA-07; `AppUserLookupTest`, harnesses e testes das classes alteradas verdes.

@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.platform.dto.CreateCompanyRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformCompanyDTO;
 import mz.multicore.erp.modules.platform.dto.UpdateCompanyRequest;
-import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,18 +28,18 @@ public class PlatformCompanyService {
 
     private final CompanyLookup companyLookup;
     private final CompanyService companyService;
-    private final AppUserCompanyAccessRepository companyAccessRepository;
+    private final AppUserLookup userLookup;
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
 
     public PlatformCompanyService(CompanyLookup companyLookup,
                                   CompanyService companyService,
-                                  AppUserCompanyAccessRepository companyAccessRepository,
+                                  AppUserLookup userLookup,
                                   AuditLogService auditLogService,
                                   ApplicationEventPublisher eventPublisher) {
         this.companyLookup = companyLookup;
         this.companyService = companyService;
-        this.companyAccessRepository = companyAccessRepository;
+        this.userLookup = userLookup;
         this.auditLogService = auditLogService;
         this.eventPublisher = eventPublisher;
     }
@@ -133,7 +133,7 @@ public class PlatformCompanyService {
                 company.getAddress(), company.getPhone(),
                 company.getLogo() != null && company.getLogo().length > 0,
                 company.isActive(),
-                companyAccessRepository.countByCompanyId(company.getId()),
+                userLookup.countAccessesForCompany(company.getId()),
                 CompanyProfileMapper.toProfile(company));
     }
 }

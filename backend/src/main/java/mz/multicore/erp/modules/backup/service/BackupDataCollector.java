@@ -14,7 +14,7 @@ import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 public class BackupDataCollector {
 
-    private final AppUserRepository userRepository;
+    private final AppUserLookup userLookup;
     private final CompanyLookup companyLookup;
     private final ClientLookup clientLookup;
     private final SupplierRepository supplierRepository;
@@ -46,7 +46,7 @@ public class BackupDataCollector {
 
     @Autowired
     public BackupDataCollector(
-            AppUserRepository userRepository,
+            AppUserLookup userLookup,
             CompanyLookup companyLookup,
             ClientLookup clientLookup,
             SupplierRepository supplierRepository,
@@ -62,7 +62,7 @@ public class BackupDataCollector {
             TreasuryTransactionRepository transactionRepository,
             AuditLogRepository auditLogRepository
     ) {
-        this.userRepository = userRepository;
+        this.userLookup = userLookup;
         this.companyLookup = companyLookup;
         this.clientLookup = clientLookup;
         this.supplierRepository = supplierRepository;
@@ -84,7 +84,7 @@ public class BackupDataCollector {
         data.put("companyId", companyId);
         data.put("generatedAt", LocalDateTime.now().toString());
 
-        data.put("users", userRepository == null ? List.of() : userRepository.findDistinctByCompanyAccessesCompanyIdOrderByName(companyId).stream().map(u -> {
+        data.put("users", userLookup == null ? List.of() : userLookup.listForCompany(companyId).stream().map(u -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", u.getId());
             m.put("username", u.getUsername());
