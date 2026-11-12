@@ -22,9 +22,8 @@ import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.service.HRService;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockMovementService;
 import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.model.Supplier;
 import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
@@ -50,7 +49,7 @@ public class DemoEnterpriseDataSeeder {
     private final CompanyLookup companyLookup;
     private final CompanyService companyService;
     private final WarehouseCommandService warehouseCommandService;
-    private final StockRepository stockRepository;
+    private final StockMovementService stockMovementService;
     private final AppUserRepository appUserRepository;
     private final SupplierRepository supplierRepository;
     private final TaxRateRepository taxRateRepository;
@@ -63,7 +62,7 @@ public class DemoEnterpriseDataSeeder {
             TreasuryAccountRepository accountRepository,
             HRService hrService, CRMService crmService,
             CompanyLookup companyLookup, CompanyService companyService,
-            WarehouseCommandService warehouseCommandService, StockRepository stockRepository,
+            WarehouseCommandService warehouseCommandService, StockMovementService stockMovementService,
             AppUserRepository appUserRepository, SupplierRepository supplierRepository,
             TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
@@ -77,7 +76,7 @@ public class DemoEnterpriseDataSeeder {
         this.companyLookup = companyLookup;
         this.companyService = companyService;
         this.warehouseCommandService = warehouseCommandService;
-        this.stockRepository = stockRepository;
+        this.stockMovementService = stockMovementService;
         this.appUserRepository = appUserRepository;
         this.supplierRepository = supplierRepository;
         this.taxRateRepository = taxRateRepository;
@@ -242,12 +241,11 @@ public class DemoEnterpriseDataSeeder {
         seedStock(massa, wh, "160.000");
     }
 
+    /** Saldo inicial pelo ledger do inventário: grava movimento, lote e saldo juntos. */
     private void seedStock(Product product, Warehouse warehouse, String quantity) {
-        Stock stock = new Stock();
-        stock.setProduct(product);
-        stock.setWarehouse(warehouse);
-        stock.setQuantity(new BigDecimal(quantity));
-        stockRepository.save(stock);
+        CurrentUserContext.runAsSystem(warehouse.getCompany().getId(), () ->
+                stockMovementService.registerMovement(product, warehouse, new BigDecimal(quantity),
+                        "ENTRY", null, null, "Stock inicial (demonstração)"));
     }
 
     private void createTreasuryAccount(String name, String accountNumber, String balance, Company company) {

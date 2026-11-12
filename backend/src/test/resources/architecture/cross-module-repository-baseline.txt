@@ -3,13 +3,11 @@
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> hr.repository.EmployeeRepository
-backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> purchases.repository.SupplierRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> users.repository.AppUserRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> hr.repository.EmployeeRepository
-backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> inventory.repository.StockRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> purchases.repository.SupplierRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> users.repository.AppUserRepository
 backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> fiscal.repository.TaxRateRepository
