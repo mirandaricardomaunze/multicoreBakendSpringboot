@@ -4,6 +4,7 @@ import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -84,6 +85,39 @@ class StockLookupTest {
         assertThat(lookup.listForCompany(9L)).isEqualTo(daEmpresa);
         assertThat(lookup.listForWarehouse(8L)).isEqualTo(doArmazem);
         assertThat(lookup.listForProduct(7L)).isEqualTo(doProduto);
+    }
+
+    @Test
+    void findForReservation_delegaNoLockPessimista_eExigeTransaccaoDoChamador() throws NoSuchMethodException {
+        Stock s = stock("5");
+        when(stocks.findForReservation(3L, 4L)).thenReturn(Optional.of(s));
+
+        assertThat(lookup.findForReservation(3L, 4L)).containsSame(s);
+        assertThat(lookup.findForReservation(null, 4L)).isEmpty();
+
+        Transactional tx = StockLookup.class.getMethod("findForReservation", Long.class, Long.class)
+                .getAnnotation(Transactional.class);
+        assertThat(tx).isNotNull();
+        assertThat(tx.propagation()).isEqualTo(Propagation.MANDATORY);
+    }
+
+    /** MD-I03 — nenhum módulo fora do inventário lê saldos pelo StockRepository; lê pelo StockLookup. */
+    @Test
+    void leitoresDeStockForaDoInventario_usamOStockLookup() throws IOException {
+        Path main = moduleRoot().resolve("src/main/java/mz/multicore/erp");
+        Path inventory = main.resolve("modules/inventory");
+        List<String> offenders = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(main)) {
+            for (Path file : files.filter(p -> p.toString().endsWith(".java"))
+                    .filter(p -> !p.startsWith(inventory)).toList()) {
+                if (Files.readString(file).contains("inventory.repository.StockRepository")) {
+                    offenders.add(main.relativize(file).toString());
+                }
+            }
+        }
+        assertThat(offenders)
+                .as("Saldos de stock lidos fora do inventário têm de passar pelo StockLookup")
+                .isEmpty();
     }
 
     @Test

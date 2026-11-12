@@ -76,7 +76,8 @@ class InventoryReportPrintServiceTest {
         when(stockRepository.findByWarehouseId(10L)).thenReturn(List.of(s1, s2));
 
         InventoryReportPrintService service = new InventoryReportPrintService(
-                stockRepository, new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
+                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
                 companyService
         );
 

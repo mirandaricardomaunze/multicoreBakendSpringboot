@@ -8,10 +8,9 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
@@ -59,7 +58,7 @@ public class ProductionPlanService {
     private final ProductionSalesHistoryRepository salesHistory;
     private final BillOfMaterialsRepository bomRepository;
     private final WarehouseLookup warehouseLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final StockMovementRegistrationService movementService;
     private final AverageCostUpdater averageCost;
     private final StockWasteService wasteService;
@@ -69,7 +68,7 @@ public class ProductionPlanService {
     public ProductionPlanService(ProductionPlanRepository planRepository, ProductionRunRepository runRepository,
                                  ProductionPlanLineRepository lineRepository,
                                  ProductionSalesHistoryRepository salesHistory, BillOfMaterialsRepository bomRepository,
-                                 WarehouseLookup warehouseLookup, StockRepository stockRepository,
+                                 WarehouseLookup warehouseLookup, StockLookup stockLookup,
                                  StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                  StockWasteService wasteService, AuditLogService auditLogService,
                                  org.springframework.context.ApplicationEventPublisher eventPublisher) {
@@ -79,7 +78,7 @@ public class ProductionPlanService {
         this.salesHistory = salesHistory;
         this.bomRepository = bomRepository;
         this.warehouseLookup = warehouseLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.movementService = movementService;
         this.averageCost = averageCost;
         this.wasteService = wasteService;
@@ -359,7 +358,7 @@ public class ProductionPlanService {
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId).map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return stockLookup.quantityOf(productId, warehouseId);
     }
 
     private static BigDecimal nz(BigDecimal value) {

@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.reports.service;
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
 import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
 import mz.multicore.erp.modules.inventory.model.Stock;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.pos.model.TillSession;
 import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
 import mz.multicore.erp.modules.pos.repository.TillMovementRepository;
@@ -23,18 +23,18 @@ import java.util.stream.Collectors;
 /** Recolhe e normaliza indicadores operacionais externos às facturas. */
 @Component
 public class ReportOperationsCollector {
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final ApprovalRequestRepository approvalRequestRepository;
     private final TillSessionRepository tillSessionRepository;
     private final PaymentEntryRepository paymentEntryRepository;
     private final TillMovementRepository tillMovementRepository;
 
-    public ReportOperationsCollector(StockRepository stockRepository,
+    public ReportOperationsCollector(StockLookup stockLookup,
                                      ApprovalRequestRepository approvalRequestRepository,
                                      TillSessionRepository tillSessionRepository,
                                      PaymentEntryRepository paymentEntryRepository,
                                      TillMovementRepository tillMovementRepository) {
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.approvalRequestRepository = approvalRequestRepository;
         this.tillSessionRepository = tillSessionRepository;
         this.paymentEntryRepository = paymentEntryRepository;
@@ -42,7 +42,7 @@ public class ReportOperationsCollector {
     }
 
     List<LowStockAlertDTO> lowStockAlerts(Long companyId) {
-        return stockRepository.findByWarehouseCompanyId(companyId).stream()
+        return stockLookup.listForCompany(companyId).stream()
                 .filter(this::isBelowMinimum).map(this::toLowStockAlert).toList();
     }
 

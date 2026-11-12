@@ -58,7 +58,7 @@ class ReportServiceTest {
         tillMovementRepository = mock(TillMovementRepository.class);
 
         service = new ReportService(new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
-                stockRepository, approvalRequestRepository,
+                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository), approvalRequestRepository,
                 tillSessionRepository, paymentEntryRepository, tillMovementRepository);
 
         when(stockRepository.findByWarehouseCompanyId(COMPANY_ID)).thenReturn(List.of());

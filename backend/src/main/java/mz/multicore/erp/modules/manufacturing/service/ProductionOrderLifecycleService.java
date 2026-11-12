@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.manufacturing.dto.CreateProductionOrderRequest;
 import mz.multicore.erp.modules.manufacturing.dto.ProductionOrderDTO;
@@ -32,7 +32,7 @@ public class ProductionOrderLifecycleService {
     private final BillOfMaterialsRepository bomRepository;
     private final CompanyLookup companyLookup;
     private final WarehouseLookup warehouseLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final ApplicationEventPublisher eventPublisher;
     private final mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService;
 
@@ -42,7 +42,7 @@ public class ProductionOrderLifecycleService {
             BillOfMaterialsRepository bomRepository,
             CompanyLookup companyLookup,
             WarehouseLookup warehouseLookup,
-            StockRepository stockRepository,
+            StockLookup stockLookup,
             @Autowired(required = false) ApplicationEventPublisher eventPublisher,
             mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService
     ) {
@@ -51,7 +51,7 @@ public class ProductionOrderLifecycleService {
         this.bomRepository = bomRepository;
         this.companyLookup = companyLookup;
         this.warehouseLookup = warehouseLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.eventPublisher = eventPublisher;
     }
 
@@ -170,7 +170,7 @@ public class ProductionOrderLifecycleService {
         }
         Long sourceWhId = order.getSourceWarehouse() != null ? order.getSourceWarehouse().getId() : null;
         String description = "Ordem de produção " + order.getOrderNumber();
-        ProductionShortageCheck.assertAvailable(stockRepository, order);
+        ProductionShortageCheck.assertAvailable(stockLookup, order);
         BigDecimal actualRawMaterialCost = BigDecimal.ZERO;
         for (ProductionOrderLine line : order.getLines()) {
             line.setConsumedQuantity(line.getPlannedQuantity());

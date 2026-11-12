@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.intelligence.dto.AiAssistantRequest;
 import mz.multicore.erp.modules.intelligence.dto.AiAssistantResponse;
 import mz.multicore.erp.modules.intelligence.dto.AiEvidenceDTO;
 import mz.multicore.erp.modules.inventory.model.Stock;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
 import mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository;
 import org.springframework.stereotype.Service;
@@ -30,18 +30,18 @@ public class AiManagementAssistantService {
     public static final String HUMAN_NOTICE = "Confirme os valores nos módulos operacionais antes de decidir.";
 
     private final InvoiceLookup invoiceLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final ManagementAiGateway aiGateway;
     private final AuditLogService auditLogService;
 
     public AiManagementAssistantService(InvoiceLookup invoiceLookup,
-                                        StockRepository stockRepository,
+                                        StockLookup stockLookup,
                                         PurchaseOrderRepository purchaseOrderRepository,
                                         ManagementAiGateway aiGateway,
                                         AuditLogService auditLogService) {
         this.invoiceLookup = invoiceLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.aiGateway = aiGateway;
         this.auditLogService = auditLogService;
@@ -75,7 +75,7 @@ public class AiManagementAssistantService {
         BigDecimal average = sales.isEmpty() ? BigDecimal.ZERO
                 : salesTotal.divide(BigDecimal.valueOf(sales.size()), 2, RoundingMode.HALF_UP);
 
-        List<Stock> stocks = stockRepository.findByWarehouseCompanyId(companyId);
+        List<Stock> stocks = stockLookup.listForCompany(companyId);
         long out = stocks.stream().filter(stock -> nz(stock.getQuantity()).signum() <= 0).count();
         long low = stocks.stream().filter(stock -> nz(stock.getQuantity()).signum() > 0
                 && nz(stock.getQuantity()).compareTo(nz(stock.getProduct().getMinStock())) <= 0).count();

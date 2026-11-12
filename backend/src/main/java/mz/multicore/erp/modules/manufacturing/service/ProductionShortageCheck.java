@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.manufacturing.service;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.modules.inventory.model.Stock;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.manufacturing.model.ProductionOrder;
 import mz.multicore.erp.modules.manufacturing.model.ProductionOrderLine;
 
@@ -15,12 +15,12 @@ final class ProductionShortageCheck {
     private ProductionShortageCheck() {
     }
 
-    static void assertAvailable(StockRepository stockRepository, ProductionOrder order) {
+    static void assertAvailable(StockLookup stockLookup, ProductionOrder order) {
         if (order.getSourceWarehouse() == null) return;
         Long warehouseId = order.getSourceWarehouse().getId();
         for (ProductionOrderLine line : order.getLines()) {
             if (!line.getComponentProduct().isStockTracked()) continue;
-            BigDecimal available = stockRepository.findForReservation(line.getComponentProduct().getId(), warehouseId)
+            BigDecimal available = stockLookup.findForReservation(line.getComponentProduct().getId(), warehouseId)
                     .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
             if (available.compareTo(line.getPlannedQuantity()) < 0) {
                 throw new BusinessRuleException("Falta " + line.getComponentProduct().getName() + ": a ordem precisa de "

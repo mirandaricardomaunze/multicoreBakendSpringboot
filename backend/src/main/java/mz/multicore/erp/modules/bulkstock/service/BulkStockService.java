@@ -15,11 +15,10 @@ import mz.multicore.erp.modules.bulkstock.repository.BulkStockSettingRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
 import mz.multicore.erp.modules.inventory.model.StockMovementType;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pickup.service.PickupService;
@@ -51,7 +50,7 @@ public class BulkStockService {
     private final BulkMeasurementRepository measurementRepository;
     private final ProductLookup productLookup;
     private final WarehouseLookup warehouseLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final CompanyLookup companyLookup;
     private final StockMovementRegistrationService movementService;
     private final ProductUnitService productUnitService;
@@ -60,14 +59,14 @@ public class BulkStockService {
 
     public BulkStockService(BulkStockSettingRepository settingRepository, BulkMeasurementRepository measurementRepository,
                             ProductLookup productLookup, WarehouseLookup warehouseLookup,
-                            StockRepository stockRepository, CompanyLookup companyLookup,
+                            StockLookup stockLookup, CompanyLookup companyLookup,
                             StockMovementRegistrationService movementService, ProductUnitService productUnitService,
                             PickupService pickupService, AuditLogService auditLogService) {
         this.settingRepository = settingRepository;
         this.measurementRepository = measurementRepository;
         this.productLookup = productLookup;
         this.warehouseLookup = warehouseLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.companyLookup = companyLookup;
         this.movementService = movementService;
         this.productUnitService = productUnitService;
@@ -196,8 +195,7 @@ public class BulkStockService {
             m.setVolumeM3(volume);
             m.setMeasuredQuantity(toBase(request.companyId(), product, volume));
         }
-        BigDecimal system = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        BigDecimal system = stockLookup.quantityOf(product.getId(), warehouse.getId());
         BigDecimal pending = pickupService.pendingQuantity(request.companyId(), product.getId(), warehouse.getId());
         BigDecimal difference = BulkMeasurementRules.difference(m.getMeasuredQuantity(), pending, system)
                 .setScale(3, RoundingMode.HALF_UP);

@@ -3,6 +3,7 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -38,6 +39,18 @@ public class StockLookup {
         return find(productId, warehouseId)
                 .map(Stock::getQuantity)
                 .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Saldo do produto no armazém com lock pessimista, para validar disponibilidade antes de consumir.
+     * Só faz sentido dentro da transacção de escrita do chamador, por isso exige-a.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Stock> findForReservation(Long productId, Long warehouseId) {
+        if (productId == null || warehouseId == null) {
+            return Optional.empty();
+        }
+        return stockRepository.findForReservation(productId, warehouseId);
     }
 
     /** Saldos de todos os armazéns da empresa (com produto, armazém e empresa carregados). */

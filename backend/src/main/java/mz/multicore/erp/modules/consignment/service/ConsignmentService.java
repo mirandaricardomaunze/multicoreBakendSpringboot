@@ -21,10 +21,9 @@ import mz.multicore.erp.modules.consignment.model.ConsignmentLine;
 import mz.multicore.erp.modules.consignment.model.ConsignmentStatus;
 import mz.multicore.erp.modules.consignment.repository.ConsignmentDeliveryRepository;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
@@ -55,7 +54,7 @@ public class ConsignmentService {
     private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
     private final WarehouseLookup warehouseLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService movementService;
     private final StockWasteService wasteService;
@@ -67,7 +66,7 @@ public class ConsignmentService {
 
     public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientLookup clientLookup,
                               ProductLookup productLookup, WarehouseLookup warehouseLookup,
-                              StockRepository stockRepository, InvoiceLookup invoiceLookup,
+                              StockLookup stockLookup, InvoiceLookup invoiceLookup,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
                               TransitWarehouseProvider transitWarehouses,
                               mz.multicore.erp.modules.inventory.service.InventoryService inventoryService,
@@ -77,7 +76,7 @@ public class ConsignmentService {
         this.clientLookup = clientLookup;
         this.productLookup = productLookup;
         this.warehouseLookup = warehouseLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.invoiceLookup = invoiceLookup;
         this.movementService = movementService;
         this.wasteService = wasteService;
@@ -216,7 +215,7 @@ public class ConsignmentService {
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId).map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return stockLookup.quantityOf(productId, warehouseId);
     }
 
     static ConsignmentDTO toDto(ConsignmentDelivery d) {

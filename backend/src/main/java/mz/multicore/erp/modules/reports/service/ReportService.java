@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
 import mz.multicore.erp.modules.pos.repository.TillMovementRepository;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
@@ -35,13 +35,13 @@ public class ReportService {
     }
 
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
-    public ReportService(InvoiceLookup invoiceLookup, StockRepository stockRepository,
+    public ReportService(InvoiceLookup invoiceLookup, StockLookup stockLookup,
                          ApprovalRequestRepository approvalRequestRepository,
                          TillSessionRepository tillSessionRepository,
                          PaymentEntryRepository paymentEntryRepository,
                          TillMovementRepository tillMovementRepository) {
         this(invoiceLookup, new ReportSalesAnalyzer(),
-                new ReportOperationsCollector(stockRepository, approvalRequestRepository,
+                new ReportOperationsCollector(stockLookup, approvalRequestRepository,
                         tillSessionRepository, paymentEntryRepository, tillMovementRepository));
     }
 

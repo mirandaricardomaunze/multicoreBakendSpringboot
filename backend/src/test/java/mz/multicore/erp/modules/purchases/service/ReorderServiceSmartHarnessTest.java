@@ -47,7 +47,7 @@ class ReorderServiceSmartHarnessTest {
         productRepository = mock(ProductRepository.class);
         invoiceRepository = mock(InvoiceRepository.class);
         purchaseLineRepository = mock(PurchaseLineRepository.class);
-        service = new ReorderService(stockRepository,
+        service = new ReorderService(new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
                 new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), purchaseLineRepository);
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);

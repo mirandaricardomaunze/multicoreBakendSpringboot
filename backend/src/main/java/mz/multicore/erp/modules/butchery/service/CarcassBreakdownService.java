@@ -13,9 +13,8 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
@@ -44,7 +43,7 @@ public class CarcassBreakdownService {
     private final ProductLookup productLookup;
     private final CompanyLookup companyLookup;
     private final WarehouseLookup warehouseLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final StockMovementRegistrationService movementService;
     private final AverageCostUpdater averageCost;
     private final DocumentNumberService documentNumberService;
@@ -53,7 +52,7 @@ public class CarcassBreakdownService {
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
                                    ProductLookup productLookup, CompanyLookup companyLookup,
-                                   WarehouseLookup warehouseLookup, StockRepository stockRepository,
+                                   WarehouseLookup warehouseLookup, StockLookup stockLookup,
                                    StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                    DocumentNumberService documentNumberService, AuditLogService auditLogService,
                                    org.springframework.context.ApplicationEventPublisher eventPublisher) {
@@ -62,7 +61,7 @@ public class CarcassBreakdownService {
         this.productLookup = productLookup;
         this.companyLookup = companyLookup;
         this.warehouseLookup = warehouseLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.movementService = movementService;
         this.averageCost = averageCost;
         this.documentNumberService = documentNumberService;
@@ -214,8 +213,7 @@ public class CarcassBreakdownService {
         }
         String description = "Anulação da desmancha " + breakdown.getNumber() + " - " + request.reason().trim();
         for (CarcassBreakdownLine line : breakdown.getLines()) {
-            BigDecimal available = stockRepository.findByProductIdAndWarehouseId(line.getProduct().getId(), breakdown.getWarehouse().getId())
-                    .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+            BigDecimal available = stockLookup.quantityOf(line.getProduct().getId(), breakdown.getWarehouse().getId());
             if (available.compareTo(line.getKg()) < 0) {
                 throw new BusinessRuleException("Já não há " + DisplayNumbers.qty(line.getKg()) + " kg de " + line.getProduct().getName()
                         + " em stock (há " + DisplayNumbers.qty(available) + " kg): parte já foi vendida e a desmancha não se anula.");

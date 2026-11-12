@@ -16,9 +16,8 @@ import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.TransitWarehouseProvider;
@@ -55,7 +54,7 @@ public class ReturnableService {
     private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
     private final WarehouseLookup warehouseLookup;
-    private final StockRepository stockRepository;
+    private final StockLookup stockLookup;
     private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService stockMovements;
     private final TransitWarehouseProvider transitWarehouses;
@@ -65,7 +64,7 @@ public class ReturnableService {
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
                              ProductLookup productLookup, ClientLookup clientLookup,
                              CompanyLookup companyLookup, WarehouseLookup warehouseLookup,
-                             StockRepository stockRepository, InvoiceLookup invoiceLookup,
+                             StockLookup stockLookup, InvoiceLookup invoiceLookup,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
                              ComercialService comercialService, AuditLogService auditLogService) {
         this.itemRepository = itemRepository;
@@ -74,7 +73,7 @@ public class ReturnableService {
         this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
         this.warehouseLookup = warehouseLookup;
-        this.stockRepository = stockRepository;
+        this.stockLookup = stockLookup;
         this.invoiceLookup = invoiceLookup;
         this.stockMovements = stockMovements;
         this.transitWarehouses = transitWarehouses;
@@ -250,7 +249,7 @@ public class ReturnableService {
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId).map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return stockLookup.quantityOf(productId, warehouseId);
     }
 
     static ReturnableMovementDTO toDto(ReturnableMovement m) {

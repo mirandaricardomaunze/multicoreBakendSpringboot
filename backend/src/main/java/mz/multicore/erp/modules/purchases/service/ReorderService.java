@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.purchases.service;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
 import mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +35,13 @@ public class ReorderService {
     }
 
     public ReorderService(
-            StockRepository stockRepository,
+            StockLookup stockLookup,
             ProductLookup productLookup,
             InvoiceLookup invoiceLookup,
             PurchaseLineRepository purchaseLineRepository
     ) {
         this(productLookup,
-             new ReorderDataCollector(stockRepository, invoiceLookup, purchaseLineRepository),
+             new ReorderDataCollector(stockLookup, invoiceLookup, purchaseLineRepository),
              new ReorderSuggestionCalculator());
     }
 

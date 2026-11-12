@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.manufacturing.service;
 
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.manufacturing.dto.*;
 import mz.multicore.erp.modules.manufacturing.repository.BillOfMaterialsRepository;
@@ -36,8 +36,8 @@ public class ProductionService {
                              CompanyLookup companyLookup,
                              ProductLookup productLookup,
                              WarehouseLookup warehouseLookup,
-                             StockRepository stockRepository) {
-        this(bomRepository, productionOrderRepository, companyLookup, productLookup, warehouseLookup, stockRepository, null, null);
+                             StockLookup stockLookup) {
+        this(bomRepository, productionOrderRepository, companyLookup, productLookup, warehouseLookup, stockLookup, null, null);
     }
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
@@ -45,13 +45,13 @@ public class ProductionService {
                              CompanyLookup companyLookup,
                              ProductLookup productLookup,
                              WarehouseLookup warehouseLookup,
-                             StockRepository stockRepository,
+                             StockLookup stockLookup,
                              ApplicationEventPublisher eventPublisher,
                              mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService) {
         this(
                 new BillOfMaterialsService(bomRepository, companyLookup, productLookup),
                 new ProductionOrderLifecycleService(productionOrderRepository, bomRepository,
-                        companyLookup, warehouseLookup, stockRepository, eventPublisher, movementService)
+                        companyLookup, warehouseLookup, stockLookup, eventPublisher, movementService)
         );
     }
 
