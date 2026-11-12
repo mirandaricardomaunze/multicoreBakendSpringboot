@@ -201,3 +201,12 @@ fica tudo em 3201. Código: `GoodsAccounts` (accounting) e `BomFinishedGoodsLook
   abate a Clientes; reembolso de devolução em dinheiro lança D Clientes / C Caixa ou Banco (`CUSTOMER_REFUND`).
 - **Compra sem validade obrigatória:** só os artigos perecíveis (`tracksExpiry`) exigem validade na entrada.
 
+## Acerto de existências (2026-11-12)
+
+O stock inicial entra como entrada manual (`ENTRY`) e não é lançado; sem acerto, Mercadorias (3201) fica abaixo do
+stock e chega a negativo à medida que as vendas tiram o custo. Em Contabilidade → Balancete, **"Acertar existências"**
+valoriza o stock ao custo médio, separa o que é fabricado (3401) do que é comprado (3201) e lança a diferença face ao
+saldo contabilístico contra **5901 Resultados transitados** (`INVENTORY_ADJUSTMENT`, um por dia). Usa-se no arranque
+(inventário inicial) e depois de contagens grandes. *A contrapartida é a confirmar pelo contabilista.*
+Código: `InventoryAdjustmentService`, `StockValuationService`. Teste: `InventoryPostingHttpIntegrationTest`.
+

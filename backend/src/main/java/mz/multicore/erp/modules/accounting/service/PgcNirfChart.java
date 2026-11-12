@@ -45,6 +45,7 @@ public final class PgcNirfChart {
     public static final String FROTA_COMBUSTIVEIS = "6221";
     public static final String DEPRECIACAO_EXERCICIO = "6501";
     public static final String VARIACAO_PRODUCAO = "7301";
+    public static final String RESULTADOS_TRANSITADOS = "5901"; // contrapartida do inventário inicial
 
     public static List<Seed> accounts() {
         return List.of(
@@ -86,6 +87,8 @@ public final class PgcNirfChart {
                 new Seed("5", "Capital, reservas e resultados transitados", AccountNature.CREDORA, false),
                 new Seed("51", "Capital social", AccountNature.CREDORA, false),
                 new Seed("5101", "Capital social", AccountNature.CREDORA, true),
+                new Seed("59", "Resultados transitados", AccountNature.CREDORA, false),
+                new Seed(RESULTADOS_TRANSITADOS, "Resultados transitados", AccountNature.CREDORA, true),
 
                 // Classe 6 — Custos e perdas
                 new Seed("6", "Custos e perdas", AccountNature.DEVEDORA, false),

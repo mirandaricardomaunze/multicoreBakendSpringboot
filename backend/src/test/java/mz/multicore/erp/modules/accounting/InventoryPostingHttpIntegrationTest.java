@@ -149,6 +149,18 @@ class InventoryPostingHttpIntegrationTest {
                 .andExpect(status().is4xxClientError());
     }
 
+    @Test
+    void inventoryAdjustmentBringsTheGoodsAccountsToTheStockAtCost() throws Exception {
+        Ctx c = context();
+        long product = product(c, "Sabao 400 g (teste acerto)", "60", "40");
+        entry(c, product, "25"); // opening stock: entered by hand, never posted
+
+        JsonNode result = json(send(post("/api/accounting/inventory-adjustment"), c, "{}"));
+        assertThat(ledger(c, "3201")).isEqualByComparingTo(new BigDecimal(result.get("goodsStockValue").asText()));
+        assertThat(ledger(c, "3401")).isEqualByComparingTo(new BigDecimal(result.get("finishedStockValue").asText()));
+        send(post("/api/accounting/inventory-adjustment"), c, "{}").andExpect(status().is4xxClientError());
+    }
+
     private BigDecimal ledger(Ctx c, String account) throws Exception {
         return new BigDecimal(getJson("/api/accounting/ledger/" + account + "?from=2000-01-01&to=" + LocalDate.now().plusDays(1), c)
                 .get("closingBalance").asText());
