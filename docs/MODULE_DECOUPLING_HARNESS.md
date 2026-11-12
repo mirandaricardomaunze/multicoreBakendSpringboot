@@ -48,7 +48,7 @@ correm sempre no gate.
 | MD-I02 | `StockLookup` só de leitura (`find`, `quantityOf`, `listForCompany`/`listForWarehouse`/`listForProduct`); toda a escrita de stock alheia passa pelo serviço de movimentos (ledger) — seeder demo migrado — **feito** | `StockLookupTest` |
 | MD-I03 | Leitores de `StockRepository` (18) migrados sem mudar saldos nem movimentos; `StockLookup.findForReservation` (lock pessimista, exige a transacção do chamador) para a verificação de faltas da produção — **feito** | `ModuleDecouplingHarnessTest`, `StockLookupTest` |
 | MD-I04 | Quebras, transferências, lotes e movimentos (16) por Lookup/Service do inventário: `StockWasteLookup`, `StockTransferLookup`, `ProductBatchLookup` (`requireForCompany`: "Lote não encontrado." / "Lote não encontrado nesta empresa."), `StockMovementLookup` — **feito** | `ModuleDecouplingHarnessTest`, `InventoryDocumentLookupsTest` |
-| MD-I05 | Zero ligações a `inventory.repository.*` fora de `inventory`; suite verde | `ModuleDecouplingHarnessTest` |
+| MD-I05 | Zero ligações a `inventory.repository.*` fora de `inventory`; suite verde — **feito** (onda GOAL-004 imposta pelo harness: 0 ligações) | `ModuleDecouplingHarnessTest` |
 
 ## GOAL-005 — Restantes módulos (95)
 
