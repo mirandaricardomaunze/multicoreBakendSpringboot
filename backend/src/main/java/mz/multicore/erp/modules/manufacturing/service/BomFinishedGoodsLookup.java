@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.manufacturing.service;
 import mz.multicore.erp.modules.accounting.service.FinishedGoodsLookup;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.manufacturing.repository.BillOfMaterialsRepository;
 import org.springframework.stereotype.Component;
 
@@ -14,13 +14,13 @@ import java.math.BigDecimal;
 public class BomFinishedGoodsLookup implements FinishedGoodsLookup {
 
     private final BillOfMaterialsRepository bomRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final CreditNoteRepository creditNoteRepository;
 
-    public BomFinishedGoodsLookup(BillOfMaterialsRepository bomRepository, InvoiceRepository invoiceRepository,
+    public BomFinishedGoodsLookup(BillOfMaterialsRepository bomRepository, InvoiceLookup invoiceLookup,
                                   CreditNoteRepository creditNoteRepository) {
         this.bomRepository = bomRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.creditNoteRepository = creditNoteRepository;
     }
 
@@ -32,7 +32,7 @@ public class BomFinishedGoodsLookup implements FinishedGoodsLookup {
 
     @Override
     public BigDecimal finishedCostOfInvoice(Long companyId, Long invoiceId) {
-        return invoiceRepository.findById(invoiceId)
+        return invoiceLookup.find(invoiceId)
                 .filter(invoice -> invoice.getCompany() != null && companyId.equals(invoice.getCompany().getId()))
                 .map(invoice -> invoice.getLines().stream()
                         .filter(line -> manufactured(companyId, line.getProduct()))

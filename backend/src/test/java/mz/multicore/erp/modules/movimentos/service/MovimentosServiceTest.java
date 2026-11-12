@@ -53,7 +53,8 @@ class MovimentosServiceTest {
         debitNoteRepository = mock(DebitNoteRepository.class);
         deliveryGuideRepository = mock(DeliveryGuideRepository.class);
         quotationRepository = mock(mz.multicore.erp.modules.comercial.repository.QuotationRepository.class);
-        service = new MovimentosService(invoiceRepository, orderRepository,
+        service = new MovimentosService(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderRepository,
                 creditNoteRepository, debitNoteRepository, deliveryGuideRepository, quotationRepository);
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
@@ -148,7 +149,8 @@ class MovimentosServiceTest {
         var receiptRepo = mock(mz.multicore.erp.modules.comercial.repository.ReceiptRepository.class);
         var transferRepo = mock(mz.multicore.erp.modules.inventory.repository.StockTransferRepository.class);
 
-        var fullService = new MovimentosService(invoiceRepository, orderRepository,
+        var fullService = new MovimentosService(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderRepository,
                 creditNoteRepository, debitNoteRepository, deliveryGuideRepository, quotationRepository,
                 receiptRepo, transferRepo);
 

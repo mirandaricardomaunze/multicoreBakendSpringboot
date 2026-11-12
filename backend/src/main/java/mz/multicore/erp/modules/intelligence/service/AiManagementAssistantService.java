@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.intelligence.dto.AiAssistantRequest;
 import mz.multicore.erp.modules.intelligence.dto.AiAssistantResponse;
 import mz.multicore.erp.modules.intelligence.dto.AiEvidenceDTO;
@@ -29,18 +29,18 @@ public class AiManagementAssistantService {
 
     public static final String HUMAN_NOTICE = "Confirme os valores nos módulos operacionais antes de decidir.";
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final StockRepository stockRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final ManagementAiGateway aiGateway;
     private final AuditLogService auditLogService;
 
-    public AiManagementAssistantService(InvoiceRepository invoiceRepository,
+    public AiManagementAssistantService(InvoiceLookup invoiceLookup,
                                         StockRepository stockRepository,
                                         PurchaseOrderRepository purchaseOrderRepository,
                                         ManagementAiGateway aiGateway,
                                         AuditLogService auditLogService) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.stockRepository = stockRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.aiGateway = aiGateway;
@@ -68,7 +68,7 @@ public class AiManagementAssistantService {
 
     private ManagementAiContext aggregate(Long companyId) {
         LocalDateTime since = LocalDateTime.now().minusDays(30);
-        List<Invoice> sales = invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, since, LocalDateTime.now())
+        List<Invoice> sales = invoiceLookup.listCreatedBetween(companyId, since, LocalDateTime.now())
                 .stream().filter(invoice -> invoice.getStatus() != null && invoice.getStatus().isRealisedSale()).toList();
         BigDecimal salesTotal = sales.stream().map(Invoice::getTotalAmount).map(AiManagementAssistantService::nz)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

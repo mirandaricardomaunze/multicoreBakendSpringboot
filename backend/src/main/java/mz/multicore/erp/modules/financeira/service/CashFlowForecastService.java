@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.financeira.dto.CashFlowForecastDTO;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
@@ -28,9 +28,9 @@ public class CashFlowForecastService {
 
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
     public CashFlowForecastService(TreasuryAccountRepository accountRepository,
-                                   InvoiceRepository invoiceRepository,
+                                   InvoiceLookup invoiceLookup,
                                    PurchaseRepository purchaseRepository) {
-        this(new CashFlowDataCollector(accountRepository, invoiceRepository, purchaseRepository),
+        this(new CashFlowDataCollector(accountRepository, invoiceLookup, purchaseRepository),
                 new CashFlowProjectionCalculator());
     }
 

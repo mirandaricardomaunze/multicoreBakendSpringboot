@@ -45,7 +45,8 @@ class AiManagementAssistantServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AiManagementAssistantService(invoiceRepository, stockRepository,
+        service = new AiManagementAssistantService(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), stockRepository,
                 purchaseOrderRepository, aiGateway, auditLogService);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
         CurrentUserContext.setCurrentCompanyId(41L);

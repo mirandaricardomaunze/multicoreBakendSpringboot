@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.financeira.dto.CashFlowBucketDTO;
@@ -56,7 +57,7 @@ class CashFlowForecastHarnessTest {
 
     @BeforeEach
     void setUp() {
-        forecastService = new CashFlowForecastService(accountRepository, invoiceRepository, purchaseRepository);
+        forecastService = new CashFlowForecastService(accountRepository, new InvoiceLookup(invoiceRepository), purchaseRepository);
         printService = new CashFlowForecastPrintService(forecastService, companyService);
         CurrentUserContext.setCurrentUser("gestor_financeiro", "MANAGER");
         CurrentUserContext.setCurrentCompanyId(companyId);

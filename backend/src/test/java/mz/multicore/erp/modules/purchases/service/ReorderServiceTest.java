@@ -39,7 +39,8 @@ class ReorderServiceTest {
         invoiceRepository = mock(mz.multicore.erp.modules.comercial.repository.InvoiceRepository.class);
         purchaseLineRepository = mock(mz.multicore.erp.modules.purchases.repository.PurchaseLineRepository.class);
         service = new ReorderService(stockRepository,
-                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)), invoiceRepository, purchaseLineRepository);
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), purchaseLineRepository);
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
     }

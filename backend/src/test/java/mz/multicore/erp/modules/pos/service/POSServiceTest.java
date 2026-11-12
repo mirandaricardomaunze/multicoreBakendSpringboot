@@ -110,7 +110,9 @@ class POSServiceTest {
         storeVoucherRepository = mock(mz.multicore.erp.modules.pos.repository.StoreVoucherRepository.class);
         creditNoteRepository = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
 
-        service = new POSService(tillSessionRepository, tillMovementRepository, invoiceRepository,
+        service = new POSService(tillSessionRepository, tillMovementRepository,
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
+                new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository),
                 new ClientLookup(clientRepository), new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository, new CompanyLookup(companyRepository),
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,

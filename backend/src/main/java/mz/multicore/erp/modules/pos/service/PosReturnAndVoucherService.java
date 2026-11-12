@@ -13,8 +13,8 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.SalesChannel;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
+import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.pos.dto.POSReturnRequest;
 import mz.multicore.erp.modules.pos.dto.POSReturnResultDTO;
@@ -44,7 +44,7 @@ import java.util.Optional;
 @Component
 public class PosReturnAndVoucherService {
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceCommandService invoiceCommands;
     private final CreditNoteRepository creditNoteRepository;
     private final CreditNoteService creditNoteService;
     private final StoreVoucherRepository storeVoucherRepository;
@@ -53,7 +53,7 @@ public class PosReturnAndVoucherService {
     private final AuditLogService auditLogService;
     private final PosSessionAndShiftService sessionAndShiftService;
 
-    public PosReturnAndVoucherService(InvoiceRepository invoiceRepository,
+    public PosReturnAndVoucherService(InvoiceCommandService invoiceCommands,
                                       CreditNoteRepository creditNoteRepository,
                                       CreditNoteService creditNoteService,
                                       StoreVoucherRepository storeVoucherRepository,
@@ -61,7 +61,7 @@ public class PosReturnAndVoucherService {
                                       FinanceService financeService,
                                       AuditLogService auditLogService,
                                       PosSessionAndShiftService sessionAndShiftService) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceCommands = invoiceCommands;
         this.creditNoteRepository = creditNoteRepository;
         this.creditNoteService = creditNoteService;
         this.storeVoucherRepository = storeVoucherRepository;
@@ -75,7 +75,7 @@ public class PosReturnAndVoucherService {
         PermissionGuard.requireManagerOrAdmin("registar devolução no POS");
         CurrentUserContext.requireCompany(request.companyId());
 
-        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(request.invoiceId(), request.companyId())
+        Invoice invoice = invoiceCommands.lockForCompany(request.invoiceId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         String key = request.idempotencyKey();
         String fingerprint = key == null ? null : posReturnRequestFingerprint(request);

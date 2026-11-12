@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.performance.service;
 
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.performance.dto.EmployeeRankingDTO;
@@ -23,14 +23,14 @@ import java.util.*;
 @Service
 public class EmployeeRankingService {
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final EmployeeRepository employeeRepository;
     private final SalesGoalRepository salesGoalRepository;
 
-    public EmployeeRankingService(InvoiceRepository invoiceRepository,
+    public EmployeeRankingService(InvoiceLookup invoiceLookup,
                                   EmployeeRepository employeeRepository,
                                   SalesGoalRepository salesGoalRepository) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.employeeRepository = employeeRepository;
         this.salesGoalRepository = salesGoalRepository;
     }
@@ -40,7 +40,7 @@ public class EmployeeRankingService {
         LocalDateTime start = (from != null ? from : LocalDate.now().withDayOfMonth(1)).atStartOfDay();
         LocalDateTime end = (to != null ? to : LocalDate.now()).atTime(LocalTime.MAX);
 
-        List<Invoice> invoices = invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, start, end);
+        List<Invoice> invoices = invoiceLookup.listCreatedBetween(companyId, start, end);
 
         // CDC-BIZ-12: Apenas faturas com isRealisedSale() == true
         List<Invoice> realised = invoices.stream()

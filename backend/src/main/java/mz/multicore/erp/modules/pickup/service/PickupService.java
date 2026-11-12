@@ -9,7 +9,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.NoteStatus;
 import mz.multicore.erp.modules.comercial.model.ProductSaleType;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import mz.multicore.erp.modules.pickup.dto.*;
@@ -42,17 +42,17 @@ public class PickupService {
     private final PickupAccountRepository accountRepository;
     private final MaterialPickupRepository pickupRepository;
     private final PickupCreditQueryRepository creditRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
     public PickupService(PickupAccountRepository accountRepository, MaterialPickupRepository pickupRepository,
-                         PickupCreditQueryRepository creditRepository, InvoiceRepository invoiceRepository,
+                         PickupCreditQueryRepository creditRepository, InvoiceLookup invoiceLookup,
                          DocumentNumberService documentNumberService, AuditLogService auditLogService) {
         this.accountRepository = accountRepository;
         this.pickupRepository = pickupRepository;
         this.creditRepository = creditRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -133,7 +133,7 @@ public class PickupService {
     public PickupAccountDTO open(OpenPickupAccountRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
         PermissionGuard.requireSeller("registar material por levantar");
-        Invoice invoice = invoiceRepository.findById(request.invoiceId())
+        Invoice invoice = invoiceLookup.find(request.invoiceId())
                 .filter(i -> i.getCompany().getId().equals(request.companyId()))
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada nesta empresa."));
         if (!invoice.getStatus().isRealisedSale()) {

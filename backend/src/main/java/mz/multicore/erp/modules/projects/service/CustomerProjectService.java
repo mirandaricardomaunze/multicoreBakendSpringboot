@@ -8,8 +8,8 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.projects.dto.*;
@@ -38,19 +38,19 @@ public class CustomerProjectService {
     private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
     private final OrderRepository orderRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final AuditLogService auditLogService;
 
     public CustomerProjectService(CustomerProjectRepository projectRepository, CustomerProjectOrderRepository linkRepository,
                                   ClientLookup clientLookup, CompanyLookup companyLookup,
-                                  OrderRepository orderRepository, InvoiceRepository invoiceRepository,
+                                  OrderRepository orderRepository, InvoiceLookup invoiceLookup,
                                   AuditLogService auditLogService) {
         this.projectRepository = projectRepository;
         this.linkRepository = linkRepository;
         this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
         this.orderRepository = orderRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -146,7 +146,7 @@ public class CustomerProjectService {
         List<ProjectStatementLineDTO> lines = new ArrayList<>();
         for (CustomerProjectOrder link : linkRepository.findByProjectWithOrder(project.getId())) {
             Order order = link.getOrder();
-            Invoice invoice = order.getInvoiceId() == null ? null : invoiceRepository.findById(order.getInvoiceId()).orElse(null);
+            Invoice invoice = invoiceLookup.find(order.getInvoiceId()).orElse(null);
             boolean realised = invoice != null && invoice.getStatus().isRealisedSale();
             lines.add(new ProjectStatementLineDTO(order.getId(), order.getOrderNumber(),
                     order.getCreatedAt() == null ? null : order.getCreatedAt().toLocalDate(), order.getStatus(),

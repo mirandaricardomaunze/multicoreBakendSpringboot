@@ -35,7 +35,8 @@ class TreasuryPaginationHarnessTest {
     void transactionsPage_isTenantScopedAndCappedAtServer() {
         var accounts = mock(TreasuryAccountRepository.class);
         var transactions = mock(TreasuryTransactionRepository.class);
-        var service = new FinanceService(accounts, transactions, mock(InvoiceRepository.class));
+        var service = new FinanceService(accounts, transactions,
+                new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(mock(InvoiceRepository.class)));
         CurrentUserContext.setCurrentCompanyId(7L);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
 

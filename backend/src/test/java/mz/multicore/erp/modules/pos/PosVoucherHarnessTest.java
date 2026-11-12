@@ -109,7 +109,9 @@ public class PosVoucherHarnessTest {
         creditNoteRepository = mock(CreditNoteRepository.class);
 
         service = new POSService(
-                tillSessionRepository, tillMovementRepository, invoiceRepository,
+                tillSessionRepository, tillMovementRepository,
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
+                new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository),
                 new ClientLookup(clientRepository), new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 warehouseRepository, new CompanyLookup(companyRepository),
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,

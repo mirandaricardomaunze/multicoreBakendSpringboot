@@ -22,7 +22,8 @@ class FinanceServiceDecompositionHarnessTest {
         TreasuryQueryService queryService = mock(TreasuryQueryService.class);
         InvoiceRepository invoiceRepository = mock(InvoiceRepository.class);
 
-        FinanceService service = new FinanceService(opService, queryService, invoiceRepository);
+        FinanceService service = new FinanceService(opService, queryService,
+                new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository));
 
         when(queryService.getAllAccounts()).thenReturn(List.of());
         assertSame(List.of(), service.getAllAccounts());

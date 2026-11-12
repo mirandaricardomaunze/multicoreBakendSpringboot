@@ -9,10 +9,7 @@ import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
-import mz.multicore.erp.modules.comercial.service.ClientLookup;
-import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.comercial.service.ReceivablesService;
-import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
+import mz.multicore.erp.modules.comercial.service.*;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
@@ -38,7 +35,8 @@ import java.util.Optional;
 @Component
 public class PosCheckoutAndPaymentService {
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final InvoiceCommandService invoiceCommands;
     private final ClientLookup clientLookup;
     private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
@@ -59,7 +57,7 @@ public class PosCheckoutAndPaymentService {
     private final mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer; // respeita reservas; nulo só no construtor legado
 
     public PosCheckoutAndPaymentService(
-            InvoiceRepository invoiceRepository, ClientLookup clientLookup,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, PaymentEntryRepository paymentEntryRepository,
@@ -71,7 +69,8 @@ public class PosCheckoutAndPaymentService {
             mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer) {
         this.priceGuard = priceGuard;
         this.saleStockIssuer = saleStockIssuer;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
+        this.invoiceCommands = invoiceCommands;
         this.clientLookup = clientLookup;
         this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
@@ -97,7 +96,7 @@ public class PosCheckoutAndPaymentService {
 
         String requestFingerprint = posRequestFingerprint(request);
         if (request.contingencyReference() != null && !request.contingencyReference().isBlank()) {
-            Optional<Invoice> existing = invoiceRepository.findByCompanyIdAndContingencyReference(
+            Optional<Invoice> existing = invoiceLookup.findByContingencyReference(
                     request.companyId(), request.contingencyReference().trim());
             if (existing.isPresent()) {
                 Invoice previous = existing.get();
@@ -203,7 +202,7 @@ public class PosCheckoutAndPaymentService {
         deductStockForSale(invoice, warehouse, client, walkInLabel);
         invoice.setAmountPaid(totalPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
-        final Invoice savedInvoice = invoiceRepository.save(invoice);
+        final Invoice savedInvoice = invoiceCommands.save(invoice);
 
         if (request.quotationId() != null && quotationRepository != null) {
             quotationRepository.findByIdAndCompanyId(request.quotationId(), request.companyId()).ifPresent(quotation -> {
@@ -240,7 +239,7 @@ public class PosCheckoutAndPaymentService {
     public Invoice registerLatePayment(Long invoiceId, PosPaymentRequest req) {
         PermissionGuard.requireSeller("registar pagamento posterior");
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
+        Invoice invoice = invoiceCommands.lockForCompany(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         String key = req.idempotencyKey();
         String fingerprint = key == null ? null : paymentRequestFingerprint(req);
@@ -268,7 +267,7 @@ public class PosCheckoutAndPaymentService {
                 .add(req.amount()).setScale(2, RoundingMode.HALF_UP);
         invoice.setAmountPaid(newPaid);
         invoice.setStatus(invoice.deriveStatusFromPayments());
-        return invoiceRepository.save(invoice);
+        return invoiceCommands.save(invoice);
     }
 
     private void applyPayment(Invoice invoice, PosPaymentRequest req, TillSession session, Client client) {

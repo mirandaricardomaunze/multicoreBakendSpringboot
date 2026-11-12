@@ -22,8 +22,13 @@ class InvoicePaymentConcurrencyHarnessTest {
                 "Optional<Invoice> lockByIdAndCompanyId",
                 "i.id = :id and i.company.id = :companyId");
 
+        // Outside comercial the lock goes through the owner's command service (MD-V03), which must keep delegating
+        // to the tenant-scoped PESSIMISTIC_WRITE query above.
+        String commands = read("backend/src/main/java/mz/multicore/erp/modules/comercial/service/InvoiceCommandService.java");
+        assertThat(commands).contains("invoiceRepository.lockByIdAndCompanyId(id, companyId)");
+
         String service = read("backend/src/main/java/mz/multicore/erp/modules/financeira/service/FinanceService.java");
-        int lock = service.indexOf("invoiceRepository.lockByIdAndCompanyId");
+        int lock = service.indexOf("invoiceCommands.lockForCompany");
         int collectableCheck = service.indexOf("invoice.getStatus().isCollectable()", lock);
         int moneyMovement = service.indexOf("registerTransaction(accountId", lock);
         assertThat(lock).isGreaterThanOrEqualTo(0);

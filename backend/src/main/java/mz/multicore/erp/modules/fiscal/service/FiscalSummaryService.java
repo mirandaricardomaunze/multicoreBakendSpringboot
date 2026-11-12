@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.fiscal.service;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.fiscal.dto.IvaSummaryDTO;
 import mz.multicore.erp.modules.purchases.model.Purchase;
 import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
@@ -26,11 +26,11 @@ import java.util.List;
 @Service
 public class FiscalSummaryService {
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final PurchaseRepository purchaseRepository;
 
-    public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository) {
-        this.invoiceRepository = invoiceRepository;
+    public FiscalSummaryService(InvoiceLookup invoiceLookup, PurchaseRepository purchaseRepository) {
+        this.invoiceLookup = invoiceLookup;
         this.purchaseRepository = purchaseRepository;
     }
 
@@ -50,7 +50,7 @@ public class FiscalSummaryService {
         BigDecimal salesBase = BigDecimal.ZERO;
         BigDecimal outputTax = BigDecimal.ZERO;
 
-        for (Invoice inv : invoiceRepository.findByCompanyId(companyId)) {
+        for (Invoice inv : invoiceLookup.listForCompany(companyId)) {
             if (inv.getStatus() == InvoiceStatus.CANCELLED) continue;
             if (inv.getStatus() != InvoiceStatus.APPROVED && inv.getStatus() != InvoiceStatus.PAID) continue;
             LocalDateTime created = inv.getCreatedAt();

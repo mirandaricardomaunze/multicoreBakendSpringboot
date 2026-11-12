@@ -28,7 +28,8 @@ class FinanceServiceTenantTest {
     void getAllAccounts_readsOnlyActiveCompany() {
         TreasuryAccountRepository accounts = mock(TreasuryAccountRepository.class);
         TreasuryTransactionRepository transactions = mock(TreasuryTransactionRepository.class);
-        FinanceService service = new FinanceService(accounts, transactions, mock(InvoiceRepository.class));
+        FinanceService service = new FinanceService(accounts, transactions,
+                new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(mock(InvoiceRepository.class)));
         CurrentUserContext.setCurrentCompanyId(7L);
 
         Company company = new Company();

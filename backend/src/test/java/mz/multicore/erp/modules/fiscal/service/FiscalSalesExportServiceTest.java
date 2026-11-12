@@ -50,7 +50,8 @@ class FiscalSalesExportServiceTest {
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
         companyRepository = mock(CompanyRepository.class);
-        service = new FiscalSalesExportService(invoiceRepository, new CompanyLookup(companyRepository));
+        service = new FiscalSalesExportService(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), new CompanyLookup(companyRepository));
 
         Company company = new Company();
         company.setId(COMPANY);

@@ -67,12 +67,13 @@ class CommercialPerformanceHarnessTest {
         invoiceRepository = mock(InvoiceRepository.class);
 
         bonusCalculatorEngine = new BonusCalculatorEngine();
-        progressEngine = new GoalProgressEngine(invoiceRepository, employeeRepository, bonusCalculatorEngine);
+        var invoiceLookup = new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository);
+        progressEngine = new GoalProgressEngine(invoiceLookup, employeeRepository, bonusCalculatorEngine);
         salesGoalService = new SalesGoalService(
                 salesGoalRepository, bonusRepository, new CompanyLookup(companyRepository), employeeRepository,
                 payslipRepository, payrollPeriodService, progressEngine, bonusCalculatorEngine, auditLogService
         );
-        employeeRankingService = new EmployeeRankingService(invoiceRepository, employeeRepository, salesGoalRepository);
+        employeeRankingService = new EmployeeRankingService(invoiceLookup, employeeRepository, salesGoalRepository);
 
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");

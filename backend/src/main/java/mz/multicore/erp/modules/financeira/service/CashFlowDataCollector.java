@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.financeira.dto.CashFlowItemDTO;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
@@ -31,14 +31,14 @@ public class CashFlowDataCollector {
     ) {}
 
     private final TreasuryAccountRepository accountRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final PurchaseRepository purchaseRepository;
 
     public CashFlowDataCollector(TreasuryAccountRepository accountRepository,
-                                 InvoiceRepository invoiceRepository,
+                                 InvoiceLookup invoiceLookup,
                                  PurchaseRepository purchaseRepository) {
         this.accountRepository = accountRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.purchaseRepository = purchaseRepository;
     }
 
@@ -60,8 +60,8 @@ public class CashFlowDataCollector {
         BigDecimal availableLiquidity = cashBalance.add(bankBalance);
 
         List<Invoice> invoices = companyId != null
-                ? invoiceRepository.findByCompanyId(companyId)
-                : invoiceRepository.findAll();
+                ? invoiceLookup.listForCompany(companyId)
+                : invoiceLookup.listAll();
         List<CashFlowItemDTO> allReceivables = new ArrayList<>();
         BigDecimal totalReceivables = BigDecimal.ZERO;
 

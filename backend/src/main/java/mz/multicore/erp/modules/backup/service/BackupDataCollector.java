@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.backup.service;
 
 import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -36,7 +36,7 @@ public class BackupDataCollector {
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
     private final StockMovementRepository stockMovementRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final ReceiptRepository receiptRepository;
     private final PurchaseRepository purchaseRepository;
     private final TillSessionRepository tillSessionRepository;
@@ -54,7 +54,7 @@ public class BackupDataCollector {
             WarehouseRepository warehouseRepository,
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
-            InvoiceRepository invoiceRepository,
+            InvoiceLookup invoiceLookup,
             ReceiptRepository receiptRepository,
             PurchaseRepository purchaseRepository,
             TillSessionRepository tillSessionRepository,
@@ -70,7 +70,7 @@ public class BackupDataCollector {
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
         this.stockMovementRepository = stockMovementRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.receiptRepository = receiptRepository;
         this.purchaseRepository = purchaseRepository;
         this.tillSessionRepository = tillSessionRepository;
@@ -168,7 +168,7 @@ public class BackupDataCollector {
             return map;
         }).collect(Collectors.toList()));
 
-        data.put("invoices", invoiceRepository == null ? List.of() : invoiceRepository.findByCompanyId(companyId).stream().map(i -> {
+        data.put("invoices", invoiceLookup == null ? List.of() : invoiceLookup.listForCompany(companyId).stream().map(i -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", i.getId());
             m.put("invoiceNumber", i.getInvoiceNumber());

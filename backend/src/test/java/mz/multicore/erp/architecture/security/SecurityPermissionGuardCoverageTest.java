@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
 import mz.multicore.erp.modules.audit.service.ForensicAuditService;
 import mz.multicore.erp.modules.backup.service.ScheduledBackupService;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.CashFlowForecastService;
 import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
@@ -29,7 +30,7 @@ class SecurityPermissionGuardCoverageTest {
 
     @BeforeEach
     void setUp() {
-        InvoiceRepository invoiceRepository = Mockito.mock(InvoiceRepository.class);
+        InvoiceLookup invoiceLookup = new InvoiceLookup(Mockito.mock(InvoiceRepository.class));
         StockWasteRepository stockWasteRepository = Mockito.mock(StockWasteRepository.class);
         AuditLogRepository auditLogRepository = Mockito.mock(AuditLogRepository.class);
         DataSource dataSource = Mockito.mock(DataSource.class);
@@ -37,9 +38,9 @@ class SecurityPermissionGuardCoverageTest {
         TreasuryAccountRepository accountRepository = Mockito.mock(TreasuryAccountRepository.class);
         PurchaseRepository purchaseRepository = Mockito.mock(PurchaseRepository.class);
 
-        forensicAuditService = new ForensicAuditService(invoiceRepository, stockWasteRepository, auditLogRepository);
+        forensicAuditService = new ForensicAuditService(invoiceLookup,stockWasteRepository, auditLogRepository);
         systemMonitoringService = new SystemMonitoringService(dataSource, backupService, null, "1.0.0", "backups");
-        cashFlowForecastService = new CashFlowForecastService(accountRepository, invoiceRepository, purchaseRepository);
+        cashFlowForecastService = new CashFlowForecastService(accountRepository, invoiceLookup,purchaseRepository);
 
         CurrentUserContext.clear();
     }

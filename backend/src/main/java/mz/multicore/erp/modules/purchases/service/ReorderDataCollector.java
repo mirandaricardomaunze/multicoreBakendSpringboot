@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.purchases.model.PurchaseLine;
@@ -20,14 +20,14 @@ public class ReorderDataCollector {
     public record ProductPurchaseInfo(Long supplierId, String supplierName, BigDecimal unitPrice) {}
 
     private final StockRepository stockRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final PurchaseLineRepository purchaseLineRepository;
 
     public ReorderDataCollector(StockRepository stockRepository,
-                                InvoiceRepository invoiceRepository,
+                                InvoiceLookup invoiceLookup,
                                 PurchaseLineRepository purchaseLineRepository) {
         this.stockRepository = stockRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.purchaseLineRepository = purchaseLineRepository;
     }
 
@@ -44,7 +44,7 @@ public class ReorderDataCollector {
     public Map<Long, BigDecimal> collectSalesLast30Days(Long companyId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         Map<Long, BigDecimal> salesLast30Days = new HashMap<>();
-        List<Object[]> salesAgg = invoiceRepository.sumQuantitySoldByProductSince(
+        List<Object[]> salesAgg = invoiceLookup.sumQuantitySoldByProductSince(
                 companyId, InvoiceStatus.realisedSaleStatuses(), thirtyDaysAgo);
         if (salesAgg != null) {
             for (Object[] row : salesAgg) {

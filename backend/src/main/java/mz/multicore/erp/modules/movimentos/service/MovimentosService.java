@@ -4,10 +4,10 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,19 +32,19 @@ public class MovimentosService {
     }
 
     public MovimentosService(
-            InvoiceRepository invoiceRepository,
+            InvoiceLookup invoiceLookup,
             OrderRepository orderRepository,
             CreditNoteRepository creditNoteRepository,
             DebitNoteRepository debitNoteRepository,
             DeliveryGuideRepository deliveryGuideRepository,
             QuotationRepository quotationRepository
     ) {
-        this(new MovimentoCollector(invoiceRepository, orderRepository, creditNoteRepository, debitNoteRepository,
+        this(new MovimentoCollector(invoiceLookup,orderRepository, creditNoteRepository, debitNoteRepository,
                 deliveryGuideRepository, quotationRepository, null, null));
     }
 
     public MovimentosService(
-            InvoiceRepository invoiceRepository,
+            InvoiceLookup invoiceLookup,
             OrderRepository orderRepository,
             CreditNoteRepository creditNoteRepository,
             DebitNoteRepository debitNoteRepository,
@@ -53,7 +53,7 @@ public class MovimentosService {
             ReceiptRepository receiptRepository,
             StockTransferRepository stockTransferRepository
     ) {
-        this(new MovimentoCollector(invoiceRepository, orderRepository, creditNoteRepository, debitNoteRepository,
+        this(new MovimentoCollector(invoiceLookup,orderRepository, creditNoteRepository, debitNoteRepository,
                 deliveryGuideRepository, quotationRepository, receiptRepository, stockTransferRepository));
     }
 

@@ -11,7 +11,7 @@ import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -56,7 +56,7 @@ public class ReturnableService {
     private final CompanyLookup companyLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService stockMovements;
     private final TransitWarehouseProvider transitWarehouses;
     private final ComercialService comercialService;
@@ -65,7 +65,7 @@ public class ReturnableService {
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
                              ProductLookup productLookup, ClientLookup clientLookup,
                              CompanyLookup companyLookup, WarehouseRepository warehouseRepository,
-                             StockRepository stockRepository, InvoiceRepository invoiceRepository,
+                             StockRepository stockRepository, InvoiceLookup invoiceLookup,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
                              ComercialService comercialService, AuditLogService auditLogService) {
         this.itemRepository = itemRepository;
@@ -75,7 +75,7 @@ public class ReturnableService {
         this.companyLookup = companyLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.stockMovements = stockMovements;
         this.transitWarehouses = transitWarehouses;
         this.comercialService = comercialService;
@@ -209,7 +209,7 @@ public class ReturnableService {
         InvoiceDTO invoice = comercialService.createInvoice(new CreateInvoiceRequest(client.getId(), request.companyId(), atClients.getId(),
                 List.of(new CreateInvoiceLineRequest(product.getId(), request.quantity(), product.effectiveTaxRate(), BigDecimal.ZERO, null, null))));
         ReturnableMovement movement = save(request.companyId(), client, item, ReturnableMovementType.CHARGED, request.quantity(),
-                invoice.invoiceNumber(), request.notes(), request.requestKey(), invoiceRepository.findById(invoice.id()).orElseThrow());
+                invoice.invoiceNumber(), request.notes(), request.requestKey(), invoiceLookup.find(invoice.id()).orElseThrow());
         auditLogService.logCurrent("RETURNABLE_CHARGED", DisplayNumbers.qty(request.quantity()) + " " + product.getName()
                 + " não devolvido(s) por " + client.getName() + ": fatura " + invoice.invoiceNumber() + ".");
         return toDto(movement);

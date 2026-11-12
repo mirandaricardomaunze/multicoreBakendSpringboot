@@ -11,10 +11,10 @@ import mz.multicore.erp.modules.comercial.model.SalesChannel;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
@@ -36,7 +36,7 @@ import static mz.multicore.erp.modules.movimentos.service.MovimentoSummarizer.*;
 @Component
 public class MovimentoCollector {
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final OrderRepository orderRepository;
     private final CreditNoteRepository creditNoteRepository;
     private final DebitNoteRepository debitNoteRepository;
@@ -47,7 +47,7 @@ public class MovimentoCollector {
 
     @Autowired
     public MovimentoCollector(
-            InvoiceRepository invoiceRepository,
+            InvoiceLookup invoiceLookup,
             OrderRepository orderRepository,
             CreditNoteRepository creditNoteRepository,
             DebitNoteRepository debitNoteRepository,
@@ -56,7 +56,7 @@ public class MovimentoCollector {
             @Autowired(required = false) ReceiptRepository receiptRepository,
             @Autowired(required = false) StockTransferRepository stockTransferRepository
     ) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.orderRepository = orderRepository;
         this.creditNoteRepository = creditNoteRepository;
         this.debitNoteRepository = debitNoteRepository;
@@ -85,8 +85,8 @@ public class MovimentoCollector {
     }
 
     private void collectInvoices(Long companyId, List<MovimentoDTO> out) {
-        if (invoiceRepository == null) return;
-        for (Invoice inv : invoiceRepository.findByCompanyId(companyId)) {
+        if (invoiceLookup == null) return;
+        for (Invoice inv : invoiceLookup.listForCompany(companyId)) {
             MovimentoTipo tipo = (inv.getSalesChannel() == SalesChannel.POS) ? MovimentoTipo.VENDA_POS : MovimentoTipo.FATURA;
             String wh = inv.getWarehouse() != null ? inv.getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(tipo, inv.getId(), inv.getInvoiceNumber(), nameOf(inv.getClient(), inv.getCustomerName()),

@@ -36,7 +36,8 @@ class VatSettlementHarnessTest {
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
         purchaseRepository = mock(PurchaseRepository.class);
-        fiscalSummaryService = new FiscalSummaryService(invoiceRepository, purchaseRepository);
+        fiscalSummaryService = new FiscalSummaryService(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), purchaseRepository);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
     }

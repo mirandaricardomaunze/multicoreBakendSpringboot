@@ -46,7 +46,8 @@ class FinanceServiceTest {
         transactionRepository = mock(TreasuryTransactionRepository.class);
         invoiceRepository = mock(InvoiceRepository.class);
 
-        service = new FinanceService(accountRepository, transactionRepository, invoiceRepository);
+        service = new FinanceService(accountRepository, transactionRepository,
+                new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository));
 
         when(accountRepository.findByIdAndCompanyId(ACCOUNT_ID, COMPANY_ID))
                 .thenReturn(Optional.of(account()));

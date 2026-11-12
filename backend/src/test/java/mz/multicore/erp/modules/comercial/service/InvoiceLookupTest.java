@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.comercial.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.comercial.model.Invoice;
+import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -67,6 +69,44 @@ class InvoiceLookupTest {
         when(invoices.findByCompanyIdAndCreatedAtBetween(5L, from, to)).thenReturn(rows);
 
         assertThat(lookup.listCreatedBetween(5L, from, to)).isEqualTo(rows);
+    }
+
+    @Test
+    void listForCompany_e_listAll_delegamNoRepositorio() {
+        List<Invoice> company = List.of(invoice(1L));
+        List<Invoice> all = List.of(invoice(1L), invoice(2L));
+        when(invoices.findByCompanyId(5L)).thenReturn(company);
+        when(invoices.findAll()).thenReturn(all);
+
+        assertThat(lookup.listForCompany(5L)).isEqualTo(company);
+        assertThat(lookup.listAll()).isEqualTo(all);
+    }
+
+    @Test
+    void listByStatus_delegaNoFiltroDeEstados() {
+        List<InvoiceStatus> statuses = InvoiceStatus.collectableStatuses();
+        List<Invoice> rows = List.of(invoice(3L));
+        when(invoices.findByCompanyIdAndStatusIn(5L, statuses)).thenReturn(rows);
+
+        assertThat(lookup.listByStatus(5L, statuses)).isEqualTo(rows);
+    }
+
+    @Test
+    void findByContingencyReference_delegaComEmpresa() {
+        Invoice i = invoice(4L);
+        when(invoices.findByCompanyIdAndContingencyReference(5L, "OFF-1")).thenReturn(Optional.of(i));
+
+        assertThat(lookup.findByContingencyReference(5L, "OFF-1")).containsSame(i);
+    }
+
+    @Test
+    void sumQuantitySoldByProductSince_delegaNaAgregacao() {
+        LocalDateTime since = LocalDateTime.of(2026, 10, 1, 0, 0);
+        Set<InvoiceStatus> statuses = Set.of(InvoiceStatus.PAID);
+        List<Object[]> rows = List.<Object[]>of(new Object[]{1L, java.math.BigDecimal.TEN});
+        when(invoices.sumQuantitySoldByProductSince(5L, statuses, since)).thenReturn(rows);
+
+        assertThat(lookup.sumQuantitySoldByProductSince(5L, statuses, since)).isEqualTo(rows);
     }
 
     @Test

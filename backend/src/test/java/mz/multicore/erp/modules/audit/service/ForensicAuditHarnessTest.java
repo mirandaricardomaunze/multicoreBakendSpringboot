@@ -12,6 +12,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.model.StockWaste;
@@ -67,7 +68,7 @@ class ForensicAuditHarnessTest {
         when(companyService.getCompanyById(COMPANY_ID)).thenReturn(company);
 
         forensicAuditService = new ForensicAuditService(
-                invoiceRepository,
+                new InvoiceLookup(invoiceRepository),
                 stockWasteRepository,
                 auditLogRepository
         );

@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
 import mz.multicore.erp.modules.pos.repository.TillMovementRepository;
@@ -22,25 +22,25 @@ import java.util.List;
 /** Orquestra os relatórios operacionais tenant-scoped da loja. */
 @Service
 public class ReportService {
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final ReportSalesAnalyzer salesAnalyzer;
     private final ReportOperationsCollector operationsCollector;
 
     @Autowired
-    public ReportService(InvoiceRepository invoiceRepository, ReportSalesAnalyzer salesAnalyzer,
+    public ReportService(InvoiceLookup invoiceLookup, ReportSalesAnalyzer salesAnalyzer,
                          ReportOperationsCollector operationsCollector) {
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.salesAnalyzer = salesAnalyzer;
         this.operationsCollector = operationsCollector;
     }
 
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
-    public ReportService(InvoiceRepository invoiceRepository, StockRepository stockRepository,
+    public ReportService(InvoiceLookup invoiceLookup, StockRepository stockRepository,
                          ApprovalRequestRepository approvalRequestRepository,
                          TillSessionRepository tillSessionRepository,
                          PaymentEntryRepository paymentEntryRepository,
                          TillMovementRepository tillMovementRepository) {
-        this(invoiceRepository, new ReportSalesAnalyzer(),
+        this(invoiceLookup, new ReportSalesAnalyzer(),
                 new ReportOperationsCollector(stockRepository, approvalRequestRepository,
                         tillSessionRepository, paymentEntryRepository, tillMovementRepository));
     }
@@ -50,9 +50,9 @@ public class ReportService {
         CurrentUserContext.requireCompany(companyId);
         LocalDate today = LocalDate.now();
         List<Invoice> salesToday = salesAnalyzer.filterRealisedSales(
-                invoiceRepository.findByCompanyIdAndCreatedAtBetween(
+                invoiceLookup.listCreatedBetween(
                         companyId, today.atStartOfDay(), today.plusDays(1).atStartOfDay()));
-        List<Invoice> collectable = invoiceRepository.findByCompanyIdAndStatusIn(
+        List<Invoice> collectable = invoiceLookup.listByStatus(
                 companyId, InvoiceStatus.collectableStatuses());
         return new StoreDashboardDTO(today, salesAnalyzer.summarise(salesToday),
                 salesAnalyzer.topProductsFrom(salesToday), operationsCollector.lowStockAlerts(companyId),
@@ -67,7 +67,7 @@ public class ReportService {
         LocalDateTime from = reportDate.atStartOfDay();
         LocalDateTime to = reportDate.plusDays(1).atStartOfDay();
         List<Invoice> sales = salesAnalyzer.filterRealisedSales(
-                invoiceRepository.findByCompanyIdAndCreatedAtBetween(companyId, from, to));
+                invoiceLookup.listCreatedBetween(companyId, from, to));
         return new DailyStoreReportDTO(reportDate, salesAnalyzer.summarise(sales),
                 salesAnalyzer.outstandingCreditFor(sales), operationsCollector.paymentSummary(companyId, from, to),
                 operationsCollector.cashMovementSummary(companyId, from, to),

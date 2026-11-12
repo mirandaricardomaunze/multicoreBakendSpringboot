@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.FiscalSalesExportDTO;
@@ -32,19 +32,19 @@ public class FiscalSalesExportService {
     private static final Set<InvoiceStatus> ISSUED = EnumSet.of(
             InvoiceStatus.APPROVED, InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.CANCELLED);
 
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final CompanyLookup companyLookup;
     private final FiscalSalesXmlBuilder xmlBuilder;
 
     @Autowired
-    public FiscalSalesExportService(InvoiceRepository invoiceRepository, CompanyLookup companyLookup, FiscalSalesXmlBuilder xmlBuilder) {
-        this.invoiceRepository = invoiceRepository;
+    public FiscalSalesExportService(InvoiceLookup invoiceLookup, CompanyLookup companyLookup, FiscalSalesXmlBuilder xmlBuilder) {
+        this.invoiceLookup = invoiceLookup;
         this.companyLookup = companyLookup;
         this.xmlBuilder = xmlBuilder;
     }
 
-    public FiscalSalesExportService(InvoiceRepository invoiceRepository, CompanyLookup companyLookup) {
-        this(invoiceRepository, companyLookup, new FiscalSalesXmlBuilder());
+    public FiscalSalesExportService(InvoiceLookup invoiceLookup, CompanyLookup companyLookup) {
+        this(invoiceLookup, companyLookup, new FiscalSalesXmlBuilder());
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +58,7 @@ public class FiscalSalesExportService {
 
         Company company = companyLookup.require(companyId);
 
-        List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId).stream()
+        List<Invoice> invoices = invoiceLookup.listForCompany(companyId).stream()
                 .filter(i -> ISSUED.contains(i.getStatus()) && withinPeriod(i.getCreatedAt(), start, end))
                 .sorted(Comparator.comparing(Invoice::getInvoiceNumber, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();

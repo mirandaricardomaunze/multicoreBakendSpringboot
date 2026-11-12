@@ -10,7 +10,7 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
@@ -56,7 +56,7 @@ public class ConsignmentService {
     private final ProductLookup productLookup;
     private final WarehouseRepository warehouseRepository;
     private final StockRepository stockRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService movementService;
     private final StockWasteService wasteService;
     private final TransitWarehouseProvider transitWarehouses;
@@ -67,7 +67,7 @@ public class ConsignmentService {
 
     public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientLookup clientLookup,
                               ProductLookup productLookup, WarehouseRepository warehouseRepository,
-                              StockRepository stockRepository, InvoiceRepository invoiceRepository,
+                              StockRepository stockRepository, InvoiceLookup invoiceLookup,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
                               TransitWarehouseProvider transitWarehouses,
                               mz.multicore.erp.modules.inventory.service.InventoryService inventoryService,
@@ -78,7 +78,7 @@ public class ConsignmentService {
         this.productLookup = productLookup;
         this.warehouseRepository = warehouseRepository;
         this.stockRepository = stockRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceLookup = invoiceLookup;
         this.movementService = movementService;
         this.wasteService = wasteService;
         this.transitWarehouses = transitWarehouses;
@@ -191,7 +191,7 @@ public class ConsignmentService {
         if (!invoiceLines.isEmpty()) {
             InvoiceDTO invoice = comercialService.createInvoice(new CreateInvoiceRequest(delivery.getClient().getId(), request.companyId(),
                     delivery.getConsignmentWarehouse().getId(), invoiceLines));
-            delivery.setInvoice(invoiceRepository.findById(invoice.id()).orElseThrow());
+            delivery.setInvoice(invoiceLookup.find(invoice.id()).orElseThrow());
         }
         delivery.setStatus(ConsignmentStatus.SETTLED);
         delivery.setSettledAt(LocalDateTime.now());

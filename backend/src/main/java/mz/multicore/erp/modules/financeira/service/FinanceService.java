@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
@@ -24,24 +24,24 @@ public class FinanceService {
 
     private final TreasuryOperationService operationService;
     private final TreasuryQueryService queryService;
-    private final InvoiceRepository invoiceRepository;
+    private final InvoiceCommandService invoiceCommands;
 
     @Autowired
     public FinanceService(TreasuryOperationService operationService,
                           TreasuryQueryService queryService,
-                          @Lazy InvoiceRepository invoiceRepository) {
+                          @Lazy InvoiceCommandService invoiceCommands) {
         this.operationService = operationService;
         this.queryService = queryService;
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceCommands = invoiceCommands;
     }
 
     public FinanceService(TreasuryAccountRepository accountRepository,
                           TreasuryTransactionRepository transactionRepository,
-                          @Lazy InvoiceRepository invoiceRepository) {
+                          @Lazy InvoiceCommandService invoiceCommands) {
         TreasuryOperationService op = new TreasuryOperationService(accountRepository, transactionRepository);
         this.operationService = op;
         this.queryService = new TreasuryQueryService(accountRepository, transactionRepository, op);
-        this.invoiceRepository = invoiceRepository;
+        this.invoiceCommands = invoiceCommands;
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +68,7 @@ public class FinanceService {
         PermissionGuard.requireManagerOrAdmin("liquidar fatura");
 
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        Invoice invoice = invoiceRepository.lockByIdAndCompanyId(invoiceId, companyId)
+        Invoice invoice = invoiceCommands.lockForCompany(invoiceId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Fatura não encontrada."));
         if (!invoice.getStatus().isCollectable()) {
             throw new BusinessRuleException("Apenas faturas por cobrar podem ser liquidadas. Estado atual: " + invoice.getStatus());
@@ -80,7 +80,7 @@ public class FinanceService {
 
         invoice.setAmountPaid(invoice.getTotalAmount());
         invoice.setStatus(invoice.deriveStatusFromPayments());
-        invoiceRepository.save(invoice);
+        invoiceCommands.save(invoice);
     }
 
     @Transactional

@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import mz.multicore.erp.modules.purchases.dto.ReorderSuggestionDTO;
@@ -37,11 +37,11 @@ public class ReorderService {
     public ReorderService(
             StockRepository stockRepository,
             ProductLookup productLookup,
-            InvoiceRepository invoiceRepository,
+            InvoiceLookup invoiceLookup,
             PurchaseLineRepository purchaseLineRepository
     ) {
         this(productLookup,
-             new ReorderDataCollector(stockRepository, invoiceRepository, purchaseLineRepository),
+             new ReorderDataCollector(stockRepository, invoiceLookup, purchaseLineRepository),
              new ReorderSuggestionCalculator());
     }
 

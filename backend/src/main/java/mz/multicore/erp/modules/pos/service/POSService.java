@@ -7,7 +7,8 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
@@ -80,7 +81,7 @@ public class POSService {
 
     public POSService(
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
-            InvoiceRepository invoiceRepository, ClientLookup clientLookup,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup, TreasuryAccountRepository treasuryAccountRepository,
             InventoryService inventoryService, FinanceService financeService,
@@ -89,7 +90,7 @@ public class POSService {
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
             CreditNoteRepository creditNoteRepository) {
-        this(tillSessionRepository, tillMovementRepository, invoiceRepository, clientLookup,
+        this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
                 productLookup, warehouseRepository, companyLookup, treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
@@ -98,7 +99,7 @@ public class POSService {
 
     public POSService(
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
-            InvoiceRepository invoiceRepository, ClientLookup clientLookup,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup, TreasuryAccountRepository treasuryAccountRepository,
             InventoryService inventoryService, FinanceService financeService,
@@ -107,7 +108,7 @@ public class POSService {
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
             CreditNoteRepository creditNoteRepository, QuotationRepository quotationRepository) {
-        this(tillSessionRepository, tillMovementRepository, invoiceRepository, clientLookup,
+        this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
                 productLookup, warehouseRepository, companyLookup, treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
@@ -116,7 +117,7 @@ public class POSService {
 
     public POSService(
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
-            InvoiceRepository invoiceRepository, ClientLookup clientLookup,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseRepository warehouseRepository,
             CompanyLookup companyLookup, TreasuryAccountRepository treasuryAccountRepository,
             InventoryService inventoryService, FinanceService financeService,
@@ -131,10 +132,10 @@ public class POSService {
         PosZReportCalculator zrc = new PosZReportCalculator(
                 tillSessionRepository, tillMovementRepository, paymentEntryRepository, shiftReconciliationRepository, sss);
         PosReturnAndVoucherService rvs = new PosReturnAndVoucherService(
-                invoiceRepository, creditNoteRepository, creditNoteService, storeVoucherRepository,
+                invoiceCommands, creditNoteRepository, creditNoteService, storeVoucherRepository,
                 tillMovementRepository, financeService, auditLogService, sss);
         PosCheckoutAndPaymentService cps = new PosCheckoutAndPaymentService(
-                invoiceRepository, clientLookup, productLookup, warehouseRepository,
+                invoiceLookup, invoiceCommands, clientLookup, productLookup, warehouseRepository,
                 companyLookup, inventoryService, financeService, paymentEntryRepository,
                 tillMovementRepository, walkInClientProvider, documentNumberService, auditLogService,
                 receivablesService, eventPublisher, quotationRepository, sss, rvs, null, null);
