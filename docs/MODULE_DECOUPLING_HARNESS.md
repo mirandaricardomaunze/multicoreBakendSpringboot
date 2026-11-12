@@ -36,7 +36,7 @@ correm sempre no gate.
 | MD-V01 | `ClientLookup` em `comercial.service`: `requireForCompany`/`findForCompany`, `require`/`find`, `listForCompany`; "Cliente não encontrado." normalizado; escrita do seeder via `ClientCommandService.saveClient`; migração de todos os leitores de `ClientRepository` (15) — **feito** | `ClientLookupTest` |
 | MD-V02 | `InvoiceLookup` (`require`/`find`, "Fatura não encontrada.", `listCreatedBetween`) e migração de `inventory` (2) e `printing` (3) — **feito** | `InvoiceLookupTest` |
 | MD-V03 | Restantes leitores de `InvoiceRepository` (30 no total): `InvoiceLookup` alargado (`listForCompany`/`listAll`/`listByStatus`/`findByContingencyReference`/`sumQuantitySoldByProductSince`) e `InvoiceCommandService` (`lockForCompany`/`save`) para as escritas — **feito** | `ModuleDecouplingHarnessTest`, `InvoiceCommandServiceTest` |
-| MD-V04 | `OrderLookup` cobre encomendas, cotações e guias de entrega; leitores migrados | `OrderLookupTest` |
+| MD-V04 | `OrderLookup` cobre encomendas, cotações e guias de entrega; `OrderCommandService` (`saveOrder`, `markQuotationConvertedByPos`) para as escritas; leitores migrados (20, incluindo o wildcard do `PosCheckoutAndPaymentService`) — **feito** | `OrderLookupTest` |
 | MD-V05 | Recibos, notas de crédito e de débito por Lookup do agregado mais próximo; leitores migrados | `ModuleDecouplingHarnessTest` |
 | MD-V06 | Zero ligações a `comercial.repository.*` fora de `comercial`; suite verde | `ModuleDecouplingHarnessTest` |
 

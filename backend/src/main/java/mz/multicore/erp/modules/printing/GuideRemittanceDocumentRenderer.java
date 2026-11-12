@@ -11,7 +11,7 @@ import mz.multicore.erp.architecture.quantity.LogisticsLoadCalculator;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceLine;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
@@ -32,15 +32,15 @@ public class GuideRemittanceDocumentRenderer {
 
     private final LineRowMapper lineRowMapper;
     private final DocumentConfigService documentConfigService;
-    private final OrderRepository orderRepository;
+    private final OrderLookup orderLookup;
 
     @Autowired
     public GuideRemittanceDocumentRenderer(LineRowMapper lineRowMapper,
                                            DocumentConfigService documentConfigService,
-                                           OrderRepository orderRepository) {
+                                           OrderLookup orderLookup) {
         this.lineRowMapper = lineRowMapper;
         this.documentConfigService = documentConfigService;
-        this.orderRepository = orderRepository;
+        this.orderLookup = orderLookup;
     }
 
     public GuideRemittanceDocumentRenderer(LineRowMapper lineRowMapper,
@@ -140,8 +140,8 @@ public class GuideRemittanceDocumentRenderer {
         PdfPCell meta = new PdfPCell();
         meta.setBorder(PdfPCell.NO_BORDER);
         addRight(meta, "Fatura de origem: " + invoice.getInvoiceNumber());
-        if (orderRepository != null) {
-            orderRepository.findFirstByCompanyIdAndInvoiceId(invoice.getCompany().getId(), invoice.getId())
+        if (orderLookup != null) {
+            orderLookup.findOrderByInvoice(invoice.getCompany().getId(), invoice.getId())
                     .ifPresent(o -> addRight(meta, "Encomenda: " + o.getOrderNumber()));
         }
         if (invoice.getCreatedAt() != null) {

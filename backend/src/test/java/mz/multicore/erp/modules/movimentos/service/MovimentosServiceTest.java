@@ -45,6 +45,11 @@ class MovimentosServiceTest {
     private mz.multicore.erp.modules.comercial.repository.QuotationRepository quotationRepository;
     private MovimentosService service;
 
+    private mz.multicore.erp.modules.comercial.service.OrderLookup orderLookup() {
+        return new mz.multicore.erp.modules.comercial.service.OrderLookup(
+                orderRepository, quotationRepository, deliveryGuideRepository);
+    }
+
     @BeforeEach
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
@@ -54,8 +59,8 @@ class MovimentosServiceTest {
         deliveryGuideRepository = mock(DeliveryGuideRepository.class);
         quotationRepository = mock(mz.multicore.erp.modules.comercial.repository.QuotationRepository.class);
         service = new MovimentosService(
-                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderRepository,
-                creditNoteRepository, debitNoteRepository, deliveryGuideRepository, quotationRepository);
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderLookup(),
+                creditNoteRepository, debitNoteRepository);
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
@@ -150,9 +155,8 @@ class MovimentosServiceTest {
         var transferRepo = mock(mz.multicore.erp.modules.inventory.repository.StockTransferRepository.class);
 
         var fullService = new MovimentosService(
-                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderRepository,
-                creditNoteRepository, debitNoteRepository, deliveryGuideRepository, quotationRepository,
-                receiptRepo, transferRepo);
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderLookup(),
+                creditNoteRepository, debitNoteRepository, receiptRepo, transferRepo);
 
         var posInv = invoice("VD-1", clientNamed("Carlos"), null, days(2), InvoiceStatus.PAID, "80");
         posInv.setSalesChannel(mz.multicore.erp.modules.comercial.model.SalesChannel.POS);

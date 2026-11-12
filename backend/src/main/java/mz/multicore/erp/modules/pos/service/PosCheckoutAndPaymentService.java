@@ -8,7 +8,6 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.*;
-import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.comercial.service.*;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -50,7 +49,7 @@ public class PosCheckoutAndPaymentService {
     private final AuditLogService auditLogService;
     private final ReceivablesService receivablesService;
     private final ApplicationEventPublisher eventPublisher;
-    private final QuotationRepository quotationRepository;
+    private final OrderCommandService orderCommands;
     private final PosSessionAndShiftService sessionAndShiftService;
     private final PosReturnAndVoucherService returnAndVoucherService;
     private final PosPriceGuard priceGuard;
@@ -64,7 +63,7 @@ public class PosCheckoutAndPaymentService {
             TillMovementRepository tillMovementRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             ReceivablesService receivablesService, ApplicationEventPublisher eventPublisher,
-            QuotationRepository quotationRepository, PosSessionAndShiftService sessionAndShiftService,
+            OrderCommandService orderCommands, PosSessionAndShiftService sessionAndShiftService,
             PosReturnAndVoucherService returnAndVoucherService, PosPriceGuard priceGuard,
             mz.multicore.erp.modules.comercial.service.SaleStockIssuer saleStockIssuer) {
         this.priceGuard = priceGuard;
@@ -84,7 +83,7 @@ public class PosCheckoutAndPaymentService {
         this.auditLogService = auditLogService;
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
-        this.quotationRepository = quotationRepository;
+        this.orderCommands = orderCommands;
         this.sessionAndShiftService = sessionAndShiftService;
         this.returnAndVoucherService = returnAndVoucherService;
     }
@@ -204,21 +203,11 @@ public class PosCheckoutAndPaymentService {
         invoice.setStatus(invoice.deriveStatusFromPayments());
         final Invoice savedInvoice = invoiceCommands.save(invoice);
 
-        if (request.quotationId() != null && quotationRepository != null) {
-            quotationRepository.findByIdAndCompanyId(request.quotationId(), request.companyId()).ifPresent(quotation -> {
-                if (quotation.getStatus().isOpen()) {
-                    quotation.setStatus(QuotationStatus.CONVERTED);
-                    quotation.setInvoiceId(savedInvoice.getId());
-                    quotation.setInvoiceNumber(savedInvoice.getInvoiceNumber());
-                    if (quotation.getDecidedAt() == null) {
-                        quotation.setDecidedAt(LocalDateTime.now());
-                        quotation.setDecidedBy(savedInvoice.getCreatedBy());
-                    }
-                    quotationRepository.save(quotation);
-                    auditLogService.logCurrent("QUOTATION_CONVERT_POS", "Cotação " + quotation.getQuotationNumber()
-                            + " convertida no POS através da fatura " + savedInvoice.getInvoiceNumber() + ". Total: " + savedInvoice.getTotalAmount() + " MT.");
-                }
-            });
+        if (request.quotationId() != null && orderCommands != null) {
+            orderCommands.markQuotationConvertedByPos(request.quotationId(), request.companyId(), savedInvoice)
+                    .ifPresent(quotation -> auditLogService.logCurrent("QUOTATION_CONVERT_POS", "Cotação "
+                            + quotation.getQuotationNumber() + " convertida no POS através da fatura "
+                            + savedInvoice.getInvoiceNumber() + ". Total: " + savedInvoice.getTotalAmount() + " MT."));
         }
 
         if (hasMultiPayments) {

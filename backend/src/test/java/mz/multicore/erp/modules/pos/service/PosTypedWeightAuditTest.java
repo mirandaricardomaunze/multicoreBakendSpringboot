@@ -2,8 +2,8 @@ package mz.multicore.erp.modules.pos.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutLineRequest;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutRequest;
 import mz.multicore.erp.modules.promotions.service.PromotionService;
@@ -28,7 +28,7 @@ class PosTypedWeightAuditTest {
     @Test
     void onlyTypedWeightsAreAudited() {
         AuditLogService audit = mock(AuditLogService.class);
-        PosPriceGuard guard = new PosPriceGuard(mock(ProductLookup.class), mock(QuotationRepository.class),
+        PosPriceGuard guard = new PosPriceGuard(mock(ProductLookup.class), mock(OrderLookup.class),
                 mock(PromotionService.class), mock(PosDiscountAuthorizationService.class), audit);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
         CurrentUserContext.setCurrentCompanyId(1L);

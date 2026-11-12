@@ -6,8 +6,8 @@ import mz.multicore.erp.modules.backup.service.BackupFileCipher;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutLineRequest;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutRequest;
 import mz.multicore.erp.modules.pos.service.PosDiscountAuthorizationService;
@@ -50,7 +50,7 @@ class MandatorySecurityHarnessTest {
     private final PromotionService promotions = mock(PromotionService.class);
     private final PosDiscountAuthorizationService authorizations = new PosDiscountAuthorizationService();
     private final PosPriceGuard guard = new PosPriceGuard(
-            new ProductLookup(products, mock(ProductCategoryRepository.class)), mock(QuotationRepository.class), promotions,
+            new ProductLookup(products, mock(ProductCategoryRepository.class)), mock(OrderLookup.class), promotions,
             authorizations, mock(AuditLogService.class));
 
     @BeforeEach

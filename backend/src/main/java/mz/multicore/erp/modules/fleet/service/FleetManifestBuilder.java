@@ -5,7 +5,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuideLine;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateFleetManifestRequest;
@@ -27,18 +27,18 @@ public class FleetManifestBuilder {
 
     private final FleetManifestRepository manifestRepository;
     private final VehicleRepository vehicleRepository;
-    private final DeliveryGuideRepository guideRepository;
+    private final OrderLookup orderLookup;
     private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
 
     public FleetManifestBuilder(FleetManifestRepository manifestRepository,
                                 VehicleRepository vehicleRepository,
-                                DeliveryGuideRepository guideRepository,
+                                OrderLookup orderLookup,
                                 CompanyLookup companyLookup,
                                 DocumentNumberService documentNumberService) {
         this.manifestRepository = manifestRepository;
         this.vehicleRepository = vehicleRepository;
-        this.guideRepository = guideRepository;
+        this.orderLookup = orderLookup;
         this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
     }
@@ -88,7 +88,7 @@ public class FleetManifestBuilder {
         int sequence = 1;
 
         for (Long guideId : request.deliveryGuideIds()) {
-            DeliveryGuide guide = guideRepository.findByIdWithLinesAndCompanyId(guideId, companyId)
+            DeliveryGuide guide = orderLookup.findDeliveryGuideWithLines(guideId, companyId)
                     .orElseThrow(() -> new BusinessRuleException("Guia de remessa não encontrada: " + guideId));
 
             Client client = guide.getClient();

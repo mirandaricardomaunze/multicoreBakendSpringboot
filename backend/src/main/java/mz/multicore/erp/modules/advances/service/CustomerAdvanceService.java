@@ -26,13 +26,13 @@ import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.Receipt;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
@@ -66,7 +66,7 @@ public class CustomerAdvanceService {
     private final CreditNoteService creditNoteService;
     private final ClientLookup clientLookup;
     private final CompanyLookup companyLookup;
-    private final OrderRepository orderRepository;
+    private final OrderLookup orderLookup;
     private final InvoiceLookup invoiceLookup;
     private final InvoiceCommandService invoiceCommands;
     private final ReceiptRepository receiptRepository;
@@ -77,7 +77,7 @@ public class CustomerAdvanceService {
     public CustomerAdvanceService(CustomerAdvanceRepository advanceRepository, AdvanceProductProvisioner productProvisioner,
                                   ComercialService comercialService, CreditNoteService creditNoteService,
                                   ClientLookup clientLookup, CompanyLookup companyLookup,
-                                  OrderRepository orderRepository, InvoiceLookup invoiceLookup,
+                                  OrderLookup orderLookup, InvoiceLookup invoiceLookup,
                                   InvoiceCommandService invoiceCommands, ReceiptRepository receiptRepository,
                                   CreditNoteRepository creditNoteRepository,
                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
@@ -87,7 +87,7 @@ public class CustomerAdvanceService {
         this.creditNoteService = creditNoteService;
         this.clientLookup = clientLookup;
         this.companyLookup = companyLookup;
-        this.orderRepository = orderRepository;
+        this.orderLookup = orderLookup;
         this.invoiceLookup = invoiceLookup;
         this.invoiceCommands = invoiceCommands;
         this.receiptRepository = receiptRepository;
@@ -267,8 +267,7 @@ public class CustomerAdvanceService {
     }
 
     private Order requireClientOrder(ReceiveAdvanceRequest request, Client client) {
-        Order order = orderRepository.findById(request.orderId())
-                .filter(o -> o.getCompany() != null && request.companyId().equals(o.getCompany().getId()))
+        Order order = orderLookup.findOrderForCompany(request.orderId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada nesta empresa."));
         if (order.getClient() == null || !order.getClient().getId().equals(client.getId())) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " é de outro cliente.");

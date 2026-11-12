@@ -6,7 +6,10 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
 import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
@@ -52,7 +55,8 @@ class DeliveryGuidesPrintServiceTest {
         when(repo.findByIdWithLinesAndCompanyId(500L, 1L)).thenReturn(Optional.of(guide));
         when(config.getColumns(eq(1L), any(DocumentType.class))).thenReturn(DocumentColumnsDTO.all());
 
-        DeliveryGuidePrintService service = new DeliveryGuidePrintService(repo, mapper, config);
+        DeliveryGuidePrintService service = new DeliveryGuidePrintService(
+                new OrderLookup(mock(OrderRepository.class), mock(QuotationRepository.class), repo), mapper, config);
         byte[] pdf = service.render(500L);
 
         PdfReader reader = new PdfReader(pdf);

@@ -2,8 +2,8 @@ package mz.multicore.erp.modules.printing;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,8 +41,8 @@ public class GuideRemittancePrintService {
 
     public GuideRemittancePrintService(InvoiceLookup invoiceLookup, LineRowMapper lineRowMapper,
                                        DocumentConfigService documentConfigService,
-                                       OrderRepository orderRepository) {
-        this(invoiceLookup, new GuideRemittanceDocumentRenderer(lineRowMapper, documentConfigService, orderRepository));
+                                       OrderLookup orderLookup) {
+        this(invoiceLookup, new GuideRemittanceDocumentRenderer(lineRowMapper, documentConfigService, orderLookup));
     }
 
     @Transactional(readOnly = true)

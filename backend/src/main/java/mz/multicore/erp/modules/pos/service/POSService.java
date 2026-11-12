@@ -9,8 +9,8 @@ import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.OrderCommandService;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
@@ -107,12 +107,12 @@ public class POSService {
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
-            CreditNoteRepository creditNoteRepository, QuotationRepository quotationRepository) {
+            CreditNoteRepository creditNoteRepository, OrderCommandService orderCommands) {
         this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
                 productLookup, warehouseRepository, companyLookup, treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
-                eventPublisher, storeVoucherRepository, creditNoteRepository, quotationRepository, null);
+                eventPublisher, storeVoucherRepository, creditNoteRepository, orderCommands, null);
     }
 
     public POSService(
@@ -125,7 +125,7 @@ public class POSService {
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
-            CreditNoteRepository creditNoteRepository, QuotationRepository quotationRepository,
+            CreditNoteRepository creditNoteRepository, OrderCommandService orderCommands,
             ShiftReconciliationRepository shiftReconciliationRepository) {
         PosSessionAndShiftService sss = new PosSessionAndShiftService(
                 tillSessionRepository, tillMovementRepository, shiftReconciliationRepository, auditLogService);
@@ -138,7 +138,7 @@ public class POSService {
                 invoiceLookup, invoiceCommands, clientLookup, productLookup, warehouseRepository,
                 companyLookup, inventoryService, financeService, paymentEntryRepository,
                 tillMovementRepository, walkInClientProvider, documentNumberService, auditLogService,
-                receivablesService, eventPublisher, quotationRepository, sss, rvs, null, null);
+                receivablesService, eventPublisher, orderCommands, sss, rvs, null, null);
         this.tillSessionRepository = tillSessionRepository;
         this.companyLookup = companyLookup;
         this.financeService = financeService;
