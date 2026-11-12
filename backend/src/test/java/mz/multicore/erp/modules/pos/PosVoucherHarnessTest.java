@@ -116,7 +116,10 @@ public class PosVoucherHarnessTest {
                 warehouseRepository, new CompanyLookup(companyRepository),
                 treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
-                receivablesService, eventPublisher, storeVoucherRepository, creditNoteRepository
+                receivablesService, eventPublisher, storeVoucherRepository,
+                new mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup(creditNoteRepository,
+                        mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class)),
+                new mz.multicore.erp.modules.comercial.service.InvoiceNoteCommandService(creditNoteRepository)
         );
 
         company = new Company();

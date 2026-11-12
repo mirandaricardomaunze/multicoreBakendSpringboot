@@ -8,11 +8,10 @@ import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.Quotation;
 import mz.multicore.erp.modules.comercial.model.Receipt;
 import mz.multicore.erp.modules.comercial.model.SalesChannel;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
@@ -36,25 +35,22 @@ public class MovimentoCollector {
 
     private final InvoiceLookup invoiceLookup;
     private final OrderLookup orderLookup;
-    private final CreditNoteRepository creditNoteRepository;
-    private final DebitNoteRepository debitNoteRepository;
-    private final ReceiptRepository receiptRepository;
+    private final InvoiceNoteLookup noteLookup;
+    private final ReceiptLookup receiptLookup;
     private final StockTransferRepository stockTransferRepository;
 
     @Autowired
     public MovimentoCollector(
             InvoiceLookup invoiceLookup,
             OrderLookup orderLookup,
-            CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository,
-            @Autowired(required = false) ReceiptRepository receiptRepository,
+            InvoiceNoteLookup noteLookup,
+            ReceiptLookup receiptLookup,
             @Autowired(required = false) StockTransferRepository stockTransferRepository
     ) {
         this.invoiceLookup = invoiceLookup;
         this.orderLookup = orderLookup;
-        this.creditNoteRepository = creditNoteRepository;
-        this.debitNoteRepository = debitNoteRepository;
-        this.receiptRepository = receiptRepository;
+        this.noteLookup = noteLookup;
+        this.receiptLookup = receiptLookup;
         this.stockTransferRepository = stockTransferRepository;
     }
 
@@ -114,8 +110,8 @@ public class MovimentoCollector {
     }
 
     private void collectCreditNotes(Long companyId, List<MovimentoDTO> out) {
-        if (creditNoteRepository == null) return;
-        for (CreditNote n : creditNoteRepository.findByCompanyId(companyId)) {
+        if (noteLookup == null) return;
+        for (CreditNote n : noteLookup.listCreditNotesForCompany(companyId)) {
             String wh = n.getWarehouse() != null ? n.getWarehouse().getName()
                     : (n.getInvoice() != null && n.getInvoice().getWarehouse() != null ? n.getInvoice().getWarehouse().getName() : "—");
             out.add(new MovimentoDTO(MovimentoTipo.NOTA_CREDITO, n.getId(), n.getNoteNumber(), nameOf(n.getClient(), null),
@@ -124,8 +120,8 @@ public class MovimentoCollector {
     }
 
     private void collectDebitNotes(Long companyId, List<MovimentoDTO> out) {
-        if (debitNoteRepository == null) return;
-        for (DebitNote n : debitNoteRepository.findByCompanyId(companyId)) {
+        if (noteLookup == null) return;
+        for (DebitNote n : noteLookup.listDebitNotesForCompany(companyId)) {
             String wh = (n.getInvoice() != null && n.getInvoice().getWarehouse() != null) ? n.getInvoice().getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(MovimentoTipo.NOTA_DEBITO, n.getId(), n.getNoteNumber(), nameOf(n.getClient(), null),
                     n.getIssueDate(), statusName(n.getStatus()), n.getTotalAmount(), summarizeDebitNote(n), BigDecimal.ZERO, wh));
@@ -133,8 +129,8 @@ public class MovimentoCollector {
     }
 
     private void collectReceipts(Long companyId, List<MovimentoDTO> out) {
-        if (receiptRepository == null) return;
-        for (Receipt r : receiptRepository.findByCompanyId(companyId)) {
+        if (receiptLookup == null) return;
+        for (Receipt r : receiptLookup.listForCompany(companyId)) {
             String clientName = (r.getInvoice() != null && r.getInvoice().getClient() != null)
                     ? nameOf(r.getInvoice().getClient(), r.getInvoice().getCustomerName()) : SEM_CLIENTE;
             String wh = (r.getInvoice() != null && r.getInvoice().getWarehouse() != null) ? r.getInvoice().getWarehouse().getName() : "—";

@@ -60,7 +60,7 @@ class MovimentosServiceTest {
         quotationRepository = mock(mz.multicore.erp.modules.comercial.repository.QuotationRepository.class);
         service = new MovimentosService(
                 new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderLookup(),
-                creditNoteRepository, debitNoteRepository);
+                new mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup(creditNoteRepository, debitNoteRepository));
 
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
@@ -156,7 +156,8 @@ class MovimentosServiceTest {
 
         var fullService = new MovimentosService(
                 new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository), orderLookup(),
-                creditNoteRepository, debitNoteRepository, receiptRepo, transferRepo);
+                new mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup(creditNoteRepository, debitNoteRepository),
+                new mz.multicore.erp.modules.comercial.service.ReceiptLookup(receiptRepo), transferRepo);
 
         var posInv = invoice("VD-1", clientNamed("Carlos"), null, days(2), InvoiceStatus.PAID, "80");
         posInv.setSalesChannel(mz.multicore.erp.modules.comercial.model.SalesChannel.POS);

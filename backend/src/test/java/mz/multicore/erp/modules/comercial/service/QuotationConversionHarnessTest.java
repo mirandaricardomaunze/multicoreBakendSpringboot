@@ -135,7 +135,10 @@ class QuotationConversionHarnessTest {
                 warehouseRepository, new CompanyLookup(companyRepository), treasuryAccountRepository,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
-                eventPublisher, storeVoucherRepository, creditNoteRepository,
+                eventPublisher, storeVoucherRepository,
+                new InvoiceNoteLookup(creditNoteRepository,
+                        mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class)),
+                new InvoiceNoteCommandService(creditNoteRepository),
                 new OrderCommandService(mock(OrderRepository.class), quotationRepository)
         );
 

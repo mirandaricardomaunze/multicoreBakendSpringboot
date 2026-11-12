@@ -2,8 +2,8 @@ package mz.multicore.erp.modules.manufacturing.service;
 
 import mz.multicore.erp.modules.accounting.service.FinishedGoodsLookup;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.manufacturing.repository.BillOfMaterialsRepository;
 import org.springframework.stereotype.Component;
 
@@ -15,13 +15,13 @@ public class BomFinishedGoodsLookup implements FinishedGoodsLookup {
 
     private final BillOfMaterialsRepository bomRepository;
     private final InvoiceLookup invoiceLookup;
-    private final CreditNoteRepository creditNoteRepository;
+    private final InvoiceNoteLookup noteLookup;
 
     public BomFinishedGoodsLookup(BillOfMaterialsRepository bomRepository, InvoiceLookup invoiceLookup,
-                                  CreditNoteRepository creditNoteRepository) {
+                                  InvoiceNoteLookup noteLookup) {
         this.bomRepository = bomRepository;
         this.invoiceLookup = invoiceLookup;
-        this.creditNoteRepository = creditNoteRepository;
+        this.noteLookup = noteLookup;
     }
 
     @Override
@@ -43,7 +43,7 @@ public class BomFinishedGoodsLookup implements FinishedGoodsLookup {
 
     @Override
     public BigDecimal finishedCostOfCreditNote(Long companyId, Long noteId) {
-        return creditNoteRepository.findByIdWithLinesAndCompanyId(noteId, companyId)
+        return noteLookup.findCreditNoteWithLinesForCompany(noteId, companyId)
                 .map(note -> note.getLines().stream()
                         .filter(line -> line.getInvoiceLine() != null && line.getInvoiceLine().getUnitCost() != null)
                         .filter(line -> manufactured(companyId, line.getInvoiceLine().getProduct()))

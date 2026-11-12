@@ -9,7 +9,7 @@ import mz.multicore.erp.architecture.format.DisplayNumbers;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.advances.AdvancePayments;
 import mz.multicore.erp.modules.comercial.model.Receipt;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,16 +24,16 @@ public class ReceiptDocumentPrintService {
 
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    private final ReceiptRepository receiptRepository;
+    private final ReceiptLookup receiptLookup;
 
-    public ReceiptDocumentPrintService(ReceiptRepository receiptRepository) {
-        this.receiptRepository = receiptRepository;
+    public ReceiptDocumentPrintService(ReceiptLookup receiptLookup) {
+        this.receiptLookup = receiptLookup;
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long receiptId) {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
-        Receipt r = receiptRepository.findById(receiptId)
+        Receipt r = receiptLookup.find(receiptId)
                 .filter(x -> x.getCompany() != null && companyId.equals(x.getCompany().getId()))
                 .orElseThrow(() -> new BusinessRuleException("Recibo não encontrado."));
         boolean cancelled = "CANCELLED".equals(r.getStatus());

@@ -5,7 +5,7 @@ status: IN_PROGRESS
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
-verify: ["ClientLookupTest", "InvoiceLookupTest", "InvoiceCommandServiceTest", "OrderLookupTest", "ModuleDecouplingHarnessTest", "CleanArchitectureHarnessTest"]
+verify: ["ClientLookupTest", "InvoiceLookupTest", "InvoiceCommandServiceTest", "OrderLookupTest", "ReceiptLookupTest", "InvoiceNoteLookupTest", "ModuleDecouplingHarnessTest", "CleanArchitectureHarnessTest"]
 blockedBy: []
 ---
 
@@ -23,7 +23,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-V02 — InvoiceLookup e migração de inventory e printing — `InvoiceLookupTest`
 - [x] MD-V03 — restantes leitores de InvoiceRepository — `ModuleDecouplingHarnessTest`
 - [x] MD-V04 — OrderLookup (encomendas, cotações, guias) e leitores migrados — `OrderLookupTest`
-- [ ] MD-V05 — recibos, notas de crédito e de débito migrados — `ModuleDecouplingHarnessTest`
+- [x] MD-V05 — recibos, notas de crédito e de débito migrados — `ModuleDecouplingHarnessTest`
 - [ ] MD-V06 — zero ligações a comercial.repository fora de comercial; suite verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
@@ -42,3 +42,5 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-12 · MD-V02 · `InvoiceLookup` (`require`/`find` com "Fatura não encontrada.", `listCreatedBetween`); `printing` (Invoice/Receipt/GuideRemittancePrintService) e `inventory` (StockWasteService/StockWasteAnalyticsService) lêem facturas só pelo Lookup; 5 linhas apagadas da baseline CA-07; `InvoiceLookupTest`, testes de inventory/printing (81 classes), `AuditTrailCriticalEventsHarnessTest` e harnesses verdes.
 - 2026-11-12 · MD-V03 · `InvoiceLookup` alargado (`listForCompany`, `listAll`, `listByStatus`, `findByContingencyReference`, `sumQuantitySoldByProductSince`) e novo `InvoiceCommandService` (`lockForCompany`, `save`) para POS, tesouraria e adiantamentos; os 25 leitores restantes (advances, audit, backup, consignment, financeira, fiscal, intelligence, manufacturing, movimentos, performance, pickup, pos — incluindo o `PosCheckoutAndPaymentService` do import wildcard —, projects, purchases, reports, returnables) migrados, mensagens específicas mantidas; 25 linhas apagadas da baseline CA-07. O wildcard `comercial.repository.*` do `PosCheckoutAndPaymentService` fica para o MD-V04 (só usa `QuotationRepository`).
 - 2026-11-12 · MD-V04 · `OrderLookup` (encomendas `requireOrder`/`findOrder`/`findOrderForCompany`/`listOrdersForCompany`/`findOrderByInvoice`; cotações `listQuotationsForCompany`/`findQuotationForCompany`/`findQuotationWithLines`; guias `listDeliveryGuidesForCompany`/`findDeliveryGuideWithLines`; "Encomenda não encontrada." normalizado) e `OrderCommandService` (`saveOrder`, `markQuotationConvertedByPos` — a conversão da cotação no POS passou para o dono, a auditoria fica no POS); advances, customorders, fleet, movimentos, pos (incluindo o wildcard do `PosCheckoutAndPaymentService`), printing e projects migrados, mensagens específicas mantidas; 20 linhas apagadas da baseline CA-07; `OrderLookupTest` e 184 classes de teste (módulos tocados + architecture) verdes. Nota: compilar pelo reactor da raiz (`-pl backend -am`), porque os DTOs vivem no módulo `contracts`.
+- 2026-11-12 · MD-V05 · `ReceiptLookup` (`find`, `listForCompany`) + `ReceiptCommandService.save` e `InvoiceNoteLookup` (notas de crédito `findCreditNote`/`findCreditNoteWithLinesForCompany`/`findCreditNoteByPosReturnKey`/`listCreditNotesForCompany` e, como agregado mais próximo, `listDebitNotesForCompany`) + `InvoiceNoteCommandService.markCreditNotePosReturn` (a marcação de idempotência da devolução POS passou para o dono); advances, backup, manufacturing (BomFinishedGoodsLookup), movimentos, pos (POSService, PosReturnAndVoucherService) e printing migrados, mensagens mantidas; 14 linhas apagadas da baseline CA-07; `ReceiptLookupTest`, `InvoiceNoteLookupTest` e os testes dos módulos tocados verdes.
+- 2026-11-12 · MD-V05 (correcção do gate) · o diff-guard (DG-07) rejeitou a linha nova `@Autowired(required = false) ReceiptLookup` no `MovimentoCollector`; a anotação foi retirada (o `ReceiptLookup` é `@Service`, sempre presente). O Maven não pôde correr nesta sessão; o próximo gate confirma.

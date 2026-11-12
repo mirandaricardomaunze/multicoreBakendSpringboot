@@ -25,8 +25,9 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.Receipt;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptCommandService;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
@@ -69,8 +70,9 @@ public class CustomerAdvanceService {
     private final OrderLookup orderLookup;
     private final InvoiceLookup invoiceLookup;
     private final InvoiceCommandService invoiceCommands;
-    private final ReceiptRepository receiptRepository;
-    private final CreditNoteRepository creditNoteRepository;
+    private final ReceiptLookup receiptLookup;
+    private final ReceiptCommandService receiptCommands;
+    private final InvoiceNoteLookup noteLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
@@ -78,8 +80,8 @@ public class CustomerAdvanceService {
                                   ComercialService comercialService, CreditNoteService creditNoteService,
                                   ClientLookup clientLookup, CompanyLookup companyLookup,
                                   OrderLookup orderLookup, InvoiceLookup invoiceLookup,
-                                  InvoiceCommandService invoiceCommands, ReceiptRepository receiptRepository,
-                                  CreditNoteRepository creditNoteRepository,
+                                  InvoiceCommandService invoiceCommands, ReceiptLookup receiptLookup,
+                                  ReceiptCommandService receiptCommands, InvoiceNoteLookup noteLookup,
                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
         this.advanceRepository = advanceRepository;
         this.productProvisioner = productProvisioner;
@@ -90,8 +92,9 @@ public class CustomerAdvanceService {
         this.orderLookup = orderLookup;
         this.invoiceLookup = invoiceLookup;
         this.invoiceCommands = invoiceCommands;
-        this.receiptRepository = receiptRepository;
-        this.creditNoteRepository = creditNoteRepository;
+        this.receiptLookup = receiptLookup;
+        this.receiptCommands = receiptCommands;
+        this.noteLookup = noteLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -139,7 +142,7 @@ public class CustomerAdvanceService {
         advance.setOrder(order);
         advance.setAmount(invoice.getTotalAmount());
         advance.setAdvanceInvoice(invoice);
-        advance.setReceipt(receiptRepository.findById(receiptDto.id()).orElseThrow());
+        advance.setReceipt(receiptLookup.find(receiptDto.id()).orElseThrow());
         advance.setNotes(blankToNull(request.notes()));
         advance.setRequestKey(request.requestKey());
         advance.setCreatedBy(CurrentUserContext.getUsername());
@@ -189,11 +192,11 @@ public class CustomerAdvanceService {
         offset.setStatus("COMPLETED");
         offset.setReceiptNumber(documentNumberService.next(DocumentSeries.RECEIPT));
         offset.setCreatedBy(CurrentUserContext.getUsername());
-        offset = receiptRepository.save(offset);
+        offset = receiptCommands.save(offset);
 
         advance.setStatus(CustomerAdvanceStatus.APPLIED);
         advance.setAppliedInvoice(target);
-        advance.setCreditNote(creditNoteRepository.findById(note.id()).orElseThrow());
+        advance.setCreditNote(noteLookup.findCreditNote(note.id()).orElseThrow());
         advance.setOffsetReceipt(offset);
         advance.setAppliedAt(LocalDateTime.now());
         advance.setAppliedBy(CurrentUserContext.getUsername());
@@ -227,7 +230,7 @@ public class CustomerAdvanceService {
         CreditNoteDTO note = creditNoteService.approve(created.id());
         comercialService.cancelReceipt(advance.getReceipt().getId(), "Devolução do sinal ao cliente: " + request.reason().trim());
         advance.setStatus(CustomerAdvanceStatus.REFUNDED);
-        advance.setCreditNote(creditNoteRepository.findById(note.id()).orElseThrow());
+        advance.setCreditNote(noteLookup.findCreditNote(note.id()).orElseThrow());
         advance.setAppliedAt(LocalDateTime.now());
         advance.setAppliedBy(CurrentUserContext.getUsername());
         String notes = (advance.getNotes() == null ? "" : advance.getNotes() + " · ") + "Devolvido: " + request.reason().trim();

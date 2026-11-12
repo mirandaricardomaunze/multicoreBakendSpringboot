@@ -1,11 +1,10 @@
 package mz.multicore.erp.modules.movimentos.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,23 +31,19 @@ public class MovimentosService {
     public MovimentosService(
             InvoiceLookup invoiceLookup,
             OrderLookup orderLookup,
-            CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository
+            InvoiceNoteLookup noteLookup
     ) {
-        this(new MovimentoCollector(invoiceLookup, orderLookup, creditNoteRepository, debitNoteRepository,
-                null, null));
+        this(new MovimentoCollector(invoiceLookup, orderLookup, noteLookup, null, null));
     }
 
     public MovimentosService(
             InvoiceLookup invoiceLookup,
             OrderLookup orderLookup,
-            CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository,
-            ReceiptRepository receiptRepository,
+            InvoiceNoteLookup noteLookup,
+            ReceiptLookup receiptLookup,
             StockTransferRepository stockTransferRepository
     ) {
-        this(new MovimentoCollector(invoiceLookup, orderLookup, creditNoteRepository, debitNoteRepository,
-                receiptRepository, stockTransferRepository));
+        this(new MovimentoCollector(invoiceLookup, orderLookup, noteLookup, receiptLookup, stockTransferRepository));
     }
 
     /**

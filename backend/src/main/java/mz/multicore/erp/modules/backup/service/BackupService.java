@@ -7,7 +7,7 @@ import mz.multicore.erp.modules.backup.dto.BackupVerificationDTO;
 import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
@@ -57,7 +57,7 @@ public class BackupService {
             StockRepository stockRepository,
             StockMovementRepository stockMovementRepository,
             InvoiceLookup invoiceLookup,
-            ReceiptRepository receiptRepository,
+            ReceiptLookup receiptLookup,
             PurchaseRepository purchaseRepository,
             TillSessionRepository tillSessionRepository,
             TreasuryAccountRepository accountRepository,
@@ -67,7 +67,7 @@ public class BackupService {
         this(
                 new BackupDataCollector(userRepository, companyLookup, clientLookup, supplierRepository,
                         productLookup, warehouseRepository, stockRepository, stockMovementRepository,
-                        invoiceLookup, receiptRepository, purchaseRepository, tillSessionRepository,
+                        invoiceLookup, receiptLookup, purchaseRepository, tillSessionRepository,
                         accountRepository, transactionRepository, auditLogRepository),
                 new BackupExecutionService(),
                 new BackupVerificationService(new BackupContentReader(new BackupFileCipher("")))
