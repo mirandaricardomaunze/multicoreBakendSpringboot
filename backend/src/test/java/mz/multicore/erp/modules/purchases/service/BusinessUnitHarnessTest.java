@@ -172,7 +172,7 @@ class BusinessUnitHarnessTest {
                 inventoryService,
                 mock(ReceiptRepository.class),
                 mock(mz.multicore.erp.modules.financeira.service.FinanceService.class),
-                mock(mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository.class),
+                mock(mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup.class),
                 mock(OrderRepository.class),
                 mock(OrderLineRepository.class),
                 mock(WalkInClientProvider.class),

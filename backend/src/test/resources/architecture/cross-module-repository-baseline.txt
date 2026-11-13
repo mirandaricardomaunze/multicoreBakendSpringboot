@@ -1,18 +1,11 @@
 # CA-07 frozen baseline (generated from HEAD 0b47d51 on 2026-11-10). May only SHRINK.
 # Never add lines: new code must call the owning module's service. See docs/CLEAN_ARCHITECTURE_RULES_SPEC.md
-backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/architecture/DataLoader.java -> fiscal.repository.TaxRateRepository
-backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/architecture/DemoEnterpriseDataSeeder.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/architecture/ReferenceAndAdminDataSeeder.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> audit.repository.AuditLogRepository
-backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> financeira.repository.TreasuryAccountRepository
-backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupDataCollector.java -> financeira.repository.TreasuryTransactionRepository
 backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> audit.repository.AuditLogRepository
-backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> financeira.repository.TreasuryAccountRepository
-backend/src/main/java/mz/multicore/erp/modules/backup/service/BackupService.java -> financeira.repository.TreasuryTransactionRepository
 backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialProductCatalogService.java -> fiscal.repository.TaxRateRepository
-backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/comercial/service/ComercialService.java -> fiscal.repository.TaxRateRepository
 backend/src/main/java/mz/multicore/erp/modules/comercial/service/CreditControlService.java -> approvals.repository.ApprovalRequestRepository
 backend/src/main/java/mz/multicore/erp/modules/comercial/service/CreditRiskAssessmentService.java -> approvals.repository.ApprovalRequestRepository
@@ -29,9 +22,7 @@ backend/src/main/java/mz/multicore/erp/modules/dashboard/service/OperationalPuls
 backend/src/main/java/mz/multicore/erp/modules/dashboard/service/OperationalPulseService.java -> recurring.repository.RecurringContractRepository
 backend/src/main/java/mz/multicore/erp/modules/hr/service/HRService.java -> performance.repository.SalesGoalBonusRepository
 backend/src/main/java/mz/multicore/erp/modules/hr/service/HrPayslipIssuanceService.java -> performance.repository.SalesGoalBonusRepository
-backend/src/main/java/mz/multicore/erp/modules/pos/service/POSService.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/AssetDepreciationMapPrintService.java -> assets.repository.AssetRepository
-backend/src/main/java/mz/multicore/erp/modules/printing/CompanyBankDetails.java -> financeira.repository.TreasuryAccountRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/FleetManifestPrintService.java -> fleet.repository.FleetManifestRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/QualityEquipmentPrintService.java -> quality.repository.WorkerEquipmentAssignmentRepository
 backend/src/main/java/mz/multicore/erp/modules/printing/WorkSheetPrintService.java -> crm.repository.WorkSheetRepository

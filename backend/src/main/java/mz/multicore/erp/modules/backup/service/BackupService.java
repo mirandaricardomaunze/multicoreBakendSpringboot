@@ -9,8 +9,7 @@ import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
@@ -58,15 +57,14 @@ public class BackupService {
             InvoiceLookup invoiceLookup,
             ReceiptLookup receiptLookup,
             TillSessionLookup tillSessionLookup,
-            TreasuryAccountRepository accountRepository,
-            TreasuryTransactionRepository transactionRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             AuditLogRepository auditLogRepository
     ) {
         this(
                 new BackupDataCollector(userLookup, companyLookup, clientLookup, supplierLookup,
                         productLookup, warehouseLookup, stockLookup, stockMovementLookup,
                         invoiceLookup, receiptLookup, tillSessionLookup,
-                        accountRepository, transactionRepository, auditLogRepository),
+                        treasuryAccountLookup, auditLogRepository),
                 new BackupExecutionService(),
                 new BackupVerificationService(new BackupContentReader(new BackupFileCipher("")))
         );

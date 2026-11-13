@@ -9,7 +9,7 @@ import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
@@ -111,7 +111,7 @@ class OrderBillingAndReprintSecurityHarnessTest {
                 inventoryService,
                 mock(ReceiptRepository.class),
                 mock(FinanceService.class),
-                mock(TreasuryAccountRepository.class),
+                mock(TreasuryAccountLookup.class),
                 orderRepository,
                 mock(OrderLineRepository.class),
                 mock(WalkInClientProvider.class),

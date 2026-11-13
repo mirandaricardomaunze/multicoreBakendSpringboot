@@ -17,7 +17,6 @@ import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -84,7 +83,7 @@ public class POSService {
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
             InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseLookup warehouseLookup,
-            CompanyLookup companyLookup, TreasuryAccountRepository treasuryAccountRepository,
+            CompanyLookup companyLookup,
             InventoryService inventoryService, FinanceService financeService,
             PaymentEntryRepository paymentEntryRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
@@ -92,7 +91,7 @@ public class POSService {
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
             InvoiceNoteLookup noteLookup, InvoiceNoteCommandService noteCommands) {
         this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
-                productLookup, warehouseLookup, companyLookup, treasuryAccountRepository,
+                productLookup, warehouseLookup, companyLookup,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
                 eventPublisher, storeVoucherRepository, noteLookup, noteCommands, null, null);
@@ -102,7 +101,7 @@ public class POSService {
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
             InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseLookup warehouseLookup,
-            CompanyLookup companyLookup, TreasuryAccountRepository treasuryAccountRepository,
+            CompanyLookup companyLookup,
             InventoryService inventoryService, FinanceService financeService,
             PaymentEntryRepository paymentEntryRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
@@ -110,7 +109,7 @@ public class POSService {
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
             InvoiceNoteLookup noteLookup, InvoiceNoteCommandService noteCommands, OrderCommandService orderCommands) {
         this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
-                productLookup, warehouseLookup, companyLookup, treasuryAccountRepository,
+                productLookup, warehouseLookup, companyLookup,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
                 eventPublisher, storeVoucherRepository, noteLookup, noteCommands, orderCommands, null);
@@ -120,7 +119,7 @@ public class POSService {
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
             InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
             ProductLookup productLookup, WarehouseLookup warehouseLookup,
-            CompanyLookup companyLookup, TreasuryAccountRepository treasuryAccountRepository,
+            CompanyLookup companyLookup,
             InventoryService inventoryService, FinanceService financeService,
             PaymentEntryRepository paymentEntryRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,

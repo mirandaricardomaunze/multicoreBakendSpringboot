@@ -19,7 +19,6 @@ import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
@@ -63,7 +62,6 @@ class POSServiceTest {
     private ProductRepository productRepository;
     private WarehouseRepository warehouseRepository;
     private CompanyRepository companyRepository;
-    private TreasuryAccountRepository treasuryAccountRepository;
     private InventoryService inventoryService;
     private FinanceService financeService;
     private PaymentEntryRepository paymentEntryRepository;
@@ -97,7 +95,6 @@ class POSServiceTest {
         productRepository = mock(ProductRepository.class);
         warehouseRepository = mock(WarehouseRepository.class);
         companyRepository = mock(CompanyRepository.class);
-        treasuryAccountRepository = mock(TreasuryAccountRepository.class);
         inventoryService = mock(InventoryService.class);
         financeService = mock(FinanceService.class);
         paymentEntryRepository = mock(PaymentEntryRepository.class);
@@ -115,7 +112,7 @@ class POSServiceTest {
                 new mz.multicore.erp.modules.comercial.service.InvoiceCommandService(invoiceRepository),
                 new ClientLookup(clientRepository), new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), new CompanyLookup(companyRepository),
-                treasuryAccountRepository, inventoryService, financeService, paymentEntryRepository,
+                inventoryService, financeService, paymentEntryRepository,
                 walkInClientProvider, documentNumberService, auditLogService, creditNoteService,
                 receivablesService, eventPublisher, storeVoucherRepository,
                 new mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup(creditNoteRepository,

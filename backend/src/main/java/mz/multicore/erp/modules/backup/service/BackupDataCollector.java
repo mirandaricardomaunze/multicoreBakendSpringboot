@@ -6,8 +6,7 @@ import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
@@ -38,8 +37,7 @@ public class BackupDataCollector {
     private final InvoiceLookup invoiceLookup;
     private final ReceiptLookup receiptLookup;
     private final TillSessionLookup tillSessionLookup;
-    private final TreasuryAccountRepository accountRepository;
-    private final TreasuryTransactionRepository transactionRepository;
+    private final TreasuryAccountLookup treasuryAccountLookup;
     private final AuditLogRepository auditLogRepository;
 
     @Autowired
@@ -55,8 +53,7 @@ public class BackupDataCollector {
             InvoiceLookup invoiceLookup,
             ReceiptLookup receiptLookup,
             TillSessionLookup tillSessionLookup,
-            TreasuryAccountRepository accountRepository,
-            TreasuryTransactionRepository transactionRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             AuditLogRepository auditLogRepository
     ) {
         this.userLookup = userLookup;
@@ -70,8 +67,7 @@ public class BackupDataCollector {
         this.invoiceLookup = invoiceLookup;
         this.receiptLookup = receiptLookup;
         this.tillSessionLookup = tillSessionLookup;
-        this.accountRepository = accountRepository;
-        this.transactionRepository = transactionRepository;
+        this.treasuryAccountLookup = treasuryAccountLookup;
         this.auditLogRepository = auditLogRepository;
     }
 
@@ -209,7 +205,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("treasuryAccounts", accountRepository == null ? List.of() : accountRepository.findByCompanyIdOrderByName(companyId).stream().map(a -> {
+        data.put("treasuryAccounts", treasuryAccountLookup == null ? List.of() : treasuryAccountLookup.listForCompany(companyId).stream().map(a -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", a.getId());
             m.put("name", a.getName());

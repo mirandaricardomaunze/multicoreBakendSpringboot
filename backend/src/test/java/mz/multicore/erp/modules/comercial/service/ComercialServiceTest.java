@@ -114,7 +114,8 @@ class ComercialServiceTest {
         service = new ComercialService(clientRepository, productRepository, productCategoryRepository,
                 invoiceRepository, approvalService, new CompanyLookup(companyRepository),
                 new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository), inventoryService,
-                receiptRepository, financeService, treasuryAccountRepository, orderRepository, orderLineRepository,
+                receiptRepository, financeService,
+                new mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup(treasuryAccountRepository), orderRepository, orderLineRepository,
                 walkInClientProvider, documentNumberService, auditLogService, taxRateRepository,
                 receivablesService, eventPublisher);
 

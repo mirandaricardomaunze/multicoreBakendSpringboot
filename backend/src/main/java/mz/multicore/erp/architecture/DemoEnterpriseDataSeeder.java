@@ -13,9 +13,7 @@ import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.crm.service.CRMService;
-import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
-import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountProvisioningService;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
@@ -43,7 +41,7 @@ public class DemoEnterpriseDataSeeder {
     private final ClientCommandService clientCommandService;
     private final ProductLookup productLookup;
     private final ProductCommandService productCommandService;
-    private final TreasuryAccountRepository accountRepository;
+    private final TreasuryAccountProvisioningService treasuryAccounts;
     private final HRService hrService;
     private final CRMService crmService;
     private final CompanyLookup companyLookup;
@@ -59,7 +57,7 @@ public class DemoEnterpriseDataSeeder {
     public DemoEnterpriseDataSeeder(
             EmployeeCommandService employeeCommandService, ClientCommandService clientCommandService,
             ProductLookup productLookup, ProductCommandService productCommandService,
-            TreasuryAccountRepository accountRepository,
+            TreasuryAccountProvisioningService treasuryAccounts,
             HRService hrService, CRMService crmService,
             CompanyLookup companyLookup, CompanyService companyService,
             WarehouseCommandService warehouseCommandService, StockMovementService stockMovementService,
@@ -70,7 +68,7 @@ public class DemoEnterpriseDataSeeder {
         this.clientCommandService = clientCommandService;
         this.productLookup = productLookup;
         this.productCommandService = productCommandService;
-        this.accountRepository = accountRepository;
+        this.treasuryAccounts = treasuryAccounts;
         this.hrService = hrService;
         this.crmService = crmService;
         this.companyLookup = companyLookup;
@@ -249,13 +247,7 @@ public class DemoEnterpriseDataSeeder {
     }
 
     private void createTreasuryAccount(String name, String accountNumber, String balance, Company company) {
-        TreasuryAccount a = new TreasuryAccount();
-        a.setName(name);
-        a.setAccountNumber(accountNumber);
-        a.setAccountType(TreasuryAccountType.BANK);
-        a.setBalance(new BigDecimal(balance));
-        a.setCompany(company);
-        accountRepository.save(a);
+        treasuryAccounts.openBankAccount(company, name, accountNumber, new BigDecimal(balance));
     }
 
     private void seedTicketsAndExpenses(Client padaria, Client techSol, Employee maria, Employee joao) {

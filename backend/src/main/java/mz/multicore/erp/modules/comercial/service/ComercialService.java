@@ -18,7 +18,7 @@ import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
@@ -46,7 +46,7 @@ public class ComercialService {
 
     private final InvoiceRepository invoiceRepository;
     private final ReceiptRepository receiptRepository;
-    private final TreasuryAccountRepository treasuryAccountRepository;
+    private final TreasuryAccountLookup treasuryAccountLookup;
     private final OrderRepository orderRepository;
     private final DocumentNumberService documentNumberService;
     private final FinanceService financeService;
@@ -68,7 +68,7 @@ public class ComercialService {
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
-            TreasuryAccountRepository treasuryAccountRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             OrderRepository orderRepository,
             OrderLineRepository orderLineRepository,
             WalkInClientProvider walkInClientProvider,
@@ -79,7 +79,7 @@ public class ComercialService {
             ApplicationEventPublisher eventPublisher) {
         this(clientRepository, productRepository, productCategoryRepository, invoiceRepository,
                 approvalService, companyLookup, warehouseLookup, inventoryService,
-                receiptRepository, financeService, treasuryAccountRepository, orderRepository,
+                receiptRepository, financeService, treasuryAccountLookup, orderRepository,
                 orderLineRepository, walkInClientProvider, documentNumberService, auditLogService,
                 taxRateRepository, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
     }
@@ -95,7 +95,7 @@ public class ComercialService {
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
-            TreasuryAccountRepository treasuryAccountRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             OrderRepository orderRepository,
             OrderLineRepository orderLineRepository,
             WalkInClientProvider walkInClientProvider,
@@ -107,7 +107,7 @@ public class ComercialService {
             OrderRiskEvaluator orderRiskEvaluator,
             BusinessUnitLookup businessUnitLookup) {
         this(
-                invoiceRepository, receiptRepository, treasuryAccountRepository, orderRepository,
+                invoiceRepository, receiptRepository, treasuryAccountLookup, orderRepository,
                 documentNumberService, financeService, auditLogService, eventPublisher,
                 new ComercialClientAndCreditService(clientRepository, companyLookup, invoiceRepository, auditLogService),
                 new ComercialProductCatalogService(productRepository, productCategoryRepository, companyLookup,
@@ -132,7 +132,7 @@ public class ComercialService {
     public ComercialService(
             InvoiceRepository invoiceRepository,
             ReceiptRepository receiptRepository,
-            TreasuryAccountRepository treasuryAccountRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             OrderRepository orderRepository,
             DocumentNumberService documentNumberService,
             @Lazy FinanceService financeService,
@@ -144,7 +144,7 @@ public class ComercialService {
             ComercialOrderLifecycleService orderLifecycleService) {
         this.invoiceRepository = invoiceRepository;
         this.receiptRepository = receiptRepository;
-        this.treasuryAccountRepository = treasuryAccountRepository;
+        this.treasuryAccountLookup = treasuryAccountLookup;
         this.orderRepository = orderRepository;
         this.documentNumberService = documentNumberService;
         this.financeService = financeService;
@@ -207,8 +207,7 @@ public class ComercialService {
                     + " MT) excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
 
-        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(treasuryAccountId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."));
+        TreasuryAccount account = treasuryAccountLookup.requireForCompany(treasuryAccountId, companyId);
 
         Receipt receipt = new Receipt();
         receipt.setInvoice(invoice);
