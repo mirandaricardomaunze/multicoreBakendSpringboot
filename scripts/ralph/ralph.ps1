@@ -209,7 +209,7 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
     }
     # Transient network/API failure: nothing to gate. Back off (2, 4, 8 ... max 30 min) and retry.
     $isShort = $out.Trim().Length -lt 600
-    if ($isShort -and $out -match '(API Error|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Can.t reach the API|fetch failed|socket hang up|\b5\d\d\b|overloaded)') {
+    if ($isShort -and $out -match '(API Error|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Can.t reach the API|fetch failed|socket hang up|\b5\d\d\b|overloaded|Request timed out|timed out)') {
         $netWaits++
         $waitMin = [math]::Min(30, [math]::Pow(2, [math]::Min($netWaits, 5)))
         $netWaitedMin += $waitMin
