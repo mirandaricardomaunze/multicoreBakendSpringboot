@@ -15,7 +15,7 @@ class QualityEquipmentPrintServiceDecompositionHarnessTest {
         String renderer = Files.readString(DIR.resolve("QualityEquipmentDocumentRenderer.java"));
 
         assertTrue(facade.contains("documentRenderer.renderDocument(assignment)"));
-        assertTrue(facade.contains("findByIdWithDetailsAndCompanyId"));
+        assertTrue(facade.contains("assignmentLookup.requireForCompany(assignmentId, effectiveCompanyId)"));
         assertFalse(facade.contains("PdfDocumentBuilder.buildA4"));
         assertTrue(renderer.contains("TERMO DE ENTREGA E RESPONSABILIDADE DE EPI"));
         assertTrue(Files.readAllLines(DIR.resolve("QualityEquipmentPrintService.java")).size() <= 55);

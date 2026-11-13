@@ -6,6 +6,7 @@ import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
 import mz.multicore.erp.modules.approvals.repository.ApprovalHistoryRepository;
 import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ class ApprovalServiceTest {
         requestRepository = mock(ApprovalRequestRepository.class);
         historyRepository = mock(ApprovalHistoryRepository.class);
         companyRepository = mock(CompanyRepository.class);
-        service = new ApprovalService(requestRepository, historyRepository, List.of(), companyRepository);
+        service = new ApprovalService(requestRepository, historyRepository, List.of(), new CompanyLookup(companyRepository));
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("gerente", "MANAGER");
     }

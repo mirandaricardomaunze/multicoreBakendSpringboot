@@ -13,15 +13,14 @@ import mz.multicore.erp.modules.bulkstock.model.BulkStockSetting;
 import mz.multicore.erp.modules.bulkstock.repository.BulkMeasurementRepository;
 import mz.multicore.erp.modules.bulkstock.repository.BulkStockSettingRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.model.Stock;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
 import mz.multicore.erp.modules.inventory.model.StockMovementType;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pickup.service.PickupService;
 import mz.multicore.erp.modules.units.dto.UnitConversionDTO;
 import mz.multicore.erp.modules.units.service.ProductUnitService;
@@ -49,26 +48,26 @@ public class BulkStockService {
 
     private final BulkStockSettingRepository settingRepository;
     private final BulkMeasurementRepository measurementRepository;
-    private final ProductRepository productRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
-    private final CompanyRepository companyRepository;
+    private final ProductLookup productLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
+    private final CompanyLookup companyLookup;
     private final StockMovementRegistrationService movementService;
     private final ProductUnitService productUnitService;
     private final PickupService pickupService;
     private final AuditLogService auditLogService;
 
     public BulkStockService(BulkStockSettingRepository settingRepository, BulkMeasurementRepository measurementRepository,
-                            ProductRepository productRepository, WarehouseRepository warehouseRepository,
-                            StockRepository stockRepository, CompanyRepository companyRepository,
+                            ProductLookup productLookup, WarehouseLookup warehouseLookup,
+                            StockLookup stockLookup, CompanyLookup companyLookup,
                             StockMovementRegistrationService movementService, ProductUnitService productUnitService,
                             PickupService pickupService, AuditLogService auditLogService) {
         this.settingRepository = settingRepository;
         this.measurementRepository = measurementRepository;
-        this.productRepository = productRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
-        this.companyRepository = companyRepository;
+        this.productLookup = productLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
+        this.companyLookup = companyLookup;
         this.movementService = movementService;
         this.productUnitService = productUnitService;
         this.pickupService = pickupService;
@@ -98,8 +97,7 @@ public class BulkStockService {
         BigDecimal tolerance = BulkMeasurementRules.requireTolerance(request.tolerancePercent());
         BulkStockSetting setting = existing.orElseGet(BulkStockSetting::new);
         if (setting.getId() == null) {
-            setting.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            setting.setCompany(companyLookup.require(request.companyId()));
             setting.setProduct(product);
         }
         setting.setTolerancePercent(tolerance);
@@ -176,9 +174,7 @@ public class BulkStockService {
         BulkStockSetting setting = settingRepository.findByCompanyIdAndProductId(request.companyId(), product.getId())
                 .orElseThrow(() -> new BusinessRuleException("O produto " + product.getName()
                         + " não está marcado como granel. Um gestor define-o primeiro, com a tolerância de perda."));
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany().getId().equals(request.companyId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse warehouse = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         BulkMeasurementMethod method = parseMethod(request.method());
 
         BulkMeasurement m = new BulkMeasurement();
@@ -199,8 +195,7 @@ public class BulkStockService {
             m.setVolumeM3(volume);
             m.setMeasuredQuantity(toBase(request.companyId(), product, volume));
         }
-        BigDecimal system = stockRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-                .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        BigDecimal system = stockLookup.quantityOf(product.getId(), warehouse.getId());
         BigDecimal pending = pickupService.pendingQuantity(request.companyId(), product.getId(), warehouse.getId());
         BigDecimal difference = BulkMeasurementRules.difference(m.getMeasuredQuantity(), pending, system)
                 .setScale(3, RoundingMode.HALF_UP);
@@ -259,7 +254,7 @@ public class BulkStockService {
     }
 
     private Product requireProduct(Long companyId, Long productId) {
-        return productRepository.findByIdAndCompaniesId(productId, companyId)
+        return productLookup.findForCompany(productId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
     }
 

@@ -57,8 +57,13 @@ class ReportServiceTest {
         paymentEntryRepository = mock(PaymentEntryRepository.class);
         tillMovementRepository = mock(TillMovementRepository.class);
 
-        service = new ReportService(invoiceRepository, stockRepository, approvalRequestRepository,
-                tillSessionRepository, paymentEntryRepository, tillMovementRepository);
+        service = new ReportService(new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
+                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
+                new mz.multicore.erp.modules.approvals.service.ApprovalRequestLookup(approvalRequestRepository),
+                new mz.multicore.erp.modules.pos.service.TillSessionLookup(tillSessionRepository, tillMovementRepository),
+                new mz.multicore.erp.modules.pos.service.PosPaymentLookup(paymentEntryRepository,
+                        mock(mz.multicore.erp.modules.pos.repository.StoreVoucherRepository.class),
+                        mock(mz.multicore.erp.modules.pos.repository.MobilePaymentRepository.class)));
 
         when(stockRepository.findByWarehouseCompanyId(COMPANY_ID)).thenReturn(List.of());
         when(approvalRequestRepository.findByCompanyIdAndStatus(COMPANY_ID, ApprovalStatus.PENDING))

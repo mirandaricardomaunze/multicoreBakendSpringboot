@@ -1,6 +1,5 @@
 package mz.multicore.erp.modules.financeira.service;
 
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -20,9 +19,8 @@ class FinanceServiceDecompositionHarnessTest {
     void financeServiceDelegatesToCollaboratorsAndRespectsLineLimits() throws Exception {
         TreasuryOperationService opService = mock(TreasuryOperationService.class);
         TreasuryQueryService queryService = mock(TreasuryQueryService.class);
-        InvoiceRepository invoiceRepository = mock(InvoiceRepository.class);
 
-        FinanceService service = new FinanceService(opService, queryService, invoiceRepository);
+        FinanceService service = new FinanceService(opService, queryService);
 
         when(queryService.getAllAccounts()).thenReturn(List.of());
         assertSame(List.of(), service.getAllAccounts());

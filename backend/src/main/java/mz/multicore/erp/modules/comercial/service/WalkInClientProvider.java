@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.comercial.service;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -27,13 +27,13 @@ public class WalkInClientProvider {
     public static final String WALK_IN_NAME = "Consumidor Final";
 
     private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final TransactionTemplate ownTransaction;
 
-    public WalkInClientProvider(ClientRepository clientRepository, CompanyRepository companyRepository,
+    public WalkInClientProvider(ClientRepository clientRepository, CompanyLookup companyLookup,
                                 PlatformTransactionManager transactionManager) {
         this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.ownTransaction = new TransactionTemplate(transactionManager);
         this.ownTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -73,7 +73,7 @@ public class WalkInClientProvider {
             c.setCreatedBy("SYSTEM");
             return c;
         });
-        client.getCompanies().add(companyRepository.getReferenceById(companyId));
+        client.getCompanies().add(companyLookup.reference(companyId));
         clientRepository.saveAndFlush(client);
     }
 }

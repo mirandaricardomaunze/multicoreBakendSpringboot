@@ -3,8 +3,8 @@ package mz.multicore.erp.modules.inventory.service;
 import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateStockAdjustmentRequest;
 import mz.multicore.erp.modules.inventory.dto.RegisterMovementRequest;
 import mz.multicore.erp.modules.inventory.dto.StockMovementDTO;
@@ -47,18 +47,18 @@ public class StockMovementService {
             StockAdjustmentOperationRepository stockAdjustmentOperationRepository,
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
-            ProductRepository productRepository,
-            CompanyRepository companyRepository,
+            ProductLookup productLookup,
+            CompanyLookup companyLookup,
             ProductBatchService productBatchService,
             AuditLogService auditLogService
     ) {
         StockMovementRegistrationService reg = new StockMovementRegistrationService(
                 stockMovementRepository, stockMovementOperationRepository, stockRepository,
-                warehouseRepository, productRepository, companyRepository, productBatchService, null);
+                warehouseRepository, productLookup, companyLookup, productBatchService, null);
         StockMovementQueryService query = new StockMovementQueryService(stockMovementRepository);
         StockAdjustmentCoordinator adj = new StockAdjustmentCoordinator(
                 stockAdjustmentOperationRepository, stockRepository, warehouseRepository,
-                productRepository, companyRepository, auditLogService, reg, query);
+                productLookup, companyLookup, auditLogService, reg, query);
         this.registrationService = reg;
         this.adjustmentCoordinator = adj;
         this.queryService = query;

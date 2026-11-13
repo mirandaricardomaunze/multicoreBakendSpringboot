@@ -2,9 +2,12 @@ package mz.multicore.erp.modules.manufacturing.service;
 
 import mz.multicore.erp.architecture.events.ProductionCompletedEvent;
 import mz.multicore.erp.modules.comercial.model.Product;
+import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
@@ -61,10 +64,10 @@ class ProductionServiceTest {
         service = new ProductionService(
                 bomRepository,
                 productionOrderRepository,
-                companyRepository,
-                productRepository,
-                warehouseRepository,
-                stockRepository,
+                new CompanyLookup(companyRepository),
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
+                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
                 eventPublisher,
                 movementService
         );

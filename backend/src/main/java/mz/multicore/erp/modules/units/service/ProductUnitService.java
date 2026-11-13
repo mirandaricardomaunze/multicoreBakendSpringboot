@@ -5,7 +5,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductSaleType;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.units.dto.*;
 import mz.multicore.erp.modules.units.model.ProductUnit;
 import mz.multicore.erp.modules.units.model.UnitDimension;
@@ -35,14 +36,17 @@ public class ProductUnitService {
     private static final Set<String> PACKAGING_CODES = Set.of("CX", "EMB");
 
     private final ProductUnitRepository productUnitRepository;
-    private final ProductRepository productRepository;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
     private final UnitOfMeasureService unitService;
     private final AuditLogService auditLogService;
 
-    public ProductUnitService(ProductUnitRepository productUnitRepository, ProductRepository productRepository,
-                              UnitOfMeasureService unitService, AuditLogService auditLogService) {
+    public ProductUnitService(ProductUnitRepository productUnitRepository, ProductLookup productLookup,
+                              ProductCommandService productCommandService, UnitOfMeasureService unitService,
+                              AuditLogService auditLogService) {
         this.productUnitRepository = productUnitRepository;
-        this.productRepository = productRepository;
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
         this.unitService = unitService;
         this.auditLogService = auditLogService;
     }
@@ -85,7 +89,7 @@ public class ProductUnitService {
             throw new BusinessRuleException("Um produto vendido ao peso tem de ter a unidade base em massa (kg, g ou t).");
         }
         product.setBaseUnitCode(unit.getCode());
-        productRepository.save(product);
+        productCommandService.saveProduct(product);
         auditLogService.logCurrent("PRODUCT_BASE_UNIT_SET",
                 "Produto " + product.getSku() + ": unidade base " + current + " -> " + unit.getCode());
         return getProductUnits(request.companyId(), product.getId());
@@ -245,7 +249,7 @@ public class ProductUnitService {
                     throw new BusinessRuleException("O código de barras " + barcode + " já pertence a "
                             + other.getProduct().getName() + " (" + other.getUnit().getName() + ").");
                 });
-        productRepository.findByBarcode(barcode).ifPresent(p -> {
+        productLookup.findByBarcode(barcode).ifPresent(p -> {
             throw new BusinessRuleException("O código de barras " + barcode + " já é o código do produto " + p.getName() + ".");
         });
     }
@@ -260,7 +264,7 @@ public class ProductUnitService {
     private Product requireProduct(Long companyId, Long productId) {
         CurrentUserContext.requireCompany(companyId);
         if (productId == null) throw new BusinessRuleException("Produto é obrigatório.");
-        return productRepository.findByIdAndCompaniesId(productId, companyId)
+        return productLookup.findForCompany(productId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
     }
 

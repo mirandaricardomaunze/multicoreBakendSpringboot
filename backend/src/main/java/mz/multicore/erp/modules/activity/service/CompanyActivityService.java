@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.activity.model.CompanyActivityProfile;
 import mz.multicore.erp.modules.activity.repository.CompanyActivityProfileRepository;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,14 +29,14 @@ public class CompanyActivityService {
     static final ActivityProfile DEFAULT_PROFILE = ActivityProfile.GENERAL_RETAIL;
 
     private final CompanyActivityProfileRepository profileRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public CompanyActivityService(CompanyActivityProfileRepository profileRepository,
-                                  CompanyRepository companyRepository,
+                                  CompanyLookup companyLookup,
                                   AuditLogService auditLogService) {
         this.profileRepository = profileRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -66,8 +66,7 @@ public class CompanyActivityService {
     public CompanyActivityDTO update(UpdateCompanyActivityRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
         Set<ActivityProfile> requested = parseProfiles(request.profiles());
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         List<ActivityProfile> before = storedProfiles(company.getId());
         profileRepository.deleteByCompanyId(company.getId());

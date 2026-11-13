@@ -44,6 +44,15 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
     }
 
+    /**
+     * Comando de escrita para os outros módulos (plataforma, armazéns, seeders): gravam a empresa por
+     * aqui, nunca pelo {@link CompanyRepository} (docs/MODULE_DECOUPLING_SPEC.md §2).
+     */
+    @Transactional
+    public Company saveCompany(Company company) {
+        return companyRepository.save(company);
+    }
+
     public void selectCompany(Long id) {
         tenantAccessService.selectCompany(id);
     }

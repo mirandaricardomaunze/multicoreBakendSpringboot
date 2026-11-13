@@ -8,11 +8,11 @@ import mz.multicore.erp.modules.comercial.dto.ReprintAuthorizationRequest;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -106,18 +106,18 @@ class OrderBillingAndReprintSecurityHarnessTest {
                 mock(ProductCategoryRepository.class),
                 invoiceRepository,
                 mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class),
-                mock(CompanyRepository.class),
-                mock(WarehouseRepository.class),
+                mock(CompanyLookup.class),
+                mock(WarehouseLookup.class),
                 inventoryService,
                 mock(ReceiptRepository.class),
                 mock(FinanceService.class),
-                mock(TreasuryAccountRepository.class),
+                mock(TreasuryAccountLookup.class),
                 orderRepository,
                 mock(OrderLineRepository.class),
                 mock(WalkInClientProvider.class),
                 documentNumberService,
                 mock(AuditLogService.class),
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 receivablesService,
                 mock(ApplicationEventPublisher.class)
         );

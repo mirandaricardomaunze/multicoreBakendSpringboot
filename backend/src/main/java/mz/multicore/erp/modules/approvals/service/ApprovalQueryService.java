@@ -5,8 +5,9 @@ import mz.multicore.erp.modules.approvals.dto.ApprovalRequestDTO;
 import mz.multicore.erp.modules.approvals.model.ApprovalRequest;
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
 import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
-import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.model.WasteStatus;
+import mz.multicore.erp.modules.inventory.service.StockTransferLookup;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,19 +25,19 @@ public class ApprovalQueryService {
 
     private final ApprovalRequestRepository requestRepository;
     private final ApprovalLifecycleService lifecycleService;
-    private final ObjectProvider<StockTransferRepository> stockTransferRepository;
-    private final ObjectProvider<StockWasteRepository> stockWasteRepository;
+    private final ObjectProvider<StockTransferLookup> stockTransferLookup;
+    private final ObjectProvider<StockWasteLookup> stockWasteLookup;
 
     public ApprovalQueryService(
             ApprovalRequestRepository requestRepository,
             ApprovalLifecycleService lifecycleService,
-            ObjectProvider<StockTransferRepository> stockTransferRepository,
-            ObjectProvider<StockWasteRepository> stockWasteRepository
+            ObjectProvider<StockTransferLookup> stockTransferLookup,
+            ObjectProvider<StockWasteLookup> stockWasteLookup
     ) {
         this.requestRepository = requestRepository;
         this.lifecycleService = lifecycleService;
-        this.stockTransferRepository = stockTransferRepository;
-        this.stockWasteRepository = stockWasteRepository;
+        this.stockTransferLookup = stockTransferLookup;
+        this.stockWasteLookup = stockWasteLookup;
     }
 
     @Transactional
@@ -59,9 +60,9 @@ public class ApprovalQueryService {
 
     public void syncUnindexedPendingDocuments(Long companyId) {
         if (companyId == null) return;
-        if (stockTransferRepository != null && stockTransferRepository.getIfAvailable() != null) {
-            var transferRepo = stockTransferRepository.getIfAvailable();
-            for (var transfer : transferRepo.findByCompanyId(companyId)) {
+        StockTransferLookup transfers = stockTransferLookup == null ? null : stockTransferLookup.getIfAvailable();
+        if (transfers != null) {
+            for (var transfer : transfers.listForCompany(companyId)) {
                 if (transfer.getStatus() != null && transfer.getStatus().isSeparatedOrPending()) {
                     List<ApprovalRequest> existing = requestRepository.findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
                             companyId, "STOCK_TRANSFER", transfer.getId(), ApprovalStatus.PENDING);
@@ -82,9 +83,9 @@ public class ApprovalQueryService {
                 }
             }
         }
-        if (stockWasteRepository != null && stockWasteRepository.getIfAvailable() != null) {
-            var wasteRepo = stockWasteRepository.getIfAvailable();
-            for (var waste : wasteRepo.findByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, mz.multicore.erp.modules.inventory.model.WasteStatus.PENDING_APPROVAL)) {
+        StockWasteLookup wastes = stockWasteLookup == null ? null : stockWasteLookup.getIfAvailable();
+        if (wastes != null) {
+            for (var waste : wastes.listForCompanyWithStatus(companyId, WasteStatus.PENDING_APPROVAL)) {
                 List<ApprovalRequest> existing = requestRepository.findByCompanyIdAndDocumentTypeAndDocumentIdAndStatus(
                         companyId, "STOCK_WASTE", waste.getId(), ApprovalStatus.PENDING);
                 if (existing.isEmpty()) {

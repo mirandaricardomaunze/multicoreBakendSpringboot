@@ -31,7 +31,9 @@ class OrderPickingSheetPrintServiceTest {
     @BeforeEach
     void setup() {
         orderRepository = mock(OrderRepository.class);
-        service = new OrderPickingSheetPrintService(orderRepository);
+        service = new OrderPickingSheetPrintService(new mz.multicore.erp.modules.comercial.service.OrderLookup(
+                orderRepository, mock(mz.multicore.erp.modules.comercial.repository.QuotationRepository.class),
+                mock(mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository.class)));
         CurrentUserContext.setCurrentCompanyId(1L);
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
     }

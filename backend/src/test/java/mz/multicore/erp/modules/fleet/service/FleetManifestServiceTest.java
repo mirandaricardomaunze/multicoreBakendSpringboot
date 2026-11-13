@@ -7,8 +7,12 @@ import mz.multicore.erp.modules.comercial.model.DeliveryGuide;
 import mz.multicore.erp.modules.comercial.model.DeliveryGuideLine;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
+import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fleet.dto.CreateFleetManifestRequest;
 import mz.multicore.erp.modules.fleet.dto.FleetManifestDTO;
 import mz.multicore.erp.modules.fleet.model.FleetManifest;
@@ -50,7 +54,9 @@ class FleetManifestServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
 
         service = new FleetManifestService(
-                manifestRepository, vehicleRepository, guideRepository, companyRepository, documentNumberService
+                manifestRepository, vehicleRepository,
+                new OrderLookup(mock(OrderRepository.class), mock(QuotationRepository.class), guideRepository),
+                new CompanyLookup(companyRepository), documentNumberService
         );
 
         company = new Company();

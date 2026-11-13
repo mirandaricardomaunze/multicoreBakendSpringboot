@@ -1,12 +1,16 @@
 package mz.multicore.erp.modules.fiscal.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
+import mz.multicore.erp.modules.comercial.model.CreditNote;
+import mz.multicore.erp.modules.comercial.model.DebitNote;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.model.NoteStatus;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
 import mz.multicore.erp.modules.fiscal.dto.IvaSummaryDTO;
 import mz.multicore.erp.modules.purchases.model.Purchase;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
+import mz.multicore.erp.modules.purchases.model.SupplierReturn;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,26 +30,15 @@ import java.util.List;
 @Service
 public class FiscalSummaryService {
 
-    private final InvoiceRepository invoiceRepository;
-    private final PurchaseRepository purchaseRepository;
-    private final mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository;
-    private final mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository;
-    private final mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository supplierReturnRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final InvoiceNoteLookup noteLookup;
+    private final SupplierLookup supplierLookup;
 
-    public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository) {
-        this(invoiceRepository, purchaseRepository, null, null, null);
-    }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public FiscalSummaryService(InvoiceRepository invoiceRepository, PurchaseRepository purchaseRepository,
-                                mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNoteRepository,
-                                mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNoteRepository,
-                                mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository supplierReturnRepository) {
-        this.supplierReturnRepository = supplierReturnRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.purchaseRepository = purchaseRepository;
-        this.creditNoteRepository = creditNoteRepository;
-        this.debitNoteRepository = debitNoteRepository;
+    public FiscalSummaryService(InvoiceLookup invoiceLookup, InvoiceNoteLookup noteLookup,
+                                SupplierLookup supplierLookup) {
+        this.invoiceLookup = invoiceLookup;
+        this.noteLookup = noteLookup;
+        this.supplierLookup = supplierLookup;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +57,7 @@ public class FiscalSummaryService {
         BigDecimal salesBase = BigDecimal.ZERO;
         BigDecimal outputTax = BigDecimal.ZERO;
 
-        for (Invoice inv : invoiceRepository.findByCompanyId(companyId)) {
+        for (Invoice inv : invoiceLookup.listForCompany(companyId)) {
             // VAT is due when the invoice is issued, paid or not: a partially paid invoice counts in full.
             if (inv.getStatus() == null || !inv.getStatus().isRealisedSale()) continue;
             LocalDateTime created = inv.getCreatedAt();
@@ -82,30 +75,26 @@ public class FiscalSummaryService {
         }
 
         // Approved credit notes reduce the output tax of the month they are issued in; debit notes increase it.
-        if (creditNoteRepository != null) {
-            for (var note : creditNoteRepository.findByCompanyId(companyId)) {
-                if (note.getStatus() != mz.multicore.erp.modules.comercial.model.NoteStatus.APPROVED || !inPeriod(note.getIssueDate(), start, end)) continue;
-                salesBase = salesBase.subtract(nz(note.getTotalBeforeTax()));
-                outputTax = outputTax.subtract(nz(note.getTaxAmount()));
-                sales.add(new IvaSummaryDTO.IvaLineDTO(note.getNoteNumber(), note.getClient() != null ? note.getClient().getName() : "—",
-                        nz(note.getTotalBeforeTax()).negate(), nz(note.getTaxAmount()).negate(), nz(note.getTotalAmount()).negate()));
-            }
+        for (CreditNote note : noteLookup.listCreditNotesForCompany(companyId)) {
+            if (note.getStatus() != NoteStatus.APPROVED || !inPeriod(note.getIssueDate(), start, end)) continue;
+            salesBase = salesBase.subtract(nz(note.getTotalBeforeTax()));
+            outputTax = outputTax.subtract(nz(note.getTaxAmount()));
+            sales.add(new IvaSummaryDTO.IvaLineDTO(note.getNoteNumber(), note.getClient() != null ? note.getClient().getName() : "—",
+                    nz(note.getTotalBeforeTax()).negate(), nz(note.getTaxAmount()).negate(), nz(note.getTotalAmount()).negate()));
         }
-        if (debitNoteRepository != null) {
-            for (var note : debitNoteRepository.findByCompanyId(companyId)) {
-                if (note.getStatus() != mz.multicore.erp.modules.comercial.model.NoteStatus.APPROVED || !inPeriod(note.getIssueDate(), start, end)) continue;
-                salesBase = salesBase.add(nz(note.getTotalBeforeTax()));
-                outputTax = outputTax.add(nz(note.getTaxAmount()));
-                sales.add(new IvaSummaryDTO.IvaLineDTO(note.getNoteNumber(), note.getClient() != null ? note.getClient().getName() : "—",
-                        nz(note.getTotalBeforeTax()), nz(note.getTaxAmount()), nz(note.getTotalAmount())));
-            }
+        for (DebitNote note : noteLookup.listDebitNotesForCompany(companyId)) {
+            if (note.getStatus() != NoteStatus.APPROVED || !inPeriod(note.getIssueDate(), start, end)) continue;
+            salesBase = salesBase.add(nz(note.getTotalBeforeTax()));
+            outputTax = outputTax.add(nz(note.getTaxAmount()));
+            sales.add(new IvaSummaryDTO.IvaLineDTO(note.getNoteNumber(), note.getClient() != null ? note.getClient().getName() : "—",
+                    nz(note.getTotalBeforeTax()), nz(note.getTaxAmount()), nz(note.getTotalAmount())));
         }
 
         List<IvaSummaryDTO.IvaLineDTO> purchases = new ArrayList<>();
         BigDecimal purchasesBase = BigDecimal.ZERO;
         BigDecimal inputTax = BigDecimal.ZERO;
 
-        for (Purchase p : purchaseRepository.findByCompanyId(companyId)) {
+        for (Purchase p : supplierLookup.listPurchasesForCompany(companyId)) {
             if ("CANCELLED".equals(p.getStatus())) continue;
             LocalDateTime created = p.getPurchaseDate();
             if (created == null || created.isBefore(start) || created.isAfter(end)) continue;
@@ -122,15 +111,13 @@ public class FiscalSummaryService {
         }
 
         // Goods returned to the supplier reduce the deductible VAT of the month of the return.
-        if (supplierReturnRepository != null) {
-            for (var r : supplierReturnRepository.findByCompanyIdOrderByReturnDateDesc(companyId)) {
-                if (!inPeriod(r.getReturnDate(), start, end)) continue;
-                purchasesBase = purchasesBase.subtract(nz(r.getNetAmount()));
-                inputTax = inputTax.subtract(nz(r.getTaxAmount()));
-                purchases.add(new IvaSummaryDTO.IvaLineDTO(r.getReturnNumber(), r.getPurchase().getSupplier() != null
-                        ? r.getPurchase().getSupplier().getName() : "—", nz(r.getNetAmount()).negate(),
-                        nz(r.getTaxAmount()).negate(), nz(r.getTotalAmount()).negate()));
-            }
+        for (SupplierReturn r : supplierLookup.listSupplierReturnsForCompany(companyId)) {
+            if (!inPeriod(r.getReturnDate(), start, end)) continue;
+            purchasesBase = purchasesBase.subtract(nz(r.getNetAmount()));
+            inputTax = inputTax.subtract(nz(r.getTaxAmount()));
+            purchases.add(new IvaSummaryDTO.IvaLineDTO(r.getReturnNumber(), r.getPurchase().getSupplier() != null
+                    ? r.getPurchase().getSupplier().getName() : "—", nz(r.getNetAmount()).negate(),
+                    nz(r.getTaxAmount()).negate(), nz(r.getTotalAmount()).negate()));
         }
 
         BigDecimal prevCredit = previousCredit != null && previousCredit.compareTo(BigDecimal.ZERO) > 0

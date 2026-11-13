@@ -16,19 +16,19 @@ import mz.multicore.erp.modules.comercial.dto.*;
 import mz.multicore.erp.modules.comercial.model.*;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
-import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
+import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -46,7 +46,7 @@ public class ComercialService {
 
     private final InvoiceRepository invoiceRepository;
     private final ReceiptRepository receiptRepository;
-    private final TreasuryAccountRepository treasuryAccountRepository;
+    private final TreasuryAccountLookup treasuryAccountLookup;
     private final OrderRepository orderRepository;
     private final DocumentNumberService documentNumberService;
     private final FinanceService financeService;
@@ -63,25 +63,25 @@ public class ComercialService {
             ProductCategoryRepository productCategoryRepository,
             InvoiceRepository invoiceRepository,
             @Lazy ApprovalService approvalService,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository,
+            CompanyLookup companyLookup,
+            WarehouseLookup warehouseLookup,
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
-            TreasuryAccountRepository treasuryAccountRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             OrderRepository orderRepository,
             OrderLineRepository orderLineRepository,
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher) {
         this(clientRepository, productRepository, productCategoryRepository, invoiceRepository,
-                approvalService, companyRepository, warehouseRepository, inventoryService,
-                receiptRepository, financeService, treasuryAccountRepository, orderRepository,
+                approvalService, companyLookup, warehouseLookup, inventoryService,
+                receiptRepository, financeService, treasuryAccountLookup, orderRepository,
                 orderLineRepository, walkInClientProvider, documentNumberService, auditLogService,
-                taxRateRepository, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
+                taxRateLookup, receivablesService, eventPublisher, new OrderRiskEvaluator(invoiceRepository), null);
     }
 
     public ComercialService(
@@ -90,41 +90,41 @@ public class ComercialService {
             ProductCategoryRepository productCategoryRepository,
             InvoiceRepository invoiceRepository,
             @Lazy ApprovalService approvalService,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository,
+            CompanyLookup companyLookup,
+            WarehouseLookup warehouseLookup,
             @Lazy InventoryService inventoryService,
             ReceiptRepository receiptRepository,
             @Lazy FinanceService financeService,
-            TreasuryAccountRepository treasuryAccountRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             OrderRepository orderRepository,
             OrderLineRepository orderLineRepository,
             WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
-            TaxRateRepository taxRateRepository,
+            TaxRateLookup taxRateLookup,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
             OrderRiskEvaluator orderRiskEvaluator,
-            BusinessUnitRepository businessUnitRepository) {
+            BusinessUnitLookup businessUnitLookup) {
         this(
-                invoiceRepository, receiptRepository, treasuryAccountRepository, orderRepository,
+                invoiceRepository, receiptRepository, treasuryAccountLookup, orderRepository,
                 documentNumberService, financeService, auditLogService, eventPublisher,
-                new ComercialClientAndCreditService(clientRepository, companyRepository, invoiceRepository, auditLogService),
-                new ComercialProductCatalogService(productRepository, productCategoryRepository, companyRepository,
-                        taxRateRepository, businessUnitRepository, inventoryService, auditLogService),
+                new ComercialClientAndCreditService(clientRepository, companyLookup, invoiceRepository, auditLogService),
+                new ComercialProductCatalogService(productRepository, productCategoryRepository, companyLookup,
+                        taxRateLookup, businessUnitLookup, inventoryService, auditLogService),
                 new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
-                        companyRepository, warehouseRepository, inventoryService, receiptRepository, financeService,
+                        companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                        receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null),
+                        receivablesService, eventPublisher, businessUnitLookup, new SaleStockIssuer(inventoryService, orderLineRepository), null),
                 new ComercialOrderLifecycleService(orderRepository, orderLineRepository, clientRepository,
-                        productRepository, companyRepository, warehouseRepository, inventoryService, invoiceRepository,
+                        productRepository, companyLookup, warehouseLookup, inventoryService, invoiceRepository,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
                         receivablesService, orderRiskEvaluator,
-                        new ComercialClientAndCreditService(clientRepository, companyRepository, invoiceRepository, auditLogService),
+                        new ComercialClientAndCreditService(clientRepository, companyLookup, invoiceRepository, auditLogService),
                         new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
-                                companyRepository, warehouseRepository, inventoryService, receiptRepository, financeService,
+                                companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                                 approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                                receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null), null)
+                                receivablesService, eventPublisher, businessUnitLookup, new SaleStockIssuer(inventoryService, orderLineRepository), null), null)
         );
     }
 
@@ -132,7 +132,7 @@ public class ComercialService {
     public ComercialService(
             InvoiceRepository invoiceRepository,
             ReceiptRepository receiptRepository,
-            TreasuryAccountRepository treasuryAccountRepository,
+            TreasuryAccountLookup treasuryAccountLookup,
             OrderRepository orderRepository,
             DocumentNumberService documentNumberService,
             @Lazy FinanceService financeService,
@@ -144,7 +144,7 @@ public class ComercialService {
             ComercialOrderLifecycleService orderLifecycleService) {
         this.invoiceRepository = invoiceRepository;
         this.receiptRepository = receiptRepository;
-        this.treasuryAccountRepository = treasuryAccountRepository;
+        this.treasuryAccountLookup = treasuryAccountLookup;
         this.orderRepository = orderRepository;
         this.documentNumberService = documentNumberService;
         this.financeService = financeService;
@@ -207,8 +207,7 @@ public class ComercialService {
                     + " MT) excede o saldo em dívida (" + DisplayNumbers.money(outstanding) + " MT).");
         }
 
-        TreasuryAccount account = treasuryAccountRepository.findByIdAndCompanyId(treasuryAccountId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Conta de tesouraria não encontrada."));
+        TreasuryAccount account = treasuryAccountLookup.requireForCompany(treasuryAccountId, companyId);
 
         Receipt receipt = new Receipt();
         receipt.setInvoice(invoice);

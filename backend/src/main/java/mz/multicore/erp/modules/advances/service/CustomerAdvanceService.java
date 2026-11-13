@@ -25,16 +25,18 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.Receipt;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptCommandService;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
+import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import org.springframework.stereotype.Service;
@@ -63,31 +65,36 @@ public class CustomerAdvanceService {
     private final AdvanceProductProvisioner productProvisioner;
     private final ComercialService comercialService;
     private final CreditNoteService creditNoteService;
-    private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
-    private final OrderRepository orderRepository;
-    private final InvoiceRepository invoiceRepository;
-    private final ReceiptRepository receiptRepository;
-    private final CreditNoteRepository creditNoteRepository;
+    private final ClientLookup clientLookup;
+    private final CompanyLookup companyLookup;
+    private final OrderLookup orderLookup;
+    private final InvoiceLookup invoiceLookup;
+    private final InvoiceCommandService invoiceCommands;
+    private final ReceiptLookup receiptLookup;
+    private final ReceiptCommandService receiptCommands;
+    private final InvoiceNoteLookup noteLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
     public CustomerAdvanceService(CustomerAdvanceRepository advanceRepository, AdvanceProductProvisioner productProvisioner,
                                   ComercialService comercialService, CreditNoteService creditNoteService,
-                                  ClientRepository clientRepository, CompanyRepository companyRepository,
-                                  OrderRepository orderRepository, InvoiceRepository invoiceRepository,
-                                  ReceiptRepository receiptRepository, CreditNoteRepository creditNoteRepository,
+                                  ClientLookup clientLookup, CompanyLookup companyLookup,
+                                  OrderLookup orderLookup, InvoiceLookup invoiceLookup,
+                                  InvoiceCommandService invoiceCommands, ReceiptLookup receiptLookup,
+                                  ReceiptCommandService receiptCommands, InvoiceNoteLookup noteLookup,
                                   DocumentNumberService documentNumberService, AuditLogService auditLogService) {
         this.advanceRepository = advanceRepository;
         this.productProvisioner = productProvisioner;
         this.comercialService = comercialService;
         this.creditNoteService = creditNoteService;
-        this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
-        this.orderRepository = orderRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.receiptRepository = receiptRepository;
-        this.creditNoteRepository = creditNoteRepository;
+        this.clientLookup = clientLookup;
+        this.companyLookup = companyLookup;
+        this.orderLookup = orderLookup;
+        this.invoiceLookup = invoiceLookup;
+        this.invoiceCommands = invoiceCommands;
+        this.receiptLookup = receiptLookup;
+        this.receiptCommands = receiptCommands;
+        this.noteLookup = noteLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -107,13 +114,11 @@ public class CustomerAdvanceService {
         if (AdvancePayments.isOffsetPayment(request.paymentMethod())) {
             throw new BusinessRuleException("Escolha a forma como o cliente pagou o sinal.");
         }
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("O adiantamento é de um cliente identificado, não do Consumidor Final.");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         Order order = request.orderId() == null ? null : requireClientOrder(request, client);
 
         // The amount typed is what the client pays, VAT included; the invoice line carries the net price.
@@ -123,7 +128,7 @@ public class CustomerAdvanceService {
         var line = new CreateInvoiceLineRequest(product.getId(), BigDecimal.ONE, rate, BigDecimal.ZERO, null, null, netPrice);
         var invoiceDto = comercialService.createInvoice(new CreateInvoiceRequest(
                 client.getId(), request.companyId(), request.warehouseId(), List.of(line), LocalDate.now()));
-        Invoice invoice = invoiceRepository.findById(invoiceDto.id())
+        Invoice invoice = invoiceLookup.find(invoiceDto.id())
                 .orElseThrow(() -> new BusinessRuleException("Fatura do adiantamento não encontrada."));
         if (invoice.getStatus() != InvoiceStatus.APPROVED) {
             throw new BusinessRuleException("A fatura do adiantamento ficou pendente de aprovação e não foi recebida.");
@@ -137,7 +142,7 @@ public class CustomerAdvanceService {
         advance.setOrder(order);
         advance.setAmount(invoice.getTotalAmount());
         advance.setAdvanceInvoice(invoice);
-        advance.setReceipt(receiptRepository.findById(receiptDto.id()).orElseThrow());
+        advance.setReceipt(receiptLookup.find(receiptDto.id()).orElseThrow());
         advance.setNotes(blankToNull(request.notes()));
         advance.setRequestKey(request.requestKey());
         advance.setCreatedBy(CurrentUserContext.getUsername());
@@ -157,7 +162,7 @@ public class CustomerAdvanceService {
         if (advance.getStatus() != CustomerAdvanceStatus.OPEN) {
             throw new BusinessRuleException("Este adiantamento já foi aplicado.");
         }
-        Invoice target = invoiceRepository.lockByIdAndCompanyId(request.invoiceId(), request.companyId())
+        Invoice target = invoiceCommands.lockForCompany(request.invoiceId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Fatura final não encontrada."));
         Invoice advanceInvoice = advance.getAdvanceInvoice();
         BigDecimal amount = advance.getAmount();
@@ -169,13 +174,13 @@ public class CustomerAdvanceService {
         }
 
         // The cash stays recorded once: it leaves the advance invoice and settles part of the final invoice.
-        Invoice source = invoiceRepository.lockByIdAndCompanyId(advanceInvoice.getId(), request.companyId()).orElseThrow();
+        Invoice source = invoiceCommands.lockForCompany(advanceInvoice.getId(), request.companyId()).orElseThrow();
         source.setAmountPaid(source.getAmountPaid().subtract(amount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
         source.setStatus(source.deriveStatusFromPayments());
-        invoiceRepository.save(source);
+        invoiceCommands.save(source);
         target.setAmountPaid(target.getAmountPaid().add(amount).setScale(2, RoundingMode.HALF_UP));
         target.setStatus(target.deriveStatusFromPayments());
-        invoiceRepository.save(target);
+        invoiceCommands.save(target);
 
         Receipt offset = new Receipt();
         offset.setInvoice(target);
@@ -187,11 +192,11 @@ public class CustomerAdvanceService {
         offset.setStatus("COMPLETED");
         offset.setReceiptNumber(documentNumberService.next(DocumentSeries.RECEIPT));
         offset.setCreatedBy(CurrentUserContext.getUsername());
-        offset = receiptRepository.save(offset);
+        offset = receiptCommands.save(offset);
 
         advance.setStatus(CustomerAdvanceStatus.APPLIED);
         advance.setAppliedInvoice(target);
-        advance.setCreditNote(creditNoteRepository.findById(note.id()).orElseThrow());
+        advance.setCreditNote(noteLookup.findCreditNote(note.id()).orElseThrow());
         advance.setOffsetReceipt(offset);
         advance.setAppliedAt(LocalDateTime.now());
         advance.setAppliedBy(CurrentUserContext.getUsername());
@@ -225,7 +230,7 @@ public class CustomerAdvanceService {
         CreditNoteDTO note = creditNoteService.approve(created.id());
         comercialService.cancelReceipt(advance.getReceipt().getId(), "Devolução do sinal ao cliente: " + request.reason().trim());
         advance.setStatus(CustomerAdvanceStatus.REFUNDED);
-        advance.setCreditNote(creditNoteRepository.findById(note.id()).orElseThrow());
+        advance.setCreditNote(noteLookup.findCreditNote(note.id()).orElseThrow());
         advance.setAppliedAt(LocalDateTime.now());
         advance.setAppliedBy(CurrentUserContext.getUsername());
         String notes = (advance.getNotes() == null ? "" : advance.getNotes() + " · ") + "Devolvido: " + request.reason().trim();
@@ -265,8 +270,7 @@ public class CustomerAdvanceService {
     }
 
     private Order requireClientOrder(ReceiveAdvanceRequest request, Client client) {
-        Order order = orderRepository.findById(request.orderId())
-                .filter(o -> o.getCompany() != null && request.companyId().equals(o.getCompany().getId()))
+        Order order = orderLookup.findOrderForCompany(request.orderId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada nesta empresa."));
         if (order.getClient() == null || !order.getClient().getId().equals(client.getId())) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " é de outro cliente.");

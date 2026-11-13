@@ -6,9 +6,10 @@ import mz.multicore.erp.architecture.paging.PageResponseMapper;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.StockMovement;
@@ -47,18 +48,18 @@ public class InventoryService {
             StockMovementRepository stockMovementRepository,
             StockMovementOperationRepository stockMovementOperationRepository,
             StockAdjustmentOperationRepository stockAdjustmentOperationRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup, CompanyService companyService,
             ProductBatchService productBatchService,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             AuditLogService auditLogService
     ) {
         this(
-                new WarehouseService(warehouseRepository, companyRepository, auditLogService),
-                new StockQueryService(stockRepository, warehouseRepository, productRepository, productBatchService,
-                        new WarehouseService(warehouseRepository, companyRepository, auditLogService)),
+                new WarehouseService(warehouseRepository, companyLookup, companyService, auditLogService),
+                new StockQueryService(stockRepository, warehouseRepository, productLookup, productBatchService,
+                        new WarehouseService(warehouseRepository, companyLookup, companyService, auditLogService)),
                 new StockMovementService(stockMovementRepository, stockMovementOperationRepository,
                         stockAdjustmentOperationRepository, stockRepository, warehouseRepository,
-                        productRepository, companyRepository, productBatchService, auditLogService),
+                        productLookup, companyLookup, productBatchService, auditLogService),
                 productBatchService,
                 stockRepository,
                 stockMovementRepository

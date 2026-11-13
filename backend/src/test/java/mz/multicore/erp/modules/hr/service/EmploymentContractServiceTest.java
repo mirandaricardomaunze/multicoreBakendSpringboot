@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateContractRequest;
 import mz.multicore.erp.modules.hr.dto.RenewContractRequest;
 import mz.multicore.erp.modules.hr.model.ContractStatus;
@@ -53,7 +54,7 @@ class EmploymentContractServiceTest {
         salaryHistoryService = mock(SalaryHistoryService.class);
         auditLogService = mock(AuditLogService.class);
         service = new EmploymentContractService(contractRepository, employeeRepository,
-                companyRepository, documentNumberService, salaryHistoryService, auditLogService);
+                new CompanyLookup(companyRepository), documentNumberService, salaryHistoryService, auditLogService);
 
         Company company = new Company();
         company.setId(7L);

@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.printing;
 
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
-import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
+import mz.multicore.erp.modules.inventory.service.ProductBatchLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -16,10 +16,10 @@ import java.time.LocalDate;
 @Component
 public class LineRowMapper {
 
-    private final ProductBatchRepository batchRepository;
+    private final ProductBatchLookup batchLookup;
 
-    public LineRowMapper(ProductBatchRepository batchRepository) {
-        this.batchRepository = batchRepository;
+    public LineRowMapper(ProductBatchLookup batchLookup) {
+        this.batchLookup = batchLookup;
     }
 
     private static final java.time.format.DateTimeFormatter DATE_FMT = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -74,7 +74,7 @@ public class LineRowMapper {
     private String resolveActiveBatch(Product product) {
         if (product == null || product.getId() == null) return null;
         try {
-            return batchRepository.findFirstByProductIdOrderByExpirationDateAsc(product.getId())
+            return batchLookup.findEarliestExpiring(product.getId())
                     .map(ProductBatch::getBatchNumber)
                     .orElse(null);
         } catch (Exception ignored) {
@@ -86,8 +86,7 @@ public class LineRowMapper {
         if (product == null || batchNumber == null || batchNumber.isBlank()) {
             return null;
         }
-        return batchRepository
-                .findFirstByProductIdAndBatchNumberOrderByExpirationDateAsc(product.getId(), batchNumber)
+        return batchLookup.findByBatchNumber(product.getId(), batchNumber)
                 .map(ProductBatch::getExpirationDate)
                 .orElse(null);
     }

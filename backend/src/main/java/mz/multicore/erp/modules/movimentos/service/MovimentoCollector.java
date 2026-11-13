@@ -8,15 +8,12 @@ import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.Quotation;
 import mz.multicore.erp.modules.comercial.model.Receipt;
 import mz.multicore.erp.modules.comercial.model.SalesChannel;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
 import mz.multicore.erp.modules.inventory.model.StockTransfer;
-import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
+import mz.multicore.erp.modules.inventory.service.StockTransferLookup;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoTipo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,34 +33,25 @@ import static mz.multicore.erp.modules.movimentos.service.MovimentoSummarizer.*;
 @Component
 public class MovimentoCollector {
 
-    private final InvoiceRepository invoiceRepository;
-    private final OrderRepository orderRepository;
-    private final CreditNoteRepository creditNoteRepository;
-    private final DebitNoteRepository debitNoteRepository;
-    private final DeliveryGuideRepository deliveryGuideRepository;
-    private final QuotationRepository quotationRepository;
-    private final ReceiptRepository receiptRepository;
-    private final StockTransferRepository stockTransferRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final OrderLookup orderLookup;
+    private final InvoiceNoteLookup noteLookup;
+    private final ReceiptLookup receiptLookup;
+    private final StockTransferLookup stockTransferLookup;
 
     @Autowired
     public MovimentoCollector(
-            InvoiceRepository invoiceRepository,
-            OrderRepository orderRepository,
-            CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository,
-            DeliveryGuideRepository deliveryGuideRepository,
-            QuotationRepository quotationRepository,
-            @Autowired(required = false) ReceiptRepository receiptRepository,
-            @Autowired(required = false) StockTransferRepository stockTransferRepository
+            InvoiceLookup invoiceLookup,
+            OrderLookup orderLookup,
+            InvoiceNoteLookup noteLookup,
+            ReceiptLookup receiptLookup,
+            StockTransferLookup stockTransferLookup
     ) {
-        this.invoiceRepository = invoiceRepository;
-        this.orderRepository = orderRepository;
-        this.creditNoteRepository = creditNoteRepository;
-        this.debitNoteRepository = debitNoteRepository;
-        this.deliveryGuideRepository = deliveryGuideRepository;
-        this.quotationRepository = quotationRepository;
-        this.receiptRepository = receiptRepository;
-        this.stockTransferRepository = stockTransferRepository;
+        this.invoiceLookup = invoiceLookup;
+        this.orderLookup = orderLookup;
+        this.noteLookup = noteLookup;
+        this.receiptLookup = receiptLookup;
+        this.stockTransferLookup = stockTransferLookup;
     }
 
     public List<MovimentoDTO> collectMovimentos(Long companyId, String query, LocalDate from, LocalDate to) {
@@ -85,8 +73,8 @@ public class MovimentoCollector {
     }
 
     private void collectInvoices(Long companyId, List<MovimentoDTO> out) {
-        if (invoiceRepository == null) return;
-        for (Invoice inv : invoiceRepository.findByCompanyId(companyId)) {
+        if (invoiceLookup == null) return;
+        for (Invoice inv : invoiceLookup.listForCompany(companyId)) {
             MovimentoTipo tipo = (inv.getSalesChannel() == SalesChannel.POS) ? MovimentoTipo.VENDA_POS : MovimentoTipo.FATURA;
             String wh = inv.getWarehouse() != null ? inv.getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(tipo, inv.getId(), inv.getInvoiceNumber(), nameOf(inv.getClient(), inv.getCustomerName()),
@@ -95,8 +83,8 @@ public class MovimentoCollector {
     }
 
     private void collectQuotations(Long companyId, List<MovimentoDTO> out) {
-        if (quotationRepository == null) return;
-        for (Quotation q : quotationRepository.findByCompanyIdOrderByQuotationDateDesc(companyId)) {
+        if (orderLookup == null) return;
+        for (Quotation q : orderLookup.listQuotationsForCompany(companyId)) {
             String wh = q.getWarehouse() != null ? q.getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(MovimentoTipo.COTACAO, q.getId(), q.getQuotationNumber(), nameOf(q.getClient(), q.getWalkInName()),
                     q.getQuotationDate(), statusName(q.getStatus()), q.getTotalAmount(), summarizeQuotation(q), sumQuotationQty(q), wh));
@@ -104,8 +92,8 @@ public class MovimentoCollector {
     }
 
     private void collectOrders(Long companyId, List<MovimentoDTO> out) {
-        if (orderRepository == null) return;
-        for (Order o : orderRepository.findByCompanyId(companyId)) {
+        if (orderLookup == null) return;
+        for (Order o : orderLookup.listOrdersForCompany(companyId)) {
             String wh = o.getWarehouse() != null ? o.getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(MovimentoTipo.ENCOMENDA, o.getId(), o.getOrderNumber(), nameOf(o.getClient(), o.getWalkInName()),
                     o.getCreatedAt(), o.getStatus(), o.getTotalAmount(), summarizeOrder(o), sumOrderQty(o), wh));
@@ -113,8 +101,8 @@ public class MovimentoCollector {
     }
 
     private void collectDeliveryGuides(Long companyId, List<MovimentoDTO> out) {
-        if (deliveryGuideRepository == null) return;
-        for (DeliveryGuide g : deliveryGuideRepository.findByCompanyId(companyId)) {
+        if (orderLookup == null) return;
+        for (DeliveryGuide g : orderLookup.listDeliveryGuidesForCompany(companyId)) {
             String wh = g.getWarehouse() != null ? g.getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(MovimentoTipo.GUIA_REMESSA, g.getId(), g.getGuideNumber(), nameOf(g.getClient(), g.getWalkInName()),
                     g.getGuideDate(), statusName(g.getStatus()), g.getTotalAmount(), summarizeGuide(g), sumGuideQty(g), wh));
@@ -122,8 +110,8 @@ public class MovimentoCollector {
     }
 
     private void collectCreditNotes(Long companyId, List<MovimentoDTO> out) {
-        if (creditNoteRepository == null) return;
-        for (CreditNote n : creditNoteRepository.findByCompanyId(companyId)) {
+        if (noteLookup == null) return;
+        for (CreditNote n : noteLookup.listCreditNotesForCompany(companyId)) {
             String wh = n.getWarehouse() != null ? n.getWarehouse().getName()
                     : (n.getInvoice() != null && n.getInvoice().getWarehouse() != null ? n.getInvoice().getWarehouse().getName() : "—");
             out.add(new MovimentoDTO(MovimentoTipo.NOTA_CREDITO, n.getId(), n.getNoteNumber(), nameOf(n.getClient(), null),
@@ -132,8 +120,8 @@ public class MovimentoCollector {
     }
 
     private void collectDebitNotes(Long companyId, List<MovimentoDTO> out) {
-        if (debitNoteRepository == null) return;
-        for (DebitNote n : debitNoteRepository.findByCompanyId(companyId)) {
+        if (noteLookup == null) return;
+        for (DebitNote n : noteLookup.listDebitNotesForCompany(companyId)) {
             String wh = (n.getInvoice() != null && n.getInvoice().getWarehouse() != null) ? n.getInvoice().getWarehouse().getName() : "—";
             out.add(new MovimentoDTO(MovimentoTipo.NOTA_DEBITO, n.getId(), n.getNoteNumber(), nameOf(n.getClient(), null),
                     n.getIssueDate(), statusName(n.getStatus()), n.getTotalAmount(), summarizeDebitNote(n), BigDecimal.ZERO, wh));
@@ -141,8 +129,8 @@ public class MovimentoCollector {
     }
 
     private void collectReceipts(Long companyId, List<MovimentoDTO> out) {
-        if (receiptRepository == null) return;
-        for (Receipt r : receiptRepository.findByCompanyId(companyId)) {
+        if (receiptLookup == null) return;
+        for (Receipt r : receiptLookup.listForCompany(companyId)) {
             String clientName = (r.getInvoice() != null && r.getInvoice().getClient() != null)
                     ? nameOf(r.getInvoice().getClient(), r.getInvoice().getCustomerName()) : SEM_CLIENTE;
             String wh = (r.getInvoice() != null && r.getInvoice().getWarehouse() != null) ? r.getInvoice().getWarehouse().getName() : "—";
@@ -154,8 +142,8 @@ public class MovimentoCollector {
     }
 
     private void collectTransfers(Long companyId, List<MovimentoDTO> out) {
-        if (stockTransferRepository == null) return;
-        for (StockTransfer t : stockTransferRepository.findByCompanyId(companyId)) {
+        if (stockTransferLookup == null) return;
+        for (StockTransfer t : stockTransferLookup.listForCompany(companyId)) {
             String route = (t.getOriginWarehouse() != null ? t.getOriginWarehouse().getName() : "-")
                     + " → " + (t.getDestinationWarehouse() != null ? t.getDestinationWarehouse().getName() : "-");
             out.add(new MovimentoDTO(MovimentoTipo.TRANSFERENCIA, t.getId(), t.getTransferNumber(), route, t.getTransferDate(),

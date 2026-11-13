@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.CreatePayrollDeductionRequest;
 import mz.multicore.erp.modules.hr.dto.PayrollDeductionDTO;
@@ -66,7 +67,7 @@ class PayrollDeductionServiceTest {
         financeService = mock(FinanceService.class);
         auditLogService = mock(AuditLogService.class);
         service = new PayrollDeductionService(deductionRepository, lineRepository,
-                employeeRepository, companyRepository, financeService, auditLogService);
+                employeeRepository, new CompanyLookup(companyRepository), financeService, auditLogService);
 
         Company company = new Company();
         company.setId(COMPANY);

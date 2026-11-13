@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.CreateTerminationRequest;
 import mz.multicore.erp.modules.hr.dto.TerminationDTO;
@@ -27,7 +27,7 @@ import java.util.List;
 public class TerminationLifecycleService {
     private final TerminationRepository terminationRepository;
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final EmploymentContractService contractService;
     private final DocumentNumberService documentNumberService;
     private final FinanceService financeService;
@@ -36,7 +36,7 @@ public class TerminationLifecycleService {
 
     public TerminationLifecycleService(TerminationRepository terminationRepository,
                                        EmployeeRepository employeeRepository,
-                                       CompanyRepository companyRepository,
+                                       CompanyLookup companyLookup,
                                        EmploymentContractService contractService,
                                        DocumentNumberService documentNumberService,
                                        @Lazy FinanceService financeService,
@@ -44,7 +44,7 @@ public class TerminationLifecycleService {
                                        TerminationSettlementCalculator calculator) {
         this.terminationRepository = terminationRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.contractService = contractService;
         this.documentNumberService = documentNumberService;
         this.financeService = financeService;
@@ -70,8 +70,7 @@ public class TerminationLifecycleService {
         TerminationSettlementCalculator.Settlement settlement = calculator.compute(employee, request);
 
         Termination termination = new Termination();
-        termination.setCompany(companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada.")));
+        termination.setCompany(companyLookup.requireActive(companyId));
         termination.setEmployee(employee);
         termination.setContract(settlement.contract());
         termination.setSettlementNumber(documentNumberService.next(DocumentSeries.TERMINATION));

@@ -14,9 +14,9 @@ import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.repository.PayslipRepository;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
-import mz.multicore.erp.modules.performance.model.BonusStatus;
 import mz.multicore.erp.modules.performance.model.SalesGoalBonus;
-import mz.multicore.erp.modules.performance.repository.SalesGoalBonusRepository;
+import mz.multicore.erp.modules.performance.service.SalesGoalBonusCommandService;
+import mz.multicore.erp.modules.performance.service.SalesGoalBonusLookup;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -46,7 +46,8 @@ public class HrPayslipIssuanceService {
     private final SalaryHistoryService salaryHistoryService;
     private final PayrollDeductionService payrollDeductionService;
     private final PayrollPeriodService payrollPeriodService;
-    private final SalesGoalBonusRepository salesGoalBonusRepository;
+    private final SalesGoalBonusLookup salesGoalBonusLookup;
+    private final SalesGoalBonusCommandService salesGoalBonusCommands;
 
     public HrPayslipIssuanceService(
             EmployeeRepository employeeRepository, PayslipRepository payslipRepository,
@@ -55,7 +56,8 @@ public class HrPayslipIssuanceService {
             EmploymentContractService contractService, @Lazy TimeSheetService timeSheetService,
             @Lazy OvertimeValuationService overtimeValuationService, SalaryHistoryService salaryHistoryService,
             @Lazy PayrollDeductionService payrollDeductionService, PayrollPeriodService payrollPeriodService,
-            @Lazy SalesGoalBonusRepository salesGoalBonusRepository) {
+            @Lazy SalesGoalBonusLookup salesGoalBonusLookup,
+            @Lazy SalesGoalBonusCommandService salesGoalBonusCommands) {
         this.employeeRepository = employeeRepository;
         this.payslipRepository = payslipRepository;
         this.absenceRepository = absenceRepository;
@@ -69,7 +71,8 @@ public class HrPayslipIssuanceService {
         this.salaryHistoryService = salaryHistoryService;
         this.payrollDeductionService = payrollDeductionService;
         this.payrollPeriodService = payrollPeriodService;
-        this.salesGoalBonusRepository = salesGoalBonusRepository;
+        this.salesGoalBonusLookup = salesGoalBonusLookup;
+        this.salesGoalBonusCommands = salesGoalBonusCommands;
     }
 
     public PayslipDTO createPayslip(CreatePayslipRequest request) {
@@ -101,9 +104,8 @@ public class HrPayslipIssuanceService {
         p.setOtherDeductions(orZero(request.otherDeductions()));
         p.setAbsenceDeduction(calculateAbsenceDeduction(employee, request.year(), request.month()));
 
-        List<SalesGoalBonus> approvedBonuses = salesGoalBonusRepository != null
-                ? salesGoalBonusRepository.findByCompanyIdAndEmployeeIdAndStatus(employee.getCompany().getId(), employee.getId(), BonusStatus.APPROVED)
-                        .stream().filter(b -> b.getPayslip() == null).toList()
+        List<SalesGoalBonus> approvedBonuses = salesGoalBonusLookup != null
+                ? salesGoalBonusLookup.listApprovedUnsettledForEmployee(employee.getCompany().getId(), employee.getId())
                 : List.of();
         p.setSalesBonus(approvedBonuses.stream().map(SalesGoalBonus::getApprovedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
         p.setNetPay(calculateNet(p));
@@ -112,12 +114,8 @@ public class HrPayslipIssuanceService {
         p.setPayslipNumber(documentNumberService.next(DocumentSeries.PAYSLIP));
 
         Payslip saved = payslipRepository.save(p);
-        if (salesGoalBonusRepository != null) {
-            for (SalesGoalBonus bonus : approvedBonuses) {
-                bonus.setPayslip(saved);
-                bonus.setStatus(BonusStatus.PAID);
-                salesGoalBonusRepository.save(bonus);
-            }
+        if (salesGoalBonusCommands != null && !approvedBonuses.isEmpty()) {
+            salesGoalBonusCommands.settleOnPayslip(approvedBonuses, saved);
         }
         saved = applyCommittedDeductions(saved);
         auditLogService.logCurrent("PAYSLIP_ISSUE", String.format(

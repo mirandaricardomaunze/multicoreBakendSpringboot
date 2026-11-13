@@ -6,11 +6,11 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseOrderLineRequest;
@@ -36,26 +36,26 @@ public class PurchaseOrderLifecycleService {
 
     private final PurchaseOrderRepository orderRepository;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final ProductLookup productLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
     public PurchaseOrderLifecycleService(
             PurchaseOrderRepository orderRepository,
             SupplierRepository supplierRepository,
-            ProductRepository productRepository,
-            WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            ProductLookup productLookup,
+            WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService
     ) {
         this.orderRepository = orderRepository;
         this.supplierRepository = supplierRepository;
-        this.productRepository = productRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.productLookup = productLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -72,13 +72,11 @@ public class PurchaseOrderLifecycleService {
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
         }
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         PurchaseOrder order = new PurchaseOrder();
         order.setSupplier(supplier);
@@ -94,7 +92,7 @@ public class PurchaseOrderLifecycleService {
         BigDecimal totalTax = BigDecimal.ZERO;
 
         for (CreatePurchaseOrderLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
+            Product product = productLookup.findForCompany(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
             BigDecimal taxRate = lineReq.taxRate() != null ? lineReq.taxRate() : product.effectiveTaxRate();
@@ -147,8 +145,7 @@ public class PurchaseOrderLifecycleService {
         if (!supplier.isActive()) {
             throw new BusinessRuleException("Fornecedor inactivo não pode receber encomendas.");
         }
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (warehouse.getCompany() == null || !companyId.equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
@@ -162,7 +159,7 @@ public class PurchaseOrderLifecycleService {
         BigDecimal total = BigDecimal.ZERO;
         BigDecimal totalTax = BigDecimal.ZERO;
         for (CreatePurchaseOrderLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), companyId)
+            Product product = productLookup.findForCompany(lineReq.productId(), companyId)
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
             BigDecimal taxRate = lineReq.taxRate() != null ? lineReq.taxRate() : product.effectiveTaxRate();
             LineCalculator.LineAmounts amounts = LineCalculator.compute(

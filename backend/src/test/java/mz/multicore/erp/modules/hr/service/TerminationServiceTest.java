@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.CreateTerminationRequest;
 import mz.multicore.erp.modules.hr.dto.PayrollDeductionDTO;
@@ -79,7 +80,7 @@ class TerminationServiceTest {
         financeService = mock(FinanceService.class);
         auditLogService = mock(AuditLogService.class);
         service = new TerminationService(terminationRepository, employeeRepository, vacationRepository,
-                companyRepository, contractService, salaryHistoryService, payrollDeductionService,
+                new CompanyLookup(companyRepository), contractService, salaryHistoryService, payrollDeductionService,
                 hrPolicyService, documentNumberService, financeService, auditLogService);
 
         Company company = new Company();

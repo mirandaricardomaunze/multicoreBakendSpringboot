@@ -2,13 +2,13 @@ package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.financeira.dto.CashFlowItemDTO;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.purchases.model.Purchase;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -31,15 +31,15 @@ public class CashFlowDataCollector {
     ) {}
 
     private final TreasuryAccountRepository accountRepository;
-    private final InvoiceRepository invoiceRepository;
-    private final PurchaseRepository purchaseRepository;
+    private final InvoiceLookup invoiceLookup;
+    private final SupplierLookup supplierLookup;
 
     public CashFlowDataCollector(TreasuryAccountRepository accountRepository,
-                                 InvoiceRepository invoiceRepository,
-                                 PurchaseRepository purchaseRepository) {
+                                 InvoiceLookup invoiceLookup,
+                                 SupplierLookup supplierLookup) {
         this.accountRepository = accountRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.purchaseRepository = purchaseRepository;
+        this.invoiceLookup = invoiceLookup;
+        this.supplierLookup = supplierLookup;
     }
 
     public CollectedCashFlowData collect(Long companyId, LocalDate today) {
@@ -60,8 +60,8 @@ public class CashFlowDataCollector {
         BigDecimal availableLiquidity = cashBalance.add(bankBalance);
 
         List<Invoice> invoices = companyId != null
-                ? invoiceRepository.findByCompanyId(companyId)
-                : invoiceRepository.findAll();
+                ? invoiceLookup.listForCompany(companyId)
+                : invoiceLookup.listAll();
         List<CashFlowItemDTO> allReceivables = new ArrayList<>();
         BigDecimal totalReceivables = BigDecimal.ZERO;
 
@@ -86,8 +86,8 @@ public class CashFlowDataCollector {
         }
 
         List<Purchase> purchases = companyId != null
-                ? purchaseRepository.findByCompanyId(companyId)
-                : purchaseRepository.findAll();
+                ? supplierLookup.listPurchasesForCompany(companyId)
+                : supplierLookup.listAllPurchases();
         List<CashFlowItemDTO> allPayables = new ArrayList<>();
         BigDecimal totalPayables = BigDecimal.ZERO;
 

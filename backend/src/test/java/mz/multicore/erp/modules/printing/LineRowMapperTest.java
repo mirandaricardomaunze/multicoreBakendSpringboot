@@ -19,7 +19,7 @@ class LineRowMapperTest {
         product.setPackagesPerBox(12);
         product.setUnitsPerPackage(6);
 
-        LineItemsTableRenderer.Row row = new LineRowMapper(mock(ProductBatchRepository.class)).map(
+        LineItemsTableRenderer.Row row = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class))).map(
                 product, null, new BigDecimal("18"), new BigDecimal("100"),
                 new BigDecimal("0.16"), BigDecimal.ZERO, new BigDecimal("2088"));
 
@@ -37,7 +37,7 @@ class LineRowMapperTest {
         product.setPackagesPerBox(4);
         product.setUnitsPerPackage(1);
 
-        LineItemsTableRenderer.Row row = new LineRowMapper(mock(ProductBatchRepository.class)).map(
+        LineItemsTableRenderer.Row row = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class))).map(
                 product, null, new BigDecimal("3"), new BigDecimal("150"),
                 new BigDecimal("0.16"), BigDecimal.ZERO, new BigDecimal("450"));
 
@@ -53,7 +53,7 @@ class LineRowMapperTest {
         product.setPackagesPerBox(4);
         product.setUnitsPerPackage(1);
 
-        LineItemsTableRenderer.Row row = new LineRowMapper(mock(ProductBatchRepository.class)).map(
+        LineItemsTableRenderer.Row row = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class))).map(
                 product, null, new BigDecimal("4"), new BigDecimal("50"),
                 new BigDecimal("0.16"), BigDecimal.ZERO, new BigDecimal("200"));
 
@@ -69,7 +69,7 @@ class LineRowMapperTest {
         product.setPackagesPerBox(1);
         product.setUnitsPerPackage(1);
 
-        LineItemsTableRenderer.Row row = new LineRowMapper(mock(ProductBatchRepository.class)).map(
+        LineItemsTableRenderer.Row row = new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class))).map(
                 product, null, new BigDecimal("1"), new BigDecimal("5000"),
                 new BigDecimal("0.16"), BigDecimal.ZERO, new BigDecimal("5000"));
 

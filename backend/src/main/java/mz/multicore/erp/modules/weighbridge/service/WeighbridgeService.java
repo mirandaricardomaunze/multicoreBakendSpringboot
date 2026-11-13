@@ -6,8 +6,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import mz.multicore.erp.modules.weighbridge.dto.FirstWeighingRequest;
@@ -32,17 +32,17 @@ import java.util.List;
 public class WeighbridgeService {
 
     private final WeighingTicketRepository ticketRepository;
-    private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
+    private final ProductLookup productLookup;
+    private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
-    public WeighbridgeService(WeighingTicketRepository ticketRepository, ProductRepository productRepository,
-                              CompanyRepository companyRepository, DocumentNumberService documentNumberService,
+    public WeighbridgeService(WeighingTicketRepository ticketRepository, ProductLookup productLookup,
+                              CompanyLookup companyLookup, DocumentNumberService documentNumberService,
                               AuditLogService auditLogService) {
         this.ticketRepository = ticketRepository;
-        this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
+        this.productLookup = productLookup;
+        this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
         this.auditLogService = auditLogService;
     }
@@ -65,10 +65,10 @@ public class WeighbridgeService {
         if (ticketRepository.hasOpenTicket(request.companyId(), plate)) {
             throw new BusinessRuleException("O camião " + plate + " já está no recinto: faça a 2.ª pesagem do talão aberto.");
         }
-        Product product = request.productId() == null ? null : productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+        Product product = request.productId() == null ? null : productLookup.findForCompany(request.productId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Artigo não encontrado nesta empresa."));
         WeighingTicket t = new WeighingTicket();
-        t.setCompany(companyRepository.findById(request.companyId()).orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+        t.setCompany(companyLookup.require(request.companyId()));
         t.setNumber(documentNumberService.next(DocumentSeries.WEIGHING_TICKET));
         t.setDirection(request.direction());
         t.setPlate(plate);

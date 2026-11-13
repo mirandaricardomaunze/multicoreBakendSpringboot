@@ -6,9 +6,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.expiry.dto.*;
 import mz.multicore.erp.modules.expiry.model.MarkdownRule;
 import mz.multicore.erp.modules.expiry.repository.MarkdownRuleRepository;
@@ -18,8 +17,8 @@ import mz.multicore.erp.modules.inventory.dto.StockWasteDTO;
 import mz.multicore.erp.modules.inventory.model.ProductBatch;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
 import mz.multicore.erp.modules.inventory.model.WasteStatus;
-import mz.multicore.erp.modules.inventory.repository.ProductBatchRepository;
-import mz.multicore.erp.modules.inventory.repository.StockWasteRepository;
+import mz.multicore.erp.modules.inventory.service.ProductBatchLookup;
+import mz.multicore.erp.modules.inventory.service.StockWasteLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
@@ -46,27 +45,25 @@ public class ExpiryService {
     private static final BigDecimal ONE = BigDecimal.ONE;
 
     private final InventoryService inventoryService;
-    private final ProductBatchRepository batchRepository;
-    private final ProductRepository productRepository;
-    private final ProductCategoryRepository categoryRepository;
-    private final CompanyRepository companyRepository;
+    private final ProductBatchLookup batchLookup;
+    private final ProductLookup productLookup;
+    private final CompanyLookup companyLookup;
     private final MarkdownRuleRepository ruleRepository;
-    private final StockWasteRepository wasteRepository;
+    private final StockWasteLookup wasteLookup;
     private final StockWasteService wasteService;
     private final PromotionService promotionService;
     private final AuditLogService auditLogService;
 
-    public ExpiryService(InventoryService inventoryService, ProductBatchRepository batchRepository, ProductRepository productRepository,
-                         ProductCategoryRepository categoryRepository, CompanyRepository companyRepository,
-                         MarkdownRuleRepository ruleRepository, StockWasteRepository wasteRepository, StockWasteService wasteService,
+    public ExpiryService(InventoryService inventoryService, ProductBatchLookup batchLookup, ProductLookup productLookup,
+                         CompanyLookup companyLookup,
+                         MarkdownRuleRepository ruleRepository, StockWasteLookup wasteLookup, StockWasteService wasteService,
                          PromotionService promotionService, AuditLogService auditLogService) {
         this.inventoryService = inventoryService;
-        this.batchRepository = batchRepository;
-        this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
-        this.companyRepository = companyRepository;
+        this.batchLookup = batchLookup;
+        this.productLookup = productLookup;
+        this.companyLookup = companyLookup;
         this.ruleRepository = ruleRepository;
-        this.wasteRepository = wasteRepository;
+        this.wasteLookup = wasteLookup;
         this.wasteService = wasteService;
         this.promotionService = promotionService;
         this.auditLogService = auditLogService;
@@ -79,7 +76,7 @@ public class ExpiryService {
         List<ExpiryRules.Rule> rules = activeRules(companyId);
         List<ProductBatchDTO> batches = inventoryService.findExpiringBatchesByCompany(companyId,
                 today.plusDays(Math.max(0, Math.min(horizonDays, 90))));
-        Map<Long, Product> products = productRepository.findAllById(batches.stream().map(ProductBatchDTO::productId).collect(Collectors.toSet()))
+        Map<Long, Product> products = productLookup.findAllById(batches.stream().map(ProductBatchDTO::productId).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(Product::getId, Function.identity()));
         List<ExpiryLotDTO> lots = new ArrayList<>();
         BigDecimal expired = BigDecimal.ZERO;
@@ -111,11 +108,10 @@ public class ExpiryService {
                 : ruleRepository.findByIdAndCompanyId(request.id(), request.companyId())
                         .orElseThrow(() -> new BusinessRuleException("Regra de remarcação não encontrada."));
         if (rule.getCompany() == null) {
-            rule.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            rule.setCompany(companyLookup.require(request.companyId()));
         }
         rule.setCategory(request.categoryId() == null ? null
-                : categoryRepository.findByIdAndCompaniesId(request.categoryId(), request.companyId())
+                : productLookup.findCategoryForCompany(request.categoryId(), request.companyId())
                         .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada nesta empresa.")));
         rule.setDaysBefore(request.daysBefore());
         rule.setPercent(request.percent());
@@ -207,13 +203,7 @@ public class ExpiryService {
     }
 
     private ProductBatch requireBatch(Long companyId, Long batchId) {
-        ProductBatch batch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new BusinessRuleException("Lote não encontrado."));
-        if (batch.getWarehouse() == null || batch.getWarehouse().getCompany() == null
-                || !companyId.equals(batch.getWarehouse().getCompany().getId())) {
-            throw new BusinessRuleException("Lote não encontrado nesta empresa.");
-        }
-        return batch;
+        return batchLookup.requireForCompany(batchId, companyId);
     }
 
     private ExpiryLotDTO lotOf(Long companyId, ProductBatch batch) {
@@ -243,7 +233,7 @@ public class ExpiryService {
     }
 
     private BigDecimal lossesThisMonth(Long companyId, LocalDate today) {
-        return wasteRepository.findByCompanyIdAndPeriod(companyId, today.withDayOfMonth(1).atStartOfDay(), today.plusDays(1).atStartOfDay())
+        return wasteLookup.listForCompanyInPeriod(companyId, today.withDayOfMonth(1).atStartOfDay(), today.plusDays(1).atStartOfDay())
                 .stream().filter(w -> w.getReason() == WasteReason.EXPIRED && w.getStatus() == WasteStatus.APPROVED)
                 .map(w -> w.getTotalCost() == null ? BigDecimal.ZERO : w.getTotalCost()).reduce(BigDecimal.ZERO, BigDecimal::add);
     }

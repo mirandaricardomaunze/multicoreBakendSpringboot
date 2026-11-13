@@ -2,12 +2,12 @@ package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.security.AttachmentCrypto;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.*;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.repository.OccupationalHealthExamRepository;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -43,14 +43,14 @@ public class OccupationalHealthService {
      */
     public OccupationalHealthService(OccupationalHealthExamRepository repository,
                                      EmployeeRepository employeeRepository,
-                                     CompanyRepository companyRepository,
-                                     SupplierRepository supplierRepository,
+                                     CompanyLookup companyLookup,
+                                     SupplierLookup supplierLookup,
                                      @Lazy FinanceService financeService,
                                      AttachmentCrypto attachmentCrypto,
                                      AuditLogService auditLogService) {
-        this(new OccupationalHealthRegistrationService(repository, employeeRepository, companyRepository,
-                        supplierRepository, attachmentCrypto, auditLogService),
-                new OccupationalHealthFinanceService(repository, supplierRepository, financeService, auditLogService),
+        this(new OccupationalHealthRegistrationService(repository, employeeRepository, companyLookup,
+                        supplierLookup, attachmentCrypto, auditLogService),
+                new OccupationalHealthFinanceService(repository, supplierLookup, financeService, auditLogService),
                 new OccupationalHealthQueryService(repository, employeeRepository, attachmentCrypto, auditLogService));
     }
 

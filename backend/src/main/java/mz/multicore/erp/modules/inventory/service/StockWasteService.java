@@ -2,9 +2,9 @@ package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.StockWaste;
 import mz.multicore.erp.modules.inventory.model.WasteStatus;
@@ -46,47 +46,47 @@ public class StockWasteService {
 
     public StockWasteService(
             StockWasteRepository wasteRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             ProductBatchRepository batchRepository,
             InventoryService inventoryService,
-            InvoiceRepository invoiceRepository,
-            CompanyRepository companyRepository
+            InvoiceLookup invoiceLookup,
+            CompanyLookup companyLookup
     ) {
-        this(wasteRepository, productRepository, warehouseRepository, batchRepository,
-                inventoryService, invoiceRepository, companyRepository, null, null);
+        this(wasteRepository, productLookup, warehouseRepository, batchRepository,
+                inventoryService, invoiceLookup, companyLookup, null, null);
     }
 
     public StockWasteService(
             StockWasteRepository wasteRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             ProductBatchRepository batchRepository,
             InventoryService inventoryService,
-            InvoiceRepository invoiceRepository,
-            CompanyRepository companyRepository,
+            InvoiceLookup invoiceLookup,
+            CompanyLookup companyLookup,
             AuditLogService auditLogService
     ) {
-        this(wasteRepository, productRepository, warehouseRepository, batchRepository,
-                inventoryService, invoiceRepository, companyRepository, auditLogService, null);
+        this(wasteRepository, productLookup, warehouseRepository, batchRepository,
+                inventoryService, invoiceLookup, companyLookup, auditLogService, null);
     }
 
     public StockWasteService(
             StockWasteRepository wasteRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             WarehouseRepository warehouseRepository,
             ProductBatchRepository batchRepository,
             InventoryService inventoryService,
-            InvoiceRepository invoiceRepository,
-            CompanyRepository companyRepository,
+            InvoiceLookup invoiceLookup,
+            CompanyLookup companyLookup,
             AuditLogService auditLogService,
             @Lazy ApprovalService approvalService
     ) {
         this.lifecycleService = new StockWasteLifecycleService(
-                wasteRepository, productRepository, warehouseRepository, batchRepository,
-                inventoryService, companyRepository, auditLogService, approvalService);
+                wasteRepository, productLookup, warehouseRepository, batchRepository,
+                inventoryService, companyLookup, auditLogService, approvalService);
         this.analyticsService = new StockWasteAnalyticsService(
-                batchRepository, wasteRepository, invoiceRepository);
+                batchRepository, wasteRepository, invoiceLookup);
         this.queryService = new StockWasteQueryService(wasteRepository);
     }
 

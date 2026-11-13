@@ -18,13 +18,13 @@ import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductSaleType;
 import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
-import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -39,25 +39,25 @@ public class ComercialProductCatalogService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
-    private final CompanyRepository companyRepository;
-    private final TaxRateRepository taxRateRepository;
-    private final BusinessUnitRepository businessUnitRepository;
+    private final CompanyLookup companyLookup;
+    private final TaxRateLookup taxRateLookup;
+    private final BusinessUnitLookup businessUnitLookup;
     private final InventoryService inventoryService;
     private final AuditLogService auditLogService;
 
     public ComercialProductCatalogService(
             ProductRepository productRepository,
             ProductCategoryRepository productCategoryRepository,
-            CompanyRepository companyRepository,
-            TaxRateRepository taxRateRepository,
-            @Autowired(required = false) BusinessUnitRepository businessUnitRepository,
+            CompanyLookup companyLookup,
+            TaxRateLookup taxRateLookup,
+            @Nullable BusinessUnitLookup businessUnitLookup,
             @Lazy InventoryService inventoryService,
             AuditLogService auditLogService) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
-        this.companyRepository = companyRepository;
-        this.taxRateRepository = taxRateRepository;
-        this.businessUnitRepository = businessUnitRepository;
+        this.companyLookup = companyLookup;
+        this.taxRateLookup = taxRateLookup;
+        this.businessUnitLookup = businessUnitLookup;
         this.inventoryService = inventoryService;
         this.auditLogService = auditLogService;
     }
@@ -143,7 +143,7 @@ public class ComercialProductCatalogService {
         }
         Product sharedProduct = productRepository.findBySku(sku).orElse(null);
         if (sharedProduct != null) {
-            sharedProduct.getCompanies().add(companyRepository.getReferenceById(companyId));
+            sharedProduct.getCompanies().add(companyLookup.reference(companyId));
             return toDTO(productRepository.save(sharedProduct));
         }
         if (cleanReference != null && productRepository.findByReferenceAndCompaniesId(cleanReference, companyId).isPresent()) {
@@ -171,11 +171,10 @@ public class ComercialProductCatalogService {
                     .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada.")));
         }
         if (taxRateId != null) {
-            product.setTaxRate(taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada.")));
+            product.setTaxRate(taxRateLookup.requireForCompany(taxRateId, companyId));
         }
         product.setCreatedBy("SYSTEM");
-        product.getCompanies().add(companyRepository.getReferenceById(companyId));
+        product.getCompanies().add(companyLookup.reference(companyId));
         return toDTO(productRepository.save(product));
     }
 
@@ -193,8 +192,8 @@ public class ComercialProductCatalogService {
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
         assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
-        if (businessUnitId != null && businessUnitRepository != null) {
-            product.setBusinessUnit(businessUnitRepository.findByIdAndCompanyId(businessUnitId, CurrentUserContext.getCurrentCompanyId())
+        if (businessUnitId != null && businessUnitLookup != null) {
+            product.setBusinessUnit(businessUnitLookup.findForCompany(businessUnitId, CurrentUserContext.getCurrentCompanyId())
                     .orElseThrow(() -> new BusinessRuleException("Linha de negócio não encontrada.")));
         }
         return toDTO(productRepository.save(product));
@@ -238,8 +237,7 @@ public class ComercialProductCatalogService {
                         .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada."))
                 : null);
         product.setTaxRate(taxRateId != null
-                ? taxRateRepository.findByIdAndCompaniesId(taxRateId, companyId)
-                        .orElseThrow(() -> new BusinessRuleException("Taxa de IVA não encontrada."))
+                ? taxRateLookup.requireForCompany(taxRateId, companyId)
                 : null);
         product = productRepository.save(product);
         auditLogService.logCurrent("PRODUCT_UPDATE",
@@ -260,8 +258,8 @@ public class ComercialProductCatalogService {
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
         assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
-        if (businessUnitId != null && businessUnitRepository != null) {
-            product.setBusinessUnit(businessUnitRepository.findByIdAndCompanyId(businessUnitId, CurrentUserContext.getCurrentCompanyId())
+        if (businessUnitId != null && businessUnitLookup != null) {
+            product.setBusinessUnit(businessUnitLookup.findForCompany(businessUnitId, CurrentUserContext.getCurrentCompanyId())
                     .orElseThrow(() -> new BusinessRuleException("Linha de negócio não encontrada.")));
         } else {
             product.setBusinessUnit(null);
@@ -309,7 +307,7 @@ public class ComercialProductCatalogService {
     }
 
     public List<TaxRateDTO> getActiveVatRates() {
-        return taxRateRepository.findDistinctByCompaniesIdAndActiveTrueOrderByTypeAscRateDesc(CurrentUserContext.getCurrentCompanyId()).stream()
+        return taxRateLookup.listActiveForCompany(CurrentUserContext.getCurrentCompanyId()).stream()
                 .filter(t -> t.getType() != null && t.getType().name().startsWith("IVA"))
                 .map(t -> new TaxRateDTO(t.getId(), t.getCode(), t.getName(), t.getType().name(),
                         t.getRate(), t.getLegalBasis(), t.isActive()))

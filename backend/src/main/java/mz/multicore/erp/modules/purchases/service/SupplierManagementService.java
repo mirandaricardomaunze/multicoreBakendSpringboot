@@ -6,7 +6,7 @@ import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.architecture.validation.TaxIdValidator;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.purchases.dto.CreateSupplierRequest;
 import mz.multicore.erp.modules.purchases.dto.SupplierDTO;
 import mz.multicore.erp.modules.purchases.model.Supplier;
@@ -19,14 +19,14 @@ import java.util.List;
 @Service
 public class SupplierManagementService {
     private final SupplierRepository supplierRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
     public SupplierManagementService(SupplierRepository supplierRepository,
-                                   CompanyRepository companyRepository,
+                                   CompanyLookup companyLookup,
                                    AuditLogService auditLogService) {
         this.supplierRepository = supplierRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -34,8 +34,7 @@ public class SupplierManagementService {
     public Supplier createSupplier(String name, String taxId, String email, String address, Long companyId) {
         CurrentUserContext.requireCompany(companyId);
         TaxIdValidator.validate(taxId);
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(companyId);
 
         Supplier supplier = new Supplier();
         supplier.setName(name);

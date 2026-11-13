@@ -6,6 +6,7 @@ import mz.multicore.erp.modules.approvals.service.ApprovalService;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.hr.dto.CreateAbsenceRequest;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
@@ -110,7 +111,7 @@ class HRServiceTest {
                 vacationRepository,
                 // Guarda REAL sobre os mocks: as regras de "quem pode agir sobre quem" continuam a
                 // ser exercitadas por estes testes. Um mock da guarda esvaziava-os em silêncio.
-                new HrAccessGuard(employeeRepository, companyRepository),
+                new HrAccessGuard(employeeRepository, new CompanyLookup(companyRepository)),
                 payrollTaxService,
                 mock(ApprovalService.class),
                 documentNumberService,

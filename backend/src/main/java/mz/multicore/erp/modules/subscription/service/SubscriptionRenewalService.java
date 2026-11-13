@@ -7,8 +7,8 @@ import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.pos.dto.InitiateMobilePaymentRequest;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentProvider;
 import mz.multicore.erp.modules.pos.dto.MobilePaymentStatus;
-import mz.multicore.erp.modules.pos.repository.MobilePaymentRepository;
 import mz.multicore.erp.modules.pos.service.MobilePaymentService;
+import mz.multicore.erp.modules.pos.service.PosPaymentLookup;
 import mz.multicore.erp.modules.subscription.dto.SelfServiceSubscriptionPaymentRequest;
 import mz.multicore.erp.modules.subscription.dto.SubscriptionPaymentResultDTO;
 import mz.multicore.erp.modules.subscription.dto.SubscriptionPlanDetailDTO;
@@ -40,7 +40,7 @@ public class SubscriptionRenewalService {
     private final SubscriptionQueryService queryService;
     private final SubscriptionLifecycleService lifecycleService;
     private final MobilePaymentService mobilePaymentService;
-    private final MobilePaymentRepository mobilePaymentRepository;
+    private final PosPaymentLookup posPaymentLookup;
 
     public SubscriptionRenewalService(SubscriptionRepository subscriptionRepository,
                                       SubscriptionPaymentRepository paymentRepository,
@@ -48,14 +48,14 @@ public class SubscriptionRenewalService {
                                       SubscriptionQueryService queryService,
                                       SubscriptionLifecycleService lifecycleService,
                                       MobilePaymentService mobilePaymentService,
-                                      MobilePaymentRepository mobilePaymentRepository) {
+                                      PosPaymentLookup posPaymentLookup) {
         this.subscriptionRepository = subscriptionRepository;
         this.paymentRepository = paymentRepository;
         this.auditLogService = auditLogService;
         this.queryService = queryService;
         this.lifecycleService = lifecycleService;
         this.mobilePaymentService = mobilePaymentService;
-        this.mobilePaymentRepository = mobilePaymentRepository;
+        this.posPaymentLookup = posPaymentLookup;
     }
 
     public List<SubscriptionPlanDetailDTO> listAvailablePlans() {
@@ -181,13 +181,13 @@ public class SubscriptionRenewalService {
         Long companyId = CurrentUserContext.requireCurrentCompanyId();
         Company company = queryService.requireCompany(companyId);
 
-        if (mobilePaymentService == null || mobilePaymentRepository == null) {
+        if (mobilePaymentService == null || posPaymentLookup == null) {
             throw new BusinessRuleException("Serviço de pagamentos móveis indisponível.");
         }
 
         var statusResp = mobilePaymentService.checkStatus(transactionId, companyId);
         if (statusResp.status() == MobilePaymentStatus.SUCCESS) {
-            var txOpt = mobilePaymentRepository.findByTransactionIdAndCompanyId(transactionId, companyId);
+            var txOpt = posPaymentLookup.findMobilePaymentForCompany(transactionId, companyId);
             if (txOpt.isPresent()) {
                 var tx = txOpt.get();
                 boolean alreadyRecorded = paymentRepository.findByCompanyIdOrderByPaidAtDesc(companyId).stream()

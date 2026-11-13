@@ -4,9 +4,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.*;
 import mz.multicore.erp.modules.inventory.model.*;
 import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
@@ -21,14 +21,14 @@ import java.util.Objects;
 public class StockTransferDraftService {
     private final StockTransferRepository transfers;
     private final WarehouseRepository warehouses;
-    private final CompanyRepository companies;
-    private final ProductRepository products;
+    private final CompanyLookup companies;
+    private final ProductLookup products;
     private final DocumentNumberService numbers;
     private final AuditLogService audit;
     private final StockTransferValidator validator;
 
     public StockTransferDraftService(StockTransferRepository transfers, WarehouseRepository warehouses,
-                                     CompanyRepository companies, ProductRepository products,
+                                     CompanyLookup companies, ProductLookup products,
                                      DocumentNumberService numbers, AuditLogService audit,
                                      StockTransferValidator validator) {
         this.transfers=transfers; this.warehouses=warehouses; this.companies=companies;
@@ -40,7 +40,7 @@ public class StockTransferDraftService {
         requireDifferent(request.originWarehouseId(), request.destinationWarehouseId());
         String driver=validator.requiredDriver(request.driverName(), request.responsible());
         String plate=validator.requiredPlate(request.vehiclePlate(), request.vehicle());
-        Company company=companies.findById(request.companyId()).orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company=companies.require(request.companyId());
         Warehouse origin=warehouse(request.originWarehouseId(), "origem");
         Warehouse destination=warehouse(request.destinationWarehouseId(), "destino");
         requireCompany(origin, destination, company.getId());
@@ -85,8 +85,7 @@ public class StockTransferDraftService {
         transfer.setDriverName(driver); transfer.setVehiclePlate(plate); transfer.setNotes(blankToNull(notes));
         if (requiresReceipt != null) transfer.setRequiresReceipt(requiresReceipt);
         for (CreateStockTransferLineRequest request : lines) {
-            Product product=products.findByIdAndCompaniesId(request.productId(), companyId)
-                    .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + request.productId()));
+            Product product=products.requireForCompany(request.productId(), companyId);
             StockTransferLine line=new StockTransferLine(); line.setTransfer(transfer);
             line.setProduct(product); line.setQuantity(request.quantity()); transfer.getLines().add(line);
         }

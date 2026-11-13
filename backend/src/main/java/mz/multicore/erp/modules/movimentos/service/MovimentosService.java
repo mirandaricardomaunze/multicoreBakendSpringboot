@@ -1,14 +1,11 @@
 package mz.multicore.erp.modules.movimentos.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.DebitNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.DeliveryGuideRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
-import mz.multicore.erp.modules.inventory.repository.StockTransferRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
+import mz.multicore.erp.modules.inventory.service.StockTransferLookup;
 import mz.multicore.erp.modules.movimentos.dto.MovimentoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,29 +29,21 @@ public class MovimentosService {
     }
 
     public MovimentosService(
-            InvoiceRepository invoiceRepository,
-            OrderRepository orderRepository,
-            CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository,
-            DeliveryGuideRepository deliveryGuideRepository,
-            QuotationRepository quotationRepository
+            InvoiceLookup invoiceLookup,
+            OrderLookup orderLookup,
+            InvoiceNoteLookup noteLookup
     ) {
-        this(new MovimentoCollector(invoiceRepository, orderRepository, creditNoteRepository, debitNoteRepository,
-                deliveryGuideRepository, quotationRepository, null, null));
+        this(new MovimentoCollector(invoiceLookup, orderLookup, noteLookup, null, null));
     }
 
     public MovimentosService(
-            InvoiceRepository invoiceRepository,
-            OrderRepository orderRepository,
-            CreditNoteRepository creditNoteRepository,
-            DebitNoteRepository debitNoteRepository,
-            DeliveryGuideRepository deliveryGuideRepository,
-            QuotationRepository quotationRepository,
-            ReceiptRepository receiptRepository,
-            StockTransferRepository stockTransferRepository
+            InvoiceLookup invoiceLookup,
+            OrderLookup orderLookup,
+            InvoiceNoteLookup noteLookup,
+            ReceiptLookup receiptLookup,
+            StockTransferLookup stockTransferLookup
     ) {
-        this(new MovimentoCollector(invoiceRepository, orderRepository, creditNoteRepository, debitNoteRepository,
-                deliveryGuideRepository, quotationRepository, receiptRepository, stockTransferRepository));
+        this(new MovimentoCollector(invoiceLookup, orderLookup, noteLookup, receiptLookup, stockTransferLookup));
     }
 
     /**

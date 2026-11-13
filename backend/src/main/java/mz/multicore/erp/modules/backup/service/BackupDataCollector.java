@@ -1,20 +1,18 @@
 package mz.multicore.erp.modules.backup.service;
 
-import mz.multicore.erp.modules.audit.repository.AuditLogRepository;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.comercial.repository.ReceiptRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
-import mz.multicore.erp.modules.inventory.repository.StockMovementRepository;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
-import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.audit.service.AuditLogLookup;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.comercial.service.ReceiptLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
+import mz.multicore.erp.modules.pos.service.TillSessionLookup;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,55 +26,49 @@ import java.util.stream.Collectors;
 @Service
 public class BackupDataCollector {
 
-    private final AppUserRepository userRepository;
-    private final CompanyRepository companyRepository;
-    private final ClientRepository clientRepository;
-    private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
-    private final StockMovementRepository stockMovementRepository;
-    private final InvoiceRepository invoiceRepository;
-    private final ReceiptRepository receiptRepository;
-    private final PurchaseRepository purchaseRepository;
-    private final TillSessionRepository tillSessionRepository;
-    private final TreasuryAccountRepository accountRepository;
-    private final TreasuryTransactionRepository transactionRepository;
-    private final AuditLogRepository auditLogRepository;
+    private final AppUserLookup userLookup;
+    private final CompanyLookup companyLookup;
+    private final ClientLookup clientLookup;
+    private final SupplierLookup supplierLookup;
+    private final ProductLookup productLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
+    private final StockMovementLookup stockMovementLookup;
+    private final InvoiceLookup invoiceLookup;
+    private final ReceiptLookup receiptLookup;
+    private final TillSessionLookup tillSessionLookup;
+    private final TreasuryAccountLookup treasuryAccountLookup;
+    private final AuditLogLookup auditLogLookup;
 
     @Autowired
     public BackupDataCollector(
-            AppUserRepository userRepository,
-            CompanyRepository companyRepository,
-            ClientRepository clientRepository,
-            SupplierRepository supplierRepository,
-            ProductRepository productRepository,
-            WarehouseRepository warehouseRepository,
-            StockRepository stockRepository,
-            StockMovementRepository stockMovementRepository,
-            InvoiceRepository invoiceRepository,
-            ReceiptRepository receiptRepository,
-            PurchaseRepository purchaseRepository,
-            TillSessionRepository tillSessionRepository,
-            TreasuryAccountRepository accountRepository,
-            TreasuryTransactionRepository transactionRepository,
-            AuditLogRepository auditLogRepository
+            AppUserLookup userLookup,
+            CompanyLookup companyLookup,
+            ClientLookup clientLookup,
+            SupplierLookup supplierLookup,
+            ProductLookup productLookup,
+            WarehouseLookup warehouseLookup,
+            StockLookup stockLookup,
+            StockMovementLookup stockMovementLookup,
+            InvoiceLookup invoiceLookup,
+            ReceiptLookup receiptLookup,
+            TillSessionLookup tillSessionLookup,
+            TreasuryAccountLookup treasuryAccountLookup,
+            AuditLogLookup auditLogLookup
     ) {
-        this.userRepository = userRepository;
-        this.companyRepository = companyRepository;
-        this.clientRepository = clientRepository;
-        this.supplierRepository = supplierRepository;
-        this.productRepository = productRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
-        this.stockMovementRepository = stockMovementRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.receiptRepository = receiptRepository;
-        this.purchaseRepository = purchaseRepository;
-        this.tillSessionRepository = tillSessionRepository;
-        this.accountRepository = accountRepository;
-        this.transactionRepository = transactionRepository;
-        this.auditLogRepository = auditLogRepository;
+        this.userLookup = userLookup;
+        this.companyLookup = companyLookup;
+        this.clientLookup = clientLookup;
+        this.supplierLookup = supplierLookup;
+        this.productLookup = productLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
+        this.stockMovementLookup = stockMovementLookup;
+        this.invoiceLookup = invoiceLookup;
+        this.receiptLookup = receiptLookup;
+        this.tillSessionLookup = tillSessionLookup;
+        this.treasuryAccountLookup = treasuryAccountLookup;
+        this.auditLogLookup = auditLogLookup;
     }
 
     public Map<String, Object> collectBackupData(Long companyId) {
@@ -84,7 +76,7 @@ public class BackupDataCollector {
         data.put("companyId", companyId);
         data.put("generatedAt", LocalDateTime.now().toString());
 
-        data.put("users", userRepository == null ? List.of() : userRepository.findDistinctByCompanyAccessesCompanyIdOrderByName(companyId).stream().map(u -> {
+        data.put("users", userLookup == null ? List.of() : userLookup.listForCompany(companyId).stream().map(u -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", u.getId());
             m.put("username", u.getUsername());
@@ -94,7 +86,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("companies", companyRepository == null ? List.of() : companyRepository.findById(companyId).stream().map(c -> {
+        data.put("companies", companyLookup == null ? List.of() : companyLookup.find(companyId).stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", c.getId());
             m.put("name", c.getName());
@@ -103,7 +95,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("clients", clientRepository == null ? List.of() : clientRepository.findDistinctByCompaniesIdOrderByName(companyId).stream().map(c -> {
+        data.put("clients", clientLookup == null ? List.of() : clientLookup.listForCompany(companyId).stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", c.getId());
             m.put("name", c.getName());
@@ -112,7 +104,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("suppliers", supplierRepository == null ? List.of() : supplierRepository.findByCompanyId(companyId).stream().map(s -> {
+        data.put("suppliers", supplierLookup == null ? List.of() : supplierLookup.listForCompany(companyId).stream().map(s -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", s.getId());
             m.put("name", s.getName());
@@ -122,7 +114,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("products", productRepository == null ? List.of() : productRepository.findDistinctByCompaniesIdOrderByName(companyId).stream().map(p -> {
+        data.put("products", productLookup == null ? List.of() : productLookup.listForCompany(companyId).stream().map(p -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", p.getId());
             m.put("sku", p.getSku());
@@ -133,7 +125,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("warehouses", warehouseRepository == null ? List.of() : warehouseRepository.findByCompanyId(companyId).stream().map(w -> {
+        data.put("warehouses", warehouseLookup == null ? List.of() : warehouseLookup.listForCompany(companyId).stream().map(w -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", w.getId());
             m.put("name", w.getName());
@@ -142,7 +134,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("stocks", stockRepository == null ? List.of() : stockRepository.findByWarehouseCompanyId(companyId).stream().map(s -> {
+        data.put("stocks", stockLookup == null ? List.of() : stockLookup.listForCompany(companyId).stream().map(s -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", s.getId());
             m.put("productId", s.getProduct().getId());
@@ -153,7 +145,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("stockMovements", stockMovementRepository == null ? List.of() : stockMovementRepository.findByCompanyId(companyId).stream().map(m -> {
+        data.put("stockMovements", stockMovementLookup == null ? List.of() : stockMovementLookup.listForCompany(companyId).stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", m.getId());
             map.put("movementType", m.getMovementType());
@@ -168,7 +160,7 @@ public class BackupDataCollector {
             return map;
         }).collect(Collectors.toList()));
 
-        data.put("invoices", invoiceRepository == null ? List.of() : invoiceRepository.findByCompanyId(companyId).stream().map(i -> {
+        data.put("invoices", invoiceLookup == null ? List.of() : invoiceLookup.listForCompany(companyId).stream().map(i -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", i.getId());
             m.put("invoiceNumber", i.getInvoiceNumber());
@@ -180,7 +172,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("receipts", receiptRepository == null ? List.of() : receiptRepository.findByCompanyId(companyId).stream().map(r -> {
+        data.put("receipts", receiptLookup == null ? List.of() : receiptLookup.listForCompany(companyId).stream().map(r -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", r.getId());
             m.put("receiptNumber", r.getReceiptNumber());
@@ -191,7 +183,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("purchases", purchaseRepository == null ? List.of() : purchaseRepository.findByCompanyId(companyId).stream().map(p -> {
+        data.put("purchases", supplierLookup == null ? List.of() : supplierLookup.listPurchasesForCompany(companyId).stream().map(p -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", p.getId());
             m.put("purchaseNumber", p.getPurchaseNumber());
@@ -202,7 +194,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("tillSessions", tillSessionRepository == null ? List.of() : tillSessionRepository.findByCompanyId(companyId).stream().map(ts -> {
+        data.put("tillSessions", tillSessionLookup == null ? List.of() : tillSessionLookup.listForCompany(companyId).stream().map(ts -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", ts.getId());
             m.put("operator", ts.getOperator());
@@ -213,7 +205,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("treasuryAccounts", accountRepository == null ? List.of() : accountRepository.findByCompanyIdOrderByName(companyId).stream().map(a -> {
+        data.put("treasuryAccounts", treasuryAccountLookup == null ? List.of() : treasuryAccountLookup.listForCompany(companyId).stream().map(a -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", a.getId());
             m.put("name", a.getName());
@@ -221,7 +213,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("auditLogs", auditLogRepository == null ? List.of() : auditLogRepository.findByCompanyIdOrderByEventTimeDesc(companyId).stream().map(l -> {
+        data.put("auditLogs", auditLogLookup == null ? List.of() : auditLogLookup.listForCompany(companyId).stream().map(l -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", l.getId());
             m.put("username", l.getUsername());

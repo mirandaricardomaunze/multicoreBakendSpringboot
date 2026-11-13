@@ -8,18 +8,17 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import mz.multicore.erp.modules.manufacturing.model.BillOfMaterials;
 import mz.multicore.erp.modules.manufacturing.model.BomItem;
 import mz.multicore.erp.modules.manufacturing.model.BomType;
-import mz.multicore.erp.modules.manufacturing.repository.BillOfMaterialsRepository;
+import mz.multicore.erp.modules.manufacturing.service.BillOfMaterialsLookup;
 import mz.multicore.erp.modules.productionplan.dto.*;
 import mz.multicore.erp.modules.productionplan.model.ProductionPlan;
 import mz.multicore.erp.modules.productionplan.model.ProductionPlanLine;
@@ -57,9 +56,9 @@ public class ProductionPlanService {
     private final ProductionRunRepository runRepository;
     private final ProductionPlanLineRepository lineRepository;
     private final ProductionSalesHistoryRepository salesHistory;
-    private final BillOfMaterialsRepository bomRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
+    private final BillOfMaterialsLookup bomLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
     private final StockMovementRegistrationService movementService;
     private final AverageCostUpdater averageCost;
     private final StockWasteService wasteService;
@@ -68,8 +67,8 @@ public class ProductionPlanService {
 
     public ProductionPlanService(ProductionPlanRepository planRepository, ProductionRunRepository runRepository,
                                  ProductionPlanLineRepository lineRepository,
-                                 ProductionSalesHistoryRepository salesHistory, BillOfMaterialsRepository bomRepository,
-                                 WarehouseRepository warehouseRepository, StockRepository stockRepository,
+                                 ProductionSalesHistoryRepository salesHistory, BillOfMaterialsLookup bomLookup,
+                                 WarehouseLookup warehouseLookup, StockLookup stockLookup,
                                  StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                  StockWasteService wasteService, AuditLogService auditLogService,
                                  org.springframework.context.ApplicationEventPublisher eventPublisher) {
@@ -77,9 +76,9 @@ public class ProductionPlanService {
         this.runRepository = runRepository;
         this.lineRepository = lineRepository;
         this.salesHistory = salesHistory;
-        this.bomRepository = bomRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
+        this.bomLookup = bomLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
         this.movementService = movementService;
         this.averageCost = averageCost;
         this.wasteService = wasteService;
@@ -330,13 +329,12 @@ public class ProductionPlanService {
     }
 
     private List<BillOfMaterials> recipes(Long companyId) {
-        return bomRepository.findByCompanyIdAndActiveTrueOrderByNameAsc(companyId).stream()
+        return bomLookup.listActiveForCompany(companyId).stream()
                 .filter(b -> b.getBomType() == null || b.getBomType() == BomType.STANDARD).toList();
     }
 
     private BillOfMaterials requireRecipe(Long companyId, Long bomId) {
-        BillOfMaterials bom = bomRepository.findByIdAndCompanyId(bomId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Receita não encontrada."));
+        BillOfMaterials bom = bomLookup.requireForCompany(bomId, companyId);
         if (!bom.isActive() || (bom.getBomType() != null && bom.getBomType() != BomType.STANDARD)) {
             throw new BusinessRuleException("A receita '" + bom.getName() + "' não está activa para produção.");
         }
@@ -349,9 +347,7 @@ public class ProductionPlanService {
     }
 
     private Warehouse requireWarehouse(Long companyId, Long warehouseId) {
-        return warehouseRepository.findById(warehouseId)
-                .filter(w -> w.getCompany() != null && companyId.equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        return warehouseLookup.requireForCompany(warehouseId, companyId);
     }
 
     private static void requireOpen(ProductionPlan plan) {
@@ -361,7 +357,7 @@ public class ProductionPlanService {
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId).map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return stockLookup.quantityOf(productId, warehouseId);
     }
 
     private static BigDecimal nz(BigDecimal value) {

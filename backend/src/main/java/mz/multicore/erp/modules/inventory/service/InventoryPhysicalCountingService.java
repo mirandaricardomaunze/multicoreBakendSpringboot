@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.inventory.dto.CreateInventorySessionRequest;
 import mz.multicore.erp.modules.inventory.dto.InventorySessionDTO;
 import mz.multicore.erp.modules.inventory.dto.UpdateInventoryItemCountRequest;
@@ -33,7 +33,7 @@ public class InventoryPhysicalCountingService {
     public InventoryPhysicalCountingService(
             InventoryPhysicalSessionRepository sessionRepository,
             InventoryPhysicalItemRepository itemRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
             StockRepository stockRepository,
             WarehouseRepository warehouseRepository,
             InventoryService inventoryService
@@ -41,7 +41,7 @@ public class InventoryPhysicalCountingService {
         InventoryCountingQueryService query = new InventoryCountingQueryService(sessionRepository, stockRepository);
         this.queryService = query;
         this.lifecycleService = new InventoryCountingLifecycleService(
-                sessionRepository, itemRepository, productRepository, warehouseRepository, inventoryService, query);
+                sessionRepository, itemRepository, productLookup, warehouseRepository, inventoryService, query);
     }
 
     @Transactional

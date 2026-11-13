@@ -5,9 +5,9 @@ import mz.multicore.erp.modules.audit.dto.ForensicAuditSummaryDTO;
 import mz.multicore.erp.modules.audit.service.ForensicAuditService;
 import mz.multicore.erp.modules.backup.service.ScheduledBackupService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.monitoring.dto.TenantHealthDTO;
-import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,23 +28,23 @@ public class TenantMonitoringService {
 
     private static final Logger log = LoggerFactory.getLogger(TenantMonitoringService.class);
 
-    private final CompanyRepository companyRepository;
-    private final AppUserCompanyAccessRepository companyAccessRepository;
+    private final CompanyLookup companyLookup;
+    private final AppUserLookup userLookup;
     private final ForensicAuditService forensicAuditService;
     private final ScheduledBackupService scheduledBackupService;
     private final SystemIncidentManager systemIncidentManager;
     private final SystemAlertEmailService systemAlertEmailService;
 
     public TenantMonitoringService(
-            CompanyRepository companyRepository,
-            AppUserCompanyAccessRepository companyAccessRepository,
+            CompanyLookup companyLookup,
+            AppUserLookup userLookup,
             ForensicAuditService forensicAuditService,
             ScheduledBackupService scheduledBackupService,
             SystemIncidentManager systemIncidentManager,
             SystemAlertEmailService systemAlertEmailService
     ) {
-        this.companyRepository = companyRepository;
-        this.companyAccessRepository = companyAccessRepository;
+        this.companyLookup = companyLookup;
+        this.userLookup = userLookup;
         this.forensicAuditService = forensicAuditService;
         this.scheduledBackupService = scheduledBackupService;
         this.systemIncidentManager = systemIncidentManager;
@@ -57,8 +57,8 @@ public class TenantMonitoringService {
 
         List<Company> companies = PermissionGuard.SUPERADMIN_ROLE.equalsIgnoreCase(
                 mz.multicore.erp.architecture.security.CurrentUserContext.getRole())
-                ? companyRepository.findAll()
-                : companyRepository.findById(
+                ? companyLookup.findAll()
+                : companyLookup.find(
                         mz.multicore.erp.architecture.security.CurrentUserContext.requireCurrentCompanyId())
                         .map(List::of).orElseGet(List::of);
         List<TenantHealthDTO> result = new ArrayList<>();
@@ -72,7 +72,7 @@ public class TenantMonitoringService {
         }
 
         for (Company company : companies) {
-            long userCount = companyAccessRepository.countByCompanyId(company.getId());
+            long userCount = userLookup.countAccessesForCompany(company.getId());
 
             int criticalAnomalies = 0;
             int totalAnomalies = 0;

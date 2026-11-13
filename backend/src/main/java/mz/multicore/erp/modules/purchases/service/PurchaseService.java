@@ -1,10 +1,10 @@
 package mz.multicore.erp.modules.purchases.service;
 
 import mz.multicore.erp.modules.audit.service.AuditLogService;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.purchases.dto.CreatePurchaseRequest;
@@ -51,37 +51,37 @@ public class PurchaseService {
     public PurchaseService(
             SupplierRepository supplierRepository,
             PurchaseRepository purchaseRepository,
-            ProductRepository productRepository,
-            WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            ProductLookup productLookup,
+            WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             InventoryService inventoryService,
             FinanceService financeService,
             DocumentNumberService documentNumberService,
             AuditLogService auditLogService,
             ApplicationEventPublisher eventPublisher
     ) {
-        this(new SupplierManagementService(supplierRepository, companyRepository, auditLogService),
-                createDirectPurchaseService(supplierRepository, purchaseRepository, productRepository,
-                        warehouseRepository, companyRepository, inventoryService, financeService,
+        this(new SupplierManagementService(supplierRepository, companyLookup, auditLogService),
+                createDirectPurchaseService(supplierRepository, purchaseRepository, productLookup,
+                        warehouseLookup, companyLookup, inventoryService, financeService,
                         documentNumberService, eventPublisher),
                 new SupplierPaymentService(purchaseRepository, financeService, eventPublisher, auditLogService,
-                        createDirectPurchaseService(supplierRepository, purchaseRepository, productRepository,
-                                warehouseRepository, companyRepository, inventoryService, financeService,
+                        createDirectPurchaseService(supplierRepository, purchaseRepository, productLookup,
+                                warehouseLookup, companyLookup, inventoryService, financeService,
                                 documentNumberService, eventPublisher)));
     }
 
     private static DirectPurchaseService createDirectPurchaseService(
             SupplierRepository supplierRepository,
             PurchaseRepository purchaseRepository,
-            ProductRepository productRepository,
-            WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
+            ProductLookup productLookup,
+            WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             InventoryService inventoryService,
             FinanceService financeService,
             DocumentNumberService documentNumberService,
             ApplicationEventPublisher eventPublisher) {
-        return new DirectPurchaseService(supplierRepository, purchaseRepository, productRepository,
-                warehouseRepository, companyRepository, inventoryService, financeService,
+        return new DirectPurchaseService(supplierRepository, purchaseRepository, productLookup,
+                warehouseLookup, companyLookup, inventoryService, financeService,
                 documentNumberService, eventPublisher);
     }
 

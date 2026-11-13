@@ -12,10 +12,13 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.repository.*;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
@@ -144,8 +147,8 @@ class BusinessUnitHarnessTest {
         businessUnitService = new BusinessUnitService(
                 businessUnitRepository,
                 supplierRepository,
-                companyRepository,
-                productRepository,
+                new CompanyLookup(companyRepository),
+                new ProductLookup(productRepository, mock(ProductCategoryRepository.class)),
                 auditLogService
         );
 
@@ -164,22 +167,22 @@ class BusinessUnitHarnessTest {
                 mock(ProductCategoryRepository.class),
                 invoiceRepository,
                 mock(mz.multicore.erp.modules.approvals.service.ApprovalService.class),
-                companyRepository,
-                warehouseRepository,
+                new CompanyLookup(companyRepository),
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
                 inventoryService,
                 mock(ReceiptRepository.class),
                 mock(mz.multicore.erp.modules.financeira.service.FinanceService.class),
-                mock(mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository.class),
+                mock(mz.multicore.erp.modules.financeira.service.TreasuryAccountLookup.class),
                 mock(OrderRepository.class),
                 mock(OrderLineRepository.class),
                 mock(WalkInClientProvider.class),
                 documentNumberService,
                 auditLogService,
-                mock(mz.multicore.erp.modules.fiscal.repository.TaxRateRepository.class),
+                mock(mz.multicore.erp.modules.fiscal.service.TaxRateLookup.class),
                 receivablesService,
                 mock(ApplicationEventPublisher.class),
                 null,
-                businessUnitRepository
+                new BusinessUnitLookup(businessUnitRepository)
         );
 
         when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));

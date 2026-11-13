@@ -1,9 +1,8 @@
 package mz.multicore.erp.modules.printing;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.fleet.model.FleetManifest;
-import mz.multicore.erp.modules.fleet.repository.FleetManifestRepository;
+import mz.multicore.erp.modules.fleet.service.VehicleLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,25 +10,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FleetManifestPrintService {
 
-    private final FleetManifestRepository manifestRepository;
+    private final VehicleLookup vehicleLookup;
     private final FleetManifestDocumentRenderer documentRenderer;
 
     @Autowired
-    public FleetManifestPrintService(FleetManifestRepository manifestRepository,
+    public FleetManifestPrintService(VehicleLookup vehicleLookup,
                                      FleetManifestDocumentRenderer documentRenderer) {
-        this.manifestRepository = manifestRepository;
+        this.vehicleLookup = vehicleLookup;
         this.documentRenderer = documentRenderer;
     }
 
-    public FleetManifestPrintService(FleetManifestRepository manifestRepository) {
-        this(manifestRepository, new FleetManifestDocumentRenderer());
+    public FleetManifestPrintService(VehicleLookup vehicleLookup) {
+        this(vehicleLookup, new FleetManifestDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
     public byte[] renderA4(Long manifestId) {
         Long companyId = CurrentUserContext.getCurrentCompanyId();
-        FleetManifest manifest = manifestRepository.findByIdAndCompanyIdWithStops(manifestId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Manifesto de carga não encontrado: " + manifestId));
+        FleetManifest manifest = vehicleLookup.requireManifestForCompany(manifestId, companyId);
         return documentRenderer.renderA4(manifest);
     }
 }

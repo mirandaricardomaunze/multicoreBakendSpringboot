@@ -1,18 +1,21 @@
 package mz.multicore.erp.architecture;
 
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.comercial.service.ClientCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.service.CRMService;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountProvisioningService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateCommandService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
 import mz.multicore.erp.modules.hr.service.HRService;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.inventory.service.StockMovementService;
+import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
+import mz.multicore.erp.modules.purchases.service.SupplierCommandService;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -40,30 +43,33 @@ public class DataLoader implements CommandLineRunner {
     }
 
     public DataLoader(
-            EmployeeRepository employeeRepository,
-            ClientRepository clientRepository,
-            ProductRepository productRepository,
-            TreasuryAccountRepository accountRepository,
+            EmployeeCommandService employeeCommandService,
+            ClientCommandService clientCommandService,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
+            TreasuryAccountProvisioningService treasuryAccounts,
             HRService hrService,
             CRMService crmService,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository,
-            StockRepository stockRepository,
-            AppUserRepository appUserRepository,
-            SupplierRepository supplierRepository,
-            TaxRateRepository taxRateRepository,
-            ProductCategoryRepository productCategoryRepository,
+            CompanyLookup companyLookup,
+            CompanyService companyService,
+            WarehouseCommandService warehouseCommandService,
+            StockMovementService stockMovementService,
+            AppUserLookup userLookup,
+            AppUserCommandService userCommands,
+            SupplierCommandService supplierCommandService,
+            TaxRateLookup taxRateLookup,
+            TaxRateCommandService taxRateCommands,
             boolean seedDemoData,
             String superAdminPassword,
             PasswordEncoder passwordEncoder) {
         this.seedDemoData = seedDemoData;
         this.referenceSeeder = new ReferenceAndAdminDataSeeder(
-                companyRepository, appUserRepository, taxRateRepository,
-                productCategoryRepository, superAdminPassword, passwordEncoder);
+                companyLookup, userLookup, userCommands, taxRateLookup, taxRateCommands,
+                productLookup, productCommandService, superAdminPassword, passwordEncoder);
         this.demoSeeder = new DemoEnterpriseDataSeeder(
-                employeeRepository, clientRepository, productRepository, accountRepository,
-                hrService, crmService, companyRepository, warehouseRepository, stockRepository,
-                appUserRepository, supplierRepository, taxRateRepository, productCategoryRepository,
+                employeeCommandService, clientCommandService, productLookup, productCommandService, treasuryAccounts,
+                hrService, crmService, companyLookup, companyService, warehouseCommandService, stockMovementService,
+                userCommands, supplierCommandService, taxRateLookup, taxRateCommands,
                 passwordEncoder, this.referenceSeeder);
     }
 

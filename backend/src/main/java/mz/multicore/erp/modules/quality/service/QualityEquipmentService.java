@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.paging.PageResponse;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.company.service.CompanyService;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeLookup;
 import mz.multicore.erp.modules.quality.dto.*;
 import mz.multicore.erp.modules.quality.repository.EquipmentRepository;
 import mz.multicore.erp.modules.quality.repository.WorkerEquipmentAssignmentRepository;
@@ -40,12 +40,12 @@ public class QualityEquipmentService {
     public QualityEquipmentService(
             EquipmentRepository equipmentRepository,
             WorkerEquipmentAssignmentRepository assignmentRepository,
-            EmployeeRepository employeeRepository,
+            EmployeeLookup employeeLookup,
             CompanyService companyService
     ) {
         this.catalogService = new EquipmentCatalogService(equipmentRepository, companyService);
         this.assignmentService = new WorkerEquipmentAssignmentService(
-                equipmentRepository, assignmentRepository, employeeRepository, companyService);
+                equipmentRepository, assignmentRepository, employeeLookup, companyService);
         this.monitoringService = new QualityMonitoringService(equipmentRepository, assignmentRepository);
     }
 

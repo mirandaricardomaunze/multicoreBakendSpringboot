@@ -5,6 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateSalaryChangeRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
 import mz.multicore.erp.modules.hr.model.SalaryChange;
@@ -51,7 +52,7 @@ class SalaryHistoryServiceTest {
         companyRepository = mock(CompanyRepository.class);
         auditLogService = mock(AuditLogService.class);
         service = new SalaryHistoryService(salaryChangeRepository, employeeRepository,
-                companyRepository, auditLogService);
+                new CompanyLookup(companyRepository), auditLogService);
 
         Company company = new Company();
         company.setId(COMPANY);

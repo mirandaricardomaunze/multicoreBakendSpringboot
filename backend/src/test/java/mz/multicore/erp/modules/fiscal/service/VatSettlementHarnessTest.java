@@ -30,13 +30,24 @@ class VatSettlementHarnessTest {
 
     private InvoiceRepository invoiceRepository;
     private PurchaseRepository purchaseRepository;
+    private mz.multicore.erp.modules.comercial.repository.CreditNoteRepository creditNotes;
+    private mz.multicore.erp.modules.comercial.repository.DebitNoteRepository debitNotes;
     private FiscalSummaryService fiscalSummaryService;
 
     @BeforeEach
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
         purchaseRepository = mock(PurchaseRepository.class);
-        fiscalSummaryService = new FiscalSummaryService(invoiceRepository, purchaseRepository);
+        creditNotes = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
+        debitNotes = mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class);
+        fiscalSummaryService = new FiscalSummaryService(
+                new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
+                new mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup(creditNotes, debitNotes),
+                new mz.multicore.erp.modules.purchases.service.SupplierLookup(
+                        mock(mz.multicore.erp.modules.purchases.repository.SupplierRepository.class),
+                        purchaseRepository,
+                        mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository.class),
+                        mock(mz.multicore.erp.modules.purchases.repository.SupplierReturnRepository.class)));
         CurrentUserContext.setCurrentUser("admin", "ADMIN");
         CurrentUserContext.setCurrentCompanyId(COMPANY_ID);
     }
@@ -134,9 +145,7 @@ class VatSettlementHarnessTest {
 
     @Test
     void partiallyPaidInvoicesAndApprovedNotesCountInTheMonth() {
-        var creditNotes = mock(mz.multicore.erp.modules.comercial.repository.CreditNoteRepository.class);
-        var debitNotes = mock(mz.multicore.erp.modules.comercial.repository.DebitNoteRepository.class);
-        FiscalSummaryService service = new FiscalSummaryService(invoiceRepository, purchaseRepository, creditNotes, debitNotes, null);
+        FiscalSummaryService service = fiscalSummaryService;
         Invoice partial = createInvoice("FT-010", new BigDecimal("10000.00"), new BigDecimal("1600.00"),
                 new BigDecimal("11600.00"), InvoiceStatus.PARTIALLY_PAID);
         mz.multicore.erp.modules.comercial.model.CreditNote note = new mz.multicore.erp.modules.comercial.model.CreditNote();

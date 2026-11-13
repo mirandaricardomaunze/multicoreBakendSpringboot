@@ -9,7 +9,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,15 +20,15 @@ public class OrderPickingPrintService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    private final OrderRepository orderRepository;
+    private final OrderLookup orderLookup;
 
-    public OrderPickingPrintService(OrderRepository orderRepository) {
-        this.orderRepository = orderRepository;
+    public OrderPickingPrintService(OrderLookup orderLookup) {
+        this.orderLookup = orderLookup;
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long orderId, boolean reprint) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderLookup.findOrder(orderId)
                 .orElseThrow(() -> new BusinessRuleException("Pedido nao encontrado."));
         CurrentUserContext.requireCompany(order.getCompany().getId());
         return PdfDocumentBuilder.buildReceipt(doc -> render(doc, order, reprint));

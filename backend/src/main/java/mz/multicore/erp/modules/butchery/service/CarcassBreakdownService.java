@@ -10,13 +10,12 @@ import mz.multicore.erp.modules.butchery.model.*;
 import mz.multicore.erp.modules.butchery.repository.BreakdownTemplateRepository;
 import mz.multicore.erp.modules.butchery.repository.CarcassBreakdownRepository;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.model.Stock;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.AverageCostUpdater;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
@@ -41,10 +40,10 @@ public class CarcassBreakdownService {
 
     private final BreakdownTemplateRepository templateRepository;
     private final CarcassBreakdownRepository breakdownRepository;
-    private final ProductRepository productRepository;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
+    private final ProductLookup productLookup;
+    private final CompanyLookup companyLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
     private final StockMovementRegistrationService movementService;
     private final AverageCostUpdater averageCost;
     private final DocumentNumberService documentNumberService;
@@ -52,17 +51,17 @@ public class CarcassBreakdownService {
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public CarcassBreakdownService(BreakdownTemplateRepository templateRepository, CarcassBreakdownRepository breakdownRepository,
-                                   ProductRepository productRepository, CompanyRepository companyRepository,
-                                   WarehouseRepository warehouseRepository, StockRepository stockRepository,
+                                   ProductLookup productLookup, CompanyLookup companyLookup,
+                                   WarehouseLookup warehouseLookup, StockLookup stockLookup,
                                    StockMovementRegistrationService movementService, AverageCostUpdater averageCost,
                                    DocumentNumberService documentNumberService, AuditLogService auditLogService,
                                    org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.templateRepository = templateRepository;
         this.breakdownRepository = breakdownRepository;
-        this.productRepository = productRepository;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
+        this.productLookup = productLookup;
+        this.companyLookup = companyLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
         this.movementService = movementService;
         this.averageCost = averageCost;
         this.documentNumberService = documentNumberService;
@@ -131,9 +130,7 @@ public class CarcassBreakdownService {
         var existing = breakdownRepository.findByCompanyIdAndRequestKey(request.companyId(), request.requestKey());
         if (existing.isPresent()) return toDto(existing.get());
 
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany() != null && request.companyId().equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse warehouse = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         Product source = trackedProduct(request.companyId(), request.sourceProductId());
         BreakdownTemplate template = request.templateId() == null ? null
                 : templateRepository.findByIdAndCompanyId(request.templateId(), request.companyId())
@@ -216,8 +213,7 @@ public class CarcassBreakdownService {
         }
         String description = "Anulação da desmancha " + breakdown.getNumber() + " - " + request.reason().trim();
         for (CarcassBreakdownLine line : breakdown.getLines()) {
-            BigDecimal available = stockRepository.findByProductIdAndWarehouseId(line.getProduct().getId(), breakdown.getWarehouse().getId())
-                    .map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+            BigDecimal available = stockLookup.quantityOf(line.getProduct().getId(), breakdown.getWarehouse().getId());
             if (available.compareTo(line.getKg()) < 0) {
                 throw new BusinessRuleException("Já não há " + DisplayNumbers.qty(line.getKg()) + " kg de " + line.getProduct().getName()
                         + " em stock (há " + DisplayNumbers.qty(available) + " kg): parte já foi vendida e a desmancha não se anula.");
@@ -241,7 +237,7 @@ public class CarcassBreakdownService {
     }
 
     private Product trackedProduct(Long companyId, Long productId) {
-        Product product = productRepository.findByIdAndCompaniesId(productId, companyId)
+        Product product = productLookup.findForCompany(productId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa (ID " + productId + ")."));
         if (!product.isStockTracked()) {
             throw new BusinessRuleException("O artigo '" + product.getName() + "' não controla stock e não entra numa desmancha.");
@@ -250,7 +246,7 @@ public class CarcassBreakdownService {
     }
 
     private Company company(Long companyId) {
-        return companyRepository.findById(companyId).orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        return companyLookup.require(companyId);
     }
 
     private static BigDecimal expectedYield(BreakdownTemplate template, Long productId) {

@@ -88,7 +88,7 @@ class ApprovalServiceDecompositionHarnessTest {
                 .contains("public ApprovalRequestDTO approveRequest(Long requestId, String comments)")
                 .contains("public ApprovalRequestDTO rejectRequest(Long requestId, String reason)")
                 .contains("public void cancelPendingForDocument(String documentType, Long documentId, String reason)")
-                .contains("CompanyRepository companyRepository)")
-                .contains("ObjectProvider<StockWasteRepository> stockWasteRepository)");
+                .contains("CompanyLookup companyLookup)")
+                .contains("ObjectProvider<StockWasteLookup> stockWasteLookup)");
     }
 }

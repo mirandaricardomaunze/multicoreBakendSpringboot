@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.support.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.support.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.support.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.support.model.SupportTicket;
@@ -33,7 +33,7 @@ class SupportServiceTest {
     void setUp() {
         ticketRepository = mock(PlatformSupportTicketRepository.class);
         messageRepository = mock(SupportMessageRepository.class);
-        service = new SupportService(ticketRepository, messageRepository, mock(CompanyRepository.class));
+        service = new SupportService(ticketRepository, messageRepository, mock(CompanyLookup.class));
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(i -> {
             SupportTicket t = i.getArgument(0);
             if (t.getId() == null) t.setId(100L);

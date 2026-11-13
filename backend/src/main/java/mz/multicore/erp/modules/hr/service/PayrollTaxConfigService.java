@@ -2,7 +2,7 @@ package mz.multicore.erp.modules.hr.service;
 
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.PayrollTaxConfigDTO;
 import mz.multicore.erp.modules.hr.dto.SavePayrollTaxConfigRequest;
 import mz.multicore.erp.modules.hr.model.PayrollIrpsBracket;
@@ -16,11 +16,11 @@ import java.util.List;
 @Service
 public class PayrollTaxConfigService {
     private final PayrollTaxConfigRepository repository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
-    public PayrollTaxConfigService(PayrollTaxConfigRepository repository, CompanyRepository companyRepository) {
+    public PayrollTaxConfigService(PayrollTaxConfigRepository repository, CompanyLookup companyLookup) {
         this.repository = repository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     @Transactional(readOnly = true)
@@ -35,8 +35,7 @@ public class PayrollTaxConfigService {
             throw new BusinessRuleException("A data final da configuração fiscal é inválida.");
         }
         PayrollTaxConfig config = new PayrollTaxConfig();
-        config.setCompany(companyRepository.findById(CurrentUserContext.getCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa ativa não encontrada.")));
+        config.setCompany(companyLookup.requireActive(CurrentUserContext.getCurrentCompanyId()));
         config.setName(request.name().trim());
         config.setEffectiveFrom(request.effectiveFrom());
         config.setEffectiveTo(request.effectiveTo());

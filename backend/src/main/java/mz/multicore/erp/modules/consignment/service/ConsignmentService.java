@@ -10,9 +10,9 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.consignment.dto.*;
@@ -21,11 +21,10 @@ import mz.multicore.erp.modules.consignment.model.ConsignmentLine;
 import mz.multicore.erp.modules.consignment.model.ConsignmentStatus;
 import mz.multicore.erp.modules.consignment.repository.ConsignmentDeliveryRepository;
 import mz.multicore.erp.modules.inventory.dto.CreateStockWasteRequest;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.model.WasteReason;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.StockWasteService;
 import mz.multicore.erp.modules.inventory.service.TransitWarehouseProvider;
@@ -52,11 +51,11 @@ public class ConsignmentService {
     private static final String MOVEMENT_TYPE = "TRANSFER";
 
     private final ConsignmentDeliveryRepository deliveryRepository;
-    private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final ClientLookup clientLookup;
+    private final ProductLookup productLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
+    private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService movementService;
     private final StockWasteService wasteService;
     private final TransitWarehouseProvider transitWarehouses;
@@ -65,20 +64,20 @@ public class ConsignmentService {
     private final DocumentNumberService documentNumberService;
     private final AuditLogService auditLogService;
 
-    public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientRepository clientRepository,
-                              ProductRepository productRepository, WarehouseRepository warehouseRepository,
-                              StockRepository stockRepository, InvoiceRepository invoiceRepository,
+    public ConsignmentService(ConsignmentDeliveryRepository deliveryRepository, ClientLookup clientLookup,
+                              ProductLookup productLookup, WarehouseLookup warehouseLookup,
+                              StockLookup stockLookup, InvoiceLookup invoiceLookup,
                               StockMovementRegistrationService movementService, StockWasteService wasteService,
                               TransitWarehouseProvider transitWarehouses,
                               mz.multicore.erp.modules.inventory.service.InventoryService inventoryService,
                               ComercialService comercialService, DocumentNumberService documentNumberService,
                               AuditLogService auditLogService) {
         this.deliveryRepository = deliveryRepository;
-        this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.clientLookup = clientLookup;
+        this.productLookup = productLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
+        this.invoiceLookup = invoiceLookup;
         this.movementService = movementService;
         this.wasteService = wasteService;
         this.transitWarehouses = transitWarehouses;
@@ -102,14 +101,11 @@ public class ConsignmentService {
         PermissionGuard.requireSeller("entregar em consignação");
         var existing = deliveryRepository.findByCompanyIdAndRequestKey(request.companyId(), request.requestKey());
         if (existing.isPresent()) return toDto(existing.get());
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Revendedor não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("A consignação é para um revendedor identificado, não para o Consumidor Final.");
         }
-        Warehouse source = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany() != null && request.companyId().equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse source = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         Warehouse consignment = consignmentWarehouse(source);
         if (consignment.getId().equals(source.getId())) throw new BusinessRuleException("Escolha o armazém da loja, não o de consignação.");
 
@@ -127,7 +123,7 @@ public class ConsignmentService {
         Set<Long> seen = new HashSet<>();
         for (DeliverLineRequest l : request.lines()) {
             if (!seen.add(l.productId())) throw new BusinessRuleException("Cada artigo só aparece uma vez na guia.");
-            Product product = productRepository.findByIdAndCompaniesId(l.productId(), request.companyId())
+            Product product = productLookup.findForCompany(l.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Artigo não encontrado (ID " + l.productId() + ")."))
                     .requireOrdinarySale();
             if (product.isStockTracked()) {
@@ -192,7 +188,7 @@ public class ConsignmentService {
         if (!invoiceLines.isEmpty()) {
             InvoiceDTO invoice = comercialService.createInvoice(new CreateInvoiceRequest(delivery.getClient().getId(), request.companyId(),
                     delivery.getConsignmentWarehouse().getId(), invoiceLines));
-            delivery.setInvoice(invoiceRepository.findById(invoice.id()).orElseThrow());
+            delivery.setInvoice(invoiceLookup.find(invoice.id()).orElseThrow());
         }
         delivery.setStatus(ConsignmentStatus.SETTLED);
         delivery.setSettledAt(LocalDateTime.now());
@@ -219,7 +215,7 @@ public class ConsignmentService {
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId).map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return stockLookup.quantityOf(productId, warehouseId);
     }
 
     static ConsignmentDTO toDto(ConsignmentDelivery d) {

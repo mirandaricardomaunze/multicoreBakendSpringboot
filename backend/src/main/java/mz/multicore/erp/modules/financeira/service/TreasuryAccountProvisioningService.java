@@ -28,6 +28,12 @@ public class TreasuryAccountProvisioningService {
     /** Opens a bank account with a zero balance. The caller is responsible for authorisation. */
     @Transactional
     public Long openBankAccount(Company company, String bankName, String accountNumber) {
+        return openBankAccount(company, bankName, accountNumber, BigDecimal.ZERO);
+    }
+
+    /** Opens a bank account with the given opening balance (e.g. demo data). */
+    @Transactional
+    public Long openBankAccount(Company company, String bankName, String accountNumber, BigDecimal openingBalance) {
         if (company == null || company.getId() == null) {
             throw new BusinessRuleException("Empresa não encontrada.");
         }
@@ -41,7 +47,7 @@ public class TreasuryAccountProvisioningService {
         account.setName(bankName.trim());
         account.setAccountNumber(accountNumber.trim());
         account.setAccountType(TreasuryAccountType.BANK);
-        account.setBalance(BigDecimal.ZERO);
+        account.setBalance(openingBalance == null ? BigDecimal.ZERO : openingBalance);
         account.setCompany(company);
         account.setCreatedBy(CurrentUserContext.getUsername());
         return treasuryAccountRepository.save(account).getId();

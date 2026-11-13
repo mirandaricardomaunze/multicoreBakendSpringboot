@@ -7,7 +7,8 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Order;
 import mz.multicore.erp.modules.comercial.model.OrderLine;
 import mz.multicore.erp.modules.comercial.model.OrderStatus;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.service.OrderCommandService;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
 import mz.multicore.erp.modules.customorders.dto.*;
 import mz.multicore.erp.modules.customorders.model.CustomOrderStage;
 import mz.multicore.erp.modules.customorders.model.DeliveryMode;
@@ -36,15 +37,18 @@ public class CustomOrderService {
 
     private final CustomOrderAgendaRepository agendaRepository;
     private final OrderCustomizationRepository customizationRepository;
-    private final OrderRepository orderRepository;
+    private final OrderLookup orderLookup;
+    private final OrderCommandService orderCommands;
     private final ProductionPlanService planService;
     private final AuditLogService auditLogService;
 
     public CustomOrderService(CustomOrderAgendaRepository agendaRepository, OrderCustomizationRepository customizationRepository,
-                              OrderRepository orderRepository, ProductionPlanService planService, AuditLogService auditLogService) {
+                              OrderLookup orderLookup, OrderCommandService orderCommands,
+                              ProductionPlanService planService, AuditLogService auditLogService) {
         this.agendaRepository = agendaRepository;
         this.customizationRepository = customizationRepository;
-        this.orderRepository = orderRepository;
+        this.orderLookup = orderLookup;
+        this.orderCommands = orderCommands;
         this.planService = planService;
         this.auditLogService = auditLogService;
     }
@@ -85,7 +89,7 @@ public class CustomOrderService {
             return created;
         });
         order.setExpectedDeliveryDate(request.deliveryDate());
-        orderRepository.save(order);
+        orderCommands.saveOrder(order);
         c.setDeliveryTime(request.deliveryTime());
         c.setMode(request.mode());
         c.setDeliveryAddress(blankToNull(request.deliveryAddress()));
@@ -169,7 +173,7 @@ public class CustomOrderService {
     public record Sheet(Order order, OrderCustomization customization, CustomOrderDTO view) {}
 
     private Order requireOrder(Long orderId, Long companyId) {
-        return orderRepository.findById(orderId).filter(o -> o.getCompany() != null && companyId.equals(o.getCompany().getId()))
+        return orderLookup.findOrderForCompany(orderId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada."));
     }
 

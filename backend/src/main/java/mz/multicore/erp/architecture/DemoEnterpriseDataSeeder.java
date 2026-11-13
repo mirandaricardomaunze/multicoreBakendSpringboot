@@ -3,32 +3,31 @@ package mz.multicore.erp.architecture;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ClientCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.crm.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.crm.service.CRMService;
-import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
-import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.financeira.service.TreasuryAccountProvisioningService;
 import mz.multicore.erp.modules.fiscal.model.TaxRate;
-import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
+import mz.multicore.erp.modules.fiscal.service.TaxRateCommandService;
+import mz.multicore.erp.modules.fiscal.service.TaxRateLookup;
 import mz.multicore.erp.modules.hr.dto.CreateExpenseClaimRequest;
 import mz.multicore.erp.modules.hr.model.Employee;
-import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
+import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
 import mz.multicore.erp.modules.hr.service.HRService;
-import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockMovementService;
+import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.model.Supplier;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierCommandService;
 import mz.multicore.erp.modules.users.model.AppUser;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -39,49 +38,55 @@ import java.util.List;
 @Component
 public class DemoEnterpriseDataSeeder {
 
-    private final EmployeeRepository employeeRepository;
-    private final ClientRepository clientRepository;
-    private final ProductRepository productRepository;
-    private final TreasuryAccountRepository accountRepository;
+    private final EmployeeCommandService employeeCommandService;
+    private final ClientCommandService clientCommandService;
+    private final ProductLookup productLookup;
+    private final ProductCommandService productCommandService;
+    private final TreasuryAccountProvisioningService treasuryAccounts;
     private final HRService hrService;
     private final CRMService crmService;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
-    private final AppUserRepository appUserRepository;
-    private final SupplierRepository supplierRepository;
-    private final TaxRateRepository taxRateRepository;
-    private final ProductCategoryRepository productCategoryRepository;
+    private final CompanyLookup companyLookup;
+    private final CompanyService companyService;
+    private final WarehouseCommandService warehouseCommandService;
+    private final StockMovementService stockMovementService;
+    private final AppUserCommandService userCommands;
+    private final SupplierCommandService supplierCommandService;
+    private final TaxRateLookup taxRateLookup;
+    private final TaxRateCommandService taxRateCommands;
     private final PasswordEncoder passwordEncoder;
     private final ReferenceAndAdminDataSeeder referenceSeeder;
 
     public DemoEnterpriseDataSeeder(
-            EmployeeRepository employeeRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, TreasuryAccountRepository accountRepository,
-            HRService hrService, CRMService crmService, CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository, StockRepository stockRepository,
-            AppUserRepository appUserRepository, SupplierRepository supplierRepository,
-            TaxRateRepository taxRateRepository, ProductCategoryRepository productCategoryRepository,
+            EmployeeCommandService employeeCommandService, ClientCommandService clientCommandService,
+            ProductLookup productLookup, ProductCommandService productCommandService,
+            TreasuryAccountProvisioningService treasuryAccounts,
+            HRService hrService, CRMService crmService,
+            CompanyLookup companyLookup, CompanyService companyService,
+            WarehouseCommandService warehouseCommandService, StockMovementService stockMovementService,
+            AppUserCommandService userCommands, SupplierCommandService supplierCommandService,
+            TaxRateLookup taxRateLookup, TaxRateCommandService taxRateCommands,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
-        this.employeeRepository = employeeRepository;
-        this.clientRepository = clientRepository;
-        this.productRepository = productRepository;
-        this.accountRepository = accountRepository;
+        this.employeeCommandService = employeeCommandService;
+        this.clientCommandService = clientCommandService;
+        this.productLookup = productLookup;
+        this.productCommandService = productCommandService;
+        this.treasuryAccounts = treasuryAccounts;
         this.hrService = hrService;
         this.crmService = crmService;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
-        this.appUserRepository = appUserRepository;
-        this.supplierRepository = supplierRepository;
-        this.taxRateRepository = taxRateRepository;
-        this.productCategoryRepository = productCategoryRepository;
+        this.companyLookup = companyLookup;
+        this.companyService = companyService;
+        this.warehouseCommandService = warehouseCommandService;
+        this.stockMovementService = stockMovementService;
+        this.userCommands = userCommands;
+        this.supplierCommandService = supplierCommandService;
+        this.taxRateLookup = taxRateLookup;
+        this.taxRateCommands = taxRateCommands;
         this.passwordEncoder = passwordEncoder;
         this.referenceSeeder = referenceSeeder;
     }
 
     public void seedDemoEnvironment() {
-        if (companyRepository.count() > 0) {
+        if (companyLookup.count() > 0) {
             referenceSeeder.seedDefaultAdmin();
             return;
         }
@@ -89,15 +94,15 @@ public class DemoEnterpriseDataSeeder {
         Company mzCompany = createCompany("Multicore Moçambique Lda", "400123456", "contacto@multicore.co.mz", "Avenida 24 de Julho 1500, Maputo");
         referenceSeeder.seedDefaultAdmin(ptCompany, mzCompany);
 
-        productCategoryRepository.findAll().forEach(category -> {
+        productLookup.findAllCategories().forEach(category -> {
             category.getCompanies().add(ptCompany);
             category.getCompanies().add(mzCompany);
-            productCategoryRepository.save(category);
+            productCommandService.saveCategory(category);
         });
-        taxRateRepository.findAll().forEach(rate -> {
+        taxRateLookup.listAll().forEach(rate -> {
             rate.getCompanies().add(ptCompany);
             rate.getCompanies().add(mzCompany);
-            taxRateRepository.save(rate);
+            taxRateCommands.saveTaxRate(rate);
         });
 
         AppUser mariaUser = createAppUser("maria", "Maria Santos", "EMPLOYEE");
@@ -107,7 +112,7 @@ public class DemoEnterpriseDataSeeder {
         joaoUser.grantCompany(ptCompany, "MANAGER");
         anaUser.grantCompany(ptCompany, "ADMIN");
         anaUser.grantCompany(mzCompany, "ADMIN");
-        appUserRepository.saveAll(List.of(mariaUser, joaoUser, anaUser));
+        userCommands.saveUsers(List.of(mariaUser, joaoUser, anaUser));
 
         Warehouse whLisboa = createWarehouse("Armazém Lisboa Central", "Lisboa", ptCompany);
         createWarehouse("Armazém Porto Norte", "Porto", ptCompany);
@@ -127,9 +132,9 @@ public class DemoEnterpriseDataSeeder {
         Client techSol = createClient("Tech Solutions Lda", "501234567", "financeiro@techsolutions.pt", "Avenida da Boavista 1200, Porto", ptCompany);
         Client padaria = createClient("Padaria Central do Minho", "509876543", "geral@padariaminho.pt", "Rua Principal 45, Braga", ptCompany);
 
-        TaxRate ivaExempt = taxRateRepository.findByCode("IVAEXMT").orElse(null);
-        TaxRate ivaReduced = taxRateRepository.findByCode("IVA5").orElse(null);
-        TaxRate ivaNormal = taxRateRepository.findByCode("IVA16").orElse(null);
+        TaxRate ivaExempt = taxRateLookup.findByCode("IVAEXMT").orElse(null);
+        TaxRate ivaReduced = taxRateLookup.findByCode("IVA5").orElse(null);
+        TaxRate ivaNormal = taxRateLookup.findByCode("IVA16").orElse(null);
 
         Product erpLic = createProduct("MER-ARROZ-5KG", "MRC-0001", "5601000000017", "Arroz Agulha 5kg", "550.00", "430.00", "20.000", "Saco de arroz agulha de 5kg", ivaExempt, ptCompany, mzCompany);
         Product support = createProduct("MER-ACUCAR-1KG", "MRC-0002", "5601000000024", "Açúcar Branco 1kg", "95.00", "72.00", "40.000", "Pacote de açúcar branco refinado de 1kg", ivaExempt, ptCompany, mzCompany);
@@ -153,7 +158,7 @@ public class DemoEnterpriseDataSeeder {
         c.setTaxId(taxId);
         c.setEmail(email);
         c.setAddress(address);
-        return companyRepository.save(c);
+        return companyService.saveCompany(c);
     }
 
     private AppUser createAppUser(String username, String name, String role) {
@@ -163,7 +168,7 @@ public class DemoEnterpriseDataSeeder {
         u.setPassword(passwordEncoder.encode("password"));
         u.setRole(role);
         u.setActive(true);
-        return appUserRepository.save(u);
+        return userCommands.saveUser(u);
     }
 
     private Warehouse createWarehouse(String name, String location, Company company) {
@@ -171,7 +176,7 @@ public class DemoEnterpriseDataSeeder {
         w.setName(name);
         w.setLocation(location);
         w.setCompany(company);
-        return warehouseRepository.save(w);
+        return warehouseCommandService.saveWarehouse(w);
     }
 
     private void createSupplier(String name, String taxId, String email, String address, Company company) {
@@ -181,7 +186,7 @@ public class DemoEnterpriseDataSeeder {
         s.setEmail(email);
         s.setAddress(address);
         s.setCompany(company);
-        supplierRepository.save(s);
+        supplierCommandService.saveSupplier(s);
     }
 
     private Employee createEmployee(Company company, String number, String name, String email,
@@ -197,7 +202,7 @@ public class DemoEnterpriseDataSeeder {
         e.setHireDate(hireDate);
         e.setCreatedBy("SYSTEM");
         e.setAppUser(appUser);
-        return employeeRepository.save(e);
+        return employeeCommandService.saveEmployee(e);
     }
 
     private Client createClient(String name, String taxId, String email, String address, Company company) {
@@ -207,7 +212,7 @@ public class DemoEnterpriseDataSeeder {
         c.setEmail(email);
         c.setAddress(address);
         c.getCompanies().add(company);
-        return clientRepository.save(c);
+        return clientCommandService.saveClient(c);
     }
 
     private Product createProduct(String sku, String reference, String barcode, String name,
@@ -224,7 +229,7 @@ public class DemoEnterpriseDataSeeder {
         p.setDescription(desc);
         p.setTaxRate(taxRate);
         p.getCompanies().addAll(List.of(companies));
-        return productRepository.save(p);
+        return productCommandService.saveProduct(p);
     }
 
     private void seedWarehouseStocks(Warehouse wh, Product erpLic, Product support, String supportQty,
@@ -237,22 +242,15 @@ public class DemoEnterpriseDataSeeder {
         seedStock(massa, wh, "160.000");
     }
 
+    /** Saldo inicial pelo ledger do inventário: grava movimento, lote e saldo juntos. */
     private void seedStock(Product product, Warehouse warehouse, String quantity) {
-        Stock stock = new Stock();
-        stock.setProduct(product);
-        stock.setWarehouse(warehouse);
-        stock.setQuantity(new BigDecimal(quantity));
-        stockRepository.save(stock);
+        CurrentUserContext.runAsSystem(warehouse.getCompany().getId(), () ->
+                stockMovementService.registerMovement(product, warehouse, new BigDecimal(quantity),
+                        "ENTRY", null, null, "Stock inicial (demonstração)"));
     }
 
     private void createTreasuryAccount(String name, String accountNumber, String balance, Company company) {
-        TreasuryAccount a = new TreasuryAccount();
-        a.setName(name);
-        a.setAccountNumber(accountNumber);
-        a.setAccountType(TreasuryAccountType.BANK);
-        a.setBalance(new BigDecimal(balance));
-        a.setCompany(company);
-        accountRepository.save(a);
+        treasuryAccounts.openBankAccount(company, name, accountNumber, new BigDecimal(balance));
     }
 
     private void seedTicketsAndExpenses(Client padaria, Client techSol, Employee maria, Employee joao) {

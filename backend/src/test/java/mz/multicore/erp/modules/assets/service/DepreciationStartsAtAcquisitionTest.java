@@ -30,7 +30,8 @@ class DepreciationStartsAtAcquisitionTest {
         when(assets.findByCompanyIdOrderByAssetCodeAsc(1L)).thenReturn(List.of(april, june));
         when(companies.findById(1L)).thenReturn(Optional.of(new Company()));
 
-        var results = new AssetDepreciationBatchService(assets, mock(AssetDepreciationRecordRepository.class), companies,
+        var results = new AssetDepreciationBatchService(assets, mock(AssetDepreciationRecordRepository.class),
+                new mz.multicore.erp.modules.company.service.CompanyLookup(companies),
                 new AssetDepreciationEngine(), mock(ApplicationEventPublisher.class)).runMonthlyDepreciation(1L, 2026, 5);
 
         assertThat(results).extracting(r -> r.assetCode()).containsExactly("COMP-01");

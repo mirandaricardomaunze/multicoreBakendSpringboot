@@ -4,7 +4,8 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.company.service.CompanyService;
 import mz.multicore.erp.modules.inventory.dto.CreateWarehouseRequest;
 import mz.multicore.erp.modules.inventory.dto.WarehouseDTO;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
@@ -33,14 +34,12 @@ public class WarehouseService {
         this.queryService = queryService;
     }
 
-    public WarehouseService(
-            WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository,
-            AuditLogService auditLogService) {
-        WarehouseQueryService query = new WarehouseQueryService(warehouseRepository, companyRepository);
+    public WarehouseService(WarehouseRepository warehouseRepository, CompanyLookup companyLookup,
+                            CompanyService companyService, AuditLogService auditLogService) {
+        WarehouseQueryService query = new WarehouseQueryService(warehouseRepository, companyLookup);
         this.queryService = query;
         this.lifecycleService = new WarehouseLifecycleService(
-                warehouseRepository, companyRepository, auditLogService, query);
+                warehouseRepository, companyLookup, companyService, auditLogService, query);
     }
 
     @Transactional(readOnly = true)

@@ -49,7 +49,7 @@ class BackupServiceTest {
 
     private BackupService service() {
         return new BackupService(null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null);
     }
 
     private Path writeBackup(String fileName, long companyId) throws Exception {

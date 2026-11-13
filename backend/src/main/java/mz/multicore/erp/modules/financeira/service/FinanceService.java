@@ -1,14 +1,12 @@
 package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.architecture.paging.PageResponse;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.financeira.dto.TreasuryAccountDTO;
 import mz.multicore.erp.modules.financeira.dto.TreasuryTransactionDTO;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,32 +18,26 @@ public class FinanceService {
 
     private final TreasuryOperationService operationService;
     private final TreasuryQueryService queryService;
-    private final InvoiceRepository invoiceRepository;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
-    public FinanceService(TreasuryOperationService operationService, TreasuryQueryService queryService,
-                          @Lazy InvoiceRepository invoiceRepository) {
-        this(operationService, queryService, invoiceRepository, null);
+    public FinanceService(TreasuryOperationService operationService, TreasuryQueryService queryService) {
+        this(operationService, queryService, null);
     }
 
     @Autowired
     public FinanceService(TreasuryOperationService operationService,
                           TreasuryQueryService queryService,
-                          @Lazy InvoiceRepository invoiceRepository,
                           org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.operationService = operationService;
         this.queryService = queryService;
-        this.invoiceRepository = invoiceRepository;
         this.eventPublisher = eventPublisher;
     }
 
     public FinanceService(TreasuryAccountRepository accountRepository,
-                          TreasuryTransactionRepository transactionRepository,
-                          @Lazy InvoiceRepository invoiceRepository) {
+                          TreasuryTransactionRepository transactionRepository) {
         TreasuryOperationService op = new TreasuryOperationService(accountRepository, transactionRepository);
         this.operationService = op;
         this.queryService = new TreasuryQueryService(accountRepository, transactionRepository, op);
-        this.invoiceRepository = invoiceRepository;
         this.eventPublisher = null;
     }
 

@@ -7,10 +7,11 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceLineRequest;
 import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.crm.dto.CreateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.UpdateWorkSheetRequest;
 import mz.multicore.erp.modules.crm.dto.VoidWorkSheetRequest;
@@ -21,7 +22,7 @@ import mz.multicore.erp.modules.crm.model.WorkSheet;
 import mz.multicore.erp.modules.crm.repository.SupportTicketRepository;
 import mz.multicore.erp.modules.crm.repository.WorkSheetRepository;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,10 +37,11 @@ public class WorkSheetService {
 
     private final WorkSheetRepository workSheetRepository;
     private final SupportTicketRepository ticketRepository;
-    private final ProductRepository productRepository;
+    private final ProductCommandService productCommandService;
+    private final ProductLookup productLookup;
     private final ComercialService comercialService;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final CompanyLookup companyLookup;
+    private final WarehouseLookup warehouseLookup;
 
     public static final String LABOUR_SKU = "SERV-TEC";
     public static final String PARTS_SKU = "PECAS-SUP";
@@ -49,17 +51,19 @@ public class WorkSheetService {
     public WorkSheetService(
             WorkSheetRepository workSheetRepository,
             SupportTicketRepository ticketRepository,
-            ProductRepository productRepository,
+            ProductLookup productLookup,
+            ProductCommandService productCommandService,
             ComercialService comercialService,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository
+            CompanyLookup companyLookup,
+            WarehouseLookup warehouseLookup
     ) {
         this.workSheetRepository = workSheetRepository;
         this.ticketRepository = ticketRepository;
-        this.productRepository = productRepository;
+        this.productCommandService = productCommandService;
+        this.productLookup = productLookup;
         this.comercialService = comercialService;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
+        this.companyLookup = companyLookup;
+        this.warehouseLookup = warehouseLookup;
     }
 
     @Transactional
@@ -167,9 +171,8 @@ public class WorkSheetService {
                     BigDecimal.ZERO, null, null));
         }
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada."));
-        Warehouse warehouse = warehouseRepository.findByCompanyId(companyId).stream().findFirst()
+        Company company = companyLookup.requireActive(companyId);
+        Warehouse warehouse = warehouseLookup.listForCompany(companyId).stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException(
                         "Nenhum armazém cadastrado para a empresa " + company.getName()));
 
@@ -208,14 +211,14 @@ public class WorkSheetService {
 
     public Product internalProduct(Long companyId, String sku, String name, BigDecimal unitPrice,
                                    String description) {
-        Product product = productRepository.findBySkuAndCompaniesId(sku, companyId)
+        Product product = productLookup.findBySkuForCompany(sku, companyId)
                 .orElseGet(() -> {
                     Product created = new Product();
                     created.setSku(sku);
                     created.setName(name);
                     created.setUnitPrice(unitPrice);
                     created.setDescription(description);
-                    created.getCompanies().add(companyRepository.getReferenceById(companyId));
+                    created.getCompanies().add(companyLookup.reference(companyId));
                     created.setStockTracked(false);
                     return created;
                 });
@@ -223,7 +226,7 @@ public class WorkSheetService {
         if (product.isStockTracked()) {
             product.setStockTracked(false);
         }
-        return productRepository.save(product);
+        return productCommandService.saveProduct(product);
     }
 
     public Product labourProduct(Long companyId) {

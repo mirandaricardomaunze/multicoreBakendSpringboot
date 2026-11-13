@@ -1,7 +1,6 @@
 package mz.multicore.erp.modules.financeira.service;
 
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
@@ -28,7 +27,7 @@ class FinanceServiceTenantTest {
     void getAllAccounts_readsOnlyActiveCompany() {
         TreasuryAccountRepository accounts = mock(TreasuryAccountRepository.class);
         TreasuryTransactionRepository transactions = mock(TreasuryTransactionRepository.class);
-        FinanceService service = new FinanceService(accounts, transactions, mock(InvoiceRepository.class));
+        FinanceService service = new FinanceService(accounts, transactions);
         CurrentUserContext.setCurrentCompanyId(7L);
 
         Company company = new Company();

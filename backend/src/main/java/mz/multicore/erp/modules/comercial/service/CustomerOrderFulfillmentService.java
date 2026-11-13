@@ -70,7 +70,7 @@ public class CustomerOrderFulfillmentService {
             OrderLineRepository orderLineRepository, OrderEventRepository eventRepository,
             InventoryService inventoryService, OrderPickingPrintService printService, AppUserService appUserService) {
         this(comercialService, orderRepository, orderLineRepository, eventRepository, inventoryService,
-                printService, new OrderPickingSheetPrintService(orderRepository), appUserService);
+                printService, new OrderPickingSheetPrintService(new OrderLookup(orderRepository, null, null)), appUserService);
     }
 
     @Transactional

@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.support.service;
 
 import mz.multicore.erp.architecture.security.PermissionGuard;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.support.dto.CreateTicketRequest;
 import mz.multicore.erp.modules.support.dto.SupportMessageDTO;
 import mz.multicore.erp.modules.support.dto.SupportTicketDTO;
@@ -36,9 +36,9 @@ public class SupportService {
 
     public SupportService(PlatformSupportTicketRepository ticketRepository,
                           SupportMessageRepository messageRepository,
-                          CompanyRepository companyRepository) {
+                          CompanyLookup companyLookup) {
         PlatformSupportAdminService admin = new PlatformSupportAdminService(
-                ticketRepository, messageRepository, companyRepository);
+                ticketRepository, messageRepository, companyLookup);
         this.platformAdminService = admin;
         this.companyTicketService = new CompanySupportTicketService(ticketRepository, admin);
     }

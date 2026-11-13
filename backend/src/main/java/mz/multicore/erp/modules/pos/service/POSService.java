@@ -5,19 +5,20 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Invoice;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.CreditNoteRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceCommandService;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteCommandService;
+import mz.multicore.erp.modules.comercial.service.InvoiceNoteLookup;
+import mz.multicore.erp.modules.comercial.service.OrderCommandService;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.CreditNoteService;
 import mz.multicore.erp.modules.comercial.service.ReceivablesService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutRequest;
@@ -54,7 +55,7 @@ import java.util.Optional;
 public class POSService {
 
     private final TillSessionRepository tillSessionRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final FinanceService financeService;
     private final AuditLogService auditLogService;
     private final PosSessionAndShiftService sessionAndShiftService;
@@ -64,12 +65,12 @@ public class POSService {
 
     @Autowired
     public POSService(
-            TillSessionRepository tillSessionRepository, CompanyRepository companyRepository,
+            TillSessionRepository tillSessionRepository, CompanyLookup companyLookup,
             FinanceService financeService, AuditLogService auditLogService,
             PosSessionAndShiftService sessionAndShiftService, PosZReportCalculator zReportCalculator,
             PosCheckoutAndPaymentService checkoutAndPaymentService, PosReturnAndVoucherService returnAndVoucherService) {
         this.tillSessionRepository = tillSessionRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.financeService = financeService;
         this.auditLogService = auditLogService;
         this.sessionAndShiftService = sessionAndShiftService;
@@ -80,66 +81,66 @@ public class POSService {
 
     public POSService(
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
-            InvoiceRepository invoiceRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository, TreasuryAccountRepository treasuryAccountRepository,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             InventoryService inventoryService, FinanceService financeService,
             PaymentEntryRepository paymentEntryRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
-            CreditNoteRepository creditNoteRepository) {
-        this(tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
-                productRepository, warehouseRepository, companyRepository, treasuryAccountRepository,
+            InvoiceNoteLookup noteLookup, InvoiceNoteCommandService noteCommands) {
+        this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
+                productLookup, warehouseLookup, companyLookup,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
-                eventPublisher, storeVoucherRepository, creditNoteRepository, null, null);
+                eventPublisher, storeVoucherRepository, noteLookup, noteCommands, null, null);
     }
 
     public POSService(
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
-            InvoiceRepository invoiceRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository, TreasuryAccountRepository treasuryAccountRepository,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             InventoryService inventoryService, FinanceService financeService,
             PaymentEntryRepository paymentEntryRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
-            CreditNoteRepository creditNoteRepository, QuotationRepository quotationRepository) {
-        this(tillSessionRepository, tillMovementRepository, invoiceRepository, clientRepository,
-                productRepository, warehouseRepository, companyRepository, treasuryAccountRepository,
+            InvoiceNoteLookup noteLookup, InvoiceNoteCommandService noteCommands, OrderCommandService orderCommands) {
+        this(tillSessionRepository, tillMovementRepository, invoiceLookup, invoiceCommands, clientLookup,
+                productLookup, warehouseLookup, companyLookup,
                 inventoryService, financeService, paymentEntryRepository, walkInClientProvider,
                 documentNumberService, auditLogService, creditNoteService, receivablesService,
-                eventPublisher, storeVoucherRepository, creditNoteRepository, quotationRepository, null);
+                eventPublisher, storeVoucherRepository, noteLookup, noteCommands, orderCommands, null);
     }
 
     public POSService(
             TillSessionRepository tillSessionRepository, TillMovementRepository tillMovementRepository,
-            InvoiceRepository invoiceRepository, ClientRepository clientRepository,
-            ProductRepository productRepository, WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository, TreasuryAccountRepository treasuryAccountRepository,
+            InvoiceLookup invoiceLookup, InvoiceCommandService invoiceCommands, ClientLookup clientLookup,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup,
             InventoryService inventoryService, FinanceService financeService,
             PaymentEntryRepository paymentEntryRepository, WalkInClientProvider walkInClientProvider,
             DocumentNumberService documentNumberService, AuditLogService auditLogService,
             CreditNoteService creditNoteService, ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher, StoreVoucherRepository storeVoucherRepository,
-            CreditNoteRepository creditNoteRepository, QuotationRepository quotationRepository,
-            ShiftReconciliationRepository shiftReconciliationRepository) {
+            InvoiceNoteLookup noteLookup, InvoiceNoteCommandService noteCommands,
+            OrderCommandService orderCommands, ShiftReconciliationRepository shiftReconciliationRepository) {
         PosSessionAndShiftService sss = new PosSessionAndShiftService(
                 tillSessionRepository, tillMovementRepository, shiftReconciliationRepository, auditLogService);
         PosZReportCalculator zrc = new PosZReportCalculator(
                 tillSessionRepository, tillMovementRepository, paymentEntryRepository, shiftReconciliationRepository, sss);
         PosReturnAndVoucherService rvs = new PosReturnAndVoucherService(
-                invoiceRepository, creditNoteRepository, creditNoteService, storeVoucherRepository,
+                invoiceCommands, noteLookup, noteCommands, creditNoteService, storeVoucherRepository,
                 tillMovementRepository, financeService, auditLogService, sss, eventPublisher);
         PosCheckoutAndPaymentService cps = new PosCheckoutAndPaymentService(
-                invoiceRepository, clientRepository, productRepository, warehouseRepository,
-                companyRepository, inventoryService, financeService, paymentEntryRepository,
+                invoiceLookup, invoiceCommands, clientLookup, productLookup, warehouseLookup,
+                companyLookup, inventoryService, financeService, paymentEntryRepository,
                 tillMovementRepository, walkInClientProvider, documentNumberService, auditLogService,
-                receivablesService, eventPublisher, quotationRepository, sss, rvs, null, null);
+                receivablesService, eventPublisher, orderCommands, sss, rvs, null, null);
         this.tillSessionRepository = tillSessionRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.financeService = financeService;
         this.auditLogService = auditLogService;
         this.sessionAndShiftService = sss;
@@ -164,8 +165,7 @@ public class POSService {
         PermissionGuard.requireSeller("abrir sessão de caixa");
         CurrentUserContext.requireCompany(companyId);
         sessionAndShiftService.requireOwnOperatorForSeller(operator);
-        Company company = companyRepository.lockById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.lockForUpdate(companyId);
         Optional<TillSession> active = tillSessionRepository.findActiveSessionForOperator(operator, "OPEN", companyId);
         if (active.isPresent()) {
             throw new BusinessRuleException("Já possui uma sessão de caixa aberta para este operador.");

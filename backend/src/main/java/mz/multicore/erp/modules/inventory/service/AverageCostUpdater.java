@@ -1,7 +1,7 @@
 package mz.multicore.erp.modules.inventory.service;
 
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.repository.StockRepository;
 import org.springframework.stereotype.Component;
@@ -18,17 +18,17 @@ import java.math.RoundingMode;
 public class AverageCostUpdater {
 
     private final StockRepository stockRepository;
-    private final ProductRepository productRepository;
+    private final ProductCommandService productCommands;
 
-    public AverageCostUpdater(StockRepository stockRepository, ProductRepository productRepository) {
+    public AverageCostUpdater(StockRepository stockRepository, ProductCommandService productCommands) {
         this.stockRepository = stockRepository;
-        this.productRepository = productRepository;
+        this.productCommands = productCommands;
     }
 
     public void beforeEntry(Product product, Warehouse warehouse, BigDecimal quantity, BigDecimal totalCost) {
         if (quantity == null || quantity.signum() <= 0 || totalCost == null) return;
         WeightedAverageCost.apply(stockRepository, product, warehouse, quantity,
                 totalCost.divide(quantity, 6, RoundingMode.HALF_UP));
-        productRepository.save(product);
+        productCommands.saveProduct(product);
     }
 }

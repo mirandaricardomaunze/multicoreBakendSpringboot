@@ -3,10 +3,10 @@ package mz.multicore.erp.modules.manufacturing.service;
 import mz.multicore.erp.architecture.events.ProductionCompletedEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.manufacturing.dto.CreateProductionOrderRequest;
 import mz.multicore.erp.modules.manufacturing.dto.ProductionOrderDTO;
 import mz.multicore.erp.modules.manufacturing.model.*;
@@ -30,9 +30,9 @@ public class ProductionOrderLifecycleService {
 
     private final ProductionOrderRepository productionOrderRepository;
     private final BillOfMaterialsRepository bomRepository;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
+    private final CompanyLookup companyLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
     private final ApplicationEventPublisher eventPublisher;
     private final mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService;
     private final mz.multicore.erp.modules.numbering.service.DocumentNumberService numbers;
@@ -41,9 +41,9 @@ public class ProductionOrderLifecycleService {
     public ProductionOrderLifecycleService(
             ProductionOrderRepository productionOrderRepository,
             BillOfMaterialsRepository bomRepository,
-            CompanyRepository companyRepository,
-            WarehouseRepository warehouseRepository,
-            StockRepository stockRepository,
+            CompanyLookup companyLookup,
+            WarehouseLookup warehouseLookup,
+            StockLookup stockLookup,
             @Autowired(required = false) ApplicationEventPublisher eventPublisher,
             mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService,
             @Autowired(required = false) mz.multicore.erp.modules.numbering.service.DocumentNumberService numbers) {
@@ -51,9 +51,9 @@ public class ProductionOrderLifecycleService {
         this.movementService = movementService;
         this.productionOrderRepository = productionOrderRepository;
         this.bomRepository = bomRepository;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
+        this.companyLookup = companyLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
         this.eventPublisher = eventPublisher;
     }
 
@@ -61,16 +61,15 @@ public class ProductionOrderLifecycleService {
     public ProductionOrderDTO createProductionOrder(Long companyId, CreateProductionOrderRequest request) {
         if (companyId == null) throw new BusinessRuleException("A empresa activa é obrigatória.");
 
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada: " + companyId));
+        Company company = companyLookup.require(companyId);
 
         BillOfMaterials bom = bomRepository.findByIdAndCompanyId(request.bomId(), companyId)
                 .orElseThrow(() -> new BusinessRuleException("Ficha técnica não encontrada."));
 
-        Warehouse sourceWh = warehouseRepository.findById(request.sourceWarehouseId())
+        Warehouse sourceWh = warehouseLookup.find(request.sourceWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de matérias-primas não encontrado."));
 
-        Warehouse targetWh = warehouseRepository.findById(request.targetWarehouseId())
+        Warehouse targetWh = warehouseLookup.find(request.targetWarehouseId())
                 .orElseThrow(() -> new BusinessRuleException("Armazém de produto acabado não encontrado."));
 
         String orderNumber = numbers != null ? numbers.next(mz.multicore.erp.modules.numbering.service.DocumentSeries.PRODUCTION_ORDER)
@@ -174,7 +173,7 @@ public class ProductionOrderLifecycleService {
         }
         Long sourceWhId = order.getSourceWarehouse() != null ? order.getSourceWarehouse().getId() : null;
         String description = "Ordem de produção " + order.getOrderNumber();
-        ProductionShortageCheck.assertAvailable(stockRepository, order);
+        ProductionShortageCheck.assertAvailable(stockLookup, order);
         BigDecimal actualRawMaterialCost = BigDecimal.ZERO;
         for (ProductionOrderLine line : order.getLines()) {
             line.setConsumedQuantity(line.getPlannedQuantity());

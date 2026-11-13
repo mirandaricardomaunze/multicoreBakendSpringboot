@@ -5,10 +5,9 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.ProductCategory;
-import mz.multicore.erp.modules.comercial.repository.ProductCategoryRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.promotions.dto.CreatePromotionRequest;
 import mz.multicore.erp.modules.promotions.dto.PromotionDTO;
 import mz.multicore.erp.modules.promotions.model.Promotion;
@@ -25,22 +24,19 @@ public class PromotionLifecycleService {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final PromotionRepository promotionRepository;
-    private final CompanyRepository companyRepository;
-    private final ProductRepository productRepository;
-    private final ProductCategoryRepository categoryRepository;
+    private final CompanyLookup companyLookup;
+    private final ProductLookup productLookup;
     private final AuditLogService auditLogService;
 
     public PromotionLifecycleService(
             PromotionRepository promotionRepository,
-            CompanyRepository companyRepository,
-            ProductRepository productRepository,
-            ProductCategoryRepository categoryRepository,
+            CompanyLookup companyLookup,
+            ProductLookup productLookup,
             AuditLogService auditLogService
     ) {
         this.promotionRepository = promotionRepository;
-        this.companyRepository = companyRepository;
-        this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
+        this.companyLookup = companyLookup;
+        this.productLookup = productLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -54,8 +50,7 @@ public class PromotionLifecycleService {
             throw new BusinessRuleException("A data de fim não pode ser anterior à data de início.");
         }
 
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         Promotion promotion = new Promotion();
         promotion.setCompany(company);
@@ -94,11 +89,11 @@ public class PromotionLifecycleService {
             throw new BusinessRuleException("Indique exactamente um alcance: produto OU categoria.");
         }
         if (hasProduct) {
-            Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+            Product product = productLookup.findForCompany(request.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado na empresa activa."));
             promotion.setProduct(product);
         } else {
-            ProductCategory category = categoryRepository.findByIdAndCompaniesId(request.categoryId(), request.companyId())
+            ProductCategory category = productLookup.findCategoryForCompany(request.categoryId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Categoria não encontrada na empresa activa."));
             promotion.setCategory(category);
         }

@@ -21,7 +21,8 @@ import mz.multicore.erp.modules.hr.repository.ExpenseClaimRepository;
 import mz.multicore.erp.modules.hr.repository.PayslipRepository;
 import mz.multicore.erp.modules.hr.repository.VacationRepository;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
-import mz.multicore.erp.modules.performance.repository.SalesGoalBonusRepository;
+import mz.multicore.erp.modules.performance.service.SalesGoalBonusCommandService;
+import mz.multicore.erp.modules.performance.service.SalesGoalBonusLookup;
 import mz.multicore.erp.modules.users.service.AppUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -69,7 +70,7 @@ public class HRService {
                 vacationRepository, guard, payrollTaxService, approvalService, documentNumberService,
                 auditLogService, financeService, appUserService, contractService, timeSheetService,
                 overtimeValuationService, salaryHistoryService, payrollLiabilityService,
-                payrollDeductionService, hrPolicyService, payrollPeriodService, eventPublisher, null);
+                payrollDeductionService, hrPolicyService, payrollPeriodService, eventPublisher, null, null);
     }
 
     public HRService(
@@ -83,13 +84,15 @@ public class HRService {
             @Lazy OvertimeValuationService overtimeValuationService, SalaryHistoryService salaryHistoryService,
             @Lazy PayrollLiabilityService payrollLiabilityService, @Lazy PayrollDeductionService payrollDeductionService,
             HrPolicyService hrPolicyService, PayrollPeriodService payrollPeriodService,
-            ApplicationEventPublisher eventPublisher, @Lazy SalesGoalBonusRepository salesGoalBonusRepository
+            ApplicationEventPublisher eventPublisher, @Lazy SalesGoalBonusLookup salesGoalBonusLookup,
+            @Lazy SalesGoalBonusCommandService salesGoalBonusCommands
     ) {
         this(
                 new HrEmployeeManagementService(employeeRepository, expenseClaimRepository, guard, approvalService, auditLogService, appUserService),
                 new HrPayslipIssuanceService(employeeRepository, payslipRepository, absenceRepository, guard, payrollTaxService,
                         documentNumberService, auditLogService, contractService, timeSheetService, overtimeValuationService,
-                        salaryHistoryService, payrollDeductionService, payrollPeriodService, salesGoalBonusRepository),
+                        salaryHistoryService, payrollDeductionService, payrollPeriodService, salesGoalBonusLookup,
+                        salesGoalBonusCommands),
                 new HrPayslipLifecycleService(payslipRepository, guard, auditLogService, financeService,
                         payrollLiabilityService, payrollDeductionService, eventPublisher),
                 new HrAbsenceAndVacationService(absenceRepository, vacationRepository, guard, auditLogService, timeSheetService, hrPolicyService)

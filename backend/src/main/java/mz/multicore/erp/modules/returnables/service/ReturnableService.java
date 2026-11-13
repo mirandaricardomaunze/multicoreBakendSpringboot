@@ -10,16 +10,15 @@ import mz.multicore.erp.modules.comercial.dto.CreateInvoiceRequest;
 import mz.multicore.erp.modules.comercial.dto.InvoiceDTO;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.ComercialService;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.model.Stock;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService;
 import mz.multicore.erp.modules.inventory.service.TransitWarehouseProvider;
 import mz.multicore.erp.modules.returnables.dto.*;
@@ -51,31 +50,31 @@ public class ReturnableService {
 
     private final ReturnableItemRepository itemRepository;
     private final ReturnableMovementRepository movementRepository;
-    private final ProductRepository productRepository;
-    private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final StockRepository stockRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final ProductLookup productLookup;
+    private final ClientLookup clientLookup;
+    private final CompanyLookup companyLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final StockLookup stockLookup;
+    private final InvoiceLookup invoiceLookup;
     private final StockMovementRegistrationService stockMovements;
     private final TransitWarehouseProvider transitWarehouses;
     private final ComercialService comercialService;
     private final AuditLogService auditLogService;
 
     public ReturnableService(ReturnableItemRepository itemRepository, ReturnableMovementRepository movementRepository,
-                             ProductRepository productRepository, ClientRepository clientRepository,
-                             CompanyRepository companyRepository, WarehouseRepository warehouseRepository,
-                             StockRepository stockRepository, InvoiceRepository invoiceRepository,
+                             ProductLookup productLookup, ClientLookup clientLookup,
+                             CompanyLookup companyLookup, WarehouseLookup warehouseLookup,
+                             StockLookup stockLookup, InvoiceLookup invoiceLookup,
                              StockMovementRegistrationService stockMovements, TransitWarehouseProvider transitWarehouses,
                              ComercialService comercialService, AuditLogService auditLogService) {
         this.itemRepository = itemRepository;
         this.movementRepository = movementRepository;
-        this.productRepository = productRepository;
-        this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.stockRepository = stockRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.productLookup = productLookup;
+        this.clientLookup = clientLookup;
+        this.companyLookup = companyLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.stockLookup = stockLookup;
+        this.invoiceLookup = invoiceLookup;
         this.stockMovements = stockMovements;
         this.transitWarehouses = transitWarehouses;
         this.comercialService = comercialService;
@@ -96,15 +95,14 @@ public class ReturnableService {
     public ReturnableItemDTO saveItem(SaveReturnableItemRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
         PermissionGuard.requireManagerOrAdmin("definir vasilhame");
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+        Product product = productLookup.findForCompany(request.productId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Artigo não encontrado nesta empresa."));
         if (!product.isStockTracked()) {
             throw new BusinessRuleException("O vasilhame tem de controlar stock: '" + product.getName() + "' não controla.");
         }
         ReturnableItem item = itemRepository.findByCompanyIdAndProductId(request.companyId(), product.getId()).orElseGet(() -> {
             ReturnableItem created = new ReturnableItem();
-            created.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            created.setCompany(companyLookup.require(request.companyId()));
             created.setProduct(product);
             return created;
         });
@@ -161,9 +159,7 @@ public class ReturnableService {
         }
         Client client = requireClient(request.companyId(), request.clientId());
         ReturnableItem item = requireItem(request.companyId(), request.itemId());
-        Warehouse shop = warehouseRepository.findById(request.warehouseId())
-                .filter(w -> w.getCompany() != null && request.companyId().equals(w.getCompany().getId()))
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado nesta empresa."));
+        Warehouse shop = warehouseLookup.requireForCompany(request.warehouseId(), request.companyId());
         Warehouse atClients = transitWarehouses.named(shop.getCompany(), CLIENTS_WAREHOUSE, "Grades, garrafas e paletes nos clientes");
         if (atClients.getId().equals(shop.getId())) throw new BusinessRuleException("Escolha o armazém da loja.");
         Product product = item.getProduct();
@@ -210,7 +206,7 @@ public class ReturnableService {
         InvoiceDTO invoice = comercialService.createInvoice(new CreateInvoiceRequest(client.getId(), request.companyId(), atClients.getId(),
                 List.of(new CreateInvoiceLineRequest(product.getId(), request.quantity(), product.effectiveTaxRate(), BigDecimal.ZERO, null, null))));
         ReturnableMovement movement = save(request.companyId(), client, item, ReturnableMovementType.CHARGED, request.quantity(),
-                invoice.invoiceNumber(), request.notes(), request.requestKey(), invoiceRepository.findById(invoice.id()).orElseThrow());
+                invoice.invoiceNumber(), request.notes(), request.requestKey(), invoiceLookup.find(invoice.id()).orElseThrow());
         auditLogService.logCurrent("RETURNABLE_CHARGED", DisplayNumbers.qty(request.quantity()) + " " + product.getName()
                 + " não devolvido(s) por " + client.getName() + ": fatura " + invoice.invoiceNumber() + ".");
         return toDto(movement);
@@ -238,8 +234,7 @@ public class ReturnableService {
     }
 
     private Client requireClient(Long companyId, Long clientId) {
-        Client client = clientRepository.findByIdAndCompaniesId(clientId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(clientId, companyId);
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("O vasilhame fica em nome de um cliente identificado, não do Consumidor Final.");
         }
@@ -254,7 +249,7 @@ public class ReturnableService {
     }
 
     private BigDecimal stockOf(Long productId, Long warehouseId) {
-        return stockRepository.findByProductIdAndWarehouseId(productId, warehouseId).map(Stock::getQuantity).orElse(BigDecimal.ZERO);
+        return stockLookup.quantityOf(productId, warehouseId);
     }
 
     static ReturnableMovementDTO toDto(ReturnableMovement m) {

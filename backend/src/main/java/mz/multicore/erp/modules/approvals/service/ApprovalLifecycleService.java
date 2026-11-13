@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.approvals.model.ApprovalRequest;
 import mz.multicore.erp.modules.approvals.model.ApprovalStatus;
 import mz.multicore.erp.modules.approvals.repository.ApprovalHistoryRepository;
 import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,20 +26,20 @@ public class ApprovalLifecycleService {
     private final ApprovalRequestRepository requestRepository;
     private final ApprovalHistoryRepository historyRepository;
     private final List<ApprovalCallback> callbacks;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final ApprovalEscalationPolicy escalationPolicy;
 
     public ApprovalLifecycleService(
             ApprovalRequestRepository requestRepository,
             ApprovalHistoryRepository historyRepository,
             List<ApprovalCallback> callbacks,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             ApprovalEscalationPolicy escalationPolicy
     ) {
         this.requestRepository = requestRepository;
         this.historyRepository = historyRepository;
         this.callbacks = callbacks != null ? callbacks : List.of();
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.escalationPolicy = escalationPolicy != null ? escalationPolicy : new ApprovalEscalationPolicy();
     }
 
@@ -70,7 +70,7 @@ public class ApprovalLifecycleService {
         }
 
         ApprovalRequest request = new ApprovalRequest();
-        request.setCompany(companyRepository.getReferenceById(companyId));
+        request.setCompany(companyLookup.reference(companyId));
         request.setDocumentType(documentType);
         request.setDocumentId(documentId);
         request.setAmount(amount != null ? amount : BigDecimal.ZERO);

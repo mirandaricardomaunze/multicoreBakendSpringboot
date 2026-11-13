@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.printing;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.quality.model.WorkerEquipmentAssignment;
-import mz.multicore.erp.modules.quality.repository.WorkerEquipmentAssignmentRepository;
+import mz.multicore.erp.modules.quality.service.WorkerEquipmentAssignmentLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,20 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class QualityEquipmentPrintService {
 
-    private final WorkerEquipmentAssignmentRepository assignmentRepository;
+    private final WorkerEquipmentAssignmentLookup assignmentLookup;
     private final QualityEquipmentDocumentRenderer documentRenderer;
 
     @Autowired
     public QualityEquipmentPrintService(
-            WorkerEquipmentAssignmentRepository assignmentRepository,
+            WorkerEquipmentAssignmentLookup assignmentLookup,
             QualityEquipmentDocumentRenderer documentRenderer
     ) {
-        this.assignmentRepository = assignmentRepository;
+        this.assignmentLookup = assignmentLookup;
         this.documentRenderer = documentRenderer;
     }
 
-    public QualityEquipmentPrintService(WorkerEquipmentAssignmentRepository assignmentRepository) {
-        this(assignmentRepository, new QualityEquipmentDocumentRenderer());
+    public QualityEquipmentPrintService(WorkerEquipmentAssignmentLookup assignmentLookup) {
+        this(assignmentLookup, new QualityEquipmentDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
@@ -38,9 +38,7 @@ public class QualityEquipmentPrintService {
         Long effectiveCompanyId = companyId != null ? companyId : CurrentUserContext.findCurrentCompanyId();
         if (effectiveCompanyId == null) effectiveCompanyId = 1L;
 
-        WorkerEquipmentAssignment assignment = assignmentRepository
-                .findByIdWithDetailsAndCompanyId(assignmentId, effectiveCompanyId)
-                .orElseThrow(() -> new BusinessRuleException("Atribuição de equipamento não encontrada para impressão."));
+        WorkerEquipmentAssignment assignment = assignmentLookup.requireForCompany(assignmentId, effectiveCompanyId);
 
         return documentRenderer.renderDocument(assignment);
     }

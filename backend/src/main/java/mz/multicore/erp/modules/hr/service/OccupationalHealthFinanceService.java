@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.hr.dto.OccupationalHealthProviderCostDTO;
 import mz.multicore.erp.modules.hr.model.OccupationalHealthExam;
 import mz.multicore.erp.modules.hr.repository.OccupationalHealthExamRepository;
 import mz.multicore.erp.modules.purchases.model.Supplier;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,16 +31,16 @@ import static mz.multicore.erp.modules.hr.service.OccupationalHealthMapper.toDTO
 @Service
 public class OccupationalHealthFinanceService {
     private final OccupationalHealthExamRepository repository;
-    private final SupplierRepository supplierRepository;
+    private final SupplierLookup supplierLookup;
     private final FinanceService financeService;
     private final AuditLogService auditLogService;
 
     public OccupationalHealthFinanceService(OccupationalHealthExamRepository repository,
-                                            SupplierRepository supplierRepository,
+                                            SupplierLookup supplierLookup,
                                             @Lazy FinanceService financeService,
                                             AuditLogService auditLogService) {
         this.repository = repository;
-        this.supplierRepository = supplierRepository;
+        this.supplierLookup = supplierLookup;
         this.financeService = financeService;
         this.auditLogService = auditLogService;
     }
@@ -48,7 +48,7 @@ public class OccupationalHealthFinanceService {
     @Transactional(readOnly = true)
     public List<HealthProviderDTO> providers() {
         PermissionGuard.requireManagerOrAdmin("consultar prestadores de saúde ocupacional");
-        return supplierRepository.findByCompanyIdAndActiveTrue(companyId()).stream()
+        return supplierLookup.listActiveForCompany(companyId()).stream()
                 .sorted(Comparator.comparing(Supplier::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(supplier -> new HealthProviderDTO(supplier.getId(), supplier.getName(), supplier.getTaxId()))
                 .toList();

@@ -4,9 +4,9 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest;
 import mz.multicore.erp.modules.inventory.dto.ReceiveStockTransferRequest.ReceiveLine;
 import mz.multicore.erp.modules.inventory.dto.StockTransferDTO;
@@ -72,8 +72,8 @@ class StockTransferReceiptDiscrepancyHarnessTest {
         transitService = new StockTransferTransitService(
                 transferRepository, stockRepository, stockMovementRepository, productBatchService, audit);
         service = new StockTransferService(
-                transferRepository, mock(WarehouseRepository.class), mock(CompanyRepository.class),
-                mock(ProductRepository.class), stockRepository, stockMovementRepository, productBatchService,
+                transferRepository, mock(WarehouseRepository.class), mock(CompanyLookup.class),
+                mock(ProductLookup.class), stockRepository, stockMovementRepository, productBatchService,
                 mock(DocumentNumberService.class), audit,
                 mock(org.springframework.context.ApplicationEventPublisher.class), null, transitService);
 

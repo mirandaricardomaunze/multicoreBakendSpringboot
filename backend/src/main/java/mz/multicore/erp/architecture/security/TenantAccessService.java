@@ -3,7 +3,7 @@ package mz.multicore.erp.architecture.security;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.users.model.AppUser;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,17 +13,17 @@ import java.util.List;
 @Service
 public class TenantAccessService {
 
-    private final AppUserRepository appUserRepository;
+    private final AppUserLookup userLookup;
     private final mz.multicore.erp.modules.subscription.service.SubscriptionService subscriptionService;
 
-    public TenantAccessService(AppUserRepository appUserRepository) {
-        this(appUserRepository, null);
+    public TenantAccessService(AppUserLookup userLookup) {
+        this(userLookup, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public TenantAccessService(AppUserRepository appUserRepository,
+    public TenantAccessService(AppUserLookup userLookup,
                                mz.multicore.erp.modules.subscription.service.SubscriptionService subscriptionService) {
-        this.appUserRepository = appUserRepository;
+        this.userLookup = userLookup;
         this.subscriptionService = subscriptionService;
     }
 
@@ -32,8 +32,7 @@ public class TenantAccessService {
         if (username == null || username.isBlank()) {
             throw new BusinessRuleException("Utilizador autenticado em falta.");
         }
-        AppUser user = appUserRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+        AppUser user = userLookup.requireByUsername(username);
         if (!user.isActive()) {
             throw new BusinessRuleException("Utilizador inativo.");
         }

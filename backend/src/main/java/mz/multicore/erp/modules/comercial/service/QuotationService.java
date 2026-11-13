@@ -9,8 +9,8 @@ import mz.multicore.erp.modules.comercial.dto.UpdateQuotationRequest;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.comercial.repository.ProductRepository;
 import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,16 +42,16 @@ public class QuotationService {
     public QuotationService(QuotationRepository quotationRepository,
                             ClientRepository clientRepository,
                             ProductRepository productRepository,
-                            CompanyRepository companyRepository,
-                            WarehouseRepository warehouseRepository,
+                            CompanyLookup companyLookup,
+                            WarehouseLookup warehouseLookup,
                             WalkInClientProvider walkInClientProvider,
                             DocumentNumberService documentNumberService,
                             AuditLogService auditLogService,
                             ComercialService comercialService) {
         QuotationQueryService qService = new QuotationQueryService(quotationRepository);
         QuotationLifecycleService lService = new QuotationLifecycleService(
-                quotationRepository, clientRepository, productRepository, companyRepository,
-                warehouseRepository, walkInClientProvider, documentNumberService, auditLogService, qService, null);
+                quotationRepository, clientRepository, productRepository, companyLookup,
+                warehouseLookup, walkInClientProvider, documentNumberService, auditLogService, qService, null);
         QuotationConversionService cService = new QuotationConversionService(
                 quotationRepository, auditLogService, comercialService, qService, lService);
         this.queryService = qService;

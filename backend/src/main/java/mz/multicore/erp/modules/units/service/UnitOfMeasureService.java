@@ -4,7 +4,7 @@ import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.units.dto.CreateUnitOfMeasureRequest;
 import mz.multicore.erp.modules.units.dto.UnitOfMeasureDTO;
 import mz.multicore.erp.modules.units.model.UnitDimension;
@@ -24,13 +24,13 @@ public class UnitOfMeasureService {
     private static final Pattern CODE = Pattern.compile("[A-Z0-9_]{1,20}");
 
     private final UnitOfMeasureRepository unitRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final AuditLogService auditLogService;
 
-    public UnitOfMeasureService(UnitOfMeasureRepository unitRepository, CompanyRepository companyRepository,
+    public UnitOfMeasureService(UnitOfMeasureRepository unitRepository, CompanyLookup companyLookup,
                                 AuditLogService auditLogService) {
         this.unitRepository = unitRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -48,8 +48,7 @@ public class UnitOfMeasureService {
                 || unitRepository.findByCodeAndCompanyId(code, request.companyId()).isPresent()) {
             throw new BusinessRuleException("Já existe uma unidade com o código " + code + ".");
         }
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
         UnitOfMeasure unit = new UnitOfMeasure();
         unit.setCompany(company);
         unit.setCode(code);

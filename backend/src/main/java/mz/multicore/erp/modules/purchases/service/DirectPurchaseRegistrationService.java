@@ -4,13 +4,13 @@ import mz.multicore.erp.architecture.events.PurchaseRegisteredEvent;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.pricing.LineCalculator;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.service.FinanceService;
 import mz.multicore.erp.modules.inventory.model.Warehouse;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
@@ -33,9 +33,9 @@ public class DirectPurchaseRegistrationService {
 
     private final SupplierRepository supplierRepository;
     private final PurchaseRepository purchaseRepository;
-    private final ProductRepository productRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final CompanyRepository companyRepository;
+    private final ProductLookup productLookup;
+    private final WarehouseLookup warehouseLookup;
+    private final CompanyLookup companyLookup;
     private final InventoryService inventoryService;
     private final FinanceService financeService;
     private final DocumentNumberService documentNumberService;
@@ -43,16 +43,16 @@ public class DirectPurchaseRegistrationService {
 
     public DirectPurchaseRegistrationService(
             SupplierRepository supplierRepository, PurchaseRepository purchaseRepository,
-            ProductRepository productRepository, WarehouseRepository warehouseRepository,
-            CompanyRepository companyRepository, InventoryService inventoryService,
+            ProductLookup productLookup, WarehouseLookup warehouseLookup,
+            CompanyLookup companyLookup, InventoryService inventoryService,
             FinanceService financeService, DocumentNumberService documentNumberService,
             ApplicationEventPublisher eventPublisher
     ) {
         this.supplierRepository = supplierRepository;
         this.purchaseRepository = purchaseRepository;
-        this.productRepository = productRepository;
-        this.warehouseRepository = warehouseRepository;
-        this.companyRepository = companyRepository;
+        this.productLookup = productLookup;
+        this.warehouseLookup = warehouseLookup;
+        this.companyLookup = companyLookup;
         this.inventoryService = inventoryService;
         this.financeService = financeService;
         this.documentNumberService = documentNumberService;
@@ -69,14 +69,12 @@ public class DirectPurchaseRegistrationService {
             throw new BusinessRuleException("Fornecedor inactivo não pode ser usado em compras.");
         }
 
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new BusinessRuleException("Armazém não encontrado."));
+        Warehouse warehouse = warehouseLookup.require(request.warehouseId());
         if (!request.companyId().equals(warehouse.getCompany().getId())) {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
 
-        Company company = companyRepository.findById(request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        Company company = companyLookup.require(request.companyId());
 
         Purchase purchase = new Purchase();
         purchase.setSupplier(supplier);
@@ -88,7 +86,7 @@ public class DirectPurchaseRegistrationService {
         BigDecimal total = BigDecimal.ZERO, totalTax = BigDecimal.ZERO;
 
         for (CreatePurchaseLineRequest lineReq : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(lineReq.productId(), request.companyId())
+            Product product = productLookup.findForCompany(lineReq.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + lineReq.productId()));
 
             PurchaseLine line = new PurchaseLine();

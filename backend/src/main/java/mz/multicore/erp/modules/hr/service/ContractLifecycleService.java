@@ -5,7 +5,7 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.hr.dto.CreateContractRequest;
 import mz.multicore.erp.modules.hr.dto.EmploymentContractDTO;
 import mz.multicore.erp.modules.hr.dto.RenewContractRequest;
@@ -28,7 +28,7 @@ public class ContractLifecycleService {
 
     private final EmploymentContractRepository contractRepository;
     private final EmployeeRepository employeeRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
     private final DocumentNumberService documentNumberService;
     private final SalaryHistoryService salaryHistoryService;
     private final AuditLogService auditLogService;
@@ -39,7 +39,7 @@ public class ContractLifecycleService {
     public ContractLifecycleService(
             EmploymentContractRepository contractRepository,
             EmployeeRepository employeeRepository,
-            CompanyRepository companyRepository,
+            CompanyLookup companyLookup,
             DocumentNumberService documentNumberService,
             SalaryHistoryService salaryHistoryService,
             AuditLogService auditLogService,
@@ -48,7 +48,7 @@ public class ContractLifecycleService {
     ) {
         this.contractRepository = contractRepository;
         this.employeeRepository = employeeRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
         this.documentNumberService = documentNumberService;
         this.salaryHistoryService = salaryHistoryService;
         this.auditLogService = auditLogService;
@@ -195,8 +195,7 @@ public class ContractLifecycleService {
     }
 
     private Company currentCompany() {
-        return companyRepository.findById(currentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Empresa activa não encontrada."));
+        return companyLookup.requireActive(currentCompanyId());
     }
 
     private Long currentCompanyId() {

@@ -1,9 +1,9 @@
 package mz.multicore.erp.modules.manufacturing.service;
 
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
-import mz.multicore.erp.modules.inventory.repository.StockRepository;
-import mz.multicore.erp.modules.inventory.repository.WarehouseRepository;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
+import mz.multicore.erp.modules.inventory.service.StockLookup;
+import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.manufacturing.dto.*;
 import mz.multicore.erp.modules.manufacturing.repository.BillOfMaterialsRepository;
 import mz.multicore.erp.modules.manufacturing.repository.ProductionOrderRepository;
@@ -33,25 +33,25 @@ public class ProductionService {
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
                              ProductionOrderRepository productionOrderRepository,
-                             CompanyRepository companyRepository,
-                             ProductRepository productRepository,
-                             WarehouseRepository warehouseRepository,
-                             StockRepository stockRepository) {
-        this(bomRepository, productionOrderRepository, companyRepository, productRepository, warehouseRepository, stockRepository, null, null);
+                             CompanyLookup companyLookup,
+                             ProductLookup productLookup,
+                             WarehouseLookup warehouseLookup,
+                             StockLookup stockLookup) {
+        this(bomRepository, productionOrderRepository, companyLookup, productLookup, warehouseLookup, stockLookup, null, null);
     }
 
     public ProductionService(BillOfMaterialsRepository bomRepository,
                              ProductionOrderRepository productionOrderRepository,
-                             CompanyRepository companyRepository,
-                             ProductRepository productRepository,
-                             WarehouseRepository warehouseRepository,
-                             StockRepository stockRepository,
+                             CompanyLookup companyLookup,
+                             ProductLookup productLookup,
+                             WarehouseLookup warehouseLookup,
+                             StockLookup stockLookup,
                              ApplicationEventPublisher eventPublisher,
                              mz.multicore.erp.modules.inventory.service.StockMovementRegistrationService movementService) {
         this(
-                new BillOfMaterialsService(bomRepository, companyRepository, productRepository),
+                new BillOfMaterialsService(bomRepository, companyLookup, productLookup),
                 new ProductionOrderLifecycleService(productionOrderRepository, bomRepository,
-                        companyRepository, warehouseRepository, stockRepository, eventPublisher, movementService, null)
+                        companyLookup, warehouseLookup, stockLookup, eventPublisher, movementService, null)
         );
     }
 

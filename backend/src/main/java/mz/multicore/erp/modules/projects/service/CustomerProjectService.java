@@ -7,11 +7,11 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.Order;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.InvoiceRepository;
-import mz.multicore.erp.modules.comercial.repository.OrderRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.projects.dto.*;
 import mz.multicore.erp.modules.projects.model.CustomerProject;
 import mz.multicore.erp.modules.projects.model.CustomerProjectOrder;
@@ -35,22 +35,22 @@ public class CustomerProjectService {
 
     private final CustomerProjectRepository projectRepository;
     private final CustomerProjectOrderRepository linkRepository;
-    private final ClientRepository clientRepository;
-    private final CompanyRepository companyRepository;
-    private final OrderRepository orderRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final ClientLookup clientLookup;
+    private final CompanyLookup companyLookup;
+    private final OrderLookup orderLookup;
+    private final InvoiceLookup invoiceLookup;
     private final AuditLogService auditLogService;
 
     public CustomerProjectService(CustomerProjectRepository projectRepository, CustomerProjectOrderRepository linkRepository,
-                                  ClientRepository clientRepository, CompanyRepository companyRepository,
-                                  OrderRepository orderRepository, InvoiceRepository invoiceRepository,
+                                  ClientLookup clientLookup, CompanyLookup companyLookup,
+                                  OrderLookup orderLookup, InvoiceLookup invoiceLookup,
                                   AuditLogService auditLogService) {
         this.projectRepository = projectRepository;
         this.linkRepository = linkRepository;
-        this.clientRepository = clientRepository;
-        this.companyRepository = companyRepository;
-        this.orderRepository = orderRepository;
-        this.invoiceRepository = invoiceRepository;
+        this.clientLookup = clientLookup;
+        this.companyLookup = companyLookup;
+        this.orderLookup = orderLookup;
+        this.invoiceLookup = invoiceLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -64,16 +64,14 @@ public class CustomerProjectService {
     public CustomerProjectDTO save(SaveCustomerProjectRequest request) {
         CurrentUserContext.requireCompany(request.companyId());
         PermissionGuard.requireSeller("registar obra de cliente");
-        Client client = clientRepository.findByIdAndCompaniesId(request.clientId(), request.companyId())
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        Client client = clientLookup.requireForCompany(request.clientId(), request.companyId());
         if (WalkInClientProvider.WALK_IN_TAX_ID.equals(client.getTaxId())) {
             throw new BusinessRuleException("Uma obra pertence a um cliente identificado, não ao Consumidor Final.");
         }
         boolean created = request.id() == null;
         CustomerProject project = created ? new CustomerProject() : requireProject(request.companyId(), request.id());
         if (created) {
-            project.setCompany(companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada.")));
+            project.setCompany(companyLookup.require(request.companyId()));
             project.setCode(String.format("OB-%04d", projectRepository.countByCompanyId(request.companyId()) + 1));
         } else if (!project.getClient().getId().equals(client.getId()) && !linkRepository.findByProjectWithOrder(project.getId()).isEmpty()) {
             throw new BusinessRuleException("A obra já tem encomendas: não pode mudar de cliente.");
@@ -96,8 +94,7 @@ public class CustomerProjectService {
         PermissionGuard.requireSeller("associar encomenda a obra");
         CustomerProject project = requireProject(companyId, projectId);
         if (!project.isActive()) throw new BusinessRuleException("A obra " + project.getName() + " está fechada.");
-        Order order = orderRepository.findById(orderId)
-                .filter(o -> o.getCompany().getId().equals(companyId))
+        Order order = orderLookup.findOrderForCompany(orderId, companyId)
                 .orElseThrow(() -> new BusinessRuleException("Encomenda não encontrada nesta empresa."));
         if (order.getClient() == null || !order.getClient().getId().equals(project.getClient().getId())) {
             throw new BusinessRuleException("A encomenda " + order.getOrderNumber() + " é de outro cliente; a obra "
@@ -148,7 +145,7 @@ public class CustomerProjectService {
         List<ProjectStatementLineDTO> lines = new ArrayList<>();
         for (CustomerProjectOrder link : linkRepository.findByProjectWithOrder(project.getId())) {
             Order order = link.getOrder();
-            Invoice invoice = order.getInvoiceId() == null ? null : invoiceRepository.findById(order.getInvoiceId()).orElse(null);
+            Invoice invoice = invoiceLookup.find(order.getInvoiceId()).orElse(null);
             boolean realised = invoice != null && invoice.getStatus().isRealisedSale();
             lines.add(new ProjectStatementLineDTO(order.getId(), order.getOrderNumber(),
                     order.getCreatedAt() == null ? null : order.getCreatedAt().toLocalDate(), order.getStatus(),

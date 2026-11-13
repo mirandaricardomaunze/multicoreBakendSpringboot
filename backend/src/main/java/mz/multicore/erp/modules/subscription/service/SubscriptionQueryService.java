@@ -1,9 +1,8 @@
 package mz.multicore.erp.modules.subscription.service;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.subscription.dto.SubscriptionDTO;
 import mz.multicore.erp.modules.subscription.model.PaymentMethod;
 import mz.multicore.erp.modules.subscription.model.PlanType;
@@ -27,20 +26,20 @@ public class SubscriptionQueryService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPaymentRepository paymentRepository;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
     public SubscriptionQueryService(SubscriptionRepository subscriptionRepository,
                                     SubscriptionPaymentRepository paymentRepository,
-                                    CompanyRepository companyRepository) {
+                                    CompanyLookup companyLookup) {
         this.subscriptionRepository = subscriptionRepository;
         this.paymentRepository = paymentRepository;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDTO> listOverview() {
         PermissionGuard.requireSuperAdmin("listar assinaturas");
-        return companyRepository.findAll().stream()
+        return companyLookup.findAll().stream()
                 .sorted(Comparator.comparing(Company::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(c -> toDto(c, subscriptionRepository.findByCompanyId(c.getId()).orElse(null)))
                 .toList();
@@ -67,8 +66,7 @@ public class SubscriptionQueryService {
     }
 
     public Company requireCompany(Long companyId) {
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        return companyLookup.require(companyId);
     }
 
     public List<String> planOptions() {

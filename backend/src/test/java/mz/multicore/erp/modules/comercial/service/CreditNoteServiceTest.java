@@ -65,7 +65,8 @@ class CreditNoteServiceTest {
         documentNumberService = mock(DocumentNumberService.class);
         auditLogService = mock(AuditLogService.class);
 
-        service = new CreditNoteService(creditNoteRepository, invoiceRepository, warehouseRepository,
+        service = new CreditNoteService(creditNoteRepository, invoiceRepository,
+                new mz.multicore.erp.modules.inventory.service.WarehouseLookup(warehouseRepository),
                 inventoryService, documentNumberService, auditLogService,
                 mock(org.springframework.context.ApplicationEventPublisher.class));
 

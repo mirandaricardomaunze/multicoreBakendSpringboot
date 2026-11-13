@@ -23,7 +23,8 @@ import static org.mockito.Mockito.when;
 class TenantAccessServiceTest {
 
     private final AppUserRepository repository = mock(AppUserRepository.class);
-    private final TenantAccessService tenantAccessService = new TenantAccessService(repository);
+    private final TenantAccessService tenantAccessService = new TenantAccessService(
+            new mz.multicore.erp.modules.users.service.AppUserLookup(repository, null));
 
     @AfterEach
     void clearContext() {

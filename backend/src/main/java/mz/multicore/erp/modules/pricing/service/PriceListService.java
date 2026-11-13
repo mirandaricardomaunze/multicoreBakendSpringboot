@@ -5,11 +5,11 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ClientRepository;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ClientLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.comercial.service.WalkInClientProvider;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.pricing.dto.*;
 import mz.multicore.erp.modules.pricing.model.ClientPriceList;
 import mz.multicore.erp.modules.pricing.model.PriceList;
@@ -37,21 +37,21 @@ public class PriceListService {
     private final PriceListRepository priceListRepository;
     private final PriceListItemRepository itemRepository;
     private final ClientPriceListRepository assignmentRepository;
-    private final CompanyRepository companyRepository;
-    private final ProductRepository productRepository;
-    private final ClientRepository clientRepository;
+    private final CompanyLookup companyLookup;
+    private final ProductLookup productLookup;
+    private final ClientLookup clientLookup;
     private final AuditLogService auditLogService;
 
     public PriceListService(PriceListRepository priceListRepository, PriceListItemRepository itemRepository,
-                            ClientPriceListRepository assignmentRepository, CompanyRepository companyRepository,
-                            ProductRepository productRepository, ClientRepository clientRepository,
+                            ClientPriceListRepository assignmentRepository, CompanyLookup companyLookup,
+                            ProductLookup productLookup, ClientLookup clientLookup,
                             AuditLogService auditLogService) {
         this.priceListRepository = priceListRepository;
         this.itemRepository = itemRepository;
         this.assignmentRepository = assignmentRepository;
-        this.companyRepository = companyRepository;
-        this.productRepository = productRepository;
-        this.clientRepository = clientRepository;
+        this.companyLookup = companyLookup;
+        this.productLookup = productLookup;
+        this.clientLookup = clientLookup;
         this.auditLogService = auditLogService;
     }
 
@@ -79,8 +79,7 @@ public class PriceListService {
         PriceList list;
         boolean created = request.id() == null;
         if (created) {
-            Company company = companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+            Company company = companyLookup.require(request.companyId());
             list = new PriceList();
             list.setCompany(company);
         } else {
@@ -123,7 +122,7 @@ public class PriceListService {
     @Transactional
     public PriceListItemDTO saveItem(SavePriceListItemRequest request) {
         PriceList list = requireList(request.companyId(), request.priceListId());
-        Product product = productRepository.findByIdAndCompaniesId(request.productId(), request.companyId())
+        Product product = productLookup.findForCompany(request.productId(), request.companyId())
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado nesta empresa."));
         BigDecimal price = request.price();
         if (price == null || price.signum() <= 0) {
@@ -216,8 +215,7 @@ public class PriceListService {
 
     private Client requireClient(Long companyId, Long clientId) {
         CurrentUserContext.requireCompany(companyId);
-        return clientRepository.findByIdAndCompaniesId(clientId, companyId)
-                .orElseThrow(() -> new BusinessRuleException("Cliente não encontrado nesta empresa."));
+        return clientLookup.requireForCompany(clientId, companyId);
     }
 
     static String normalizeCode(String raw) {

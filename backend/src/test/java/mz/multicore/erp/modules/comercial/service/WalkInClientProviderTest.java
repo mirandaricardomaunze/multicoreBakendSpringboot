@@ -5,6 +5,7 @@ import mz.multicore.erp.modules.comercial.model.Client;
 import mz.multicore.erp.modules.comercial.repository.ClientRepository;
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class WalkInClientProviderTest {
     void setUp() {
         clients = mock(ClientRepository.class);
         companies = mock(CompanyRepository.class);
-        provider = new WalkInClientProvider(clients, companies, mock(PlatformTransactionManager.class));
+        provider = new WalkInClientProvider(clients, new CompanyLookup(companies),mock(PlatformTransactionManager.class));
         CurrentUserContext.setCurrentCompanyId(1L);
         walkIn.setTaxId(WalkInClientProvider.WALK_IN_TAX_ID);
     }
@@ -68,7 +69,7 @@ class WalkInClientProviderTest {
         when(clients.findByTaxIdAndCompaniesId(any(), any())).thenReturn(Optional.empty());
         when(clients.findByTaxId(any())).thenReturn(Optional.empty());
 
-        new WalkInClientBootstrap(companies, provider).run(null);
+        new WalkInClientBootstrap(new CompanyLookup(companies), provider).run(null);
 
         verify(clients, times(2)).saveAndFlush(any());
     }

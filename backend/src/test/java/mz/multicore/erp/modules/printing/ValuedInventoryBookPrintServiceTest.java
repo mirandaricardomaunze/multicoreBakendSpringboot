@@ -50,7 +50,8 @@ class ValuedInventoryBookPrintServiceTest {
         when(companyService.getCompanyById(1L)).thenReturn(company);
         when(stockRepository.findByWarehouseCompanyId(1L)).thenReturn(List.of(stock));
 
-        ValuedInventoryBookPrintService service = new ValuedInventoryBookPrintService(stockRepository, companyService);
+        ValuedInventoryBookPrintService service = new ValuedInventoryBookPrintService(
+                new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository), companyService);
         byte[] pdf = service.render(1L, 2026);
 
         assertNotNull(pdf);

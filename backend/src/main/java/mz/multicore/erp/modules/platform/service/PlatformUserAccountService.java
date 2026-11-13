@@ -6,14 +6,14 @@ import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PasswordPolicy;
 import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.company.model.Company;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.platform.dto.CreatePlatformUserRequest;
 import mz.multicore.erp.modules.platform.dto.PlatformUserDTO;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.model.AppUserCompanyAccess;
 import mz.multicore.erp.modules.users.model.UserRole;
-import mz.multicore.erp.modules.users.repository.AppUserCompanyAccessRepository;
-import mz.multicore.erp.modules.users.repository.AppUserRepository;
+import mz.multicore.erp.modules.users.service.AppUserCommandService;
+import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -23,36 +23,36 @@ import java.util.List;
 @Component
 public class PlatformUserAccountService {
 
-    private final AppUserRepository appUserRepository;
-    private final AppUserCompanyAccessRepository companyAccessRepository;
-    private final CompanyRepository companyRepository;
+    private final AppUserLookup userLookup;
+    private final AppUserCommandService userCommands;
+    private final CompanyLookup companyLookup;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final AuthSessionService authSessionService;
 
-    public PlatformUserAccountService(AppUserRepository appUserRepository,
-                                      AppUserCompanyAccessRepository companyAccessRepository,
-                                      CompanyRepository companyRepository,
+    public PlatformUserAccountService(AppUserLookup userLookup,
+                                      AppUserCommandService userCommands,
+                                      CompanyLookup companyLookup,
                                       PasswordEncoder passwordEncoder,
                                       AuditLogService auditLogService,
                                       AuthSessionService authSessionService) {
-        this.appUserRepository = appUserRepository;
-        this.companyAccessRepository = companyAccessRepository;
-        this.companyRepository = companyRepository;
+        this.userLookup = userLookup;
+        this.userCommands = userCommands;
+        this.companyLookup = companyLookup;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
         this.authSessionService = authSessionService;
     }
 
     public List<PlatformUserDTO> listUsers() {
-        return appUserRepository.findAll().stream()
+        return userLookup.listAll().stream()
                 .sorted(Comparator.comparing(AppUser::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toDto)
                 .toList();
     }
 
     public PlatformUserDTO createUser(CreatePlatformUserRequest request) {
-        appUserRepository.findByUsername(request.username()).ifPresent(u -> {
+        userLookup.findByUsername(request.username()).ifPresent(u -> {
             throw new BusinessRuleException("Utilizador já existe.");
         });
         PasswordPolicy.validate(request.password(), request.username());
@@ -67,7 +67,7 @@ public class PlatformUserAccountService {
         user.setActive(true);
         user.grantCompany(company, role);
         user.setCreatedBy(CurrentUserContext.getUsername());
-        appUserRepository.save(user);
+        userCommands.saveUser(user);
 
         audit(request.username(), "PLATFORM_USER_CREATE",
                 "Utilizador criado e ligado a '" + company.getName() + "' como " + role + ".");
@@ -80,7 +80,7 @@ public class PlatformUserAccountService {
             throw new BusinessRuleException("O nome do utilizador é obrigatório.");
         }
         user.setName(name.trim());
-        appUserRepository.save(user);
+        userCommands.saveUser(user);
         audit(username, "PLATFORM_USER_UPDATE", "Nome actualizado para '" + user.getName() + "'.");
         return toDto(user);
     }
@@ -93,7 +93,7 @@ public class PlatformUserAccountService {
         if (!active && user.isActive()) {
             for (AppUserCompanyAccess access : user.getCompanyAccesses()) {
                 if ("ADMIN".equalsIgnoreCase(access.getRole())
-                        && companyAccessRepository.countActiveByCompanyIdAndRole(
+                        && userLookup.countActiveByCompanyAndRole(
                                 access.getCompany().getId(), "ADMIN") <= 1) {
                     throw new BusinessRuleException("Não é possível desactivar o único administrador da empresa "
                             + access.getCompany().getName() + ".");
@@ -101,7 +101,7 @@ public class PlatformUserAccountService {
             }
         }
         user.setActive(active);
-        appUserRepository.save(user);
+        userCommands.saveUser(user);
         audit(username, "PLATFORM_USER_STATUS", (active ? "Activado" : "Desactivado") + " o utilizador.");
         return toDto(user);
     }
@@ -111,7 +111,7 @@ public class PlatformUserAccountService {
         AppUser user = requireUser(username);
         user.setPassword(passwordEncoder.encode(newPassword.trim()));
         user.setPasswordChangeRequired(true);
-        appUserRepository.save(user);
+        userCommands.saveUser(user);
         if (authSessionService != null) {
             authSessionService.revokeUser(user.getUsername());
         }
@@ -119,13 +119,11 @@ public class PlatformUserAccountService {
     }
 
     public Company requireCompany(Long companyId) {
-        return companyRepository.findById(companyId)
-                .orElseThrow(() -> new BusinessRuleException("Empresa não encontrada."));
+        return companyLookup.require(companyId);
     }
 
     public AppUser requireUser(String username) {
-        return appUserRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessRuleException("Utilizador não encontrado."));
+        return userLookup.requireByUsername(username);
     }
 
     public void audit(String username, String action, String details) {

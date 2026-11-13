@@ -1,9 +1,8 @@
 package mz.multicore.erp.modules.printing;
 
-import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.crm.model.WorkSheet;
-import mz.multicore.erp.modules.crm.repository.WorkSheetRepository;
+import mz.multicore.erp.modules.crm.service.WorkSheetLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,25 +16,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WorkSheetPrintService {
 
-    private final WorkSheetRepository workSheetRepository;
+    private final WorkSheetLookup workSheetLookup;
     private final WorkSheetDocumentRenderer documentRenderer;
 
     @Autowired
-    public WorkSheetPrintService(WorkSheetRepository workSheetRepository,
+    public WorkSheetPrintService(WorkSheetLookup workSheetLookup,
                                  WorkSheetDocumentRenderer documentRenderer) {
-        this.workSheetRepository = workSheetRepository;
+        this.workSheetLookup = workSheetLookup;
         this.documentRenderer = documentRenderer;
     }
 
-    public WorkSheetPrintService(WorkSheetRepository workSheetRepository) {
-        this(workSheetRepository, new WorkSheetDocumentRenderer());
+    public WorkSheetPrintService(WorkSheetLookup workSheetLookup) {
+        this(workSheetLookup, new WorkSheetDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long workSheetId) {
-        WorkSheet ws = workSheetRepository
-                .findByIdAndSupportTicketCompanyId(workSheetId, CurrentUserContext.getCurrentCompanyId())
-                .orElseThrow(() -> new BusinessRuleException("Folha de obra não encontrada."));
+        WorkSheet ws = workSheetLookup.requireForCompany(workSheetId, CurrentUserContext.getCurrentCompanyId());
         return documentRenderer.renderA4(ws);
     }
 }

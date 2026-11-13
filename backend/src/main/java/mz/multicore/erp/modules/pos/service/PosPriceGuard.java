@@ -6,8 +6,8 @@ import mz.multicore.erp.modules.audit.service.AuditLogService;
 import mz.multicore.erp.modules.comercial.model.Product;
 import mz.multicore.erp.modules.comercial.model.Quotation;
 import mz.multicore.erp.modules.comercial.model.QuotationLine;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
-import mz.multicore.erp.modules.comercial.repository.QuotationRepository;
+import mz.multicore.erp.modules.comercial.service.OrderLookup;
+import mz.multicore.erp.modules.comercial.service.ProductLookup;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutLineRequest;
 import mz.multicore.erp.modules.pos.dto.POSCheckoutRequest;
 import mz.multicore.erp.modules.promotions.service.PromotionService;
@@ -27,28 +27,28 @@ public class PosPriceGuard {
 
     static final BigDecimal SELLER_DISCOUNT_LIMIT = BigDecimal.TEN;
 
-    private final ProductRepository productRepository;
-    private final QuotationRepository quotationRepository;
+    private final ProductLookup productLookup;
+    private final OrderLookup orderLookup;
     private final PromotionService promotionService;
     private final PosDiscountAuthorizationService authorizationService;
     private final AuditLogService auditLogService;
     /** Price lists (SA-C03); {@code null} in legacy constructors. */
     private final PriceResolutionService priceResolver;
 
-    public PosPriceGuard(ProductRepository productRepository, QuotationRepository quotationRepository,
+    public PosPriceGuard(ProductLookup productLookup, OrderLookup orderLookup,
                          PromotionService promotionService, PosDiscountAuthorizationService authorizationService,
                          AuditLogService auditLogService) {
-        this(productRepository, quotationRepository, promotionService, authorizationService, auditLogService, null);
+        this(productLookup, orderLookup, promotionService, authorizationService, auditLogService, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public PosPriceGuard(ProductRepository productRepository, QuotationRepository quotationRepository,
+    public PosPriceGuard(ProductLookup productLookup, OrderLookup orderLookup,
                          PromotionService promotionService, PosDiscountAuthorizationService authorizationService,
                          AuditLogService auditLogService,
                          PriceResolutionService priceResolver) {
         this.priceResolver = priceResolver;
-        this.productRepository = productRepository;
-        this.quotationRepository = quotationRepository;
+        this.productLookup = productLookup;
+        this.orderLookup = orderLookup;
         this.promotionService = promotionService;
         this.authorizationService = authorizationService;
         this.auditLogService = auditLogService;
@@ -65,7 +65,7 @@ public class PosPriceGuard {
                 : priceResolver.selectionFor(request.companyId(), request.clientId(), java.time.LocalDate.now());
         BigDecimal needed = BigDecimal.ZERO;
         for (POSCheckoutLineRequest line : request.lines()) {
-            Product product = productRepository.findByIdAndCompaniesId(line.productId(), request.companyId())
+            Product product = productLookup.findForCompany(line.productId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Produto não encontrado ID: " + line.productId()));
             QuotationLine agreed = quoted.stream()
                     .filter(candidate -> candidate.getProduct().getId().equals(product.getId())).findFirst().orElse(null);
@@ -97,7 +97,7 @@ public class PosPriceGuard {
 
     private List<QuotationLine> quotedLines(POSCheckoutRequest request) {
         if (request.quotationId() == null) return List.of();
-        return quotationRepository.findByIdWithLinesAndCompanyId(request.quotationId(), request.companyId())
+        return orderLookup.findQuotationWithLines(request.quotationId(), request.companyId())
                 .map(Quotation::getLines).orElse(List.of());
     }
 

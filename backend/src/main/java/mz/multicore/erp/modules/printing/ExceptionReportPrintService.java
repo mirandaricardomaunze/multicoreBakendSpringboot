@@ -5,7 +5,7 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
-import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.exceptions.dto.ExceptionFindingDTO;
 import mz.multicore.erp.modules.exceptions.dto.ExceptionReportDTO;
 import mz.multicore.erp.modules.exceptions.model.ExceptionSeverity;
@@ -23,18 +23,18 @@ public class ExceptionReportPrintService {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final ExceptionReportService reportService;
-    private final CompanyRepository companyRepository;
+    private final CompanyLookup companyLookup;
 
-    public ExceptionReportPrintService(ExceptionReportService reportService, CompanyRepository companyRepository) {
+    public ExceptionReportPrintService(ExceptionReportService reportService, CompanyLookup companyLookup) {
         this.reportService = reportService;
-        this.companyRepository = companyRepository;
+        this.companyLookup = companyLookup;
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long companyId, LocalDate from, LocalDate to) {
         CurrentUserContext.requireCompany(companyId);
         ExceptionReportDTO report = reportService.report(companyId, from, to);
-        var company = companyRepository.findById(companyId).orElseThrow();
+        var company = companyLookup.require(companyId);
         return PdfDocumentBuilder.buildA4(doc -> {
             doc.add(CompanyHeaderRenderer.build(company, "Relatório de Excepções", DATE.format(from) + " a " + DATE.format(to), null));
             doc.add(new Paragraph("Alta: " + report.high() + "   ·   Média: " + report.medium() + "   ·   Baixa: " + report.low(),

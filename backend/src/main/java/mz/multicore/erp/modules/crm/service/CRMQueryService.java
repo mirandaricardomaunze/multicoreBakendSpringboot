@@ -3,7 +3,7 @@ package mz.multicore.erp.modules.crm.service;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.architecture.security.PermissionGuard;
 import mz.multicore.erp.modules.comercial.model.Product;
-import mz.multicore.erp.modules.comercial.repository.ProductRepository;
+import mz.multicore.erp.modules.comercial.service.ProductCommandService;
 import mz.multicore.erp.modules.crm.dto.CrmSettingsDTO;
 import mz.multicore.erp.modules.crm.dto.SupportTicketDTO;
 import mz.multicore.erp.modules.crm.dto.UpdateCrmSettingsRequest;
@@ -25,20 +25,20 @@ public class CRMQueryService {
 
     private final SupportTicketRepository ticketRepository;
     private final WorkSheetRepository workSheetRepository;
-    private final ProductRepository productRepository;
+    private final ProductCommandService productCommandService;
     private final SupportTicketLifecycleService ticketLifecycleService;
     private final WorkSheetService workSheetService;
 
     public CRMQueryService(
             SupportTicketRepository ticketRepository,
             WorkSheetRepository workSheetRepository,
-            ProductRepository productRepository,
+            ProductCommandService productCommandService,
             SupportTicketLifecycleService ticketLifecycleService,
             WorkSheetService workSheetService
     ) {
         this.ticketRepository = ticketRepository;
         this.workSheetRepository = workSheetRepository;
-        this.productRepository = productRepository;
+        this.productCommandService = productCommandService;
         this.ticketLifecycleService = ticketLifecycleService;
         this.workSheetService = workSheetService;
     }
@@ -55,7 +55,7 @@ public class CRMQueryService {
 
         Product labour = workSheetService.labourProduct(CurrentUserContext.getCurrentCompanyId());
         labour.setUnitPrice(request.hourlyRate().setScale(2, RoundingMode.HALF_UP));
-        labour = productRepository.save(labour);
+        labour = productCommandService.saveProduct(labour);
 
         return new CrmSettingsDTO(labour.getUnitPrice(), labour.getSku(), labour.getName());
     }

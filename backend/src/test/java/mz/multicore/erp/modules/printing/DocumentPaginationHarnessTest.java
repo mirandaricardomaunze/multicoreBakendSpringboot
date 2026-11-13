@@ -27,7 +27,7 @@ class DocumentPaginationHarnessTest {
             "1.ª VIA — ORIGINAL (Cliente)", "2.ª VIA — DUPLICADO (Contabilidade / Fisco)");
 
     private final InvoiceA4Renderer renderer =
-            new InvoiceA4Renderer(new LineRowMapper(mock(ProductBatchRepository.class)));
+            new InvoiceA4Renderer(new LineRowMapper(new mz.multicore.erp.modules.inventory.service.ProductBatchLookup(mock(ProductBatchRepository.class))));
 
     @Test
     @DisplayName("DP-01: A página 2 do original continua a ser o original")

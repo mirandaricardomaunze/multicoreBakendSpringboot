@@ -2,6 +2,7 @@ package mz.multicore.erp.modules.numbering.service;
 
 import mz.multicore.erp.modules.company.model.Company;
 import mz.multicore.erp.modules.company.repository.CompanyRepository;
+import mz.multicore.erp.modules.company.service.CompanyLookup;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -23,7 +24,7 @@ class DocumentSequenceBootstrapTest {
         when(companies.findAll()).thenReturn(List.of(a, b));
         int year = LocalDate.now().getYear();
 
-        new DocumentSequenceBootstrap(companies, numbering).run(null);
+        new DocumentSequenceBootstrap(new CompanyLookup(companies), numbering).run(null);
 
         for (Long company : List.of(1L, 2L)) {
             for (String series : DocumentSeries.ALL) {
