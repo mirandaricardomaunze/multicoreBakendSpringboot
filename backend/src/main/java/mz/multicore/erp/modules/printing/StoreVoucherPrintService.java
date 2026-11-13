@@ -11,7 +11,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import mz.multicore.erp.architecture.exception.BusinessRuleException;
 import mz.multicore.erp.architecture.security.CurrentUserContext;
 import mz.multicore.erp.modules.pos.model.StoreVoucher;
-import mz.multicore.erp.modules.pos.repository.StoreVoucherRepository;
+import mz.multicore.erp.modules.pos.service.PosPaymentLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +26,15 @@ public class StoreVoucherPrintService {
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private final StoreVoucherRepository storeVoucherRepository;
+    private final PosPaymentLookup paymentLookup;
 
-    public StoreVoucherPrintService(StoreVoucherRepository storeVoucherRepository) {
-        this.storeVoucherRepository = storeVoucherRepository;
+    public StoreVoucherPrintService(PosPaymentLookup paymentLookup) {
+        this.paymentLookup = paymentLookup;
     }
 
     @Transactional(readOnly = true)
     public byte[] render(Long voucherId) {
-        StoreVoucher voucher = storeVoucherRepository.findById(voucherId)
-                .orElseThrow(() -> new BusinessRuleException("Vale de compras não encontrado."));
-        return renderVoucher(voucher);
+        return renderVoucher(paymentLookup.requireVoucher(voucherId));
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +51,7 @@ public class StoreVoucherPrintService {
     }
 
     private StoreVoucher requireByCode(String code) {
-        return storeVoucherRepository.findByCode(code)
+        return paymentLookup.findVoucherByCode(code)
                 .orElseThrow(() -> new BusinessRuleException("Vale de compras não encontrado para o código: " + code));
     }
 

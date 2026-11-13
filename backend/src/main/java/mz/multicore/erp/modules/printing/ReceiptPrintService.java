@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.documents.dto.DocumentColumnsDTO;
 import mz.multicore.erp.modules.documents.model.DocumentType;
 import mz.multicore.erp.modules.documents.service.DocumentConfigService;
 import mz.multicore.erp.modules.pos.model.PaymentEntry;
-import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
+import mz.multicore.erp.modules.pos.service.PosPaymentLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,29 +23,29 @@ import java.util.List;
 public class ReceiptPrintService {
 
     private final InvoiceLookup invoiceLookup;
-    private final PaymentEntryRepository paymentEntryRepository;
+    private final PosPaymentLookup paymentLookup;
     private final DocumentConfigService documentConfigService;
     private final ReceiptDocumentRenderer documentRenderer;
 
     @Autowired
     public ReceiptPrintService(
             InvoiceLookup invoiceLookup,
-            PaymentEntryRepository paymentEntryRepository,
+            PosPaymentLookup paymentLookup,
             DocumentConfigService documentConfigService,
             ReceiptDocumentRenderer documentRenderer
     ) {
         this.invoiceLookup = invoiceLookup;
-        this.paymentEntryRepository = paymentEntryRepository;
+        this.paymentLookup = paymentLookup;
         this.documentConfigService = documentConfigService;
         this.documentRenderer = documentRenderer;
     }
 
     public ReceiptPrintService(
             InvoiceLookup invoiceLookup,
-            PaymentEntryRepository paymentEntryRepository,
+            PosPaymentLookup paymentLookup,
             DocumentConfigService documentConfigService
     ) {
-        this(invoiceLookup, paymentEntryRepository, documentConfigService, new ReceiptDocumentRenderer());
+        this(invoiceLookup, paymentLookup, documentConfigService, new ReceiptDocumentRenderer());
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +53,7 @@ public class ReceiptPrintService {
         Invoice invoice = invoiceLookup.require(invoiceId);
         CurrentUserContext.requireCompany(invoice.getCompany().getId());
         DocumentColumnsDTO cols = documentConfigService.getColumns(invoice.getCompany().getId(), DocumentType.POS_RECEIPT);
-        List<PaymentEntry> entries = paymentEntryRepository.findByInvoiceIdOrderByPaidAtAsc(invoice.getId());
+        List<PaymentEntry> entries = paymentLookup.listForInvoice(invoice.getId());
         return documentRenderer.renderDocument(invoice, cols, entries);
     }
 

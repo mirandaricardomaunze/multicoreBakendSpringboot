@@ -59,7 +59,10 @@ class ReportServiceTest {
 
         service = new ReportService(new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
                 new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository), approvalRequestRepository,
-                tillSessionRepository, paymentEntryRepository, tillMovementRepository);
+                new mz.multicore.erp.modules.pos.service.TillSessionLookup(tillSessionRepository, tillMovementRepository),
+                new mz.multicore.erp.modules.pos.service.PosPaymentLookup(paymentEntryRepository,
+                        mock(mz.multicore.erp.modules.pos.repository.StoreVoucherRepository.class),
+                        mock(mz.multicore.erp.modules.pos.repository.MobilePaymentRepository.class)));
 
         when(stockRepository.findByWarehouseCompanyId(COMPANY_ID)).thenReturn(List.of());
         when(approvalRequestRepository.findByCompanyIdAndStatus(COMPANY_ID, ApprovalStatus.PENDING))

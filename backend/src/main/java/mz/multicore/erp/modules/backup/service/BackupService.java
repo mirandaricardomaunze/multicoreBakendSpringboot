@@ -14,7 +14,7 @@ import mz.multicore.erp.modules.financeira.repository.TreasuryTransactionReposit
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
-import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
+import mz.multicore.erp.modules.pos.service.TillSessionLookup;
 import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +57,7 @@ public class BackupService {
             StockMovementLookup stockMovementLookup,
             InvoiceLookup invoiceLookup,
             ReceiptLookup receiptLookup,
-            TillSessionRepository tillSessionRepository,
+            TillSessionLookup tillSessionLookup,
             TreasuryAccountRepository accountRepository,
             TreasuryTransactionRepository transactionRepository,
             AuditLogRepository auditLogRepository
@@ -65,7 +65,7 @@ public class BackupService {
         this(
                 new BackupDataCollector(userLookup, companyLookup, clientLookup, supplierLookup,
                         productLookup, warehouseLookup, stockLookup, stockMovementLookup,
-                        invoiceLookup, receiptLookup, tillSessionRepository,
+                        invoiceLookup, receiptLookup, tillSessionLookup,
                         accountRepository, transactionRepository, auditLogRepository),
                 new BackupExecutionService(),
                 new BackupVerificationService(new BackupContentReader(new BackupFileCipher("")))

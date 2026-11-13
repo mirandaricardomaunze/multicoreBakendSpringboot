@@ -5,9 +5,8 @@ import mz.multicore.erp.modules.approvals.repository.ApprovalRequestRepository;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.pos.model.TillSession;
-import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
-import mz.multicore.erp.modules.pos.repository.TillMovementRepository;
-import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
+import mz.multicore.erp.modules.pos.service.PosPaymentLookup;
+import mz.multicore.erp.modules.pos.service.TillSessionLookup;
 import mz.multicore.erp.modules.reports.dto.CashMovementSummaryDTO;
 import mz.multicore.erp.modules.reports.dto.LowStockAlertDTO;
 import mz.multicore.erp.modules.reports.dto.OpenTillSessionDTO;
@@ -25,20 +24,17 @@ import java.util.stream.Collectors;
 public class ReportOperationsCollector {
     private final StockLookup stockLookup;
     private final ApprovalRequestRepository approvalRequestRepository;
-    private final TillSessionRepository tillSessionRepository;
-    private final PaymentEntryRepository paymentEntryRepository;
-    private final TillMovementRepository tillMovementRepository;
+    private final TillSessionLookup tillSessionLookup;
+    private final PosPaymentLookup paymentLookup;
 
     public ReportOperationsCollector(StockLookup stockLookup,
                                      ApprovalRequestRepository approvalRequestRepository,
-                                     TillSessionRepository tillSessionRepository,
-                                     PaymentEntryRepository paymentEntryRepository,
-                                     TillMovementRepository tillMovementRepository) {
+                                     TillSessionLookup tillSessionLookup,
+                                     PosPaymentLookup paymentLookup) {
         this.stockLookup = stockLookup;
         this.approvalRequestRepository = approvalRequestRepository;
-        this.tillSessionRepository = tillSessionRepository;
-        this.paymentEntryRepository = paymentEntryRepository;
-        this.tillMovementRepository = tillMovementRepository;
+        this.tillSessionLookup = tillSessionLookup;
+        this.paymentLookup = paymentLookup;
     }
 
     List<LowStockAlertDTO> lowStockAlerts(Long companyId) {
@@ -51,13 +47,13 @@ public class ReportOperationsCollector {
     }
 
     List<OpenTillSessionDTO> openTillSessions(Long companyId) {
-        return tillSessionRepository.findByCompanyId(companyId).stream()
+        return tillSessionLookup.listForCompany(companyId).stream()
                 .filter(session -> "OPEN".equals(session.getStatus()))
                 .map(this::toOpenTillSession).toList();
     }
 
     List<PaymentMethodSummaryDTO> paymentSummary(Long companyId, LocalDateTime from, LocalDateTime to) {
-        return paymentEntryRepository.findByInvoiceCompanyIdAndPaidAtBetween(companyId, from, to).stream()
+        return paymentLookup.listPaidForCompanyBetween(companyId, from, to).stream()
                 .collect(Collectors.groupingBy(entry -> entry.getMethod() == null ? "UNKNOWN" : entry.getMethod().name(),
                         Collectors.reducing(BigDecimal.ZERO,
                                 entry -> valueOrZero(entry.getAmount()), BigDecimal::add)))
@@ -66,7 +62,7 @@ public class ReportOperationsCollector {
     }
 
     List<CashMovementSummaryDTO> cashMovementSummary(Long companyId, LocalDateTime from, LocalDateTime to) {
-        return tillMovementRepository.findByTillSessionCompanyIdAndMovementDateBetween(companyId, from, to).stream()
+        return tillSessionLookup.listMovementsForCompany(companyId, from, to).stream()
                 .collect(Collectors.groupingBy(movement -> movement.getMovementType() == null
                                 ? "UNKNOWN" : movement.getMovementType().name(),
                         Collectors.reducing(BigDecimal.ZERO,

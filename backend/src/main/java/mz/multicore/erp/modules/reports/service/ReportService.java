@@ -6,9 +6,8 @@ import mz.multicore.erp.modules.comercial.model.Invoice;
 import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
-import mz.multicore.erp.modules.pos.repository.PaymentEntryRepository;
-import mz.multicore.erp.modules.pos.repository.TillMovementRepository;
-import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
+import mz.multicore.erp.modules.pos.service.PosPaymentLookup;
+import mz.multicore.erp.modules.pos.service.TillSessionLookup;
 import mz.multicore.erp.modules.reports.dto.DailyStoreReportDTO;
 import mz.multicore.erp.modules.reports.dto.StoreDashboardDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,12 +36,11 @@ public class ReportService {
     /** Construtor retrocompatível preservado para testes e integrações existentes. */
     public ReportService(InvoiceLookup invoiceLookup, StockLookup stockLookup,
                          ApprovalRequestRepository approvalRequestRepository,
-                         TillSessionRepository tillSessionRepository,
-                         PaymentEntryRepository paymentEntryRepository,
-                         TillMovementRepository tillMovementRepository) {
+                         TillSessionLookup tillSessionLookup,
+                         PosPaymentLookup paymentLookup) {
         this(invoiceLookup, new ReportSalesAnalyzer(),
                 new ReportOperationsCollector(stockLookup, approvalRequestRepository,
-                        tillSessionRepository, paymentEntryRepository, tillMovementRepository));
+                        tillSessionLookup, paymentLookup));
     }
 
     @Transactional(readOnly = true)
