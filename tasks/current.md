@@ -52,6 +52,12 @@ concluídos devem ser movidos para `tasks/archive/` no fecho de cada fase.
 
 ## Decisões permanentes relevantes
 
+36. **Módulos Desacoplados por Lookups (2026-11-13):**
+    - Nenhum módulo lê o Repository de outro: leitura por `<Agregado>Lookup` no módulo dono, escrita pelo
+      Service/CommandService dono, stock alheio só pelo ledger de movimentos.
+    - SPEC em `docs/MODULE_DECOUPLING_SPEC.md`; baseline do CA-07 vazia (era 395) e imposta pelo
+      `CleanArchitectureHarnessTest` e `ModuleDecouplingHarnessTest`. Feito pelo Ralph Loop (GOAL-001..005).
+
 35. **Painel Executivo com Tema e Modais Próprios:**
     - O painel abre no tema da aplicação e acompanha a troca de tema sem fechar.
     - Os modais (Metas, Vendedores) abrem sempre no tema actual do painel, na moldura `ExecutiveTvDialog`.
