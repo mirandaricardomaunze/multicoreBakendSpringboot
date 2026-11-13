@@ -1,7 +1,7 @@
 ---
 id: GOAL-005
 title: "Nenhum módulo lê o Repository de outro"
-status: IN_PROGRESS
+status: DONE
 priority: HIGH
 spec: docs/MODULE_DECOUPLING_SPEC.md
 harness: docs/MODULE_DECOUPLING_HARNESS.md
@@ -25,7 +25,7 @@ Cada critério de migração apaga as suas linhas de
 - [x] MD-R04 — pos: Lookup das sessões/vendas e leitores migrados — `ModuleDecouplingHarnessTest`
 - [x] MD-R05 — TreasuryAccountLookup e leitores migrados — `TreasuryAccountLookupTest`
 - [x] MD-R06 — fleet, fiscal, approvals, manufacturing, assets, recurring, performance, audit, quality, crm — `ModuleDecouplingHarnessTest`
-- [ ] MD-R07 — zero imports de Repository alheio; baseline do CA-07 vazia; suite verde — `ModuleDecouplingHarnessTest`
+- [x] MD-R07 — zero imports de Repository alheio; baseline do CA-07 vazia; suite verde — `ModuleDecouplingHarnessTest`
 
 ## Fora de âmbito
 
@@ -46,3 +46,4 @@ Cada critério de migração apaga as suas linhas de
 - 2026-11-13 · MD-R04 · `TillSessionLookup` (`listForCompany`, `listMovementsForCompany`) e `PosPaymentLookup` (`listForInvoice`, `listPaidForCompanyBetween`; vales e pagamentos móveis do agregado mais próximo: `requireVoucher` "Vale de compras não encontrado.", `findVoucherByCode`, `findMobilePaymentForCompany`); 8 ficheiros migrados (backup, printing, reports, subscription) e 12 linhas apagadas da baseline CA-07; `PosLookupsTest`, harnesses e testes de backup/printing/reports/subscription verdes.
 - 2026-11-13 · MD-R05 · `TreasuryAccountLookup` (`requireForCompany`: "Conta de tesouraria não encontrada."; `listForCompany`) e `TreasuryAccountProvisioningService.openBankAccount(..., openingBalance)` para o seeder de demonstração; 7 ficheiros migrados (seeders, backup, comercial, POS, printing): o `TreasuryTransactionRepository` do backup e o `TreasuryAccountRepository` do `POSService` não eram usados e saíram dos construtores; 9 linhas apagadas da baseline CA-07; `TreasuryAccountLookupTest`, harnesses e testes de backup/comercial/POS/auditoria verdes.
 - 2026-11-13 · MD-R06 · Lookups nos módulos donos: `TaxRateLookup` (`countAll`, `listAll`, `findByCode`, `requireForCompany` "Taxa de IVA não encontrada.", `listActiveForCompany`) + `TaxRateCommandService.saveTaxRate` (seeders); `AuditLogLookup.listForCompany`; `ApprovalRequestLookup` (`listForCompanyByStatus`, `listForDocument`); `AssetLookup.listForCompany`; `RecurringContractLookup.listForCompanyWithClient`; `VehicleLookup` (`listForCompany`, `listFuelLogsForVehicle`, `requireManifestForCompany` "Manifesto de carga não encontrado."); `ProductionOrderLookup.listForCompany`; `BillOfMaterialsLookup` (`listActiveForCompany`, `requireForCompany` "Receita não encontrada."); `SalesGoalBonusLookup.listApprovedUnsettledForEmployee` + `SalesGoalBonusCommandService.settleOnPayslip` (recibo do RH); `WorkerEquipmentAssignmentLookup.requireForCompany` "Atribuição de equipamento não encontrada."; `WorkSheetLookup.requireForCompany` "Folha de obra não encontrada.". 22 ficheiros migrados (seeders, backup, comercial, dashboard, hr, printing, productionplan, reports) e as 28 linhas restantes apagadas da baseline CA-07 (fica vazia); asserção textual do `QualityEquipmentPrintServiceDecompositionHarnessTest` passa a exigir `assignmentLookup.requireForCompany(...)`; `RemainingOwnerLookupsTest`, harnesses e testes das classes alteradas verdes.
+- 2026-11-13 · MD-R07 · verificação final: baseline CA-07 só com o cabeçalho, zero ligações a Repository alheio em todo o backend (relatório do `ModuleDecouplingHarnessTest`: GOAL-001..005 a 0); goal em `DONE`, pelo que o harness passa a impor a onda inteira; `ModuleDecouplingHarnessTest` e `CleanArchitectureHarnessTest` verdes; suite completa (`mvn test`): 2011 testes, 0 falhas, 0 erros, 2 ignorados; a JVM do surefire morreu por falta de memória nativa da máquina (mmap do G1) ao arrancar o último teste, `WeighbridgeTest`, que corrido isolado está verde (2/2).
