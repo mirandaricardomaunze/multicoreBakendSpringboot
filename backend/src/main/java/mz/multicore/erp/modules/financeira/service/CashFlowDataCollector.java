@@ -8,7 +8,7 @@ import mz.multicore.erp.modules.financeira.model.TreasuryAccount;
 import mz.multicore.erp.modules.financeira.model.TreasuryAccountType;
 import mz.multicore.erp.modules.financeira.repository.TreasuryAccountRepository;
 import mz.multicore.erp.modules.purchases.model.Purchase;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -32,14 +32,14 @@ public class CashFlowDataCollector {
 
     private final TreasuryAccountRepository accountRepository;
     private final InvoiceLookup invoiceLookup;
-    private final PurchaseRepository purchaseRepository;
+    private final SupplierLookup supplierLookup;
 
     public CashFlowDataCollector(TreasuryAccountRepository accountRepository,
                                  InvoiceLookup invoiceLookup,
-                                 PurchaseRepository purchaseRepository) {
+                                 SupplierLookup supplierLookup) {
         this.accountRepository = accountRepository;
         this.invoiceLookup = invoiceLookup;
-        this.purchaseRepository = purchaseRepository;
+        this.supplierLookup = supplierLookup;
     }
 
     public CollectedCashFlowData collect(Long companyId, LocalDate today) {
@@ -86,8 +86,8 @@ public class CashFlowDataCollector {
         }
 
         List<Purchase> purchases = companyId != null
-                ? purchaseRepository.findByCompanyId(companyId)
-                : purchaseRepository.findAll();
+                ? supplierLookup.listPurchasesForCompany(companyId)
+                : supplierLookup.listAllPurchases();
         List<CashFlowItemDTO> allPayables = new ArrayList<>();
         BigDecimal totalPayables = BigDecimal.ZERO;
 

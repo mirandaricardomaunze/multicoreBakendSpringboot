@@ -41,7 +41,11 @@ class SecurityPermissionGuardCoverageTest {
         forensicAuditService = new ForensicAuditService(invoiceLookup,
                 new mz.multicore.erp.modules.inventory.service.StockWasteLookup(stockWasteRepository), auditLogRepository);
         systemMonitoringService = new SystemMonitoringService(dataSource, backupService, null, "1.0.0", "backups");
-        cashFlowForecastService = new CashFlowForecastService(accountRepository, invoiceLookup,purchaseRepository);
+        cashFlowForecastService = new CashFlowForecastService(accountRepository, invoiceLookup,
+                new mz.multicore.erp.modules.purchases.service.SupplierLookup(
+                        Mockito.mock(mz.multicore.erp.modules.purchases.repository.SupplierRepository.class),
+                        purchaseRepository,
+                        Mockito.mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository.class)));
 
         CurrentUserContext.clear();
     }

@@ -182,7 +182,7 @@ class BusinessUnitHarnessTest {
                 receivablesService,
                 mock(ApplicationEventPublisher.class),
                 null,
-                businessUnitRepository
+                new BusinessUnitLookup(businessUnitRepository)
         );
 
         when(companyRepository.findById(COMPANY_ID)).thenReturn(Optional.of(company));

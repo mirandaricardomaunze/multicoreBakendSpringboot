@@ -12,8 +12,7 @@ import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,14 +30,13 @@ public class BackupDataCollector {
     private final AppUserLookup userLookup;
     private final CompanyLookup companyLookup;
     private final ClientLookup clientLookup;
-    private final SupplierRepository supplierRepository;
+    private final SupplierLookup supplierLookup;
     private final ProductLookup productLookup;
     private final WarehouseLookup warehouseLookup;
     private final StockLookup stockLookup;
     private final StockMovementLookup stockMovementLookup;
     private final InvoiceLookup invoiceLookup;
     private final ReceiptLookup receiptLookup;
-    private final PurchaseRepository purchaseRepository;
     private final TillSessionRepository tillSessionRepository;
     private final TreasuryAccountRepository accountRepository;
     private final TreasuryTransactionRepository transactionRepository;
@@ -49,14 +47,13 @@ public class BackupDataCollector {
             AppUserLookup userLookup,
             CompanyLookup companyLookup,
             ClientLookup clientLookup,
-            SupplierRepository supplierRepository,
+            SupplierLookup supplierLookup,
             ProductLookup productLookup,
             WarehouseLookup warehouseLookup,
             StockLookup stockLookup,
             StockMovementLookup stockMovementLookup,
             InvoiceLookup invoiceLookup,
             ReceiptLookup receiptLookup,
-            PurchaseRepository purchaseRepository,
             TillSessionRepository tillSessionRepository,
             TreasuryAccountRepository accountRepository,
             TreasuryTransactionRepository transactionRepository,
@@ -65,14 +62,13 @@ public class BackupDataCollector {
         this.userLookup = userLookup;
         this.companyLookup = companyLookup;
         this.clientLookup = clientLookup;
-        this.supplierRepository = supplierRepository;
+        this.supplierLookup = supplierLookup;
         this.productLookup = productLookup;
         this.warehouseLookup = warehouseLookup;
         this.stockLookup = stockLookup;
         this.stockMovementLookup = stockMovementLookup;
         this.invoiceLookup = invoiceLookup;
         this.receiptLookup = receiptLookup;
-        this.purchaseRepository = purchaseRepository;
         this.tillSessionRepository = tillSessionRepository;
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
@@ -112,7 +108,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("suppliers", supplierRepository == null ? List.of() : supplierRepository.findByCompanyId(companyId).stream().map(s -> {
+        data.put("suppliers", supplierLookup == null ? List.of() : supplierLookup.listForCompany(companyId).stream().map(s -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", s.getId());
             m.put("name", s.getName());
@@ -191,7 +187,7 @@ public class BackupDataCollector {
             return m;
         }).collect(Collectors.toList()));
 
-        data.put("purchases", purchaseRepository == null ? List.of() : purchaseRepository.findByCompanyId(companyId).stream().map(p -> {
+        data.put("purchases", supplierLookup == null ? List.of() : supplierLookup.listPurchasesForCompany(companyId).stream().map(p -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", p.getId());
             m.put("purchaseNumber", p.getPurchaseNumber());

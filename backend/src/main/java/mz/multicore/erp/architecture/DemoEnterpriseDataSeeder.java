@@ -26,7 +26,7 @@ import mz.multicore.erp.modules.inventory.model.Warehouse;
 import mz.multicore.erp.modules.inventory.service.StockMovementService;
 import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
 import mz.multicore.erp.modules.purchases.model.Supplier;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierCommandService;
 import mz.multicore.erp.modules.users.model.AppUser;
 import mz.multicore.erp.modules.users.service.AppUserCommandService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,7 +51,7 @@ public class DemoEnterpriseDataSeeder {
     private final WarehouseCommandService warehouseCommandService;
     private final StockMovementService stockMovementService;
     private final AppUserCommandService userCommands;
-    private final SupplierRepository supplierRepository;
+    private final SupplierCommandService supplierCommandService;
     private final TaxRateRepository taxRateRepository;
     private final PasswordEncoder passwordEncoder;
     private final ReferenceAndAdminDataSeeder referenceSeeder;
@@ -63,7 +63,7 @@ public class DemoEnterpriseDataSeeder {
             HRService hrService, CRMService crmService,
             CompanyLookup companyLookup, CompanyService companyService,
             WarehouseCommandService warehouseCommandService, StockMovementService stockMovementService,
-            AppUserCommandService userCommands, SupplierRepository supplierRepository,
+            AppUserCommandService userCommands, SupplierCommandService supplierCommandService,
             TaxRateRepository taxRateRepository,
             PasswordEncoder passwordEncoder, ReferenceAndAdminDataSeeder referenceSeeder) {
         this.employeeCommandService = employeeCommandService;
@@ -78,7 +78,7 @@ public class DemoEnterpriseDataSeeder {
         this.warehouseCommandService = warehouseCommandService;
         this.stockMovementService = stockMovementService;
         this.userCommands = userCommands;
-        this.supplierRepository = supplierRepository;
+        this.supplierCommandService = supplierCommandService;
         this.taxRateRepository = taxRateRepository;
         this.passwordEncoder = passwordEncoder;
         this.referenceSeeder = referenceSeeder;
@@ -185,7 +185,7 @@ public class DemoEnterpriseDataSeeder {
         s.setEmail(email);
         s.setAddress(address);
         s.setCompany(company);
-        supplierRepository.save(s);
+        supplierCommandService.saveSupplier(s);
     }
 
     private Employee createEmployee(Company company, String number, String name, String email,

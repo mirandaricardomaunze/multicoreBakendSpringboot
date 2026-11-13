@@ -22,9 +22,9 @@ import mz.multicore.erp.modules.company.service.CompanyLookup;
 import mz.multicore.erp.modules.fiscal.dto.TaxRateDTO;
 import mz.multicore.erp.modules.fiscal.repository.TaxRateRepository;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
-import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -41,7 +41,7 @@ public class ComercialProductCatalogService {
     private final ProductCategoryRepository productCategoryRepository;
     private final CompanyLookup companyLookup;
     private final TaxRateRepository taxRateRepository;
-    private final BusinessUnitRepository businessUnitRepository;
+    private final BusinessUnitLookup businessUnitLookup;
     private final InventoryService inventoryService;
     private final AuditLogService auditLogService;
 
@@ -50,14 +50,14 @@ public class ComercialProductCatalogService {
             ProductCategoryRepository productCategoryRepository,
             CompanyLookup companyLookup,
             TaxRateRepository taxRateRepository,
-            @Autowired(required = false) BusinessUnitRepository businessUnitRepository,
+            @Nullable BusinessUnitLookup businessUnitLookup,
             @Lazy InventoryService inventoryService,
             AuditLogService auditLogService) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.companyLookup = companyLookup;
         this.taxRateRepository = taxRateRepository;
-        this.businessUnitRepository = businessUnitRepository;
+        this.businessUnitLookup = businessUnitLookup;
         this.inventoryService = inventoryService;
         this.auditLogService = auditLogService;
     }
@@ -193,8 +193,8 @@ public class ComercialProductCatalogService {
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
         assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
-        if (businessUnitId != null && businessUnitRepository != null) {
-            product.setBusinessUnit(businessUnitRepository.findByIdAndCompanyId(businessUnitId, CurrentUserContext.getCurrentCompanyId())
+        if (businessUnitId != null && businessUnitLookup != null) {
+            product.setBusinessUnit(businessUnitLookup.findForCompany(businessUnitId, CurrentUserContext.getCurrentCompanyId())
                     .orElseThrow(() -> new BusinessRuleException("Linha de negócio não encontrada.")));
         }
         return toDTO(productRepository.save(product));
@@ -260,8 +260,8 @@ public class ComercialProductCatalogService {
                 .orElseThrow(() -> new BusinessRuleException("Produto não encontrado."));
         assignPackaging(product, unitsPerBox, packagesPerBox, unitsPerPackage);
         assignLogisticsWeights(product, netUnitWeightKg, grossUnitWeightKg);
-        if (businessUnitId != null && businessUnitRepository != null) {
-            product.setBusinessUnit(businessUnitRepository.findByIdAndCompanyId(businessUnitId, CurrentUserContext.getCurrentCompanyId())
+        if (businessUnitId != null && businessUnitLookup != null) {
+            product.setBusinessUnit(businessUnitLookup.findForCompany(businessUnitId, CurrentUserContext.getCurrentCompanyId())
                     .orElseThrow(() -> new BusinessRuleException("Linha de negócio não encontrada.")));
         } else {
             product.setBusinessUnit(null);

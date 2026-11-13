@@ -24,10 +24,11 @@ import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
 import mz.multicore.erp.modules.purchases.model.BusinessUnit;
-import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
+import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import mz.multicore.erp.modules.pricing.service.PriceResolutionService;
@@ -58,7 +59,7 @@ public class ComercialInvoiceLifecycleService {
     private final AuditLogService auditLogService;
     private final ReceivablesService receivablesService;
     private final ApplicationEventPublisher eventPublisher;
-    private final BusinessUnitRepository businessUnitRepository;
+    private final BusinessUnitLookup businessUnitLookup;
     private final SaleStockIssuer saleStockIssuer;
     private final PriceResolutionService priceResolver;
 
@@ -77,7 +78,7 @@ public class ComercialInvoiceLifecycleService {
             AuditLogService auditLogService,
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
-            @Autowired(required = false) BusinessUnitRepository businessUnitRepository, SaleStockIssuer saleStockIssuer,
+            @Nullable BusinessUnitLookup businessUnitLookup, SaleStockIssuer saleStockIssuer,
             @Autowired(required = false) PriceResolutionService priceResolver) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
@@ -93,7 +94,7 @@ public class ComercialInvoiceLifecycleService {
         this.auditLogService = auditLogService;
         this.receivablesService = receivablesService;
         this.eventPublisher = eventPublisher;
-        this.businessUnitRepository = businessUnitRepository;
+        this.businessUnitLookup = businessUnitLookup;
         this.saleStockIssuer = saleStockIssuer;
         this.priceResolver = priceResolver;
     }
@@ -120,8 +121,8 @@ public class ComercialInvoiceLifecycleService {
             throw new BusinessRuleException("O armazém não pertence à empresa ativa.");
         }
         BusinessUnit restrictedBu = null;
-        if (request.businessUnitId() != null && businessUnitRepository != null) {
-            restrictedBu = businessUnitRepository.findByIdAndCompanyId(request.businessUnitId(), request.companyId())
+        if (request.businessUnitId() != null && businessUnitLookup != null) {
+            restrictedBu = businessUnitLookup.findForCompany(request.businessUnitId(), request.companyId())
                     .orElseThrow(() -> new BusinessRuleException("Linha de negócio restrita não encontrada."));
         }
 

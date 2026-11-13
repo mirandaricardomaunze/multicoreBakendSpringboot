@@ -13,7 +13,7 @@ import mz.multicore.erp.modules.intelligence.dto.AiEvidenceDTO;
 import mz.multicore.erp.modules.inventory.model.Stock;
 import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.purchases.model.PurchaseOrder;
-import mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,18 +31,18 @@ public class AiManagementAssistantService {
 
     private final InvoiceLookup invoiceLookup;
     private final StockLookup stockLookup;
-    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final SupplierLookup supplierLookup;
     private final ManagementAiGateway aiGateway;
     private final AuditLogService auditLogService;
 
     public AiManagementAssistantService(InvoiceLookup invoiceLookup,
                                         StockLookup stockLookup,
-                                        PurchaseOrderRepository purchaseOrderRepository,
+                                        SupplierLookup supplierLookup,
                                         ManagementAiGateway aiGateway,
                                         AuditLogService auditLogService) {
         this.invoiceLookup = invoiceLookup;
         this.stockLookup = stockLookup;
-        this.purchaseOrderRepository = purchaseOrderRepository;
+        this.supplierLookup = supplierLookup;
         this.aiGateway = aiGateway;
         this.auditLogService = auditLogService;
     }
@@ -80,7 +80,7 @@ public class AiManagementAssistantService {
         long low = stocks.stream().filter(stock -> nz(stock.getQuantity()).signum() > 0
                 && nz(stock.getQuantity()).compareTo(nz(stock.getProduct().getMinStock())) <= 0).count();
 
-        List<PurchaseOrder> openOrders = purchaseOrderRepository.findByCompanyIdOrderByOrderDateDesc(companyId).stream()
+        List<PurchaseOrder> openOrders = supplierLookup.listPurchaseOrdersForCompany(companyId).stream()
                 .filter(order -> PurchaseOrder.ORDERED.equals(order.getStatus())
                         || PurchaseOrder.PARTIALLY_RECEIVED.equals(order.getStatus())).toList();
         long overdue = openOrders.stream().filter(order -> order.getExpectedDate() != null

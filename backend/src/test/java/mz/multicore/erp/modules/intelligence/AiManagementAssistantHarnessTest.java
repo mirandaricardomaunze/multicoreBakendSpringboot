@@ -31,7 +31,7 @@ class AiManagementAssistantHarnessTest {
                 .doesNotContain("Repository", "jakarta.persistence", "modules.company.model");
         assertThat(service).contains("PermissionGuard.requireManagerOrAdmin", "CurrentUserContext.getCurrentCompanyId()")
                 .contains("AI_MANAGEMENT_QUERY", "aiGateway.answer", "localAnswer")
-                .contains("stockLookup.listForCompany(companyId)", "findByCompanyIdOrderByOrderDateDesc(companyId)")
+                .contains("stockLookup.listForCompany(companyId)", "supplierLookup.listPurchaseOrdersForCompany(companyId)")
                 .doesNotContain("getClient()", "getSupplier()", "getUsername()");
         assertThat(gateway).contains("if (!configured()) return Optional.empty()", "https")
                 .contains("ManagementAiContext").doesNotContain("Company", "Invoice", "Stock", "PurchaseOrder");

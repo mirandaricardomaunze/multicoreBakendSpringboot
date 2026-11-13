@@ -52,7 +52,10 @@ class OccupationalHealthServiceTest {
                         java.nio.charset.StandardCharsets.UTF_8)));
         auditLogService = mock(AuditLogService.class);
         service = new OccupationalHealthService(repository, employeeRepository, new CompanyLookup(companyRepository),
-                supplierRepository, financeService, attachmentCrypto, auditLogService);
+                new mz.multicore.erp.modules.purchases.service.SupplierLookup(supplierRepository,
+                        mock(mz.multicore.erp.modules.purchases.repository.PurchaseRepository.class),
+                        mock(mz.multicore.erp.modules.purchases.repository.PurchaseOrderRepository.class)),
+                financeService, attachmentCrypto, auditLogService);
         CurrentUserContext.setCurrentCompanyId(7L);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
         company = new Company();

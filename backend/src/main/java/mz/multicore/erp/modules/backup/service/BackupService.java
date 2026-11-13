@@ -15,8 +15,7 @@ import mz.multicore.erp.modules.inventory.service.StockLookup;
 import mz.multicore.erp.modules.inventory.service.StockMovementLookup;
 import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.pos.repository.TillSessionRepository;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,23 +50,22 @@ public class BackupService {
             AppUserLookup userLookup,
             CompanyLookup companyLookup,
             ClientLookup clientLookup,
-            SupplierRepository supplierRepository,
+            SupplierLookup supplierLookup,
             ProductLookup productLookup,
             WarehouseLookup warehouseLookup,
             StockLookup stockLookup,
             StockMovementLookup stockMovementLookup,
             InvoiceLookup invoiceLookup,
             ReceiptLookup receiptLookup,
-            PurchaseRepository purchaseRepository,
             TillSessionRepository tillSessionRepository,
             TreasuryAccountRepository accountRepository,
             TreasuryTransactionRepository transactionRepository,
             AuditLogRepository auditLogRepository
     ) {
         this(
-                new BackupDataCollector(userLookup, companyLookup, clientLookup, supplierRepository,
+                new BackupDataCollector(userLookup, companyLookup, clientLookup, supplierLookup,
                         productLookup, warehouseLookup, stockLookup, stockMovementLookup,
-                        invoiceLookup, receiptLookup, purchaseRepository, tillSessionRepository,
+                        invoiceLookup, receiptLookup, tillSessionRepository,
                         accountRepository, transactionRepository, auditLogRepository),
                 new BackupExecutionService(),
                 new BackupVerificationService(new BackupContentReader(new BackupFileCipher("")))

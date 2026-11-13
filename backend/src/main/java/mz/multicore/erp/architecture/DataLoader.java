@@ -12,7 +12,7 @@ import mz.multicore.erp.modules.hr.service.EmployeeCommandService;
 import mz.multicore.erp.modules.hr.service.HRService;
 import mz.multicore.erp.modules.inventory.service.StockMovementService;
 import mz.multicore.erp.modules.inventory.service.WarehouseCommandService;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierCommandService;
 import mz.multicore.erp.modules.users.service.AppUserCommandService;
 import mz.multicore.erp.modules.users.service.AppUserLookup;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +55,7 @@ public class DataLoader implements CommandLineRunner {
             StockMovementService stockMovementService,
             AppUserLookup userLookup,
             AppUserCommandService userCommands,
-            SupplierRepository supplierRepository,
+            SupplierCommandService supplierCommandService,
             TaxRateRepository taxRateRepository,
             boolean seedDemoData,
             String superAdminPassword,
@@ -67,7 +67,7 @@ public class DataLoader implements CommandLineRunner {
         this.demoSeeder = new DemoEnterpriseDataSeeder(
                 employeeCommandService, clientCommandService, productLookup, productCommandService, accountRepository,
                 hrService, crmService, companyLookup, companyService, warehouseCommandService, stockMovementService,
-                userCommands, supplierRepository, taxRateRepository,
+                userCommands, supplierCommandService, taxRateRepository,
                 passwordEncoder, this.referenceSeeder);
     }
 

@@ -13,7 +13,7 @@ import mz.multicore.erp.modules.hr.model.OccupationalHealthExam;
 import mz.multicore.erp.modules.hr.repository.EmployeeRepository;
 import mz.multicore.erp.modules.hr.repository.OccupationalHealthExamRepository;
 import mz.multicore.erp.modules.purchases.model.Supplier;
-import mz.multicore.erp.modules.purchases.repository.SupplierRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,20 +38,20 @@ public class OccupationalHealthRegistrationService {
     private final OccupationalHealthExamRepository repository;
     private final EmployeeRepository employeeRepository;
     private final CompanyLookup companyLookup;
-    private final SupplierRepository supplierRepository;
+    private final SupplierLookup supplierLookup;
     private final AttachmentCrypto attachmentCrypto;
     private final AuditLogService auditLogService;
 
     public OccupationalHealthRegistrationService(OccupationalHealthExamRepository repository,
                                                  EmployeeRepository employeeRepository,
                                                  CompanyLookup companyLookup,
-                                                 SupplierRepository supplierRepository,
+                                                 SupplierLookup supplierLookup,
                                                  AttachmentCrypto attachmentCrypto,
                                                  AuditLogService auditLogService) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
         this.companyLookup = companyLookup;
-        this.supplierRepository = supplierRepository;
+        this.supplierLookup = supplierLookup;
         this.attachmentCrypto = attachmentCrypto;
         this.auditLogService = auditLogService;
     }
@@ -125,7 +125,7 @@ public class OccupationalHealthRegistrationService {
 
     private Supplier resolveProvider(Long providerId) {
         if (providerId == null) return null;
-        Supplier provider = supplierRepository.findById(providerId)
+        Supplier provider = supplierLookup.find(providerId)
                 .filter(candidate -> candidate.getCompany() != null
                         && companyId().equals(candidate.getCompany().getId()))
                 .orElseThrow(() -> new BusinessRuleException(

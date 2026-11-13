@@ -48,7 +48,11 @@ class AiManagementAssistantServiceTest {
         service = new AiManagementAssistantService(
                 new mz.multicore.erp.modules.comercial.service.InvoiceLookup(invoiceRepository),
                 new mz.multicore.erp.modules.inventory.service.StockLookup(stockRepository),
-                purchaseOrderRepository, aiGateway, auditLogService);
+                new mz.multicore.erp.modules.purchases.service.SupplierLookup(
+                        mock(mz.multicore.erp.modules.purchases.repository.SupplierRepository.class),
+                        mock(mz.multicore.erp.modules.purchases.repository.PurchaseRepository.class),
+                        purchaseOrderRepository),
+                aiGateway, auditLogService);
         CurrentUserContext.setCurrentUser("gestor", "MANAGER");
         CurrentUserContext.setCurrentCompanyId(41L);
     }

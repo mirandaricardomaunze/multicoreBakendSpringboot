@@ -6,7 +6,7 @@ import mz.multicore.erp.modules.comercial.model.InvoiceStatus;
 import mz.multicore.erp.modules.comercial.service.InvoiceLookup;
 import mz.multicore.erp.modules.fiscal.dto.IvaSummaryDTO;
 import mz.multicore.erp.modules.purchases.model.Purchase;
-import mz.multicore.erp.modules.purchases.repository.PurchaseRepository;
+import mz.multicore.erp.modules.purchases.service.SupplierLookup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +27,11 @@ import java.util.List;
 public class FiscalSummaryService {
 
     private final InvoiceLookup invoiceLookup;
-    private final PurchaseRepository purchaseRepository;
+    private final SupplierLookup supplierLookup;
 
-    public FiscalSummaryService(InvoiceLookup invoiceLookup, PurchaseRepository purchaseRepository) {
+    public FiscalSummaryService(InvoiceLookup invoiceLookup, SupplierLookup supplierLookup) {
         this.invoiceLookup = invoiceLookup;
-        this.purchaseRepository = purchaseRepository;
+        this.supplierLookup = supplierLookup;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +71,7 @@ public class FiscalSummaryService {
         BigDecimal purchasesBase = BigDecimal.ZERO;
         BigDecimal inputTax = BigDecimal.ZERO;
 
-        for (Purchase p : purchaseRepository.findByCompanyId(companyId)) {
+        for (Purchase p : supplierLookup.listPurchasesForCompany(companyId)) {
             if ("CANCELLED".equals(p.getStatus())) continue;
             LocalDateTime created = p.getPurchaseDate();
             if (created == null || created.isBefore(start) || created.isAfter(end)) continue;

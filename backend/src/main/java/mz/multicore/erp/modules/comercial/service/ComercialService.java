@@ -28,7 +28,7 @@ import mz.multicore.erp.modules.inventory.service.WarehouseLookup;
 import mz.multicore.erp.modules.inventory.service.InventoryService;
 import mz.multicore.erp.modules.numbering.service.DocumentNumberService;
 import mz.multicore.erp.modules.numbering.service.DocumentSeries;
-import mz.multicore.erp.modules.purchases.repository.BusinessUnitRepository;
+import mz.multicore.erp.modules.purchases.service.BusinessUnitLookup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -105,17 +105,17 @@ public class ComercialService {
             ReceivablesService receivablesService,
             ApplicationEventPublisher eventPublisher,
             OrderRiskEvaluator orderRiskEvaluator,
-            BusinessUnitRepository businessUnitRepository) {
+            BusinessUnitLookup businessUnitLookup) {
         this(
                 invoiceRepository, receiptRepository, treasuryAccountRepository, orderRepository,
                 documentNumberService, financeService, auditLogService, eventPublisher,
                 new ComercialClientAndCreditService(clientRepository, companyLookup, invoiceRepository, auditLogService),
                 new ComercialProductCatalogService(productRepository, productCategoryRepository, companyLookup,
-                        taxRateRepository, businessUnitRepository, inventoryService, auditLogService),
+                        taxRateRepository, businessUnitLookup, inventoryService, auditLogService),
                 new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                         companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                        receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null),
+                        receivablesService, eventPublisher, businessUnitLookup, new SaleStockIssuer(inventoryService, orderLineRepository), null),
                 new ComercialOrderLifecycleService(orderRepository, orderLineRepository, clientRepository,
                         productRepository, companyLookup, warehouseLookup, inventoryService, invoiceRepository,
                         approvalService, walkInClientProvider, documentNumberService, auditLogService,
@@ -124,7 +124,7 @@ public class ComercialService {
                         new ComercialInvoiceLifecycleService(invoiceRepository, clientRepository, productRepository,
                                 companyLookup, warehouseLookup, inventoryService, receiptRepository, financeService,
                                 approvalService, walkInClientProvider, documentNumberService, auditLogService,
-                                receivablesService, eventPublisher, businessUnitRepository, new SaleStockIssuer(inventoryService, orderLineRepository), null), null)
+                                receivablesService, eventPublisher, businessUnitLookup, new SaleStockIssuer(inventoryService, orderLineRepository), null), null)
         );
     }
 
